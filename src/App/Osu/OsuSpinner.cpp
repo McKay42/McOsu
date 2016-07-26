@@ -1,0 +1,474 @@
+//================ Copyright (c) 2015, PG & Jeffrey Han (opsu!), All rights reserved. =================//
+//
+// Purpose:		spinner. spin logic has been taken from opsu!, I didn't have time to rewrite it yet
+//
+// $NoKeywords: $spin
+//=====================================================================================================//
+
+#include "OsuSpinner.h"
+
+#include "Engine.h"
+#include "ResourceManager.h"
+#include "AnimationHandler.h"
+#include "SoundEngine.h"
+#include "Mouse.h"
+#include "ConVar.h"
+
+#include "Osu.h"
+#include "OsuSkin.h"
+#include "OsuGameRules.h"
+
+OsuSpinner::OsuSpinner(int x, int y, long time, int sampleType, long endTime, OsuBeatmap *beatmap) : OsuHitObject(time, sampleType, -1, -1, beatmap)
+{
+	m_vRawPos = Vector2(x,y);
+
+	m_iObjectDuration = endTime - time;
+	m_bDrawRPM = false;
+	m_bClickedOnce = false;
+	m_fRotationsNeeded = -1.0f;
+
+	int minVel = 12;
+	int maxVel = 48;
+	int minTime = 2000;
+	int maxTime = 5000;
+	m_iMaxStoredDeltaAngles = clamp<int>((int)( (endTime - time - minTime) * (maxVel - minVel) / (maxTime - minTime) + minVel ), minVel, maxVel);
+	m_storedDeltaAngles = new float[m_iMaxStoredDeltaAngles];
+	for (int i=0; i<m_iMaxStoredDeltaAngles; i++)
+	{
+		m_storedDeltaAngles[i] = 0.0f;
+	}
+	m_iDeltaAngleIndex = 0;
+
+	m_fPercent = 0.0f;
+
+	m_fDrawRot = 0.0f;
+	m_fRotations = 0.0f;
+	m_fDeltaOverflow = 0.0f;
+	m_fSumDeltaAngle = 0.0f;
+	m_fDeltaAngleOverflow = 0.0f;
+	m_fRPM = 0.0f;
+	m_fLastMouseAngle = 0.0f;
+	m_fRatio = 0.0f;
+
+	// spinners don't need misaims
+	m_bMisAim = true;
+}
+
+OsuSpinner::~OsuSpinner()
+{
+	delete[] m_storedDeltaAngles;
+	m_storedDeltaAngles = NULL;
+}
+
+void OsuSpinner::draw(Graphics *g)
+{
+	OsuHitObject::draw(g);
+
+	if (m_bFinished || !m_bVisible)
+		return;
+
+	OsuSkin *skin = m_beatmap->getSkin();
+	Vector2 center = m_beatmap->osuCoords2Pixels(m_vRawPos);
+
+	float clampedRatio = clamp<float>(m_fRatio, 0.0f, 1.0f);
+	float finishScaleRatio = clampedRatio;
+	finishScaleRatio =  -finishScaleRatio*(finishScaleRatio-2);
+	float finishScale = 0.80f + finishScaleRatio*0.20f; // the spinner grows until reaching 100% during spinning, depending on how many spins are left
+
+	if (skin->getSpinnerBackground() != skin->getMissingTexture() || skin->getVersion() < 2) // old style
+	{
+		// draw spinner circle
+		if (skin->getSpinnerCircle() != skin->getMissingTexture())
+		{
+			float spinnerCircleScale = Osu::getImageScaleToFitResolution(skin->getSpinnerCircle(), m_beatmap->getPlayfieldSize() + Vector2(m_beatmap->getHitcircleDiameter(), m_beatmap->getHitcircleDiameter())/1.5f);
+
+			g->setColor(0xffffffff);
+			g->setAlpha(m_fAlpha);
+			g->pushTransform();
+				g->rotate(m_fDrawRot);
+				g->scale(spinnerCircleScale, spinnerCircleScale);
+				g->translate(center.x, center.y);
+				g->drawImage(skin->getSpinnerCircle());
+			g->popTransform();
+		}
+
+		// draw approach circle
+		if (!m_beatmap->getOsu()->getModHD() && m_fPercent > 0.0f)
+		{
+			float spinnerApproachCircleImageScale = Osu::getImageScaleToFitResolution(skin->getSpinnerApproachCircle(), m_beatmap->getPlayfieldSize() + Vector2(m_beatmap->getHitcircleDiameter(), m_beatmap->getHitcircleDiameter()));
+
+			g->setColor(skin->getSpinnerApproachCircleColor());
+			g->setAlpha(m_fAlpha);
+			g->pushTransform();
+				g->scale(spinnerApproachCircleImageScale*m_fPercent, spinnerApproachCircleImageScale*m_fPercent);
+				g->translate(center.x, center.y);
+				g->drawImage(skin->getSpinnerApproachCircle());
+			g->popTransform();
+		}
+	}
+	else // new style
+	{
+		// bottom
+		if (skin->getSpinnerBottom() != skin->getMissingTexture())
+		{
+			float spinnerBottomImageScale = Osu::getImageScaleToFitResolution(skin->getSpinnerBottom(), m_beatmap->getPlayfieldSize() + Vector2(m_beatmap->getHitcircleDiameter(), m_beatmap->getHitcircleDiameter())/1.5f);
+
+			g->setColor(0xffffffff);
+			g->setAlpha(m_fAlpha);
+			g->pushTransform();
+				g->rotate(m_fDrawRot/7.0f);
+				g->scale(spinnerBottomImageScale*finishScale, spinnerBottomImageScale*finishScale);
+				g->translate(center.x, center.y);
+				g->drawImage(skin->getSpinnerBottom());
+			g->popTransform();
+		}
+
+		// circle
+		// doesn't get drawn on v2 spinners
+		/*
+		if (skin->getSpinnerCircle() != skin->getMissingTexture())
+		{
+			float spinnerCircleImageScale = Osu::getImageScaleToFitResolution(skin->getSpinnerCircle(), m_beatmap->getPlayfieldSize() + Vector2(m_beatmap->getHitcircleDiameter(), m_beatmap->getHitcircleDiameter())/1.5f);
+
+			g->setColor(0xffffffff);
+			g->setAlpha(m_fAlpha);
+			g->pushTransform();
+				g->rotate(m_fDrawRot);
+				g->scale(spinnerCircleImageScale, spinnerCircleImageScale);
+				g->translate(center.x, center.y);
+				g->drawImage(skin->getSpinnerCircle());
+			g->popTransform();
+		}
+		*/
+
+		// top
+		if (skin->getSpinnerTop() != skin->getMissingTexture())
+		{
+			float spinnerTopImageScale = Osu::getImageScaleToFitResolution(skin->getSpinnerTop(), m_beatmap->getPlayfieldSize() + Vector2(m_beatmap->getHitcircleDiameter(), m_beatmap->getHitcircleDiameter())/1.5f);
+			if (spinnerTopImageScale > 1.0f)
+				spinnerTopImageScale = 1.0f;
+
+			g->setColor(0xffffffff);
+			g->setAlpha(m_fAlpha);
+			g->pushTransform();
+				g->rotate(m_fDrawRot/2.0f);
+				g->scale(spinnerTopImageScale*finishScale, spinnerTopImageScale*finishScale);
+				g->translate(center.x, center.y);
+				g->drawImage(skin->getSpinnerTop());
+			g->popTransform();
+		}
+
+		// middle
+		if (skin->getSpinnerMiddle2() != skin->getMissingTexture())
+		{
+			float spinnerMiddle2ImageScale = Osu::getImageScaleToFitResolution(skin->getSpinnerMiddle2(), m_beatmap->getPlayfieldSize() + Vector2(m_beatmap->getHitcircleDiameter(), m_beatmap->getHitcircleDiameter())/1.5f);
+			if (spinnerMiddle2ImageScale > 1.0f) // this is not correct, but not having it is also not correct
+				spinnerMiddle2ImageScale = 1.0f;
+
+			g->setColor(0xffffffff);
+			g->setAlpha(m_fAlpha);
+			g->pushTransform();
+				g->rotate(m_fDrawRot);
+				g->scale(spinnerMiddle2ImageScale*finishScale, spinnerMiddle2ImageScale*finishScale);
+				g->translate(center.x, center.y);
+				g->drawImage(skin->getSpinnerMiddle2());
+			g->popTransform();
+		}
+		if (skin->getSpinnerMiddle() != skin->getMissingTexture())
+		{
+			float spinnerMiddleImageScale = Osu::getImageScaleToFitResolution(skin->getSpinnerMiddle(), m_beatmap->getPlayfieldSize() + Vector2(m_beatmap->getHitcircleDiameter(), m_beatmap->getHitcircleDiameter())/1.5f);
+
+			g->setColor(COLOR(255, 255, (int)(255*m_fPercent), (int)(255*m_fPercent)));
+			g->setAlpha(m_fAlpha);
+			g->pushTransform();
+				g->rotate(m_fDrawRot/2.0f); // apparently does not rotate in osu
+				g->scale(spinnerMiddleImageScale*finishScale, spinnerMiddleImageScale*finishScale);
+				g->translate(center.x, center.y);
+				g->drawImage(skin->getSpinnerMiddle());
+			g->popTransform();
+		}
+
+		// draw approach circle
+		if (!m_beatmap->getOsu()->getModHD() && m_fPercent > 0.0f)
+		{
+			float spinnerApproachCircleImageScale = Osu::getImageScaleToFitResolution(skin->getSpinnerApproachCircle(), m_beatmap->getPlayfieldSize() + Vector2(m_beatmap->getHitcircleDiameter(), m_beatmap->getHitcircleDiameter()));
+
+			g->setColor(skin->getSpinnerApproachCircleColor());
+			g->setAlpha(m_fAlpha);
+			g->pushTransform();
+				g->scale(spinnerApproachCircleImageScale*m_fPercent, spinnerApproachCircleImageScale*m_fPercent);
+				g->translate(center.x, center.y);
+				g->drawImage(skin->getSpinnerApproachCircle());
+			g->popTransform();
+		}
+	}
+
+	// draw "CLEAR!"
+	if (m_fRatio >= 1.0f)
+	{
+		float spinnerClearImageScale = Osu::getImageScale(skin->getSpinnerClear(), 80);
+
+		g->setColor(0xffffffff);
+		g->pushTransform();
+		g->scale(spinnerClearImageScale, spinnerClearImageScale);
+		g->translate(center.x, center.y - m_beatmap->getPlayfieldSize().y*0.25f);
+		g->drawImage(skin->getSpinnerClear());
+		g->popTransform();
+	}
+
+	// draw "SPIN!"
+	if (clampedRatio < 0.03f)
+	{
+		float spinerSpinImageScale = Osu::getImageScale(skin->getSpinnerSpin(), 80);
+
+		g->setColor(0xffffffff);
+		g->setAlpha(m_fAlpha);
+		g->pushTransform();
+		g->scale(spinerSpinImageScale, spinerSpinImageScale);
+		g->translate(center.x, center.y + m_beatmap->getPlayfieldSize().y*0.30f);
+		g->drawImage(skin->getSpinnerSpin());
+		g->popTransform();
+	}
+
+	// draw RPM
+	if (m_bDrawRPM)
+	{
+		McFont *rpmFont = engine->getResourceManager()->getFont("FONT_DEFAULT");
+		float stringWidth = rpmFont->getStringWidth("RPM: 477");
+		g->setColor(0xffffffff);
+		g->pushTransform();
+		g->translate(Osu::getScreenWidth()/2 - stringWidth/2, Osu::getScreenHeight() - 5);
+		g->drawString(rpmFont, UString::format("RPM: %i", (int)m_fRPM));
+		g->popTransform();
+	}
+}
+
+void OsuSpinner::update(long curPos)
+{
+	OsuHitObject::update(curPos);
+
+	if (m_beatmap->isPaused())
+		return;
+
+	// if we have not been clicked yet, check if we are in the timeframe of a miss, also handle auto and relax
+	if (!m_bFinished)
+	{
+		// handle spinner ending
+		if (curPos >= m_iTime + m_iObjectDuration)
+		{
+			onHit();
+			return;
+		}
+
+		// HACKHACK: added 0.75 multiplier until i fix the rotation logic frametime bullshit code from opsu
+		m_fRotationsNeeded = (int)(((float)m_iObjectDuration / 1000.0f * OsuGameRules::getSpinnerSpins(m_beatmap))*0.75f) * (std::min(1.0f / m_beatmap->getOsu()->getSpeedMultiplier(), 1.0f));
+
+		float fixedRate = /*(1.0f / convar->getConVarByName("fps_max")->getFloat())*/engine->getFrameTime();
+
+		const float DELTA_UPDATE_TIME = (fixedRate * 1000.0f);
+		const float AUTO_MULTIPLIER = (1.0f / 20.0f);
+		//const float MAX_ANG_DIFF = ((1000.0f/60.0f) * AUTO_MULTIPLIER);
+
+		// scale percent calculation
+		long delta = (long)m_iTime - (long)curPos;
+		m_fPercent = 1.0f - clamp<float>((float)delta / -(float)(m_iObjectDuration), 0.0f, 1.0f);
+
+		// handle auto, mouse spinning movement
+		float angleDiff = 0;
+		if (m_beatmap->getOsu()->getModAuto() || m_beatmap->getOsu()->getModAutopilot() || m_beatmap->getOsu()->getModSpunout())
+			angleDiff = engine->getFrameTime() * 1000.0f * AUTO_MULTIPLIER * m_beatmap->getOsu()->getSpeedMultiplier();
+		else // user spin
+		{
+			Vector2 mouseDelta = engine->getMouse()->getPos() - m_beatmap->osuCoords2Pixels(Vector2(OsuGameRules::OSU_COORD_WIDTH/2, OsuGameRules::OSU_COORD_HEIGHT/2));
+			float currentMouseAngle = (float) atan2(mouseDelta.y, mouseDelta.x);
+			angleDiff = (currentMouseAngle - m_fLastMouseAngle);
+			if (std::abs(angleDiff) > 0.001f)
+				m_fLastMouseAngle = currentMouseAngle;
+			else
+				angleDiff = 0;
+		}
+
+		// handle RPM visibility
+		if (curPos >= m_iTime)
+			m_bDrawRPM = true;
+		else
+			m_bDrawRPM = false;
+
+		// handle spinning
+		// HACKHACK: rewrite this
+		if (delta <= 0)
+		{
+			bool isSpinning = m_beatmap->isClickHeld() || m_beatmap->getOsu()->getModAuto() || m_beatmap->getOsu()->getModRelax() || m_beatmap->getOsu()->getModSpunout();
+
+			m_fDeltaOverflow += engine->getFrameTime() * 1000.0f;
+
+			if (angleDiff < -PI)
+				angleDiff += 2*PI;
+			else if (angleDiff > PI)
+				angleDiff -= 2*PI;
+
+			if (isSpinning)
+				m_fDeltaAngleOverflow += angleDiff;
+
+			while (m_fDeltaOverflow >= DELTA_UPDATE_TIME)
+			{
+				// spin caused by the cursor
+				float deltaAngle = 0;
+				if (isSpinning)
+				{
+					deltaAngle = m_fDeltaAngleOverflow * DELTA_UPDATE_TIME / m_fDeltaOverflow;
+					m_fDeltaAngleOverflow -= deltaAngle;
+					//deltaAngle = clamp<float>(deltaAngle, -MAX_ANG_DIFF, MAX_ANG_DIFF);
+				}
+
+				m_fDeltaOverflow -= DELTA_UPDATE_TIME;
+
+				m_fSumDeltaAngle -= m_storedDeltaAngles[m_iDeltaAngleIndex];
+				m_fSumDeltaAngle += deltaAngle;
+				m_storedDeltaAngles[m_iDeltaAngleIndex++] = deltaAngle;
+				m_iDeltaAngleIndex %= m_iMaxStoredDeltaAngles;
+
+				float rotationAngle = m_fSumDeltaAngle / m_iMaxStoredDeltaAngles;
+				//rotationAngle = clamp<float>(rotationAngle, -MAX_ANG_DIFF, MAX_ANG_DIFF);
+				float rotationPerSec = rotationAngle * (1000.0f / DELTA_UPDATE_TIME) / (2.0f*PI);
+
+				///m_fRPM = std::abs(rotationPerSec*60.0f);
+				m_fRPM += std::abs(rotationPerSec*60.0f);
+				m_fRPM /= 2.0;
+				m_fRPM = std::min(m_fRPM, 477.0f);
+
+				if (std::abs(rotationAngle) > 0.0001f)
+					rotate(rotationAngle);
+				///if (std::abs(rotationAngle) > 0.00001f)
+				///	data.changeHealth(DELTA_UPDATE_TIME * m_beatmap->getSelectedDifficulty()->OD);
+			}
+
+
+			m_fRatio = m_fRotations / (m_fRotationsNeeded*360.0f);
+			///debugLog("ratio = %f, rotations = %f, rotationsneeded = %f, sumdeltaangle = %f, maxStoredDeltaAngles = %i\n", m_fRatio, m_fRotations/360.0f, m_fRotationsNeeded/360.0f, m_fSumDeltaAngle, m_iMaxStoredDeltaAngles);
+		}
+	}
+}
+
+void OsuSpinner::onClickEvent(Vector2 cursorPos, std::vector<OsuBeatmap::CLICK> &clicks)
+{
+	if (m_bFinished)
+		return;
+
+	// needed for nightmare mod
+	if (m_bVisible && !m_bClickedOnce)
+	{
+		m_bClickedOnce = true;
+		m_beatmap->consumeClickEvent();
+	}
+}
+
+void OsuSpinner::onReset(long curPos)
+{
+	OsuHitObject::onReset(curPos);
+
+	m_bClickedOnce = false;
+
+	m_fRPM = 0.0f;
+	m_fDrawRot = 0.0f;
+	m_fRotations = 0.0f;
+	m_fDeltaOverflow = 0.0f;
+	m_fSumDeltaAngle = 0.0f;
+	m_iDeltaAngleIndex = 0;
+	m_fDeltaAngleOverflow = 0.0f;
+	m_fRatio = 0.0f;
+
+	// spinners don't need misaims
+	m_bMisAim = true;
+
+	for (int i=0; i<m_iMaxStoredDeltaAngles; i++)
+	{
+		m_storedDeltaAngles[i] = 0.0f;
+	}
+
+	if (curPos > m_iTime + m_iObjectDuration)
+		m_bFinished = true;
+	else
+		m_bFinished = false;
+}
+
+void OsuSpinner::onHit()
+{
+	///debugLog("ratio = %f\n", m_fRatio);
+	m_bDrawRPM = false;
+
+	// calculate hit result
+	OsuBeatmap::HIT result = OsuBeatmap::HIT_NULL;
+	if (m_fRatio >= 1.0f)
+		result = OsuBeatmap::HIT_300;
+	else if (m_fRatio >= 0.9f && !OsuGameRules::osu_mod_ming3012.getBool())
+		result = OsuBeatmap::HIT_100;
+	else if (m_fRatio >= 0.75f)
+		result = OsuBeatmap::HIT_50;
+	else
+		result = OsuBeatmap::HIT_MISS;
+
+	// sound and hit animation
+	if (result == OsuBeatmap::HIT_MISS)
+	{
+		if (m_beatmap->getCombo() > 20)
+			engine->getSound()->play(m_beatmap->getSkin()->getCombobreak());
+	}
+	else
+		m_beatmap->getSkin()->playHitCircleSound(m_iSampleType);
+
+	// add it, and we are finished
+	addHitResult(result, 0, m_vRawPos);
+	m_bFinished = true;
+
+	engine->getSound()->stop(m_beatmap->getSkin()->getSpinnerSpinSound());
+}
+
+void OsuSpinner::rotate(float rad)
+{
+	m_fDrawRot += rad2deg(rad);
+
+	rad = std::abs(rad);
+	float newRotations = m_fRotations + rad2deg(rad);
+
+	// added one whole rotation...
+	if (floor(newRotations/360.0f) > m_fRotations/360.0f)
+	{
+		//TODO seems to give 1100 points per spin but also an extra 100 for some spinners
+		if ((int)(newRotations/360.0f) > (int)(m_fRotationsNeeded)+1)
+		{
+			// extra rotations
+			///data.changeScore(1000);
+			engine->getSound()->play(m_beatmap->getSkin()->getSpinnerBonus());
+		}
+		///data.changeScore(100);
+		///engine->getSound()->play(m_beatmap->getSkin()->getSpinnerSpinSound());
+	}
+
+	// spinner sound
+	if (!m_beatmap->getSkin()->getSpinnerSpinSound()->isPlaying())
+		engine->getSound()->play(m_beatmap->getSkin()->getSpinnerSpinSound());
+	float frequency = 20000.0f + (int)(clamp<float>(m_fRatio, 0.0f, 1.0f)*40000.0f);
+	m_beatmap->getSkin()->getSpinnerSpinSound()->setFrequency(frequency);
+
+	m_fRotations = newRotations;
+}
+
+Vector2 OsuSpinner::getAutoCursorPos(long curPos)
+{
+	// calculate point
+	long delta = 0;
+	if (curPos <= m_iTime)
+		delta = 0;
+	else if (curPos >= m_iTime + m_iObjectDuration)
+		delta = m_iObjectDuration;
+	else
+		delta = curPos - m_iTime;
+
+	Vector2 actualPos = m_beatmap->osuCoords2Pixels(m_vRawPos);
+	const float AUTO_MULTIPLIER = (1.0f / 20.0f);
+	float multiplier = (m_beatmap->getOsu()->getModAuto() || m_beatmap->getOsu()->getModAutopilot()) ? AUTO_MULTIPLIER : 1.0f;
+	float angle = (delta * multiplier) - PI/2.0f;
+	float r = m_beatmap->getPlayfieldSize().y / 10.0f;
+	return Vector2((float) (actualPos.x + r * cos(angle)), (float) (actualPos.y + r * sin(angle)));
+}
