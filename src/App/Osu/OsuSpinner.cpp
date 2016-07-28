@@ -418,7 +418,7 @@ void OsuSpinner::onHit()
 		m_beatmap->getSkin()->playHitCircleSound(m_iSampleType);
 
 	// add it, and we are finished
-	addHitResult(result, 0, m_vRawPos);
+	addHitResult(result, 0, m_vRawPos, -1.0f);
 	m_bFinished = true;
 
 	engine->getSound()->stop(m_beatmap->getSkin()->getSpinnerSpinSound());

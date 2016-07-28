@@ -132,7 +132,7 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen()
 	addExperimentalCheckbox("Wobble", "Playfield rotates and moves.", convar->getConVarByName("osu_mod_wobble"));
 	addExperimentalCheckbox("AR Wobble", "Approach rate oscillates between -1 and +1.", convar->getConVarByName("osu_mod_arwobble"));
 	addExperimentalCheckbox("MinG3012", "No 100s, only 300s or 50s. Git gud.", convar->getConVarByName("osu_mod_ming3012"));
-	addExperimentalCheckbox("Timewarp", "Speed increases from 1x to 1.5x over the course of the beatmap.", convar->getConVarByName("osu_mod_timewarp"));
+	addExperimentalCheckbox("Timewarp", "Speed increases from 100% to 150% over the course of the beatmap.", convar->getConVarByName("osu_mod_timewarp"));
 	addExperimentalCheckbox("AR Timewarp", "Approach rate decreases from 100% to 50% over the course of the beatmap.", convar->getConVarByName("osu_mod_artimewarp"));
 	addExperimentalCheckbox("Minimize", "Circle size decreases from 100% to 50% over the course of the beatmap.", convar->getConVarByName("osu_mod_minimize"));
 	addExperimentalCheckbox("First Person", "Centered cursor.", convar->getConVarByName("osu_mod_fps"));
@@ -175,6 +175,7 @@ void OsuModSelector::updateButtons()
 	setModButtonOnGrid(1, 2, "autopilot", "Automatic cursor movement - just follow the rhythm.\n** UNRANKED **", m_osu->getSkin()->getSelectionModAutopilot());
 	setModButtonOnGrid(2, 2, "spunout", "Spinners will be automatically completed.", m_osu->getSkin()->getSelectionModSpunOut());
 	setModButtonOnGrid(3, 2, "auto", "Watch a perfect automated play through the song.", m_osu->getSkin()->getSelectionModAutoplay());
+	setModButtonOnGrid(4, 2, "target", "Accuracy is based on the distance to the center of all hitobjects.\n300s still require at least being in the hit window of a 100 in addition to the rule above.", m_osu->getSkin()->getSelectionModTarget());
 }
 
 OsuModSelector::~OsuModSelector()
@@ -956,7 +957,7 @@ void OsuModSelectorModButton::update()
 	CBaseUIImageButton::update();
 	if (!m_bVisible) return;
 
-	if (isMouseInside())
+	if (isMouseInside() && m_bAvailable)
 	{
 		m_osu->getTooltipOverlay()->begin();
 		for (int i=0; i<m_tooltipTextLines.size(); i++)

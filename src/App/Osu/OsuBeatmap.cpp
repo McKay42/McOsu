@@ -77,6 +77,7 @@ ConVar osu_mod_minimize_multiplier("osu_mod_minimize_multiplier", 0.5f);
 ConVar osu_mod_fps("osu_mod_fps", false);
 ConVar osu_mod_jigsaw1("osu_mod_jigsaw1", false);
 ConVar osu_mod_jigsaw2("osu_mod_jigsaw2", false);
+ConVar osu_mod_jigsaw_followcircle_radius_factor("osu_mod_jigsaw_followcircle_radius_factor", 0.0f);
 ConVar osu_mod_wobble2("osu_mod_wobble2", false);
 ConVar osu_mod_artimewarp("osu_mod_artimewarp", false);
 ConVar osu_mod_artimewarp_multiplier("osu_mod_artimewarp_multiplier", 0.5f);
@@ -437,7 +438,8 @@ void OsuBeatmap::update()
 	{
 		if (m_hitobjects.size() > 0 && m_iCurMusicPos > m_hitobjects[0]->getTime())
 		{
-			float speed = 1.0f + ((double)(m_iCurMusicPos - m_hitobjects[0]->getTime()) / (double)(m_hitobjects[m_hitobjects.size()-1]->getTime() + m_hitobjects[m_hitobjects.size()-1]->getDuration() - m_hitobjects[0]->getTime()))*(osu_mod_timewarp_multiplier.getFloat()-1.0f);
+			const float percentFinished = ((double)(m_iCurMusicPos - m_hitobjects[0]->getTime()) / (double)(m_hitobjects[m_hitobjects.size()-1]->getTime() + m_hitobjects[m_hitobjects.size()-1]->getDuration() - m_hitobjects[0]->getTime()));
+			const float speed = m_osu->getSpeedMultiplier() + percentFinished*m_osu->getSpeedMultiplier()*(osu_mod_timewarp_multiplier.getFloat()-1.0f);
 			m_music->setSpeed(speed);
 		}
 	}
@@ -1109,7 +1111,7 @@ void OsuBeatmap::updateHitobjectMetrics()
 	m_fNumberScale = (m_fRawHitcircleDiameter / (160.0f * (skin->isDefault12x() ? 2.0f : 1.0f))) * osuCoordScaleMultiplier * osu_number_scale_multiplier.getFloat();
 	m_fHitcircleOverlapScale = (m_fRawHitcircleDiameter / (160.0f)) * osuCoordScaleMultiplier * osu_number_scale_multiplier.getFloat();
 
-	m_fSliderFollowCircleDiameter = m_fHitcircleDiameter * (m_osu->getModNM() || osu_mod_jigsaw2.getBool() ? 1.0f : (259.0f / 128.0f));
+	m_fSliderFollowCircleDiameter = m_fHitcircleDiameter * (m_osu->getModNM() || osu_mod_jigsaw2.getBool() ? (1.0f*(1.0f - osu_mod_jigsaw_followcircle_radius_factor.getFloat()) + osu_mod_jigsaw_followcircle_radius_factor.getFloat()*(259.0f / 128.0f)) : (259.0f / 128.0f));
 	m_fSliderFollowCircleScale = m_fSliderFollowCircleDiameter / skin->getSliderFollowCircle()->getWidth();
 }
 

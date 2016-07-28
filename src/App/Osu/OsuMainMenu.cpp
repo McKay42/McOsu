@@ -23,7 +23,7 @@
 #include "CBaseUIContainer.h"
 #include "CBaseUIButton.h"
 
-#define MCOSU_VERSION "Alpha 18"
+#define MCOSU_VERSION "Alpha 19"
 #define MCOSU_BANNER "-WIP-"
 
 

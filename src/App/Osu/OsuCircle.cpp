@@ -64,6 +64,22 @@ void OsuCircle::drawCircle(Graphics *g, OsuSkin *skin, Vector2 pos, float hitcir
 		drawHitCircleOverlay(g, skin, pos, circleOverlayImageScale, alpha);
 }
 
+void OsuCircle::drawCircle(Graphics *g, OsuSkin *skin, Vector2 pos, float hitcircleDiameter, Color color, float alpha)
+{
+	// circle
+	const float circleImageScale = hitcircleDiameter / (float) skin->getHitCircle()->getWidth();
+	drawHitCircle(g, skin->getHitCircle(), pos, color, circleImageScale, alpha);
+
+	// overlay
+	const float circleOverlayImageScale = hitcircleDiameter / (float) skin->getHitCircleOverlay()->getWidth();
+	if (!skin->getHitCircleOverlayAboveNumber())
+		drawHitCircleOverlay(g, skin, pos, circleOverlayImageScale, alpha);
+
+	// overlay
+	if (skin->getHitCircleOverlayAboveNumber())
+		drawHitCircleOverlay(g, skin, pos, circleOverlayImageScale, alpha);
+}
+
 void OsuCircle::drawSliderCircle(Graphics *g, OsuBeatmap *beatmap, Image *hitCircleImage, Vector2 rawPos, int number, int colorCounter, float approachScale, float alpha, float numberAlpha, bool drawNumber, bool overrideHDApproachCircle)
 {
 	if (alpha <= 0.0f)
@@ -235,6 +251,11 @@ OsuCircle::OsuCircle(int x, int y, long time, int sampleType, int comboNumber, i
 	m_fHitAnimation = 0.0f;
 }
 
+OsuCircle::~OsuCircle()
+{
+	onReset(0);
+}
+
 void OsuCircle::draw(Graphics *g)
 {
 	OsuHitObject::draw(g);
@@ -295,14 +316,21 @@ void OsuCircle::update(long curPos)
 			{
 				if (curPos >= m_iTime)
 				{
-					const float cursorDelta = (m_beatmap->getCursorPos() - m_beatmap->osuCoords2Pixels(m_vRawPos)).length();
+					const Vector2 pos = m_beatmap->osuCoords2Pixels(m_vRawPos);
+					const float cursorDelta = (m_beatmap->getCursorPos() - pos).length();
 
 					if (cursorDelta < m_beatmap->getHitcircleDiameter()/2.0f)
 					{
 						const long delta = curPos - (long)m_iTime;
+
 						OsuBeatmap::HIT result = OsuGameRules::getHitResult(delta, m_beatmap);
 						if (result != OsuBeatmap::HIT_NULL)
-							onHit(result, delta);
+						{
+							const float targetDelta = cursorDelta / (m_beatmap->getHitcircleDiameter()/2.0f);
+							const float targetAngle = rad2deg(atan2(m_beatmap->getCursorPos().y - pos.y, m_beatmap->getCursorPos().x - pos.x));
+
+							onHit(result, delta, targetDelta, targetAngle);
+						}
 					}
 				}
 			}
@@ -332,7 +360,8 @@ void OsuCircle::onClickEvent(Vector2 cursorPos, std::vector<OsuBeatmap::CLICK> &
 	if (m_bFinished)
 		return;
 
-	const float cursorDelta = (cursorPos - m_beatmap->osuCoords2Pixels(m_vRawPos)).length();
+	const Vector2 pos = m_beatmap->osuCoords2Pixels(m_vRawPos);
+	const float cursorDelta = (cursorPos - pos).length();
 
 	if (cursorDelta < m_beatmap->getHitcircleDiameter()/2.0f)
 	{
@@ -341,13 +370,16 @@ void OsuCircle::onClickEvent(Vector2 cursorPos, std::vector<OsuBeatmap::CLICK> &
 		OsuBeatmap::HIT result = OsuGameRules::getHitResult(delta, m_beatmap);
 		if (result != OsuBeatmap::HIT_NULL)
 		{
+			const float targetDelta = cursorDelta / (m_beatmap->getHitcircleDiameter()/2.0f);
+			const float targetAngle = rad2deg(atan2(cursorPos.y - pos.y, cursorPos.x - pos.x));
+
 			m_beatmap->consumeClickEvent();
-			onHit(result, delta);
+			onHit(result, delta, targetDelta, targetAngle);
 		}
 	}
 }
 
-void OsuCircle::onHit(OsuBeatmap::HIT result, long delta)
+void OsuCircle::onHit(OsuBeatmap::HIT result, long delta, float targetDelta, float targetAngle)
 {
 	// sound and hit animation
 	if (result == OsuBeatmap::HIT_MISS)
@@ -364,7 +396,7 @@ void OsuCircle::onHit(OsuBeatmap::HIT result, long delta)
 	}
 
 	// add it, and we are finished
-	addHitResult(result, delta, m_vRawPos);
+	addHitResult(result, delta, m_vRawPos, targetDelta, targetAngle);
 	m_bFinished = true;
 }
 

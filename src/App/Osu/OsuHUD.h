@@ -13,6 +13,7 @@
 class Osu;
 class McFont;
 class ConVar;
+class Image;
 
 class OsuHUD : public OsuScreen
 {
@@ -35,6 +36,7 @@ public:
 
 	void animateCombo();
 	void addHitError(long delta, bool miss = false, bool misaim = false);
+	void addTarget(float delta, float angle);
 
 	void animateVolumeChange();
 
@@ -56,6 +58,7 @@ private:
 	void drawHitErrorBar(Graphics *g, float hitWindow300, float hitWindow100, float hitWindow50);
 	void drawProgressBar(Graphics *g, float percent, bool waiting);
 	void drawStatistics(Graphics *g, int nps, int nd);
+	void drawTargetHeatmap(Graphics *g, float hitcircleDiameter);
 
 	void drawNPS(Graphics *g, int nps);
 	void drawND(Graphics *g, int nd);
@@ -65,6 +68,9 @@ private:
 
 	ConVar *m_host_timescale_ref;
 	ConVar *m_osu_volume_master_ref;
+	ConVar *m_osu_mod_target_300_percent_ref;
+	ConVar *m_osu_mod_target_100_percent_ref;
+	ConVar *m_osu_mod_target_50_percent_ref;
 
 	float m_fAccuracyXOffset;
 	float m_fAccuracyYOffset;
@@ -82,8 +88,8 @@ private:
 	// hit error bar
 	struct HITERROR
 	{
-		long delta;
 		float time;
+		long delta;
 		bool miss;
 		bool misaim;
 	};
@@ -102,6 +108,15 @@ private:
 		float time;
 	};
 	std::vector<CURSORTRAIL> m_cursorTrail;
+
+	// target heatmap
+	struct TARGET
+	{
+		float time;
+		float delta;
+		float angle;
+	};
+	std::vector<TARGET> m_targets;
 };
 
 #endif

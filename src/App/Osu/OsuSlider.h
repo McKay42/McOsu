@@ -48,7 +48,7 @@ private:
 
 	void updateAnimations(long curPos);
 
-	void onHit(OsuBeatmap::HIT result, long delta, bool startOrEnd);
+	void onHit(OsuBeatmap::HIT result, long delta, bool startOrEnd, float targetDelta = 0.0f, float targetAngle = 0.0f);
 	void onRepeatHit(bool successful, bool sliderend);
 	void onTickHit(bool successful, int tickIndex);
 	void onSliderBreak();
