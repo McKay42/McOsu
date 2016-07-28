@@ -114,6 +114,7 @@ public:
 	inline Image *getSelectionModSpunOut() {return m_selectionModSpunOut;}
 	inline Image *getSelectionModAutoplay() {return m_selectionModAutoplay;}
 	inline Image *getSelectionModNightmare() {return m_selectionModNightmare;}
+	inline Image *getSelectionModTarget() {return m_selectionModTarget;}
 
 	inline Image *getPauseContinue() {return m_pauseContinue;}
 	inline Image *getPauseRetry() {return m_pauseRetry;}
@@ -142,6 +143,7 @@ public:
 	inline Image *getBeatmapImportSpinner() {return m_beatmapImportSpinner;}
 	inline Image *getBeatmapImportTop() {return m_beatmapImportTop;}
 	inline Image *getCircleEmpty() {return m_circleEmpty;}
+	inline Image *getCircleFull() {return m_circleFull;}
 
 	inline Sound *getSpinnerBonus() {return m_spinnerBonus;}
 	inline Sound *getSpinnerSpinSound() {return m_spinnerSpinSound;}
@@ -295,6 +297,7 @@ private:
 	Image *m_selectionModSpunOut;
 	Image *m_selectionModAutoplay;
 	Image *m_selectionModNightmare;
+	Image *m_selectionModTarget;
 
 	Image *m_pauseContinue;
 	Image *m_pauseRetry;
@@ -323,6 +326,7 @@ private:
 	Image *m_beatmapImportSpinner;
 	Image *m_beatmapImportTop;
 	Image *m_circleEmpty;
+	Image *m_circleFull;
 
 	Sound *m_normalHitNormal;
 	Sound *m_normalHitWhistle;

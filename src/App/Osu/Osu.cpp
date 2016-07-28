@@ -130,6 +130,7 @@ Osu::Osu()
 	m_bModAutopilot = false;
 	m_bModRelax = false;
 	m_bModSpunout = false;
+	m_bModTarget = false;
 	m_bModDT = false;
 	m_bModNC = false;
 	m_bModHT = false;
@@ -399,7 +400,7 @@ void Osu::update()
 	}
 
 	// handle mousewheel volume change
-	if (((m_songBrowser != NULL && !m_songBrowser->isVisible()) || ((m_songBrowser2 != NULL && !m_songBrowser2->isVisible())) ) && !m_optionsMenu->isVisible())
+	if (((m_songBrowser != NULL && (!m_songBrowser->isVisible() || engine->getKeyboard()->isAltDown())) || ((m_songBrowser2 != NULL && (!m_songBrowser2->isVisible() || engine->getKeyboard()->isAltDown()))) ) && !m_optionsMenu->isVisible())
 	{
 		int wheelDelta = engine->getMouse()->getWheelDeltaVertical();
 		if (wheelDelta != 0)
@@ -418,6 +419,7 @@ void Osu::updateMods()
 	m_bModAutopilot = osu_mods.getString().find("autopilot") != -1;
 	m_bModRelax = osu_mods.getString().find("relax") != -1;
 	m_bModSpunout = osu_mods.getString().find("spunout") != -1;
+	m_bModTarget = osu_mods.getString().find("target") != -1;
 	m_bModDT = osu_mods.getString().find("dt") != -1;
 	m_bModNC = osu_mods.getString().find("nc") != -1;
 	m_bModHT = osu_mods.getString().find("ht") != -1;

@@ -170,6 +170,8 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSection("Input");
 
 	addSubSection("Mouse");
+	addSlider("Sensitivity:", 0.4f, 6.0f, convar->getConVarByName("mouse_sensitivity"));
+	addCheckbox("Raw input", convar->getConVarByName("mouse_raw_input"));
 	addCheckbox("Confine Cursor (Windowed)", convar->getConVarByName("osu_confine_cursor_windowed"));
 	addCheckbox("Confine Cursor (Fullscreen)", convar->getConVarByName("osu_confine_cursor_fullscreen"));
 	addCheckbox("Disable Mouse Buttons in Play Mode", convar->getConVarByName("osu_disable_mousebuttons"));

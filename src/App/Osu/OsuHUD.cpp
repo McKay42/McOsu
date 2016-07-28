@@ -16,8 +16,10 @@
 #include "Osu.h"
 #include "OsuSkin.h"
 #include "OsuBeatmap.h"
-#include "OsuHitObject.h"
 #include "OsuGameRules.h"
+
+#include "OsuHitObject.h"
+#include "OsuCircle.h"
 
 #define NUM_FPS_AVG 35
 
@@ -38,6 +40,7 @@ ConVar osu_draw_progressbar("osu_draw_progressbar", true);
 ConVar osu_draw_combo("osu_draw_combo", true);
 ConVar osu_draw_accuracy("osu_draw_accuracy", true);
 ConVar osu_draw_statistics("osu_draw_statistics", false);
+ConVar osu_draw_target_heatmap("osu_draw_target_heatmap", true);
 
 ConVar osu_combo_anim1_duration("osu_combo_anim1_duration", 0.15f);
 ConVar osu_combo_anim1_size("osu_combo_anim1_size", 0.15f);
@@ -50,6 +53,9 @@ OsuHUD::OsuHUD(Osu *osu)
 
 	m_host_timescale_ref = convar->getConVarByName("host_timescale");
 	m_osu_volume_master_ref = convar->getConVarByName("osu_volume_master");
+	m_osu_mod_target_300_percent_ref = convar->getConVarByName("osu_mod_target_300_percent");
+	m_osu_mod_target_100_percent_ref = convar->getConVarByName("osu_mod_target_100_percent");
+	m_osu_mod_target_50_percent_ref = convar->getConVarByName("osu_mod_target_50_percent");
 
 	m_tempFont = engine->getResourceManager()->getFont("FONT_DEFAULT");
 
@@ -103,6 +109,9 @@ void OsuHUD::draw(Graphics *g)
 
 		if (osu_draw_hiterrorbar.getBool() && !m_osu->getBeatmap()->isSpinnerActive())
 			drawHitErrorBar(g, OsuGameRules::getHitWindow300(m_osu->getBeatmap()), OsuGameRules::getHitWindow100(m_osu->getBeatmap()), OsuGameRules::getHitWindow50(m_osu->getBeatmap()));
+
+		if (m_osu->getModTarget() && osu_draw_target_heatmap.getBool())
+			drawTargetHeatmap(g, m_osu->getBeatmap()->getHitcircleDiameter());
 	}
 
 	if (m_osu->getBeatmap()->shouldFlashWarningArrows())
@@ -146,6 +155,13 @@ void OsuHUD::update()
 				m_fCurFps += 1.0f/m_fpsAvg[i];
 		}
 		m_fCurFps /= (float)NUM_FPS_AVG;
+	}
+
+	// target heatmap cleanup
+	if (m_osu->getModTarget())
+	{
+		if (m_targets.size() > 0 && engine->getTime() > m_targets[0].time)
+			m_targets.erase(m_targets.begin());
 	}
 }
 
@@ -824,6 +840,71 @@ void OsuHUD::drawND(Graphics *g, int nd)
 	g->popTransform();
 }
 
+void OsuHUD::drawTargetHeatmap(Graphics *g, float hitcircleDiameter)
+{
+	const Vector2 center = Vector2((int)(hitcircleDiameter/2.0f + 5.0f), (int)(hitcircleDiameter/2.0f + 5.0f));
+
+	const int brightnessSub = 0;
+	const Color color300 = COLOR(255, 0, 255-brightnessSub, 255-brightnessSub);
+	const Color color100 = COLOR(255, 0, 255-brightnessSub, 0);
+	const Color color50 = COLOR(255, 255-brightnessSub, 165-brightnessSub, 0);
+	const Color colorMiss = COLOR(255, 255-brightnessSub, 0, 0);
+
+	OsuCircle::drawCircle(g, m_osu->getSkin(), center, hitcircleDiameter, COLOR(255, 50, 50, 50));
+
+	const int size = hitcircleDiameter*0.075f;
+	for (int i=0; i<m_targets.size(); i++)
+	{
+		const float delta = m_targets[i].delta;
+
+		const float overlap = 0.15f;
+		Color color;
+		if (delta < m_osu_mod_target_300_percent_ref->getFloat()-overlap)
+			color = color300;
+		else if (delta < m_osu_mod_target_300_percent_ref->getFloat()+overlap)
+		{
+			const float factor300 = (m_osu_mod_target_300_percent_ref->getFloat() + overlap - delta) / (2.0f*overlap);
+			const float factor100 = 1.0f - factor300;
+			color = COLORf(1.0f, COLOR_GET_Rf(color300)*factor300 + COLOR_GET_Rf(color100)*factor100, COLOR_GET_Gf(color300)*factor300 + COLOR_GET_Gf(color100)*factor100, COLOR_GET_Bf(color300)*factor300 + COLOR_GET_Bf(color100)*factor100);
+		}
+		else if (delta < m_osu_mod_target_100_percent_ref->getFloat()-overlap)
+			color = color100;
+		else if (delta < m_osu_mod_target_100_percent_ref->getFloat()+overlap)
+		{
+			const float factor100 = (m_osu_mod_target_100_percent_ref->getFloat() + overlap - delta) / (2.0f*overlap);
+			const float factor50 = 1.0f - factor100;
+			color = COLORf(1.0f, COLOR_GET_Rf(color100)*factor100 + COLOR_GET_Rf(color50)*factor50, COLOR_GET_Gf(color100)*factor100 + COLOR_GET_Gf(color50)*factor50, COLOR_GET_Bf(color100)*factor100 + COLOR_GET_Bf(color50)*factor50);
+		}
+		else if (delta < m_osu_mod_target_50_percent_ref->getFloat())
+			color = color50;
+		else
+			color = colorMiss;
+
+		g->setColor(color);
+		g->setAlpha(clamp<float>((m_targets[i].time - engine->getTime())/3.5f, 0.0f, 1.0f));
+
+		const float theta = deg2rad(m_targets[i].angle);
+		const float cs = cos(theta);
+		const float sn = sin(theta);
+
+		Vector2 up = Vector2(-1, 0);
+		Vector2 offset;
+		offset.x = up.x * cs - up.y * sn;
+		offset.y = up.x * sn + up.y * cs;
+		offset.normalize();
+		offset *= (delta*(hitcircleDiameter/2.0f));
+
+		//g->fillRect(center.x-size/2 - offset.x, center.y-size/2 - offset.y, size, size);
+
+		const float imageScale = m_osu->getImageScaleToFitResolution(m_osu->getSkin()->getCircleFull(), Vector2(size, size));
+		g->pushTransform();
+		g->scale(imageScale, imageScale);
+		g->translate(center.x - offset.x, center.y - offset.y);
+		g->drawImage(m_osu->getSkin()->getCircleFull());
+		g->popTransform();
+	}
+}
+
 void OsuHUD::animateCombo()
 {
 	m_fComboAnim1 = 0.0f;
@@ -851,6 +932,16 @@ void OsuHUD::addHitError(long delta, bool miss, bool misaim)
 			i--;
 		}
 	}
+}
+
+void OsuHUD::addTarget(float delta, float angle)
+{
+	TARGET t;
+	t.time = engine->getTime() + 3.5f;
+	t.delta = delta;
+	t.angle = angle;
+
+	m_targets.push_back(t);
 }
 
 void OsuHUD::animateVolumeChange()

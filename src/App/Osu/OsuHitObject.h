@@ -24,7 +24,7 @@ public:
 	virtual void update(long curPos);
 
 	virtual void updateStackPosition(float stackOffset) = 0;
-	void addHitResult(OsuBeatmap::HIT result, long delta, Vector2 posRaw, bool ignoreOnHitErrorBar = false, bool ignoreCombo = false);
+	void addHitResult(OsuBeatmap::HIT result, long delta, Vector2 posRaw, float targetDelta = 0.0f, float targetAngle = 0.0f, bool ignoreOnHitErrorBar = false, bool ignoreCombo = false);
 	void misAimed() {m_bMisAim = true;}
 
 	void setStack(int stack) {m_iStack = stack;}
@@ -78,9 +78,14 @@ protected:
 	long m_iAutopilotDelta;
 
 private:
-	float m_fHitResultAnim;
-	Vector2 m_vHitResultPosRaw;
-	OsuBeatmap::HIT m_hitResult;
+	struct HITRESULTANIM
+	{
+		float anim;
+		Vector2 rawPos;
+		OsuBeatmap::HIT result;
+	};
+
+	std::vector<HITRESULTANIM> m_hitResults;
 };
 
 #endif

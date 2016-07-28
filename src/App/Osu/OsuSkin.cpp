@@ -127,6 +127,7 @@ OsuSkin::OsuSkin(Osu *osu, UString filepath)
 	m_selectionModSpunOut = m_missingTexture;
 	m_selectionModAutoplay = m_missingTexture;
 	m_selectionModNightmare = m_missingTexture;
+	m_selectionModTarget = m_missingTexture;
 
 	m_pauseContinue = m_missingTexture;
 	m_pauseRetry = m_missingTexture;
@@ -155,6 +156,7 @@ OsuSkin::OsuSkin(Osu *osu, UString filepath)
 	m_beatmapImportSpinner = m_missingTexture;
 	m_beatmapImportTop = m_missingTexture;
 	m_circleEmpty = m_missingTexture;
+	m_circleFull = m_missingTexture;
 
 	m_normalHitNormal = NULL;
 	m_normalHitWhistle = NULL;
@@ -358,6 +360,7 @@ void OsuSkin::load()
 	checkLoadImage(&m_selectionModSpunOut, "selection-mod-spunout", "OSU_SKIN_SELECTION_MOD_SPUNOUT");
 	checkLoadImage(&m_selectionModAutoplay, "selection-mod-autoplay", "OSU_SKIN_SELECTION_MOD_AUTOPLAY");
 	checkLoadImage(&m_selectionModNightmare, "selection-mod-nightmare", "OSU_SKIN_SELECTION_MOD_NIGHTMARE");
+	checkLoadImage(&m_selectionModTarget, "selection-mod-target", "OSU_SKIN_SELECTION_MOD_TARGET");
 
 	checkLoadImage(&m_pauseContinue, "pause-continue", "OSU_SKIN_PAUSE_CONTINUE");
 	checkLoadImage(&m_pauseRetry, "pause-retry", "OSU_SKIN_PAUSE_RETRY");
@@ -383,6 +386,7 @@ void OsuSkin::load()
 	checkLoadImage(&m_beatmapImportSpinner, "beatmapimport-spinner", "OSU_SKIN_BEATMAP_IMPORT_SPINNER");
 	checkLoadImage(&m_beatmapImportTop, "beatmapimport-top", "OSU_SKIN_BEATMAP_IMPORT_TOP");
 	checkLoadImage(&m_circleEmpty, "circle-empty", "OSU_SKIN_CIRCLE_EMPTY");
+	checkLoadImage(&m_circleFull, "circle-full", "OSU_SKIN_CIRCLE_FULL");
 
 	// sounds
 
