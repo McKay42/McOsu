@@ -1262,8 +1262,14 @@ void OsuSongBrowser2::onKeyDown(KeyboardEvent &key)
 	if (key == KEY_F5)
 		refreshBeatmaps();
 
+	// arrow keys volume
+	if (engine->getKeyboard()->isAltDown() && key == (KEYCODE)OsuKeyBindings::INCREASE_VOLUME.getInt())
+		m_osu->volumeUp();
+	if (engine->getKeyboard()->isAltDown() && key == (KEYCODE)OsuKeyBindings::DECREASE_VOLUME.getInt())
+		m_osu->volumeDown();
+
 	// selection move
-	if (key == KEY_DOWN)
+	if (!engine->getKeyboard()->isAltDown() && key == KEY_DOWN)
 	{
 		std::vector<CBaseUIElement*> *elements = m_songBrowser->getContainer()->getAllBaseUIElementsPointer();
 		for (int i=0; i<elements->size(); i++)
@@ -1288,7 +1294,7 @@ void OsuSongBrowser2::onKeyDown(KeyboardEvent &key)
 		}
 	}
 
-	if (key == KEY_UP)
+	if (!engine->getKeyboard()->isAltDown() && key == KEY_UP)
 	{
 		std::vector<CBaseUIElement*> *elements = m_songBrowser->getContainer()->getAllBaseUIElementsPointer();
 		for (int i=0; i<elements->size(); i++)

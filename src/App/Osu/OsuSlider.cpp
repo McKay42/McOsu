@@ -153,14 +153,13 @@ OsuSlider::OsuSlider(char type, int repeat, float pixelLength, std::vector<Vecto
 
 OsuSlider::~OsuSlider()
 {
+	onReset(0);
 	SAFE_DELETE(m_curve);
 }
 
 void OsuSlider::draw(Graphics *g)
 {
 	if (m_points.size() <= 0) return;
-
-	OsuHitObject::draw(g);
 
 	OsuSkin *skin = m_beatmap->getSkin();
 
@@ -397,6 +396,8 @@ void OsuSlider::draw(Graphics *g)
 		}
 	}
 
+	OsuHitObject::draw(g);
+
 	// debug
 	/*
 	if (m_bVisible)
@@ -544,7 +545,8 @@ void OsuSlider::update(long curPos)
 			{
 				if (curPos >= m_iTime && m_bCursorInside)
 				{
-					float cursorDelta = (m_beatmap->getCursorPos() - m_beatmap->osuCoords2Pixels(m_points[0])).length();
+					const Vector2 pos = m_beatmap->osuCoords2Pixels(m_points[0]);
+					const float cursorDelta = (m_beatmap->getCursorPos() - pos).length();
 
 					if (cursorDelta < m_beatmap->getHitcircleDiameter()/2.0f)
 					{
@@ -553,8 +555,11 @@ void OsuSlider::update(long curPos)
 
 						if (result != OsuBeatmap::HIT_NULL)
 						{
+							const float targetDelta = cursorDelta / (m_beatmap->getHitcircleDiameter()/2.0f);
+							const float targetAngle = rad2deg(atan2(m_beatmap->getCursorPos().y - pos.y, m_beatmap->getCursorPos().x - pos.x));
+
 							m_startResult = result;
-							onHit(m_startResult, delta, false);
+							onHit(m_startResult, delta, false, targetDelta, targetAngle);
 						}
 					}
 				}
@@ -654,6 +659,8 @@ void OsuSlider::update(long curPos)
 				else
 					m_endResult = OsuBeatmap::HIT_MISS;
 
+				debugLog("percent = %f\n", percent);
+
 				onHit(m_endResult, 0, true); // delta doesn't matter here
 			}
 		}
@@ -726,24 +733,28 @@ void OsuSlider::onClickEvent(Vector2 cursorPos, std::vector<OsuBeatmap::CLICK> &
 
 	if (!m_bStartFinished)
 	{
-		float cursorDelta = (cursorPos - m_beatmap->osuCoords2Pixels(m_points[0])).length();
+		const Vector2 pos = m_beatmap->osuCoords2Pixels(m_points[0]);
+		const float cursorDelta = (cursorPos - pos).length();
 
 		if (cursorDelta < m_beatmap->getHitcircleDiameter()/2.0f)
 		{
-			long delta = (long)clicks[0].musicPos - (long)m_iTime;
+			const long delta = (long)clicks[0].musicPos - (long)m_iTime;
 
 			OsuBeatmap::HIT result = OsuGameRules::getHitResult(delta, m_beatmap);
 			if (result != OsuBeatmap::HIT_NULL)
 			{
+				const float targetDelta = cursorDelta / (m_beatmap->getHitcircleDiameter()/2.0f);
+				const float targetAngle = rad2deg(atan2(cursorPos.y - pos.y, cursorPos.x - pos.x));
+
 				m_beatmap->consumeClickEvent();
 				m_startResult = result;
-				onHit(m_startResult, delta, false);
+				onHit(m_startResult, delta, false, targetDelta, targetAngle);
 			}
 		}
 	}
 }
 
-void OsuSlider::onHit(OsuBeatmap::HIT result, long delta, bool startOrEnd)
+void OsuSlider::onHit(OsuBeatmap::HIT result, long delta, bool startOrEnd, float targetDelta, float targetAngle)
 {
 	if (m_points.size() == 0)
 		return;
@@ -781,11 +792,15 @@ void OsuSlider::onHit(OsuBeatmap::HIT result, long delta, bool startOrEnd)
 	if (!startOrEnd)
 	{
 		m_bStartFinished = true;
-		m_beatmap->addHitResult(result, delta, false, true);
+
+		if (!m_beatmap->getOsu()->getModTarget())
+			m_beatmap->addHitResult(result, delta, false, true);
+		else
+			addHitResult(result, delta, m_curve->pointAt(0.0f), targetDelta, targetAngle, false);
 	}
 	else
 	{
-		addHitResult(result, delta, m_curve->pointAt(1.0f), true, !m_bHeldTillEnd);
+		addHitResult(result, delta, m_curve->pointAt(1.0f), -1.0f, 0.0f, true, !m_bHeldTillEnd);
 		m_bStartFinished = true;
 		m_bEndFinished = true;
 		m_bFinished = true;

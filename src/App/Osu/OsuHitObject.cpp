@@ -15,6 +15,11 @@
 #include "Osu.h"
 #include "OsuSkin.h"
 #include "OsuGameRules.h"
+#include "OsuHUD.h"
+
+ConVar osu_mod_target_300_percent("osu_mod_target_300_percent", 0.5f);
+ConVar osu_mod_target_100_percent("osu_mod_target_100_percent", 0.7f);
+ConVar osu_mod_target_50_percent("osu_mod_target_50_percent", 0.95f);
 
 void OsuHitObject::drawHitResult(Graphics *g, OsuBeatmap *beatmap, Vector2 rawPos, OsuBeatmap::HIT result, float animPercent)
 {
@@ -82,9 +87,6 @@ OsuHitObject::OsuHitObject(long time, int sampleType, int comboNumber, int color
 	m_iHiddenDecayTime = 0;
 	m_iHiddenTimeDiff = 0;
 
-	m_fHitResultAnim = 0.0f;
-	m_hitResult = OsuBeatmap::HIT_NULL;
-
 	m_bVisible = false;
 	m_bFinished = false;
 	m_bMisAim = false;
@@ -96,8 +98,10 @@ OsuHitObject::OsuHitObject(long time, int sampleType, int comboNumber, int color
 
 void OsuHitObject::draw(Graphics *g)
 {
-	if (m_fHitResultAnim > 0.0f && m_fHitResultAnim < 1.0f)
-		drawHitResult(g, m_beatmap, m_beatmap->osuCoords2Pixels(m_vHitResultPosRaw), m_hitResult, m_fHitResultAnim);
+	for (int i=0; i<m_hitResults.size(); i++)
+	{
+		drawHitResult(g, m_beatmap, m_beatmap->osuCoords2Pixels(m_hitResults[i].rawPos), m_hitResults[i].result, clamp<float>(((m_hitResults[i].anim-engine->getTime()) / 1.5f), 0.0f, 1.0f));
+	}
 }
 
 void OsuHitObject::update(long curPos)
@@ -123,16 +127,34 @@ void OsuHitObject::update(long curPos)
 	}
 	else
 		m_bVisible = false;
+
+	if (m_hitResults.size() > 0 && engine->getTime() > m_hitResults[0].anim)
+		m_hitResults.erase(m_hitResults.begin());
 }
 
-void OsuHitObject::addHitResult(OsuBeatmap::HIT result, long delta, Vector2 posRaw, bool ignoreOnHitErrorBar, bool ignoreCombo)
+void OsuHitObject::addHitResult(OsuBeatmap::HIT result, long delta, Vector2 posRaw, float targetDelta, float targetAngle, bool ignoreOnHitErrorBar, bool ignoreCombo)
 {
-	m_hitResult = result;
-	m_beatmap->addHitResult(result, delta, ignoreOnHitErrorBar, false, ignoreCombo);
-	m_vHitResultPosRaw = posRaw;
+	if (m_beatmap->getOsu()->getModTarget() && result != OsuBeatmap::HIT_MISS && targetDelta >= 0.0f)
+	{
+		if (targetDelta < osu_mod_target_300_percent.getFloat() && (result == OsuBeatmap::HIT_300 || result == OsuBeatmap::HIT_100))
+			result = OsuBeatmap::HIT_300;
+		else if (targetDelta < osu_mod_target_100_percent.getFloat())
+			result = OsuBeatmap::HIT_100;
+		else if (targetDelta < osu_mod_target_50_percent.getFloat())
+			result = OsuBeatmap::HIT_50;
+		else
+			result = OsuBeatmap::HIT_MISS;
 
-	m_fHitResultAnim = 1.0f; // 1 frame delay, i don't even care
-	anim->moveLinear(&m_fHitResultAnim, 0.0f, 1.5f, true);
+		m_beatmap->getOsu()->getHUD()->addTarget(targetDelta, targetAngle);
+	}
+
+	m_beatmap->addHitResult(result, delta, ignoreOnHitErrorBar, false, ignoreCombo);
+
+	HITRESULTANIM hitresult;
+	hitresult.result = result;
+	hitresult.rawPos = posRaw;
+	hitresult.anim = engine->getTime() + 1.5f;
+	m_hitResults.push_back(hitresult);
 }
 
 void OsuHitObject::onReset(long curPos)

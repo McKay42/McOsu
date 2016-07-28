@@ -109,6 +109,7 @@ public:
 	inline bool getModAutopilot() {return m_bModAutopilot;}
 	inline bool getModRelax() {return m_bModRelax;}
 	inline bool getModSpunout() {return m_bModSpunout;}
+	inline bool getModTarget() {return m_bModTarget;}
 	inline bool getModDT() {return m_bModDT;}
 	inline bool getModNC() {return m_bModNC;}
 	inline bool getModHT() {return m_bModHT;}
@@ -178,6 +179,7 @@ private:
 	bool m_bModAutopilot;
 	bool m_bModRelax;
 	bool m_bModSpunout;
+	bool m_bModTarget;
 	bool m_bModDT;
 	bool m_bModNC;
 	bool m_bModHT;
