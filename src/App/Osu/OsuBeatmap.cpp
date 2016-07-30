@@ -292,7 +292,7 @@ void OsuBeatmap::drawFollowPoints(Graphics *g)
 	OsuSkin *skin = m_osu->getSkin();
 
 	const long curPos = m_iCurMusicPos + (long)osu_global_offset.getInt() - m_selectedDifficulty->localoffset;
-	const long approachTime = std::min(OsuGameRules::getApproachTime(this), (long)osu_followpoints_approachtime.getFloat());
+	const long approachTime = std::min((long)OsuGameRules::getApproachTime(this), (long)osu_followpoints_approachtime.getFloat());
 
 	// scale the image scale with the hitcirclediameter // HACKHACK: hardcoded magic numbers, use hardcoded osu!pixels instead
 	const float followPointImageScale = (m_fRawHitcircleDiameter/74.0f)*m_osu->getUIScale(0.5625f)*(skin->isFollowPoint2x() ? 0.5f : 1.0f) * osu_followpoints_scale_multiplier.getFloat();
@@ -564,7 +564,7 @@ void OsuBeatmap::update()
 				{
 					if (m_iCurMusicPos >= m_hitobjects[i]->getTime())
 						lastUnfinishedHitObject = m_hitobjects[i];
-					else if (std::abs(m_hitobjects[i]->getTime()-m_iCurMusicPos)  < OsuGameRules::getHitWindow50(this))
+					else if (std::abs(m_hitobjects[i]->getTime()-m_iCurMusicPos)  < (long)OsuGameRules::getHitWindow50(this))
 					{
 						m_misaimObjects.push_back(m_hitobjects[i]);
 					}
@@ -572,7 +572,7 @@ void OsuBeatmap::update()
 						break;
 				}
 			}
-			if (lastUnfinishedHitObject != NULL && std::abs(lastUnfinishedHitObject->getTime()-m_iCurMusicPos)  < OsuGameRules::getHitWindow50(this))
+			if (lastUnfinishedHitObject != NULL && std::abs(lastUnfinishedHitObject->getTime()-m_iCurMusicPos)  < (long)OsuGameRules::getHitWindow50(this))
 				m_misaimObjects.insert(m_misaimObjects.begin(), lastUnfinishedHitObject);
 
 			// now, go through the remaining clicks, and go through the unfinished hitobjects.
@@ -712,7 +712,7 @@ void OsuBeatmap::addHitResult(HIT hit, long delta, bool ignoreOnHitErrorBar, boo
 	// handle sudden death
 	if (m_osu->getModSS())
 	{
-		if (hit != HIT_300 && hit != HIT_300G && hit != HIT_300K)
+		if (hit != HIT_300)
 		{
 			restart();
 			return;
@@ -741,7 +741,7 @@ void OsuBeatmap::addHitResult(HIT hit, long delta, bool ignoreOnHitErrorBar, boo
 	}
 	else // misses
 	{
-		if (osu_hiterrorbar_misses.getBool() && !ignoreOnHitErrorBar && delta <= OsuGameRules::getHitWindow50(this))
+		if (osu_hiterrorbar_misses.getBool() && !ignoreOnHitErrorBar && delta <= (long)OsuGameRules::getHitWindow50(this))
 			m_osu->getHUD()->addHitError(delta, true);
 
 		m_iCombo = 0;
@@ -768,12 +768,9 @@ void OsuBeatmap::addHitResult(HIT hit, long delta, bool ignoreOnHitErrorBar, boo
 			num50s++;
 			break;
 		case HIT_100:
-		case HIT_100K:
 			num100s++;
 			break;
 		case HIT_300:
-		case HIT_300G:
-		case HIT_300K:
 			num300s++;
 			break;
 		}

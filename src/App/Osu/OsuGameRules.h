@@ -99,37 +99,37 @@ public:
 		return clamp<float>(mapDifficultyRangeInv((float)getRawHitWindow300(beatmap) * beatmap->getOsu()->getSpeedMultiplier(), 80.0f, 50.0f, 20.0f), 0.0f, 12.5f);
 	}
 
-	static long getApproachTime(OsuBeatmap *beatmap)
+	static float getApproachTime(OsuBeatmap *beatmap)
 	{
-		return (long)mapDifficultyRange(beatmap->getAR(), 1800.0f, 1200.0f, 450.0f);
+		return mapDifficultyRange(beatmap->getAR(), 1800.0f, 1200.0f, 450.0f);
 	}
-	static long getRawApproachTime(OsuBeatmap *beatmap) // ignore AR override
+	static float getRawApproachTime(OsuBeatmap *beatmap) // ignore AR override
 	{
-		return (long)mapDifficultyRange(beatmap->getRawAR(), 1800.0f, 1200.0f, 450.0f);
-	}
-
-	static long getHitWindow300(OsuBeatmap *beatmap)
-	{
-		return (long)mapDifficultyRange(beatmap->getOD(), 80.0f, 50.0f, 20.0f);
-	}
-	static long getRawHitWindow300(OsuBeatmap *beatmap) // ignore OD override
-	{
-		return (long)mapDifficultyRange(beatmap->getRawOD(), 80.0f, 50.0f, 20.0f);
+		return mapDifficultyRange(beatmap->getRawAR(), 1800.0f, 1200.0f, 450.0f);
 	}
 
-	static long getHitWindow100(OsuBeatmap *beatmap)
+	static float getHitWindow300(OsuBeatmap *beatmap)
 	{
-		return (long)mapDifficultyRange(beatmap->getOD(), 140.0f, 100.0f, 60.0f);
+		return mapDifficultyRange(beatmap->getOD(), 80.0f, 50.0f, 20.0f);
+	}
+	static float getRawHitWindow300(OsuBeatmap *beatmap) // ignore OD override
+	{
+		return mapDifficultyRange(beatmap->getRawOD(), 80.0f, 50.0f, 20.0f);
 	}
 
-	static long getHitWindow50(OsuBeatmap *beatmap)
+	static float getHitWindow100(OsuBeatmap *beatmap)
 	{
-		return (long)mapDifficultyRange(beatmap->getOD(), 200.0f, 150.0f, 100.0f);
+		return mapDifficultyRange(beatmap->getOD(), 140.0f, 100.0f, 60.0f);
 	}
 
-	static inline long getHitWindowMiss(OsuBeatmap *beatmap)
+	static float getHitWindow50(OsuBeatmap *beatmap)
 	{
-		return (long)(500.0f - (beatmap->getOD() * 10.0f));
+		return mapDifficultyRange(beatmap->getOD(), 200.0f, 150.0f, 100.0f);
+	}
+
+	static inline float getHitWindowMiss(OsuBeatmap *beatmap)
+	{
+		return (500.0f - (beatmap->getOD() * 10.0f));
 	}
 
 	static float getSpinnerSpins(OsuBeatmap *beatmap)
@@ -145,22 +145,22 @@ public:
 
 		if (!osu_mod_ming3012.getBool())
 		{
-			if (delta <= getHitWindow300(beatmap))
+			if (delta <= (long)getHitWindow300(beatmap))
 				result = OsuBeatmap::HIT_300;
-			else if (delta <= getHitWindow100(beatmap))
+			else if (delta <= (long)getHitWindow100(beatmap))
 				result = OsuBeatmap::HIT_100;
-			else if (delta <= getHitWindow50(beatmap))
+			else if (delta <= (long)getHitWindow50(beatmap))
 				result = OsuBeatmap::HIT_50;
-			else if (delta <= getHitWindowMiss(beatmap))
+			else if (delta <= (long)getHitWindowMiss(beatmap))
 				result = OsuBeatmap::HIT_MISS;
 		}
 		else
 		{
-			if (delta <= getHitWindow300(beatmap))
+			if (delta <= (long)getHitWindow300(beatmap))
 				result = OsuBeatmap::HIT_300;
-			else if (delta <= getHitWindow50(beatmap))
+			else if (delta <= (long)getHitWindow50(beatmap))
 				result = OsuBeatmap::HIT_50;
-			else if (delta <= getHitWindowMiss(beatmap))
+			else if (delta <= (long)getHitWindowMiss(beatmap))
 				result = OsuBeatmap::HIT_MISS;
 		}
 

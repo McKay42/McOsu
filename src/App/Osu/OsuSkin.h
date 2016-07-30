@@ -156,9 +156,11 @@ public:
 	inline Sound *getCheckOff() {return m_checkOff;}
 
 	inline bool isCursor2x() {return m_bCursor2x;}
+	inline bool isApproachCircle2x() {return m_bApproachCircle2x;}
 	inline bool isReverseArrow2x() {return m_bReverseArrow2x;}
 	inline bool isFollowPoint2x() {return m_bFollowPoint2x;}
 	inline bool isHitCircle2x() {return m_bHitCircle2x;}
+	inline bool isHitCircleOverlay2x() {return m_bHitCircleOverlay2x;}
 	inline bool isDefault12x() {return m_bIsDefault12x;}
 	inline bool isHit02x() {return m_bHit02x;}
 	inline bool isHit502x() {return m_bHit502x;}
@@ -366,9 +368,11 @@ private:
 
 	// scaling
 	bool m_bCursor2x;
+	bool m_bApproachCircle2x;
 	bool m_bReverseArrow2x;
 	bool m_bFollowPoint2x;
 	bool m_bHitCircle2x;
+	bool m_bHitCircleOverlay2x;
 	bool m_bIsDefault12x;
 	bool m_bHit02x;
 	bool m_bHit502x;
