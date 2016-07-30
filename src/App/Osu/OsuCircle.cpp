@@ -46,12 +46,12 @@ void OsuCircle::drawCircle(Graphics *g, OsuSkin *skin, Vector2 pos, float hitcir
 	drawApproachCircle(g, skin, pos, comboColor, hitcircleDiameter, approachScale, alpha, modHD, overrideHDApproachCircle);
 
 	// circle
-	const float circleImageScale = hitcircleDiameter / (float) skin->getHitCircle()->getWidth();
+	const float circleImageScale = hitcircleDiameter / (128.0f * (skin->isHitCircle2x() ? 2.0f : 1.0f));
 	comboColor = skin->getComboColorForCounter(colorCounter);
 	drawHitCircle(g, skin->getHitCircle(), pos, comboColor, circleImageScale, alpha);
 
 	// overlay
-	const float circleOverlayImageScale = hitcircleDiameter / (float) skin->getHitCircleOverlay()->getWidth();
+	const float circleOverlayImageScale = hitcircleDiameter / (128.0f * (skin->isHitCircleOverlay2x() ? 2.0f : 1.0f));
 	if (!skin->getHitCircleOverlayAboveNumber())
 		drawHitCircleOverlay(g, skin, pos, circleOverlayImageScale, alpha);
 
@@ -67,11 +67,11 @@ void OsuCircle::drawCircle(Graphics *g, OsuSkin *skin, Vector2 pos, float hitcir
 void OsuCircle::drawCircle(Graphics *g, OsuSkin *skin, Vector2 pos, float hitcircleDiameter, Color color, float alpha)
 {
 	// circle
-	const float circleImageScale = hitcircleDiameter / (float) skin->getHitCircle()->getWidth();
+	const float circleImageScale = hitcircleDiameter / (128.0f * (skin->isHitCircle2x() ? 2.0f : 1.0f));
 	drawHitCircle(g, skin->getHitCircle(), pos, color, circleImageScale, alpha);
 
 	// overlay
-	const float circleOverlayImageScale = hitcircleDiameter / (float) skin->getHitCircleOverlay()->getWidth();
+	const float circleOverlayImageScale = hitcircleDiameter / (128.0f * (skin->isHitCircleOverlay2x() ? 2.0f : 1.0f));
 	if (!skin->getHitCircleOverlayAboveNumber())
 		drawHitCircleOverlay(g, skin, pos, circleOverlayImageScale, alpha);
 
@@ -98,7 +98,7 @@ void OsuCircle::drawSliderCircle(Graphics *g, OsuBeatmap *beatmap, Image *hitCir
 	drawApproachCircle(g, skin, pos, comboColor, beatmap->getHitcircleDiameter(), approachScale, alpha, beatmap->getOsu()->getModHD(), overrideHDApproachCircle);
 
 	// circle
-	const float circleImageScale = beatmap->getHitcircleDiameter() / (float) skin->getHitCircle()->getWidth();
+	const float circleImageScale = beatmap->getHitcircleDiameter() / (128.0f * (skin->isHitCircle2x() ? 2.0f : 1.0f));
 	drawHitCircle(g, hitCircleImage, pos, comboColor, circleImageScale, alpha);
 
 	// number
@@ -127,7 +127,7 @@ void OsuCircle::drawApproachCircle(Graphics *g, OsuSkin *skin, Vector2 pos, Colo
 		g->setAlpha(alpha);
 		if (approachScale > 1.0f)
 		{
-			float approachCircleImageScale = hitcircleDiameter / (float) skin->getApproachCircle()->getWidth();
+			float approachCircleImageScale = hitcircleDiameter / (128.0f * (skin->isApproachCircle2x() ? 2.0f : 1.0f));
 
 			g->pushTransform();
 				g->scale(approachCircleImageScale*approachScale, approachCircleImageScale*approachScale);
@@ -341,7 +341,7 @@ void OsuCircle::update(long curPos)
 				m_bWaiting = true;
 
 				// if this is a miss after waiting
-				if (delta > OsuGameRules::getHitWindow50(m_beatmap))
+				if (delta > (long)OsuGameRules::getHitWindow50(m_beatmap))
 					onHit(OsuBeatmap::HIT_MISS, delta);
 			}
 			else

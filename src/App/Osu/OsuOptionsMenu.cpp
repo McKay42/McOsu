@@ -242,6 +242,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Draw SliderEndCircle", convar->getConVarByName("osu_slider_draw_endcircle"));
 	addCheckbox("Use New Hidden Fading Sliders", convar->getConVarByName("osu_hd_sliders_fade"));
 	addCheckbox("Use Fast Hidden Fading Sliders (!)", convar->getConVarByName("osu_hd_sliders_fast_fade"));
+	addCheckbox("Use Score V2 slider accuracy", convar->getConVarByName("osu_slider_scorev2"));
 
 	//**************************************************************************************************************************//
 

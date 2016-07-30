@@ -202,6 +202,7 @@ Osu::Osu()
 	//m_modSelector->setVisible(true);
 	//m_songBrowser->setVisible(true);
 	//m_songBrowser2->setVisible(true);
+	//m_pauseMenu->setVisible(true);
 
 	// debug
 	if (m_songBrowser != NULL)
@@ -453,6 +454,8 @@ void Osu::updateMods()
 
 void Osu::onKeyDown(KeyboardEvent &key)
 {
+	// global hotkeys
+
 	// special hotkeys
 	if (engine->getKeyboard()->isAltDown() && engine->getKeyboard()->isControlDown() && key == KEY_R && OsuSliderCurve::BLEND_SHADER != NULL)
 	{
@@ -472,6 +475,20 @@ void Osu::onKeyDown(KeyboardEvent &key)
 		engine->toggleFullscreen();
 		key.consume();
 	}
+
+	// arrow keys volume (alt)
+	if (engine->getKeyboard()->isAltDown() && key == (KEYCODE)OsuKeyBindings::INCREASE_VOLUME.getInt())
+	{
+		volumeUp();
+		key.consume();
+	}
+	if (engine->getKeyboard()->isAltDown() && key == (KEYCODE)OsuKeyBindings::DECREASE_VOLUME.getInt())
+	{
+		volumeDown();
+		key.consume();
+	}
+
+	// local hotkeys
 
 	// while playing
 	if (isInPlayMode())
