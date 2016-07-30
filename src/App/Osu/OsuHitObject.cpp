@@ -106,7 +106,7 @@ void OsuHitObject::draw(Graphics *g)
 
 void OsuHitObject::update(long curPos)
 {
-	long approachTime = OsuGameRules::getApproachTime(m_beatmap);
+	long approachTime = (long)OsuGameRules::getApproachTime(m_beatmap);
 	m_iHiddenDecayTime = (long) ((float)approachTime / 3.6f);
 	m_iHiddenTimeDiff = (long) ((float)approachTime / 3.3f);
 	m_iFadeInTime = std::min(400, (int) ((float)approachTime / 1.75f));

@@ -33,6 +33,7 @@ public:
 	void drawBeatmapImportTop(Graphics *g);
 	void drawVolumeChange(Graphics *g);
 	void drawScoreNumber(Graphics *g, int number, float scale = 1.0f, bool drawLeadingAndTrailingZero = false, int offset = 2);
+	void drawWarningArrow(Graphics *g, Vector2 pos, bool flipVertically, bool originLeft = true);
 
 	void animateCombo();
 	void addHitError(long delta, bool miss = false, bool misaim = false);

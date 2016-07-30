@@ -41,6 +41,8 @@ private:
 	void onRetryClicked();
 	void onBackClicked();
 
+	void onSelectionChange();
+
 	void scheduleVisibilityChange(bool visible);
 
 	Osu *m_osu;
@@ -50,6 +52,12 @@ private:
 	bool m_bScheduledVisibility;
 
 	std::vector<OsuPauseMenuButton*> m_buttons;
+	OsuPauseMenuButton *m_selectedButton;
+	float m_fWarningArrowsAnimStartTime;
+	float m_fWarningArrowsAnimAlpha;
+	float m_fWarningArrowsAnimX;
+	float m_fWarningArrowsAnimY;
+	bool m_bInitialWarningArrowFlyIn;
 };
 
 #endif

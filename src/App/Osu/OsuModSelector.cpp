@@ -810,7 +810,7 @@ void OsuModSelector::updateOverrideSliderLabels()
 
 UString OsuModSelector::getOverrideSliderLabelText(OsuModSelector::OVERRIDE_SLIDER s, bool active)
 {
-	const float convarValue = s.cvar->getFloat();
+	float convarValue = s.cvar->getFloat();
 
 	UString newLabelText = s.label->getName();
 	if (m_osu->getSelectedBeatmap() != NULL && m_osu->getSelectedBeatmap()->getSelectedDifficulty() != NULL)
@@ -821,9 +821,27 @@ UString OsuModSelector::getOverrideSliderLabelText(OsuModSelector::OVERRIDE_SLID
 		if (s.label->getName().find("CS") != -1)
 			beatmapValue = m_osu->getSelectedBeatmap()->getSelectedDifficulty()->CS;
 		else if (s.label->getName().find("AR") != -1)
+		{
 			beatmapValue = active ? OsuGameRules::getRawApproachRateForSpeedMultiplier(m_osu->getSelectedBeatmap()) : OsuGameRules::getApproachRateForSpeedMultiplier(m_osu->getSelectedBeatmap());
+
+			// compensate and round
+			convarValue = OsuGameRules::getApproachRateForSpeedMultiplier(m_osu->getSelectedBeatmap());
+			if (engine->getKeyboard()->isAltDown())
+				convarValue = std::round(convarValue * 10.0f) / 10.0f;
+			else
+				convarValue = std::round(convarValue * 100.0f) / 100.0f;
+		}
 		else if (s.label->getName().find("OD") != -1)
+		{
 			beatmapValue = active ? OsuGameRules::getRawOverallDifficultyForSpeedMultiplier(m_osu->getSelectedBeatmap()) : OsuGameRules::getOverallDifficultyForSpeedMultiplier(m_osu->getSelectedBeatmap());
+
+			// compensate and round
+			convarValue = OsuGameRules::getOverallDifficultyForSpeedMultiplier(m_osu->getSelectedBeatmap());
+			if (engine->getKeyboard()->isAltDown())
+				convarValue = std::round(convarValue * 10.0f) / 10.0f;
+			else
+				convarValue = std::round(convarValue * 100.0f) / 100.0f;
+		}
 		else if (s.label->getName().find("HP") != -1)
 			beatmapValue = m_osu->getSelectedBeatmap()->getSelectedDifficulty()->HP;
 		else if (s.label->getName().find("BPM") != -1)

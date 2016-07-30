@@ -22,8 +22,11 @@
 #include "OsuBeatmap.h"
 #include "OsuSongBrowser.h"
 #include "OsuKeyBindings.h"
+#include "OsuHUD.h"
 
 ConVar osu_pause_dim_background("osu_pause_dim_background", true);
+
+
 
 class OsuPauseMenuButton : public CBaseUIImageButton
 {
@@ -42,11 +45,20 @@ private:
 	float m_fScaleMultiplier;
 };
 
+
+
 OsuPauseMenu::OsuPauseMenu(Osu *osu) : OsuScreen()
 {
 	m_osu = osu;
 	m_bScheduledVisibility = false;
 	m_bScheduledVisibilityChange = false;
+
+	m_selectedButton = NULL;
+	m_fWarningArrowsAnimStartTime = 0.0f;
+	m_fWarningArrowsAnimAlpha = 0.0f;
+	m_fWarningArrowsAnimX = 0.0f;
+	m_fWarningArrowsAnimY = 0.0f;
+	m_bInitialWarningArrowFlyIn = true;
 
 	m_container = new CBaseUIContainer(0, 0, Osu::getScreenWidth(), Osu::getScreenHeight(), "");
 
@@ -85,6 +97,21 @@ void OsuPauseMenu::draw(Graphics *g)
 	*/
 
 	m_container->draw(g);
+
+	if (m_selectedButton != NULL)
+	{
+		const Color arrowColor = COLOR(255, 0, 114, 255);
+		float animation = fmod((float)(engine->getTime()-m_fWarningArrowsAnimStartTime)*3.2f, 2.0f);
+		if (animation > 1.0f)
+			animation = 2.0f - animation;
+		animation =  -animation*(animation-2); // quad out
+		float offset = m_osu->getUIScale(20.0f + 45.0f*animation);
+
+		g->setColor(arrowColor);
+		g->setAlpha(m_fWarningArrowsAnimAlpha);
+		m_osu->getHUD()->drawWarningArrow(g, Vector2(m_fWarningArrowsAnimX, m_fWarningArrowsAnimY) + Vector2(0, m_selectedButton->getSize().y/2) - Vector2(offset, 0), false, false);
+		m_osu->getHUD()->drawWarningArrow(g, Vector2(Osu::getScreenWidth() - m_fWarningArrowsAnimX, m_fWarningArrowsAnimY) + Vector2(0, m_selectedButton->getSize().y/2) + Vector2(offset, 0), true, false);
+	}
 }
 
 void OsuPauseMenu::update()
@@ -98,6 +125,9 @@ void OsuPauseMenu::update()
 		m_bScheduledVisibilityChange = false;
 		setVisible(m_bScheduledVisibility);
 	}
+
+	if (anim->isAnimating(&m_fWarningArrowsAnimX))
+		m_fWarningArrowsAnimStartTime = engine->getTime();
 }
 
 void OsuPauseMenu::onContinueClicked()
@@ -124,6 +154,27 @@ void OsuPauseMenu::onBackClicked()
 	scheduleVisibilityChange(false);
 }
 
+void OsuPauseMenu::onSelectionChange()
+{
+	if (m_selectedButton != NULL)
+	{
+		if (m_bInitialWarningArrowFlyIn)
+		{
+			m_bInitialWarningArrowFlyIn = false;
+
+			m_fWarningArrowsAnimY = m_selectedButton->getPos().y;
+			m_fWarningArrowsAnimX = m_selectedButton->getPos().x - m_osu->getUIScale(170.0f);
+
+			anim->moveLinear(&m_fWarningArrowsAnimAlpha, 1.0f, 0.3f);
+			anim->moveQuadIn(&m_fWarningArrowsAnimX, m_selectedButton->getPos().x, 0.3f);
+		}
+		else
+			m_fWarningArrowsAnimX = m_selectedButton->getPos().x;
+
+		anim->moveQuadOut(&m_fWarningArrowsAnimY, m_selectedButton->getPos().y, 0.1f);
+	}
+}
+
 void OsuPauseMenu::onKeyDown(KeyboardEvent &e)
 {
 	if (!m_bVisible) return;
@@ -144,6 +195,49 @@ void OsuPauseMenu::onKeyDown(KeyboardEvent &e)
 				break;
 			}
 		}
+	}
+
+	// handle arrow keys selection
+	if (m_buttons.size() > 0)
+	{
+		if (!engine->getKeyboard()->isAltDown() && e == KEY_DOWN)
+		{
+			OsuPauseMenuButton *nextSelectedButton = m_buttons[0];
+			bool next = false;
+			for (int i=0; i<m_buttons.size(); i++)
+			{
+				if (next)
+				{
+					nextSelectedButton = m_buttons[i];
+					break;
+				}
+				if (m_selectedButton == m_buttons[i])
+					next = true;
+			}
+			m_selectedButton = nextSelectedButton;
+			onSelectionChange();
+		}
+
+		if (!engine->getKeyboard()->isAltDown() && e == KEY_UP)
+		{
+			OsuPauseMenuButton *nextSelectedButton = m_buttons[m_buttons.size()-1];
+			bool next = false;
+			for (int i=m_buttons.size()-1; i>=0; i--)
+			{
+				if (next)
+				{
+					nextSelectedButton = m_buttons[i];
+					break;
+				}
+				if (m_selectedButton == m_buttons[i])
+					next = true;
+			}
+			m_selectedButton = nextSelectedButton;
+			onSelectionChange();
+		}
+
+		if (m_selectedButton != NULL && e == KEY_ENTER)
+			m_selectedButton->click();
 	}
 
 	if (e != KEY_ESCAPE && e != (KEYCODE)OsuKeyBindings::GAME_PAUSE.getInt()) // needed for unpause in Osu.cpp
@@ -178,29 +272,40 @@ void OsuPauseMenu::updateLayout()
 	float height = (Osu::getScreenHeight()/(float)m_buttons.size());
 	float half = (m_buttons.size()-1)/2.0f;
 
+	float maxWidth = 0.0f;
+	float maxHeight = 0.0f;
 	for (int i=0; i<m_buttons.size(); i++)
 	{
 		Image *img = engine->getResourceManager()->getImage(m_buttons[i]->getImageResourceName());
 		if (img == NULL)
 			img = engine->getResourceManager()->getImage("MISSING_TEXTURE");
 
-		float scale = m_osu->getImageScale(m_osu->getSkin()->getPauseContinue(), 38.0f);
+		float scale = m_osu->getUIScale(256) / (411.0f * (m_osu->getSkin()->isPauseContinue2x() ? 2.0f : 1.0f));
 
-		if (m_osu->getSkin()->isPauseContinue2x())
-			scale *= 2.0f;
+		m_buttons[i]->setBaseScale(scale, scale);
+		m_buttons[i]->setSize(img->getWidth()*scale, img->getHeight()*scale);
 
-		Vector2 newPos = Vector2(Osu::getScreenWidth()/2.0f - img->getWidth()*scale/2.0f, (i+1)*height - height/2.0f - img->getHeight()*scale/2.0f);
+		if (m_buttons[i]->getSize().x > maxWidth)
+			maxWidth = m_buttons[i]->getSize().x;
+		if (m_buttons[i]->getSize().y > maxHeight)
+			maxHeight = m_buttons[i]->getSize().y;
+	}
 
-		float pinch = std::max(0.0f, (height/2.0f - img->getHeight()*scale/2.0f));
+	for (int i=0; i<m_buttons.size(); i++)
+	{
+		Vector2 newPos = Vector2(Osu::getScreenWidth()/2.0f - maxWidth/2, (i+1)*height - height/2.0f - maxHeight/2.0f);
+
+		float pinch = std::max(0.0f, (height/2.0f - maxHeight/2.0f));
 		if ((float)i < half)
 			newPos.y += pinch;
 		else if ((float)i > half)
 			newPos.y -= pinch;
 
 		m_buttons[i]->setPos(newPos);
-		m_buttons[i]->setBaseScale(scale, scale);
-		m_buttons[i]->setSize(img->getWidth()*scale, img->getHeight()*scale);
+		m_buttons[i]->setSize(maxWidth, maxHeight);
 	}
+
+	onSelectionChange();
 }
 
 void OsuPauseMenu::onResolutionChange(Vector2 newResolution)
@@ -212,6 +317,11 @@ void OsuPauseMenu::onResolutionChange(Vector2 newResolution)
 void OsuPauseMenu::setVisible(bool visible)
 {
 	m_bVisible = visible;
+
+	// reset
+	m_selectedButton = NULL;
+	m_bInitialWarningArrowFlyIn = true;
+	m_fWarningArrowsAnimAlpha = 0.0f;
 
 	if (m_bVisible)
 	{
@@ -237,6 +347,7 @@ void OsuPauseMenu::setButton(int i, Image *img)
 		m_buttons[i]->setImageResourceName(img == NULL ? "MISSING_TEXTURE" : img->getName());
 	}
 }
+
 
 
 OsuPauseMenuButton::OsuPauseMenuButton(Osu *osu, UString imageResourceName, float xPos, float yPos, float xSize, float ySize, UString name) : CBaseUIImageButton(imageResourceName, xPos, yPos, xSize, ySize, name)

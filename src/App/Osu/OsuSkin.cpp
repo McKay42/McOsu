@@ -192,9 +192,11 @@ OsuSkin::OsuSkin(Osu *osu, UString filepath)
 
 	// scaling
 	m_bCursor2x = false;
+	m_bApproachCircle2x = false;
 	m_bReverseArrow2x = false;
 	m_bFollowPoint2x = false;
 	m_bHitCircle2x = false;
+	m_bHitCircleOverlay2x = false;
 	m_bIsDefault12x = false;
 	m_bHit02x = false;
 	m_bHit502x = false;
@@ -421,12 +423,16 @@ void OsuSkin::load()
 	// HACKHACK: this is pure cancer
 	if (m_cursor != NULL && m_cursor->getFilePath().find("@2x") != -1)
 		m_bCursor2x = true;
+	if (m_approachCircle != NULL && m_approachCircle->getFilePath().find("@2x") != -1)
+		m_bApproachCircle2x = true;
 	if (m_reverseArrow != NULL && m_reverseArrow->getFilePath().find("@2x") != -1)
 		m_bReverseArrow2x = true;
 	if (m_followPoint != NULL && m_followPoint->getFilePath().find("@2x") != -1)
 		m_bFollowPoint2x = true;
 	if (m_hitCircle != NULL && m_hitCircle->getFilePath().find("@2x") != -1)
 		m_bHitCircle2x = true;
+	if (m_hitCircleOverlay != NULL && m_hitCircleOverlay->getFilePath().find("@2x") != -1)
+		m_bHitCircleOverlay2x = true;
 	if (m_default1 != NULL && m_default1->getFilePath().find("@2x") != -1)
 		m_bIsDefault12x = true;
 	if (m_hit0 != NULL && m_hit0->getFilePath().find("@2x") != -1)

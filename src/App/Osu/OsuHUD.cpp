@@ -608,31 +608,28 @@ void OsuHUD::drawSkip(Graphics *g)
 	g->popTransform();
 }
 
-void OsuHUD::drawWarningArrows(Graphics *g, float hitcircleDiameter)
+void OsuHUD::drawWarningArrow(Graphics *g, Vector2 pos, bool flipVertically, bool originLeft)
 {
 	const float scale = osu_hud_scale.getFloat() * m_osu->getImageScale(m_osu->getSkin()->getPlayWarningArrow(), 78);
+
+	g->pushTransform();
+		g->scale(flipVertically ? -scale : scale, scale);
+		g->translate(pos.x + (flipVertically ? (-m_osu->getSkin()->getPlayWarningArrow()->getWidth()*scale/2.0f) : (m_osu->getSkin()->getPlayWarningArrow()->getWidth()*scale/2.0f)) * (originLeft ? 1.0f : -1.0f), pos.y);
+		g->drawImage(m_osu->getSkin()->getPlayWarningArrow());
+	g->popTransform();
+}
+
+void OsuHUD::drawWarningArrows(Graphics *g, float hitcircleDiameter)
+{
 	const float divider = 18.0f;
 	const float part = OsuGameRules::getPlayfieldSize().y * (1.0f / divider);
 
 	g->setColor(0xffffffff);
-	g->pushTransform();
-		g->scale(scale, scale);
-		g->translate(m_osu->getSkin()->getPlayWarningArrow()->getWidth()*scale/2.0f + m_osu->getUIScale(28), OsuGameRules::getPlayfieldCenter().y - OsuGameRules::getPlayfieldSize().y/2 + part*2);
-		g->drawImage(m_osu->getSkin()->getPlayWarningArrow());
+	drawWarningArrow(g, Vector2(m_osu->getUIScale(28), OsuGameRules::getPlayfieldCenter().y - OsuGameRules::getPlayfieldSize().y/2 + part*2), false);
+	drawWarningArrow(g, Vector2(m_osu->getUIScale(28), OsuGameRules::getPlayfieldCenter().y - OsuGameRules::getPlayfieldSize().y/2 + part*2 + part*13), false);
 
-		g->translate(0.0f, part*13);
-		g->drawImage(m_osu->getSkin()->getPlayWarningArrow());
-	g->popTransform();
-
-	g->setColor(0xffffffff);
-	g->pushTransform();
-		g->scale(-scale, scale);
-		g->translate(Osu::getScreenWidth() - m_osu->getSkin()->getPlayWarningArrow()->getWidth()*scale/2.0f - m_osu->getUIScale(28), OsuGameRules::getPlayfieldCenter().y - OsuGameRules::getPlayfieldSize().y/2 + part*2);
-		g->drawImage(m_osu->getSkin()->getPlayWarningArrow());
-
-		g->translate(0.0f, part*13);
-		g->drawImage(m_osu->getSkin()->getPlayWarningArrow());
-	g->popTransform();
+	drawWarningArrow(g, Vector2(Osu::getScreenWidth() - m_osu->getUIScale(28), OsuGameRules::getPlayfieldCenter().y - OsuGameRules::getPlayfieldSize().y/2 + part*2), true);
+	drawWarningArrow(g, Vector2(Osu::getScreenWidth() - m_osu->getUIScale(28), OsuGameRules::getPlayfieldCenter().y - OsuGameRules::getPlayfieldSize().y/2 + part*2 + part*13), true);
 }
 
 void OsuHUD::drawContinue(Graphics *g, Vector2 cursor, float hitcircleDiameter)

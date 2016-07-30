@@ -31,9 +31,11 @@ public:
 		HIT_50,
 		HIT_100,
 		HIT_300,
+		/*
 		HIT_100K,
 		HIT_300K,
 		HIT_300G,
+		*/
 		HIT_SLIDER10,
 		HIT_SLIDER30
 	};

@@ -31,6 +31,7 @@ ConVar osu_hd_sliders_fast_fade("osu_hd_sliders_fast_fade", false);
 ConVar osu_slider_break_epilepsy("osu_slider_break_epilepsy", false);
 ConVar osu_slider_rainbow("osu_slider_rainbow", false);
 ConVar osu_slider_debug("osu_slider_debug", false);
+ConVar osu_slider_scorev2("osu_slider_scorev2", false);
 
 ConVar osu_slider_draw_endcircle("osu_slider_draw_endcircle", true);
 ConVar osu_slider_shrink("osu_slider_shrink", false);
@@ -570,7 +571,7 @@ void OsuSlider::update(long curPos)
 			if (delta >= 0)
 			{
 				// if this is a miss after waiting
-				if (delta > OsuGameRules::getHitWindow50(m_beatmap))
+				if (delta > (long)OsuGameRules::getHitWindow50(m_beatmap))
 				{
 					m_startResult = OsuBeatmap::HIT_MISS;
 					onHit(m_startResult, delta, false);
@@ -579,7 +580,7 @@ void OsuSlider::update(long curPos)
 		}
 	}
 
-	// handle slider end
+	// handle slider end, repeats, ticks
 	if (!m_bEndFinished)
 	{
 		if ((m_beatmap->isClickHeld() || m_beatmap->getOsu()->getModRelax()) && m_bCursorInside)
@@ -650,16 +651,19 @@ void OsuSlider::update(long curPos)
 
 				float percent = numActualHits / numMaxPossibleHits;
 
-				if (percent >= 0.999f)
+				bool allow300 = osu_slider_scorev2.getBool() ? (m_startResult == OsuBeatmap::HIT_300) : true;
+				bool allow100 = osu_slider_scorev2.getBool() ? (m_startResult == OsuBeatmap::HIT_300 || m_startResult == OsuBeatmap::HIT_100) : true;
+
+				if (percent >= 0.999f && allow300)
 					m_endResult = OsuBeatmap::HIT_300;
-				else if (percent >= 0.5f && !OsuGameRules::osu_mod_ming3012.getBool())
+				else if (percent >= 0.5f && allow100 && !OsuGameRules::osu_mod_ming3012.getBool())
 					m_endResult = OsuBeatmap::HIT_100;
 				else if (percent > 0.0f)
 					m_endResult = OsuBeatmap::HIT_50;
 				else
 					m_endResult = OsuBeatmap::HIT_MISS;
 
-				debugLog("percent = %f\n", percent);
+				//debugLog("percent = %f\n", percent);
 
 				onHit(m_endResult, 0, true); // delta doesn't matter here
 			}
