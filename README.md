@@ -24,5 +24,6 @@ Notable features which osu! doesn't have (yet) in comparison:
 - Enable/Disable approach circles, numbers, sliderendcircles, followpoints or any other element
 - Ignore beatmap sample volume
 - Enhanced hit error bar, shows misaims and extra clicks
+- Nearly unlimited customizability using console commands for people who want to tinker with everything (e.g. osu_playfield_rotation, osu_circle_fade_out_time, osu_skip_time, etc.)
 
 TODO: more text
