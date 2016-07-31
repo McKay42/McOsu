@@ -23,5 +23,6 @@ Notable features which osu! doesn't have (yet) in comparison:
 - Arbitrary HUD scale (Combo counter, accuracy, etc.)
 - Enable/Disable approach circles, numbers, sliderendcircles, followpoints or any other element
 - Ignore beatmap sample volume
+- Enhanced hit error bar, shows misaims and extra clicks
 
 TODO: more text
