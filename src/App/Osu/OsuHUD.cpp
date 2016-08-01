@@ -415,22 +415,6 @@ void OsuHUD::drawBeatmapImportSpinner(Graphics *g)
 	g->popTransform();
 }
 
-void OsuHUD::drawBeatmapImportTop(Graphics *g)
-{
-	// commented because it looks ugly
-	/*
-	Image *beatmapImportTop = m_osu->getSkin()->getBeatmapImportTop();
-	float scale = Osu::getImageScaleToFitResolution(beatmapImportTop, Osu::getScreenSize());
-
-	g->setColor(0xffffffff);
-	g->pushTransform();
-	g->scale(scale, scale);
-	g->translate(Osu::getScreenWidth()/2, (beatmapImportTop->getHeight()/2)*scale);
-	g->drawImage(beatmapImportTop);
-	g->popTransform();
-	*/
-}
-
 void OsuHUD::drawVolumeChange(Graphics *g)
 {
 	if (engine->getTime() > m_fVolumeChangeTime) return;
@@ -439,7 +423,7 @@ void OsuHUD::drawVolumeChange(Graphics *g)
 	g->fillRect(0, Osu::getScreenHeight()*(1.0f - m_fLastVolume), Osu::getScreenWidth(), Osu::getScreenHeight()*m_fLastVolume);
 }
 
-void OsuHUD::drawScoreNumber(Graphics *g, int number, float scale, bool drawLeadingAndTrailingZero, int offset)
+void OsuHUD::drawScoreNumber(Graphics *g, int number, float scale, bool drawLeadingZeroes, int offset)
 {
 	// get digits
 	std::vector<int> digits;
@@ -451,8 +435,11 @@ void OsuHUD::drawScoreNumber(Graphics *g, int number, float scale, bool drawLead
 		digits.insert(digits.begin(), curDigit);
 	}
 	digits.insert(digits.begin(), number);
-	if (drawLeadingAndTrailingZero && digits.size() == 1)
-		digits.push_back(0);
+	if (digits.size() == 1)
+	{
+		if (drawLeadingZeroes)
+			digits.insert(digits.begin(), 0);
+	}
 
 	// draw them
 	float lastWidth = m_osu->getSkin()->getScore0()->getWidth();
@@ -561,7 +548,10 @@ void OsuHUD::drawAccuracy(Graphics *g, float accuracy)
 
 	// get integer & fractional parts of the number
 	const int accuracyInt = (int)accuracy;
-	const int accuracyFrac = (int)((accuracy - accuracyInt)*100.0f);
+	const int accuracyFrac = clamp<int>(((int)(std::round((accuracy - accuracyInt)*1000.0f))) / 10, 0, 99);
+	// what we want: 99.015 -> 99.01, 99.019 -> 99.01, 99.02 -> 99.02
+	// if we only multiply with 100, floating point inaccuracies would cause things like 99.02 -> 99.01
+	// to solve this for a known number of decimal digits, just increase the multiplier, round, and integer divide later to compensate
 
 	// draw it
 	const int spacingOffset = 2;
@@ -570,7 +560,7 @@ void OsuHUD::drawAccuracy(Graphics *g, float accuracy)
 	g->pushTransform();
 
 		// note that "spacingOffset*numDigits" would actually be used with (numDigits-1), but because we add a spacingOffset after the score dot we also have to add it here
-		const int numDigits = (accuracyInt < 10 && accuracyInt > 0 ? 3 : (accuracyInt > 99 ? 5 : 4));
+		const int numDigits = (accuracyInt > 99 ? 5 : 4);
 		const float xOffset = m_osu->getSkin()->getScore0()->getWidth()*scale*numDigits + m_osu->getSkin()->getScoreDot()->getWidth()*scale + m_osu->getSkin()->getScorePercent()->getWidth()*scale + spacingOffset*numDigits + 1;
 
 		m_fAccuracyXOffset = Osu::getScreenWidth() - xOffset - offset;
@@ -578,7 +568,7 @@ void OsuHUD::drawAccuracy(Graphics *g, float accuracy)
 		g->scale(scale, scale);
 		g->translate(m_fAccuracyXOffset, m_fAccuracyYOffset);
 
-		drawScoreNumber(g, accuracyInt, scale, accuracy == 0.0f, spacingOffset);
+		drawScoreNumber(g, accuracyInt, scale, true, spacingOffset);
 
 		// draw dot '.' between the integer and fractional part
 		g->setColor(0xffffffff);

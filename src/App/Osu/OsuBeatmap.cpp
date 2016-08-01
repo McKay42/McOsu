@@ -779,7 +779,7 @@ void OsuBeatmap::addHitResult(HIT hit, long delta, bool ignoreOnHitErrorBar, boo
 	const float totalHitPoints = num50s*(1.0f/6.0f)+ num100s*(2.0f/6.0f) + num300s;
 	const float totalNumHits = numMisses + num50s + num100s + num300s;
 
-	if (totalHitPoints == 0.0f || totalNumHits == 0.0f)
+	if ((totalHitPoints == 0.0f || totalNumHits == 0.0f) && m_hitresults.size() < 1)
 		m_fAccuracy = 1.0f;
 	else
 		m_fAccuracy = totalHitPoints / totalNumHits;

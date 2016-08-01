@@ -48,9 +48,11 @@ public:
 		m_font = m_osu->getSubTitleFont();
 
 		m_iMargin = 10;
-		m_fSubTitleScale = 0.6f;
-		m_fSongInfoScale = 0.7f;
-		m_fDiffInfoScale = 0.65f;
+
+		float globalScaler = 1.3f;
+		m_fSubTitleScale = 0.6f*globalScaler;
+		m_fSongInfoScale = 0.7f*globalScaler;
+		m_fDiffInfoScale = 0.65f*globalScaler;
 
 		m_sArtist = "Artist";
 		m_sTitle = "Title";
@@ -872,7 +874,6 @@ void OsuSongBrowser2::draw(Graphics *g)
 		g->popTransform();
 
 		m_osu->getHUD()->drawBeatmapImportSpinner(g);
-		m_osu->getHUD()->drawBeatmapImportTop(g);
 		return;
 	}
 

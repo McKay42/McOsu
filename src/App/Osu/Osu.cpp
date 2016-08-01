@@ -66,6 +66,7 @@ ConVar osu_resolution("osu_resolution", UString("1280x720"), DUMMY_OSU_VOLUME_MU
 ConVar osu_resolution_enabled("osu_resolution_enabled", false);
 
 ConVar osu_draw_fps("osu_draw_fps", true);
+ConVar osu_hide_cursor_during_gameplay("osu_hide_cursor_during_gameplay", false);
 
 Vector2 Osu::g_vInternalResolution;
 Vector2 Osu::osuBaseResolution = Vector2(640.0f, 480.0f);
@@ -148,6 +149,9 @@ Osu::Osu()
 	m_frameBuffer = new RenderTarget(0, 0, getScreenWidth(), getScreenHeight());
 	m_backBuffer = new RenderTarget(0, 0, getScreenWidth(), getScreenHeight());
 
+	// load a few select subsystems very early
+	m_notificationOverlay = new OsuNotificationOverlay(this);
+
 	// exec the config file (this must be right here!)
 	Console::execConfigFile("osu");
 
@@ -155,13 +159,10 @@ Osu::Osu()
 	updateMods();
 
 	// load global resources
-	m_titleFont = engine->getResourceManager()->loadFont("segoeuisb.ttf", "FONT_OSU_TITLE", 40.0f);
-	m_subTitleFont = engine->getResourceManager()->loadFont("segoeuisb.ttf", "FONT_OSU_SUBTITLE", 21.0f);
-	m_songBrowserFont = engine->getResourceManager()->loadFont("segoeui.ttf", "FONT_OSU_SONGBROWSER", 35.0f);
-	m_songBrowserFontBold = engine->getResourceManager()->loadFont("segoeuib.ttf", "FONT_OSU_SONGBROWSER_BOLD", 30.0f);
-
-	// load a few select subsystems early
-	m_notificationOverlay = new OsuNotificationOverlay(this);
+	m_titleFont = engine->getResourceManager()->loadFont("SourceSansPro-Semibold.otf", "FONT_OSU_TITLE", 40.0f);
+	m_subTitleFont = engine->getResourceManager()->loadFont("SourceSansPro-Semibold.otf", "FONT_OSU_SUBTITLE", 21.0f);
+	m_songBrowserFont = engine->getResourceManager()->loadFont("SourceSansPro-Regular.otf", "FONT_OSU_SONGBROWSER", 35.0f);
+	m_songBrowserFontBold = engine->getResourceManager()->loadFont("SourceSansPro-Bold.otf", "FONT_OSU_SONGBROWSER_BOLD", 30.0f);
 
 	// load skin
 	UString skinFolder = m_osu_folder_ref->getString();
@@ -252,7 +253,9 @@ void Osu::draw(Graphics *g)
 			g->fillRect(0, 0, Osu::getScreenWidth(), Osu::getScreenHeight());
 		}
 
-		if (m_bModAuto || m_bModAutopilot)
+		const bool allowDrawCursor = !osu_hide_cursor_during_gameplay.getBool() || getSelectedBeatmap()->isPaused();
+
+		if ((m_bModAuto || m_bModAutopilot) && allowDrawCursor)
 			m_hud->drawCursor(g, m_osu_mod_fps_ref->getBool() ? OsuGameRules::getPlayfieldCenter() : getSelectedBeatmap()->getCursorPos());
 
 		if (getSelectedBeatmap()->isPaused())
@@ -265,7 +268,7 @@ void Osu::draw(Graphics *g)
 
 		m_hud->drawVolumeChange(g);
 
-		if (!(m_bModAuto || m_bModAutopilot))
+		if (!(m_bModAuto || m_bModAutopilot) && allowDrawCursor)
 			m_hud->drawCursor(g, getSelectedBeatmap()->getCursorPos());
 	}
 	else // if we are not playing
