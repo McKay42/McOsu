@@ -139,9 +139,7 @@ public:
 	inline Image *getSongSelectBottom() {return m_songSelectBottom;}
 	inline Image *getMenuButtonBackground() {return m_menuButtonBackground;}
 
-	inline Image *getLoadingSmall() {return m_loadingSmall;}
 	inline Image *getBeatmapImportSpinner() {return m_beatmapImportSpinner;}
-	inline Image *getBeatmapImportTop() {return m_beatmapImportTop;}
 	inline Image *getCircleEmpty() {return m_circleEmpty;}
 	inline Image *getCircleFull() {return m_circleFull;}
 
@@ -324,9 +322,7 @@ private:
 	Image *m_songSelectBottom;
 	Image *m_menuButtonBackground;
 
-	Image *m_loadingSmall;
 	Image *m_beatmapImportSpinner;
-	Image *m_beatmapImportTop;
 	Image *m_circleEmpty;
 	Image *m_circleFull;
 
