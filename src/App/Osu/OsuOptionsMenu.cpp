@@ -84,7 +84,7 @@ public:
 				g->pushTransform();
 				g->scale(scoreScale, scoreScale);
 				g->translate(pos.x - skin->getScore0()->getWidth()*scoreScale, pos.y);
-				m_osu->getHUD()->drawScoreNumber(g, i-1, 1.0f, false, 0);
+				m_osu->getHUD()->drawScoreNumber(g, i-1, 1.0f);
 				g->popTransform();
 			}
 		}
@@ -253,6 +253,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Rainbow Sliders", convar->getConVarByName("osu_slider_rainbow"));
 	addCheckbox("SliderBreak Epilepsy", convar->getConVarByName("osu_slider_break_epilepsy"));
 	addCheckbox("Shrinking Sliders", convar->getConVarByName("osu_slider_shrink"));
+	addCheckbox("Invisible Cursor", convar->getConVarByName("osu_hide_cursor_during_gameplay"));
 
 
 
@@ -665,6 +666,25 @@ void OsuOptionsMenu::onResolutionSelect()
     // wtf
     resolutions.push_back(Vector2(4096, 2160));
 
+    // get custom resolutions
+    std::vector<Vector2> customResolutions;
+    std::ifstream customres("cfg/customres.cfg");
+	std::string curLine;
+	while (std::getline(customres, curLine))
+	{
+		const char *curLineChar = curLine.c_str();
+		if (curLine.find("//") == std::string::npos) // ignore comments
+		{
+			int width = 0;
+			int height = 0;
+			if (sscanf(curLineChar, "%ix%i\n", &width, &height) == 2)
+			{
+				if (width > 319 && height > 239) // 320x240 sanity check
+					customResolutions.push_back(Vector2(width, height));
+			}
+		}
+	}
+
     // native resolution at the end
     Vector2 nativeResolution = env->getNativeScreenSize();
     bool containsNativeResolution = false;
@@ -688,7 +708,11 @@ void OsuOptionsMenu::onResolutionSelect()
 		if (resolutions[i].x > nativeResolution.x || resolutions[i].y > nativeResolution.y)
 			continue;
 
-		m_contextMenu->addButton(UString::format("%ix%i", (int)resolutions[i].x, (int)resolutions[i].y));
+		m_contextMenu->addButton(UString::format("%ix%i", (int)std::round(resolutions[i].x), (int)std::round(resolutions[i].y)));
+	}
+	for (int i=0; i<customResolutions.size(); i++)
+	{
+		m_contextMenu->addButton(UString::format("%ix%i", (int)std::round(customResolutions[i].x), (int)std::round(customResolutions[i].y)));
 	}
 	m_contextMenu->end();
 	m_contextMenu->setClickCallback( MakeDelegate(this, &OsuOptionsMenu::onResolutionSelect2) );

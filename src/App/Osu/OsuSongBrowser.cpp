@@ -134,7 +134,6 @@ void OsuSongBrowser::draw(Graphics *g)
 		g->popTransform();
 
 		m_osu->getHUD()->drawBeatmapImportSpinner(g);
-		m_osu->getHUD()->drawBeatmapImportTop(g);
 		return;
 	}
 

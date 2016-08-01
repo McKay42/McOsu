@@ -30,9 +30,8 @@ public:
 	void drawPlayfieldBorder(Graphics *g, Vector2 playfieldCenter, Vector2 playfieldSize, float hitcircleDiameter);
 	void drawLoadingSmall(Graphics *g);
 	void drawBeatmapImportSpinner(Graphics *g);
-	void drawBeatmapImportTop(Graphics *g);
 	void drawVolumeChange(Graphics *g);
-	void drawScoreNumber(Graphics *g, int number, float scale = 1.0f, bool drawLeadingAndTrailingZero = false, int offset = 2);
+	void drawScoreNumber(Graphics *g, int number, float scale = 1.0f, bool drawLeadingZeroes = false, int offset = 2);
 	void drawWarningArrow(Graphics *g, Vector2 pos, bool flipVertically, bool originLeft = true);
 
 	void animateCombo();
@@ -50,9 +49,9 @@ private:
 	void drawCursorRaw(Graphics *g, Vector2 pos);
 	void drawCursorTrailRaw(Graphics *g, float alpha, Vector2 pos);
 	void drawFps(Graphics *g, McFont *font, float fps);
-
-	void drawCombo(Graphics *g, int combo);
 	void drawAccuracy(Graphics *g, float accuracy);
+	void drawCombo(Graphics *g, int combo);
+
 	void drawSkip(Graphics *g);
 	void drawWarningArrows(Graphics *g, float hitcircleDiameter = 0.0f);
 	void drawContinue(Graphics *g, Vector2 cursor, float hitcircleDiameter = 0.0f);
