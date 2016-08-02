@@ -25,3 +25,6 @@ Notable features which osu! doesn't have (yet) in comparison:
 - Nearly unlimited customizability using console commands for people who want to tinker with everything (e.g. osu_playfield_rotation, osu_circle_fade_out_time, osu_skip_time, etc.)
 
 TODO: more text
+
+
+[Donations](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=QFLYEQNMVANJU)
