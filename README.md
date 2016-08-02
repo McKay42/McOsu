@@ -1,7 +1,5 @@
 # McOsu
 
-**This repository is atm only for people who are interested in looking at the code, there are no public releases yet (private alpha).**
-
 **Discord** (Feedback, Requests, Bug reports, etc.): https://discord.gg/3UQnt7X
 
 An unofficial open-source client for [osu!](https://osu.ppy.sh) with the main focus on making practicing easier and customizing gameplay.
