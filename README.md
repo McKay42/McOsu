@@ -10,7 +10,7 @@ Note that Linux support is not as polished as Windows, and some functions such a
 
 Notable features which osu! doesn't have (yet) in comparison:
 - Mid-play empty section skipping
-- Beatmap scrubbing
+- Beatmap scrubbing (SHIFT + ALT + Click drag)
 - Override CS/AR/HP/OD
 - Speed/BPM changer
 - Change mods while playing
