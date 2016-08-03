@@ -32,6 +32,8 @@ class RenderTarget;
 class Osu : public App, public MouseListener
 {
 public:
+	static ConVar *debug;
+
 	static inline Vector2 getScreenSize() {return g_vInternalResolution;}
 	static inline int getScreenWidth() {return (int)g_vInternalResolution.x;}
 	static inline int getScreenHeight() {return (int)g_vInternalResolution.y;}

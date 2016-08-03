@@ -391,20 +391,20 @@ void OsuHUD::drawLoadingSmall(Graphics *g)
 	g->drawString(font, loadingText);
 	g->popTransform();
 	*/
-	const float scale = Osu::getImageScale(m_osu->getSkin()->getBeatmapImportSpinner(), 29);
+	const float scale = Osu::getImageScale(m_osu->getSkin()->getLoadingSpinner(), 29);
 
 	g->setColor(0xffffffff);
 	g->pushTransform();
 	g->rotate(engine->getTime()*180, 0, 0, 1);
 	g->scale(scale, scale);
 	g->translate(Osu::getScreenWidth()/2, Osu::getScreenHeight()/2);
-	g->drawImage(m_osu->getSkin()->getBeatmapImportSpinner());
+	g->drawImage(m_osu->getSkin()->getLoadingSpinner());
 	g->popTransform();
 }
 
 void OsuHUD::drawBeatmapImportSpinner(Graphics *g)
 {
-	const float scale = Osu::getImageScale(m_osu->getSkin()->getBeatmapImportSpinner(), 128);
+	const float scale = Osu::getImageScale(m_osu->getSkin()->getBeatmapImportSpinner(), 100);
 
 	g->setColor(0xffffffff);
 	g->pushTransform();
@@ -639,7 +639,7 @@ void OsuHUD::drawContinue(Graphics *g, Vector2 cursor, float hitcircleDiameter)
 	g->pushTransform();
 	g->scale(cursorScale, cursorScale);
 	g->translate(cursor.x, cursor.y);
-	g->drawImage(m_osu->getSkin()->getDefaultCursor());
+	g->drawImage(cursorImage);
 	g->popTransform();
 
 	// pulse animation
@@ -648,7 +648,7 @@ void OsuHUD::drawContinue(Graphics *g, Vector2 cursor, float hitcircleDiameter)
 	g->pushTransform();
 	g->scale(cursorScale*(1.0f + cursorAnimPulsePercent), cursorScale*(1.0f + cursorAnimPulsePercent));
 	g->translate(cursor.x, cursor.y);
-	g->drawImage(m_osu->getSkin()->getDefaultCursor());
+	g->drawImage(cursorImage);
 	g->popTransform();
 
 	// unpause click message

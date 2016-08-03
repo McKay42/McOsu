@@ -140,6 +140,7 @@ public:
 	inline Image *getMenuButtonBackground() {return m_menuButtonBackground;}
 
 	inline Image *getBeatmapImportSpinner() {return m_beatmapImportSpinner;}
+	inline Image *getLoadingSpinner() {return m_loadingSpinner;}
 	inline Image *getCircleEmpty() {return m_circleEmpty;}
 	inline Image *getCircleFull() {return m_circleFull;}
 
@@ -323,6 +324,7 @@ private:
 	Image *m_menuButtonBackground;
 
 	Image *m_beatmapImportSpinner;
+	Image *m_loadingSpinner;
 	Image *m_circleEmpty;
 	Image *m_circleFull;
 

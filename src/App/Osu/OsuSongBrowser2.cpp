@@ -1055,7 +1055,11 @@ void OsuSongBrowser2::update()
 					m_beatmaps.push_back(bm);
 				}
 				else
+				{
+					if (Osu::debug->getBool())
+						debugLog("Couldn't load(), deleting object.\n");
 					SAFE_DELETE(bm);
+				}
 			}
 
 			if (m_iCurRefreshBeatmap >= m_iCurRefreshNumBeatmaps)
