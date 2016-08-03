@@ -42,6 +42,8 @@ void DUMMY_OSU_LETTERBOXING(UString oldValue, UString newValue) {;}
 void DUMMY_OSU_VOLUME_MUSIC_ARGS(UString oldValue, UString newValue) {;}
 void DUMMY_OSU_MODS(void) {;}
 
+ConVar osu_debug("osu_debug", false);
+
 ConVar osu_disable_mousebuttons("osu_disable_mousebuttons", true);
 ConVar osu_confine_cursor_windowed("osu_confine_cursor_windowed", false, DUMMY_OSU_LETTERBOXING);
 ConVar osu_confine_cursor_fullscreen("osu_confine_cursor_fullscreen", true, DUMMY_OSU_LETTERBOXING);
@@ -68,6 +70,7 @@ ConVar osu_resolution_enabled("osu_resolution_enabled", false);
 ConVar osu_draw_fps("osu_draw_fps", true);
 ConVar osu_hide_cursor_during_gameplay("osu_hide_cursor_during_gameplay", false);
 
+ConVar *Osu::debug = &osu_debug;
 Vector2 Osu::g_vInternalResolution;
 Vector2 Osu::osuBaseResolution = Vector2(640.0f, 480.0f);
 
