@@ -153,7 +153,8 @@ bool OsuBeatmap::load()
 	UString searchpath = m_sFilePath;
 	std::vector<UString> files = env->getFilesInFolder(searchpath);
 
-	//debugLog("Beatmap: %s\n", m_sFilePath.toUtf8());
+	if (Osu::debug->getBool())
+		debugLog("OsuBeatmap::load() : %s\n", m_sFilePath.toUtf8());
 
 	for (int i=0; i<files.size(); i++)
 	{
@@ -170,6 +171,8 @@ bool OsuBeatmap::load()
 			// try to load it. if successful, save it, else cleanup and continue to the next osu file
 			if (!diff->loadMetadata())
 			{
+				if (Osu::debug->getBool())
+					debugLog("OsuBeatmap::load() : Couldn't loadMetadata(), deleting object.\n");
 				SAFE_DELETE(diff);
 				continue;
 			}

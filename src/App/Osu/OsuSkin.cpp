@@ -153,6 +153,7 @@ OsuSkin::OsuSkin(Osu *osu, UString filepath)
 	m_menuButtonBackground = m_missingTexture;
 
 	m_beatmapImportSpinner = m_missingTexture;
+	m_loadingSpinner = m_missingTexture;
 	m_circleEmpty = m_missingTexture;
 	m_circleFull = m_missingTexture;
 
@@ -383,6 +384,7 @@ void OsuSkin::load()
 	checkLoadImage(&m_menuButtonBackground, "menu-button-background", "OSU_SKIN_MENU_BUTTON_BACKGROUND");
 
 	checkLoadImage(&m_beatmapImportSpinner, "beatmapimport-spinner", "OSU_SKIN_BEATMAP_IMPORT_SPINNER");
+	checkLoadImage(&m_loadingSpinner, "loading-spinner", "OSU_SKIN_LOADING_SPINNER");
 	checkLoadImage(&m_circleEmpty, "circle-empty", "OSU_SKIN_CIRCLE_EMPTY");
 	checkLoadImage(&m_circleFull, "circle-full", "OSU_SKIN_CIRCLE_FULL");
 

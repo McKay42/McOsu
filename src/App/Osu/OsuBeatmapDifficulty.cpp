@@ -9,6 +9,7 @@
 
 #include "Engine.h"
 #include "ResourceManager.h"
+#include "ConVar.h"
 
 #include "Osu.h"
 #include "OsuNotificationOverlay.h"
@@ -51,6 +52,9 @@ OsuBeatmapDifficulty::OsuBeatmapDifficulty(Osu *osu, UString filepath, UString f
 
 bool OsuBeatmapDifficulty::loadMetadata()
 {
+	if (Osu::debug->getBool())
+		debugLog("OsuBeatmapDifficulty::loadMetadata() : %s\n", m_sFilePath.toUtf8());
+
 	// open osu file
 	std::ifstream file(m_sFilePath.toUtf8());
 	if (!file.good())
@@ -154,7 +158,9 @@ bool OsuBeatmapDifficulty::loadMetadata()
 					memset(stringBuffer, '\0', 1024);
 					if (sscanf(curLineChar, "BeatmapID:%1023[^\n]", stringBuffer) == 1)
 					{
-						beatmapId = std::stol(stringBuffer);
+						// FUCK stol(), causing crashes in e.g. std::stol("--123456");
+						//beatmapId = std::stol(stringBuffer);
+						beatmapId = 0;
 					}
 				}
 				break;
@@ -229,6 +235,9 @@ bool OsuBeatmapDifficulty::loadMetadata()
 	// calculate BPM range
 	if (timingpoints.size() > 0)
 	{
+		if (Osu::debug->getBool())
+			debugLog("OsuBeatmapDifficulty::loadMetadata() : calculating BPM range ...\n");
+
 		// sort timingpoints by time
 		struct TimingPointSortComparator
 		{
@@ -287,7 +296,6 @@ bool OsuBeatmapDifficulty::loadMetadata()
 bool OsuBeatmapDifficulty::load(OsuBeatmap *beatmap, std::vector<OsuHitObject*> *hitobjects)
 {
 	unload();
-	debugLog("OsuBeatmapDifficulty: %s\n", m_sFilePath.toUtf8());
 
 	// open osu file
 	std::ifstream file(m_sFilePath.toUtf8());

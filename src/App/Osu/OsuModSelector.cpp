@@ -437,11 +437,11 @@ void OsuModSelector::updateLayout()
 				{
 					Image *buttonImage = engine->getResourceManager()->getImage(button->getImageResourceName());
 
+					if (buttonImage != NULL)
+						scale = m_osu->getImageScale(buttonImage, 42.0f);
+
 					button->setPos(start + Vector2(size.x*x + offset.x*x, size.y*y + offset.y*y));
-					if (buttonImage != NULL && buttonImage->getWidth()*scale > size.x+5)
-						button->setBaseScale(scale*0.5f, scale*0.5f); // HACKHACK: @2x hack
-					else
-						button->setBaseScale(scale, scale);
+					button->setBaseScale(scale, scale);
 					button->setSize(size);
 				}
 			}
