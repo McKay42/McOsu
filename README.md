@@ -26,6 +26,7 @@ Note that Linux support is not as polished as Windows, and some functions such a
 
 ##Known incompatible GPUs:
 - Mobile Intel 4 Series Express Chipset Family (can't create RenderTargets for drawing sliders)
+- Intel G45/G43 Express Chipset
 
 ##Skin Credits:
 - ffffffffffffffffff - "- Jaret - Mish Mosh"
