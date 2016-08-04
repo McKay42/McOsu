@@ -95,7 +95,9 @@ OsuSkin::OsuSkin(Osu *osu, UString filepath)
 	m_sliderFollowCircle = m_missingTexture;
 	m_sliderScorePoint = m_missingTexture;
 	m_sliderStartCircle = m_missingTexture;
+	m_sliderStartCircleOverlay = m_missingTexture;
 	m_sliderEndCircle = m_missingTexture;
+	m_sliderEndCircleOverlay = m_missingTexture;
 
 	m_spinnerBackground = m_missingTexture;
 	m_spinnerCircle = m_missingTexture;
@@ -200,12 +202,17 @@ OsuSkin::OsuSkin(Osu *osu, UString filepath)
 	m_bHit02x = false;
 	m_bHit502x = false;
 	m_bHit1002x = false;
+	m_bSpinnerApproachCircle2x = false;
 	m_bSpinnerBottom2x= false;
 	m_bSpinnerCircle2x= false;
 	m_bSpinnerTop2x= false;
 	m_bSpinnerMiddle2x= false;
 	m_bSpinnerMiddle22x= false;
 	m_bSliderScorePoint2x = false;
+	m_bSliderStartCircle2x = false;
+	m_bSliderStartCircleOverlay2x = false;
+	m_bSliderEndCircle2x = false;
+	m_bSliderEndCircleOverlay2x = false;
 
 	m_bCircularmetre2x = false;
 	m_bPlaySkip2x = false;
@@ -326,7 +333,9 @@ void OsuSkin::load()
 	checkLoadImage(&m_sliderScorePoint, "sliderscorepoint", "OSU_SKIN_SLIDERSCOREPOINT");
 	checkLoadImage(&m_sliderFollowCircle, "sliderfollowcircle", "OSU_SKIN_SLIDERFOLLOWCIRCLE");
 	checkLoadImage(&m_sliderStartCircle, "sliderstartcircle", "OSU_SKIN_SLIDERSTARTCIRCLE");
+	checkLoadImage(&m_sliderStartCircleOverlay, "sliderstartcircleoverlay", "OSU_SKIN_SLIDERSTARTCIRCLEOVERLAY");
 	checkLoadImage(&m_sliderEndCircle, "sliderendcircle", "OSU_SKIN_SLIDERENDCIRCLE");
+	checkLoadImage(&m_sliderEndCircleOverlay, "sliderendcircleoverlay", "OSU_SKIN_SLIDERENDCIRCLEOVERLAY");
 
 	checkLoadImage(&m_spinnerBackground, "spinner-background", "OSU_SKIN_SPINNERBACKGROUND");
 	checkLoadImage(&m_spinnerCircle, "spinner-circle", "OSU_SKIN_SPINNERCIRCLE");
@@ -439,6 +448,8 @@ void OsuSkin::load()
 		m_bHit502x = true;
 	if (m_hit100 != NULL && m_hit100->getFilePath().find("@2x") != -1)
 		m_bHit1002x = true;
+	if (m_spinnerApproachCircle != NULL && m_spinnerApproachCircle->getFilePath().find("@2x") != -1)
+		m_bSpinnerApproachCircle2x = true;
 	if (m_spinnerBottom != NULL && m_spinnerBottom->getFilePath().find("@2x") != -1)
 		m_bSpinnerBottom2x = true;
 	if (m_spinnerCircle != NULL && m_spinnerCircle->getFilePath().find("@2x") != -1)
@@ -451,6 +462,14 @@ void OsuSkin::load()
 		m_bSpinnerMiddle22x = true;
 	if (m_sliderScorePoint != NULL && m_sliderScorePoint->getFilePath().find("@2x") != -1)
 		m_bSliderScorePoint2x = true;
+	if (m_sliderStartCircle != NULL && m_sliderStartCircle->getFilePath().find("@2x") != -1)
+		m_bSliderStartCircle2x = true;
+	if (m_sliderStartCircleOverlay != NULL && m_sliderStartCircleOverlay->getFilePath().find("@2x") != -1)
+		m_bSliderStartCircleOverlay2x = true;
+	if (m_sliderEndCircle != NULL && m_sliderEndCircle->getFilePath().find("@2x") != -1)
+		m_bSliderEndCircle2x = true;
+	if (m_sliderEndCircleOverlay != NULL && m_sliderEndCircleOverlay->getFilePath().find("@2x") != -1)
+		m_bSliderEndCircleOverlay2x = true;
 
 	if (m_circularmetre != NULL && m_circularmetre->getFilePath().find("@2x") != -1)
 		m_bCircularmetre2x = true;

@@ -44,7 +44,8 @@ void DUMMY_OSU_MODS(void) {;}
 
 ConVar osu_debug("osu_debug", false);
 
-ConVar osu_disable_mousebuttons("osu_disable_mousebuttons", true);
+ConVar osu_disable_mousebuttons("osu_disable_mousebuttons", false);
+ConVar osu_disable_mousewheel("osu_disable_mousewheel", false);
 ConVar osu_confine_cursor_windowed("osu_confine_cursor_windowed", false, DUMMY_OSU_LETTERBOXING);
 ConVar osu_confine_cursor_fullscreen("osu_confine_cursor_fullscreen", true, DUMMY_OSU_LETTERBOXING);
 
@@ -409,13 +410,16 @@ void Osu::update()
 	// handle mousewheel volume change
 	if (((m_songBrowser != NULL && (!m_songBrowser->isVisible() || engine->getKeyboard()->isAltDown())) || ((m_songBrowser2 != NULL && (!m_songBrowser2->isVisible() || engine->getKeyboard()->isAltDown()))) ) && !m_optionsMenu->isVisible())
 	{
-		int wheelDelta = engine->getMouse()->getWheelDeltaVertical();
-		if (wheelDelta != 0)
+		if (!(isInPlayMode() && !m_pauseMenu->isVisible()) || !osu_disable_mousewheel.getBool() || engine->getKeyboard()->isAltDown())
 		{
-			if (wheelDelta > 0)
-				volumeUp();
-			else
-				volumeDown();
+			int wheelDelta = engine->getMouse()->getWheelDeltaVertical();
+			if (wheelDelta != 0)
+			{
+				if (wheelDelta > 0)
+					volumeUp();
+				else
+					volumeDown();
+			}
 		}
 	}
 }
