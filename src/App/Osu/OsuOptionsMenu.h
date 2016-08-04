@@ -98,6 +98,10 @@ private:
 	CBaseUICheckbox *m_fullscreenCheckbox;
 	CBaseUISlider *m_backgroundBrightnessSlider;
 	CBaseUISlider *m_hudSizeSlider;
+	CBaseUISlider *m_hudComboScaleSlider;
+	CBaseUISlider *m_hudAccuracyScaleSlider;
+	CBaseUISlider *m_hudHiterrorbarScaleSlider;
+	CBaseUISlider *m_hudProgressbarScaleSlider;
 	CBaseUISlider *m_playfieldBorderSizeSlider;
 	CBaseUISlider *m_cursorSizeSlider;
 	CBaseUILabel *m_skinLabel;
@@ -116,7 +120,7 @@ private:
 class OsuUIListBoxContextMenu : public CBaseUIElement
 {
 public:
-	OsuUIListBoxContextMenu(float xPos, float yPos, float xSize, float ySize, UString name);
+	OsuUIListBoxContextMenu(float xPos, float yPos, float xSize, float ySize, UString name, CBaseUIScrollView *parent);
 	virtual ~OsuUIListBoxContextMenu();
 
 	void draw(Graphics *g);
@@ -134,12 +138,13 @@ public:
 	void addButton(UString text);
 	void end();
 
-	void setVisible2(bool visible2) {m_bVisible2 = visible2;}
+	void setVisible2(bool visible2);
 
 	bool isVisible() {return m_bVisible && m_bVisible2;}
 
 private:
 	CBaseUIContainer *m_container;
+	CBaseUIScrollView *m_parent;
 
 	void onClick(CBaseUIButton *button);
 	ButtonClickCallback m_clickCallback;

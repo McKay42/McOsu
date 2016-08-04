@@ -70,6 +70,8 @@ bool OsuBeatmapDifficulty::loadMetadata()
 	// load metadata only
 	int curBlock = -1;
 
+	bool foundAR = false;
+
 	std::string curLine;
 	while (std::getline(file, curLine))
 	{
@@ -167,7 +169,8 @@ bool OsuBeatmapDifficulty::loadMetadata()
 
 			case 2: // Difficulty
 				sscanf(curLineChar, "CircleSize:%f\n", &CS);
-				sscanf(curLineChar, "ApproachRate:%f\n", &AR);
+				if (sscanf(curLineChar, "ApproachRate:%f\n", &AR) == 1)
+					foundAR = true;
 				sscanf(curLineChar, "HPDrainRate:%f\n", &HP);
 				sscanf(curLineChar, "OverallDifficulty:%f\n", &OD);
 				sscanf(curLineChar, "SliderMultiplier:%f\n", &sliderMultiplier);
@@ -194,7 +197,8 @@ bool OsuBeatmapDifficulty::loadMetadata()
 				break;
 			case 5: // TimingPoints
 
-				// Offset, Milliseconds per Beat, Meter, Sample Type, Sample Set, Volume, Inherited, Kiai Mode
+				// old beatmaps: Offset, Milliseconds per Beat
+				// new beatmaps: Offset, Milliseconds per Beat, Meter, Sample Type, Sample Set, Volume, Inherited, Kiai Mode
 
 				double tpOffset;
 				float tpMSPerBeat;
@@ -209,6 +213,18 @@ bool OsuBeatmapDifficulty::loadMetadata()
 					t.sampleType = tpSampleType;
 					t.sampleSet = tpSampleSet;
 					t.volume = tpVolume;
+
+					timingpoints.push_back(t);
+				}
+				else if (sscanf(curLineChar, "%lf,%f", &tpOffset, &tpMSPerBeat) == 2)
+				{
+					TIMINGPOINT t;
+					t.offset = (long)std::round(tpOffset);
+					t.msPerBeat = tpMSPerBeat;
+
+					t.sampleType = 0;
+					t.sampleSet = 0;
+					t.volume = 100;
 
 					timingpoints.push_back(t);
 				}
@@ -290,6 +306,10 @@ bool OsuBeatmapDifficulty::loadMetadata()
 		maxBPM = (int)std::round(tempMaxBPM);
 	}
 
+	// old beatmaps: AR = OD, there is no ApproachRate stored
+	if (!foundAR)
+		AR = OD;
+
 	return true;
 }
 
@@ -333,7 +353,8 @@ bool OsuBeatmapDifficulty::load(OsuBeatmap *beatmap, std::vector<OsuHitObject*> 
 			{
 			case 3: // TimingPoints
 
-				// Offset, Milliseconds per Beat, Meter, Sample Type, Sample Set, Volume, Inherited, Kiai Mode
+				// old beatmaps: Offset, Milliseconds per Beat
+				// new beatmaps: Offset, Milliseconds per Beat, Meter, Sample Type, Sample Set, Volume, Inherited, Kiai Mode
 
 				double tpOffset;
 				float tpMSPerBeat;
@@ -348,6 +369,18 @@ bool OsuBeatmapDifficulty::load(OsuBeatmap *beatmap, std::vector<OsuHitObject*> 
 					t.sampleType = tpSampleType;
 					t.sampleSet = tpSampleSet;
 					t.volume = tpVolume;
+
+					timingpoints.push_back(t);
+				}
+				else if (sscanf(curLineChar, "%lf,%f", &tpOffset, &tpMSPerBeat) == 2)
+				{
+					TIMINGPOINT t;
+					t.offset = (long)std::round(tpOffset);
+					t.msPerBeat = tpMSPerBeat;
+
+					t.sampleType = 0;
+					t.sampleSet = 0;
+					t.volume = 100;
 
 					timingpoints.push_back(t);
 				}
@@ -395,14 +428,18 @@ bool OsuBeatmapDifficulty::load(OsuBeatmap *beatmap, std::vector<OsuHitObject*> 
 						std::vector<UString> tokens = curLineString.split(",");
 						if (tokens.size() < 8)
 						{
-							engine->showMessageError("Error", UString::format("Invalid slider in beatmap: %s\n\ncurLine = %s", m_sFilePath.toUtf8(), curLine));
-							return false;
+							debugLog("Invalid slider in beatmap: %s\n\ncurLine = %s\n", m_sFilePath.toUtf8(), curLineChar);
+							continue;
+							//engine->showMessageError("Error", UString::format("Invalid slider in beatmap: %s\n\ncurLine = %s", m_sFilePath.toUtf8(), curLine));
+							//return false;
 						}
 						std::vector<UString> sliderTokens = tokens[5].split("|");
-						if (sliderTokens.size() == 0)
+						if (sliderTokens.size() < 2)
 						{
-							engine->showMessageError("Error", UString::format("Invalid slider tokens: %s\n\nIn beatmap: %s", curLine, m_sFilePath.toUtf8()));
-							return false;
+							debugLog("Invalid slider tokens: %s\n\nIn beatmap: %s\n", curLineChar, m_sFilePath.toUtf8());
+							continue;
+							//engine->showMessageError("Error", UString::format("Invalid slider tokens: %s\n\nIn beatmap: %s", curLineChar, m_sFilePath.toUtf8()));
+							//return false;
 						}
 
 						std::vector<Vector2> points;

@@ -249,7 +249,7 @@ void OsuBeatmap::draw(Graphics *g)
 	}
 
 	// draw playfield border
-	if (osu_draw_playfield_border.getBool())
+	if (osu_draw_playfield_border.getBool() && !osu_mod_fps.getBool())
 		m_osu->getHUD()->drawPlayfieldBorder(g, m_vPlayfieldCenter, m_vPlayfieldSize, m_fHitcircleDiameter);
 
 	// draw followpoints
