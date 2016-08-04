@@ -31,6 +31,10 @@ ConVar osu_cursor_trail_spacing("osu_cursor_trail_spacing", 0.015f);
 ConVar osu_cursor_trail_alpha("osu_cursor_trail_alpha", 1.0f);
 
 ConVar osu_hud_scale("osu_hud_scale", 1.0f);
+ConVar osu_hud_hiterrorbar_scale("osu_hud_hiterrorbar_scale", 1.0f);
+ConVar osu_hud_combo_scale("osu_hud_combo_scale", 1.0f);
+ConVar osu_hud_accuracy_scale("osu_hud_accuracy_scale", 1.0f);
+ConVar osu_hud_progressbar_scale("osu_hud_progressbar_scale", 1.0f);
 ConVar osu_hud_playfield_border_size("osu_hud_playfield_border_size", 5.0f);
 
 ConVar osu_draw_cursor_trail("osu_draw_cursor_trail", true);
@@ -511,7 +515,7 @@ void OsuHUD::drawCombo(Graphics *g, int combo)
 
 	// draw back (anim)
 	float animScaleMultiplier = 1.0f + m_fComboAnim2*osu_combo_anim2_size.getFloat();
-	float scale = osu_hud_scale.getFloat() * m_osu->getImageScale(m_osu->getSkin()->getScore0(), 32)*animScaleMultiplier;
+	float scale = m_osu->getImageScale(m_osu->getSkin()->getScore0(), 32)*animScaleMultiplier * osu_hud_scale.getFloat() * osu_hud_combo_scale.getFloat();
 	if (m_fComboAnim2 > 0.01f)
 	{
 		g->setAlpha(m_fComboAnim2*0.65f);
@@ -530,7 +534,7 @@ void OsuHUD::drawCombo(Graphics *g, int combo)
 	g->setAlpha(1.0f);
 	const float animPercent = (m_fComboAnim1 < 1.0f ? m_fComboAnim1 : 2.0f - m_fComboAnim1);
 	animScaleMultiplier = 1.0f + (0.5f*animPercent*animPercent)*osu_combo_anim1_size.getFloat();
-	scale = osu_hud_scale.getFloat() * m_osu->getImageScale(m_osu->getSkin()->getScore0(), 32) * animScaleMultiplier;
+	scale = m_osu->getImageScale(m_osu->getSkin()->getScore0(), 32) * animScaleMultiplier * osu_hud_scale.getFloat() * osu_hud_combo_scale.getFloat();
 	g->pushTransform();
 		g->scale(scale, scale);
 		g->translate(offset, Osu::getScreenHeight() - m_osu->getSkin()->getScore0()->getHeight()*scale/2.0f);
@@ -556,7 +560,7 @@ void OsuHUD::drawAccuracy(Graphics *g, float accuracy)
 	// draw it
 	const int spacingOffset = 2;
 	const int offset = 5;
-	const float scale = osu_hud_scale.getFloat() * m_osu->getImageScale(m_osu->getSkin()->getScore0(), 13);
+	const float scale = m_osu->getImageScale(m_osu->getSkin()->getScore0(), 13) * osu_hud_scale.getFloat() * osu_hud_accuracy_scale.getFloat();
 	g->pushTransform();
 
 		// note that "spacingOffset*numDigits" would actually be used with (numDigits-1), but because we add a spacingOffset after the score dot we also have to add it here
@@ -667,8 +671,8 @@ void OsuHUD::drawHitErrorBar(Graphics *g, float hitWindow300, float hitWindow100
 	const Color color100 = COLOR(255, 0, 255-brightnessSub, 0);
 	const Color color50 = COLOR(255, 255-brightnessSub, 165-brightnessSub, 0);
 
-	const Vector2 size = Vector2(Osu::getScreenWidth()*0.15f, Osu::getScreenHeight()*0.007f);
-	const Vector2 center = Vector2(Osu::getScreenWidth()/2.0f, Osu::getScreenHeight()*0.985f);
+	const Vector2 size = Vector2(Osu::getScreenWidth()*0.15f, Osu::getScreenHeight()*0.007f)*osu_hud_scale.getFloat()*osu_hud_hiterrorbar_scale.getFloat();
+	const Vector2 center = Vector2(Osu::getScreenWidth()/2.0f, Osu::getScreenHeight() - Osu::getScreenHeight()*0.015*osu_hud_scale.getFloat()*osu_hud_hiterrorbar_scale.getFloat());
 
 	const float entryHeight = size.y*3.4f;
 	const float entryWidth = size.y*0.6f;
@@ -723,14 +727,14 @@ void OsuHUD::drawProgressBar(Graphics *g, float percent, bool waiting)
 {
 	const float num_segments = 15*8;
 	const int offset = 20;
-	const float radius = osu_hud_scale.getFloat() * m_osu->getUIScale(10.5f);
+	const float radius = m_osu->getUIScale(10.5f) * osu_hud_scale.getFloat() * osu_hud_progressbar_scale.getFloat();
 	const float circularMetreScale = ((2*radius)/m_osu->getSkin()->getCircularmetre()->getWidth()) * 1.3f; // HACKHACK: the skin image is NOT border to border; hardcoded 1.3 multiplier
 	const float actualCircularMetreScale = ((2*radius)/m_osu->getSkin()->getCircularmetre()->getWidth());
 	Vector2 center = Vector2(m_fAccuracyXOffset - radius - offset, m_fAccuracyYOffset);
 
 	// clamp to top edge of screen
-	if (center.y - (m_osu->getSkin()->getCircularmetre()->getHeight()*actualCircularMetreScale)/2.0f < 0)
-		center.y += std::abs(center.y - (m_osu->getSkin()->getCircularmetre()->getHeight()*actualCircularMetreScale)/2.0f);
+	if (center.y - (m_osu->getSkin()->getCircularmetre()->getHeight()*actualCircularMetreScale + 5)/2.0f < 0)
+		center.y += std::abs(center.y - (m_osu->getSkin()->getCircularmetre()->getHeight()*actualCircularMetreScale + 5)/2.0f);
 
 	const float theta = 2 * PI / float(num_segments);
 	const float s = sinf(theta); // precalculate the sine and cosine

@@ -70,23 +70,27 @@ void OsuSpinner::draw(Graphics *g)
 	OsuSkin *skin = m_beatmap->getSkin();
 	Vector2 center = m_beatmap->osuCoords2Pixels(m_vRawPos);
 
-	float clampedRatio = clamp<float>(m_fRatio, 0.0f, 1.0f);
+	const float globalScale = 1.0f; // adjustments
+	const float globalBaseSkinSize = 667; // the width of spinner-bottom.png in the default skin
+	const float globalBaseSize = m_beatmap->getPlayfieldSize().y + m_beatmap->getHitcircleDiameter()/2;
+
+	const float clampedRatio = clamp<float>(m_fRatio, 0.0f, 1.0f);
 	float finishScaleRatio = clampedRatio;
 	finishScaleRatio =  -finishScaleRatio*(finishScaleRatio-2);
-	float finishScale = 0.80f + finishScaleRatio*0.20f; // the spinner grows until reaching 100% during spinning, depending on how many spins are left
+	const float finishScale = 0.80f + finishScaleRatio*0.20f; // the spinner grows until reaching 100% during spinning, depending on how many spins are left
 
 	if (skin->getSpinnerBackground() != skin->getMissingTexture() || skin->getVersion() < 2) // old style
 	{
 		// draw spinner circle
 		if (skin->getSpinnerCircle() != skin->getMissingTexture())
 		{
-			float spinnerCircleScale = Osu::getImageScaleToFitResolution(skin->getSpinnerCircle(), m_beatmap->getPlayfieldSize() + Vector2(m_beatmap->getHitcircleDiameter(), m_beatmap->getHitcircleDiameter())/1.5f);
+			float spinnerCircleScale = globalBaseSize / (globalBaseSkinSize * (skin->isSpinnerCircle2x() ? 2.0f : 1.0f));
 
 			g->setColor(0xffffffff);
 			g->setAlpha(m_fAlpha);
 			g->pushTransform();
 				g->rotate(m_fDrawRot);
-				g->scale(spinnerCircleScale, spinnerCircleScale);
+				g->scale(spinnerCircleScale*globalScale, spinnerCircleScale*globalScale);
 				g->translate(center.x, center.y);
 				g->drawImage(skin->getSpinnerCircle());
 			g->popTransform();
@@ -95,12 +99,12 @@ void OsuSpinner::draw(Graphics *g)
 		// draw approach circle
 		if (!m_beatmap->getOsu()->getModHD() && m_fPercent > 0.0f)
 		{
-			float spinnerApproachCircleImageScale = Osu::getImageScaleToFitResolution(skin->getSpinnerApproachCircle(), m_beatmap->getPlayfieldSize() + Vector2(m_beatmap->getHitcircleDiameter(), m_beatmap->getHitcircleDiameter()));
+			float spinnerApproachCircleImageScale = globalBaseSize / ((globalBaseSkinSize/2) * (skin->isSpinnerApproachCircle2x() ? 2.0f : 1.0f));
 
 			g->setColor(skin->getSpinnerApproachCircleColor());
 			g->setAlpha(m_fAlpha);
 			g->pushTransform();
-				g->scale(spinnerApproachCircleImageScale*m_fPercent, spinnerApproachCircleImageScale*m_fPercent);
+				g->scale(spinnerApproachCircleImageScale*m_fPercent*globalScale, spinnerApproachCircleImageScale*m_fPercent*globalScale);
 				g->translate(center.x, center.y);
 				g->drawImage(skin->getSpinnerApproachCircle());
 			g->popTransform();
@@ -111,48 +115,28 @@ void OsuSpinner::draw(Graphics *g)
 		// bottom
 		if (skin->getSpinnerBottom() != skin->getMissingTexture())
 		{
-			float spinnerBottomImageScale = Osu::getImageScaleToFitResolution(skin->getSpinnerBottom(), m_beatmap->getPlayfieldSize() + Vector2(m_beatmap->getHitcircleDiameter(), m_beatmap->getHitcircleDiameter())/1.5f);
+			const float spinnerBottomImageScale = globalBaseSize / (globalBaseSkinSize * (skin->isSpinnerBottom2x() ? 2.0f : 1.0f));
 
 			g->setColor(0xffffffff);
 			g->setAlpha(m_fAlpha);
 			g->pushTransform();
 				g->rotate(m_fDrawRot/7.0f);
-				g->scale(spinnerBottomImageScale*finishScale, spinnerBottomImageScale*finishScale);
+				g->scale(spinnerBottomImageScale*finishScale*globalScale, spinnerBottomImageScale*finishScale*globalScale);
 				g->translate(center.x, center.y);
 				g->drawImage(skin->getSpinnerBottom());
 			g->popTransform();
 		}
 
-		// circle
-		// doesn't get drawn on v2 spinners
-		/*
-		if (skin->getSpinnerCircle() != skin->getMissingTexture())
-		{
-			float spinnerCircleImageScale = Osu::getImageScaleToFitResolution(skin->getSpinnerCircle(), m_beatmap->getPlayfieldSize() + Vector2(m_beatmap->getHitcircleDiameter(), m_beatmap->getHitcircleDiameter())/1.5f);
-
-			g->setColor(0xffffffff);
-			g->setAlpha(m_fAlpha);
-			g->pushTransform();
-				g->rotate(m_fDrawRot);
-				g->scale(spinnerCircleImageScale, spinnerCircleImageScale);
-				g->translate(center.x, center.y);
-				g->drawImage(skin->getSpinnerCircle());
-			g->popTransform();
-		}
-		*/
-
 		// top
 		if (skin->getSpinnerTop() != skin->getMissingTexture())
 		{
-			float spinnerTopImageScale = Osu::getImageScaleToFitResolution(skin->getSpinnerTop(), m_beatmap->getPlayfieldSize() + Vector2(m_beatmap->getHitcircleDiameter(), m_beatmap->getHitcircleDiameter())/1.5f);
-			if (spinnerTopImageScale > 1.0f)
-				spinnerTopImageScale = 1.0f;
+			const float spinnerTopImageScale = globalBaseSize / (globalBaseSkinSize * (skin->isSpinnerTop2x() ? 2.0f : 1.0f));
 
 			g->setColor(0xffffffff);
 			g->setAlpha(m_fAlpha);
 			g->pushTransform();
 				g->rotate(m_fDrawRot/2.0f);
-				g->scale(spinnerTopImageScale*finishScale, spinnerTopImageScale*finishScale);
+				g->scale(spinnerTopImageScale*finishScale*globalScale, spinnerTopImageScale*finishScale*globalScale);
 				g->translate(center.x, center.y);
 				g->drawImage(skin->getSpinnerTop());
 			g->popTransform();
@@ -161,28 +145,26 @@ void OsuSpinner::draw(Graphics *g)
 		// middle
 		if (skin->getSpinnerMiddle2() != skin->getMissingTexture())
 		{
-			float spinnerMiddle2ImageScale = Osu::getImageScaleToFitResolution(skin->getSpinnerMiddle2(), m_beatmap->getPlayfieldSize() + Vector2(m_beatmap->getHitcircleDiameter(), m_beatmap->getHitcircleDiameter())/1.5f);
-			if (spinnerMiddle2ImageScale > 1.0f) // this is not correct, but not having it is also not correct
-				spinnerMiddle2ImageScale = 1.0f;
+			const float spinnerMiddle2ImageScale = globalBaseSize / (globalBaseSkinSize * (skin->isSpinnerMiddle22x() ? 2.0f : 1.0f));
 
 			g->setColor(0xffffffff);
 			g->setAlpha(m_fAlpha);
 			g->pushTransform();
 				g->rotate(m_fDrawRot);
-				g->scale(spinnerMiddle2ImageScale*finishScale, spinnerMiddle2ImageScale*finishScale);
+				g->scale(spinnerMiddle2ImageScale*finishScale*globalScale, spinnerMiddle2ImageScale*finishScale*globalScale);
 				g->translate(center.x, center.y);
 				g->drawImage(skin->getSpinnerMiddle2());
 			g->popTransform();
 		}
 		if (skin->getSpinnerMiddle() != skin->getMissingTexture())
 		{
-			float spinnerMiddleImageScale = Osu::getImageScaleToFitResolution(skin->getSpinnerMiddle(), m_beatmap->getPlayfieldSize() + Vector2(m_beatmap->getHitcircleDiameter(), m_beatmap->getHitcircleDiameter())/1.5f);
+			const float spinnerMiddleImageScale = globalBaseSize / (globalBaseSkinSize * (skin->isSpinnerMiddle2x() ? 2.0f : 1.0f));
 
 			g->setColor(COLOR(255, 255, (int)(255*m_fPercent), (int)(255*m_fPercent)));
 			g->setAlpha(m_fAlpha);
 			g->pushTransform();
 				g->rotate(m_fDrawRot/2.0f); // apparently does not rotate in osu
-				g->scale(spinnerMiddleImageScale*finishScale, spinnerMiddleImageScale*finishScale);
+				g->scale(spinnerMiddleImageScale*finishScale*globalScale, spinnerMiddleImageScale*finishScale*globalScale);
 				g->translate(center.x, center.y);
 				g->drawImage(skin->getSpinnerMiddle());
 			g->popTransform();
@@ -191,12 +173,12 @@ void OsuSpinner::draw(Graphics *g)
 		// draw approach circle
 		if (!m_beatmap->getOsu()->getModHD() && m_fPercent > 0.0f)
 		{
-			float spinnerApproachCircleImageScale = Osu::getImageScaleToFitResolution(skin->getSpinnerApproachCircle(), m_beatmap->getPlayfieldSize() + Vector2(m_beatmap->getHitcircleDiameter(), m_beatmap->getHitcircleDiameter()));
+			const float spinnerApproachCircleImageScale = globalBaseSize / ((globalBaseSkinSize/2) * (skin->isSpinnerApproachCircle2x() ? 2.0f : 1.0f));
 
 			g->setColor(skin->getSpinnerApproachCircleColor());
 			g->setAlpha(m_fAlpha);
 			g->pushTransform();
-				g->scale(spinnerApproachCircleImageScale*m_fPercent, spinnerApproachCircleImageScale*m_fPercent);
+				g->scale(spinnerApproachCircleImageScale*m_fPercent*globalScale, spinnerApproachCircleImageScale*m_fPercent*globalScale);
 				g->translate(center.x, center.y);
 				g->drawImage(skin->getSpinnerApproachCircle());
 			g->popTransform();

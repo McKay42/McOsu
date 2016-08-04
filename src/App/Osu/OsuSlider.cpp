@@ -23,6 +23,7 @@
 #include "OsuGameRules.h"
 
 ConVar osu_slider_ball_tint_combo_color("osu_slider_ball_tint_combo_color", true);
+ConVar osu_slider_body_color_saturation("osu_slider_body_color_saturation", 1.0f);
 
 ConVar osu_snaking_sliders("osu_snaking_sliders", true);
 ConVar osu_hd_sliders_fade("osu_hd_sliders_fade", true);
@@ -182,7 +183,8 @@ void OsuSlider::draw(Graphics *g)
 		m_curve->draw(g, skin->getComboColorForCounter(m_iColorCounter), alpha, sliderSnake, sliderSnakeStart);
 
 		// draw slider ticks
-		float tickImageScale = (m_beatmap->getHitcircleDiameter() / (4.0f * (skin->isSliderScorePoint2x() ? 2.0f : 1.0f))) / (float) skin->getSliderScorePoint()->getWidth();
+		// HACKHACK: hardcoded 0.125 multiplier, seems to be correct though (1/8)
+		float tickImageScale = (m_beatmap->getHitcircleDiameter() / (16.0f * (skin->isSliderScorePoint2x() ? 2.0f : 1.0f)))*0.125f;
 		for (int t=0; t<m_ticks.size(); t++)
 		{
 			if (m_ticks[t].finished || m_ticks[t].percent > sliderSnake)
@@ -323,9 +325,9 @@ void OsuSlider::draw(Graphics *g)
 
 			// explanation for this is in drawStartCircle()
 			if (skin->getSliderStartCircle() != skin->getMissingTexture() && m_iCurRepeat < 1)
-				OsuCircle::drawSliderCircle(g, m_beatmap, skin->getSliderStartCircle(), m_curve->pointAt(0.0f), m_iComboNumber, m_iColorCounter, 1.0f, alpha, alpha, drawNumber);
+				OsuCircle::drawSliderStartCircle(g, m_beatmap, m_curve->pointAt(0.0f), m_iComboNumber, m_iColorCounter, 1.0f, alpha, alpha, drawNumber);
 			else if (skin->getSliderEndCircle() != skin->getMissingTexture() && m_iCurRepeat > 0)
-				OsuCircle::drawSliderCircle(g, m_beatmap, skin->getSliderEndCircle(), m_curve->pointAt(0.0f), m_iComboNumber, m_iColorCounter, 1.0f, alpha, alpha, drawNumber);
+				OsuCircle::drawSliderEndCircle(g, m_beatmap, m_curve->pointAt(0.0f), m_iComboNumber, m_iColorCounter, 1.0f, alpha, alpha, drawNumber);
 			else
 				OsuCircle::drawCircle(g, m_beatmap, m_curve->pointAt(0.0f), m_iComboNumber, m_iColorCounter, 1.0f, alpha, alpha, drawNumber);
 		g->popTransform();
@@ -342,7 +344,7 @@ void OsuSlider::draw(Graphics *g)
 		g->pushTransform();
 			g->scale((1.0f+scale*OsuGameRules::osu_circle_fade_out_scale.getFloat()), (1.0f+scale*OsuGameRules::osu_circle_fade_out_scale.getFloat()));
 			if (skin->getSliderEndCircle() != skin->getMissingTexture())
-				OsuCircle::drawSliderCircle(g, m_beatmap, skin->getSliderEndCircle(), m_curve->pointAt(1.0f), m_iComboNumber, m_iColorCounter, 1.0f, alpha, 0.0f, false);
+				OsuCircle::drawSliderEndCircle(g, m_beatmap, m_curve->pointAt(1.0f), m_iComboNumber, m_iColorCounter, 1.0f, alpha, 0.0f, false);
 			else
 				OsuCircle::drawCircle(g, m_beatmap, m_curve->pointAt(1.0f), m_iComboNumber, m_iColorCounter, 1.0f, alpha, 0.0f, false);
 		g->popTransform();
@@ -408,7 +410,7 @@ void OsuSlider::draw(Graphics *g)
 		g->setColor(0xff0000ff);
 		g->pushTransform();
 		g->translate(screenPos.x, screenPos.y);
-		g->drawString(engine->getResourceManager()->getFont("FONT_DEFAULT"), UString::format("curRepeat = %i", m_iCurRepeat));
+		g->drawString(engine->getResourceManager()->getFont("FONT_DEFAULT"), UString::format("%li", m_iTime));
 		g->popTransform();
 	}
 	*/
@@ -419,9 +421,9 @@ void OsuSlider::drawStartCircle(Graphics *g, float alpha)
 	// if sliderendcircle exists, and we are past the first circle, only draw sliderendcircle on both start and end from then on
 	// if sliderstartcircle exists, use it only until the end of the first circle
 	if (m_beatmap->getSkin()->getSliderEndCircle() != m_beatmap->getSkin()->getMissingTexture() && m_bStartFinished)
-		OsuCircle::drawSliderCircle(g, m_beatmap, m_beatmap->getSkin()->getSliderEndCircle(), m_curve->pointAt(0.0f), m_iComboNumber, m_iColorCounter, 1.0f, alpha, 0.0f, false, false);
+		OsuCircle::drawSliderEndCircle(g, m_beatmap, m_curve->pointAt(0.0f), m_iComboNumber, m_iColorCounter, 1.0f, alpha, 0.0f, false, false);
 	else if (m_beatmap->getSkin()->getSliderStartCircle() != m_beatmap->getSkin()->getMissingTexture() && !m_bStartFinished)
-		OsuCircle::drawSliderCircle(g, m_beatmap, m_beatmap->getSkin()->getSliderStartCircle(), m_curve->pointAt(0.0f), m_iComboNumber, m_iColorCounter, m_fApproachScale, alpha, m_fHiddenAlpha, !m_bHideNumberAfterFirstRepeatHit, m_bOverrideHDApproachCircle);
+		OsuCircle::drawSliderStartCircle(g, m_beatmap, m_curve->pointAt(0.0f), m_iComboNumber, m_iColorCounter, m_fApproachScale, alpha, m_fHiddenAlpha, !m_bHideNumberAfterFirstRepeatHit, m_bOverrideHDApproachCircle);
 	else
 		OsuCircle::drawCircle(g, m_beatmap, m_curve->pointAt(0.0f), m_iComboNumber, m_iColorCounter, m_fApproachScale, alpha, m_fHiddenAlpha, !m_bHideNumberAfterFirstRepeatHit, m_bOverrideHDApproachCircle); // normal
 }
@@ -429,7 +431,7 @@ void OsuSlider::drawStartCircle(Graphics *g, float alpha)
 void OsuSlider::drawEndCircle(Graphics *g, float alpha, float sliderSnake)
 {
 	if (m_beatmap->getSkin()->getSliderEndCircle() != m_beatmap->getSkin()->getMissingTexture())
-		OsuCircle::drawSliderCircle(g, m_beatmap, m_beatmap->getSkin()->getSliderEndCircle(), m_curve->pointAt(sliderSnake), m_iComboNumber, m_iColorCounter, 1.0f, alpha, 0.0f, false, false);
+		OsuCircle::drawSliderEndCircle(g, m_beatmap, m_curve->pointAt(sliderSnake), m_iComboNumber, m_iColorCounter, 1.0f, alpha, 0.0f, false, false);
 	else
 		OsuCircle::drawCircle(g, m_beatmap, m_curve->pointAt(sliderSnake), m_iComboNumber, m_iColorCounter, 1.0f, alpha, 0.0f, false, false); // normal
 }
@@ -952,6 +954,9 @@ void OsuSlider::onReset(long curPos)
 		}
 		m_ticks[i].finished = numMissingTickClicks == 0;
 	}
+
+	m_fSliderBreakRapeTime = 0.0f;
+	convar->getConVarByName("epilepsy")->setValue(0.0f);
 }
 
 
@@ -1118,6 +1123,7 @@ void OsuSliderCurve::draw(Graphics *g, Color color, float alpha, float t, float 
 		}
 
 		BLEND_SHADER->enable();
+		BLEND_SHADER->setUniform1f("bodyColorSaturation", osu_slider_body_color_saturation.getFloat());
 		BLEND_SHADER->setUniform3f("col_border", COLOR_GET_Rf(borderColor), COLOR_GET_Gf(borderColor), COLOR_GET_Bf(borderColor));
 		BLEND_SHADER->setUniform3f("col_body", COLOR_GET_Rf(bodyColor), COLOR_GET_Gf(bodyColor), COLOR_GET_Bf(bodyColor));
 
@@ -1797,6 +1803,9 @@ void OsuSliderCurveEqualDistanceMulti::init(std::vector<OsuSliderCurveType*> cur
 
 Vector2 OsuSliderCurveEqualDistanceMulti::pointAt(float t)
 {
+	if (m_curvePoints.size() < 1) // this might happen
+		return Vector2(0,0);
+
 	float indexF = t * m_iNCurve;
 	int index = (int) indexF;
 	if (index >= m_iNCurve)

@@ -119,7 +119,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_options->setHorizontalScrolling(false);
 	m_container->addBaseUIElement(m_options);
 
-	m_contextMenu = new OsuUIListBoxContextMenu(50, 50, 150, 0, "");
+	m_contextMenu = new OsuUIListBoxContextMenu(50, 50, 150, 0, "", m_options);
 
 	//**************************************************************************************************************************//
 
@@ -174,6 +174,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Raw input", convar->getConVarByName("mouse_raw_input"));
 	addCheckbox("Confine Cursor (Windowed)", convar->getConVarByName("osu_confine_cursor_windowed"));
 	addCheckbox("Confine Cursor (Fullscreen)", convar->getConVarByName("osu_confine_cursor_fullscreen"));
+	addCheckbox("Disable Mouse Wheel in Play Mode", convar->getConVarByName("osu_disable_mousewheel"));
 	addCheckbox("Disable Mouse Buttons in Play Mode", convar->getConVarByName("osu_disable_mousebuttons"));
 
 	addSubSection("Keyboard");
@@ -201,6 +202,9 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_skinSelectButton = skinSelect.elements[0];
 	addButton("Reload Skin (CTRL+ALT+SHIFT+S)")->setClickCallback( MakeDelegate(this, &OsuOptionsMenu::onSkinReload) );
 	addSpacer();
+	addSlider("Number Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_number_scale_multiplier"), 135.0f);
+	addSlider("HitResult Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_hitresult_scale"), 135.0f);
+	addSpacer();
 	addCheckbox("Ignore Beatmap Sample Volume", convar->getConVarByName("osu_ignore_beatmap_sample_volume"));
 	addCheckbox("Ignore Beatmap Combo Colors", convar->getConVarByName("osu_ignore_beatmap_combo_colors"));
 	addCheckbox("Load HD @2x", convar->getConVarByName("osu_skin_hd"));
@@ -208,7 +212,9 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Draw CursorTrail", convar->getConVarByName("osu_draw_cursor_trail"));
 	m_cursorSizeSlider = addSlider("Cursor Size:", 0.01f, 5.0f, convar->getConVarByName("osu_cursor_scale"));
 	m_cursorSizeSlider->setAnimated(false);
+	addSpacer();
 	addCheckbox("Use combo color as tint for slider ball", convar->getConVarByName("osu_slider_ball_tint_combo_color"));
+	addSlider("SliderBody Color Saturation", 0.0f, 1.0f, convar->getConVarByName("osu_slider_body_color_saturation"));
 
 	//**************************************************************************************************************************//
 
@@ -227,7 +233,12 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Draw HitErrorBar", convar->getConVarByName("osu_draw_hiterrorbar"));
 	addCheckbox("Draw NPS and ND", convar->getConVarByName("osu_draw_statistics"));
 	addSpacer();
-	m_hudSizeSlider = addSlider("HUD Size:", 0.1f, 5.0f, convar->getConVarByName("osu_hud_scale"));
+	m_hudSizeSlider = addSlider("HUD Scale:", 0.1f, 3.0f, convar->getConVarByName("osu_hud_scale"), 165.0f);
+	addSpacer();
+	m_hudComboScaleSlider = addSlider("Combo Scale:", 0.1f, 3.0f, convar->getConVarByName("osu_hud_combo_scale"), 165.0f);
+	m_hudAccuracyScaleSlider = addSlider("Accuracy Scale:", 0.1f, 3.0f, convar->getConVarByName("osu_hud_accuracy_scale"), 165.0f);
+	m_hudHiterrorbarScaleSlider = addSlider("HitErrorBar Scale:", 0.1f, 3.0f, convar->getConVarByName("osu_hud_hiterrorbar_scale"), 165.0f);
+	m_hudProgressbarScaleSlider = addSlider("ProgressBar Scale:", 0.1f, 3.0f, convar->getConVarByName("osu_hud_progressbar_scale"), 165.0f);
 
 	addSubSection("Playfield");
 	addCheckbox("Draw FollowPoints", convar->getConVarByName("osu_draw_followpoints"));
@@ -281,7 +292,7 @@ void OsuOptionsMenu::draw(Graphics *g)
 
 	m_container->draw(g);
 
-	if (m_hudSizeSlider->isActive())
+	if (m_hudSizeSlider->isActive() || m_hudComboScaleSlider->isActive() || m_hudAccuracyScaleSlider->isActive() || m_hudHiterrorbarScaleSlider->isActive() || m_hudProgressbarScaleSlider->isActive())
 		m_osu->getHUD()->drawDummy(g);
 	else if (m_playfieldBorderSizeSlider->isActive())
 		m_osu->getHUD()->drawPlayfieldBorder(g, OsuGameRules::getPlayfieldCenter(), OsuGameRules::getPlayfieldSize(), 100);
@@ -1140,8 +1151,9 @@ void OsuOptionsMenu::save()
 
 
 
-OsuUIListBoxContextMenu::OsuUIListBoxContextMenu(float xPos, float yPos, float xSize, float ySize, UString name) : CBaseUIElement(xPos, yPos, xSize, ySize, name)
+OsuUIListBoxContextMenu::OsuUIListBoxContextMenu(float xPos, float yPos, float xSize, float ySize, UString name, CBaseUIScrollView *parent) : CBaseUIElement(xPos, yPos, xSize, ySize, name)
 {
+	m_parent = parent;
 	m_container = new CBaseUIContainer(xPos, yPos, xSize, ySize, name);
 	m_iYCounter = 0;
 	m_iWidthCounter = 0;
@@ -1240,6 +1252,16 @@ void OsuUIListBoxContextMenu::end()
 	}
 
 	setVisible2(true);
+}
+
+void OsuUIListBoxContextMenu::setVisible2(bool visible2)
+{
+	m_bVisible2 = visible2;
+
+	if (!m_bVisible2)
+		setSize(1,1); // reset size
+
+	m_parent->setScrollSizeToContent(); // and update parent scroll size
 }
 
 void OsuUIListBoxContextMenu::onClick(CBaseUIButton *button)

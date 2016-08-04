@@ -82,7 +82,9 @@ public:
 	inline Image *getSliderFollowCircle() {return m_sliderFollowCircle;}
 	inline Image *getSliderScorePoint() {return m_sliderScorePoint;}
 	inline Image *getSliderStartCircle() {return m_sliderStartCircle;}
+	inline Image *getSliderStartCircleOverlay() {return m_sliderStartCircleOverlay;}
 	inline Image *getSliderEndCircle() {return m_sliderEndCircle;}
+	inline Image *getSliderEndCircleOverlay() {return m_sliderEndCircleOverlay;}
 
 	inline Image *getSpinnerBackground() {return m_spinnerBackground;}
 	inline Image *getSpinnerCircle() {return m_spinnerCircle;}
@@ -164,12 +166,17 @@ public:
 	inline bool isHit02x() {return m_bHit02x;}
 	inline bool isHit502x() {return m_bHit502x;}
 	inline bool isHit1002x() {return m_bHit1002x;}
+	inline bool isSpinnerApproachCircle2x() {return m_bSpinnerApproachCircle2x;}
 	inline bool isSpinnerBottom2x() {return m_bSpinnerBottom2x;}
 	inline bool isSpinnerCircle2x() {return m_bSpinnerCircle2x;}
 	inline bool isSpinnerTop2x() {return m_bSpinnerTop2x;}
 	inline bool isSpinnerMiddle2x() {return m_bSpinnerMiddle2x;}
 	inline bool isSpinnerMiddle22x() {return m_bSpinnerMiddle22x;}
 	inline bool isSliderScorePoint2x() {return m_bSliderScorePoint2x;}
+	inline bool isSliderStartCircle2x() {return m_bSliderStartCircle2x;}
+	inline bool isSliderStartCircleOverlay2x() {return m_bSliderStartCircleOverlay2x;}
+	inline bool isSliderEndCircle2x() {return m_bSliderEndCircle2x;}
+	inline bool isSliderEndCircleOverlay2x() {return m_bSliderEndCircleOverlay2x;}
 
 	inline bool isCircularmetre2x() {return m_bCircularmetre2x;}
 	inline bool isPlaySkip2x() {return m_bPlaySkip2x;}
@@ -266,7 +273,9 @@ private:
 	Image *m_sliderFollowCircle;
 	Image *m_sliderScorePoint;
 	Image *m_sliderStartCircle;
+	Image *m_sliderStartCircleOverlay;
 	Image *m_sliderEndCircle;
+	Image *m_sliderEndCircleOverlay;
 
 	Image *m_spinnerBackground;
 	Image *m_spinnerCircle;
@@ -375,12 +384,17 @@ private:
 	bool m_bHit02x;
 	bool m_bHit502x;
 	bool m_bHit1002x;
+	bool m_bSpinnerApproachCircle2x;
 	bool m_bSpinnerBottom2x;
 	bool m_bSpinnerCircle2x;
 	bool m_bSpinnerTop2x;
 	bool m_bSpinnerMiddle2x;
 	bool m_bSpinnerMiddle22x;
 	bool m_bSliderScorePoint2x;
+	bool m_bSliderStartCircle2x;
+	bool m_bSliderStartCircleOverlay2x;
+	bool m_bSliderEndCircle2x;
+	bool m_bSliderEndCircleOverlay2x;
 
 	bool m_bCircularmetre2x;
 	bool m_bPlaySkip2x;
