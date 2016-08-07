@@ -142,7 +142,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSlider("FPS Limiter:", 60.0f, 1000.0f, convar->getConVarByName("fps_max"))->setChangeCallback( MakeDelegate(this, &OsuOptionsMenu::onSliderChangeInt) );
 
 	addSubSection("Layout");
-	OPTIONS_ELEMENT resolutionSelect = addButton("Select Resolution", UString::format("%ix%i", Osu::getScreenWidth(), Osu::getScreenHeight()));
+	OPTIONS_ELEMENT resolutionSelect = addButton("Select Resolution", UString::format("%ix%i", m_osu->getScreenWidth(), m_osu->getScreenHeight()));
 	((CBaseUIButton*)resolutionSelect.elements[0])->setClickCallback( MakeDelegate(this, &OsuOptionsMenu::onResolutionSelect) );
 	m_resolutionLabel = (CBaseUILabel*)resolutionSelect.elements[1];
 	m_resolutionSelectButton = resolutionSelect.elements[0];
@@ -171,7 +171,8 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 
 	addSubSection("Mouse");
 	addSlider("Sensitivity:", 0.4f, 6.0f, convar->getConVarByName("mouse_sensitivity"));
-	addCheckbox("Raw input", convar->getConVarByName("mouse_raw_input"));
+	addCheckbox("Raw Input", convar->getConVarByName("mouse_raw_input"));
+	addCheckbox("Map Absolute Raw Input to Window", convar->getConVarByName("mouse_raw_input_absolute_to_window"));
 	addCheckbox("Confine Cursor (Windowed)", convar->getConVarByName("osu_confine_cursor_windowed"));
 	addCheckbox("Confine Cursor (Fullscreen)", convar->getConVarByName("osu_confine_cursor_fullscreen"));
 	addCheckbox("Disable Mouse Wheel in Play Mode", convar->getConVarByName("osu_disable_mousewheel"));
@@ -231,7 +232,14 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Draw Accuracy", convar->getConVarByName("osu_draw_accuracy"));
 	addCheckbox("Draw ProgressBar", convar->getConVarByName("osu_draw_progressbar"));
 	addCheckbox("Draw HitErrorBar", convar->getConVarByName("osu_draw_hiterrorbar"));
-	addCheckbox("Draw NPS and ND", convar->getConVarByName("osu_draw_statistics"));
+	addSpacer();
+	addCheckbox("Draw Statistics: BPM", convar->getConVarByName("osu_draw_statistics_bpm"));
+	addCheckbox("Draw Statistics: AR", convar->getConVarByName("osu_draw_statistics_ar"));
+	addCheckbox("Draw Statistics: CS", convar->getConVarByName("osu_draw_statistics_cs"));
+	addCheckbox("Draw Statistics: OD", convar->getConVarByName("osu_draw_statistics_od"));
+	addCheckbox("Draw Statistics: Notes Per Second", convar->getConVarByName("osu_draw_statistics_nps"));
+	addCheckbox("Draw Statistics: Note Density", convar->getConVarByName("osu_draw_statistics_nd"));
+	addCheckbox("Draw Statistics: Unstable Rate", convar->getConVarByName("osu_draw_statistics_ur"));
 	addSpacer();
 	m_hudSizeSlider = addSlider("HUD Scale:", 0.1f, 3.0f, convar->getConVarByName("osu_hud_scale"), 165.0f);
 	addSpacer();
@@ -239,6 +247,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_hudAccuracyScaleSlider = addSlider("Accuracy Scale:", 0.1f, 3.0f, convar->getConVarByName("osu_hud_accuracy_scale"), 165.0f);
 	m_hudHiterrorbarScaleSlider = addSlider("HitErrorBar Scale:", 0.1f, 3.0f, convar->getConVarByName("osu_hud_hiterrorbar_scale"), 165.0f);
 	m_hudProgressbarScaleSlider = addSlider("ProgressBar Scale:", 0.1f, 3.0f, convar->getConVarByName("osu_hud_progressbar_scale"), 165.0f);
+	m_statisticsOverlayScaleSlider = addSlider("Statistics Scale:", 0.1f, 3.0f, convar->getConVarByName("osu_hud_statistics_scale"), 165.0f);
 
 	addSubSection("Playfield");
 	addCheckbox("Draw FollowPoints", convar->getConVarByName("osu_draw_followpoints"));
@@ -251,8 +260,8 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Draw Numbers", convar->getConVarByName("osu_draw_numbers"));
 	addCheckbox("Draw ApproachCircles", convar->getConVarByName("osu_draw_approach_circles"));
 	addCheckbox("Draw SliderEndCircle", convar->getConVarByName("osu_slider_draw_endcircle"));
-	addCheckbox("Use New Hidden Fading Sliders", convar->getConVarByName("osu_hd_sliders_fade"));
-	addCheckbox("Use Fast Hidden Fading Sliders (!)", convar->getConVarByName("osu_hd_sliders_fast_fade"));
+	addCheckbox("Use New Hidden Fading Sliders", convar->getConVarByName("osu_mod_hd_slider_fade"));
+	addCheckbox("Use Fast Hidden Fading Sliders (!)", convar->getConVarByName("osu_mod_hd_slider_fast_fade"));
 	addCheckbox("Use Score V2 slider accuracy", convar->getConVarByName("osu_slider_scorev2"));
 
 	//**************************************************************************************************************************//
@@ -287,15 +296,15 @@ void OsuOptionsMenu::draw(Graphics *g)
 	{
 		short brightness = clamp<float>(m_backgroundBrightnessSlider->getFloat(), 0.0f, 1.0f)*255.0f;
 		g->setColor(COLOR(255, brightness, brightness, brightness));
-		g->fillRect(0, 0, Osu::getScreenWidth(), Osu::getScreenHeight());
+		g->fillRect(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight());
 	}
 
 	m_container->draw(g);
 
-	if (m_hudSizeSlider->isActive() || m_hudComboScaleSlider->isActive() || m_hudAccuracyScaleSlider->isActive() || m_hudHiterrorbarScaleSlider->isActive() || m_hudProgressbarScaleSlider->isActive())
+	if (m_hudSizeSlider->isActive() || m_hudComboScaleSlider->isActive() || m_hudAccuracyScaleSlider->isActive() || m_hudHiterrorbarScaleSlider->isActive() || m_hudProgressbarScaleSlider->isActive() || m_statisticsOverlayScaleSlider->isActive())
 		m_osu->getHUD()->drawDummy(g);
 	else if (m_playfieldBorderSizeSlider->isActive())
-		m_osu->getHUD()->drawPlayfieldBorder(g, OsuGameRules::getPlayfieldCenter(), OsuGameRules::getPlayfieldSize(), 100);
+		m_osu->getHUD()->drawPlayfieldBorder(g, OsuGameRules::getPlayfieldCenter(m_osu), OsuGameRules::getPlayfieldSize(m_osu), 100);
 	else
 		m_backButton->draw(g);
 
@@ -449,12 +458,12 @@ void OsuOptionsMenu::updateLayout()
 
 	OsuScreenBackable::updateLayout();
 
-	m_container->setSize(Osu::getScreenSize());
+	m_container->setSize(m_osu->getScreenSize());
 
 	// options panel
-	int optionsWidth = (int)(Osu::getScreenWidth()*0.5f);
-	m_options->setRelPosX(Osu::getScreenWidth()/2 - optionsWidth/2);
-	m_options->setSize(optionsWidth, Osu::getScreenHeight()+1);
+	int optionsWidth = (int)(m_osu->getScreenWidth()*0.5f);
+	m_options->setRelPosX(m_osu->getScreenWidth()/2 - optionsWidth/2);
+	m_options->setSize(optionsWidth, m_osu->getScreenHeight()+1);
 
 	bool enableHorizontalScrolling = false;
 	int sideMargin = 25;

@@ -52,8 +52,8 @@ void OsuTooltipOverlay::draw(Graphics *g)
 		Vector2 cursorPos = engine->getMouse()->getPos();
 
 		// clamp to right edge
-		if (cursorPos.x + width + offset.x + 2*margin > Osu::getScreenWidth())
-			cursorPos.x -= (cursorPos.x + width + offset.x + 2*margin) - Osu::getScreenWidth() + 1;
+		if (cursorPos.x + width + offset.x + 2*margin > m_osu->getScreenWidth())
+			cursorPos.x -= (cursorPos.x + width + offset.x + 2*margin) - m_osu->getScreenWidth() + 1;
 
 		// draw background
 		g->setColor(0xff000000);

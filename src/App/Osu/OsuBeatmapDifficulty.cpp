@@ -424,6 +424,14 @@ bool OsuBeatmapDifficulty::load(OsuBeatmap *beatmap, std::vector<OsuHitObject*> 
 					}
 					else if (type & 0x2) // slider
 					{
+						// infinity sanity check (this only exists because of https://osu.ppy.sh/b/1029976)
+						// not a very elegant check, but it does the job
+						if (curLine.find("E") != std::string::npos || curLine.find("e") != std::string::npos)
+						{
+							debugLog("Bullshit slider in beatmap: %s\n\ncurLine = %s\n", m_sFilePath.toUtf8(), curLineChar);
+							continue;
+						}
+
 						UString curLineString = UString(curLineChar);
 						std::vector<UString> tokens = curLineString.split(",");
 						if (tokens.size() < 8)
@@ -442,29 +450,31 @@ bool OsuBeatmapDifficulty::load(OsuBeatmap *beatmap, std::vector<OsuHitObject*> 
 							//return false;
 						}
 
+						const float sanityRange = 65536/2; // infinity sanity check, same as before
 						std::vector<Vector2> points;
-						points.push_back(Vector2(x,y));
+						points.push_back(Vector2(clamp<float>(x, -sanityRange, sanityRange), clamp<float>(y, -sanityRange, sanityRange)));
 						for (int i=1; i<sliderTokens.size(); i++)
 						{
 							std::vector<UString> sliderXY = sliderTokens[i].split(":");
 							if (sliderXY.size() != 2)
 							{
-								engine->showMessageError("Error", UString::format("Invalid slider positions: %s\n\nIn beatmap: %s", curLine, m_sFilePath.toUtf8()));
-								return false;
+								debugLog("Invalid slider positions: %s\n\nIn Beatmap: %s\n", curLineChar, m_sFilePath.toUtf8());
+								continue;
+								//engine->showMessageError("Error", UString::format("Invalid slider positions: %s\n\nIn beatmap: %s", curLine, m_sFilePath.toUtf8()));
+								//return false;
 							}
-							points.push_back(Vector2((int) sliderXY[0].toFloat(), (int) sliderXY[1].toFloat()));
+							points.push_back(Vector2((int)clamp<float>(sliderXY[0].toFloat(), -sanityRange, sanityRange), (int)clamp<float>(sliderXY[1].toFloat(), -sanityRange, sanityRange)));
 						}
 
 						SLIDER s;
 						s.type = sliderTokens[0][0];
-						s.repeat = (int) tokens[6].toFloat();
+						s.repeat = (int)tokens[6].toFloat();
 						s.pixelLength = tokens[7].toFloat();
 						s.time = time;
 						s.sampleType = hitSound;
 						s.number = comboNumber++;
 						s.colorCounter = colorCounter;
 						s.points = points;
-
 
 						sliders.push_back(s);
 					}
@@ -474,8 +484,10 @@ bool OsuBeatmapDifficulty::load(OsuBeatmap *beatmap, std::vector<OsuHitObject*> 
 						std::vector<UString> tokens = curLineString.split(",");
 						if (tokens.size() < 6)
 						{
-							engine->showMessageError("Error", UString::format("Invalid spinner in beatmap: %s\n\ncurLine = %s", m_sFilePath.toUtf8(), curLine));
-							return false;
+							debugLog("Invalid spinner in beatmap: %s\n\ncurLine = %s\n", m_sFilePath.toUtf8(), curLineChar);
+							continue;
+							//engine->showMessageError("Error", UString::format("Invalid spinner in beatmap: %s\n\ncurLine = %s", m_sFilePath.toUtf8(), curLine));
+							//return false;
 						}
 
 						SPINNER s;
@@ -488,7 +500,6 @@ bool OsuBeatmapDifficulty::load(OsuBeatmap *beatmap, std::vector<OsuHitObject*> 
 						spinners.push_back(s);
 					}
 				}
-
 				break;
 			}
 		}
@@ -630,7 +641,10 @@ float OsuBeatmapDifficulty::getSliderTimeForSlider(SLIDER *slider)
 float OsuBeatmapDifficulty::getTimingPointMultiplierForSlider(SLIDER *slider)
 {
 	const TIMING_INFO t = getTimingInfoForTime(slider->time);
-	return t.beatLength / t.beatLengthBase;
+	float beatLengthBase = t.beatLengthBase;
+	if (beatLengthBase == 0.0f) // sanity check
+		beatLengthBase = 1.0f;
+	return t.beatLength / beatLengthBase;
 }
 
 OsuBeatmapDifficulty::TIMING_INFO OsuBeatmapDifficulty::getTimingInfoForTime(unsigned long positionMS)

@@ -135,6 +135,7 @@ OsuBeatmap::OsuBeatmap(Osu *osu, UString filepath)
 
 	m_iCombo = 0;
 	m_fAccuracy = 1.0f;
+	m_fUnstableRate = 0.0f;
 
 	m_iNextHitObjectTime = 0;
 	m_iPreviousHitObjectTime = 0;
@@ -213,13 +214,13 @@ void OsuBeatmap::draw(Graphics *g)
 	// draw background
 	const short brightness = clamp<float>(osu_background_brightness.getFloat(), 0.0f, 1.0f)*255.0f;
 	g->setColor(COLOR(255, brightness, brightness, brightness));
-	g->fillRect(0, 0, Osu::getScreenWidth(), Osu::getScreenHeight());
+	g->fillRect(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight());
 
 	// draw beatmap background image
 	if (m_selectedDifficulty->backgroundImage != NULL && osu_background_dim.getFloat() < 1.0f)
 	{
-		const float scale = Osu::getImageScaleToFitResolution(m_selectedDifficulty->backgroundImage, Osu::getScreenSize());
-		const Vector2 centerTrans = (Osu::getScreenSize()/2);
+		const float scale = Osu::getImageScaleToFitResolution(m_selectedDifficulty->backgroundImage, m_osu->getScreenSize());
+		const Vector2 centerTrans = (m_osu->getScreenSize()/2);
 
 		const short dim = clamp<float>(1.0f-osu_background_dim.getFloat(), 0.0f, 1.0f)*255.0f;
 		g->setColor(COLOR(255, dim, dim, dim));
@@ -298,7 +299,7 @@ void OsuBeatmap::drawFollowPoints(Graphics *g)
 	const long approachTime = std::min((long)OsuGameRules::getApproachTime(this), (long)osu_followpoints_approachtime.getFloat());
 
 	// scale the image scale with the hitcirclediameter // HACKHACK: hardcoded magic numbers, use hardcoded osu!pixels instead
-	const float followPointImageScale = (m_fRawHitcircleDiameter/74.0f)*m_osu->getUIScale(0.5625f)*(skin->isFollowPoint2x() ? 0.5f : 1.0f) * osu_followpoints_scale_multiplier.getFloat();
+	const float followPointImageScale = (m_fRawHitcircleDiameter/74.0f)*m_osu->getUIScale(m_osu, 0.5625f)*(skin->isFollowPoint2x() ? 0.5f : 1.0f) * osu_followpoints_scale_multiplier.getFloat();
 
 	// include previous object in followpoints
 	int lastObjectIndex = -1;
@@ -340,7 +341,7 @@ void OsuBeatmap::drawFollowPoints(Graphics *g)
 			const float dist = roundf(diff.length() * 100.0f) / 100.0f; // rounded to avoid flicker with playfield rotations
 
 			// draw all points between the two objects
-			const int followPointSeparation = Osu::getUIScale(32);
+			const int followPointSeparation = Osu::getUIScale(m_osu, 32);
 			for (int j=(int)(followPointSeparation * 1.5f); j<dist-followPointSeparation; j+=followPointSeparation)
 			{
 				const float animRatio = ((float)j / dist);
@@ -734,7 +735,10 @@ void OsuBeatmap::addHitResult(HIT hit, long delta, bool ignoreOnHitErrorBar, boo
 	if (hit != HIT_MISS)
 	{
 		if (!ignoreOnHitErrorBar)
+		{
+			m_hitdeltas.push_back((int)delta);
 			m_osu->getHUD()->addHitError(delta);
+		}
 
 		if (!ignoreCombo)
 		{
@@ -786,6 +790,24 @@ void OsuBeatmap::addHitResult(HIT hit, long delta, bool ignoreOnHitErrorBar, boo
 		m_fAccuracy = 1.0f;
 	else
 		m_fAccuracy = totalHitPoints / totalNumHits;
+
+	// recalculate unstable rate
+	float averageDelta = 0.0f;
+	m_fUnstableRate = 0.0f;
+	if (m_hitdeltas.size() > 0)
+	{
+		for (int i=0; i<m_hitdeltas.size(); i++)
+		{
+			averageDelta += (float)m_hitdeltas[i];
+		}
+		averageDelta /= (float)m_hitdeltas.size();
+		for (int i=0; i<m_hitdeltas.size(); i++)
+		{
+			m_fUnstableRate += ((float)m_hitdeltas[i] - averageDelta)*((float)m_hitdeltas[i] - averageDelta);
+		}
+		m_fUnstableRate /= (float)m_hitdeltas.size();
+		m_fUnstableRate = std::sqrt(m_fUnstableRate)*10;
+	}
 }
 
 void OsuBeatmap::addSliderBreak()
@@ -1016,7 +1038,7 @@ void OsuBeatmap::pause(bool quitIfWaiting)
 			m_vContinueCursorPoint = engine->getMouse()->getPos();
 
 			if (osu_mod_fps.getBool())
-				m_vContinueCursorPoint = OsuGameRules::getPlayfieldCenter();
+				m_vContinueCursorPoint = OsuGameRules::getPlayfieldCenter(m_osu);
 		}
 	}
 	else if (m_bIsPaused && !m_bContinueScheduled)
@@ -1092,18 +1114,18 @@ UString OsuBeatmap::getArtist()
 
 void OsuBeatmap::updatePlayfieldMetrics()
 {
-	m_fScaleFactor = OsuGameRules::getPlayfieldScaleFactor();
-	m_vPlayfieldSize = OsuGameRules::getPlayfieldSize();
-	m_vPlayfieldOffset = OsuGameRules::getPlayfieldOffset();
-	m_vPlayfieldCenter = OsuGameRules::getPlayfieldCenter();
+	m_fScaleFactor = OsuGameRules::getPlayfieldScaleFactor(m_osu);
+	m_vPlayfieldSize = OsuGameRules::getPlayfieldSize(m_osu);
+	m_vPlayfieldOffset = OsuGameRules::getPlayfieldOffset(m_osu);
+	m_vPlayfieldCenter = OsuGameRules::getPlayfieldCenter(m_osu);
 }
 
 void OsuBeatmap::updateHitobjectMetrics()
 {
 	OsuSkin *skin = m_osu->getSkin();
 
-	m_fRawHitcircleDiameter = OsuGameRules::getRawHitCircleDiameter(this);
-	m_fXMultiplier = OsuGameRules::getHitCircleXMultiplier();
+	m_fRawHitcircleDiameter = OsuGameRules::getRawHitCircleDiameter(getCS());
+	m_fXMultiplier = OsuGameRules::getHitCircleXMultiplier(m_osu);
 	m_fHitcircleDiameter = OsuGameRules::getHitCircleDiameter(this);
 
 	const float osuCoordScaleMultiplier = (m_fHitcircleDiameter/m_fRawHitcircleDiameter);
@@ -1275,7 +1297,9 @@ void OsuBeatmap::resetScore()
 {
 	m_iCombo = 0;
 	m_fAccuracy = 1.0f;
+	m_fUnstableRate = 0.0f;
 	m_hitresults = std::vector<HIT>();
+	m_hitdeltas = std::vector<int>();
 }
 
 unsigned long OsuBeatmap::getMusicPositionMSInterpolated()
@@ -1526,6 +1550,22 @@ float OsuBeatmap::getPercentFinished()
 		return (float)m_iCurMusicPos / ((float)m_hitobjects[m_hitobjects.size()-1]->getTime() + (float)m_hitobjects[m_hitobjects.size()-1]->getDuration());
 	else
 		return (float)m_iCurMusicPos / (float)m_music->getLengthMS();
+}
+
+int OsuBeatmap::getBPM()
+{
+	if (m_selectedDifficulty != NULL && m_music != NULL)
+		return (int)(m_selectedDifficulty->maxBPM*m_music->getSpeed());
+	else
+		return 0;
+}
+
+float OsuBeatmap::getSpeedMultiplier()
+{
+	if (m_music != NULL)
+		return m_music->getSpeed();
+	else
+		return 1.0f;
 }
 
 OsuSkin *OsuBeatmap::getSkin()
