@@ -1,6 +1,6 @@
 //================ Copyright (c) 2016, PG, All rights reserved. =================//
 //
-// Purpose:		text bar overlay which can block inputs
+// Purpose:		text bar overlay which can eat inputs (also used for key bindings)
 //
 // $NoKeywords: $osunot
 //===============================================================================//
@@ -27,7 +27,6 @@ public:
 	virtual ~OsuNotificationOverlay(){;}
 
 	void draw(Graphics *g);
-	void update();
 
 	void onKeyDown(KeyboardEvent &e);
 	void onKeyUp(KeyboardEvent &e);

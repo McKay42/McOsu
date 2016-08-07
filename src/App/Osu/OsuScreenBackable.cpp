@@ -76,12 +76,12 @@ void OsuScreenBackable::updateLayout()
 
 	// back button
 	Image *backButton = m_osu->getSkin()->getMenuBack();
-	float backButtonScale = Osu::getImageScale(backButton, 86.0f);
+	float backButtonScale = Osu::getImageScale(m_osu, backButton, 86.0f);
 	float maxFactor = 0.169f; // HACKHACK:
-	if (backButton->getWidth()*backButtonScale > Osu::getScreenWidth()*maxFactor)
-		backButtonScale = (Osu::getScreenWidth()*maxFactor)/backButton->getWidth();
+	if (backButton->getWidth()*backButtonScale > m_osu->getScreenWidth()*maxFactor)
+		backButtonScale = (m_osu->getScreenWidth()*maxFactor)/backButton->getWidth();
 	m_backButton->setSize(backButton->getWidth()*backButtonScale, backButton->getHeight()*backButtonScale);
-	m_backButton->setPosY(Osu::getScreenHeight() - m_backButton->getSize().y);
+	m_backButton->setPosY(m_osu->getScreenHeight() - m_backButton->getSize().y);
 }
 
 void OsuScreenBackable::onResolutionChange(Vector2 newResolution)

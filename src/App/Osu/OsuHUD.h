@@ -25,7 +25,7 @@ public:
 	void drawDummy(Graphics *g);
 	void update();
 
-	void drawCursor(Graphics *g, Vector2 pos);
+	void drawCursor(Graphics *g, Vector2 pos, float alphaMultiplier = 1.0f);
 	void drawFps(Graphics *g) {drawFps(g, m_tempFont, m_fCurFps);}
 	void drawPlayfieldBorder(Graphics *g, Vector2 playfieldCenter, Vector2 playfieldSize, float hitcircleDiameter);
 	void drawLoadingSmall(Graphics *g);
@@ -46,7 +46,7 @@ public:
 	Rect getSkipClickRect();
 
 private:
-	void drawCursorRaw(Graphics *g, Vector2 pos);
+	void drawCursorRaw(Graphics *g, Vector2 pos, float alphaMultiplier = 1.0f);
 	void drawCursorTrailRaw(Graphics *g, float alpha, Vector2 pos);
 	void drawFps(Graphics *g, McFont *font, float fps);
 	void drawAccuracy(Graphics *g, float accuracy);
@@ -57,11 +57,10 @@ private:
 	void drawContinue(Graphics *g, Vector2 cursor, float hitcircleDiameter = 0.0f);
 	void drawHitErrorBar(Graphics *g, float hitWindow300, float hitWindow100, float hitWindow50);
 	void drawProgressBar(Graphics *g, float percent, bool waiting);
-	void drawStatistics(Graphics *g, int nps, int nd);
+	void drawStatistics(Graphics *g, int bpm, float ar, float cs, float od, int nps, int nd, int ur);
 	void drawTargetHeatmap(Graphics *g, float hitcircleDiameter);
 
-	void drawNPS(Graphics *g, int nps);
-	void drawND(Graphics *g, int nd);
+	void drawStatisticText(Graphics *g, const UString text);
 
 	Osu *m_osu;
 	McFont *m_tempFont;

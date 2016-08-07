@@ -63,6 +63,8 @@ ConVar osu_pause_on_focus_loss("osu_pause_on_focus_loss", true);
 ConVar osu_quick_retry_delay("osu_quick_retry_delay", 0.27f);
 
 ConVar osu_mods("osu_mods", UString(""), DUMMY_OSU_VOLUME_MUSIC_ARGS);
+ConVar osu_mod_fadingcursor("osu_mod_fadingcursor", false);
+ConVar osu_mod_fadingcursor_combo("osu_mod_fadingcursor_combo", 50.0f);
 
 ConVar osu_letterboxing("osu_letterboxing", true, DUMMY_OSU_LETTERBOXING);
 ConVar osu_resolution("osu_resolution", UString("1280x720"), DUMMY_OSU_VOLUME_MUSIC_ARGS);
@@ -254,13 +256,14 @@ void Osu::draw(Graphics *g)
 				alphaPercent = 1.0f;
 
 			g->setColor(COLOR((int)(255*alphaPercent), 0, 0, 0));
-			g->fillRect(0, 0, Osu::getScreenWidth(), Osu::getScreenHeight());
+			g->fillRect(0, 0, getScreenWidth(), getScreenHeight());
 		}
 
 		const bool allowDrawCursor = !osu_hide_cursor_during_gameplay.getBool() || getSelectedBeatmap()->isPaused();
+		const float fadingCursorAlpha = 1.0f - clamp<float>((float)getSelectedBeatmap()->getCombo()/osu_mod_fadingcursor_combo.getFloat(), 0.0f, 1.0f);
 
 		if ((m_bModAuto || m_bModAutopilot) && allowDrawCursor)
-			m_hud->drawCursor(g, m_osu_mod_fps_ref->getBool() ? OsuGameRules::getPlayfieldCenter() : getSelectedBeatmap()->getCursorPos());
+			m_hud->drawCursor(g, m_osu_mod_fps_ref->getBool() ? OsuGameRules::getPlayfieldCenter(this) : getSelectedBeatmap()->getCursorPos(), osu_mod_fadingcursor.getBool() ? fadingCursorAlpha : 1.0f);
 
 		if (getSelectedBeatmap()->isPaused())
 			m_pauseMenu->draw(g);
@@ -273,7 +276,7 @@ void Osu::draw(Graphics *g)
 		m_hud->drawVolumeChange(g);
 
 		if (!(m_bModAuto || m_bModAutopilot) && allowDrawCursor)
-			m_hud->drawCursor(g, getSelectedBeatmap()->getCursorPos());
+			m_hud->drawCursor(g, getSelectedBeatmap()->getCursorPos(), osu_mod_fadingcursor.getBool() ? fadingCursorAlpha : 1.0f);
 	}
 	else // if we are not playing
 	{
@@ -391,6 +394,7 @@ void Osu::update()
 	}
 
 	// handle cursor visibility if outside of internal resolution
+	// TODO: not a critical bug, but the cursor gets visible way too early if sensitivity is > 1.0f, due to this using scaled/offset getMouse()->getPos()
 	if (osu_resolution_enabled.getBool())
 	{
 		Rect internalWindow = Rect(0, 0, g_vInternalResolution.x, g_vInternalResolution.y);
@@ -430,7 +434,7 @@ void Osu::updateMods()
 	m_bModAutopilot = osu_mods.getString().find("autopilot") != -1;
 	m_bModRelax = osu_mods.getString().find("relax") != -1;
 	m_bModSpunout = osu_mods.getString().find("spunout") != -1;
-	m_bModTarget = osu_mods.getString().find("target") != -1;
+	m_bModTarget = osu_mods.getString().find("practicetarget") != -1;
 	m_bModDT = osu_mods.getString().find("dt") != -1;
 	m_bModNC = osu_mods.getString().find("nc") != -1;
 	m_bModHT = osu_mods.getString().find("ht") != -1;
@@ -1139,10 +1143,10 @@ float Osu::getImageScaleToFillResolution(Image *img, Vector2 resolution)
 	return getImageScaleToFillResolution(Vector2(img->getWidth(), img->getHeight()), resolution);
 }
 
-float Osu::getImageScale(Vector2 size, float osuSize)
+float Osu::getImageScale(Osu *osu, Vector2 size, float osuSize)
 {
-	int swidth = getScreenWidth();
-	int sheight = getScreenHeight();
+	int swidth = osu->getScreenWidth();
+	int sheight = osu->getScreenHeight();
 
 	if (swidth * 3 > sheight * 4)
 		swidth = sheight * 4 / 3;
@@ -1158,15 +1162,15 @@ float Osu::getImageScale(Vector2 size, float osuSize)
 	return xDiameter/size.x > yDiameter/size.y ? xDiameter/size.x : yDiameter/size.y;
 }
 
-float Osu::getImageScale(Image *img, float osuSize)
+float Osu::getImageScale(Osu *osu, Image *img, float osuSize)
 {
-	return getImageScale(Vector2(img->getWidth(), img->getHeight()), osuSize);
+	return getImageScale(osu, Vector2(img->getWidth(), img->getHeight()), osuSize);
 }
 
-float Osu::getUIScale(float osuResolutionRatio)
+float Osu::getUIScale(Osu *osu, float osuResolutionRatio)
 {
-	int swidth = getScreenWidth();
-	int sheight = getScreenHeight();
+	int swidth = osu->getScreenWidth();
+	int sheight = osu->getScreenHeight();
 
 	if (swidth * 3 > sheight * 4)
 		swidth = sheight * 4 / 3;

@@ -16,8 +16,8 @@ class OsuBeatmap;
 class OsuBeatmapDifficulty;
 
 class OsuUISelectionButton;
-class OsuSongBrowserTopBarSongInfo;
-class OsuSongBrowserSongButton;
+class OsuUISongBrowserInfoLabel;
+class OsuUISongBrowserButton;
 
 class CBaseUIContainer;
 class CBaseUIImageButton;
@@ -52,7 +52,7 @@ public:
 	void refreshBeatmaps();
 
 	void onDifficultySelected(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff, bool fromClick = false, bool play = false);
-	void scrollToSongButton(OsuSongBrowserSongButton *songButton);
+	void scrollToSongButton(OsuUISongBrowserButton *songButton);
 
 	void setVisible(bool visible);
 
@@ -75,7 +75,7 @@ private:
 	void onSelectionRandom();
 	void onSelectionOptions();
 
-	void selectSongButton(OsuSongBrowserSongButton *songButton);
+	void selectSongButton(OsuUISongBrowserButton *songButton);
 	void selectRandomBeatmap();
 	void selectPreviousRandomBeatmap();
 
@@ -88,7 +88,7 @@ private:
 
 	// top bar left
 	CBaseUIContainer *m_topbarLeft;
-	OsuSongBrowserTopBarSongInfo *m_songInfo;
+	OsuUISongBrowserInfoLabel *m_songInfo;
 
 	// top bar right
 	CBaseUIContainer *m_topbarRight;
@@ -103,7 +103,7 @@ private:
 	// beatmap database
 	Timer *m_importTimer;
 	std::vector<OsuBeatmap*> m_beatmaps;
-	std::vector<OsuSongBrowserSongButton*> m_songButtons;
+	std::vector<OsuUISongBrowserButton*> m_songButtons;
 	bool m_bBeatmapRefreshScheduled;
 	bool m_bBeatmapRefreshNeedsFileRefresh;
 	int m_iCurRefreshNumBeatmaps;
@@ -128,7 +128,7 @@ private:
 	std::vector<OsuBeatmap*> m_previousRandomBeatmaps;
 
 	// search
-	std::vector<OsuSongBrowserSongButton*> m_visibleSongButtons;
+	std::vector<OsuUISongBrowserButton*> m_visibleSongButtons;
 	UString m_sSearchString;
 	float m_fSearchWaitTime;
 };

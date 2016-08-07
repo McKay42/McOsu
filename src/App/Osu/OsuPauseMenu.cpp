@@ -60,7 +60,7 @@ OsuPauseMenu::OsuPauseMenu(Osu *osu) : OsuScreen()
 	m_fWarningArrowsAnimY = 0.0f;
 	m_bInitialWarningArrowFlyIn = true;
 
-	m_container = new CBaseUIContainer(0, 0, Osu::getScreenWidth(), Osu::getScreenHeight(), "");
+	m_container = new CBaseUIContainer(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight(), "");
 
 	OsuPauseMenuButton *continueButton = addButton();
 	OsuPauseMenuButton *retryButton = addButton();
@@ -86,14 +86,14 @@ void OsuPauseMenu::draw(Graphics *g)
 	if (osu_pause_dim_background.getBool())
 	{
 		g->setColor(COLOR(150, 20, 20, 20));
-		g->fillRect(0, 0, Osu::getScreenWidth(), Osu::getScreenHeight());
+		g->fillRect(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight());
 	}
 
 	/*
 	g->setColor(0xffff0000);
-	g->drawLine(0, Osu::getScreenHeight()/3.0f, Osu::getScreenWidth(), Osu::getScreenHeight()/3.0f);
-	g->drawLine(0, (Osu::getScreenHeight()/3.0f)*2, Osu::getScreenWidth(), (Osu::getScreenHeight()/3.0f)*2);
-	g->drawLine(0, (Osu::getScreenHeight()/3.0f)*3, Osu::getScreenWidth(), (Osu::getScreenHeight()/3.0f)*3);
+	g->drawLine(0, m_osu->getScreenHeight()/3.0f, m_osu->getScreenWidth(), m_osu->getScreenHeight()/3.0f);
+	g->drawLine(0, (m_osu->getScreenHeight()/3.0f)*2, m_osu->getScreenWidth(), (m_osu->getScreenHeight()/3.0f)*2);
+	g->drawLine(0, (m_osu->getScreenHeight()/3.0f)*3, m_osu->getScreenWidth(), (m_osu->getScreenHeight()/3.0f)*3);
 	*/
 
 	m_container->draw(g);
@@ -105,12 +105,12 @@ void OsuPauseMenu::draw(Graphics *g)
 		if (animation > 1.0f)
 			animation = 2.0f - animation;
 		animation =  -animation*(animation-2); // quad out
-		float offset = m_osu->getUIScale(20.0f + 45.0f*animation);
+		float offset = m_osu->getUIScale(m_osu, 20.0f + 45.0f*animation);
 
 		g->setColor(arrowColor);
 		g->setAlpha(m_fWarningArrowsAnimAlpha);
 		m_osu->getHUD()->drawWarningArrow(g, Vector2(m_fWarningArrowsAnimX, m_fWarningArrowsAnimY) + Vector2(0, m_selectedButton->getSize().y/2) - Vector2(offset, 0), false, false);
-		m_osu->getHUD()->drawWarningArrow(g, Vector2(Osu::getScreenWidth() - m_fWarningArrowsAnimX, m_fWarningArrowsAnimY) + Vector2(0, m_selectedButton->getSize().y/2) + Vector2(offset, 0), true, false);
+		m_osu->getHUD()->drawWarningArrow(g, Vector2(m_osu->getScreenWidth() - m_fWarningArrowsAnimX, m_fWarningArrowsAnimY) + Vector2(0, m_selectedButton->getSize().y/2) + Vector2(offset, 0), true, false);
 	}
 }
 
@@ -163,7 +163,7 @@ void OsuPauseMenu::onSelectionChange()
 			m_bInitialWarningArrowFlyIn = false;
 
 			m_fWarningArrowsAnimY = m_selectedButton->getPos().y;
-			m_fWarningArrowsAnimX = m_selectedButton->getPos().x - m_osu->getUIScale(170.0f);
+			m_fWarningArrowsAnimX = m_selectedButton->getPos().x - m_osu->getUIScale(m_osu, 170.0f);
 
 			anim->moveLinear(&m_fWarningArrowsAnimAlpha, 1.0f, 0.3f);
 			anim->moveQuadIn(&m_fWarningArrowsAnimX, m_selectedButton->getPos().x, 0.3f);
@@ -269,7 +269,7 @@ void OsuPauseMenu::updateButtons()
 
 void OsuPauseMenu::updateLayout()
 {
-	float height = (Osu::getScreenHeight()/(float)m_buttons.size());
+	float height = (m_osu->getScreenHeight()/(float)m_buttons.size());
 	float half = (m_buttons.size()-1)/2.0f;
 
 	float maxWidth = 0.0f;
@@ -280,7 +280,7 @@ void OsuPauseMenu::updateLayout()
 		if (img == NULL)
 			img = engine->getResourceManager()->getImage("MISSING_TEXTURE");
 
-		float scale = m_osu->getUIScale(256) / (411.0f * (m_osu->getSkin()->isPauseContinue2x() ? 2.0f : 1.0f));
+		float scale = m_osu->getUIScale(m_osu, 256) / (411.0f * (m_osu->getSkin()->isPauseContinue2x() ? 2.0f : 1.0f));
 
 		m_buttons[i]->setBaseScale(scale, scale);
 		m_buttons[i]->setSize(img->getWidth()*scale, img->getHeight()*scale);
@@ -293,7 +293,7 @@ void OsuPauseMenu::updateLayout()
 
 	for (int i=0; i<m_buttons.size(); i++)
 	{
-		Vector2 newPos = Vector2(Osu::getScreenWidth()/2.0f - maxWidth/2, (i+1)*height - height/2.0f - maxHeight/2.0f);
+		Vector2 newPos = Vector2(m_osu->getScreenWidth()/2.0f - maxWidth/2, (i+1)*height - height/2.0f - maxHeight/2.0f);
 
 		float pinch = std::max(0.0f, (height/2.0f - maxHeight/2.0f));
 		if ((float)i < half)

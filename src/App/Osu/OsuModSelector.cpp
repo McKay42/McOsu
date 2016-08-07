@@ -81,9 +81,9 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen()
 	m_fExperimentalAnimation = 0.0f;
 	m_bScheduledHide = false;
 	m_bExperimentalVisible = false;
-	m_container = new CBaseUIContainer(0, 0, Osu::getScreenWidth(), Osu::getScreenHeight(), "");
-	m_overrideSliderContainer = new CBaseUIContainer(0, 0, Osu::getScreenWidth(), Osu::getScreenHeight(), "");
-	m_experimentalContainer = new CBaseUIContainer(0, 0, Osu::getScreenWidth(), Osu::getScreenHeight(), "");
+	m_container = new CBaseUIContainer(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight(), "");
+	m_overrideSliderContainer = new CBaseUIContainer(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight(), "");
+	m_experimentalContainer = new CBaseUIContainer(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight(), "");
 
 	m_bWaitForF1KeyUp = false;
 
@@ -138,6 +138,7 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen()
 	addExperimentalCheckbox("First Person", "Centered cursor.", convar->getConVarByName("osu_mod_fps"));
 	addExperimentalCheckbox("Jigsaw 1", "Wrong clicks count as misses.", convar->getConVarByName("osu_mod_jigsaw1"));
 	addExperimentalCheckbox("Jigsaw 2", "Massively reduced slider follow circle radius.", convar->getConVarByName("osu_mod_jigsaw2"));
+	addExperimentalCheckbox("Fading Cursor", "The cursor fades the higher the combo, becoming invisible at 50.", convar->getConVarByName("osu_mod_fadingcursor"));
 	addExperimentalCheckbox("Flip Horizontally", "Playfield is flipped horizontally.", convar->getConVarByName("osu_playfield_mirror_horizontal"));
 	addExperimentalCheckbox("Flip Vertically", "Playfield is flipped vertically.", convar->getConVarByName("osu_playfield_mirror_vertical"));
 
@@ -159,14 +160,12 @@ void OsuModSelector::updateButtons()
 	setModButtonOnGrid(1, 0, "nf", "You can't fail. No matter what.", m_osu->getSkin()->getSelectionModNoFail());
 	getModButtonOnGrid(1, 0)->setAvailable(false);
 	setModButtonOnGrid(2, 0, "ht", "Less zoom.", m_osu->getSkin()->getSelectionModHalfTime());
-	//getModButtonOnGrid(2, 0)->setAvailable(!isInCompactMode());
 	setModButtonOnGrid(4, 0, "nm", "Massively reduced slider follow circle radius. Wrong clicks count as misses.", m_osu->getSkin()->getSelectionModNightmare());
 
 	setModButtonOnGrid(0, 1, "hr", "Everything just got a bit harder...", m_osu->getSkin()->getSelectionModHardRock());
 	setModButtonOnGrid(1, 1, "sd", "Miss a note and fail.", m_osu->getSkin()->getSelectionModSuddenDeath());
 	getModButtonOnGrid(1, 1)->setAvailable(false);
 	setModButtonOnGrid(2, 1, "dt", "Zoooooooooom.", m_osu->getSkin()->getSelectionModDoubleTime());
-	//getModButtonOnGrid(2, 1)->setAvailable(!isInCompactMode());
 	setModButtonOnGrid(3, 1, "hd", "Play with no approach circles and fading notes for a slight score advantage.", m_osu->getSkin()->getSelectionModHidden());
 	setModButtonOnGrid(4, 1, "fl", "Restricted view area.", m_osu->getSkin()->getSelectionModFlashlight());
 	getModButtonOnGrid(4, 1)->setAvailable(false);
@@ -175,7 +174,7 @@ void OsuModSelector::updateButtons()
 	setModButtonOnGrid(1, 2, "autopilot", "Automatic cursor movement - just follow the rhythm.\n** UNRANKED **", m_osu->getSkin()->getSelectionModAutopilot());
 	setModButtonOnGrid(2, 2, "spunout", "Spinners will be automatically completed.", m_osu->getSkin()->getSelectionModSpunOut());
 	setModButtonOnGrid(3, 2, "auto", "Watch a perfect automated play through the song.", m_osu->getSkin()->getSelectionModAutoplay());
-	setModButtonOnGrid(4, 2, "target", "Accuracy is based on the distance to the center of all hitobjects.\n300s still require at least being in the hit window of a 100 in addition to the rule above.", m_osu->getSkin()->getSelectionModTarget());
+	setModButtonOnGrid(4, 2, "practicetarget", "Accuracy is based on the distance to the center of all hitobjects.\n300s still require at least being in the hit window of a 100 in addition to the rule above.", m_osu->getSkin()->getSelectionModTarget());
 }
 
 OsuModSelector::~OsuModSelector()
@@ -198,7 +197,7 @@ void OsuModSelector::draw(Graphics *g)
 	if (isInCompactMode())
 	{
 		// get override slider element bounds
-		Vector2 overrideSlidersStart = Vector2(Osu::getScreenWidth(), 0);
+		Vector2 overrideSlidersStart = Vector2(m_osu->getScreenWidth(), 0);
 		Vector2 overrideSlidersSize;
 		for (int i=0; i<m_overrideSliders.size(); i++)
 		{
@@ -216,8 +215,8 @@ void OsuModSelector::draw(Graphics *g)
 		overrideSlidersSize.x -= overrideSlidersStart.x;
 
 		// get mod button element bounds
-		Vector2 modGridButtonsStart = Vector2(Osu::getScreenWidth(), Osu::getScreenHeight());
-		Vector2 modGridButtonsSize = Vector2(0, Osu::getScreenHeight());
+		Vector2 modGridButtonsStart = Vector2(m_osu->getScreenWidth(), m_osu->getScreenHeight());
+		Vector2 modGridButtonsSize = Vector2(0, m_osu->getScreenHeight());
 		for (int i=0; i<m_modButtons.size(); i++)
 		{
 			CBaseUIButton *button = m_modButtons[i];
@@ -315,7 +314,7 @@ void OsuModSelector::update()
 			break;
 		}
 	}
-	Rect experimentalTrigger = Rect(0, 0, m_bExperimentalVisible ? m_experimentalContainer->getSize().x : Osu::getScreenWidth()*0.05f, Osu::getScreenHeight());
+	Rect experimentalTrigger = Rect(0, 0, m_bExperimentalVisible ? m_experimentalContainer->getSize().x : m_osu->getScreenWidth()*0.05f, m_osu->getScreenHeight());
 	if (experimentalTrigger.contains(engine->getMouse()->getPos()))
 	{
 		if (!m_bExperimentalVisible)
@@ -421,8 +420,8 @@ void OsuModSelector::updateLayout()
 	if (!isInCompactMode()) // normal layout
 	{
 		// mod grid buttons
-		Vector2 center = Osu::getScreenSize()/2.0f;
-		float scale = m_osu->getImageScale(m_osu->getSkin()->getSelectionModEasy(), 42.0f);
+		Vector2 center = m_osu->getScreenSize()/2.0f;
+		float scale = m_osu->getImageScale(m_osu, m_osu->getSkin()->getSelectionModEasy(), 42.0f);
 		Vector2 size = Vector2(m_osu->getSkin()->getSelectionModEasy()->getWidth(), m_osu->getSkin()->getSelectionModEasy()->getHeight())*scale;
 		Vector2 offset = Vector2(size.x*1.0f, size.y*0.25f);
 		Vector2 start = Vector2(center.x - (size.x*m_iGridWidth)/2.0f - (offset.x*(m_iGridWidth-1))/2.0f, center.y - (size.y*m_iGridHeight)/2.0f  - (offset.y*(m_iGridHeight-1))/2.0f);
@@ -438,7 +437,7 @@ void OsuModSelector::updateLayout()
 					Image *buttonImage = engine->getResourceManager()->getImage(button->getImageResourceName());
 
 					if (buttonImage != NULL)
-						scale = m_osu->getImageScale(buttonImage, 42.0f);
+						scale = m_osu->getImageScale(m_osu, buttonImage, 42.0f);
 
 					button->setPos(start + Vector2(size.x*x + offset.x*x, size.y*y + offset.y*y));
 					button->setBaseScale(scale, scale);
@@ -448,10 +447,10 @@ void OsuModSelector::updateLayout()
 		}
 
 		// override sliders (down here because they depend on the mod grid button alignment)
-		int overrideSliderWidth = m_osu->getUIScale(250.0f);
+		int overrideSliderWidth = m_osu->getUIScale(m_osu, 250.0f);
 		int overrideSliderHeight = m_overrideSliders.size() > 0 ? m_overrideSliders[0].slider->getSize().y : 25;
 		int overrideSliderOffsetY = ((start.y - m_overrideSliders.size()*overrideSliderHeight)/(m_overrideSliders.size()-1))*0.35f;
-		Vector2 overrideSliderStart = Vector2(Osu::getScreenWidth()/2 - overrideSliderWidth/2, start.y/2 - (m_overrideSliders.size()*overrideSliderHeight + (m_overrideSliders.size()-1)*overrideSliderOffsetY)/1.75f);
+		Vector2 overrideSliderStart = Vector2(m_osu->getScreenWidth()/2 - overrideSliderWidth/2, start.y/2 - (m_overrideSliders.size()*overrideSliderHeight + (m_overrideSliders.size()-1)*overrideSliderOffsetY)/1.75f);
 		for (int i=0; i<m_overrideSliders.size(); i++)
 		{
 			m_overrideSliders[i].desc->setSizeToContent(0, 0);
@@ -469,9 +468,9 @@ void OsuModSelector::updateLayout()
 
 		// action buttons
 		float actionMinY = start.y + size.y*m_iGridHeight + offset.y*(m_iGridHeight-1); // exact bottom of the mod buttons
-		Vector2 actionSize = Vector2(m_osu->getUIScale(448.0f), size.y*0.75f);
+		Vector2 actionSize = Vector2(m_osu->getUIScale(m_osu, 448.0f), size.y*0.75f);
 		float actionOffsetY = actionSize.y*0.5f;
-		Vector2 actionStart = Vector2(Osu::getScreenWidth()/2.0f - actionSize.x/2.0f, actionMinY + (Osu::getScreenHeight() - actionMinY)/2.0f  - (actionSize.y*m_actionButtons.size() + actionOffsetY*(m_actionButtons.size()-1))/2.0f);
+		Vector2 actionStart = Vector2(m_osu->getScreenWidth()/2.0f - actionSize.x/2.0f, actionMinY + (m_osu->getScreenHeight() - actionMinY)/2.0f  - (actionSize.y*m_actionButtons.size() + actionOffsetY*(m_actionButtons.size()-1))/2.0f);
 		for (int i=0; i<m_actionButtons.size(); i++)
 		{
 			m_actionButtons[i]->setVisible(true);
@@ -482,12 +481,12 @@ void OsuModSelector::updateLayout()
 	else // compact in-beatmap mode
 	{
 		// mod grid buttons
-		Vector2 center = Osu::getScreenSize()/2.0f;
-		float scale = m_osu->getImageScale(m_osu->getSkin()->getSelectionModEasy(), 48.0f)*0.75f;
+		Vector2 center = m_osu->getScreenSize()/2.0f;
+		float scale = m_osu->getImageScale(m_osu, m_osu->getSkin()->getSelectionModEasy(), 48.0f)*0.75f;
 		Vector2 blockSize = Vector2(m_osu->getSkin()->getSelectionModEasy()->getWidth(), m_osu->getSkin()->getSelectionModEasy()->getHeight())*scale;
 		Vector2 offset = Vector2(blockSize.x*0.15f, blockSize.y*0.05f);
 		Vector2 size = Vector2((blockSize.x*m_iGridWidth) + (offset.x*(m_iGridWidth-1)), (blockSize.y*m_iGridHeight) + (offset.y*(m_iGridHeight-1)));
-		center.y = Osu::getScreenHeight() - size.y/2 - offset.y*3.0f;
+		center.y = m_osu->getScreenHeight() - size.y/2 - offset.y*3.0f;
 		Vector2 start = Vector2(center.x - size.x/2.0f, center.y - size.y/2.0f);
 
 		for (int x=0; x<m_iGridWidth; x++)
@@ -511,10 +510,10 @@ void OsuModSelector::updateLayout()
 		}
 
 		// override sliders (down here because they depend on the mod grid button alignment)
-		int overrideSliderWidth = m_osu->getUIScale(250.0f);
+		int overrideSliderWidth = m_osu->getUIScale(m_osu, 250.0f);
 		int overrideSliderHeight = m_overrideSliders.size() > 0 ? m_overrideSliders[0].slider->getSize().y : 25;
 		int overrideSliderOffsetY = 5;
-		Vector2 overrideSliderStart = Vector2(Osu::getScreenWidth()/2 - overrideSliderWidth/2, 5);
+		Vector2 overrideSliderStart = Vector2(m_osu->getScreenWidth()/2 - overrideSliderWidth/2, 5);
 		for (int i=0; i<m_overrideSliders.size(); i++)
 		{
 			m_overrideSliders[i].desc->setSizeToContent(0, 0);
@@ -555,7 +554,7 @@ void OsuModSelector::updateLayout()
 			yCounter += 8;
 	}
 	m_experimentalContainer->setSize(experimentalMaxWidth, yCounter);
-	m_experimentalContainer->setPosY(Osu::getScreenSize().y/2 - m_experimentalContainer->getSize().y/2);
+	m_experimentalContainer->setPosY(m_osu->getScreenSize().y/2 - m_experimentalContainer->getSize().y/2);
 }
 
 void OsuModSelector::updateModConVar()
@@ -819,7 +818,10 @@ UString OsuModSelector::getOverrideSliderLabelText(OsuModSelector::OVERRIDE_SLID
 		bool wasBPMslider = false;
 		float beatmapValue = 1.0f;
 		if (s.label->getName().find("CS") != -1)
-			beatmapValue = m_osu->getSelectedBeatmap()->getSelectedDifficulty()->CS;
+		{
+			beatmapValue = clamp<float>(m_osu->getSelectedBeatmap()->getSelectedDifficulty()->CS*m_osu->getCSDifficultyMultiplier(), 0.0f, 10.0f);
+			convarValue = m_osu->getSelectedBeatmap()->getCS();
+		}
 		else if (s.label->getName().find("AR") != -1)
 		{
 			beatmapValue = active ? OsuGameRules::getRawApproachRateForSpeedMultiplier(m_osu->getSelectedBeatmap()) : OsuGameRules::getApproachRateForSpeedMultiplier(m_osu->getSelectedBeatmap());
@@ -875,8 +877,9 @@ UString OsuModSelector::getOverrideSliderLabelText(OsuModSelector::OVERRIDE_SLID
 		else if (s.desc->getText().find("Speed") != -1)
 			beatmapValue = active ? m_osu->getRawSpeedMultiplier() : m_osu->getSpeedMultiplier();
 
-		// always round beatmapValue to 1 decimal digit
-		beatmapValue = std::round(beatmapValue * 10.0f) / 10.0f;
+		// always round beatmapValue to 1 decimal digit, except for the speed slider
+		if (s.desc->getText().find("Speed") == -1)
+			beatmapValue = std::round(beatmapValue * 10.0f) / 10.0f;
 
 		// update label
 		if (!wasBPMslider)

@@ -34,19 +34,15 @@ class Osu : public App, public MouseListener
 public:
 	static ConVar *debug;
 
-	static inline Vector2 getScreenSize() {return g_vInternalResolution;}
-	static inline int getScreenWidth() {return (int)g_vInternalResolution.x;}
-	static inline int getScreenHeight() {return (int)g_vInternalResolution.y;}
-
 	static Vector2 osuBaseResolution;
 
 	static float getImageScaleToFitResolution(Image *img, Vector2 resolution);
 	static float getImageScaleToFitResolution(Vector2 size, Vector2 resolution);
 	static float getImageScaleToFillResolution(Vector2 size, Vector2 resolution);
 	static float getImageScaleToFillResolution(Image *img, Vector2 resolution);
-	static float getImageScale(Vector2 size, float osuSize);
-	static float getImageScale(Image *img, float osuSize);
-	static float getUIScale(float osuResolutionRatio);
+	static float getImageScale(Osu *osu, Vector2 size, float osuSize);
+	static float getImageScale(Osu *osu, Image *img, float osuSize);
+	static float getUIScale(Osu *osu, float osuResolutionRatio);
 
 	static bool findIgnoreCase(const std::string &haystack, const std::string &needle);
 
@@ -86,6 +82,10 @@ public:
 	void reloadSkin() {onSkinReload();}
 
 	float getCursorScaleFactor();
+
+	inline Vector2 getScreenSize() {return g_vInternalResolution;}
+	inline int getScreenWidth() {return (int)g_vInternalResolution.x;}
+	inline int getScreenHeight() {return (int)g_vInternalResolution.y;}
 
 	inline OsuSkin *getSkin() {return m_skin;}
 	inline OsuHUD *getHUD() {return m_hud;}
