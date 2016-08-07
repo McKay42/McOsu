@@ -23,8 +23,8 @@
 #include "CBaseUIContainer.h"
 #include "CBaseUIButton.h"
 
-#define MCOSU_VERSION "Alpha 21"
-#define MCOSU_BANNER "-WIP-"
+#define MCOSU_VERSION "Alpha 22"
+#define MCOSU_BANNER "-Animated Skins are not working yet-"
 
 
 
@@ -93,7 +93,7 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen()
 
 	m_fShutdownScheduledTime = 0.0f;
 
-	m_container = new CBaseUIContainer(0, 0, Osu::getScreenWidth(), Osu::getScreenHeight(), "");
+	m_container = new CBaseUIContainer(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight(), "");
 	m_mainButton = new OsuMainMenuMainButton(this, 0, 0, 1, 1, "", "");
 
 	m_container->addBaseUIElement(m_mainButton);
@@ -135,7 +135,7 @@ void OsuMainMenu::draw(Graphics *g)
 	float bannerStringWidth = smallFont->getStringWidth(MCOSU_BANNER);
 	int bannerDiff = 20;
 	int bannerMargin = 5;
-	int numBanners = (int)roundf(Osu::getScreenWidth() / (bannerStringWidth + bannerDiff)) + 2;
+	int numBanners = (int)roundf(m_osu->getScreenWidth() / (bannerStringWidth + bannerDiff)) + 2;
 
 	g->setColor(0xff777777);
 	g->pushTransform();
@@ -161,7 +161,7 @@ void OsuMainMenu::draw(Graphics *g)
 	// draw todolist
 	g->setColor(0xff777777);
 	g->pushTransform();
-	g->translate(7, Osu::getScreenHeight()/2 - smallFont->getHeight()/2);
+	g->translate(7, m_osu->getScreenHeight()/2 - smallFont->getHeight()/2);
 	g->drawString(smallFont, "TODO:");
 	g->translate(0, 10);
 	for (int i=0; i<m_todo.size(); i++)
@@ -211,7 +211,7 @@ void OsuMainMenu::drawVersionInfo(Graphics *g)
 	McFont *versionFont = engine->getResourceManager()->getFont("FONT_DEFAULT");
 
 	g->pushTransform();
-	g->translate(7, Osu::getScreenHeight() - 7);
+	g->translate(7, m_osu->getScreenHeight() - 7);
 	g->drawString(versionFont, MCOSU_VERSION);
 	g->popTransform();
 }
@@ -268,12 +268,12 @@ void OsuMainMenu::setVisible(bool visible)
 
 void OsuMainMenu::updateLayout()
 {
-	m_vCenter = Osu::getScreenSize()/2.0f;
-	float size = m_osu->getUIScale(324.0f);
+	m_vCenter = m_osu->getScreenSize()/2.0f;
+	float size = Osu::getUIScale(m_osu, 324.0f);
 	m_vSize = Vector2(size, size);
 
 	m_pauseButton->setSize(30, 30);
-	m_pauseButton->setRelPos(Osu::getScreenWidth() - m_pauseButton->getSize().x*2 - 10, m_pauseButton->getSize().y + 10);
+	m_pauseButton->setRelPos(m_osu->getScreenWidth() - m_pauseButton->getSize().x*2 - 10, m_pauseButton->getSize().y + 10);
 
 	m_mainButton->setRelPos(m_vCenter - m_vSize/2.0f - Vector2(m_fCenterOffsetAnim, 0.0f));
 	m_mainButton->setSize(m_vSize);
@@ -294,7 +294,7 @@ void OsuMainMenu::updateLayout()
 		m_menuElements[i]->setSize(m_mainButton->getSize().x + menuElementExtraWidth*offsetPercent - 2.0f*menuElementExtraWidth*(1.0f - offsetPercent), menuElementHeight);
 	}
 
-	m_container->setSize(Osu::getScreenSize());
+	m_container->setSize(m_osu->getScreenSize());
 	m_container->update_pos();
 }
 

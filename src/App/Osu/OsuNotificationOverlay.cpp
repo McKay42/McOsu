@@ -1,6 +1,6 @@
 //================ Copyright (c) 2016, PG, All rights reserved. =================//
 //
-// Purpose:		text bar overlay which can block inputs
+// Purpose:		text bar overlay which can eat inputs (also used for key bindings)
 //
 // $NoKeywords: $osunot
 //===============================================================================//
@@ -33,7 +33,7 @@ void OsuNotificationOverlay::draw(Graphics *g)
 	{
 		g->setColor(0x22ffffff);
 		g->setAlpha((m_notification1.backgroundAnim/0.5f)*0.13f);
-		g->fillRect(0, 0, Osu::getScreenWidth(), Osu::getScreenHeight());
+		g->fillRect(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight());
 	}
 
 	drawNotificationBackground(g, m_notification2);
@@ -51,7 +51,7 @@ void OsuNotificationOverlay::drawNotificationText(Graphics *g, OsuNotificationOv
 	g->pushTransform();
 		g->setColor(0xff000000);
 		g->setAlpha(n.alpha);
-		g->translate(Osu::getScreenWidth()/2 - stringWidth/2 + 1, Osu::getScreenHeight()/2 + font->getHeight()/2 + n.fallAnim*height*0.15f + 1);
+		g->translate((int)(m_osu->getScreenWidth()/2 - stringWidth/2 + 1), (int)(m_osu->getScreenHeight()/2 + font->getHeight()/2 + n.fallAnim*height*0.15f + 1));
 		g->drawString(font, n.text);
 
 		g->setColor(n.textColor);
@@ -68,20 +68,14 @@ void OsuNotificationOverlay::drawNotificationBackground(Graphics *g, OsuNotifica
 
 	g->setColor(0xff000000);
 	g->setAlpha(n.alpha*0.75f);
-	g->fillRect(0, Osu::getScreenHeight()/2 - height/2, Osu::getScreenWidth(), height);
-}
-
-void OsuNotificationOverlay::update()
-{
-	if (!isVisible()) return;
-
-
+	g->fillRect(0, m_osu->getScreenHeight()/2 - height/2, m_osu->getScreenWidth(), height);
 }
 
 void OsuNotificationOverlay::onKeyDown(KeyboardEvent &e)
 {
 	if (!isVisible()) return;
 
+	// escape always stops waiting for a key
 	if (e.getKeyCode() == KEY_ESCAPE)
 	{
 		if (m_bWaitForKey)
@@ -89,17 +83,13 @@ void OsuNotificationOverlay::onKeyDown(KeyboardEvent &e)
 		m_bWaitForKey = false;
 	}
 
+	// key binding logic
 	if (m_bWaitForKey)
 	{
-		// TODO: create key <=> name mapping (e.g. TAB/SHIFT/CONTROL etc.)
-		//McFont *font = m_osu->getSubTitleFont();
-		//if (font->hasGlyph(UString::format("%c", e.getKeyCode()).wc_str()[0]))
-		//	addNotification(UString::format("%c is the new key.", e.getKeyCode()));
-		//else
-		float prevDuration = osu_notification_duration.getFloat();
+		float prevDuration = osu_notification_duration.getFloat(); // this is a bit shitty
 		osu_notification_duration.setValue(0.85f);
 		addNotification(UString::format("The new key is (ASCII Keycode): %lu", e.getKeyCode()));
-		osu_notification_duration.setValue(prevDuration);
+		osu_notification_duration.setValue(prevDuration); // restore convar
 
 		if (m_keyListener != NULL)
 			m_keyListener->onKey(e);
@@ -147,7 +137,7 @@ void OsuNotificationOverlay::addNotification(UString text, Color textColor, bool
 		anim->moveQuadIn(&m_notification2.alpha, 0.0f, 0.2f, 0.0f, true);
 	}
 
-	// new notification
+	// build new notification
 	m_bWaitForKey = waitForKey;
 
 	float fadeOutTime = 0.4f;

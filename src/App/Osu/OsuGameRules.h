@@ -72,9 +72,13 @@ public:
 	}
 
 	// 1200 ms -> AR 5
+	static float getApproachRateForSpeedMultiplier(OsuBeatmap *beatmap, float speedMultiplier)
+	{
+		return clamp<float>(mapDifficultyRangeInv((float)getApproachTime(beatmap) * (1.0f / speedMultiplier), 1800.0f, 1200.0f, 450.0f), 0.0f, 12.5f);
+	}
 	static float getApproachRateForSpeedMultiplier(OsuBeatmap *beatmap) // respect all mods and overrides
 	{
-		return clamp<float>(mapDifficultyRangeInv((float)getApproachTime(beatmap) * (1.0f / beatmap->getOsu()->getSpeedMultiplier()), 1800.0f, 1200.0f, 450.0f), 0.0f, 12.5f);
+		return getApproachRateForSpeedMultiplier(beatmap, beatmap->getOsu()->getSpeedMultiplier());
 	}
 	static float getRawApproachRateForSpeedMultiplier(OsuBeatmap *beatmap) // ignore AR override
 	{
@@ -173,16 +177,16 @@ public:
 	//	Hitobject Scaling  //
 	//*********************//
 
-	static float getRawHitCircleDiameter(OsuBeatmap *beatmap)
+	static float getRawHitCircleDiameter(float CS)
 	{
-		return 108.848f - ((beatmap->getCS()) * 8.9646f);
+		return 108.848f - (CS * 8.9646f);
 	}
 
 	// note: these calculations are correct, even though it may not seem so due to magic numbers in osu_playfield_border_bottom_percent and osu_playfield_border_top_percent
-	static float getHitCircleXMultiplier()
+	static float getHitCircleXMultiplier(Osu *osu)
 	{
-		int swidth = Osu::getScreenWidth();
-		int sheight = Osu::getScreenHeight();
+		int swidth = osu->getScreenWidth();
+		int sheight = osu->getScreenHeight();
 
 		if (swidth * 3 > sheight * 4)
 			swidth = sheight * 4 / 3;
@@ -197,7 +201,7 @@ public:
 
 	static float getHitCircleDiameter(OsuBeatmap *beatmap)
 	{
-		return getRawHitCircleDiameter(beatmap) * getHitCircleXMultiplier();
+		return getRawHitCircleDiameter(beatmap->getCS()) * getHitCircleXMultiplier(beatmap->getOsu());
 	}
 
 
@@ -212,36 +216,36 @@ public:
 	static const int OSU_COORD_WIDTH = 512;
 	static const int OSU_COORD_HEIGHT = 384;
 
-	static float getPlayfieldScaleFactor()
+	static float getPlayfieldScaleFactor(Osu *osu)
 	{
-		const int engineScreenWidth = Osu::getScreenWidth();
-		const int topBorderSize = osu_playfield_border_top_percent.getFloat()*Osu::getScreenHeight();
-		const int bottomBorderSize = osu_playfield_border_bottom_percent.getFloat()*Osu::getScreenHeight();
-		const int engineScreenHeight = Osu::getScreenHeight() - bottomBorderSize - topBorderSize;
+		const int engineScreenWidth = osu->getScreenWidth();
+		const int topBorderSize = osu_playfield_border_top_percent.getFloat()*osu->getScreenHeight();
+		const int bottomBorderSize = osu_playfield_border_bottom_percent.getFloat()*osu->getScreenHeight();
+		const int engineScreenHeight = osu->getScreenHeight() - bottomBorderSize - topBorderSize;
 
-		return Osu::getScreenWidth()/(float)OSU_COORD_WIDTH > engineScreenHeight/(float)OSU_COORD_HEIGHT ? engineScreenHeight / (float)OSU_COORD_HEIGHT : engineScreenWidth / (float)OSU_COORD_WIDTH;
+		return osu->getScreenWidth()/(float)OSU_COORD_WIDTH > engineScreenHeight/(float)OSU_COORD_HEIGHT ? engineScreenHeight / (float)OSU_COORD_HEIGHT : engineScreenWidth / (float)OSU_COORD_WIDTH;
 	}
 
-	static Vector2 getPlayfieldSize()
+	static Vector2 getPlayfieldSize(Osu *osu)
 	{
-		const float scaleFactor = getPlayfieldScaleFactor();
+		const float scaleFactor = getPlayfieldScaleFactor(osu);
 
 		return Vector2(OSU_COORD_WIDTH*scaleFactor, OSU_COORD_HEIGHT*scaleFactor);
 	}
 
-	static Vector2 getPlayfieldOffset()
+	static Vector2 getPlayfieldOffset(Osu *osu)
 	{
-		const Vector2 playfieldSize = getPlayfieldSize();
-		const int bottomBorderSize = osu_playfield_border_bottom_percent.getFloat()*Osu::getScreenHeight();
-		const int playfieldYOffset = (Osu::getScreenHeight()/2.0f - (playfieldSize.y/2.0f)) - bottomBorderSize;
+		const Vector2 playfieldSize = getPlayfieldSize(osu);
+		const int bottomBorderSize = osu_playfield_border_bottom_percent.getFloat()*osu->getScreenHeight();
+		const int playfieldYOffset = (osu->getScreenHeight()/2.0f - (playfieldSize.y/2.0f)) - bottomBorderSize;
 
-		return Vector2((Osu::getScreenWidth()-playfieldSize.x)/2.0f, (Osu::getScreenHeight()-playfieldSize.y)/2.0f + playfieldYOffset);
+		return Vector2((osu->getScreenWidth()-playfieldSize.x)/2.0f, (osu->getScreenHeight()-playfieldSize.y)/2.0f + playfieldYOffset);
 	}
 
-	static Vector2 getPlayfieldCenter()
+	static Vector2 getPlayfieldCenter(Osu *osu)
 	{
-		const float scaleFactor = getPlayfieldScaleFactor();
-		const Vector2 playfieldOffset = getPlayfieldOffset();
+		const float scaleFactor = getPlayfieldScaleFactor(osu);
+		const Vector2 playfieldOffset = getPlayfieldOffset(osu);
 
 		return Vector2((OSU_COORD_WIDTH/2)*scaleFactor + playfieldOffset.x, (OSU_COORD_HEIGHT/2)*scaleFactor + playfieldOffset.y);
 	}

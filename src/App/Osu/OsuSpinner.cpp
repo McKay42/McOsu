@@ -188,7 +188,7 @@ void OsuSpinner::draw(Graphics *g)
 	// draw "CLEAR!"
 	if (m_fRatio >= 1.0f)
 	{
-		float spinnerClearImageScale = Osu::getImageScale(skin->getSpinnerClear(), 80);
+		float spinnerClearImageScale = Osu::getImageScale(m_beatmap->getOsu(), skin->getSpinnerClear(), 80);
 
 		g->setColor(0xffffffff);
 		g->pushTransform();
@@ -201,7 +201,7 @@ void OsuSpinner::draw(Graphics *g)
 	// draw "SPIN!"
 	if (clampedRatio < 0.03f)
 	{
-		float spinerSpinImageScale = Osu::getImageScale(skin->getSpinnerSpin(), 80);
+		float spinerSpinImageScale = Osu::getImageScale(m_beatmap->getOsu(), skin->getSpinnerSpin(), 80);
 
 		g->setColor(0xffffffff);
 		g->setAlpha(m_fAlpha);
@@ -219,7 +219,7 @@ void OsuSpinner::draw(Graphics *g)
 		float stringWidth = rpmFont->getStringWidth("RPM: 477");
 		g->setColor(0xffffffff);
 		g->pushTransform();
-		g->translate(Osu::getScreenWidth()/2 - stringWidth/2, Osu::getScreenHeight() - 5);
+		g->translate(m_beatmap->getOsu()->getScreenWidth()/2 - stringWidth/2, m_beatmap->getOsu()->getScreenHeight() - 5);
 		g->drawString(rpmFont, UString::format("RPM: %i", (int)m_fRPM));
 		g->popTransform();
 	}

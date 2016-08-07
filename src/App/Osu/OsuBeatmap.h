@@ -85,11 +85,15 @@ public:
 
 	inline int getCombo() {return m_iCombo;}
 	inline float getAccuracy() {return m_fAccuracy;}
+	inline float getUnstableRate() {return m_fUnstableRate;}
 
+	// live statistics
+	int getBPM();
+	float getSpeedMultiplier();
 	inline int getNPS() {return m_iNPS;}
 	inline int getND() {return m_iND;}
 
-	// used by OsuHitObject children
+	// used by OsuHitObject children and OsuModSelector
 	inline Osu *getOsu() const {return m_osu;}
 	OsuSkin *getSkin();
 	inline long getCurMusicPos() const {return m_iCurMusicPos;}
@@ -210,7 +214,9 @@ private:
 	// score
 	int m_iCombo;
 	float m_fAccuracy;
+	float m_fUnstableRate;
 	std::vector<HIT> m_hitresults;
+	std::vector<int> m_hitdeltas;
 
 	// gameplay
 	int m_iPreviousFollowPointObjectIndex;

@@ -103,6 +103,7 @@ private:
 	CBaseUISlider *m_hudHiterrorbarScaleSlider;
 	CBaseUISlider *m_hudProgressbarScaleSlider;
 	CBaseUISlider *m_playfieldBorderSizeSlider;
+	CBaseUISlider *m_statisticsOverlayScaleSlider;
 	CBaseUISlider *m_cursorSizeSlider;
 	CBaseUILabel *m_skinLabel;
 	CBaseUIElement *m_skinSelectButton;

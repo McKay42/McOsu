@@ -26,8 +26,9 @@ ConVar osu_slider_ball_tint_combo_color("osu_slider_ball_tint_combo_color", true
 ConVar osu_slider_body_color_saturation("osu_slider_body_color_saturation", 1.0f);
 
 ConVar osu_snaking_sliders("osu_snaking_sliders", true);
-ConVar osu_hd_sliders_fade("osu_hd_sliders_fade", true);
-ConVar osu_hd_sliders_fast_fade("osu_hd_sliders_fast_fade", false);
+ConVar osu_mod_hd_slider_fade_percent("osu_mod_hd_slider_fade_percent", 0.6f);
+ConVar osu_mod_hd_slider_fade("osu_mod_hd_slider_fade", true);
+ConVar osu_mod_hd_slider_fast_fade("osu_mod_hd_slider_fast_fade", false);
 
 ConVar osu_slider_break_epilepsy("osu_slider_break_epilepsy", false);
 ConVar osu_slider_rainbow("osu_slider_rainbow", false);
@@ -167,7 +168,7 @@ void OsuSlider::draw(Graphics *g)
 
 	if (m_bVisible || (m_bStartFinished && !m_bFinished)) // extra possibility to avoid flicker between OsuHitObject::m_bVisible delay and the fadeout animation below this if block
 	{
-		float alpha = !osu_hd_sliders_fade.getBool() ? m_fAlpha : (osu_hd_sliders_fast_fade.getBool() || m_beatmap->getOsu()->getModNM() ? m_fHiddenAlpha : m_fHiddenSlowFadeAlpha);
+		float alpha = !osu_mod_hd_slider_fade.getBool() ? m_fAlpha : (osu_mod_hd_slider_fast_fade.getBool() || m_beatmap->getOsu()->getModNM() ? m_fHiddenAlpha : m_fHiddenSlowFadeAlpha);
 		float sliderSnake = osu_snaking_sliders.getBool() ? clamp<float>(alpha*2.0f, m_fAlpha, 1.0f) : 1.0f;
 
 		// shrinking sliders
@@ -180,7 +181,8 @@ void OsuSlider::draw(Graphics *g)
 		}
 
 		// draw slider body
-		m_curve->draw(g, skin->getComboColorForCounter(m_iColorCounter), alpha, sliderSnake, sliderSnakeStart);
+		if (alpha > 0.0f)
+			m_curve->draw(g, skin->getComboColorForCounter(m_iColorCounter), alpha, sliderSnake, sliderSnakeStart);
 
 		// draw slider ticks
 		// HACKHACK: hardcoded 0.125 multiplier, seems to be correct though (1/8)
@@ -479,7 +481,7 @@ void OsuSlider::update(long curPos)
 
 		// TODO: not yet correct fading, but close enough
 		if (m_iDelta < m_iHiddenTimeDiff + m_iHiddenDecayTime)
-			m_fHiddenSlowFadeAlpha = 1.0f - clamp<float>((float)(curPos - (m_iTime - m_iHiddenTimeDiff - m_iHiddenDecayTime)) / (m_fSliderTime*0.4f+m_iHiddenTimeDiff+m_iHiddenDecayTime), 0.0f, 1.0f);
+			m_fHiddenSlowFadeAlpha = 1.0f - clamp<float>((float)(curPos - (m_iTime - m_iHiddenTimeDiff - m_iHiddenDecayTime)) / (m_fSliderTime*osu_mod_hd_slider_fade_percent.getFloat()+m_iHiddenTimeDiff+m_iHiddenDecayTime), 0.0f, 1.0f);
 	}
 
 	// when playing hidden, delta may get negative early enough to show the number again before the slider starts, this fixes that
@@ -806,7 +808,7 @@ void OsuSlider::onHit(OsuBeatmap::HIT result, long delta, bool startOrEnd, float
 	}
 	else
 	{
-		addHitResult(result, delta, m_curve->pointAt(1.0f), -1.0f, 0.0f, true, !m_bHeldTillEnd);
+		addHitResult(result, delta, getRawPosAt(m_iTime + m_iObjectDuration), -1.0f, 0.0f, true, !m_bHeldTillEnd);
 		m_bStartFinished = true;
 		m_bEndFinished = true;
 		m_bFinished = true;
