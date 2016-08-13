@@ -14,6 +14,7 @@
 #include "ConsoleBox.h"
 #include "ResourceManager.h"
 #include "AnimationHandler.h"
+#include "NetworkHandler.h"
 #include "SoundEngine.h"
 #include "Console.h"
 #include "ConVar.h"
@@ -42,6 +43,7 @@ void DUMMY_OSU_LETTERBOXING(UString oldValue, UString newValue) {;}
 void DUMMY_OSU_VOLUME_MUSIC_ARGS(UString oldValue, UString newValue) {;}
 void DUMMY_OSU_MODS(void) {;}
 
+ConVar osu_version("osu_version", 24.0f);
 ConVar osu_debug("osu_debug", false);
 
 ConVar osu_disable_mousebuttons("osu_disable_mousebuttons", false);
@@ -73,6 +75,7 @@ ConVar osu_resolution_enabled("osu_resolution_enabled", false);
 ConVar osu_draw_fps("osu_draw_fps", true);
 ConVar osu_hide_cursor_during_gameplay("osu_hide_cursor_during_gameplay", false);
 
+ConVar *Osu::version = &osu_version;
 ConVar *Osu::debug = &osu_debug;
 Vector2 Osu::g_vInternalResolution;
 Vector2 Osu::osuBaseResolution = Vector2(640.0f, 480.0f);
@@ -87,11 +90,11 @@ Osu::Osu()
 	m_osu_mod_fps_ref = convar->getConVarByName("osu_mod_fps");
 
 	// engine settings
-	engine->getEnvironment()->setWindowTitle("McOsu!");
+	env->setWindowTitle("McOsu!");
+	env->setCursorVisible(false);
 	engine->getConsoleBox()->setRequireShiftToActivate(true);
 	engine->getSound()->setVolume(osu_volume_master.getFloat());
 	engine->getMouse()->addListener(this);
-	env->setCursorVisible(false);
 	convar->getConVarByName("console_overlay")->setValue(0.0f);
 	convar->getConVarByName("vsync")->setValue(0.0f);
 	convar->getConVarByName("fps_max")->setValue(420.0f);
@@ -259,8 +262,11 @@ void Osu::draw(Graphics *g)
 			g->fillRect(0, 0, getScreenWidth(), getScreenHeight());
 		}
 
+		// special cursor handling
 		const bool allowDrawCursor = !osu_hide_cursor_during_gameplay.getBool() || getSelectedBeatmap()->isPaused();
-		const float fadingCursorAlpha = 1.0f - clamp<float>((float)getSelectedBeatmap()->getCombo()/osu_mod_fadingcursor_combo.getFloat(), 0.0f, 1.0f);
+		float fadingCursorAlpha = 1.0f - clamp<float>((float)getSelectedBeatmap()->getCombo()/osu_mod_fadingcursor_combo.getFloat(), 0.0f, 1.0f);
+		if (m_pauseMenu->isVisible() || getSelectedBeatmap()->isContinueScheduled())
+			fadingCursorAlpha = 1.0f;
 
 		if ((m_bModAuto || m_bModAutopilot) && allowDrawCursor)
 			m_hud->drawCursor(g, m_osu_mod_fps_ref->getBool() ? OsuGameRules::getPlayfieldCenter(this) : getSelectedBeatmap()->getCursorPos(), osu_mod_fadingcursor.getBool() ? fadingCursorAlpha : 1.0f);
@@ -332,7 +338,7 @@ void Osu::update()
 		// skip button clicking
 		if (getSelectedBeatmap()->isInSkippableSection() && !getSelectedBeatmap()->isPaused())
 		{
-			// TODO: make this on click only, and not if held too
+			// TODO: make this on click only, and not if held too. this can also cause earrape while scrubbing
 			if (engine->getMouse()->isLeftDown() || getSelectedBeatmap()->isClickHeld())
 			{
 				if (m_hud->getSkipClickRect().contains(engine->getMouse()->getPos()))
@@ -464,6 +470,10 @@ void Osu::updateMods()
 		env->setCursorVisible(true);
 		m_bShouldCursorBeVisible = true;
 	}
+
+	// notify the possibly running beatmap of mod changes, for e.g. recalculating stacks dynamically if HR is toggled
+	if (getSelectedBeatmap() != NULL)
+		getSelectedBeatmap()->onUpdateMods();
 }
 
 void Osu::onKeyDown(KeyboardEvent &key)
@@ -786,17 +796,13 @@ void Osu::onPlayEnd(bool quit)
 }
 
 
-
-float Osu::getCursorScaleFactor()
+OsuBeatmap *Osu::getSelectedBeatmap()
 {
-	// FUCK OSU hardcoded piece of shit code
-	const float spriteRes = 768;
-	return (float)getScreenHeight() / spriteRes;
-}
-
-OsuBeatmap *Osu::getBeatmap()
-{
-	return getSelectedBeatmap();
+	if (m_songBrowser != NULL)
+		return m_songBrowser->getSelectedBeatmap();
+	else if (m_songBrowser2 != NULL)
+		return m_songBrowser2->getSelectedBeatmap();
+	return NULL;
 }
 
 float Osu::getDifficultyMultiplier()
@@ -907,6 +913,7 @@ void Osu::onResolutionChanged(Vector2 newResolution)
 	m_backBuffer->rebuild(0, 0, g_vInternalResolution.x, g_vInternalResolution.y);
 
 	// mouse scaling & offset
+	// TODO: rethink scale logic
 	if (osu_resolution_enabled.getBool())
 	{
 		if (osu_letterboxing.getBool())
@@ -917,7 +924,7 @@ void Osu::onResolutionChanged(Vector2 newResolution)
 		else
 		{
 			engine->getMouse()->setOffset(Vector2(0,0));
-			engine->getMouse()->setScale(Vector2(g_vInternalResolution.x/engine->getScreenWidth(), g_vInternalResolution.y/engine->getScreenHeight()));
+			engine->getMouse()->setScale(Vector2(1,1));
 		}
 	}
 	else
@@ -1052,15 +1059,6 @@ void Osu::updateConfineCursor()
 		env->setCursorClip(true, Rect());
 	else
 		env->setCursorClip(false, Rect());
-}
-
-OsuBeatmap *Osu::getSelectedBeatmap()
-{
-	if (m_songBrowser != NULL)
-		return m_songBrowser->getSelectedBeatmap();
-	else if (m_songBrowser2 != NULL)
-		return m_songBrowser2->getSelectedBeatmap();
-	return NULL;
 }
 
 void Osu::onConfineCursorWindowedChange(UString oldValue, UString newValue)

@@ -43,6 +43,8 @@ public:
 	void animateCursorExpand();
 	void animateCursorShrink();
 
+	void resetHitErrorBar();
+
 	Rect getSkipClickRect();
 
 private:
@@ -57,10 +59,12 @@ private:
 	void drawContinue(Graphics *g, Vector2 cursor, float hitcircleDiameter = 0.0f);
 	void drawHitErrorBar(Graphics *g, float hitWindow300, float hitWindow100, float hitWindow50);
 	void drawProgressBar(Graphics *g, float percent, bool waiting);
-	void drawStatistics(Graphics *g, int bpm, float ar, float cs, float od, int nps, int nd, int ur);
+	void drawStatistics(Graphics *g, int misses, int bpm, float ar, float cs, float od, int nps, int nd, int ur);
 	void drawTargetHeatmap(Graphics *g, float hitcircleDiameter);
 
 	void drawStatisticText(Graphics *g, const UString text);
+
+	float getCursorScaleFactor();
 
 	Osu *m_osu;
 	McFont *m_tempFont;

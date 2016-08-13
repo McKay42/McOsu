@@ -57,6 +57,7 @@ public:
 	void skipEmptySection();
 
 	// callbacks called by the Osu class
+	void onUpdateMods();
 	void keyPressed1();
 	void keyPressed2();
 	void keyReleased1();
@@ -90,6 +91,7 @@ public:
 	// live statistics
 	int getBPM();
 	float getSpeedMultiplier();
+	inline int getNumMisses() {return m_iNumMisses;}
 	inline int getNPS() {return m_iNPS;}
 	inline int getND() {return m_iND;}
 
@@ -147,6 +149,7 @@ private:
 
 	void actualRestart();
 
+	void handlePreviewPlay();
 	void loadMusic(bool stream = true);
 	void unloadMusic();
 	void unloadDiffs();
@@ -154,13 +157,12 @@ private:
 	void resetHitObjects(long curPos = 0);
 	void resetScore();
 
-	void updateMods();
 	void updateAutoCursorPos();
 	void updatePlayfieldMetrics();
 	void updateHitobjectMetrics();
-	void calculateStacks();
 
-	void handlePreviewPlay();
+	Vector2 originalOsuCoords2Stack(Vector2 coords);
+	void calculateStacks();
 
 	unsigned long getMusicPositionMSInterpolated();
 
@@ -234,8 +236,12 @@ private:
 	std::vector<OsuHitObject*> m_misaimObjects;
 
 	// statistics
+	int m_iNumMisses;
 	int m_iNPS;
 	int m_iND;
+
+	// custom
+	bool m_bWasHREnabled; // dynamic stack recalculation
 };
 
 #endif

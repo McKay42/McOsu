@@ -43,7 +43,7 @@ void OsuUIButton::draw(Graphics *g)
 	char red = std::max((unsigned int)(COLOR_GET_Ri(m_color)*m_fBrightness), (unsigned int)(m_fAnim*255.0f));
 	char green = std::max((unsigned int)(COLOR_GET_Gi(m_color)*m_fBrightness), (unsigned int)(m_fAnim*255.0f));
 	char blue = std::max((unsigned int)(COLOR_GET_Bi(m_color)*m_fBrightness), (unsigned int)(m_fAnim*255.0f));
-	g->setColor(COLOR(255, red, green, blue));
+	g->setColor(COLOR(COLOR_GET_Ai(m_color), red, green, blue));
 
 	buttonLeft->bind();
 	g->drawQuad((int)m_vPos.x, (int)m_vPos.y, (int)leftWidth, (int)m_vSize.y);

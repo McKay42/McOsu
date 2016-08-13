@@ -47,6 +47,7 @@ ConVar osu_draw_combo("osu_draw_combo", true);
 ConVar osu_draw_accuracy("osu_draw_accuracy", true);
 ConVar osu_draw_target_heatmap("osu_draw_target_heatmap", true);
 
+ConVar osu_draw_statistics_misses("osu_draw_statistics_misses", false);
 ConVar osu_draw_statistics_bpm("osu_draw_statistics_bpm", false);
 ConVar osu_draw_statistics_ar("osu_draw_statistics_ar", false);
 ConVar osu_draw_statistics_cs("osu_draw_statistics_cs", false);
@@ -105,36 +106,36 @@ void OsuHUD::draw(Graphics *g)
 {
 	if (osu_draw_hud.getBool())
 	{
-		if (m_osu->getBeatmap()->isInSkippableSection())
+		if (m_osu->getSelectedBeatmap()->isInSkippableSection())
 			drawSkip(g);
 
 		g->pushTransform();
 			if (m_osu->getModTarget() && osu_draw_target_heatmap.getBool())
-				g->translate(0, m_osu->getBeatmap()->getHitcircleDiameter());
-			drawStatistics(g, m_osu->getBeatmap()->getBPM(), OsuGameRules::getApproachRateForSpeedMultiplier(m_osu->getBeatmap(), m_osu->getBeatmap()->getSpeedMultiplier()), m_osu->getBeatmap()->getCS(), m_osu->getBeatmap()->getOD(), m_osu->getBeatmap()->getNPS(), m_osu->getBeatmap()->getND(), m_osu->getBeatmap()->getUnstableRate());
+				g->translate(0, m_osu->getSelectedBeatmap()->getHitcircleDiameter());
+			drawStatistics(g, m_osu->getSelectedBeatmap()->getNumMisses(), m_osu->getSelectedBeatmap()->getBPM(), OsuGameRules::getApproachRateForSpeedMultiplier(m_osu->getSelectedBeatmap(), m_osu->getSelectedBeatmap()->getSpeedMultiplier()), m_osu->getSelectedBeatmap()->getCS(), OsuGameRules::getOverallDifficultyForSpeedMultiplier(m_osu->getSelectedBeatmap(), m_osu->getSelectedBeatmap()->getSpeedMultiplier()), m_osu->getSelectedBeatmap()->getNPS(), m_osu->getSelectedBeatmap()->getND(), m_osu->getSelectedBeatmap()->getUnstableRate());
 		g->popTransform();
 
 		if (osu_draw_combo.getBool())
-			drawCombo(g, m_osu->getBeatmap()->getCombo());
+			drawCombo(g, m_osu->getSelectedBeatmap()->getCombo());
 
 		if (osu_draw_progressbar.getBool())
-			drawProgressBar(g, m_osu->getBeatmap()->getPercentFinished(), m_osu->getBeatmap()->isWaiting());
+			drawProgressBar(g, m_osu->getSelectedBeatmap()->getPercentFinished(), m_osu->getSelectedBeatmap()->isWaiting());
 
 		if (osu_draw_accuracy.getBool())
-			drawAccuracy(g, m_osu->getBeatmap()->getAccuracy()*100.0f);
+			drawAccuracy(g, m_osu->getSelectedBeatmap()->getAccuracy()*100.0f);
 
-		if (osu_draw_hiterrorbar.getBool() && !m_osu->getBeatmap()->isSpinnerActive())
-			drawHitErrorBar(g, OsuGameRules::getHitWindow300(m_osu->getBeatmap()), OsuGameRules::getHitWindow100(m_osu->getBeatmap()), OsuGameRules::getHitWindow50(m_osu->getBeatmap()));
+		if (osu_draw_hiterrorbar.getBool() && !m_osu->getSelectedBeatmap()->isSpinnerActive())
+			drawHitErrorBar(g, OsuGameRules::getHitWindow300(m_osu->getSelectedBeatmap()), OsuGameRules::getHitWindow100(m_osu->getSelectedBeatmap()), OsuGameRules::getHitWindow50(m_osu->getSelectedBeatmap()));
 
 		if (m_osu->getModTarget() && osu_draw_target_heatmap.getBool())
-			drawTargetHeatmap(g, m_osu->getBeatmap()->getHitcircleDiameter());
+			drawTargetHeatmap(g, m_osu->getSelectedBeatmap()->getHitcircleDiameter());
 	}
 
-	if (m_osu->getBeatmap()->shouldFlashWarningArrows())
-		drawWarningArrows(g, m_osu->getBeatmap()->getHitcircleDiameter());
+	if (m_osu->getSelectedBeatmap()->shouldFlashWarningArrows())
+		drawWarningArrows(g, m_osu->getSelectedBeatmap()->getHitcircleDiameter());
 
-	if (m_osu->getBeatmap()->isContinueScheduled())
-		drawContinue(g, m_osu->getBeatmap()->getContinueCursorPoint(), m_osu->getBeatmap()->getHitcircleDiameter());
+	if (m_osu->getSelectedBeatmap()->isContinueScheduled())
+		drawContinue(g, m_osu->getSelectedBeatmap()->getContinueCursorPoint(), m_osu->getSelectedBeatmap()->getHitcircleDiameter());
 }
 
 void OsuHUD::drawDummy(Graphics *g)
@@ -143,7 +144,7 @@ void OsuHUD::drawDummy(Graphics *g)
 
 	drawSkip(g);
 
-	drawStatistics(g, 180, 9.0f, 4.0f, 8.0f, 4, 6, 90.0f);
+	drawStatistics(g, 0, 180, 9.0f, 4.0f, 8.0f, 4, 6, 90.0f);
 
 	drawWarningArrows(g);
 
@@ -221,7 +222,7 @@ void OsuHUD::drawCursor(Graphics *g, Vector2 pos, float alphaMultiplier)
 void OsuHUD::drawCursorRaw(Graphics *g, Vector2 pos, float alphaMultiplier)
 {
 	Image *cursor = m_osu->getSkin()->getCursor();
-	const float scale = m_osu->getCursorScaleFactor() * (m_osu->getSkin()->isCursor2x() ? 0.5f : 1.0f);
+	const float scale = getCursorScaleFactor() * (m_osu->getSkin()->isCursor2x() ? 0.5f : 1.0f);
 	const float animatedScale = scale * (m_osu->getSkin()->getCursorExpand() ? m_fCursorExpandAnim : 1.0f);
 
 	// draw cursor
@@ -255,7 +256,7 @@ void OsuHUD::drawCursorRaw(Graphics *g, Vector2 pos, float alphaMultiplier)
 void OsuHUD::drawCursorTrailRaw(Graphics *g, float alpha, Vector2 pos)
 {
 	Image *trail = m_osu->getSkin()->getCursorTrail();
-	const float scale = m_osu->getCursorScaleFactor() * (m_osu->getSkin()->isCursor2x() ? 0.5f : 1.0f); // use scale from cursor, not from trail, because fuck you
+	const float scale = getCursorScaleFactor() * (m_osu->getSkin()->isCursor2x() ? 0.5f : 1.0f); // use scale from cursor, not from trail, because fuck you
 	const float animatedScale = scale * (m_osu->getSkin()->getCursorExpand() ? m_fCursorExpandAnim : 1.0f);
 
 	g->setColor(0xffffffff);
@@ -808,12 +809,17 @@ void OsuHUD::drawProgressBar(Graphics *g, float percent, bool waiting)
 	g->popTransform();
 }
 
-void OsuHUD::drawStatistics(Graphics *g, int bpm, float ar, float cs, float od, int nps, int nd, int ur)
+void OsuHUD::drawStatistics(Graphics *g, int misses, int bpm, float ar, float cs, float od, int nps, int nd, int ur)
 {
 	g->pushTransform();
 		g->scale(osu_hud_statistics_scale.getFloat()*osu_hud_scale.getFloat(), osu_hud_statistics_scale.getFloat()*osu_hud_scale.getFloat());
 		g->translate(0, (int)((m_osu->getTitleFont()->getHeight())*osu_hud_scale.getFloat()*osu_hud_statistics_scale.getFloat()));
 
+		if (osu_draw_statistics_misses.getBool())
+		{
+			drawStatisticText(g, UString::format("Miss: %i", misses));
+			g->translate(0, (int)((m_osu->getTitleFont()->getHeight() + 10)*osu_hud_scale.getFloat()*osu_hud_statistics_scale.getFloat()));
+		}
 		if (osu_draw_statistics_bpm.getBool())
 		{
 			drawStatisticText(g, UString::format("BPM: %i", bpm));
@@ -931,6 +937,13 @@ void OsuHUD::drawTargetHeatmap(Graphics *g, float hitcircleDiameter)
 	}
 }
 
+float OsuHUD::getCursorScaleFactor()
+{
+	// FUCK OSU hardcoded piece of shit code
+	const float spriteRes = 768;
+	return (float)m_osu->getScreenHeight() / spriteRes;
+}
+
 void OsuHUD::animateCombo()
 {
 	m_fComboAnim1 = 0.0f;
@@ -987,6 +1000,11 @@ void OsuHUD::animateCursorExpand()
 void OsuHUD::animateCursorShrink()
 {
 	anim->moveQuadOut(&m_fCursorExpandAnim, 1.0f, osu_cursor_expand_duration.getFloat(), 0.0f, true);
+}
+
+void OsuHUD::resetHitErrorBar()
+{
+	m_hiterrors.clear();
 }
 
 Rect OsuHUD::getSkipClickRect()

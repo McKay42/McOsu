@@ -14,6 +14,7 @@ class OsuCircle : public OsuHitObject
 {
 public:
 	// main
+	static void drawApproachCircle(Graphics *g, OsuBeatmap *beatmap, Vector2 rawPos, int number, int colorCounter, float approachScale, float alpha, bool overrideHDApproachCircle = false);
 	static void drawCircle(Graphics *g, OsuBeatmap *beatmap, Vector2 rawPos, int number, int colorCounter, float approachScale, float alpha, float numberAlpha, bool drawNumber = true, bool overrideHDApproachCircle = false);
 	static void drawCircle(Graphics *g, OsuSkin *skin, Vector2 pos, float hitcircleDiameter, float numberScale, float overlapScale, bool modHD, int number, int colorCounter, float approachScale, float alpha, float numberAlpha, bool drawNumber = true, bool overrideHDApproachCircle = false);
 	static void drawCircle(Graphics *g, OsuSkin *skin, Vector2 pos, float hitcircleDiameter, Color color, float alpha = 1.0f);
@@ -32,12 +33,13 @@ public:
 	virtual ~OsuCircle();
 
 	virtual void draw(Graphics *g);
+	virtual void draw2(Graphics *g);
 	virtual void update(long curPos);
 
 	void updateStackPosition(float stackOffset);
 
-	inline Vector2 getRawPos() {return m_vRawPos;}
 	Vector2 getRawPosAt(long pos) {return m_vRawPos;}
+	Vector2 getOriginalRawPosAt(long pos) {return m_vOriginalRawPos;}
 	Vector2 getAutoCursorPos(long curPos);
 
 	virtual void onClickEvent(Vector2 cursorPos, std::vector<OsuBeatmap::CLICK> &clicks);
@@ -51,6 +53,7 @@ private:
 	void onHit(OsuBeatmap::HIT result, long delta, float targetDelta = 0.0f, float targetAngle = 0.0f);
 
 	Vector2 m_vRawPos;
+	Vector2 m_vOriginalRawPos; // for live mod changing
 
 	bool m_bWaiting;
 	float m_fHitAnimation;
