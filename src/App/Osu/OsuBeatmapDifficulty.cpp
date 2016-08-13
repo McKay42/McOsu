@@ -10,6 +10,7 @@
 #include "Engine.h"
 #include "ResourceManager.h"
 #include "ConVar.h"
+#include "File.h"
 
 #include "Osu.h"
 #include "OsuNotificationOverlay.h"
@@ -56,8 +57,8 @@ bool OsuBeatmapDifficulty::loadMetadata()
 		debugLog("OsuBeatmapDifficulty::loadMetadata() : %s\n", m_sFilePath.toUtf8());
 
 	// open osu file
-	std::ifstream file(m_sFilePath.toUtf8());
-	if (!file.good())
+	File file(m_sFilePath);
+	if (!file.canRead())
 	{
 		//UString errorMessage = "Error: Couldn't load beatmap file";
 		//errorMessage.append(m_sFilePath);
@@ -69,13 +70,12 @@ bool OsuBeatmapDifficulty::loadMetadata()
 
 	// load metadata only
 	int curBlock = -1;
-
 	bool foundAR = false;
-
-	std::string curLine;
-	while (std::getline(file, curLine))
+	while (file.canRead())
 	{
-		const char *curLineChar = curLine.c_str();
+		UString uCurLine = file.readLine();
+		const char *curLineChar = uCurLine.toUtf8();
+		std::string curLine(curLineChar);
 
 		if (curLine.find("//") == std::string::npos) // ignore comments
 		{
@@ -100,15 +100,15 @@ bool OsuBeatmapDifficulty::loadMetadata()
 				{
 					char stringBuffer[1024];
 					memset(stringBuffer, '\0', 1024);
-					if (sscanf(curLineChar, "AudioFilename:%1023[^\n]", stringBuffer) == 1)
+					if (sscanf(curLineChar, " AudioFilename : %1023[^\n]", stringBuffer) == 1)
 					{
 						audioFileName = UString(stringBuffer);
 						audioFileName = audioFileName.trim();
 					}
 
-					sscanf(curLineChar, "StackLeniency:%f\n", &stackLeniency);
-					sscanf(curLineChar, "PreviewTime:%lu\n", &previewTime);
-					sscanf(curLineChar, "Mode:%i\n", &mode);
+					sscanf(curLineChar, " StackLeniency : %f \n", &stackLeniency);
+					sscanf(curLineChar, " PreviewTime : %lu \n", &previewTime);
+					sscanf(curLineChar, " Mode : %i \n", &mode);
 				}
 				break;
 
@@ -116,49 +116,49 @@ bool OsuBeatmapDifficulty::loadMetadata()
 				{
 					char stringBuffer[1024];
 					memset(stringBuffer, '\0', 1024);
-					if (sscanf(curLineChar, "Title:%1023[^\n]", stringBuffer) == 1)
+					if (sscanf(curLineChar, " Title :%1023[^\n]", stringBuffer) == 1)
 					{
 						title = UString(stringBuffer);
 						title = title.trim();
 					}
 
 					memset(stringBuffer, '\0', 1024);
-					if (sscanf(curLineChar, "Artist:%1023[^\n]", stringBuffer) == 1)
+					if (sscanf(curLineChar, " Artist :%1023[^\n]", stringBuffer) == 1)
 					{
 						artist = UString(stringBuffer);
 						artist = artist.trim();
 					}
 
 					memset(stringBuffer, '\0', 1024);
-					if (sscanf(curLineChar, "Creator:%1023[^\n]", stringBuffer) == 1)
+					if (sscanf(curLineChar, " Creator :%1023[^\n]", stringBuffer) == 1)
 					{
 						creator = UString(stringBuffer);
 						creator = creator.trim();
 					}
 
 					memset(stringBuffer, '\0', 1024);
-					if (sscanf(curLineChar, "Version:%1023[^\n]", stringBuffer) == 1)
+					if (sscanf(curLineChar, " Version :%1023[^\n]", stringBuffer) == 1)
 					{
 						name = UString(stringBuffer);
 						name = name.trim();
 					}
 
 					memset(stringBuffer, '\0', 1024);
-					if (sscanf(curLineChar, "Source:%1023[^\n]", stringBuffer) == 1)
+					if (sscanf(curLineChar, " Source :%1023[^\n]", stringBuffer) == 1)
 					{
 						source = UString(stringBuffer);
 						source = source.trim();
 					}
 
 					memset(stringBuffer, '\0', 1024);
-					if (sscanf(curLineChar, "Tags:%1023[^\n]", stringBuffer) == 1)
+					if (sscanf(curLineChar, " Tags :%1023[^\n]", stringBuffer) == 1)
 					{
 						tags = UString(stringBuffer);
 						tags = tags.trim();
 					}
 
 					memset(stringBuffer, '\0', 1024);
-					if (sscanf(curLineChar, "BeatmapID:%1023[^\n]", stringBuffer) == 1)
+					if (sscanf(curLineChar, " BeatmapID :%1023[^\n]", stringBuffer) == 1)
 					{
 						// FUCK stol(), causing crashes in e.g. std::stol("--123456");
 						//beatmapId = std::stol(stringBuffer);
@@ -168,20 +168,20 @@ bool OsuBeatmapDifficulty::loadMetadata()
 				break;
 
 			case 2: // Difficulty
-				sscanf(curLineChar, "CircleSize:%f\n", &CS);
-				if (sscanf(curLineChar, "ApproachRate:%f\n", &AR) == 1)
+				sscanf(curLineChar, " CircleSize : %f \n", &CS);
+				if (sscanf(curLineChar, " ApproachRate : %f \n", &AR) == 1)
 					foundAR = true;
-				sscanf(curLineChar, "HPDrainRate:%f\n", &HP);
-				sscanf(curLineChar, "OverallDifficulty:%f\n", &OD);
-				sscanf(curLineChar, "SliderMultiplier:%f\n", &sliderMultiplier);
-				sscanf(curLineChar, "SliderTickRate:%f\n", &sliderTickRate);
+				sscanf(curLineChar, " HPDrainRate : %f \n", &HP);
+				sscanf(curLineChar, " OverallDifficulty : %f \n", &OD);
+				sscanf(curLineChar, " SliderMultiplier : %f \n", &sliderMultiplier);
+				sscanf(curLineChar, " SliderTickRate : %f \n", &sliderTickRate);
 				break;
 			case 3: // Events
 				{
 					char stringBuffer[1024];
 					memset(stringBuffer, '\0', 1024);
 					float temp;
-					if (sscanf(curLineChar, "%f,%f,\"%1023[^\"]\"", &temp, &temp, stringBuffer) == 3)
+					if (sscanf(curLineChar, " %f , %f , \"%1023[^\"]\"", &temp, &temp, stringBuffer) == 3)
 					{
 						backgroundImageName = UString(stringBuffer);
 					}
@@ -191,7 +191,7 @@ bool OsuBeatmapDifficulty::loadMetadata()
 				{
 					int comboNum;
 					int r,g,b;
-					if (sscanf(curLineChar, "Combo%i : %i,%i,%i\n", &comboNum, &r, &g, &b) == 4)
+					if (sscanf(curLineChar, " Combo %i : %i , %i , %i \n", &comboNum, &r, &g, &b) == 4)
 						combocolors.push_back(COLOR(255, r, g, b));
 				}
 				break;
@@ -205,7 +205,7 @@ bool OsuBeatmapDifficulty::loadMetadata()
 				int tpMeter;
 				int tpSampleType,tpSampleSet;
 				int tpVolume;
-				if (sscanf(curLineChar, "%lf,%f,%i,%i,%i,%i", &tpOffset, &tpMSPerBeat, &tpMeter, &tpSampleType, &tpSampleSet, &tpVolume) == 6)
+				if (sscanf(curLineChar, " %lf , %f , %i , %i , %i , %i", &tpOffset, &tpMSPerBeat, &tpMeter, &tpSampleType, &tpSampleSet, &tpVolume) == 6)
 				{
 					TIMINGPOINT t;
 					t.offset = (long)std::round(tpOffset);
@@ -216,7 +216,7 @@ bool OsuBeatmapDifficulty::loadMetadata()
 
 					timingpoints.push_back(t);
 				}
-				else if (sscanf(curLineChar, "%lf,%f", &tpOffset, &tpMSPerBeat) == 2)
+				else if (sscanf(curLineChar, " %lf , %f", &tpOffset, &tpMSPerBeat) == 2)
 				{
 					TIMINGPOINT t;
 					t.offset = (long)std::round(tpOffset);
@@ -316,10 +316,11 @@ bool OsuBeatmapDifficulty::loadMetadata()
 bool OsuBeatmapDifficulty::load(OsuBeatmap *beatmap, std::vector<OsuHitObject*> *hitobjects)
 {
 	unload();
+	timingpoints = std::vector<TIMINGPOINT>();
 
 	// open osu file
-	std::ifstream file(m_sFilePath.toUtf8());
-	if (!file.good())
+	File file(m_sFilePath);
+	if (!file.canRead())
 	{
 		UString errorMessage = "Error: Couldn't load beatmap file";
 		debugLog("Osu Error: Couldn't load beatmap file (%s)!\n", m_sFilePath.toUtf8());
@@ -337,10 +338,11 @@ bool OsuBeatmapDifficulty::load(OsuBeatmap *beatmap, std::vector<OsuHitObject*> 
 	int comboNumber = 1;
 	int curBlock = -1;
 
-	std::string curLine;
-	while (std::getline(file, curLine))
+	while (file.canRead())
 	{
-		const char *curLineChar = curLine.c_str();
+		UString uCurLine = file.readLine();
+		const char *curLineChar = uCurLine.toUtf8();
+		std::string curLine(curLineChar);
 
 		if (curLine.find("//") == std::string::npos) // ignore comments
 		{
@@ -361,7 +363,7 @@ bool OsuBeatmapDifficulty::load(OsuBeatmap *beatmap, std::vector<OsuHitObject*> 
 				int tpMeter;
 				int tpSampleType,tpSampleSet;
 				int tpVolume;
-				if (sscanf(curLineChar, "%lf,%f,%i,%i,%i,%i", &tpOffset, &tpMSPerBeat, &tpMeter, &tpSampleType, &tpSampleSet, &tpVolume) == 6)
+				if (sscanf(curLineChar, " %lf , %f , %i , %i , %i , %i", &tpOffset, &tpMSPerBeat, &tpMeter, &tpSampleType, &tpSampleSet, &tpVolume) == 6)
 				{
 					TIMINGPOINT t;
 					t.offset = (long)std::round(tpOffset);
@@ -372,7 +374,7 @@ bool OsuBeatmapDifficulty::load(OsuBeatmap *beatmap, std::vector<OsuHitObject*> 
 
 					timingpoints.push_back(t);
 				}
-				else if (sscanf(curLineChar, "%lf,%f", &tpOffset, &tpMSPerBeat) == 2)
+				else if (sscanf(curLineChar, " %lf , %f", &tpOffset, &tpMSPerBeat) == 2)
 				{
 					TIMINGPOINT t;
 					t.offset = (long)std::round(tpOffset);
@@ -400,7 +402,7 @@ bool OsuBeatmapDifficulty::load(OsuBeatmap *beatmap, std::vector<OsuHitObject*> 
 				int type;
 				int hitSound;
 
-				if (sscanf(curLineChar, "%i,%i,%li,%i,%i", &x, &y, &time, &type, &hitSound) == 5)
+				if (sscanf(curLineChar, " %i , %i , %li , %i , %i", &x, &y, &time, &type, &hitSound) == 5)
 				{
 					if (type & 0x4) // new combo
 					{
@@ -604,7 +606,7 @@ void OsuBeatmapDifficulty::unload()
 	hitcircles = std::vector<HITCIRCLE>();
 	sliders = std::vector<SLIDER>();
 	spinners = std::vector<SPINNER>();
-	timingpoints = std::vector<TIMINGPOINT>();
+	///timingpoints = std::vector<TIMINGPOINT>(); // currently commented for main menu button animation
 }
 
 void OsuBeatmapDifficulty::loadBackgroundImage()
@@ -650,7 +652,7 @@ float OsuBeatmapDifficulty::getTimingPointMultiplierForSlider(SLIDER *slider)
 OsuBeatmapDifficulty::TIMING_INFO OsuBeatmapDifficulty::getTimingInfoForTime(unsigned long positionMS)
 {
 	TIMING_INFO ti;
-	ti.offset = 1;
+	ti.offset = 0;
 	ti.beatLengthBase = 1;
 	ti.beatLength = 1;
 	ti.volume = 1;
@@ -668,6 +670,7 @@ OsuBeatmapDifficulty::TIMING_INFO OsuBeatmapDifficulty::getTimingInfoForTime(uns
 		{
 			ti.beatLength = std::abs(t->msPerBeat);
 			ti.beatLengthBase = ti.beatLength;
+			ti.offset = t->offset;
 			break;
 		}
 	}

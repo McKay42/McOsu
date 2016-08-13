@@ -23,3 +23,5 @@ ConVar OsuGameRules::osu_slider_followcircle_tick_pulse_time("osu_slider_followc
 ConVar OsuGameRules::osu_slider_followcircle_tick_pulse_scale("osu_slider_followcircle_tick_pulse_scale", 0.1f);
 
 ConVar OsuGameRules::osu_mod_ming3012("osu_mod_ming3012", false);
+ConVar OsuGameRules::osu_mod_millhioref("osu_mod_millhioref", false);
+ConVar OsuGameRules::osu_mod_millhioref_multiplier("osu_mod_millhioref_multiplier", 2.0f);

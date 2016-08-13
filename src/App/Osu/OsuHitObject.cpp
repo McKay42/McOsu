@@ -164,4 +164,6 @@ void OsuHitObject::onReset(long curPos)
 {
 	m_bMisAim = false;
 	m_iAutopilotDelta = 0;
+
+	m_hitResults.clear();
 }

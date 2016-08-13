@@ -12,6 +12,7 @@
 #include "ResourceManager.h"
 #include "SoundEngine.h"
 #include "ConVar.h"
+#include "File.h"
 
 #include <string.h>
 
@@ -198,6 +199,7 @@ OsuSkin::OsuSkin(Osu *osu, UString filepath)
 	m_bFollowPoint2x = false;
 	m_bHitCircle2x = false;
 	m_bHitCircleOverlay2x = false;
+	m_bIsDefault02x = false;
 	m_bIsDefault12x = false;
 	m_bHit02x = false;
 	m_bHit502x = false;
@@ -213,6 +215,7 @@ OsuSkin::OsuSkin(Osu *osu, UString filepath)
 	m_bSliderStartCircleOverlay2x = false;
 	m_bSliderEndCircle2x = false;
 	m_bSliderEndCircleOverlay2x = false;
+	m_bSliderFollowCircle2x = false;
 
 	m_bCircularmetre2x = false;
 	m_bPlaySkip2x = false;
@@ -440,6 +443,8 @@ void OsuSkin::load()
 		m_bHitCircle2x = true;
 	if (m_hitCircleOverlay != NULL && m_hitCircleOverlay->getFilePath().find("@2x") != -1)
 		m_bHitCircleOverlay2x = true;
+	if (m_default0 != NULL && m_default0->getFilePath().find("@2x") != -1)
+		m_bIsDefault02x = true;
 	if (m_default1 != NULL && m_default1->getFilePath().find("@2x") != -1)
 		m_bIsDefault12x = true;
 	if (m_hit0 != NULL && m_hit0->getFilePath().find("@2x") != -1)
@@ -470,6 +475,8 @@ void OsuSkin::load()
 		m_bSliderEndCircle2x = true;
 	if (m_sliderEndCircleOverlay != NULL && m_sliderEndCircleOverlay->getFilePath().find("@2x") != -1)
 		m_bSliderEndCircleOverlay2x = true;
+	if (m_sliderFollowCircle != NULL && m_sliderFollowCircle->getFilePath().find("@2x") != -1)
+		m_bSliderFollowCircle2x = true;
 
 	if (m_circularmetre != NULL && m_circularmetre->getFilePath().find("@2x") != -1)
 		m_bCircularmetre2x = true;
@@ -482,20 +489,34 @@ void OsuSkin::load()
 	if (m_menuButtonBackground != NULL && m_menuButtonBackground->getFilePath().find("@2x") != -1)
 		m_bMenuButtonBackground2x = true;
 
+	// HACKHACK: all of the <>2 loads are temporary fixes until I fix the checkLoadImage() function logic
+
 	// custom
 	Image *defaultCursor = engine->getResourceManager()->getImage("OSU_SKIN_CURSOR_DEFAULT");
+	Image *defaultCursor2 = engine->getResourceManager()->getImage("OSU_SKIN_CURSOR_DEFAULT");
 	if (defaultCursor != NULL)
 		m_defaultCursor = defaultCursor;
+	else if (defaultCursor2 != NULL)
+		m_defaultCursor = defaultCursor2;
 
 	Image *defaultButtonLeft = engine->getResourceManager()->getImage("OSU_SKIN_BUTTON_LEFT_DEFAULT");
+	Image *defaultButtonLeft2 = engine->getResourceManager()->getImage("OSU_SKIN_BUTTON_LEFT");
 	if (defaultButtonLeft != NULL)
 		m_defaultButtonLeft = defaultButtonLeft;
+	else if (defaultButtonLeft2 != NULL)
+		m_defaultButtonLeft = defaultButtonLeft2;
 	Image *defaultButtonMiddle = engine->getResourceManager()->getImage("OSU_SKIN_BUTTON_MIDDLE_DEFAULT");
+	Image *defaultButtonMiddle2 = engine->getResourceManager()->getImage("OSU_SKIN_BUTTON_MIDDLE");
 	if (defaultButtonMiddle != NULL)
 		m_defaultButtonMiddle = defaultButtonMiddle;
+	else if (defaultButtonMiddle2 != NULL)
+		m_defaultButtonMiddle = defaultButtonMiddle2;
 	Image *defaultButtonRight = engine->getResourceManager()->getImage("OSU_SKIN_BUTTON_RIGHT_DEFAULT");
+	Image *defaultButtonRight2 = engine->getResourceManager()->getImage("OSU_SKIN_BUTTON_RIGHT");
 	if (defaultButtonRight != NULL)
 		m_defaultButtonRight = defaultButtonRight;
+	else if (defaultButtonRight2 != NULL)
+		m_defaultButtonRight = defaultButtonRight2;
 
 	// print some debug info
 	debugLog("OsuSkin: Version %f\n", m_fVersion);
@@ -516,24 +537,25 @@ void OsuSkin::loadBeatmapOverride(UString filepath)
 
 bool OsuSkin::parseSkinINI(UString filepath)
 {
-	std::ifstream file(filepath.toUtf8());
-	if (!file.good())
+	File file(filepath);
+	if (!file.canRead())
 	{
 		debugLog("OsuSkin Error: Couldn't load %s\n", filepath.toUtf8());
 		return false;
 	}
 
 	int curBlock = -1;
-	std::string curLine;
-	while (std::getline(file, curLine))
+	while (file.canRead())
 	{
-		const char *curLineChar = curLine.c_str();
+		UString uCurLine = file.readLine();
+		const char *curLineChar = uCurLine.toUtf8();
+		std::string curLine(curLineChar);
 
 		if (curLine.find("//") == std::string::npos) // ignore comments
 		{
 			if (curLine.find("[General]") != std::string::npos)
 				curBlock = 0;
-			else if (curLine.find("[Colours]") != std::string::npos)
+			else if (curLine.find("[Colours]") != std::string::npos || curLine.find("[Colors]") != std::string::npos)
 				curBlock = 1;
 			else if (curLine.find("[Fonts]") != std::string::npos)
 				curBlock = 2;
@@ -546,7 +568,7 @@ bool OsuSkin::parseSkinINI(UString filepath)
 					char stringBuffer[1024];
 
 					memset(stringBuffer, '\0', 1024);
-					if (sscanf(curLineChar, "Version:%1023[^\n]", stringBuffer) == 1)
+					if (sscanf(curLineChar, " Version : %1023[^\n]", stringBuffer) == 1)
 					{
 						UString versionString = UString(stringBuffer);
 						if (versionString.find("latest") != -1 || versionString.find("User") != -1)
@@ -555,21 +577,21 @@ bool OsuSkin::parseSkinINI(UString filepath)
 							m_fVersion = versionString.toFloat();
 					}
 
-					if (sscanf(curLineChar, "CursorRotate: %i\n", &val) == 1)
+					if (sscanf(curLineChar, " CursorRotate : %i \n", &val) == 1)
 						m_bCursorRotate = val > 0 ? true : false;
-					if (sscanf(curLineChar, "CursorCentre: %i\n", &val) == 1)
+					if (sscanf(curLineChar, " CursorCentre : %i \n", &val) == 1)
 						m_bCursorCenter = val > 0 ? true : false;
-					if (sscanf(curLineChar, "CursorExpand: %i\n", &val) == 1)
+					if (sscanf(curLineChar, " CursorExpand : %i \n", &val) == 1)
 						m_bCursorExpand = val > 0 ? true : false;
-					if (sscanf(curLineChar, "SliderBallFlip: %i\n", &val) == 1)
+					if (sscanf(curLineChar, " SliderBallFlip : %i \n", &val) == 1)
 						m_bSliderBallFlip = val > 0 ? true : false;
-					if (sscanf(curLineChar, "AllowSliderBallTint: %i\n", &val) == 1)
+					if (sscanf(curLineChar, " AllowSliderBallTint : %i \n", &val) == 1)
 						m_bAllowSliderBallTint = val > 0 ? true : false;
-					if (sscanf(curLineChar, "HitCircleOverlayAboveNumber: %i\n", &val) == 1)
+					if (sscanf(curLineChar, " HitCircleOverlayAboveNumber : %i \n", &val) == 1)
 						m_bHitCircleOverlayAboveNumber = val > 0 ? true : false;
-					if (sscanf(curLineChar, "HitCircleOverlayAboveNumer: %i\n", &val) == 1)
+					if (sscanf(curLineChar, " HitCircleOverlayAboveNumer : %i \n", &val) == 1)
 						m_bHitCircleOverlayAboveNumber = val > 0 ? true : false;
-					if (sscanf(curLineChar, "SliderStyle: %i\n", &val) == 1)
+					if (sscanf(curLineChar, " SliderStyle : %i \n", &val) == 1)
 					{
 						m_iSliderStyle = val;
 						if (m_iSliderStyle != 1 && m_iSliderStyle != 2)
@@ -581,22 +603,22 @@ bool OsuSkin::parseSkinINI(UString filepath)
 				{
 					int comboNum;
 					int r,g,b;
-					if (sscanf(curLineChar, "Combo%i: %i,%i,%i\n", &comboNum, &r, &g, &b) == 4)
+					if (sscanf(curLineChar, " Combo %i : %i , %i , %i \n", &comboNum, &r, &g, &b) == 4)
 						m_comboColors.push_back(COLOR(255, r, g, b));
-					if (sscanf(curLineChar, "SpinnerApproachCircle: %i,%i,%i\n", &r, &g, &b) == 3)
+					if (sscanf(curLineChar, " SpinnerApproachCircle : %i , %i , %i \n", &r, &g, &b) == 3)
 						m_spinnerApproachCircleColor = COLOR(255, r, g, b);
-					if (sscanf(curLineChar, "SliderBorder: %i,%i,%i\n", &r, &g, &b) == 3)
+					if (sscanf(curLineChar, " SliderBorder: %i , %i , %i \n", &r, &g, &b) == 3)
 						m_sliderBorderColor = COLOR(255, r, g, b);
-					if (sscanf(curLineChar, "SliderTrackOverride: %i,%i,%i\n", &r, &g, &b) == 3)
+					if (sscanf(curLineChar, " SliderTrackOverride : %i , %i , %i \n", &r, &g, &b) == 3)
 					{
 						m_sliderTrackOverride = COLOR(255, r, g, b);
 						m_bSliderTrackOverride = true;
 					}
-					if (sscanf(curLineChar, "SliderBall: %i,%i,%i\n", &r, &g, &b) == 3)
+					if (sscanf(curLineChar, " SliderBall : %i , %i , %i \n", &r, &g, &b) == 3)
 						m_sliderBallColor = COLOR(255, r, g, b);
-					if (sscanf(curLineChar, "SongSelectActiveText: %i,%i,%i\n", &r, &g, &b) == 3)
+					if (sscanf(curLineChar, " SongSelectActiveText : %i , %i , %i \n", &r, &g, &b) == 3)
 						m_songSelectActiveText = COLOR(255, r, g, b);
-					if (sscanf(curLineChar, "SongSelectInactiveText: %i,%i,%i\n", &r, &g, &b) == 3)
+					if (sscanf(curLineChar, " SongSelectInactiveText : %i , %i , %i \n", &r, &g, &b) == 3)
 						m_songSelectInactiveText = COLOR(255, r, g, b);
 				}
 				break;
@@ -604,7 +626,7 @@ bool OsuSkin::parseSkinINI(UString filepath)
 				{
 					int val;
 
-					if (sscanf(curLineChar, "HitCircleOverlap: %i\n", &val) == 1)
+					if (sscanf(curLineChar, " HitCircleOverlap : %i \n", &val) == 1)
 						m_iHitCircleOverlap = val;
 				}
 				break;

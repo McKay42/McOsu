@@ -21,8 +21,8 @@ public:
 
 	void updateStackPosition(float stackOffset) {;}
 
-	inline Vector2 getRawPos() {return m_vRawPos;}
 	Vector2 getRawPosAt(long pos) {return m_vRawPos;}
+	Vector2 getOriginalRawPosAt(long pos) {return m_vOriginalRawPos;}
 	Vector2 getAutoCursorPos(long curPos);
 
 	virtual void onClickEvent(Vector2 cursorPos, std::vector<OsuBeatmap::CLICK> &clicks);
@@ -33,6 +33,7 @@ private:
 	void rotate(float rad);
 
 	Vector2 m_vRawPos;
+	Vector2 m_vOriginalRawPos;
 
 	bool m_bClickedOnce;
 	bool m_bDrawRPM;

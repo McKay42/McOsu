@@ -32,6 +32,7 @@ class RenderTarget;
 class Osu : public App, public MouseListener
 {
 public:
+	static ConVar *version;
 	static ConVar *debug;
 
 	static Vector2 osuBaseResolution;
@@ -81,11 +82,11 @@ public:
 
 	void reloadSkin() {onSkinReload();}
 
-	float getCursorScaleFactor();
-
 	inline Vector2 getScreenSize() {return g_vInternalResolution;}
 	inline int getScreenWidth() {return (int)g_vInternalResolution.x;}
 	inline int getScreenHeight() {return (int)g_vInternalResolution.y;}
+
+	OsuBeatmap *getSelectedBeatmap();
 
 	inline OsuSkin *getSkin() {return m_skin;}
 	inline OsuHUD *getHUD() {return m_hud;}
@@ -98,8 +99,6 @@ public:
 	inline McFont *getSubTitleFont() {return m_subTitleFont;}
 	inline McFont *getSongBrowserFont() {return m_songBrowserFont;}
 	inline McFont *getSongBrowserFontBold() {return m_songBrowserFontBold;}
-
-	OsuBeatmap *getBeatmap();
 
 	float getDifficultyMultiplier();
 	float getCSDifficultyMultiplier();
@@ -123,7 +122,6 @@ public:
 	inline bool getModNM() {return m_bModNM;}
 
 	bool isInPlayMode();
-	OsuBeatmap *getSelectedBeatmap();
 
 	void updateMods();
 	void updateConfineCursor();

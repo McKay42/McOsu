@@ -21,6 +21,7 @@ public:
 	virtual ~OsuHitObject() {;}
 
 	virtual void draw(Graphics *g);
+	virtual void draw2(Graphics *g){;}
 	virtual void update(long curPos);
 
 	virtual void updateStackPosition(float stackOffset) = 0;
@@ -31,6 +32,10 @@ public:
 	void setForceDrawApproachCircle(bool firstNote) {m_bOverrideHDApproachCircle = firstNote;}
 	void setAutopilotDelta(long delta) {m_iAutopilotDelta = delta;}
 
+	virtual Vector2 getRawPosAt(long pos) = 0; // with stack calculation modifications
+	virtual Vector2 getOriginalRawPosAt(long pos) = 0; // without stack calculations
+	virtual Vector2 getAutoCursorPos(long curPos) = 0;
+
 	inline long getTime() const {return m_iTime;}
 	inline long getDuration() const {return m_iObjectDuration;}
 	inline int getStack() const {return m_iStack;}
@@ -40,10 +45,6 @@ public:
 	inline bool isVisible() const {return m_bVisible;}
 	inline bool isFinished() const {return m_bFinished;}
 	inline bool hasMisAimed() const {return m_bMisAim;}
-
-	virtual Vector2 getRawPos() = 0;
-	virtual Vector2 getRawPosAt(long pos) = 0;
-	virtual Vector2 getAutoCursorPos(long curPos) = 0;
 
 	virtual void onClickEvent(Vector2 cursorPos, std::vector<OsuBeatmap::CLICK> &clicks) {;}
 	virtual void onReset(long curPos);

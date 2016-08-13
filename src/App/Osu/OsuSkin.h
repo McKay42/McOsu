@@ -162,6 +162,7 @@ public:
 	inline bool isFollowPoint2x() {return m_bFollowPoint2x;}
 	inline bool isHitCircle2x() {return m_bHitCircle2x;}
 	inline bool isHitCircleOverlay2x() {return m_bHitCircleOverlay2x;}
+	inline bool isDefault02x() {return m_bIsDefault02x;}
 	inline bool isDefault12x() {return m_bIsDefault12x;}
 	inline bool isHit02x() {return m_bHit02x;}
 	inline bool isHit502x() {return m_bHit502x;}
@@ -177,6 +178,7 @@ public:
 	inline bool isSliderStartCircleOverlay2x() {return m_bSliderStartCircleOverlay2x;}
 	inline bool isSliderEndCircle2x() {return m_bSliderEndCircle2x;}
 	inline bool isSliderEndCircleOverlay2x() {return m_bSliderEndCircleOverlay2x;}
+	inline bool isSliderFollowCircle2x() {return m_bSliderFollowCircle2x;}
 
 	inline bool isCircularmetre2x() {return m_bCircularmetre2x;}
 	inline bool isPlaySkip2x() {return m_bPlaySkip2x;}
@@ -380,6 +382,7 @@ private:
 	bool m_bFollowPoint2x;
 	bool m_bHitCircle2x;
 	bool m_bHitCircleOverlay2x;
+	bool m_bIsDefault02x;
 	bool m_bIsDefault12x;
 	bool m_bHit02x;
 	bool m_bHit502x;
@@ -395,6 +398,7 @@ private:
 	bool m_bSliderStartCircleOverlay2x;
 	bool m_bSliderEndCircle2x;
 	bool m_bSliderEndCircleOverlay2x;
+	bool m_bSliderFollowCircle2x;
 
 	bool m_bCircularmetre2x;
 	bool m_bPlaySkip2x;
