@@ -23,12 +23,13 @@ public:
 	virtual ~OsuSlider();
 
 	virtual void draw(Graphics *g);
+	virtual void draw2(Graphics *g);
 	virtual void update(long curPos);
 
 	void updateStackPosition(float stackOffset);
 
-	inline Vector2 getRawPos() {return m_points.size() > 0 ? m_points[0] : Vector2(0,0);}
 	Vector2 getRawPosAt(long pos);
+	Vector2 getOriginalRawPosAt(long pos);
 	inline Vector2 getAutoCursorPos(long curPos) {return m_vCurPoint;}
 
 	virtual void onClickEvent(Vector2 cursorPos, std::vector<OsuBeatmap::CLICK> &clicks);
@@ -106,6 +107,7 @@ private:
 	float m_fEndHitAnimation;
 	float m_fEndSliderBodyFadeAnimation;
 	long m_iLastClickHeld;
+	bool m_bCursorLeft;
 	bool m_bCursorInside;
 	bool m_bHeldTillEnd;
 	float m_fFollowCircleTickAnimationScale;
@@ -139,12 +141,13 @@ public:
 	void draw(Graphics *g, Color color, float alpha);
 	void draw(Graphics *g, Color color, float alpha, float t, float t2 = 0.0f);
 
+	virtual void updateStackPosition(float stackMulStackOffset);
+
 	virtual Vector2 pointAt(float t) = 0;
+	virtual Vector2 originalPointAt(float t) = 0;
 
 	inline float getStartAngle() const {return m_fStartAngle;}
 	inline float getEndAngle() const {return m_fEndAngle;}
-
-	virtual void updateStackPosition(float stackMulStackOffset);
 
 protected:
 	static float CURVE_POINTS_SEPERATION;
@@ -163,6 +166,7 @@ protected:
 
 	// these must be explicitely set in one of the subclasses
 	std::vector<Vector2> m_curvePoints;
+	std::vector<Vector2> m_originalCurvePoints;
 	float m_fStartAngle;
 	float m_fEndAngle;
 
@@ -246,6 +250,7 @@ public:
 	void init(std::vector<OsuSliderCurveType*> curvesList);
 
 	Vector2 pointAt(float t);
+	Vector2 originalPointAt(float t);
 
 private:
 	int m_iNCurve;
@@ -270,14 +275,17 @@ public:
 	OsuSliderCurveCircumscribedCircle(OsuSlider *parent, OsuBeatmap *beatmap);
 
 	Vector2 pointAt(float t);
+	Vector2 originalPointAt(float t);
+
 	void updateStackPosition(float stackMulStackOffset); // must also override this, due to the custom pointAt() function!
 
 private:
 	Vector2 intersect(Vector2 a, Vector2 ta, Vector2 b, Vector2 tb);
 	bool isIn(float a, float b, float c);
 
-	float m_fRadius;
 	Vector2 m_vCircleCenter;
+	Vector2 m_vOriginalCircleCenter;
+	float m_fRadius;
 	float m_fCalculationStartAngle;
 	float m_fCalculationEndAngle;
 };

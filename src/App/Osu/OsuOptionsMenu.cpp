@@ -14,6 +14,7 @@
 #include "Environment.h"
 #include "ResourceManager.h"
 #include "Mouse.h"
+#include "File.h"
 
 #include "CBaseUIContainer.h"
 #include "CBaseUIScrollView.h"
@@ -233,6 +234,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Draw ProgressBar", convar->getConVarByName("osu_draw_progressbar"));
 	addCheckbox("Draw HitErrorBar", convar->getConVarByName("osu_draw_hiterrorbar"));
 	addSpacer();
+	addCheckbox("Draw Statistics: Misses", convar->getConVarByName("osu_draw_statistics_misses"));
 	addCheckbox("Draw Statistics: BPM", convar->getConVarByName("osu_draw_statistics_bpm"));
 	addCheckbox("Draw Statistics: AR", convar->getConVarByName("osu_draw_statistics_ar"));
 	addCheckbox("Draw Statistics: CS", convar->getConVarByName("osu_draw_statistics_cs"));
@@ -271,6 +273,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSubSection("Why");
 	addCheckbox("Rainbow ApproachCircles", convar->getConVarByName("osu_circle_rainbow"));
 	addCheckbox("Rainbow Sliders", convar->getConVarByName("osu_slider_rainbow"));
+	addCheckbox("Rainbow Numbers", convar->getConVarByName("osu_circle_number_rainbow"));
 	addCheckbox("SliderBreak Epilepsy", convar->getConVarByName("osu_slider_break_epilepsy"));
 	addCheckbox("Shrinking Sliders", convar->getConVarByName("osu_slider_shrink"));
 	addCheckbox("Invisible Cursor", convar->getConVarByName("osu_hide_cursor_during_gameplay"));
@@ -580,8 +583,8 @@ void OsuOptionsMenu::updateOsuFolder()
 	newOsuFolder = newOsuFolder.trim();
 	if (newOsuFolder.length() > 0)
 	{
-		const char *utf8folder = newOsuFolder.toUtf8();
-		if (utf8folder[newOsuFolder.length()-1] != '/' && utf8folder[newOsuFolder.length()-1] != '\\')
+		const wchar_t *uFolder = newOsuFolder.wc_str();
+		if (uFolder[newOsuFolder.length()-1] != L'/' && uFolder[newOsuFolder.length()-1] != L'\\')
 		{
 			newOsuFolder.append("/");
 			m_osuFolderTextbox->setText(newOsuFolder);
@@ -1061,61 +1064,64 @@ void OsuOptionsMenu::save()
 
 	// get user stuff in the config file
 	std::vector<UString> keepLines;
-	std::ifstream in(userConfigFile);
-	if (!in.good())
-		debugLog("Osu Error: Couldn't read user config file!");
-	else
 	{
-		while (in.good())
+		// in extra block because the File class would block the following std::ofstream from writing to it until it's destroyed
+		File in(userConfigFile);
+		if (!in.canRead())
+			debugLog("Osu Error: Couldn't read user config file!");
+		else
 		{
-			std::string line;
-			std::getline(in, line);
-
-			bool keepLine = true;
-			for (int i=0; i<m_elements.size(); i++)
+			while (in.canRead())
 			{
-				if (m_elements[i].cvar != NULL && line.find(m_elements[i].cvar->getName().toUtf8()) != std::string::npos)
-				{
-					keepLine = false;
-					break;
-				}
-			}
+				UString uLine = in.readLine();
+				const char *lineChar = uLine.toUtf8();
+				std::string line(lineChar);
 
-			for (int i=0; i<manualConCommands.size(); i++)
-			{
-				if (line.find(manualConCommands[i]->getName().toUtf8()) != std::string::npos)
+				bool keepLine = true;
+				for (int i=0; i<m_elements.size(); i++)
 				{
-					keepLine = false;
-					break;
+					if (m_elements[i].cvar != NULL && line.find(m_elements[i].cvar->getName().toUtf8()) != std::string::npos)
+					{
+						keepLine = false;
+						break;
+					}
 				}
-			}
 
-			for (int i=0; i<manualConVars.size(); i++)
-			{
-				if (line.find(manualConVars[i]->getName().toUtf8()) != std::string::npos)
+				for (int i=0; i<manualConCommands.size(); i++)
 				{
-					keepLine = false;
-					break;
+					if (line.find(manualConCommands[i]->getName().toUtf8()) != std::string::npos)
+					{
+						keepLine = false;
+						break;
+					}
 				}
-			}
 
-			for (int i=0; i<removeConCommands.size(); i++)
-			{
-				if (line.find(removeConCommands[i]->getName().toUtf8()) != std::string::npos)
+				for (int i=0; i<manualConVars.size(); i++)
 				{
-					keepLine = false;
-					break;
+					if (line.find(manualConVars[i]->getName().toUtf8()) != std::string::npos)
+					{
+						keepLine = false;
+						break;
+					}
 				}
-			}
 
-			if (keepLine && line.size() > 0)
-				keepLines.push_back(line.c_str());
+				for (int i=0; i<removeConCommands.size(); i++)
+				{
+					if (line.find(removeConCommands[i]->getName().toUtf8()) != std::string::npos)
+					{
+						keepLine = false;
+						break;
+					}
+				}
+
+				if (keepLine && line.size() > 0)
+					keepLines.push_back(line.c_str());
+			}
 		}
-
-		in.close();
 	}
 
 	// write new config file
+	// thankfully this path is relative and hardcoded, and thus not susceptible to unicode characters
 	std::ofstream out(userConfigFile);
 	if (!out.good())
 	{

@@ -140,6 +140,7 @@ OsuSlider::OsuSlider(char type, int repeat, float pixelLength, std::vector<Vecto
 	m_fEndHitAnimation = 0.0f;
 	m_fEndSliderBodyFadeAnimation = 0.0f;
 	m_iLastClickHeld = 0;
+	m_bCursorLeft = true;
 	m_bCursorInside = false;
 	m_bHeldTillEnd = false;
 	m_fFollowCircleTickAnimationScale = 0.0f;
@@ -352,6 +353,56 @@ void OsuSlider::draw(Graphics *g)
 		g->popTransform();
 	}
 
+	OsuHitObject::draw(g);
+
+	// debug
+	/*
+	if (m_bVisible)
+	{
+		Vector2 screenPos = m_beatmap->osuCoords2Pixels(getRawPosAt(0));
+
+		g->setColor(0xff0000ff);
+		g->pushTransform();
+		g->translate(screenPos.x, screenPos.y);
+		g->drawString(engine->getResourceManager()->getFont("FONT_DEFAULT"), UString::format("%li", m_iTime));
+		g->popTransform();
+	}
+	*/
+}
+
+void OsuSlider::draw2(Graphics *g)
+{
+	OsuSkin *skin = m_beatmap->getSkin();
+
+	// HACKHACK: so much code duplication aaaaaaah
+	if (m_bVisible || (m_bStartFinished && !m_bFinished)) // extra possibility to avoid flicker between OsuHitObject::m_bVisible delay and the fadeout animation below this if block
+	{
+		float alpha = !osu_mod_hd_slider_fade.getBool() ? m_fAlpha : (osu_mod_hd_slider_fast_fade.getBool() || m_beatmap->getOsu()->getModNM() ? m_fHiddenAlpha : m_fHiddenSlowFadeAlpha);
+
+		if (m_points.size() > 1)
+		{
+			// HACKHACK: very dirty code
+			bool sliderRepeatStartCircleFinished = m_iRepeat < 2;
+			bool sliderRepeatEndCircleFinished = false;
+			for (int i=0; i<m_clicks.size(); i++)
+			{
+				if (m_clicks[i].type == 0)
+				{
+					if (m_clicks[i].sliderend)
+						sliderRepeatEndCircleFinished = m_clicks[i].finished;
+					else
+						sliderRepeatStartCircleFinished = m_clicks[i].finished;
+				}
+			}
+
+			// start circle
+			if (!m_bStartFinished || !sliderRepeatStartCircleFinished || (!m_bEndFinished && m_iRepeat % 2 == 0))
+			{
+				OsuCircle::drawApproachCircle(g, m_beatmap, m_curve->pointAt(0.0f), m_iComboNumber, m_iColorCounter, m_fApproachScale, alpha, m_bOverrideHDApproachCircle);
+			}
+		}
+	}
+
 	// draw followcircle
 	// HACKHACK: this is not entirely correct (due to m_bHeldTillEnd, if held within 300 range but then released, will flash followcircle at the end)
 	if ((m_bVisible && m_bCursorInside && (m_beatmap->isClickHeld() || m_beatmap->getOsu()->getModAuto() || m_beatmap->getOsu()->getModRelax())) || (m_bFinished && m_fFollowCircleAnimationAlpha > 0.0f && m_bHeldTillEnd))
@@ -400,22 +451,6 @@ void OsuSlider::draw(Graphics *g)
 			g->popTransform();
 		}
 	}
-
-	OsuHitObject::draw(g);
-
-	// debug
-	/*
-	if (m_bVisible)
-	{
-		Vector2 screenPos = m_beatmap->osuCoords2Pixels(getRawPos());
-
-		g->setColor(0xff0000ff);
-		g->pushTransform();
-		g->translate(screenPos.x, screenPos.y);
-		g->drawString(engine->getResourceManager()->getFont("FONT_DEFAULT"), UString::format("%li", m_iTime));
-		g->popTransform();
-	}
-	*/
 }
 
 void OsuSlider::drawStartCircle(Graphics *g, float alpha)
@@ -533,8 +568,15 @@ void OsuSlider::update(long curPos)
 		m_vCurPoint = m_beatmap->osuCoords2Pixels(m_vCurPointRaw);
 	}
 
+	// handle dynamic followradius
 	float followRadius = m_beatmap->getSliderFollowCircleDiameter()/2.0f;
+	if (m_bCursorLeft) // need to go within the circle radius to be valid again
+		followRadius = m_beatmap->getHitcircleDiameter()/2.0f;
 	m_bCursorInside = m_beatmap->getOsu()->getModAuto() || (m_beatmap->getCursorPos() - m_vCurPoint).length() < followRadius;
+	if (m_bCursorInside)
+		m_bCursorLeft = false;
+	else
+		m_bCursorLeft = true;
 
 	// handle slider start
 	if (!m_bStartFinished)
@@ -589,6 +631,8 @@ void OsuSlider::update(long curPos)
 	{
 		if ((m_beatmap->isClickHeld() || m_beatmap->getOsu()->getModRelax()) && m_bCursorInside)
 			m_iLastClickHeld = curPos;
+		else
+			m_bCursorLeft = true; // do not allow empty clicks outside of the circle radius to prevent the m_bCursorInside flag from resetting
 	
 		// handle repeats and ticks
 		for (int i=0; i<m_clicks.size(); i++)
@@ -639,6 +683,7 @@ void OsuSlider::update(long curPos)
 
 
 				// handle total slider result (currently startcircle + repeats + ticks + endcircle)
+				// clicks = (repeats + ticks)
 				float numMaxPossibleHits = 1 + m_clicks.size() + 1;
 				float numActualHits = 0;
 
@@ -722,6 +767,24 @@ Vector2 OsuSlider::getRawPosAt(long pos)
 		return m_curve->pointAt(getT(pos, false));
 }
 
+Vector2 OsuSlider::getOriginalRawPosAt(long pos)
+{
+	if (m_curve == NULL)
+		return Vector2(0, 0);
+
+	if (pos <= m_iTime)
+		return m_curve->originalPointAt(0.0f);
+	else if (pos >= m_iTime + m_fSliderTime)
+	{
+		if (m_iRepeat % 2 == 0)
+			return m_curve->originalPointAt(0.0f);
+		else
+			return m_curve->originalPointAt(1.0f);
+	}
+	else
+		return m_curve->originalPointAt(getT(pos, false));
+}
+
 float OsuSlider::getT(long pos, bool raw)
 {
 	float t = (float)((long)pos - (long)m_iTime) / m_fSliderTimeWithoutRepeats;
@@ -779,19 +842,19 @@ void OsuSlider::onHit(OsuBeatmap::HIT result, long delta, bool startOrEnd, float
 		if (!startOrEnd)
 		{
 			m_fStartHitAnimation = 0.001f; // quickfix for 1 frame missing images
-			anim->moveQuadOut(&m_fStartHitAnimation, 1.0f, OsuGameRules::osu_circle_fade_out_time.getFloat());
+			anim->moveQuadOut(&m_fStartHitAnimation, 1.0f, OsuGameRules::osu_circle_fade_out_time.getFloat(), true);
 		}
 		else
 		{
 			if (m_iRepeat % 2 != 0)
 			{
 				m_fEndHitAnimation = 0.001f; // quickfix for 1 frame missing images
-				anim->moveQuadOut(&m_fEndHitAnimation, 1.0f, OsuGameRules::osu_circle_fade_out_time.getFloat());
+				anim->moveQuadOut(&m_fEndHitAnimation, 1.0f, OsuGameRules::osu_circle_fade_out_time.getFloat(), true);
 			}
 			else
 			{
 				m_fStartHitAnimation = 0.001f; // quickfix for 1 frame missing images
-				anim->moveQuadOut(&m_fStartHitAnimation, 1.0f, OsuGameRules::osu_circle_fade_out_time.getFloat());
+				anim->moveQuadOut(&m_fStartHitAnimation, 1.0f, OsuGameRules::osu_circle_fade_out_time.getFloat(), true);
 			}
 		}
 	}
@@ -814,7 +877,7 @@ void OsuSlider::onHit(OsuBeatmap::HIT result, long delta, bool startOrEnd, float
 		m_bFinished = true;
 
 		m_fEndSliderBodyFadeAnimation = 0.001f; // quickfix for 1 frame missing images
-		anim->moveQuadOut(&m_fEndSliderBodyFadeAnimation, 1.0f, OsuGameRules::osu_circle_fade_out_time.getFloat());
+		anim->moveQuadOut(&m_fEndSliderBodyFadeAnimation, 1.0f, OsuGameRules::osu_circle_fade_out_time.getFloat(), true);
 	}
 }
 
@@ -837,12 +900,12 @@ void OsuSlider::onRepeatHit(bool successful, bool sliderend)
 		if (sliderend)
 		{
 			m_fEndHitAnimation = 0.001f; // quickfix for 1 frame missing images
-			anim->moveQuadOut(&m_fEndHitAnimation, 1.0f, OsuGameRules::osu_circle_fade_out_time.getFloat());
+			anim->moveQuadOut(&m_fEndHitAnimation, 1.0f, OsuGameRules::osu_circle_fade_out_time.getFloat(), true);
 		}
 		else
 		{
 			m_fStartHitAnimation = 0.001f; // quickfix for 1 frame missing images
-			anim->moveQuadOut(&m_fStartHitAnimation, 1.0f, OsuGameRules::osu_circle_fade_out_time.getFloat());
+			anim->moveQuadOut(&m_fStartHitAnimation, 1.0f, OsuGameRules::osu_circle_fade_out_time.getFloat(), true);
 		}
 	}
 }
@@ -894,6 +957,7 @@ void OsuSlider::onReset(long curPos)
 	OsuHitObject::onReset(curPos);
 
 	m_iLastClickHeld = 0;
+	m_bCursorLeft = true;
 	m_bHeldTillEnd = false;
 	m_startResult = OsuBeatmap::HIT_NULL;
 	m_endResult = OsuBeatmap::HIT_NULL;
@@ -1381,9 +1445,9 @@ void OsuSliderCurve::drawFillCircle(Graphics *g, Vector2 center)
 
 void OsuSliderCurve::updateStackPosition(float stackMulStackOffset)
 {
-	for (int i=0; i<m_curvePoints.size(); i++)
+	for (int i=0; i<m_originalCurvePoints.size() && i<m_curvePoints.size(); i++)
 	{
-		m_curvePoints[i] = m_curvePoints[i] - Vector2(stackMulStackOffset, stackMulStackOffset);
+		m_curvePoints[i] = m_originalCurvePoints[i] - Vector2(stackMulStackOffset, stackMulStackOffset * (m_beatmap->getOsu()->getModHR() ? -1.0f : 1.0f));
 	}
 }
 
@@ -1629,7 +1693,8 @@ OsuSliderCurveCircumscribedCircle::OsuSliderCurveCircumscribedCircle(OsuSlider *
 	norb.x = -norb.y;
 	norb.y = temp;
 
-	m_vCircleCenter = intersect(mida, nora, midb, norb);
+	m_vOriginalCircleCenter = intersect(mida, nora, midb, norb);
+	m_vCircleCenter = m_vOriginalCircleCenter;
 
 	// find the angles relative to the circle center
 	Vector2 startAngPoint = start - m_vCircleCenter;
@@ -1681,12 +1746,15 @@ OsuSliderCurveCircumscribedCircle::OsuSliderCurveCircumscribedCircle(OsuSlider *
 		if (t >= 1.0f)
 			break;
 	}
+
+	m_originalCurvePoints = m_curvePoints; // backup
 }
 
 void OsuSliderCurveCircumscribedCircle::updateStackPosition(float stackMulStackOffset)
 {
 	OsuSliderCurve::updateStackPosition(stackMulStackOffset);
-	m_vCircleCenter = m_vCircleCenter - Vector2(stackMulStackOffset, stackMulStackOffset);
+
+	m_vCircleCenter = m_vOriginalCircleCenter - Vector2(stackMulStackOffset, stackMulStackOffset * (m_beatmap->getOsu()->getModHR() ? -1.0f : 1.0f));
 }
 
 Vector2 OsuSliderCurveCircumscribedCircle::pointAt(float t)
@@ -1695,6 +1763,14 @@ Vector2 OsuSliderCurveCircumscribedCircle::pointAt(float t)
 
 	return Vector2(cos(ang) * m_fRadius + m_vCircleCenter.x,
 				   sin(ang) * m_fRadius + m_vCircleCenter.y);
+}
+
+Vector2 OsuSliderCurveCircumscribedCircle::originalPointAt(float t)
+{
+	float ang = lerp(m_fCalculationStartAngle, m_fCalculationEndAngle, t);
+
+	return Vector2(cos(ang) * m_fRadius + m_vOriginalCircleCenter.x,
+				   sin(ang) * m_fRadius + m_vOriginalCircleCenter.y);
 }
 
 Vector2 OsuSliderCurveCircumscribedCircle::intersect(Vector2 a, Vector2 ta, Vector2 b, Vector2 tb)
@@ -1801,6 +1877,8 @@ void OsuSliderCurveEqualDistanceMulti::init(std::vector<OsuSliderCurveType*> cur
 		c2 = m_curvePoints[cnt--];
 	}
 	m_fEndAngle = (float) (atan2(c2.y - c1.y, c2.x - c1.x) * 180 / PI);
+
+	m_originalCurvePoints = m_curvePoints; // backup
 }
 
 Vector2 OsuSliderCurveEqualDistanceMulti::pointAt(float t)
@@ -1816,6 +1894,24 @@ Vector2 OsuSliderCurveEqualDistanceMulti::pointAt(float t)
 	{
 		Vector2 poi = m_curvePoints[index];
 		Vector2 poi2 = m_curvePoints[index + 1];
+		float t2 = indexF - index;
+		return Vector2(lerp(poi.x, poi2.x, t2), lerp(poi.y, poi2.y, t2));
+	}
+}
+
+Vector2 OsuSliderCurveEqualDistanceMulti::originalPointAt(float t)
+{
+	if (m_originalCurvePoints.size() < 1) // this might happen
+		return Vector2(0,0);
+
+	float indexF = t * m_iNCurve;
+	int index = (int) indexF;
+	if (index >= m_iNCurve)
+		return m_originalCurvePoints[m_iNCurve];
+	else
+	{
+		Vector2 poi = m_originalCurvePoints[index];
+		Vector2 poi2 = m_originalCurvePoints[index + 1];
 		float t2 = indexF - index;
 		return Vector2(lerp(poi.x, poi2.x, t2), lerp(poi.y, poi2.y, t2));
 	}

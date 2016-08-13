@@ -9,7 +9,6 @@
 
 #include "Engine.h"
 #include "ResourceManager.h"
-#include "AnimationHandler.h"
 #include "SoundEngine.h"
 #include "Mouse.h"
 #include "ConVar.h"
@@ -20,7 +19,8 @@
 
 OsuSpinner::OsuSpinner(int x, int y, long time, int sampleType, long endTime, OsuBeatmap *beatmap) : OsuHitObject(time, sampleType, -1, -1, beatmap)
 {
-	m_vRawPos = Vector2(x,y);
+	m_vOriginalRawPos = Vector2(x,y);
+	m_vRawPos = m_vOriginalRawPos;
 
 	m_iObjectDuration = endTime - time;
 	m_bDrawRPM = false;
