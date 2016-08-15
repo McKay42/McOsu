@@ -1,5 +1,7 @@
 # McOsu
 
+**[DOWNLOAD > https://github.com/McKay42/McOsu/releases](https://github.com/McKay42/McOsu/releases)**
+
 **Discord** (Feedback, Requests, Bug reports, etc.): https://discord.gg/3UQnt7X
 
 An unofficial open-source client for [osu!](https://osu.ppy.sh) with the main focus on making practicing easier and customizing gameplay.
