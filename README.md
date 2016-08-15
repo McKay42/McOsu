@@ -27,7 +27,7 @@ Note that Linux support is not as polished as Windows, and some functions such a
 - Nearly unlimited customizability using console commands for people who want to tinker with everything (e.g. osu_playfield_rotation, osu_circle_fade_out_time, osu_skip_time, etc.)
 
 ##Known incompatible GPUs:
-- Mobile Intel 4 Series Express Chipset Family (can't create RenderTargets for drawing sliders)
+- Mobile Intel 4 Series Express Chipset Family
 - Intel G45/G43 Express Chipset
 
 ##Skin Credits:
