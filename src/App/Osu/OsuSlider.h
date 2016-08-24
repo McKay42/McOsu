@@ -15,9 +15,19 @@ class OsuSliderCurveEqualDistanceMulti;
 
 class Shader;
 class VertexArrayObject;
+class VertexBuffer;
 
 class OsuSlider : public OsuHitObject
 {
+public:
+	enum SLIDERTYPE
+	{
+		SLIDER_CATMULL = 'C',
+		SLIDER_BEZIER = 'B',
+		SLIDER_LINEAR = 'L',
+		SLIDER_PASSTHROUGH = 'P'
+	};
+
 public:
 	OsuSlider(char type, int repeat, float pixelLength, std::vector<Vector2> points, std::vector<float> ticks, float sliderTime, float sliderTimeWithoutRepeats, long time, int sampleType, int comboNumber, int colorCounter, OsuBeatmap *beatmap);
 	virtual ~OsuSlider();
@@ -55,14 +65,6 @@ private:
 	void onSliderBreak();
 
 	float getT(long pos, bool raw);
-
-	enum SLIDERTYPE
-	{
-		SLIDER_CATMULL = 'C',
-		SLIDER_BEZIER = 'B',
-		SLIDER_LINEAR = 'L',
-		SLIDER_PASSTHROUGH = 'P'
-	};
 
 	OsuSliderCurve *m_curve;
 
@@ -154,6 +156,7 @@ protected:
 	static int UNIT_CONE_DIVIDES;
 	static std::vector<float> UNIT_CONE;
 	static VertexArrayObject *MASTER_CIRCLE_VAO;
+	static VertexBuffer *MASTER_CIRCLE_VB;
 	static float MASTER_CIRCLE_VAO_RADIUS;
 
 	void drawFillCircle(Graphics *g, Vector2 center);

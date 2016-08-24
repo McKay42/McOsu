@@ -143,6 +143,7 @@ public:
 
 	Vector2 osuCoords2Pixels(Vector2 coords);
 	Vector2 getCursorPos();
+	inline float getAmplitude() {return m_fAmplitude;}
 
 private:
 	void drawFollowPoints(Graphics *g);
@@ -207,6 +208,7 @@ private:
 
 	// sound
 	float m_fBeatLength;
+	float m_fAmplitude;
 
 	float m_fSongPercentBeforeStop;
 	long m_iCurMusicPos;
@@ -226,6 +228,7 @@ private:
 	long m_iPreviousHitObjectTime;
 	Vector2 m_vAutoCursorPos;
 	float m_fPlayfieldRotation;
+	int m_iAutoCursorDanceIndex;
 
 	bool m_bClick1Held;
 	bool m_bClick2Held;

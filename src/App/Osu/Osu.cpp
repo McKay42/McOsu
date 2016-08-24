@@ -271,9 +271,7 @@ void Osu::draw(Graphics *g)
 		if ((m_bModAuto || m_bModAutopilot) && allowDrawCursor)
 			m_hud->drawCursor(g, m_osu_mod_fps_ref->getBool() ? OsuGameRules::getPlayfieldCenter(this) : getSelectedBeatmap()->getCursorPos(), osu_mod_fadingcursor.getBool() ? fadingCursorAlpha : 1.0f);
 
-		if (getSelectedBeatmap()->isPaused())
-			m_pauseMenu->draw(g);
-
+		m_pauseMenu->draw(g);
 		m_modSelector->draw(g);
 
 		if (osu_draw_fps.getBool())
@@ -311,12 +309,12 @@ void Osu::draw(Graphics *g)
 		// draw a scaled version from the buffer to the screen
 		m_backBuffer->disable();
 
-		g->disableBlending();
+		g->setBlending(false);
 		if (osu_letterboxing.getBool())
 			m_backBuffer->draw(g, engine->getGraphics()->getResolution().x/2 - g_vInternalResolution.x/2, engine->getGraphics()->getResolution().y/2 - g_vInternalResolution.y/2, g_vInternalResolution.x, g_vInternalResolution.y);
 		else
 			m_backBuffer->draw(g, 0, 0, engine->getGraphics()->getResolution().x, engine->getGraphics()->getResolution().y);
-		g->enableBlending();
+		g->setBlending(true);
 	}
 }
 
@@ -747,17 +745,20 @@ void Osu::volumeUp()
 	m_hud->animateVolumeChange();
 }
 
+void Osu::stopRidiculouslyLongApplauseSound()
+{
+	if (m_skin->getApplause() != NULL && m_skin->getApplause()->isPlaying())
+		engine->getSound()->stop(m_skin->getApplause());
+}
+
 
 
 void Osu::onBeforePlayStart()
 {
 	debugLog("Osu::onBeforePlayStart()\n");
 
+	stopRidiculouslyLongApplauseSound();
 	engine->getSound()->play(m_skin->getMenuHit());
-
-	// stop ridiculously long applause.mp3
-	if (m_skin->getApplause()->isPlaying())
-		engine->getSound()->stop(m_skin->getApplause());
 
 	updateMods();
 }
@@ -785,13 +786,14 @@ void Osu::onPlayEnd(bool quit)
 	if (!quit)
 		engine->getSound()->play(m_skin->getApplause());
 
-	toggleSongBrowser();
 	m_mainMenu->setVisible(false);
 	m_modSelector->setVisible(false);
+	m_pauseMenu->setVisible(false);
 
 	env->setCursorVisible(false);
 	m_bShouldCursorBeVisible = false;
 
+	toggleSongBrowser();
 	updateConfineCursor();
 }
 

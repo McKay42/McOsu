@@ -166,7 +166,7 @@ public:
 
 	static inline float getHitWindowMiss(OsuBeatmap *beatmap)
 	{
-		return (500.0f - (beatmap->getOD() * 10.0f));
+		return 400.0f; // opsu is using this here: (500.0f - (beatmap->getOD() * 10.0f)), while osu is just using 400 absolute ms hardcoded, not sure why
 	}
 
 	static float getSpinnerSpins(OsuBeatmap *beatmap)

@@ -14,12 +14,15 @@
 
 #include "Osu.h"
 #include "OsuNotificationOverlay.h"
+#include "OsuGameRules.h"
 #include "OsuSkin.h"
 
 #include "OsuHitObject.h"
 #include "OsuCircle.h"
 #include "OsuSlider.h"
 #include "OsuSpinner.h"
+
+ConVar osu_mod_random("osu_mod_random", false);
 
 OsuBeatmapDifficulty::OsuBeatmapDifficulty(Osu *osu, UString filepath, UString folder)
 {
@@ -237,9 +240,11 @@ bool OsuBeatmapDifficulty::loadMetadata()
 	if (mode != 0)
 		return false;
 
-	// check if the sound file exists
+	// build sound file path
 	fullSoundFilePath = m_sFolder;
 	fullSoundFilePath.append(audioFileName);
+	// temporarily disabled check, it's not really necessary here already
+	/*
 	if (!env->fileExists(fullSoundFilePath))
 	{
 		UString errorMessage = "Error: Couldn't find sound file";
@@ -247,6 +252,7 @@ bool OsuBeatmapDifficulty::loadMetadata()
 		//m_osu->getNotificationOverlay()->addNotification(errorMessage, 0xffff0000);
 		return false;
 	}
+	*/
 
 	// calculate BPM range
 	if (timingpoints.size() > 0)
@@ -568,11 +574,28 @@ bool OsuBeatmapDifficulty::load(OsuBeatmap *beatmap, std::vector<OsuHitObject*> 
 	for (int i=0; i<hitcircles.size(); i++)
 	{
 		OsuBeatmapDifficulty::HITCIRCLE *c = &hitcircles[i];
+
+		if (osu_mod_random.getBool())
+		{
+			c->x = clamp<int>(c->x - (rand() % OsuGameRules::OSU_COORD_WIDTH) / 8, 0, OsuGameRules::OSU_COORD_WIDTH);
+			c->y = clamp<int>(c->y - (rand() & OsuGameRules::OSU_COORD_HEIGHT) / 8, 0, OsuGameRules::OSU_COORD_HEIGHT);
+		}
+
 		hitobjects->push_back(new OsuCircle(c->x, c->y, c->time, c->sampleType, c->number, c->colorCounter, beatmap));
 	}
 	for (int i=0; i<sliders.size(); i++)
 	{
 		OsuBeatmapDifficulty::SLIDER *s = &sliders[i];
+
+		if (osu_mod_random.getBool())
+		{
+			for (int p=0; p<s->points.size(); p++)
+			{
+				s->points[p].x = clamp<int>(s->points[p].x - (rand() % OsuGameRules::OSU_COORD_WIDTH) / 3, 0, OsuGameRules::OSU_COORD_WIDTH);
+				s->points[p].y = clamp<int>(s->points[p].y - (rand() % OsuGameRules::OSU_COORD_HEIGHT) / 3, 0, OsuGameRules::OSU_COORD_HEIGHT);
+			}
+		}
+
 		hitobjects->push_back(new OsuSlider(s->type, s->repeat, s->pixelLength, s->points, s->ticks, s->sliderTime, s->sliderTimeWithoutRepeats, s->time, s->sampleType, s->number, s->colorCounter, beatmap));
 	}
 	for (int i=0; i<spinners.size(); i++)

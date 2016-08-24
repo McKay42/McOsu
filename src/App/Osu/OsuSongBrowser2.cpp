@@ -808,6 +808,8 @@ void OsuSongBrowser2::onSelectionOptions()
 
 void OsuSongBrowser2::onDifficultySelected(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff, bool fromClick, bool play)
 {
+	m_osu->stopRidiculouslyLongApplauseSound();
+
 	// remember it
 	// if this is the last one, and we selected with a click, restart the memory
 	if (fromClick && m_previousRandomBeatmaps.size() < 2)

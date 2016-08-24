@@ -452,5 +452,5 @@ Vector2 OsuSpinner::getAutoCursorPos(long curPos)
 	float multiplier = (m_beatmap->getOsu()->getModAuto() || m_beatmap->getOsu()->getModAutopilot()) ? AUTO_MULTIPLIER : 1.0f;
 	float angle = (delta * multiplier) - PI/2.0f;
 	float r = m_beatmap->getPlayfieldSize().y / 10.0f;
-	return Vector2((float) (actualPos.x + r * cos(angle)), (float) (actualPos.y + r * sin(angle)));
+	return Vector2((float) (actualPos.x + r * std::cos(angle)), (float) (actualPos.y + r * std::sin(angle)));
 }
