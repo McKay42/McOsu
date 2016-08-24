@@ -31,7 +31,20 @@
 
 void DUMMY_OSU_REFRESH_BEATMAPS() {;}
 
+#if defined(_WIN32) || defined(_WIN64) || defined(__WIN32__) || defined(__CYGWIN__) || defined(__CYGWIN32__) || defined(__TOS_WIN__) || defined(__WINDOWS__)
+
 ConVar osu_folder("osu_folder", UString("C:/Program Files (x86)/osu!/"));
+
+#elif defined __linux__
+
+ConVar osu_folder("osu_folder", UString("/media/pg/Win7/Program Files (x86)/osu!/"));
+
+#else
+
+#error "put correct default folder convar here"
+
+#endif
+
 ConVar osu_refresh_beatmaps("osu_refresh_beatmaps", DUMMY_OSU_REFRESH_BEATMAPS);
 
 ConVar osu_delta("osu_delta", 0.004f);
@@ -92,11 +105,11 @@ void OsuSongBrowser::onStartDebugMap()
 {
 
 	// force start a single beatmap for debugging
-	m_selectedBeatmap = new OsuBeatmap(m_osu, "C:/Program Files (x86)/osu!/Songs/361159 CXu - Shoeshoeshoeshoeshoeshoeshoeshoeshoeshoe/");
+	m_selectedBeatmap = new OsuBeatmap(m_osu, "C:/Program Files (x86)/osu!/Songs/285173 Butch Clancy - Ratchet Anthem/");
 	if (m_selectedBeatmap->load())
 	{
 		m_selectedBeatmap->select();
-		m_selectedBeatmap->selectDifficulty(1);
+		m_selectedBeatmap->selectDifficulty(0);
 		m_osu->onBeforePlayStart();
 		if (m_selectedBeatmap->play())
 		{
@@ -148,7 +161,7 @@ void OsuSongBrowser::draw(Graphics *g)
 		int numFittingSongsOnScreen = (int)((float)browserHeight/m_fSongTextHeight) + 2;
 
 		float fontHeight = m_songFont->getHeight();
-		g->enableClipRect();
+		g->setClipping(true);
 			g->setClipRect(Rect(0, 0, m_osu->getScreenWidth()/2, browserHeight + 1));
 			g->pushTransform();
 			g->translate((int)m_fSongTextOffset, fontHeight);
@@ -162,9 +175,9 @@ void OsuSongBrowser::draw(Graphics *g)
 						if (songRect.contains(engine->getMouse()->getPos()) || isCurrentlySelectedBeatmap)
 						{
 							if (isCurrentlySelectedBeatmap)
-								g->setColor(COLOR((int)( std::abs(sin(engine->getTime()*3))*50 ) + 100, 0,255,0));
+								g->setColor(COLOR((int)( std::abs(std::sin(engine->getTime()*3))*50 ) + 100, 0,255,0));
 							else
-								g->setColor(COLOR((int)( std::abs(sin(engine->getTime()*3))*50 ) + 100, 0,196,223));
+								g->setColor(COLOR((int)( std::abs(std::sin(engine->getTime()*3))*50 ) + 100, 0,196,223));
 							g->fillRect(-m_fSongTextOffset, -fontHeight + smoothOffset, songRect.getWidth(), songRect.getHeight()+1);
 
 							g->setColor(0xffffffff);
@@ -185,11 +198,11 @@ void OsuSongBrowser::draw(Graphics *g)
 					heightAdd += m_fSongTextHeight;
 				}
 			g->popTransform();
-		g->disableClipRect();
+		g->setClipping(false);
 
 		if (m_selectedBeatmap != NULL)
 		{
-			g->enableClipRect();
+			g->setClipping(true);
 				g->setClipRect(Rect(m_osu->getScreenWidth()/2, 0, m_osu->getScreenWidth()/2, browserHeight));
 				g->pushTransform();
 				g->translate(m_osu->getScreenWidth()/2 + (int)m_fSongTextOffset, m_songFont->getHeight() + (int)m_fSongTextOffset);
@@ -220,7 +233,7 @@ void OsuSongBrowser::draw(Graphics *g)
 						heightAdd += m_fSongTextHeight;
 					}
 				g->popTransform();
-			g->disableClipRect();
+			g->setClipping(false);
 		}
 
 		g->setColor(0xffffffff);

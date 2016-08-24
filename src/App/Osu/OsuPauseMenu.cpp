@@ -322,6 +322,8 @@ void OsuPauseMenu::setVisible(bool visible)
 	m_selectedButton = NULL;
 	m_bInitialWarningArrowFlyIn = true;
 	m_fWarningArrowsAnimAlpha = 0.0f;
+	m_bScheduledVisibility = visible;
+	m_bScheduledVisibilityChange = false;
 
 	if (m_bVisible)
 	{

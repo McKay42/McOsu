@@ -80,6 +80,8 @@ public:
 	void volumeDown();
 	void volumeUp();
 
+	void stopRidiculouslyLongApplauseSound();
+
 	void reloadSkin() {onSkinReload();}
 
 	inline Vector2 getScreenSize() {return g_vInternalResolution;}

@@ -83,8 +83,7 @@ private:
 
 	// fps counter
 	float m_fCurFps;
-	int m_iFpsAvgIndex;
-	float *m_fpsAvg;
+	float m_fCurFpsSmooth;
 	float m_fFpsUpdate;
 	float m_fFpsFontHeight;
 
