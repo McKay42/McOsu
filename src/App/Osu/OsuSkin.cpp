@@ -690,6 +690,9 @@ void OsuSkin::setBeatmapComboColors(std::vector<Color> colors)
 
 void OsuSkin::playHitCircleSound(int sampleType)
 {
+	if (m_iSampleVolume <= 0)
+		return;
+
 	switch (m_iSampleSet)
 	{
 	case 3:

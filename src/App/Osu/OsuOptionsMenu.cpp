@@ -66,6 +66,7 @@ public:
 			OsuCircle::drawHitResult(g, m_osu->getSkin(), hitcircleDiameter, hitcircleDiameter, m_vPos + Vector2(0, m_vSize.y/2) + Vector2(m_vSize.x*(2.0f/5.0f), 0.0f), OsuBeatmap::HIT_100, 1.0f);
 			OsuCircle::drawHitResult(g, m_osu->getSkin(), hitcircleDiameter, hitcircleDiameter, m_vPos + Vector2(0, m_vSize.y/2) + Vector2(m_vSize.x*(3.0f/5.0f), 0.0f), OsuBeatmap::HIT_50, 1.0f);
 			OsuCircle::drawHitResult(g, m_osu->getSkin(), hitcircleDiameter, hitcircleDiameter, m_vPos + Vector2(0, m_vSize.y/2) + Vector2(m_vSize.x*(4.0f/5.0f), 0.0f), OsuBeatmap::HIT_MISS, 1.0f);
+			OsuCircle::drawApproachCircle(g, m_osu->getSkin(), m_vPos + Vector2(0, m_vSize.y/2) + Vector2(m_vSize.x*(1.0f/5.0f), 0.0f), m_osu->getSkin()->getComboColorForCounter(42), hitcircleDiameter, approachScale, approachAlpha, false, false);
 		}
 		else if (m_iMode == 1)
 		{
@@ -1068,7 +1069,7 @@ void OsuOptionsMenu::save()
 		// in extra block because the File class would block the following std::ofstream from writing to it until it's destroyed
 		File in(userConfigFile);
 		if (!in.canRead())
-			debugLog("Osu Error: Couldn't read user config file!");
+			debugLog("Osu Error: Couldn't read user config file!\n");
 		else
 		{
 			while (in.canRead())

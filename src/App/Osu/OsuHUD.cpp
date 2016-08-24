@@ -21,8 +21,6 @@
 #include "OsuHitObject.h"
 #include "OsuCircle.h"
 
-#define NUM_FPS_AVG 35
-
 ConVar osu_cursor_alpha("osu_cursor_alpha", 1.0f);
 ConVar osu_cursor_scale("osu_cursor_scale", 1.29f);
 ConVar osu_cursor_expand_scale_multiplier("osu_cursor_expand_scale_multiplier", 1.3f);
@@ -74,6 +72,7 @@ OsuHUD::OsuHUD(Osu *osu)
 	m_tempFont = engine->getResourceManager()->getFont("FONT_DEFAULT");
 
 	m_fCurFps = 60.0f;
+	m_fCurFpsSmooth = 60.0f;
 	m_fFpsUpdate = 0.0f;
 	m_fFpsFontHeight = m_tempFont->getHeight();
 
@@ -82,13 +81,6 @@ OsuHUD::OsuHUD(Osu *osu)
 
 	m_fComboAnim1 = 0.0f;
 	m_fComboAnim2 = 0.0f;
-
-	m_iFpsAvgIndex = 0;
-	m_fpsAvg = new float[NUM_FPS_AVG];
-	for (int i=0; i<NUM_FPS_AVG; i++)
-	{
-		m_fpsAvg[i] = 0.0f;
-	}
 
 	m_fVolumeChangeTime = 0.0f;
 	m_fVolumeChangeFade = 1.0f;
@@ -99,7 +91,6 @@ OsuHUD::OsuHUD(Osu *osu)
 
 OsuHUD::~OsuHUD()
 {
-	delete[] m_fpsAvg;
 }
 
 void OsuHUD::draw(Graphics *g)
@@ -160,20 +151,12 @@ void OsuHUD::drawDummy(Graphics *g)
 void OsuHUD::update()
 {
 	// fps string update
-	m_fpsAvg[m_iFpsAvgIndex] = engine->getFrameTime()/m_host_timescale_ref->getFloat();
-	m_iFpsAvgIndex = (m_iFpsAvgIndex + 1) % NUM_FPS_AVG;
-	if (engine->getTime() > m_fFpsUpdate)
+	const float smooth = std::pow(0.05, engine->getFrameTime());
+	m_fCurFpsSmooth = smooth*m_fCurFpsSmooth + (1.0f - smooth)*(1.0f / engine->getFrameTime());
+	if (engine->getTime() > m_fFpsUpdate || std::abs(m_fCurFpsSmooth-m_fCurFps) > 2.0f)
 	{
-		m_fFpsUpdate = engine->getTime() + 0.35f;
-
-		// HACKHACK: absolutely disgusting
-		m_fCurFps = 0.0f;
-		for (int i=0; i<NUM_FPS_AVG; i++)
-		{
-			if (m_fpsAvg[i] > 0.0f)
-				m_fCurFps += 1.0f/m_fpsAvg[i];
-		}
-		m_fCurFps /= (float)NUM_FPS_AVG;
+		m_fFpsUpdate = engine->getTime() + 0.25f;
+		m_fCurFps = m_fCurFpsSmooth;
 	}
 
 	// target heatmap cleanup
@@ -270,6 +253,7 @@ void OsuHUD::drawCursorTrailRaw(Graphics *g, float alpha, Vector2 pos)
 
 void OsuHUD::drawFps(Graphics *g, McFont *font, float fps)
 {
+	fps = std::round(fps);
 	UString fpsString = UString::format("%i fps", (int)(fps));
 	UString msString = UString::format("%.1f ms", (1.0f/fps)*1000.0f);
 
@@ -916,8 +900,8 @@ void OsuHUD::drawTargetHeatmap(Graphics *g, float hitcircleDiameter)
 		g->setAlpha(clamp<float>((m_targets[i].time - engine->getTime())/3.5f, 0.0f, 1.0f));
 
 		const float theta = deg2rad(m_targets[i].angle);
-		const float cs = cos(theta);
-		const float sn = sin(theta);
+		const float cs = std::cos(theta);
+		const float sn = std::sin(theta);
 
 		Vector2 up = Vector2(-1, 0);
 		Vector2 offset;

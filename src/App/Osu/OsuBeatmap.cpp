@@ -36,6 +36,8 @@ ConVar *OsuBeatmap::m_osu_volume_music_ref = NULL;
 ConVar *OsuBeatmap::m_osu_speed_override_ref = NULL;
 ConVar *OsuBeatmap::m_osu_pitch_override_ref = NULL;
 
+ConVar osu_draw_reverse_order("osu_draw_reverse_order", false);
+
 ConVar osu_draw_followpoints("osu_draw_followpoints", true);
 ConVar osu_draw_playfield_border("osu_draw_playfield_border", true);
 ConVar osu_draw_hitobjects("osu_draw_hitobjects", true);
@@ -49,6 +51,7 @@ ConVar osu_hp_override("osu_hp_override", -1.0f);
 ConVar osu_od_override("osu_od_override", -1.0f);
 
 ConVar osu_auto_snapping_strength("osu_auto_snapping_strength", 1.0f, "How many iterations of quadratic interpolation to use, more = snappier, 0 = linear");
+ConVar osu_auto_cursordance("osu_auto_cursordance", false);
 ConVar osu_autopilot_snapping_strength("osu_autopilot_snapping_strength", 2.0f, "How many iterations of quadratic interpolation to use, more = snappier, 0 = linear");
 ConVar osu_autopilot_lenience("osu_autopilot_lenience", 0.75f);
 
@@ -67,9 +70,14 @@ ConVar osu_debug_hiterrorbar_misaims("osu_debug_hiterrorbar_misaims", false);
 ConVar osu_playfield_mirror_horizontal("osu_playfield_mirror_horizontal", false);
 ConVar osu_playfield_mirror_vertical("osu_playfield_mirror_vertical", false);
 ConVar osu_playfield_rotation("osu_playfield_rotation", 0.0f);
+ConVar osu_playfield_stretch_x("osu_playfield_stretch_x", 0.0f);
+ConVar osu_playfield_stretch_y("osu_playfield_stretch_y", 0.0f);
 
 ConVar osu_mod_wobble("osu_mod_wobble", false);
+ConVar osu_mod_wobble2("osu_mod_wobble2", false);
 ConVar osu_mod_wobble_strength("osu_mod_wobble_strength", 25.0f);
+ConVar osu_mod_wobble_frequency("osu_mod_wobble_frequency", 1.0f);
+ConVar osu_mod_wobble_rotation_speed("osu_mod_wobble_rotation_speed", 1.0f);
 ConVar osu_mod_timewarp("osu_mod_timewarp", false);
 ConVar osu_mod_timewarp_multiplier("osu_mod_timewarp_multiplier", 1.5f);
 ConVar osu_mod_minimize("osu_mod_minimize", false);
@@ -78,7 +86,6 @@ ConVar osu_mod_fps("osu_mod_fps", false);
 ConVar osu_mod_jigsaw1("osu_mod_jigsaw1", false);
 ConVar osu_mod_jigsaw2("osu_mod_jigsaw2", false);
 ConVar osu_mod_jigsaw_followcircle_radius_factor("osu_mod_jigsaw_followcircle_radius_factor", 0.0f);
-ConVar osu_mod_wobble2("osu_mod_wobble2", false);
 ConVar osu_mod_artimewarp("osu_mod_artimewarp", false);
 ConVar osu_mod_artimewarp_multiplier("osu_mod_artimewarp_multiplier", 0.5f);
 ConVar osu_mod_arwobble("osu_mod_arwobble", false);
@@ -87,8 +94,10 @@ ConVar osu_mod_arwobble_interval("osu_mod_arwobble_interval", 7.0f);
 
 ConVar osu_early_note_time("osu_early_note_time", 1000.0f, "Timeframe in ms at the beginning of a beatmap which triggers a starting delay for easier reading");
 ConVar osu_skip_time("osu_skip_time", 5000.0f, "Timeframe in ms within a beatmap which allows skipping if it doesn't contain any hitobjects");
+ConVar osu_stacking("osu_stacking", true, "Whether to use stacking calculations or not");
 
 ConVar osu_debug_draw_timingpoints("osu_debug_draw_timingpoints", false);
+ConVar osu_effect_amplitude_smooth("osu_effect_amplitude_smooth", 1.0f);
 
 OsuBeatmap::OsuBeatmap(Osu *osu, UString filepath)
 {
@@ -117,6 +126,7 @@ OsuBeatmap::OsuBeatmap(Osu *osu, UString filepath)
 	m_selectedDifficulty = NULL;
 	m_fWaitTime = 0.0f;
 	m_fBeatLength = 0.0f;
+	m_fAmplitude = 0.0f;
 	m_fScaleFactor = 1.0f;
 	m_fXMultiplier = 1.0f;
 	m_fNumberScale = 1.0f;
@@ -141,6 +151,7 @@ OsuBeatmap::OsuBeatmap(Osu *osu, UString filepath)
 	m_iPreviousHitObjectTime = 0;
 	m_iPreviousFollowPointObjectIndex = -1;
 	m_fPlayfieldRotation = 0.0f;
+	m_iAutoCursorDanceIndex = 0;
 
 	m_bClick1Held = false;
 	m_bClick2Held = false;
@@ -219,7 +230,7 @@ void OsuBeatmap::draw(Graphics *g)
 		return;
 
 	// draw background
-	const short brightness = clamp<float>(osu_background_brightness.getFloat(), 0.0f, 1.0f)*255.0f;
+	const short brightness = clamp<float>(osu_background_brightness.getFloat()/* + (1.0f - (1.0f-m_fAmplitude)*(1.0f-m_fAmplitude))*/, 0.0f, 1.0f)*255.0f;
 	g->setColor(COLOR(255, brightness, brightness, brightness));
 	g->fillRect(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight());
 
@@ -267,9 +278,19 @@ void OsuBeatmap::draw(Graphics *g)
 	// draw all hitobjects in reverse
 	if (osu_draw_hitobjects.getBool())
 	{
-		for (int i=m_hitobjects.size()-1; i>=0; i--)
+		if (!osu_draw_reverse_order.getBool())
 		{
-			m_hitobjects[i]->draw(g);
+			for (int i=m_hitobjects.size()-1; i>=0; i--)
+			{
+				m_hitobjects[i]->draw(g);
+			}
+		}
+		else
+		{
+			for (int i=0; i<m_hitobjects.size(); i++)
+			{
+				m_hitobjects[i]->draw(g);
+			}
 		}
 		for (int i=m_hitobjects.size()-1; i>=0; i--)
 		{
@@ -349,7 +370,7 @@ void OsuBeatmap::drawFollowPoints(Graphics *g)
 			const float xDiff = endPoint.x - startPoint.x;
 			const float yDiff = endPoint.y - startPoint.y;
 			const Vector2 diff = endPoint - startPoint;
-			const float dist = roundf(diff.length() * 100.0f) / 100.0f; // rounded to avoid flicker with playfield rotations
+			const float dist = std::round(diff.length() * 100.0f) / 100.0f; // rounded to avoid flicker with playfield rotations
 
 			// draw all points between the two objects
 			const int followPointSeparation = Osu::getUIScale(m_osu, 32);
@@ -521,7 +542,10 @@ void OsuBeatmap::update()
 
 	// wobble mod
 	if (osu_mod_wobble.getBool())
-		m_fPlayfieldRotation = (m_iCurMusicPos/1000.0f)*30.0f;
+	{
+		const float speedMultiplierCompensation = 1.0f / getSpeedMultiplier();
+		m_fPlayfieldRotation = (m_iCurMusicPos/1000.0f)*30.0f*speedMultiplierCompensation*osu_mod_wobble_rotation_speed.getFloat();
+	}
 	else
 		m_fPlayfieldRotation = 0.0f;
 
@@ -668,6 +692,12 @@ void OsuBeatmap::update()
 		else
 			m_bIsSpinnerActive = false;
 	}
+
+	/*
+	float amplitude = engine->getSound()->getAmplitude(m_music);
+	float smooth = std::pow(0.05*osu_effect_amplitude_smooth.getFloat(), engine->getFrameTime());
+	m_fAmplitude = smooth*m_fAmplitude + (1.0f - smooth)*amplitude;
+	*/
 }
 
 void OsuBeatmap::skipEmptySection()
@@ -1066,7 +1096,7 @@ float OsuBeatmap::getAR()
 	}
 
 	if (osu_mod_arwobble.getBool())
-		AR += sin((m_iCurMusicPos/1000.0f)*osu_mod_arwobble_interval.getFloat())*osu_mod_arwobble_strength.getFloat();
+		AR += std::sin((m_iCurMusicPos/1000.0f)*osu_mod_arwobble_interval.getFloat())*osu_mod_arwobble_strength.getFloat();
 
 	return AR;
 }
@@ -1262,16 +1292,18 @@ Vector2 OsuBeatmap::osuCoords2Pixels(Vector2 coords)
 	// wobble
 	if (osu_mod_wobble.getBool())
 	{
-		coords.x += sin((m_iCurMusicPos/1000.0f)*5)*osu_mod_wobble_strength.getFloat();
-		coords.y += sin((m_iCurMusicPos/1000.0f)*4)*osu_mod_wobble_strength.getFloat();
+		const float speedMultiplierCompensation = 1.0f / getSpeedMultiplier();
+		coords.x += std::sin((m_iCurMusicPos/1000.0f)*5*speedMultiplierCompensation*osu_mod_wobble_frequency.getFloat())*osu_mod_wobble_strength.getFloat();
+		coords.y += std::sin((m_iCurMusicPos/1000.0f)*4*speedMultiplierCompensation*osu_mod_wobble_frequency.getFloat())*osu_mod_wobble_strength.getFloat();
 	}
 
 	// wobble2
 	if (osu_mod_wobble2.getBool())
 	{
+		const float speedMultiplierCompensation = 1.0f / getSpeedMultiplier();
 		Vector2 centerDelta = coords - Vector2(OsuGameRules::OSU_COORD_WIDTH, OsuGameRules::OSU_COORD_HEIGHT)/2;
-		coords.x += centerDelta.x*0.25f*sin((m_iCurMusicPos/1000.0f)*5)*osu_mod_wobble_strength.getFloat();
-		coords.y += centerDelta.y*0.25f*sin((m_iCurMusicPos/1000.0f)*5)*osu_mod_wobble_strength.getFloat();
+		coords.x += centerDelta.x*0.25f*std::sin((m_iCurMusicPos/1000.0f)*5*speedMultiplierCompensation*osu_mod_wobble_frequency.getFloat())*osu_mod_wobble_strength.getFloat();
+		coords.y += centerDelta.y*0.25f*std::sin((m_iCurMusicPos/1000.0f)*3*speedMultiplierCompensation*osu_mod_wobble_frequency.getFloat())*osu_mod_wobble_strength.getFloat();
 	}
 
 	// rotation
@@ -1293,15 +1325,26 @@ Vector2 OsuBeatmap::osuCoords2Pixels(Vector2 coords)
 	}
 
 	// if wobble, clamp coordinates
-	if (osu_mod_wobble.getBool())
+	if (osu_mod_wobble.getBool() || osu_mod_wobble2.getBool())
 	{
 		coords.x = clamp<float>(coords.x, 0.0f, OsuGameRules::OSU_COORD_WIDTH);
 		coords.y = clamp<float>(coords.y, 0.0f, OsuGameRules::OSU_COORD_HEIGHT);
 	}
 
 	// scale and offset
-	coords *= m_fScaleFactor;
-	coords += m_vPlayfieldOffset; // the offset is already scaled, just add it
+	///coords *= m_fScaleFactor;
+	///coords += m_vPlayfieldOffset; // the offset is already scaled, just add it
+
+	const float targetScreenWidthFull = m_osu->getScreenWidth() - m_fHitcircleDiameter;
+	const float targetScreenHeightFull = m_osu->getScreenHeight() - m_fHitcircleDiameter;
+
+	// scale
+	coords.x *= (1.0f - osu_playfield_stretch_x.getFloat())*m_fScaleFactor + osu_playfield_stretch_x.getFloat()*(targetScreenWidthFull / (float)OsuGameRules::OSU_COORD_WIDTH);
+	coords.y *= (1.0f - osu_playfield_stretch_y.getFloat())*m_fScaleFactor + osu_playfield_stretch_y.getFloat()*(targetScreenHeightFull / (float)OsuGameRules::OSU_COORD_HEIGHT);
+
+	// offset
+	coords.x += (1.0f - osu_playfield_stretch_x.getFloat())*m_vPlayfieldOffset.x + osu_playfield_stretch_x.getFloat()*(m_fHitcircleDiameter/2.0f);
+	coords.y += (1.0f - osu_playfield_stretch_y.getFloat())*m_vPlayfieldOffset.y + osu_playfield_stretch_y.getFloat()*(m_fHitcircleDiameter/2.0f);
 
 	// first person mod, centered cursor
 	if (osu_mod_fps.getBool())
@@ -1420,6 +1463,7 @@ void OsuBeatmap::updateAutoCursorPos()
 	Vector2 prevPos = m_vPlayfieldCenter;
 	Vector2 curPos = m_vPlayfieldCenter;
 	Vector2 nextPos = m_vPlayfieldCenter;
+	int nextPosIndex = 0;
 	bool haveCurPos = false;
 
 	long curMusicPos = m_iCurMusicPos + (long)osu_global_offset.getInt() - m_selectedDifficulty->localoffset;
@@ -1456,6 +1500,7 @@ void OsuBeatmap::updateAutoCursorPos()
 			// get next object
 			if (o->getTime() > curMusicPos)
 			{
+				nextPosIndex = i;
 				nextPos = o->getAutoCursorPos(curMusicPos);
 				nextTime = o->getTime();
 				break;
@@ -1476,6 +1521,7 @@ void OsuBeatmap::updateAutoCursorPos()
 			}
 			else if (!o->isFinished()) // get next object
 			{
+				nextPosIndex = i;
 				nextPos = o->getAutoCursorPos(curMusicPos);
 				nextTime = o->getTime();
 
@@ -1515,7 +1561,6 @@ void OsuBeatmap::updateAutoCursorPos()
 
 		// scaled distance (not osucoords)
 		float distance = (nextPos-prevPos).length();
-
 		if (distance > m_fHitcircleDiameter*1.05f) // snap only if not in a stream (heuristic)
 		{
 			int numIterations = clamp<int>(m_osu->getModAutopilot() ? osu_autopilot_snapping_strength.getInt() : osu_auto_snapping_strength.getInt(), 0, 42);
@@ -1524,8 +1569,23 @@ void OsuBeatmap::updateAutoCursorPos()
 				percent = (-percent)*(percent-2.0f);
 			}
 		}
+		else // in a stream
+		{
+			m_iAutoCursorDanceIndex = nextPosIndex;
+		}
 
 		m_vAutoCursorPos = prevPos + (nextPos - prevPos)*percent;
+
+		if (osu_auto_cursordance.getBool())
+		{
+			Vector3 dir = Vector3(nextPos.x, nextPos.y, 0) - Vector3(prevPos.x, prevPos.y, 0);
+			Vector3 center = dir*0.5f;
+			Matrix4 worldMatrix;
+			worldMatrix.translate(center);
+			worldMatrix.rotate((1.0f-percent) * 180.0f * (m_iAutoCursorDanceIndex % 2 == 0 ? 1 : -1), 0, 0, 1);
+			Vector3 fancyAutoCursorPos = worldMatrix*center;
+			m_vAutoCursorPos = prevPos + (nextPos-prevPos)*0.5f + Vector2(fancyAutoCursorPos.x, fancyAutoCursorPos.y);
+		}
 	}
 }
 
@@ -1562,6 +1622,9 @@ Vector2 OsuBeatmap::originalOsuCoords2Stack(Vector2 coords)
 
 void OsuBeatmap::calculateStacks()
 {
+	if (!osu_stacking.getBool())
+		return;
+
 	updateHitobjectMetrics(); // needed for the calculations
 
 	//
