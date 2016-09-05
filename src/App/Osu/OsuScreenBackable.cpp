@@ -22,7 +22,7 @@ OsuScreenBackable::OsuScreenBackable(Osu *osu) : OsuScreen()
 
 	m_backButton = new OsuUIBackButton("", 0, 0, 0, 0, "");
 	m_backButton->setScaleToFit(true);
-	m_backButton->setClickCallback( MakeDelegate(this, &OsuScreenBackable::onBack) );
+	m_backButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuScreenBackable::onBack) );
 
 	updateLayout();
 }

@@ -141,15 +141,15 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("VSync", convar->getConVarByName("vsync"));
 	addCheckbox("Show FPS Counter", convar->getConVarByName("osu_draw_fps"));
 	addSpacer();
-	addSlider("FPS Limiter:", 60.0f, 1000.0f, convar->getConVarByName("fps_max"))->setChangeCallback( MakeDelegate(this, &OsuOptionsMenu::onSliderChangeInt) );
+	addSlider("FPS Limiter:", 60.0f, 1000.0f, convar->getConVarByName("fps_max"))->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeInt) );
 
 	addSubSection("Layout");
 	OPTIONS_ELEMENT resolutionSelect = addButton("Select Resolution", UString::format("%ix%i", m_osu->getScreenWidth(), m_osu->getScreenHeight()));
-	((CBaseUIButton*)resolutionSelect.elements[0])->setClickCallback( MakeDelegate(this, &OsuOptionsMenu::onResolutionSelect) );
+	((CBaseUIButton*)resolutionSelect.elements[0])->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onResolutionSelect) );
 	m_resolutionLabel = (CBaseUILabel*)resolutionSelect.elements[1];
 	m_resolutionSelectButton = resolutionSelect.elements[0];
 	m_fullscreenCheckbox = addCheckbox("Fullscreen");
-	m_fullscreenCheckbox->setChangeCallback( MakeDelegate(this, &OsuOptionsMenu::onFullscreenChange) );
+	m_fullscreenCheckbox->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onFullscreenChange) );
 	addCheckbox("Letterboxing", convar->getConVarByName("osu_letterboxing"));
 
 	addSubSection("Detail Settings");
@@ -165,7 +165,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSlider("Effects:", 0.0f, 1.0f, convar->getConVarByName("osu_volume_effects"), 70.0f);
 
 	addSubSection("Offset Adjustment");
-	addSlider("Global Offset:", -300.0f, 300.0f, convar->getConVarByName("osu_global_offset"))->setChangeCallback( MakeDelegate(this, &OsuOptionsMenu::onSliderChangeInt) );
+	addSlider("Global Offset:", -300.0f, 300.0f, convar->getConVarByName("osu_global_offset"))->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeInt) );
 
 	//**************************************************************************************************************************//
 
@@ -181,17 +181,17 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Disable Mouse Buttons in Play Mode", convar->getConVarByName("osu_disable_mousebuttons"));
 
 	addSubSection("Keyboard");
-	addButton("Left Click", &OsuKeyBindings::LEFT_CLICK)->setClickCallback( MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addButton("Right Click", &OsuKeyBindings::RIGHT_CLICK)->setClickCallback( MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addButton("Left Click", &OsuKeyBindings::LEFT_CLICK)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addButton("Right Click", &OsuKeyBindings::RIGHT_CLICK)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
 	addSpacer();
-	addButton("Game Pause", &OsuKeyBindings::GAME_PAUSE)->setClickCallback( MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addButton("Skip Cutscene", &OsuKeyBindings::SKIP_CUTSCENE)->setClickCallback( MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addButton("Increase Local Song Offset", &OsuKeyBindings::INCREASE_LOCAL_OFFSET)->setClickCallback( MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addButton("Decrease Local Song Offset", &OsuKeyBindings::DECREASE_LOCAL_OFFSET)->setClickCallback( MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addButton("Quick Retry (hold briefly)", &OsuKeyBindings::QUICK_RETRY)->setClickCallback( MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addButton("Game Pause", &OsuKeyBindings::GAME_PAUSE)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addButton("Skip Cutscene", &OsuKeyBindings::SKIP_CUTSCENE)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addButton("Increase Local Song Offset", &OsuKeyBindings::INCREASE_LOCAL_OFFSET)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addButton("Decrease Local Song Offset", &OsuKeyBindings::DECREASE_LOCAL_OFFSET)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addButton("Quick Retry (hold briefly)", &OsuKeyBindings::QUICK_RETRY)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
 	addSpacer();
-	addButton("Increase Volume", &OsuKeyBindings::INCREASE_VOLUME)->setClickCallback( MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addButton("Decrease Volume", &OsuKeyBindings::DECREASE_VOLUME)->setClickCallback( MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addButton("Increase Volume", &OsuKeyBindings::INCREASE_VOLUME)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addButton("Decrease Volume", &OsuKeyBindings::DECREASE_VOLUME)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
 
 	//**************************************************************************************************************************//
 
@@ -200,10 +200,10 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSubSection("Skin");
 	addSkinPreview();
 	OPTIONS_ELEMENT skinSelect = addButton("Select Skin", "default");
-	((CBaseUIButton*)skinSelect.elements[0])->setClickCallback( MakeDelegate(this, &OsuOptionsMenu::onSkinSelect) );
+	((CBaseUIButton*)skinSelect.elements[0])->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSkinSelect) );
 	m_skinLabel = (CBaseUILabel*)skinSelect.elements[1];
 	m_skinSelectButton = skinSelect.elements[0];
-	addButton("Reload Skin (CTRL+ALT+SHIFT+S)")->setClickCallback( MakeDelegate(this, &OsuOptionsMenu::onSkinReload) );
+	addButton("Reload Skin (CTRL+ALT+SHIFT+S)")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSkinReload) );
 	addSpacer();
 	addSlider("Number Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_number_scale_multiplier"), 135.0f);
 	addSlider("HitResult Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_hitresult_scale"), 135.0f);
@@ -224,9 +224,9 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSection("Gameplay");
 
 	addSubSection("General");
-	addSlider("Background Dim:", 0.0f, 1.0f, convar->getConVarByName("osu_background_dim"))->setChangeCallback( MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
+	addSlider("Background Dim:", 0.0f, 1.0f, convar->getConVarByName("osu_background_dim"))->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
 	m_backgroundBrightnessSlider = addSlider("Background Brightness:", 0.0f, 1.0f, convar->getConVarByName("osu_background_brightness"));
-	m_backgroundBrightnessSlider->setChangeCallback( MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
+	m_backgroundBrightnessSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
 
 	addSubSection("HUD");
 	addCheckbox("Draw HUD", convar->getConVarByName("osu_draw_hud"));
@@ -257,7 +257,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Draw Playfield Border", convar->getConVarByName("osu_draw_playfield_border"));
 	addSpacer();
 	m_playfieldBorderSizeSlider = addSlider("Playfield Border Size:", 0.0f, 500.0f, convar->getConVarByName("osu_hud_playfield_border_size"));
-	m_playfieldBorderSizeSlider->setChangeCallback( MakeDelegate(this, &OsuOptionsMenu::onSliderChangeInt) );
+	m_playfieldBorderSizeSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeInt) );
 
 	addSubSection("Hitobjects");
 	addCheckbox("Draw Numbers", convar->getConVarByName("osu_draw_numbers"));
@@ -634,7 +634,7 @@ void OsuOptionsMenu::onSkinSelect()
 			m_contextMenu->addButton(skinFolders[i]);
 		}
 		m_contextMenu->end();
-		m_contextMenu->setClickCallback( MakeDelegate(this, &OsuOptionsMenu::onSkinSelect2) );
+		m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSkinSelect2) );
 	}
 	else
 	{
@@ -739,7 +739,7 @@ void OsuOptionsMenu::onResolutionSelect()
 		m_contextMenu->addButton(UString::format("%ix%i", (int)std::round(customResolutions[i].x), (int)std::round(customResolutions[i].y)));
 	}
 	m_contextMenu->end();
-	m_contextMenu->setClickCallback( MakeDelegate(this, &OsuOptionsMenu::onResolutionSelect2) );
+	m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onResolutionSelect2) );
 }
 
 void OsuOptionsMenu::onResolutionSelect2(UString resolution)
@@ -747,7 +747,7 @@ void OsuOptionsMenu::onResolutionSelect2(UString resolution)
 	if (env->isFullscreen())
 		convar->getConVarByName("osu_resolution")->setValue(resolution);
 	else
-		convar->getConVarByName("windowed")->exec_arg(resolution);
+		convar->getConVarByName("windowed")->execArgs(resolution);
 }
 
 void OsuOptionsMenu::onCheckboxChange(CBaseUICheckbox *checkbox)
@@ -948,7 +948,7 @@ CBaseUICheckbox *OsuOptionsMenu::addCheckbox(UString text, ConVar *cvar)
 	if (cvar != NULL)
 	{
 		checkbox->setChecked(cvar->getBool());
-		checkbox->setChangeCallback( MakeDelegate(this, &OsuOptionsMenu::onCheckboxChange) );
+		checkbox->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onCheckboxChange) );
 	}
 	m_options->getContainer()->addBaseUIElement(checkbox);
 
@@ -970,7 +970,7 @@ OsuUISlider *OsuOptionsMenu::addSlider(UString text, float min, float max, ConVa
 	if (cvar != NULL)
 	{
 		slider->setValue(cvar->getFloat(), false);
-		slider->setChangeCallback( MakeDelegate(this, &OsuOptionsMenu::onSliderChange) );
+		slider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChange) );
 	}
 	m_options->getContainer()->addBaseUIElement(slider);
 
@@ -1240,7 +1240,7 @@ void OsuUIListBoxContextMenu::addButton(UString text)
 	int margin = 9;
 
 	CBaseUIButton *button = new CBaseUIButton(margin, m_iYCounter + margin, 0, buttonHeight, text, text);
-	button->setClickCallback( MakeDelegate(this, &OsuUIListBoxContextMenu::onClick) );
+	button->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUIListBoxContextMenu::onClick) );
 	button->setWidthToContent(3);
 	button->setTextLeft(true);
 	button->setDrawFrame(false);
