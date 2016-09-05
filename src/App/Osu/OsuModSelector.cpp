@@ -113,13 +113,13 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen()
 	OVERRIDE_SLIDER overrideHP = addOverrideSlider("HP Override", "HP:", convar->getConVarByName("osu_hp_override"));
 	OVERRIDE_SLIDER overrideBPM = addOverrideSlider("BPM Override", "BPM:", convar->getConVarByName("osu_speed_override"), 0.0f, 2.5f);
 	OVERRIDE_SLIDER overrideSpeed = addOverrideSlider("Speed Multiplier", "x", convar->getConVarByName("osu_speed_override"), 0.0f, 2.5f);
-	overrideCS.slider->setChangeCallback( MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
-	overrideAR.slider->setChangeCallback( MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
-	overrideOD.slider->setChangeCallback( MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
-	overrideHP.slider->setChangeCallback( MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
-	overrideBPM.slider->setChangeCallback( MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
+	overrideCS.slider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
+	overrideAR.slider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
+	overrideOD.slider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
+	overrideHP.slider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
+	overrideBPM.slider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
 	overrideBPM.slider->setValue(-1.0f, false);
-	overrideSpeed.slider->setChangeCallback( MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
+	overrideSpeed.slider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
 	overrideSpeed.slider->setValue(-1.0f, false);
 
 	m_ARSlider = overrideAR.slider;
@@ -145,10 +145,10 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen()
 
 	// build action buttons
 	m_resetModsButton = addActionButton("1. Reset All Mods");
-	m_resetModsButton->setClickCallback( MakeDelegate(this, &OsuModSelector::resetMods) );
+	m_resetModsButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::resetMods) );
 	m_resetModsButton->setColor(0xffff3800);
 	m_closeButton = addActionButton("2. Close");
-	m_closeButton->setClickCallback( MakeDelegate(this, &OsuModSelector::close) );
+	m_closeButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::close) );
 	m_closeButton->setColor(0xff8f8f8f);
 
 	updateButtons();
@@ -673,7 +673,7 @@ CBaseUICheckbox *OsuModSelector::addExperimentalCheckbox(UString text, UString t
 	if (cvar != NULL)
 	{
 		checkbox->setChecked(cvar->getBool());
-		checkbox->setChangeCallback( MakeDelegate(this, &OsuModSelector::onCheckboxChange) );
+		checkbox->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onCheckboxChange) );
 	}
 	m_experimentalContainer->addBaseUIElement(checkbox);
 

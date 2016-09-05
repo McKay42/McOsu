@@ -51,7 +51,7 @@ ConVar osu_disable_mousewheel("osu_disable_mousewheel", false);
 ConVar osu_confine_cursor_windowed("osu_confine_cursor_windowed", false, DUMMY_OSU_LETTERBOXING);
 ConVar osu_confine_cursor_fullscreen("osu_confine_cursor_fullscreen", true, DUMMY_OSU_LETTERBOXING);
 
-ConVar osu_skin("osu_skin", UString("default"), DUMMY_OSU_VOLUME_MUSIC_ARGS);
+ConVar osu_skin("osu_skin", "default", DUMMY_OSU_VOLUME_MUSIC_ARGS);
 ConVar osu_skin_reload("osu_skin_reload", DUMMY_OSU_MODS);
 
 ConVar osu_volume_master("osu_volume_master", 0.5f, DUMMY_OSU_VOLUME_MUSIC_ARGS);
@@ -64,12 +64,12 @@ ConVar osu_pitch_override("osu_pitch_override", -1.0f, DUMMY_OSU_VOLUME_MUSIC_AR
 ConVar osu_pause_on_focus_loss("osu_pause_on_focus_loss", true);
 ConVar osu_quick_retry_delay("osu_quick_retry_delay", 0.27f);
 
-ConVar osu_mods("osu_mods", UString(""), DUMMY_OSU_VOLUME_MUSIC_ARGS);
+ConVar osu_mods("osu_mods", "", DUMMY_OSU_VOLUME_MUSIC_ARGS);
 ConVar osu_mod_fadingcursor("osu_mod_fadingcursor", false);
 ConVar osu_mod_fadingcursor_combo("osu_mod_fadingcursor_combo", 50.0f);
 
 ConVar osu_letterboxing("osu_letterboxing", true, DUMMY_OSU_LETTERBOXING);
-ConVar osu_resolution("osu_resolution", UString("1280x720"), DUMMY_OSU_VOLUME_MUSIC_ARGS);
+ConVar osu_resolution("osu_resolution", "1280x720", DUMMY_OSU_VOLUME_MUSIC_ARGS);
 ConVar osu_resolution_enabled("osu_resolution_enabled", false);
 
 ConVar osu_draw_fps("osu_draw_fps", true);
@@ -101,21 +101,21 @@ Osu::Osu()
 	osu_resolution.setValue(UString::format("%ix%i", engine->getScreenWidth(), engine->getScreenHeight()));
 
 	// convar callbacks
-	osu_skin.setCallback( MakeDelegate(this, &Osu::onSkinChange) );
-	osu_skin_reload.setCallback( MakeDelegate(this, &Osu::onSkinReload) );
+	osu_skin.setCallback( fastdelegate::MakeDelegate(this, &Osu::onSkinChange) );
+	osu_skin_reload.setCallback( fastdelegate::MakeDelegate(this, &Osu::onSkinReload) );
 
-	osu_volume_master.setCallback( MakeDelegate(this, &Osu::onMasterVolumeChange) );
-	osu_volume_music.setCallback( MakeDelegate(this, &Osu::onMusicVolumeChange) );
-	osu_speed_override.setCallback( MakeDelegate(this, &Osu::onSpeedChange) );
-	osu_pitch_override.setCallback( MakeDelegate(this, &Osu::onPitchChange) );
+	osu_volume_master.setCallback( fastdelegate::MakeDelegate(this, &Osu::onMasterVolumeChange) );
+	osu_volume_music.setCallback( fastdelegate::MakeDelegate(this, &Osu::onMusicVolumeChange) );
+	osu_speed_override.setCallback( fastdelegate::MakeDelegate(this, &Osu::onSpeedChange) );
+	osu_pitch_override.setCallback( fastdelegate::MakeDelegate(this, &Osu::onPitchChange) );
 
-	osu_mods.setCallback( MakeDelegate(this, &Osu::updateModsForConVarTemplate) );
+	osu_mods.setCallback( fastdelegate::MakeDelegate(this, &Osu::updateModsForConVarTemplate) );
 
-	osu_resolution.setCallback( MakeDelegate(this, &Osu::onInternalResolutionChanged) );
-	osu_letterboxing.setCallback( MakeDelegate(this, &Osu::onLetterboxingChange) );
+	osu_resolution.setCallback( fastdelegate::MakeDelegate(this, &Osu::onInternalResolutionChanged) );
+	osu_letterboxing.setCallback( fastdelegate::MakeDelegate(this, &Osu::onLetterboxingChange) );
 
-	osu_confine_cursor_windowed.setCallback( MakeDelegate(this, &Osu::onConfineCursorWindowedChange) );
-	osu_confine_cursor_fullscreen.setCallback( MakeDelegate(this, &Osu::onConfineCursorFullscreenChange) );
+	osu_confine_cursor_windowed.setCallback( fastdelegate::MakeDelegate(this, &Osu::onConfineCursorWindowedChange) );
+	osu_confine_cursor_fullscreen.setCallback( fastdelegate::MakeDelegate(this, &Osu::onConfineCursorFullscreenChange) );
 
   	// vars
 	m_skin = NULL;

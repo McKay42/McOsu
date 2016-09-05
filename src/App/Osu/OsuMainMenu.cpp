@@ -123,18 +123,18 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen()
 
 	m_container->addBaseUIElement(m_mainButton);
 
-	addMainMenuButton("Play")->setClickCallback( MakeDelegate(this, &OsuMainMenu::onPlayButtonPressed) );
+	addMainMenuButton("Play")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuMainMenu::onPlayButtonPressed) );
 	///addMainMenuButton("Edit");
-	addMainMenuButton("Options")->setClickCallback( MakeDelegate(this, &OsuMainMenu::onOptionsButtonPressed) );
-	addMainMenuButton("Exit")->setClickCallback( MakeDelegate(this, &OsuMainMenu::onExitButtonPressed) );
+	addMainMenuButton("Options")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuMainMenu::onOptionsButtonPressed) );
+	addMainMenuButton("Exit")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuMainMenu::onExitButtonPressed) );
 
 	m_pauseButton = new OsuMainMenuPauseButton(0, 0, 0, 0, "", "");
-	m_pauseButton->setClickCallback( MakeDelegate(this, &OsuMainMenu::onPausePressed) );
+	m_pauseButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuMainMenu::onPausePressed) );
 	m_container->addBaseUIElement(m_pauseButton);
 
 	m_updateAvailableButton = new OsuUIButton(m_osu, 0, 0, 0, 0, "", "Checking for updates ...");
 	m_updateAvailableButton->setUseDefaultSkin();
-	m_updateAvailableButton->setClickCallback( MakeDelegate(this, &OsuMainMenu::onUpdatePressed) );
+	m_updateAvailableButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuMainMenu::onUpdatePressed) );
 	m_updateAvailableButton->setColor(0x2200ff00);
 	m_updateAvailableButton->setTextColor(0x22ffffff);
 
