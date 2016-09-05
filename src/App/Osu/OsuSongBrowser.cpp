@@ -33,11 +33,11 @@ void DUMMY_OSU_REFRESH_BEATMAPS() {;}
 
 #if defined(_WIN32) || defined(_WIN64) || defined(__WIN32__) || defined(__CYGWIN__) || defined(__CYGWIN32__) || defined(__TOS_WIN__) || defined(__WINDOWS__)
 
-ConVar osu_folder("osu_folder", UString("C:/Program Files (x86)/osu!/"));
+ConVar osu_folder("osu_folder", "C:/Program Files (x86)/osu!/");
 
 #elif defined __linux__
 
-ConVar osu_folder("osu_folder", UString("/media/pg/Win7/Program Files (x86)/osu!/"));
+ConVar osu_folder("osu_folder", "/media/pg/Win7/Program Files (x86)/osu!/");
 
 #else
 
@@ -57,7 +57,7 @@ OsuSongBrowser::OsuSongBrowser(Osu *osu) : OsuScreenBackable(osu)
 	m_osu = osu;
 
 	// convar callbacks
-	osu_refresh_beatmaps.setCallback( MakeDelegate(this, &OsuSongBrowser::refreshBeatmaps) );
+	osu_refresh_beatmaps.setCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser::refreshBeatmaps) );
 
 	// convar refs
 	m_fps_max_ref = convar->getConVarByName("fps_max");
@@ -96,9 +96,9 @@ OsuSongBrowser::OsuSongBrowser(Osu *osu) : OsuScreenBackable(osu)
 	// build bottombar
 	m_bottombar = new CBaseUIContainer(0, 0, 0, 0, "");
 
-	addBottombarNavButton()->setClickCallback( MakeDelegate(this, &OsuSongBrowser::onSelectionMods) );
-	addBottombarNavButton()->setClickCallback( MakeDelegate(this, &OsuSongBrowser::onSelectionRandom) );
-	///addBottombarNavButton()->setClickCallback( MakeDelegate(this, &OsuSongBrowser::onSelectionOptions) );
+	addBottombarNavButton()->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser::onSelectionMods) );
+	addBottombarNavButton()->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser::onSelectionRandom) );
+	///addBottombarNavButton()->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser::onSelectionOptions) );
 }
 
 void OsuSongBrowser::onStartDebugMap()

@@ -244,7 +244,7 @@ OsuSkin::OsuSkin(Osu *osu, UString filepath)
 	load();
 
 	// convar callbacks
-	osu_volume_effects.setCallback( MakeDelegate(this, &OsuSkin::onEffectVolumeChange) );
+	osu_volume_effects.setCallback( fastdelegate::MakeDelegate(this, &OsuSkin::onEffectVolumeChange) );
 
 	// force effect volume change
 	onEffectVolumeChange("", UString::format("%f", osu_volume_effects.getFloat()));

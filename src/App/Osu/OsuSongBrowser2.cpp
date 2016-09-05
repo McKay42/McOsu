@@ -74,9 +74,9 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	// build bottombar
 	m_bottombar = new CBaseUIContainer(0, 0, 0, 0, "");
 
-	addBottombarNavButton()->setClickCallback( MakeDelegate(this, &OsuSongBrowser2::onSelectionMods) );
-	addBottombarNavButton()->setClickCallback( MakeDelegate(this, &OsuSongBrowser2::onSelectionRandom) );
-	///addBottombarNavButton()->setClickCallback( MakeDelegate(this, &OsuSongBrowser::onSelectionOptions) );
+	addBottombarNavButton()->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onSelectionMods) );
+	addBottombarNavButton()->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onSelectionRandom) );
+	///addBottombarNavButton()->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser::onSelectionOptions) );
 
 	// build songbrowser
 	m_songBrowser = new CBaseUIScrollView(0, 0, 0, 0, "");

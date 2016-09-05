@@ -66,9 +66,9 @@ OsuPauseMenu::OsuPauseMenu(Osu *osu) : OsuScreen()
 	OsuPauseMenuButton *retryButton = addButton();
 	OsuPauseMenuButton *backButton = addButton();
 
-	continueButton->setClickCallback( MakeDelegate(this, &OsuPauseMenu::onContinueClicked) );
-	retryButton->setClickCallback( MakeDelegate(this, &OsuPauseMenu::onRetryClicked) );
-	backButton->setClickCallback( MakeDelegate(this, &OsuPauseMenu::onBackClicked) );
+	continueButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuPauseMenu::onContinueClicked) );
+	retryButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuPauseMenu::onRetryClicked) );
+	backButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuPauseMenu::onBackClicked) );
 
 	updateButtons();
 	updateLayout();
