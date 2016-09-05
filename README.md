@@ -7,6 +7,7 @@
 An unofficial open-source client for [osu!](https://osu.ppy.sh) with the main focus on making practicing easier and customizing gameplay.
 
 Runs on McEngine: [https://github.com/McKay42/McEngine](https://github.com/McKay42/McEngine)
+
 Binaries will be available for **Windows** and **Linux**, and maybe macOS in the future.
 Note that Linux support is not as polished as Windows, and some functions such as native fullscreen mode do not work there yet.
 
