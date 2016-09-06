@@ -26,6 +26,7 @@
 #include "OsuSongBrowser.h"
 #include "OsuSongBrowser2.h"
 #include "OsuModSelector.h"
+#include "OsuRankingScreen.h"
 #include "OsuKeyBindings.h"
 #include "OsuNotificationOverlay.h"
 #include "OsuTooltipOverlay.h"
@@ -135,6 +136,7 @@ Osu::Osu()
 	m_bToggleModSelectionScheduled = false;
 	m_bToggleSongBrowserScheduled = false;
 	m_bToggleOptionsMenuScheduled = false;
+	m_bToggleRankingScreenScheduled = false;
 
 	m_bModAuto = false;
 	m_bModAutopilot = false;
@@ -190,16 +192,18 @@ Osu::Osu()
 	m_songBrowser2 = NULL;
 	m_songBrowser2 = new OsuSongBrowser2(this);
 	m_modSelector = new OsuModSelector(this);
+	m_rankingScreen = new OsuRankingScreen(this);
 	m_pauseMenu = new OsuPauseMenu(this);
 	m_hud = new OsuHUD(this);
 
 	// the order in this vector will define in which order events are handled/consumed
 	m_screens.push_back(m_notificationOverlay);
+	m_screens.push_back(m_rankingScreen);
 	m_screens.push_back(m_modSelector);
 	m_screens.push_back(m_pauseMenu);
 	m_screens.push_back(m_hud);
 	if (m_songBrowser != NULL)
-	m_screens.push_back(m_songBrowser);
+		m_screens.push_back(m_songBrowser);
 	if (m_songBrowser2 != NULL)
 		m_screens.push_back(m_songBrowser2);
 	m_screens.push_back(m_optionsMenu);
@@ -208,11 +212,12 @@ Osu::Osu()
 
 	// make primary screen visible
 	//m_optionsMenu->setVisible(true);
-	m_mainMenu->setVisible(true);
+	//m_mainMenu->setVisible(true);
 	//m_modSelector->setVisible(true);
 	//m_songBrowser->setVisible(true);
 	//m_songBrowser2->setVisible(true);
 	//m_pauseMenu->setVisible(true);
+	m_rankingScreen->setVisible(true);
 
 	// debug
 	if (m_songBrowser != NULL)
@@ -291,6 +296,7 @@ void Osu::draw(Graphics *g)
 		m_modSelector->draw(g);
 		m_mainMenu->draw(g);
 		m_optionsMenu->draw(g);
+		m_rankingScreen->draw(g);
 
 		if (osu_draw_fps.getBool())
 			m_hud->drawFps(g);
@@ -376,6 +382,7 @@ void Osu::update()
 			if (m_songBrowser2 != NULL)
 				m_songBrowser2->setVisible(m_modSelector->isVisible());
 		}
+
 		m_modSelector->setVisible(!m_modSelector->isVisible());
 	}
 	if (m_bToggleSongBrowserScheduled)
@@ -386,6 +393,7 @@ void Osu::update()
 			m_songBrowser->setVisible(!m_songBrowser->isVisible());
 		if (m_songBrowser2 != NULL)
 			m_songBrowser2->setVisible(!m_songBrowser2->isVisible());
+
 		m_mainMenu->setVisible(!((m_songBrowser != NULL && m_songBrowser->isVisible()) || (m_songBrowser2 != NULL && m_songBrowser2->isVisible())));
 		updateConfineCursor();
 	}
@@ -395,6 +403,16 @@ void Osu::update()
 
 		m_optionsMenu->setVisible(!m_optionsMenu->isVisible());
 		m_mainMenu->setVisible(!m_optionsMenu->isVisible());
+	}
+	if (m_bToggleRankingScreenScheduled)
+	{
+		m_bToggleRankingScreenScheduled = false;
+
+		m_rankingScreen->setVisible(!m_rankingScreen->isVisible());
+		if (m_songBrowser != NULL)
+			m_songBrowser->setVisible(!m_rankingScreen->isVisible());
+		if (m_songBrowser2 != NULL)
+			m_songBrowser2->setVisible(!m_rankingScreen->isVisible());
 	}
 
 	// handle cursor visibility if outside of internal resolution
@@ -731,6 +749,11 @@ void Osu::toggleOptionsMenu()
 	m_bToggleOptionsMenuScheduled = true;
 }
 
+void Osu::toggleRankingScreen()
+{
+	m_bToggleRankingScreenScheduled = true;
+}
+
 void Osu::volumeDown()
 {
 	float newVolume = clamp<float>(osu_volume_master.getFloat() - osu_volume_change_interval.getFloat(), 0.0f, 1.0f);
@@ -745,19 +768,12 @@ void Osu::volumeUp()
 	m_hud->animateVolumeChange();
 }
 
-void Osu::stopRidiculouslyLongApplauseSound()
-{
-	if (m_skin->getApplause() != NULL && m_skin->getApplause()->isPlaying())
-		engine->getSound()->stop(m_skin->getApplause());
-}
-
 
 
 void Osu::onBeforePlayStart()
 {
 	debugLog("Osu::onBeforePlayStart()\n");
 
-	stopRidiculouslyLongApplauseSound();
 	engine->getSound()->play(m_skin->getMenuHit());
 
 	updateMods();
@@ -793,7 +809,14 @@ void Osu::onPlayEnd(bool quit)
 	env->setCursorVisible(false);
 	m_bShouldCursorBeVisible = false;
 
-	toggleSongBrowser();
+	if (m_songBrowser2 != NULL)
+		m_songBrowser2->onPlayEnd(quit);
+
+	if (quit)
+		toggleSongBrowser();
+	else
+		toggleRankingScreen();
+
 	updateConfineCursor();
 }
 

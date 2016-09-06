@@ -73,6 +73,7 @@ public:
 	void pause(bool quitIfWaiting = true);
 	void pausePreviewMusic();
 	void stop(bool quit = true);
+	void fail();
 
 	void setVolume(float volume);
 	void setSpeed(float speed);
@@ -210,7 +211,6 @@ private:
 	float m_fBeatLength;
 	float m_fAmplitude;
 
-	float m_fSongPercentBeforeStop;
 	long m_iCurMusicPos;
 	unsigned long m_iLastMusicPosition;
 	double m_fLastMusicPositionForInterpolation;

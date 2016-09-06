@@ -15,7 +15,6 @@ class OsuSliderCurveEqualDistanceMulti;
 
 class Shader;
 class VertexArrayObject;
-class VertexBuffer;
 
 class OsuSlider : public OsuHitObject
 {
@@ -156,7 +155,6 @@ protected:
 	static int UNIT_CONE_DIVIDES;
 	static std::vector<float> UNIT_CONE;
 	static VertexArrayObject *MASTER_CIRCLE_VAO;
-	static VertexBuffer *MASTER_CIRCLE_VB;
 	static float MASTER_CIRCLE_VAO_RADIUS;
 
 	void drawFillCircle(Graphics *g, Vector2 center);

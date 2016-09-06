@@ -310,7 +310,7 @@ void OsuOptionsMenu::draw(Graphics *g)
 	else if (m_playfieldBorderSizeSlider->isActive())
 		m_osu->getHUD()->drawPlayfieldBorder(g, OsuGameRules::getPlayfieldCenter(m_osu), OsuGameRules::getPlayfieldSize(m_osu), 100);
 	else
-		m_backButton->draw(g);
+		OsuScreenBackable::draw(g);
 
 	if (m_cursorSizeSlider->getFloat() < 0.15f)
 		engine->getMouse()->drawDebug(g);
