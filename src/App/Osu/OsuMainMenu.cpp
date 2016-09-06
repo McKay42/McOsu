@@ -415,8 +415,6 @@ void OsuMainMenu::setVisible(bool visible)
 	{
 		updateLayout();
 		m_fMainMenuAnimTime = engine->getTime() + 15.0f;
-
-		m_osu->stopRidiculouslyLongApplauseSound();
 	}
 }
 

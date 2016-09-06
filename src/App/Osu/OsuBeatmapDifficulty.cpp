@@ -601,6 +601,13 @@ bool OsuBeatmapDifficulty::load(OsuBeatmap *beatmap, std::vector<OsuHitObject*> 
 	for (int i=0; i<spinners.size(); i++)
 	{
 		OsuBeatmapDifficulty::SPINNER *s = &spinners[i];
+
+		if (osu_mod_random.getBool())
+		{
+			s->x = clamp<int>(s->x - ((rand() % OsuGameRules::OSU_COORD_WIDTH) / 1.25f) * (rand() % 2 == 0 ? 1.0f : -1.0f), 0, OsuGameRules::OSU_COORD_WIDTH);
+			s->y = clamp<int>(s->y - ((rand() & OsuGameRules::OSU_COORD_HEIGHT) / 1.25f) * (rand() % 2 == 0 ? 1.0f : -1.0f), 0, OsuGameRules::OSU_COORD_HEIGHT);
+		}
+
 		hitobjects->push_back(new OsuSpinner(s->x, s->y, s->time, s->sampleType, s->endTime, beatmap));
 	}
 
