@@ -21,7 +21,7 @@ class CBaseUILabel;
 class CBaseUISlider;
 class CBaseUICheckbox;
 
-class OsuModSelectorModButton;
+class OsuUIModSelectorModButton;
 class OsuUIButton;
 
 class ConVar;
@@ -68,8 +68,8 @@ private:
 	void updateButtons();
 	void updateLayout();
 
-	void setModButtonOnGrid(int x, int y, UString modName, UString tooltipText, Image *img);
-	OsuModSelectorModButton *getModButtonOnGrid(int x, int y);
+	void setModButtonOnGrid(int x, int y, int state, UString modName, UString tooltipText, Image *img);
+	OsuUIModSelectorModButton *getModButtonOnGrid(int x, int y);
 
 	OVERRIDE_SLIDER addOverrideSlider(UString text, UString labelText, ConVar *cvar, float min = 0.0f, float max = 12.5f);
 	void onOverrideSliderChange(CBaseUISlider *slider);
@@ -108,7 +108,7 @@ private:
 	// mod grid buttons
 	int m_iGridWidth;
 	int m_iGridHeight;
-	std::vector<OsuModSelectorModButton *> m_modButtons;
+	std::vector<OsuUIModSelectorModButton *> m_modButtons;
 
 	// experimental mods
 	std::vector<EXPERIMENTAL_MOD> m_experimentalMods;

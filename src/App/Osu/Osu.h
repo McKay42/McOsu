@@ -17,6 +17,7 @@ class OsuOptionsMenu;
 class OsuModSelector;
 class OsuSongBrowser;
 class OsuSongBrowser2;
+class OsuRankingScreen;
 class OsuNotificationOverlay;
 class OsuTooltipOverlay;
 class OsuBeatmap;
@@ -76,11 +77,10 @@ public:
 	void toggleModSelection(bool waitForF1KeyUp = false);
 	void toggleSongBrowser();
 	void toggleOptionsMenu();
+	void toggleRankingScreen();
 
 	void volumeDown();
 	void volumeUp();
-
-	void stopRidiculouslyLongApplauseSound();
 
 	void reloadSkin() {onSkinReload();}
 
@@ -95,6 +95,7 @@ public:
 	inline OsuNotificationOverlay *getNotificationOverlay() {return m_notificationOverlay;}
 	inline OsuTooltipOverlay *getTooltipOverlay() {return m_tooltipOverlay;}
 	inline OsuModSelector *getModSelector() {return m_modSelector;}
+	inline OsuRankingScreen *getRankingScreen() {return m_rankingScreen;}
 
 	inline RenderTarget *getFrameBuffer() {return m_frameBuffer;}
 	inline McFont *getTitleFont() {return m_titleFont;}
@@ -163,6 +164,7 @@ private:
 	OsuSongBrowser *m_songBrowser;
 	OsuSongBrowser2 *m_songBrowser2;
 	OsuModSelector *m_modSelector;
+	OsuRankingScreen *m_rankingScreen;
 	OsuPauseMenu *m_pauseMenu;
 	OsuSkin *m_skin;
 	OsuHUD *m_hud;
@@ -207,6 +209,7 @@ private:
 	bool m_bToggleModSelectionScheduled;
 	bool m_bToggleSongBrowserScheduled;
 	bool m_bToggleOptionsMenuScheduled;
+	bool m_bToggleRankingScreenScheduled;
 
 	// cursor
 	bool m_bShouldCursorBeVisible;

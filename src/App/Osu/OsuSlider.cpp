@@ -15,7 +15,6 @@
 
 #include "Shader.h"
 #include "VertexArrayObject.h"
-#include "VertexBuffer.h"
 #include "RenderTarget.h"
 
 #include "Osu.h"
@@ -50,7 +49,6 @@ float OsuSliderCurve::CURVE_POINTS_SEPERATION = 2.5f; // bigger value = less ste
 int OsuSliderCurve::UNIT_CONE_DIVIDES = 42; // can probably lower this a little bit, but not under 32
 std::vector<float> OsuSliderCurve::UNIT_CONE;
 VertexArrayObject *OsuSliderCurve::MASTER_CIRCLE_VAO = NULL;
-VertexBuffer *OsuSliderCurve::MASTER_CIRCLE_VB = NULL;
 float OsuSliderCurve::MASTER_CIRCLE_VAO_RADIUS = 0.0f;
 
 OsuSlider::OsuSlider(char type, int repeat, float pixelLength, std::vector<Vector2> points, std::vector<float> ticks, float sliderTime, float sliderTimeWithoutRepeats, long time, int sampleType, int comboNumber, int colorCounter, OsuBeatmap *beatmap) : OsuHitObject(time, sampleType, comboNumber, colorCounter, beatmap)
@@ -1078,18 +1076,13 @@ OsuSliderCurve::OsuSliderCurve(OsuSlider *parent, OsuBeatmap *beatmap)
 			UNIT_CONE.push_back(-1.0f);
 		}
 	}
-
-	/*
 	if (MASTER_CIRCLE_VAO == NULL)
 	{
 		MASTER_CIRCLE_VAO = new VertexArrayObject();
 		MASTER_CIRCLE_VAO->setType(VertexArrayObject::TYPE_TRIANGLE_FAN);
 	}
-	*/
-	if (MASTER_CIRCLE_VB == NULL)
-	{
-		MASTER_CIRCLE_VB = new VertexBuffer();
-	}
+
+
 
 	m_slider = parent;
 	m_beatmap = beatmap;
@@ -1377,25 +1370,12 @@ void OsuSliderCurve::drawFillSliderBody2(Graphics *g, int drawUpTo, int drawFrom
 	if (radius != MASTER_CIRCLE_VAO_RADIUS)
 	{
 		MASTER_CIRCLE_VAO_RADIUS = radius;
-		/*
 		MASTER_CIRCLE_VAO->clear();
 		for (int i=0; i<UNIT_CONE.size()/5; i++)
 		{
 			MASTER_CIRCLE_VAO->addVertex(Vector3((radius * UNIT_CONE[i * 5 + 2]), (radius * UNIT_CONE[i * 5 + 3]), UNIT_CONE[i * 5 + 4]));
 			MASTER_CIRCLE_VAO->addTexcoord(Vector2(UNIT_CONE[i * 5 + 0], UNIT_CONE[i * 5 + 1]));
 		}
-		*/
-
-		std::vector<Vector3> vertices;
-		std::vector<Vector2> texCoords;
-		vertices.reserve(UNIT_CONE.size()/5);
-		texCoords.reserve(UNIT_CONE.size()/5);
-		for (int i=0; i<UNIT_CONE.size()/5; i++)
-		{
-			vertices.push_back(Vector3((radius * UNIT_CONE[i * 5 + 2]), (radius * UNIT_CONE[i * 5 + 3]), UNIT_CONE[i * 5 + 4]));
-			texCoords.push_back(Vector2(UNIT_CONE[i * 5 + 0], UNIT_CONE[i * 5 + 1]));
-		}
-		MASTER_CIRCLE_VB->set(&vertices, &texCoords);
 	}
 
 	g->pushTransform();
@@ -1409,8 +1389,7 @@ void OsuSliderCurve::drawFillSliderBody2(Graphics *g, int drawUpTo, int drawFrom
 		float y = m_beatmap->osuCoords2Pixels(m_curvePoints[i]).y;
 
 		g->translate(x-startX, y-startY, 0);
-		//g->drawVAO(MASTER_CIRCLE_VAO);
-		g->drawVB(MASTER_CIRCLE_VB);
+		g->drawVAO(MASTER_CIRCLE_VAO);
 
 		startX = x;
 		startY = y;

@@ -49,6 +49,8 @@ public:
 
 	void onResolutionChange(Vector2 newResolution);
 
+	void onPlayEnd(bool quit = true);	// called when a beatmap is finished playing (or the player quit)
+
 	void refreshBeatmaps();
 
 	void onDifficultySelected(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff, bool fromClick = false, bool play = false);
@@ -62,7 +64,7 @@ public:
 	static bool searchMatcher(OsuBeatmap *beatmap, UString searchString);
 
 private:
-	void updateLayout();
+	virtual void updateLayout();
 	void scheduleSearchUpdate(bool immediately = false);
 
 	OsuUISelectionButton *addBottombarNavButton();
@@ -70,7 +72,7 @@ private:
 	ConVar *m_fps_max_ref;
 	ConVar *m_osu_songbrowser_bottombar_percent_ref;
 
-	void onBack();
+	virtual void onBack();
 	void onSelectionMods();
 	void onSelectionRandom();
 	void onSelectionOptions();

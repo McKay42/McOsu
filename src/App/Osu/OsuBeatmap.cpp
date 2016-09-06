@@ -91,6 +91,8 @@ ConVar osu_mod_artimewarp_multiplier("osu_mod_artimewarp_multiplier", 0.5f);
 ConVar osu_mod_arwobble("osu_mod_arwobble", false);
 ConVar osu_mod_arwobble_strength("osu_mod_arwobble_strength", 1.0f);
 ConVar osu_mod_arwobble_interval("osu_mod_arwobble_interval", 7.0f);
+ConVar osu_mod_shirone("osu_mod_shirone", false);
+ConVar osu_mod_shirone_combo("osu_mod_shirone_combo", 20.0f);
 
 ConVar osu_early_note_time("osu_early_note_time", 1000.0f, "Timeframe in ms at the beginning of a beatmap which triggers a starting delay for easier reading");
 ConVar osu_skip_time("osu_skip_time", 5000.0f, "Timeframe in ms within a beatmap which allows skipping if it doesn't contain any hitobjects");
@@ -136,8 +138,6 @@ OsuBeatmap::OsuBeatmap(Osu *osu, UString filepath)
 	m_fSliderFollowCircleScale = 0.0f;
 	m_fSliderFollowCircleDiameter = 0.0f;
 	m_music = NULL;
-
-	m_fSongPercentBeforeStop = 0.0f;
 
 	m_iCurMusicPos = 0;
 	m_iLastMusicPosition = 0;
@@ -831,7 +831,6 @@ bool OsuBeatmap::play()
 	// reset everything, including deleting any previously loaded hitobjects from another diff which we might just have played
 	unloadHitObjects();
 	resetScore();
-	m_fSongPercentBeforeStop = 0.0f;
 
 	// actually load the difficulty (and the hitobjects)
 	if (!m_selectedDifficulty->loaded)
@@ -880,7 +879,6 @@ void OsuBeatmap::actualRestart()
 	// reset everything
 	resetScore();
 	resetHitObjects(-1000);
-	m_fSongPercentBeforeStop = 0.0f;
 
 	updatePlayfieldMetrics();
 
@@ -983,11 +981,15 @@ void OsuBeatmap::stop(bool quit)
 	m_bIsPlaying = false;
 	m_bIsPaused = false;
 	m_bContinueScheduled = false;
-	m_fSongPercentBeforeStop = m_music->getPosition();
-	engine->getSound()->stop(m_music);
 	resetHitObjects();
 
 	m_osu->onPlayEnd(quit);
+}
+
+void OsuBeatmap::fail()
+{
+	// TODO:
+	stop();
 }
 
 void OsuBeatmap::setVolume(float volume)
@@ -1176,10 +1178,10 @@ void OsuBeatmap::consumeClickEvent()
 
 void OsuBeatmap::addHitResult(HIT hit, long delta, bool ignoreOnHitErrorBar, bool hitErrorBarOnly, bool ignoreCombo)
 {
-	// handle sudden death
+	// handle perfect & sudden death
 	if (m_osu->getModSS())
 	{
-		if (hit != HIT_300)
+		if (hit != HIT_300 && hit != HIT_SLIDER10 && hit != HIT_SLIDER30 && !hitErrorBarOnly)
 		{
 			restart();
 			return;
@@ -1189,7 +1191,7 @@ void OsuBeatmap::addHitResult(HIT hit, long delta, bool ignoreOnHitErrorBar, boo
 	{
 		if (hit == HIT_MISS)
 		{
-			restart();
+			fail();
 			return;
 		}
 	}
@@ -1221,7 +1223,6 @@ void OsuBeatmap::addHitResult(HIT hit, long delta, bool ignoreOnHitErrorBar, boo
 	if (!hitErrorBarOnly)
 		m_hitresults.push_back(hit);
 
-	// TODO: performance of the loop every time
 	// recalculate accuracy
 	int numMisses = 0;
 	int num50s = 0;
@@ -1279,6 +1280,18 @@ void OsuBeatmap::addHitResult(HIT hit, long delta, bool ignoreOnHitErrorBar, boo
 
 void OsuBeatmap::addSliderBreak()
 {
+	// handle perfect & sudden death
+	if (m_osu->getModSS())
+	{
+		restart();
+		return;
+	}
+	else if (m_osu->getModSD())
+	{
+		fail();
+		return;
+	}
+
 	m_iCombo = 0;
 }
 
@@ -1370,23 +1383,25 @@ Vector2 OsuBeatmap::getCursorPos()
 	else if (m_osu->getModAuto() || m_osu->getModAutopilot())
 		return m_vAutoCursorPos;
 	else
-		return engine->getMouse()->getPos();
+	{
+		Vector2 pos = engine->getMouse()->getPos();
+		if (osu_mod_shirone.getBool() && m_iCombo > 0)
+			return pos + Vector2(std::sin((m_iCurMusicPos/20.0f)*1.15f)*((float)m_iCombo/osu_mod_shirone_combo.getFloat()), std::cos((m_iCurMusicPos/20.0f)*1.3f)*((float)m_iCombo/osu_mod_shirone_combo.getFloat()));
+		else
+			return pos;
+	}
 }
 
 void OsuBeatmap::handlePreviewPlay()
 {
-	if (engine->getSound()->play(m_music) && m_selectedDifficulty != NULL)
+	if (m_music != NULL && (!m_music->isPlaying() || m_music->getPosition() > 0.95f) && m_selectedDifficulty != NULL)
 	{
-		if (m_fSongPercentBeforeStop == 0.0f)
-			m_music->setPositionMS(m_selectedDifficulty->previewTime);
-		else
+		engine->getSound()->stop(m_music);
+		if (engine->getSound()->play(m_music))
 		{
-			m_music->setPosition(m_fSongPercentBeforeStop);
-			m_fSongPercentBeforeStop = 0.0f;
+			m_music->setPositionMS(m_selectedDifficulty->previewTime);
+			m_music->setVolume(m_osu_volume_music_ref->getFloat());
 		}
-
-		// just to be sure
-		m_music->setVolume(m_osu_volume_music_ref->getFloat());
 	}
 }
 

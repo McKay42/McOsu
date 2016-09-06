@@ -12,10 +12,6 @@
 #include "OsuNotificationOverlay.h"
 #include "CBaseUIElement.h"
 
-#include "FastDelegate.h"
-
-using namespace fastdelegate;
-
 class Osu;
 class OsuUIButton;
 class OsuUISlider;
@@ -53,12 +49,12 @@ public:
 	void setVisible(bool visible);
 
 private:
-	void updateLayout();
+	virtual void updateLayout();
 	void updateOsuFolder();
 
 	void save();
 
-	void onBack();
+	virtual void onBack();
 	void onFullscreenChange(CBaseUICheckbox *checkbox);
 	void onSkinSelect();
 	void onSkinSelect2(UString skinName);
@@ -127,7 +123,7 @@ public:
 	void draw(Graphics *g);
 	void update();
 
-	typedef FastDelegate1<UString> ButtonClickCallback;
+	typedef fastdelegate::FastDelegate1<UString> ButtonClickCallback;
 	void setClickCallback(ButtonClickCallback clickCallback) {m_clickCallback = clickCallback;}
 
 	void onResized();

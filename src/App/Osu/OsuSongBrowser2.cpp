@@ -222,7 +222,7 @@ void OsuSongBrowser2::draw(Graphics *g)
 
 	m_bottombar->draw(g);
 	//m_bottombar->draw_debug(g);
-	m_backButton->draw(g);
+	OsuScreenBackable::draw(g);
 
 
 	// no beatmaps found (osu folder is probably invalid)
@@ -668,6 +668,11 @@ void OsuSongBrowser2::onResolutionChange(Vector2 newResolution)
 	OsuScreenBackable::onResolutionChange(newResolution);
 }
 
+void OsuSongBrowser2::onPlayEnd(bool quit)
+{
+	m_bHasSelectedAndIsPlaying = false;
+}
+
 void OsuSongBrowser2::setVisible(bool visible)
 {
 	m_bVisible = visible;
@@ -678,10 +683,10 @@ void OsuSongBrowser2::setVisible(bool visible)
 		updateLayout();
 
 		// we have to re-select the current beatmap to start playing music again
-		if (m_bHasSelectedAndIsPlaying && m_selectedBeatmap != NULL)
+		if (m_selectedBeatmap != NULL)
 			m_selectedBeatmap->select();
 
-		m_bHasSelectedAndIsPlaying = false;
+		m_bHasSelectedAndIsPlaying = false; // sanity
 
 		// try another refresh, maybe the osu!folder has changed
 		if (m_beatmaps.size() == 0)
@@ -808,8 +813,6 @@ void OsuSongBrowser2::onSelectionOptions()
 
 void OsuSongBrowser2::onDifficultySelected(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff, bool fromClick, bool play)
 {
-	m_osu->stopRidiculouslyLongApplauseSound();
-
 	// remember it
 	// if this is the last one, and we selected with a click, restart the memory
 	if (fromClick && m_previousRandomBeatmaps.size() < 2)
