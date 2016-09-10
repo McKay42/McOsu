@@ -11,7 +11,7 @@ An unofficial open-source client for [osu!](https://osu.ppy.sh) with the main fo
 Runs on McEngine: [https://github.com/McKay42/McEngine](https://github.com/McKay42/McEngine)
 
 Binaries are available for **Windows** and **Linux**, and maybe macOS in the future.
-Note that Linux support is not as polished as Windows, and some functions such as native fullscreen mode do not work there yet.
+Note that Linux support is not as polished as Windows, and some functions such as native fullscreen mode or raw input do not work there yet.
 
 ##Notable features which osu! doesn't have (yet) in comparison:
 - Mid-play empty section skipping
