@@ -2,9 +2,11 @@
 
 **[DOWNLOAD > https://github.com/McKay42/McOsu/releases](https://github.com/McKay42/McOsu/releases)**
 
+**Quick tutorial by Omgforz: [https://www.youtube.com/watch?v=PCLpOdcMQuc](https://www.youtube.com/watch?v=PCLpOdcMQuc)**
+
 **Discord** (Feedback, Requests, Bug reports, etc.): https://discord.gg/3UQnt7X
 
-An unofficial open-source client for [osu!](https://osu.ppy.sh) with the main focus on making practicing easier and customizing gameplay.
+An unofficial open-source client for [osu!](https://osu.ppy.sh) with the main focus on making practicing easier and customizing gameplay. If you have never played osu! before then I do not recommend using this client, as there are no gameplay tutorials in here.
 
 Runs on McEngine: [https://github.com/McKay42/McEngine](https://github.com/McKay42/McEngine)
 
