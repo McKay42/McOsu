@@ -50,7 +50,7 @@ private:
 	static int rainbowNumber;
 	static int rainbowColorCounter;
 
-	void onHit(OsuBeatmap::HIT result, long delta, float targetDelta = 0.0f, float targetAngle = 0.0f);
+	void onHit(OsuScore::HIT result, long delta, float targetDelta = 0.0f, float targetAngle = 0.0f);
 
 	Vector2 m_vRawPos;
 	Vector2 m_vOriginalRawPos; // for live mod changing

@@ -100,7 +100,7 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen()
 	addExperimentalCheckbox("Minimize", "Circle size decreases from 100% to 50% over the course of the beatmap.", convar->getConVarByName("osu_mod_minimize"));
 	addExperimentalCheckbox("Fading Cursor", "The cursor fades the higher the combo, becoming invisible at 50.", convar->getConVarByName("osu_mod_fadingcursor"));
 	addExperimentalCheckbox("First Person", "Centered cursor.", convar->getConVarByName("osu_mod_fps"));
-	addExperimentalCheckbox("Jigsaw 1", "Wrong clicks count as misses.", convar->getConVarByName("osu_mod_jigsaw1"));
+	addExperimentalCheckbox("Jigsaw 1", "Unnecessary clicks count as misses.", convar->getConVarByName("osu_mod_jigsaw1"));
 	addExperimentalCheckbox("Jigsaw 2", "Massively reduced slider follow circle radius.", convar->getConVarByName("osu_mod_jigsaw2"));
 	addExperimentalCheckbox("Random", "Random hitobject positions. (VERY experimental!)", convar->getConVarByName("osu_mod_random"));
 	addExperimentalCheckbox("MinG3012", "No 100s, only 300s or 50s. Git gud.", convar->getConVarByName("osu_mod_ming3012"));
@@ -126,7 +126,7 @@ void OsuModSelector::updateButtons()
 	setModButtonOnGrid(1, 0, 0, "nf", "You can't fail. No matter what.", m_osu->getSkin()->getSelectionModNoFail());
 	getModButtonOnGrid(1, 0)->setAvailable(false);
 	setModButtonOnGrid(2, 0, 0, "ht", "Less zoom.", m_osu->getSkin()->getSelectionModHalfTime());
-	setModButtonOnGrid(4, 0, 0, "nm", "Massively reduced slider follow circle radius. Wrong clicks count as misses.", m_osu->getSkin()->getSelectionModNightmare());
+	setModButtonOnGrid(4, 0, 0, "nm", "Massively reduced slider follow circle radius. Unnecessary clicks count as misses.", m_osu->getSkin()->getSelectionModNightmare());
 
 	setModButtonOnGrid(0, 1, 0, "hr", "Everything just got a bit harder...", m_osu->getSkin()->getSelectionModHardRock());
 	setModButtonOnGrid(1, 1, 0, "sd", "Miss a note and fail.", m_osu->getSkin()->getSelectionModSuddenDeath());
