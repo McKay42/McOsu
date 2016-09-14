@@ -9,6 +9,7 @@
 #define OSUBEATMAP_H
 
 #include "cbase.h"
+#include "OsuScore.h"
 
 #include <mutex>
 #include "WinMinGW.Mutex.h" // necessary due to incomplete implementation in mingw-w64
@@ -24,28 +25,13 @@ class OsuBeatmapDifficulty;
 class OsuBeatmap
 {
 public:
-	enum HIT
-	{
-		HIT_NULL,
-		HIT_MISS,
-		HIT_50,
-		HIT_100,
-		HIT_300,
-		/*
-		HIT_100K,
-		HIT_300K,
-		HIT_300G,
-		*/
-		HIT_SLIDER10,
-		HIT_SLIDER30
-	};
-
 	struct CLICK
 	{
 		long musicPos;
 		double realTime;
 	};
 
+public:
 	OsuBeatmap(Osu *osu, UString filepath);
 	virtual ~OsuBeatmap();
 
@@ -85,10 +71,6 @@ public:
 	unsigned long getLength();
 	float getPercentFinished();
 
-	inline int getCombo() {return m_iCombo;}
-	inline float getAccuracy() {return m_fAccuracy;}
-	inline float getUnstableRate() {return m_fUnstableRate;}
-
 	// live statistics
 	int getBPM();
 	float getSpeedMultiplier();
@@ -119,8 +101,8 @@ public:
 	inline float getSliderFollowCircleDiameter() {return m_fSliderFollowCircleDiameter;}
 	inline float getPlayfieldRotation() const {return m_fPlayfieldRotation;}
 
+	inline int getSelectedDifficultyIndex() {return m_iSelectedDifficulty;} // DEPRECATED
 	inline OsuBeatmapDifficulty *getSelectedDifficulty() {return m_selectedDifficulty;}
-	inline int getSelectedDifficultyIndex() {return m_iSelectedDifficulty;}
 	inline std::vector<OsuBeatmapDifficulty*> getDifficulties() {return m_difficulties;}
 
 	inline bool isPlaying() {return m_bIsPlaying;}
@@ -139,8 +121,9 @@ public:
 
 	// OsuHitObject and other helper functions
 	void consumeClickEvent();
-	void addHitResult(HIT hit, long delta, bool ignoreOnHitErrorBar = false, bool hitErrorBarOnly = false, bool ignoreCombo = false);
+	void addHitResult(OsuScore::HIT hit, long delta, bool ignoreOnHitErrorBar = false, bool hitErrorBarOnly = false, bool ignoreCombo = false);
 	void addSliderBreak();
+	void playMissSound();
 
 	Vector2 osuCoords2Pixels(Vector2 coords);
 	Vector2 getCursorPos();
@@ -163,8 +146,8 @@ private:
 	void updatePlayfieldMetrics();
 	void updateHitobjectMetrics();
 
-	Vector2 originalOsuCoords2Stack(Vector2 coords);
 	void calculateStacks();
+	Vector2 originalOsuCoords2Stack(Vector2 coords);
 
 	unsigned long getMusicPositionMSInterpolated();
 
@@ -210,17 +193,9 @@ private:
 	// sound
 	float m_fBeatLength;
 	float m_fAmplitude;
-
 	long m_iCurMusicPos;
 	unsigned long m_iLastMusicPosition;
 	double m_fLastMusicPositionForInterpolation;
-
-	// score
-	int m_iCombo;
-	float m_fAccuracy;
-	float m_fUnstableRate;
-	std::vector<HIT> m_hitresults;
-	std::vector<int> m_hitdeltas;
 
 	// gameplay
 	int m_iPreviousFollowPointObjectIndex;

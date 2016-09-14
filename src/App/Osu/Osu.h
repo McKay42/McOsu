@@ -22,6 +22,7 @@ class OsuNotificationOverlay;
 class OsuTooltipOverlay;
 class OsuBeatmap;
 class OsuScreen;
+class OsuScore;
 class OsuSkin;
 class OsuHUD;
 
@@ -82,6 +83,8 @@ public:
 	void volumeDown();
 	void volumeUp();
 
+	void saveScreenshot();
+
 	void reloadSkin() {onSkinReload();}
 
 	inline Vector2 getScreenSize() {return g_vInternalResolution;}
@@ -96,6 +99,7 @@ public:
 	inline OsuTooltipOverlay *getTooltipOverlay() {return m_tooltipOverlay;}
 	inline OsuModSelector *getModSelector() {return m_modSelector;}
 	inline OsuRankingScreen *getRankingScreen() {return m_rankingScreen;}
+	inline OsuScore *getScore() {return m_score;}
 
 	inline RenderTarget *getFrameBuffer() {return m_frameBuffer;}
 	inline McFont *getTitleFont() {return m_titleFont;}
@@ -170,6 +174,7 @@ private:
 	OsuHUD *m_hud;
 	OsuTooltipOverlay *m_tooltipOverlay;
 	OsuNotificationOverlay *m_notificationOverlay;
+	OsuScore *m_score;
 
 	std::vector<OsuScreen*> m_screens;
 

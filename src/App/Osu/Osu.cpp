@@ -34,6 +34,7 @@
 #include "OsuPauseMenu.h"
 #include "OsuBeatmap.h"
 #include "OsuBeatmapDifficulty.h"
+#include "OsuScore.h"
 #include "OsuSkin.h"
 #include "OsuHUD.h"
 
@@ -52,7 +53,7 @@ ConVar osu_disable_mousewheel("osu_disable_mousewheel", false);
 ConVar osu_confine_cursor_windowed("osu_confine_cursor_windowed", false, DUMMY_OSU_LETTERBOXING);
 ConVar osu_confine_cursor_fullscreen("osu_confine_cursor_fullscreen", true, DUMMY_OSU_LETTERBOXING);
 
-ConVar osu_skin("osu_skin", "default", DUMMY_OSU_VOLUME_MUSIC_ARGS);
+ConVar osu_skin("osu_skin", "osu!default", DUMMY_OSU_VOLUME_MUSIC_ARGS);
 ConVar osu_skin_reload("osu_skin_reload", DUMMY_OSU_MODS);
 
 ConVar osu_volume_master("osu_volume_master", 0.5f, DUMMY_OSU_VOLUME_MUSIC_ARGS);
@@ -162,6 +163,7 @@ Osu::Osu()
 
 	// load a few select subsystems very early
 	m_notificationOverlay = new OsuNotificationOverlay(this);
+	m_score = new OsuScore(this);
 
 	// exec the config file (this must be right here!)
 	Console::execConfigFile("osu");
@@ -232,6 +234,7 @@ Osu::~Osu()
 	}
 
 	SAFE_DELETE(m_skin);
+	SAFE_DELETE(m_score);
 
 	SAFE_DELETE(m_frameBuffer);
 	SAFE_DELETE(m_backBuffer);
@@ -269,7 +272,7 @@ void Osu::draw(Graphics *g)
 
 		// special cursor handling
 		const bool allowDrawCursor = !osu_hide_cursor_during_gameplay.getBool() || getSelectedBeatmap()->isPaused();
-		float fadingCursorAlpha = 1.0f - clamp<float>((float)getSelectedBeatmap()->getCombo()/osu_mod_fadingcursor_combo.getFloat(), 0.0f, 1.0f);
+		float fadingCursorAlpha = 1.0f - clamp<float>((float)m_score->getCombo()/osu_mod_fadingcursor_combo.getFloat(), 0.0f, 1.0f);
 		if (m_pauseMenu->isVisible() || getSelectedBeatmap()->isContinueScheduled())
 			fadingCursorAlpha = 1.0f;
 
@@ -436,7 +439,7 @@ void Osu::update()
 	// handle mousewheel volume change
 	if (((m_songBrowser != NULL && (!m_songBrowser->isVisible() || engine->getKeyboard()->isAltDown())) || ((m_songBrowser2 != NULL && (!m_songBrowser2->isVisible() || engine->getKeyboard()->isAltDown()))) ) && !m_optionsMenu->isVisible())
 	{
-		if (!(isInPlayMode() && !m_pauseMenu->isVisible()) || !osu_disable_mousewheel.getBool() || engine->getKeyboard()->isAltDown())
+		if ((!(isInPlayMode() && !m_pauseMenu->isVisible()) && !m_rankingScreen->isVisible()) || (isInPlayMode() && !osu_disable_mousewheel.getBool()) || engine->getKeyboard()->isAltDown())
 		{
 			int wheelDelta = engine->getMouse()->getWheelDeltaVertical();
 			if (wheelDelta != 0)
@@ -527,6 +530,25 @@ void Osu::onKeyDown(KeyboardEvent &key)
 		volumeDown();
 		key.consume();
 	}
+
+	// disable mouse buttons hotkey
+	if (key == (KEYCODE)OsuKeyBindings::DISABLE_MOUSE_BUTTONS.getInt())
+	{
+		if (osu_disable_mousebuttons.getBool())
+		{
+			osu_disable_mousebuttons.setValue(0.0f);
+			m_notificationOverlay->addNotification("Mouse buttons are enabled.");
+		}
+		else
+		{
+			osu_disable_mousebuttons.setValue(1.0f);
+			m_notificationOverlay->addNotification("Mouse buttons are disabled.");
+		}
+	}
+
+	// screenshots
+	if (key == (KEYCODE)OsuKeyBindings::SAVE_SCREENSHOT.getInt())
+		saveScreenshot();
 
 	// local hotkeys
 
@@ -768,6 +790,17 @@ void Osu::volumeUp()
 	m_hud->animateVolumeChange();
 }
 
+void Osu::saveScreenshot()
+{
+	int screenshotNumber = 0;
+	while (env->fileExists(UString::format("screenshots/screenshot%i.png", screenshotNumber)))
+	{
+		screenshotNumber++;
+	}
+	std::vector<unsigned char> pixels = engine->getGraphics()->getScreenshot();
+	Image::saveToImage(&pixels[0], engine->getGraphics()->getResolution().x, engine->getGraphics()->getResolution().y, UString::format("screenshots/screenshot%i.png", screenshotNumber));
+}
+
 
 
 void Osu::onBeforePlayStart()
@@ -800,7 +833,10 @@ void Osu::onPlayEnd(bool quit)
 	debugLog("Osu::onPlayEnd()\n");
 
 	if (!quit)
+	{
+		m_rankingScreen->setScore(m_score);
 		engine->getSound()->play(m_skin->getApplause());
+	}
 
 	m_mainMenu->setVisible(false);
 	m_modSelector->setVisible(false);

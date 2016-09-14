@@ -103,17 +103,17 @@ void OsuHUD::draw(Graphics *g)
 		g->pushTransform();
 			if (m_osu->getModTarget() && osu_draw_target_heatmap.getBool())
 				g->translate(0, m_osu->getSelectedBeatmap()->getHitcircleDiameter());
-			drawStatistics(g, m_osu->getSelectedBeatmap()->getNumMisses(), m_osu->getSelectedBeatmap()->getBPM(), OsuGameRules::getApproachRateForSpeedMultiplier(m_osu->getSelectedBeatmap(), m_osu->getSelectedBeatmap()->getSpeedMultiplier()), m_osu->getSelectedBeatmap()->getCS(), OsuGameRules::getOverallDifficultyForSpeedMultiplier(m_osu->getSelectedBeatmap(), m_osu->getSelectedBeatmap()->getSpeedMultiplier()), m_osu->getSelectedBeatmap()->getNPS(), m_osu->getSelectedBeatmap()->getND(), m_osu->getSelectedBeatmap()->getUnstableRate());
+			drawStatistics(g, m_osu->getSelectedBeatmap()->getNumMisses(), m_osu->getSelectedBeatmap()->getBPM(), OsuGameRules::getApproachRateForSpeedMultiplier(m_osu->getSelectedBeatmap(), m_osu->getSelectedBeatmap()->getSpeedMultiplier()), m_osu->getSelectedBeatmap()->getCS(), OsuGameRules::getOverallDifficultyForSpeedMultiplier(m_osu->getSelectedBeatmap(), m_osu->getSelectedBeatmap()->getSpeedMultiplier()), m_osu->getSelectedBeatmap()->getNPS(), m_osu->getSelectedBeatmap()->getND(), m_osu->getScore()->getUnstableRate());
 		g->popTransform();
 
 		if (osu_draw_combo.getBool())
-			drawCombo(g, m_osu->getSelectedBeatmap()->getCombo());
+			drawCombo(g, m_osu->getScore()->getCombo());
 
 		if (osu_draw_progressbar.getBool())
 			drawProgressBar(g, m_osu->getSelectedBeatmap()->getPercentFinished(), m_osu->getSelectedBeatmap()->isWaiting());
 
 		if (osu_draw_accuracy.getBool())
-			drawAccuracy(g, m_osu->getSelectedBeatmap()->getAccuracy()*100.0f);
+			drawAccuracy(g, m_osu->getScore()->getAccuracy()*100.0f);
 
 		if (osu_draw_hiterrorbar.getBool() && !m_osu->getSelectedBeatmap()->isSpinnerActive())
 			drawHitErrorBar(g, OsuGameRules::getHitWindow300(m_osu->getSelectedBeatmap()), OsuGameRules::getHitWindow100(m_osu->getSelectedBeatmap()), OsuGameRules::getHitWindow50(m_osu->getSelectedBeatmap()));
@@ -508,6 +508,17 @@ void OsuHUD::drawScoreNumber(Graphics *g, int number, float scale, bool drawLead
 	}
 }
 
+void OsuHUD::drawComboSimple(Graphics *g, int combo, float scale)
+{
+	g->pushTransform();
+		drawScoreNumber(g, combo, scale);
+
+		// draw 'x' at the end
+		g->translate(m_osu->getSkin()->getScoreX()->getWidth()*0.5f*scale, 0);
+		g->drawImage(m_osu->getSkin()->getScoreX());
+	g->popTransform();
+}
+
 void OsuHUD::drawCombo(Graphics *g, int combo)
 {
 	g->setColor(0xffffffff);
@@ -544,6 +555,34 @@ void OsuHUD::drawCombo(Graphics *g, int combo)
 		// draw 'x' at the end
 		g->translate(m_osu->getSkin()->getScoreX()->getWidth()*0.5f*scale, 0);
 		g->drawImage(m_osu->getSkin()->getScoreX());
+	g->popTransform();
+}
+
+void OsuHUD::drawAccuracySimple(Graphics *g, float accuracy, float scale)
+{
+	// get integer & fractional parts of the number
+	// see drawAccuracy() for explanation
+	const int accuracyInt = (int)accuracy;
+	const int accuracyFrac = clamp<int>(((int)(std::round((accuracy - accuracyInt)*1000.0f))) / 10, 0, 99);
+
+	// draw it
+	const int spacingOffset = 2;
+	g->pushTransform();
+		drawScoreNumber(g, accuracyInt, scale, true, spacingOffset);
+
+		// draw dot '.' between the integer and fractional part
+		g->setColor(0xffffffff);
+		g->translate(m_osu->getSkin()->getScoreDot()->getWidth()*0.5f*scale, 0);
+		g->drawImage(m_osu->getSkin()->getScoreDot());
+		g->translate(m_osu->getSkin()->getScoreDot()->getWidth()*0.5f*scale, 0);
+		g->translate(spacingOffset, 0); // extra spacing
+
+		drawScoreNumber(g, accuracyFrac, scale, true, spacingOffset);
+
+		// draw '%' at the end
+		g->setColor(0xffffffff);
+		g->translate(m_osu->getSkin()->getScorePercent()->getWidth()*0.5f*scale, 0);
+		g->drawImage(m_osu->getSkin()->getScorePercent());
 	g->popTransform();
 }
 

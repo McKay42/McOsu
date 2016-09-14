@@ -58,7 +58,7 @@ private:
 
 	void updateAnimations(long curPos);
 
-	void onHit(OsuBeatmap::HIT result, long delta, bool startOrEnd, float targetDelta = 0.0f, float targetAngle = 0.0f);
+	void onHit(OsuScore::HIT result, long delta, bool startOrEnd, float targetDelta = 0.0f, float targetAngle = 0.0f);
 	void onRepeatHit(bool successful, bool sliderend);
 	void onTickHit(bool successful, int tickIndex);
 	void onSliderBreak();
@@ -100,8 +100,8 @@ private:
 	Vector2 m_vCurPoint;
 	Vector2 m_vCurPointRaw;
 
-	OsuBeatmap::HIT m_startResult;
-	OsuBeatmap::HIT m_endResult;
+	OsuScore::HIT m_startResult;
+	OsuScore::HIT m_endResult;
 	bool m_bStartFinished;
 	float m_fStartHitAnimation;
 	bool m_bEndFinished;

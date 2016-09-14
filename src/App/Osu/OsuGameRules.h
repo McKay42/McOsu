@@ -174,31 +174,31 @@ public:
 		return mapDifficultyRange(beatmap->getOD(), 3.0f, 5.0f, 7.5f);
 	}
 
-	static OsuBeatmap::HIT getHitResult(long delta, OsuBeatmap *beatmap)
+	static OsuScore::HIT getHitResult(long delta, OsuBeatmap *beatmap)
 	{
 		delta = std::abs(delta);
 
-		OsuBeatmap::HIT result = OsuBeatmap::HIT_NULL;
+		OsuScore::HIT result = OsuScore::HIT_NULL;
 
 		if (!osu_mod_ming3012.getBool())
 		{
 			if (delta <= (long)getHitWindow300(beatmap))
-				result = OsuBeatmap::HIT_300;
+				result = OsuScore::HIT_300;
 			else if (delta <= (long)getHitWindow100(beatmap))
-				result = OsuBeatmap::HIT_100;
+				result = OsuScore::HIT_100;
 			else if (delta <= (long)getHitWindow50(beatmap))
-				result = OsuBeatmap::HIT_50;
+				result = OsuScore::HIT_50;
 			else if (delta <= (long)getHitWindowMiss(beatmap))
-				result = OsuBeatmap::HIT_MISS;
+				result = OsuScore::HIT_MISS;
 		}
 		else
 		{
 			if (delta <= (long)getHitWindow300(beatmap))
-				result = OsuBeatmap::HIT_300;
+				result = OsuScore::HIT_300;
 			else if (delta <= (long)getHitWindow50(beatmap))
-				result = OsuBeatmap::HIT_50;
+				result = OsuScore::HIT_50;
 			else if (delta <= (long)getHitWindowMiss(beatmap))
-				result = OsuBeatmap::HIT_MISS;
+				result = OsuScore::HIT_MISS;
 		}
 
 		return result;
