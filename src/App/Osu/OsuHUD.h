@@ -32,6 +32,8 @@ public:
 	void drawBeatmapImportSpinner(Graphics *g);
 	void drawVolumeChange(Graphics *g);
 	void drawScoreNumber(Graphics *g, int number, float scale = 1.0f, bool drawLeadingZeroes = false, int offset = 2);
+	void drawComboSimple(Graphics *g, int combo, float scale = 1.0f); // used by OsuRankingScreen
+	void drawAccuracySimple(Graphics *g, float accuracy, float scale = 1.0f); // used by OsuRankingScreen
 	void drawWarningArrow(Graphics *g, Vector2 pos, bool flipVertically, bool originLeft = true);
 
 	void animateCombo();
@@ -39,7 +41,6 @@ public:
 	void addTarget(float delta, float angle);
 
 	void animateVolumeChange();
-
 	void animateCursorExpand();
 	void animateCursorShrink();
 

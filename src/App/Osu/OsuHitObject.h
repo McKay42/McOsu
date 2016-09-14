@@ -13,8 +13,8 @@
 class OsuHitObject
 {
 public:
-	static void drawHitResult(Graphics *g, OsuBeatmap *beatmap, Vector2 rawPos, OsuBeatmap::HIT result, float animPercent);
-	static void drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiameter, float rawHitcircleDiameter, Vector2 rawPos, OsuBeatmap::HIT result, float animPercent);
+	static void drawHitResult(Graphics *g, OsuBeatmap *beatmap, Vector2 rawPos, OsuScore::HIT result, float animPercent);
+	static void drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiameter, float rawHitcircleDiameter, Vector2 rawPos, OsuScore::HIT result, float animPercent);
 
 public:
 	OsuHitObject(long time, int sampleType, int comboNumber, int colorCounter, OsuBeatmap *beatmap);
@@ -25,7 +25,7 @@ public:
 	virtual void update(long curPos);
 
 	virtual void updateStackPosition(float stackOffset) = 0;
-	void addHitResult(OsuBeatmap::HIT result, long delta, Vector2 posRaw, float targetDelta = 0.0f, float targetAngle = 0.0f, bool ignoreOnHitErrorBar = false, bool ignoreCombo = false);
+	void addHitResult(OsuScore::HIT result, long delta, Vector2 posRaw, float targetDelta = 0.0f, float targetAngle = 0.0f, bool ignoreOnHitErrorBar = false, bool ignoreCombo = false);
 	void misAimed() {m_bMisAim = true;}
 
 	void setStack(int stack) {m_iStack = stack;}
@@ -83,7 +83,7 @@ private:
 	{
 		float anim;
 		Vector2 rawPos;
-		OsuBeatmap::HIT result;
+		OsuScore::HIT result;
 	};
 
 	std::vector<HITRESULTANIM> m_hitResults;

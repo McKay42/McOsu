@@ -25,6 +25,8 @@ public:
 	static ConVar GAME_PAUSE;
 	static ConVar SKIP_CUTSCENE;
 	static ConVar QUICK_RETRY;
+	static ConVar SAVE_SCREENSHOT;
+	static ConVar DISABLE_MOUSE_BUTTONS;
 };
 
 #endif

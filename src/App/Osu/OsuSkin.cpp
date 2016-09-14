@@ -88,6 +88,10 @@ OsuSkin::OsuSkin(Osu *osu, UString filepath)
 	m_hit0 = m_missingTexture;
 	m_hit50 = m_missingTexture;
 	m_hit100 = m_missingTexture;
+	m_hit100k = m_missingTexture;
+	m_hit300 = m_missingTexture;
+	m_hit300g = m_missingTexture;
+	m_hit300k = m_missingTexture;
 
 	m_sliderGradient = m_missingTexture;
 	m_sliderGradientTrack = m_missingTexture;
@@ -154,6 +158,19 @@ OsuSkin::OsuSkin(Osu *osu, UString filepath)
 	m_songSelectTop = m_missingTexture;
 	m_songSelectBottom = m_missingTexture;
 	m_menuButtonBackground = m_missingTexture;
+	m_rankingPanel = m_missingTexture;
+	m_rankingGraph = m_missingTexture;
+	m_rankingTitle = m_missingTexture;
+	m_rankingMaxCombo = m_missingTexture;
+	m_rankingAccuracy = m_missingTexture;
+	m_rankingA = m_missingTexture;
+	m_rankingB = m_missingTexture;
+	m_rankingC = m_missingTexture;
+	m_rankingD = m_missingTexture;
+	m_rankingS = m_missingTexture;
+	m_rankingSH = m_missingTexture;
+	m_rankingX = m_missingTexture;
+	m_rankingXH = m_missingTexture;
 
 	m_beatmapImportSpinner = m_missingTexture;
 	m_loadingSpinner = m_missingTexture;
@@ -204,6 +221,10 @@ OsuSkin::OsuSkin(Osu *osu, UString filepath)
 	m_bHit02x = false;
 	m_bHit502x = false;
 	m_bHit1002x = false;
+	m_bHit100k2x = false;
+	m_bHit3002x = false;
+	m_bHit300g2x = false;
+	m_bHit300k2x = false;
 	m_bSpinnerApproachCircle2x = false;
 	m_bSpinnerBottom2x= false;
 	m_bSpinnerCircle2x= false;
@@ -223,6 +244,9 @@ OsuSkin::OsuSkin(Osu *osu, UString filepath)
 	m_bPauseContinue2x = false;
 
 	m_bMenuButtonBackground2x = false;
+	m_bRankingPanel2x = false;
+	m_bRankingMaxCombo2x = false;
+	m_bRankingAccuracy2x = false;
 
 	// skin.ini
 	m_fVersion = 1;
@@ -328,6 +352,10 @@ void OsuSkin::load()
 	checkLoadImage(&m_hit0, "hit0", "OSU_SKIN_HIT0");
 	checkLoadImage(&m_hit50, "hit50", "OSU_SKIN_HIT50");
 	checkLoadImage(&m_hit100, "hit100", "OSU_SKIN_HIT100");
+	checkLoadImage(&m_hit100k, "hit100k", "OSU_SKIN_HIT100K");
+	checkLoadImage(&m_hit300, "hit300", "OSU_SKIN_HIT300");
+	checkLoadImage(&m_hit300g, "hit300g", "OSU_SKIN_HIT300G");
+	checkLoadImage(&m_hit300k, "hit300k", "OSU_SKIN_HIT300K");
 
 	checkLoadImage(&m_sliderGradient, "slidergradient", "OSU_SKIN_SLIDERGRADIENT");
 	checkLoadImage(&m_sliderGradientTrack, "slidergradienttrack2", "OSU_SKIN_SLIDERGRADIENTTRACK");
@@ -394,6 +422,19 @@ void OsuSkin::load()
 	checkLoadImage(&m_songSelectTop, "songselect-top", "OSU_SKIN_SONGSELECT_TOP");
 	checkLoadImage(&m_songSelectBottom, "songselect-bottom", "OSU_SKIN_SONGSELECT_BOTTOM");
 	checkLoadImage(&m_menuButtonBackground, "menu-button-background", "OSU_SKIN_MENU_BUTTON_BACKGROUND");
+	checkLoadImage(&m_rankingPanel, "ranking-panel", "OSU_SKIN_RANKING_PANEL");
+	checkLoadImage(&m_rankingGraph, "ranking-graph", "OSU_SKIN_RANKING_GRAPH");
+	checkLoadImage(&m_rankingTitle, "ranking-title", "OSU_SKIN_RANKING_TITLE");
+	checkLoadImage(&m_rankingMaxCombo, "ranking-maxcombo", "OSU_SKIN_RANKING_MAXCOMBO");
+	checkLoadImage(&m_rankingAccuracy, "ranking-accuracy", "OSU_SKIN_RANKING_ACCURACY");
+	checkLoadImage(&m_rankingA, "ranking-A", "OSU_SKIN_RANKING_A");
+	checkLoadImage(&m_rankingB, "ranking-B", "OSU_SKIN_RANKING_B");
+	checkLoadImage(&m_rankingC, "ranking-C", "OSU_SKIN_RANKING_C");
+	checkLoadImage(&m_rankingD, "ranking-D", "OSU_SKIN_RANKING_D");
+	checkLoadImage(&m_rankingS, "ranking-S", "OSU_SKIN_RANKING_S");
+	checkLoadImage(&m_rankingSH, "ranking-SH", "OSU_SKIN_RANKING_SH");
+	checkLoadImage(&m_rankingX, "ranking-X", "OSU_SKIN_RANKING_X");
+	checkLoadImage(&m_rankingXH, "ranking-XH", "OSU_SKIN_RANKING_XH");
 
 	checkLoadImage(&m_beatmapImportSpinner, "beatmapimport-spinner", "OSU_SKIN_BEATMAP_IMPORT_SPINNER");
 	checkLoadImage(&m_loadingSpinner, "loading-spinner", "OSU_SKIN_LOADING_SPINNER");
@@ -422,7 +463,7 @@ void OsuSkin::load()
 	checkLoadSound(&m_spinnerSpinSound, "spinnerspin", "OSU_SKIN_SPINNERSPIN_SND", false, true);
 
 	// others
-	checkLoadSound(&m_combobreak, "combobreak", "OSU_SKIN_COMBOBREAK_SND");
+	checkLoadSound(&m_combobreak, "combobreak", "OSU_SKIN_COMBOBREAK_SND", true);
 	checkLoadSound(&m_applause, "applause", "OSU_SKIN_APPLAUSE_SND");
 	checkLoadSound(&m_menuHit, "menuhit", "OSU_SKIN_MENUHIT_SND", true);
 	checkLoadSound(&m_menuClick, "menuclick", "OSU_SKIN_MENUCLICK_SND", true);
@@ -453,6 +494,14 @@ void OsuSkin::load()
 		m_bHit502x = true;
 	if (m_hit100 != NULL && m_hit100->getFilePath().find("@2x") != -1)
 		m_bHit1002x = true;
+	if (m_hit100k != NULL && m_hit100k->getFilePath().find("@2x") != -1)
+		m_bHit100k2x = true;
+	if (m_hit300 != NULL && m_hit300->getFilePath().find("@2x") != -1)
+		m_bHit3002x = true;
+	if (m_hit300g != NULL && m_hit300g->getFilePath().find("@2x") != -1)
+		m_bHit300g2x = true;
+	if (m_hit300k != NULL && m_hit300k->getFilePath().find("@2x") != -1)
+		m_bHit300k2x = true;
 	if (m_spinnerApproachCircle != NULL && m_spinnerApproachCircle->getFilePath().find("@2x") != -1)
 		m_bSpinnerApproachCircle2x = true;
 	if (m_spinnerBottom != NULL && m_spinnerBottom->getFilePath().find("@2x") != -1)
@@ -488,6 +537,12 @@ void OsuSkin::load()
 
 	if (m_menuButtonBackground != NULL && m_menuButtonBackground->getFilePath().find("@2x") != -1)
 		m_bMenuButtonBackground2x = true;
+	if (m_rankingPanel != NULL && m_rankingPanel->getFilePath().find("@2x") != -1)
+		m_bRankingPanel2x = true;
+	if (m_rankingMaxCombo != NULL && m_rankingMaxCombo->getFilePath().find("@2x") != -1)
+		m_bRankingMaxCombo2x = true;
+	if (m_rankingAccuracy != NULL && m_rankingAccuracy->getFilePath().find("@2x") != -1)
+		m_bRankingAccuracy2x = true;
 
 	// HACKHACK: all of the <>2 loads are temporary fixes until I fix the checkLoadImage() function logic
 
