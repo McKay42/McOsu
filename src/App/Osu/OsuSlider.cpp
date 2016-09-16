@@ -832,6 +832,8 @@ void OsuSlider::onHit(OsuScore::HIT result, long delta, bool startOrEnd, float t
 	if (m_points.size() == 0)
 		return;
 
+	// start + end of a slider add +30 points, if successful
+
 	//debugLog("startOrEnd = %i,    m_iCurRepeat = %i\n", (int)startOrEnd, m_iCurRepeat);
 
 	// sound and hit animation
@@ -859,6 +861,9 @@ void OsuSlider::onHit(OsuScore::HIT result, long delta, bool startOrEnd, float t
 				anim->moveQuadOut(&m_fStartHitAnimation, 1.0f, OsuGameRules::osu_circle_fade_out_time.getFloat(), true);
 			}
 		}
+
+		// add score
+		m_beatmap->addScorePoints(30);
 	}
 
 	// add it, and we are finished
@@ -888,6 +893,8 @@ void OsuSlider::onRepeatHit(bool successful, bool sliderend)
 	if (m_points.size() == 0)
 		return;
 
+	// repeat hit of a slider adds +30 points, if successful
+
 	// sound and hit animation
 	if (!successful)
 		onSliderBreak();
@@ -909,6 +916,9 @@ void OsuSlider::onRepeatHit(bool successful, bool sliderend)
 			m_fStartHitAnimation = 0.001f; // quickfix for 1 frame missing images
 			anim->moveQuadOut(&m_fStartHitAnimation, 1.0f, OsuGameRules::osu_circle_fade_out_time.getFloat(), true);
 		}
+
+		// add score
+		m_beatmap->addScorePoints(30);
 	}
 }
 
@@ -916,6 +926,8 @@ void OsuSlider::onTickHit(bool successful, int tickIndex)
 {
 	if (m_points.size() == 0)
 		return;
+
+	// tick hit of a slider adds +10 points, if successful
 
 	// tick drawing visibility
 	int numMissingTickClicks = 0;
@@ -936,6 +948,9 @@ void OsuSlider::onTickHit(bool successful, int tickIndex)
 		anim->moveLinear(&m_fFollowCircleTickAnimationScale, 1.0f, OsuGameRules::osu_slider_followcircle_tick_pulse_time.getFloat(), true);
 		engine->getSound()->play(m_beatmap->getSkin()->getSliderTick());
 		m_beatmap->addHitResult(OsuScore::HIT_SLIDER30, 0, true);
+
+		// add score
+		m_beatmap->addScorePoints(10);
 	}
 }
 

@@ -109,6 +109,7 @@ public:
 
 	float getDifficultyMultiplier();
 	float getCSDifficultyMultiplier();
+	float getScoreMultiplier();
 	float getRawSpeedMultiplier();	// without override
 	float getSpeedMultiplier();		// with override
 	float getPitchMultiplier();

@@ -45,7 +45,7 @@ void DUMMY_OSU_LETTERBOXING(UString oldValue, UString newValue) {;}
 void DUMMY_OSU_VOLUME_MUSIC_ARGS(UString oldValue, UString newValue) {;}
 void DUMMY_OSU_MODS(void) {;}
 
-ConVar osu_version("osu_version", 24.0f);
+ConVar osu_version("osu_version", 25.0f);
 ConVar osu_debug("osu_debug", false);
 
 ConVar osu_disable_mousebuttons("osu_disable_mousebuttons", false);
@@ -340,7 +340,7 @@ void Osu::update()
 		getSelectedBeatmap()->update();
 
 		if (engine->getKeyboard()->isControlDown() && engine->getKeyboard()->isAltDown() && engine->getMouse()->isLeftDown())
-			getSelectedBeatmap()->seekPercent(engine->getMouse()->getPos().x/getScreenWidth());
+			getSelectedBeatmap()->seekPercent(clamp<float>(engine->getMouse()->getPos().x/getScreenWidth(), 0.0f, 0.99f));
 
 		// skip button clicking
 		if (getSelectedBeatmap()->isInSkippableSection() && !getSelectedBeatmap()->isPaused())
@@ -888,6 +888,26 @@ float Osu::getCSDifficultyMultiplier()
 		difficultyMultiplier = 0.5f;
 
 	return difficultyMultiplier;
+}
+
+float Osu::getScoreMultiplier()
+{
+	float multiplier = 1.0f;
+
+	if (m_bModEZ)
+		multiplier *= 0.5f;
+	if (m_bModHT)
+		multiplier *= 0.3f;
+	if (m_bModHR)
+		multiplier *= 1.06f;
+	if (m_bModDT || m_bModNC)
+		multiplier *= 1.12f;
+	if (m_bModHD)
+		multiplier *= 1.06f;
+	if (m_bModSpunout)
+		multiplier *= 0.9f;
+
+	return multiplier;
 }
 
 float Osu::getRawSpeedMultiplier()

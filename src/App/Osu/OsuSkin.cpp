@@ -247,6 +247,14 @@ OsuSkin::OsuSkin(Osu *osu, UString filepath)
 	m_bRankingPanel2x = false;
 	m_bRankingMaxCombo2x = false;
 	m_bRankingAccuracy2x = false;
+	m_bRankingA2x = false;
+	m_bRankingB2x = false;
+	m_bRankingC2x = false;
+	m_bRankingD2x = false;
+	m_bRankingS2x = false;
+	m_bRankingSH2x = false;
+	m_bRankingX2x = false;
+	m_bRankingXH2x = false;
 
 	// skin.ini
 	m_fVersion = 1;
@@ -543,6 +551,22 @@ void OsuSkin::load()
 		m_bRankingMaxCombo2x = true;
 	if (m_rankingAccuracy != NULL && m_rankingAccuracy->getFilePath().find("@2x") != -1)
 		m_bRankingAccuracy2x = true;
+	if (m_rankingA != NULL && m_rankingA->getFilePath().find("@2x") != -1)
+		m_bRankingA2x = true;
+	if (m_rankingB != NULL && m_rankingB->getFilePath().find("@2x") != -1)
+		m_bRankingB2x = true;
+	if (m_rankingC != NULL && m_rankingC->getFilePath().find("@2x") != -1)
+		m_bRankingC2x = true;
+	if (m_rankingD != NULL && m_rankingD->getFilePath().find("@2x") != -1)
+		m_bRankingD2x = true;
+	if (m_rankingS != NULL && m_rankingS->getFilePath().find("@2x") != -1)
+		m_bRankingS2x = true;
+	if (m_rankingSH != NULL && m_rankingSH->getFilePath().find("@2x") != -1)
+		m_bRankingSH2x = true;
+	if (m_rankingX != NULL && m_rankingX->getFilePath().find("@2x") != -1)
+		m_bRankingX2x = true;
+	if (m_rankingXH != NULL && m_rankingXH->getFilePath().find("@2x") != -1)
+		m_bRankingXH2x = true;
 
 	// HACKHACK: all of the <>2 loads are temporary fixes until I fix the checkLoadImage() function logic
 

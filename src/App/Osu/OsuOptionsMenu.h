@@ -95,6 +95,7 @@ private:
 	CBaseUISlider *m_backgroundBrightnessSlider;
 	CBaseUISlider *m_hudSizeSlider;
 	CBaseUISlider *m_hudComboScaleSlider;
+	CBaseUISlider *m_hudScoreScaleSlider;
 	CBaseUISlider *m_hudAccuracyScaleSlider;
 	CBaseUISlider *m_hudHiterrorbarScaleSlider;
 	CBaseUISlider *m_hudProgressbarScaleSlider;
