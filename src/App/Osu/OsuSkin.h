@@ -210,6 +210,14 @@ public:
 	inline bool isRankingPanel2x() {return m_bRankingPanel2x;}
 	inline bool isRankingMaxCombo2x() {return m_bRankingMaxCombo2x;}
 	inline bool isRankingAccuracy2x() {return m_bRankingAccuracy2x;}
+	inline bool isRankingA2x() {return m_bRankingA2x;}
+	inline bool isRankingB2x() {return m_bRankingB2x;}
+	inline bool isRankingC2x() {return m_bRankingC2x;}
+	inline bool isRankingD2x() {return m_bRankingD2x;}
+	inline bool isRankingS2x() {return m_bRankingS2x;}
+	inline bool isRankingSH2x() {return m_bRankingSH2x;}
+	inline bool isRankingX2x() {return m_bRankingX2x;}
+	inline bool isRankingXH2x() {return m_bRankingXH2x;}
 
 	// skin.ini
 	inline float getVersion() {return m_fVersion;}
@@ -454,6 +462,14 @@ private:
 	bool m_bRankingPanel2x;
 	bool m_bRankingMaxCombo2x;
 	bool m_bRankingAccuracy2x;
+	bool m_bRankingA2x;
+	bool m_bRankingB2x;
+	bool m_bRankingC2x;
+	bool m_bRankingD2x;
+	bool m_bRankingS2x;
+	bool m_bRankingSH2x;
+	bool m_bRankingX2x;
+	bool m_bRankingXH2x;
 
 	// skin.ini
 	float m_fVersion;

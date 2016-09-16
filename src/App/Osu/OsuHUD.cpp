@@ -32,6 +32,7 @@ ConVar osu_cursor_trail_alpha("osu_cursor_trail_alpha", 1.0f);
 ConVar osu_hud_scale("osu_hud_scale", 1.0f);
 ConVar osu_hud_hiterrorbar_scale("osu_hud_hiterrorbar_scale", 1.0f);
 ConVar osu_hud_combo_scale("osu_hud_combo_scale", 1.0f);
+ConVar osu_hud_score_scale("osu_hud_score_scale", 1.0f);
 ConVar osu_hud_accuracy_scale("osu_hud_accuracy_scale", 1.0f);
 ConVar osu_hud_progressbar_scale("osu_hud_progressbar_scale", 1.0f);
 ConVar osu_hud_playfield_border_size("osu_hud_playfield_border_size", 5.0f);
@@ -42,6 +43,7 @@ ConVar osu_draw_hud("osu_draw_hud", true);
 ConVar osu_draw_hiterrorbar("osu_draw_hiterrorbar", true);
 ConVar osu_draw_progressbar("osu_draw_progressbar", true);
 ConVar osu_draw_combo("osu_draw_combo", true);
+ConVar osu_draw_score("osu_draw_score", true);
 ConVar osu_draw_accuracy("osu_draw_accuracy", true);
 ConVar osu_draw_target_heatmap("osu_draw_target_heatmap", true);
 
@@ -106,6 +108,9 @@ void OsuHUD::draw(Graphics *g)
 			drawStatistics(g, m_osu->getSelectedBeatmap()->getNumMisses(), m_osu->getSelectedBeatmap()->getBPM(), OsuGameRules::getApproachRateForSpeedMultiplier(m_osu->getSelectedBeatmap(), m_osu->getSelectedBeatmap()->getSpeedMultiplier()), m_osu->getSelectedBeatmap()->getCS(), OsuGameRules::getOverallDifficultyForSpeedMultiplier(m_osu->getSelectedBeatmap(), m_osu->getSelectedBeatmap()->getSpeedMultiplier()), m_osu->getSelectedBeatmap()->getNPS(), m_osu->getSelectedBeatmap()->getND(), m_osu->getScore()->getUnstableRate());
 		g->popTransform();
 
+		if (osu_draw_score.getBool())
+			drawScore(g, m_osu->getScore()->getScore());
+
 		if (osu_draw_combo.getBool())
 			drawCombo(g, m_osu->getScore()->getCombo());
 
@@ -140,6 +145,8 @@ void OsuHUD::drawDummy(Graphics *g)
 	drawWarningArrows(g);
 
 	drawCombo(g, 420);
+
+	drawScore(g, 123456789);
 
 	drawProgressBar(g, 0.25f, false);
 
@@ -555,6 +562,18 @@ void OsuHUD::drawCombo(Graphics *g, int combo)
 		// draw 'x' at the end
 		g->translate(m_osu->getSkin()->getScoreX()->getWidth()*0.5f*scale, 0);
 		g->drawImage(m_osu->getSkin()->getScoreX());
+	g->popTransform();
+}
+
+void OsuHUD::drawScore(Graphics *g, int score)
+{
+	g->setColor(0xffffffff);
+
+	// TODO:
+	const float scale = m_osu->getImageScale(m_osu, m_osu->getSkin()->getScore0(), 32) * osu_hud_scale.getFloat() * osu_hud_score_scale.getFloat();
+	g->pushTransform();
+		g->translate(100, 100);
+		drawScoreNumber(g, m_osu->getScore()->getScore());
 	g->popTransform();
 }
 

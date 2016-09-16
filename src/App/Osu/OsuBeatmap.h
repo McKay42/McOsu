@@ -123,6 +123,7 @@ public:
 	void consumeClickEvent();
 	void addHitResult(OsuScore::HIT hit, long delta, bool ignoreOnHitErrorBar = false, bool hitErrorBarOnly = false, bool ignoreCombo = false);
 	void addSliderBreak();
+	void addScorePoints(int points);
 	void playMissSound();
 
 	Vector2 osuCoords2Pixels(Vector2 coords);
@@ -204,6 +205,9 @@ private:
 	Vector2 m_vAutoCursorPos;
 	float m_fPlayfieldRotation;
 	int m_iAutoCursorDanceIndex;
+	float m_fTimeshockTimeLimit;
+	float m_fTimeshockTime;
+	float m_fTimeshockTimer;
 
 	bool m_bClick1Held;
 	bool m_bClick2Held;

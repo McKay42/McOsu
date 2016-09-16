@@ -93,6 +93,9 @@ ConVar osu_mod_arwobble_strength("osu_mod_arwobble_strength", 1.0f);
 ConVar osu_mod_arwobble_interval("osu_mod_arwobble_interval", 7.0f);
 ConVar osu_mod_shirone("osu_mod_shirone", false);
 ConVar osu_mod_shirone_combo("osu_mod_shirone_combo", 20.0f);
+ConVar osu_mod_timeshock("osu_mod_timeshock", false);
+ConVar osu_mod_timeshock_duration("osu_mod_timeshock_duration", 1.25f);
+ConVar osu_mod_timeshock_amount("osu_mod_timeshock_amount", 2.0f);
 
 ConVar osu_early_note_time("osu_early_note_time", 1000.0f, "Timeframe in ms at the beginning of a beatmap which triggers a starting delay for easier reading");
 ConVar osu_skip_time("osu_skip_time", 5000.0f, "Timeframe in ms within a beatmap which allows skipping if it doesn't contain any hitobjects");
@@ -148,6 +151,9 @@ OsuBeatmap::OsuBeatmap(Osu *osu, UString filepath)
 	m_iPreviousFollowPointObjectIndex = -1;
 	m_fPlayfieldRotation = 0.0f;
 	m_iAutoCursorDanceIndex = 0;
+	m_fTimeshockTimer = 0.0f;
+	m_fTimeshockTime = 0.0f;
+	m_fTimeshockTimeLimit = 0.0f;
 
 	m_bClick1Held = false;
 	m_bClick2Held = false;
@@ -293,6 +299,26 @@ void OsuBeatmap::draw(Graphics *g)
 			m_hitobjects[i]->draw2(g);
 		}
 	}
+
+	if (osu_mod_timeshock.getBool() && m_fTimeshockTimer > 0.0f)
+	{
+		unsigned long nextHitObjectTime = m_music->getLengthMS()*m_fTimeshockTime - osu_mod_timeshock_amount.getFloat()*1000;
+		Vector2 nextHitObjectPos;
+		for (int i=0; i<m_hitobjects.size(); i++)
+		{
+			int nextIndex = i+1 < m_hitobjects.size() ? i+1 : i;
+			if (m_hitobjects[nextIndex]->getTime() > nextHitObjectTime)
+			{
+				nextHitObjectPos = m_hitobjects[i]->getRawPosAt(nextHitObjectTime);
+				break;
+			}
+		}
+
+		nextHitObjectPos = osuCoords2Pixels(nextHitObjectPos);
+		g->setColor(0xff00ff00);
+		g->drawRect(nextHitObjectPos.x-100, nextHitObjectPos.y-100, 200, 200);
+	}
+
 
 	// debug stuff
 	if (osu_debug_hiterrorbar_misaims.getBool())
@@ -461,6 +487,24 @@ void OsuBeatmap::update()
 	// live update hit object and playfield metrics
 	updateHitobjectMetrics();
 	updatePlayfieldMetrics();
+
+	// handle timeshock
+	if (osu_mod_timeshock.getBool())
+	{
+		if (m_fTimeshockTimer > 0.0f)
+		{
+			debugLog("percent = %f\n", m_fTimeshockTimer);
+			unsigned long newPos = m_music->getLengthMS()*m_fTimeshockTime - (unsigned long)((m_fTimeshockTimer*osu_mod_timeshock_amount.getFloat()*1000));
+			m_music->setPositionMS(newPos);
+			if (m_fTimeshockTimer >= 1.0f)
+			{
+				m_fTimeshockTimer = 0.0f;
+				m_music->setPositionMS(m_music->getLengthMS()*m_fTimeshockTime - (unsigned long)(osu_mod_timeshock_amount.getFloat()*1000));
+			}
+			m_iLastMusicPosition = newPos;
+			resetHitObjects(newPos);
+		}
+	}
 
 	// update current music position (this variable does not include any offsets!)
 	m_iCurMusicPos = getMusicPositionMSInterpolated();
@@ -1170,6 +1214,9 @@ void OsuBeatmap::consumeClickEvent()
 
 void OsuBeatmap::addHitResult(OsuScore::HIT hit, long delta, bool ignoreOnHitErrorBar, bool hitErrorBarOnly, bool ignoreCombo)
 {
+	if (m_fTimeshockTimer > 0.0f)
+		return;
+
 	// handle perfect & sudden death
 	if (m_osu->getModSS())
 	{
@@ -1189,7 +1236,21 @@ void OsuBeatmap::addHitResult(OsuScore::HIT hit, long delta, bool ignoreOnHitErr
 	}
 
 	if (hit == OsuScore::HIT_MISS)
+	{
 		playMissSound();
+
+		// handle timeshock
+		if (osu_mod_timeshock.getBool())
+		{
+			m_fTimeshockTime = m_music->getPosition();
+			if (m_fTimeshockTime > m_fTimeshockTimeLimit)
+			{
+				m_fTimeshockTimeLimit = m_fTimeshockTime;
+				m_fTimeshockTimer = 0.001f;
+				anim->moveQuadInOut(&m_fTimeshockTimer, 1.0f, osu_mod_timeshock_duration.getFloat(), true);
+			}
+		}
+	}
 
 	m_osu->getScore()->addHitResult(this, hit, delta, ignoreOnHitErrorBar, hitErrorBarOnly, ignoreCombo);
 }
@@ -1211,6 +1272,11 @@ void OsuBeatmap::addSliderBreak()
 	playMissSound();
 
 	m_osu->getScore()->addSliderBreak();
+}
+
+void OsuBeatmap::addScorePoints(int points)
+{
+	m_osu->getScore()->addPoints(points);
 }
 
 void OsuBeatmap::playMissSound()

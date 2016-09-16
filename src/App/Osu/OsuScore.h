@@ -32,6 +32,20 @@ public:
 		HIT_SLIDER30
 	};
 
+	enum GRADE
+	{
+		GRADE_XH,
+		GRADE_SH,
+		GRADE_X,
+		GRADE_S,
+		GRADE_A,
+		GRADE_B,
+		GRADE_C,
+		GRADE_D,
+		GRADE_F,
+		GRADE_N
+	};
+
 public:
 	OsuScore(Osu *osu);
 
@@ -39,7 +53,9 @@ public:
 
 	void addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignoreOnHitErrorBar, bool hitErrorBarOnly, bool ignoreCombo); // only OsuBeatmap may call this function!
 	void addSliderBreak(); // only OsuBeatmap may call this function!
+	void addPoints(int points);
 
+	inline GRADE getGrade() {return m_grade;}
 	inline int getScore() {return m_iScore;}
 	inline int getCombo() {return m_iCombo;}
 	inline int getComboMax() {return m_iComboMax;}
@@ -58,6 +74,7 @@ private:
 
 	std::vector<HIT> m_hitresults;
 	std::vector<int> m_hitdeltas;
+	GRADE m_grade;
 	int m_iScore;
 	int m_iCombo;
 	int m_iComboMax;

@@ -136,21 +136,7 @@ void OsuSongBrowser2::draw(Graphics *g)
 	g->fillRect(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight());
 
 	// draw background image
-	if (m_selectedBeatmap != NULL && m_selectedBeatmap->getSelectedDifficulty() != NULL)
-	{
-		Image *backgroundImage = m_selectedBeatmap->getSelectedDifficulty()->backgroundImage;
-		if (backgroundImage != NULL)
-		{
-			float scale = Osu::getImageScaleToFillResolution(backgroundImage, m_osu->getScreenSize());
-
-			g->setColor(0xff999999);
-			g->pushTransform();
-			g->scale(scale, scale);
-			g->translate(m_osu->getScreenWidth()/2, m_osu->getScreenHeight()/2);
-			g->drawImage(backgroundImage);
-			g->popTransform();
-		}
-	}
+	drawSelectedBeatmapBackgroundImage(g, m_osu);
 
 	// draw song browser
 	m_songBrowser->draw(g);
@@ -268,6 +254,25 @@ void OsuSongBrowser2::draw(Graphics *g)
 	}
 	g->popTransform();
 	*/
+}
+
+void OsuSongBrowser2::drawSelectedBeatmapBackgroundImage(Graphics *g, Osu *osu)
+{
+	if (osu->getSelectedBeatmap() != NULL && osu->getSelectedBeatmap()->getSelectedDifficulty() != NULL)
+	{
+		Image *backgroundImage = osu->getSelectedBeatmap()->getSelectedDifficulty()->backgroundImage;
+		if (backgroundImage != NULL)
+		{
+			float scale = Osu::getImageScaleToFillResolution(backgroundImage, osu->getScreenSize());
+
+			g->setColor(0xff999999);
+			g->pushTransform();
+			g->scale(scale, scale);
+			g->translate(osu->getScreenWidth()/2, osu->getScreenHeight()/2);
+			g->drawImage(backgroundImage);
+			g->popTransform();
+		}
+	}
 }
 
 void OsuSongBrowser2::update()

@@ -21,6 +21,8 @@ public:
 	virtual void draw(Graphics *g);
 	virtual void update();
 
+	void click() {onMouseDownInside();}
+
 	void resetState();
 
 	void setState(unsigned int state, UString modName, UString tooltipText, Image *img);

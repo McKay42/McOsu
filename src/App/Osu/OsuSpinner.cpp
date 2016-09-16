@@ -411,15 +411,14 @@ void OsuSpinner::rotate(float rad)
 	// added one whole rotation...
 	if (floor(newRotations/360.0f) > m_fRotations/360.0f)
 	{
-		//TODO seems to give 1100 points per spin but also an extra 100 for some spinners
+		// TODO seems to give 1100 points per spin but also an extra 100 for some spinners
 		if ((int)(newRotations/360.0f) > (int)(m_fRotationsNeeded)+1)
 		{
 			// extra rotations
-			///data.changeScore(1000);
+			m_beatmap->addScorePoints(1000);
 			engine->getSound()->play(m_beatmap->getSkin()->getSpinnerBonus());
 		}
-		///data.changeScore(100);
-		///engine->getSound()->play(m_beatmap->getSkin()->getSpinnerSpinSound());
+		m_beatmap->addScorePoints(100);
 	}
 
 	// spinner sound

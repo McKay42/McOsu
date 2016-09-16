@@ -122,25 +122,25 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen()
 
 void OsuModSelector::updateButtons()
 {
-	setModButtonOnGrid(0, 0, 0, "ez", "Reduces overall difficulty - larger circles, more forgiving HP drain, less accuracy required.", m_osu->getSkin()->getSelectionModEasy());
-	setModButtonOnGrid(1, 0, 0, "nf", "You can't fail. No matter what.", m_osu->getSkin()->getSelectionModNoFail());
-	getModButtonOnGrid(1, 0)->setAvailable(false);
-	setModButtonOnGrid(2, 0, 0, "ht", "Less zoom.", m_osu->getSkin()->getSelectionModHalfTime());
+	m_modButtonEasy = setModButtonOnGrid(0, 0, 0, "ez", "Reduces overall difficulty - larger circles, more forgiving HP drain, less accuracy required.", m_osu->getSkin()->getSelectionModEasy());
+	m_modButtonNofail = setModButtonOnGrid(1, 0, 0, "nf", "You can't fail. No matter what.", m_osu->getSkin()->getSelectionModNoFail());
+	m_modButtonNofail->setAvailable(false);
+	m_modButtonHalftime = setModButtonOnGrid(2, 0, 0, "ht", "Less zoom.", m_osu->getSkin()->getSelectionModHalfTime());
 	setModButtonOnGrid(4, 0, 0, "nm", "Massively reduced slider follow circle radius. Unnecessary clicks count as misses.", m_osu->getSkin()->getSelectionModNightmare());
 
-	setModButtonOnGrid(0, 1, 0, "hr", "Everything just got a bit harder...", m_osu->getSkin()->getSelectionModHardRock());
-	setModButtonOnGrid(1, 1, 0, "sd", "Miss a note and fail.", m_osu->getSkin()->getSelectionModSuddenDeath());
+	m_modButtonHardrock = setModButtonOnGrid(0, 1, 0, "hr", "Everything just got a bit harder...", m_osu->getSkin()->getSelectionModHardRock());
+	m_modButtonSuddendeath = setModButtonOnGrid(1, 1, 0, "sd", "Miss a note and fail.", m_osu->getSkin()->getSelectionModSuddenDeath());
 	setModButtonOnGrid(1, 1, 1, "ss", "SS or quit.", m_osu->getSkin()->getSelectionModPerfect());
-	setModButtonOnGrid(2, 1, 0, "dt", "Zoooooooooom.", m_osu->getSkin()->getSelectionModDoubleTime());
+	m_modButtonDoubletime = setModButtonOnGrid(2, 1, 0, "dt", "Zoooooooooom.", m_osu->getSkin()->getSelectionModDoubleTime());
 	setModButtonOnGrid(2, 1, 1, "nc", "uguuuuuuuu", m_osu->getSkin()->getSelectionModNightCore());
-	setModButtonOnGrid(3, 1, 0, "hd", "Play with no approach circles and fading notes for a slight score advantage.", m_osu->getSkin()->getSelectionModHidden());
-	setModButtonOnGrid(4, 1, 0, "fl", "Restricted view area.", m_osu->getSkin()->getSelectionModFlashlight());
+	m_modButtonHidden = setModButtonOnGrid(3, 1, 0, "hd", "Play with no approach circles and fading notes for a slight score advantage.", m_osu->getSkin()->getSelectionModHidden());
+	m_modButtonFlashlight = setModButtonOnGrid(4, 1, 0, "fl", "Restricted view area.", m_osu->getSkin()->getSelectionModFlashlight());
 	getModButtonOnGrid(4, 1)->setAvailable(false);
 
-	setModButtonOnGrid(0, 2, 0, "relax", "You don't need to click.\nGive your clicking/tapping fingers a break from the heat of things.\n** UNRANKED **", m_osu->getSkin()->getSelectionModRelax());
-	setModButtonOnGrid(1, 2, 0, "autopilot", "Automatic cursor movement - just follow the rhythm.\n** UNRANKED **", m_osu->getSkin()->getSelectionModAutopilot());
-	setModButtonOnGrid(2, 2, 0, "spunout", "Spinners will be automatically completed.", m_osu->getSkin()->getSelectionModSpunOut());
-	setModButtonOnGrid(3, 2, 0, "auto", "Watch a perfect automated play through the song.", m_osu->getSkin()->getSelectionModAutoplay());
+	m_modButtonRelax = setModButtonOnGrid(0, 2, 0, "relax", "You don't need to click.\nGive your clicking/tapping fingers a break from the heat of things.\n** UNRANKED **", m_osu->getSkin()->getSelectionModRelax());
+	m_modButtonAutopilot = setModButtonOnGrid(1, 2, 0, "autopilot", "Automatic cursor movement - just follow the rhythm.\n** UNRANKED **", m_osu->getSkin()->getSelectionModAutopilot());
+	m_modButtonSpunout = setModButtonOnGrid(2, 2, 0, "spunout", "Spinners will be automatically completed.", m_osu->getSkin()->getSelectionModSpunOut());
+	m_modButtonAuto = setModButtonOnGrid(3, 2, 0, "auto", "Watch a perfect automated play through the song.", m_osu->getSkin()->getSelectionModAutoplay());
 	setModButtonOnGrid(4, 2, 0, "practicetarget", "Accuracy is based on the distance to the center of all hitobjects.\n300s still require at least being in the hit window of a 100 in addition to the rule above.", m_osu->getSkin()->getSelectionModTarget());
 }
 
@@ -202,18 +202,18 @@ void OsuModSelector::draw(Graphics *g)
 
 		// draw mod grid buttons
 		g->pushTransform();
-		g->translate(0, (1.0f - m_fAnimation)*modGridButtonsSize.y);
-		g->setColor(backgroundColor);
-		g->fillRect(modGridButtonsStart.x - margin, modGridButtonsStart.y - margin, modGridButtonsSize.x + 2*margin, modGridButtonsSize.y + 2*margin);
-		m_container->draw(g);
+			g->translate(0, (1.0f - m_fAnimation)*modGridButtonsSize.y);
+			g->setColor(backgroundColor);
+			g->fillRect(modGridButtonsStart.x - margin, modGridButtonsStart.y - margin, modGridButtonsSize.x + 2*margin, modGridButtonsSize.y + 2*margin);
+			m_container->draw(g);
 		g->popTransform();
 
 		// draw override sliders
 		g->pushTransform();
-		g->translate(0, -(1.0f - m_fAnimation)*overrideSlidersSize.y);
-		g->setColor(backgroundColor);
-		g->fillRect(overrideSlidersStart.x - margin, 0, overrideSlidersSize.x + 2*margin, overrideSlidersSize.y + margin);
-		m_overrideSliderContainer->draw(g);
+			g->translate(0, -(1.0f - m_fAnimation)*overrideSlidersSize.y);
+			g->setColor(backgroundColor);
+			g->fillRect(overrideSlidersStart.x - margin, 0, overrideSlidersSize.x + 2*margin, overrideSlidersSize.y + margin);
+			m_overrideSliderContainer->draw(g);
 		g->popTransform();
 	}
 	else // normal mode, just draw everything
@@ -224,10 +224,10 @@ void OsuModSelector::draw(Graphics *g)
 
 	// draw experimental mods
 	g->pushTransform();
-	g->translate(-(m_experimentalContainer->getSize().x + 2.0f)*(1.0f - m_fExperimentalAnimation), 0);
-	g->setColor(backgroundColor);
-	g->fillRect(m_experimentalContainer->getPos().x - margin, m_experimentalContainer->getPos().y - margin, m_experimentalContainer->getSize().x + 2*margin*m_fExperimentalAnimation, m_experimentalContainer->getSize().y + 2*margin);
-	m_experimentalContainer->draw(g);
+		g->translate(-(m_experimentalContainer->getSize().x + 2.0f)*(1.0f - m_fExperimentalAnimation), 0);
+		g->setColor(backgroundColor);
+		g->fillRect(m_experimentalContainer->getPos().x - margin, m_experimentalContainer->getPos().y - margin, m_experimentalContainer->getSize().x + 2*margin*m_fExperimentalAnimation, m_experimentalContainer->getSize().y + 2*margin);
+		m_experimentalContainer->draw(g);
 	g->popTransform();
 }
 
@@ -307,6 +307,32 @@ void OsuModSelector::onKeyDown(KeyboardEvent &key)
 
 	if ((key == KEY_F1 && !m_bWaitForF1KeyUp) || key == KEY_2 || key == (KEYCODE)OsuKeyBindings::GAME_PAUSE.getInt() || key == KEY_ESCAPE)
 		close();
+
+	// mod hotkeys
+	if (key == (KEYCODE)OsuKeyBindings::MOD_EASY.getInt())
+		m_modButtonEasy->click();
+	if (key == (KEYCODE)OsuKeyBindings::MOD_NOFAIL.getInt())
+		m_modButtonNofail->click();
+	if (key == (KEYCODE)OsuKeyBindings::MOD_HALFTIME.getInt())
+		m_modButtonHalftime->click();
+	if (key == (KEYCODE)OsuKeyBindings::MOD_HARDROCK.getInt())
+		m_modButtonHardrock->click();
+	if (key == (KEYCODE)OsuKeyBindings::MOD_SUDDENDEATH.getInt())
+		m_modButtonSuddendeath->click();
+	if (key == (KEYCODE)OsuKeyBindings::MOD_DOUBLETIME.getInt())
+		m_modButtonDoubletime->click();
+	if (key == (KEYCODE)OsuKeyBindings::MOD_HIDDEN.getInt())
+		m_modButtonHidden->click();
+	if (key == (KEYCODE)OsuKeyBindings::MOD_FLASHLIGHT.getInt())
+		m_modButtonFlashlight->click();
+	if (key == (KEYCODE)OsuKeyBindings::MOD_RELAX.getInt())
+		m_modButtonRelax->click();
+	if (key == (KEYCODE)OsuKeyBindings::MOD_AUTOPILOT.getInt())
+		m_modButtonAutopilot->click();
+	if (key == (KEYCODE)OsuKeyBindings::MOD_SPUNOUT.getInt())
+		m_modButtonSpunout->click();
+	if (key == (KEYCODE)OsuKeyBindings::MOD_AUTO.getInt())
+		m_modButtonAuto->click();
 
 	key.consume();
 }
@@ -549,7 +575,7 @@ void OsuModSelector::updateOverrideSliders()
 	}
 }
 
-void OsuModSelector::setModButtonOnGrid(int x, int y, int state, UString modName, UString tooltipText, Image *img)
+OsuUIModSelectorModButton *OsuModSelector::setModButtonOnGrid(int x, int y, int state, UString modName, UString tooltipText, Image *img)
 {
 	OsuUIModSelectorModButton *modButton = getModButtonOnGrid(x, y);
 
@@ -558,6 +584,8 @@ void OsuModSelector::setModButtonOnGrid(int x, int y, int state, UString modName
 		modButton->setState(state, modName, tooltipText, img);
 		modButton->setVisible(true);
 	}
+
+	return modButton;
 }
 
 OsuUIModSelectorModButton *OsuModSelector::getModButtonOnGrid(int x, int y)
