@@ -117,7 +117,7 @@ UString OsuUISongBrowserInfoLabel::buildSubTitleString()
 
 UString OsuUISongBrowserInfoLabel::buildSongInfoString()
 {
-	const unsigned long fullSeconds = (m_iLengthMS*(1.0 / m_osu->getSpeedMultiplier())) / 1000;
+	const unsigned long fullSeconds = (m_iLengthMS*(1.0 / m_osu->getSpeedMultiplier())) / 1000.0;
 	const int minutes = fullSeconds / 60;
 	const int seconds = fullSeconds % 60;
 

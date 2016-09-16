@@ -30,6 +30,9 @@ class Timer;
 class OsuSongBrowser2 : public OsuScreenBackable, public MouseListener
 {
 public:
+	static void drawSelectedBeatmapBackgroundImage(Graphics *g, Osu *osu);
+
+public:
 	OsuSongBrowser2(Osu *osu);
 	virtual ~OsuSongBrowser2();
 
