@@ -97,6 +97,7 @@ Osu::Osu()
 	engine->getConsoleBox()->setRequireShiftToActivate(true);
 	engine->getSound()->setVolume(osu_volume_master.getFloat());
 	engine->getMouse()->addListener(this);
+	convar->getConVarByName("name")->setValue("Guest");
 	convar->getConVarByName("console_overlay")->setValue(0.0f);
 	convar->getConVarByName("vsync")->setValue(0.0f);
 	convar->getConVarByName("fps_max")->setValue(420.0f);
@@ -792,6 +793,7 @@ void Osu::volumeUp()
 
 void Osu::saveScreenshot()
 {
+	engine->getSound()->play(m_skin->getShutter());
 	int screenshotNumber = 0;
 	while (env->fileExists(UString::format("screenshots/screenshot%i.png", screenshotNumber)))
 	{
@@ -835,6 +837,7 @@ void Osu::onPlayEnd(bool quit)
 	if (!quit)
 	{
 		m_rankingScreen->setScore(m_score);
+		m_rankingScreen->setBeatmapInfo(getSelectedBeatmap(), getSelectedBeatmap()->getSelectedDifficulty());
 		engine->getSound()->play(m_skin->getApplause());
 	}
 

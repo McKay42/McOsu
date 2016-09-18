@@ -15,6 +15,10 @@ class CBaseUIContainer;
 class CBaseUIScrollView;
 class CBaseUIImage;
 
+class OsuBeatmap;
+class OsuBeatmapDifficulty;
+
+class OsuUIRankingScreenInfoLabel;
 class OsuUIRankingScreenRankingPanel;
 
 class OsuRankingScreen : public OsuScreenBackable
@@ -28,6 +32,7 @@ public:
 
 	void setVisible(bool visible);
 	void setScore(OsuScore *score);
+	void setBeatmapInfo(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff);
 
 private:
 	virtual void updateLayout();
@@ -38,11 +43,13 @@ private:
 	CBaseUIContainer *m_container;
 	CBaseUIScrollView *m_rankings;
 
+	OsuUIRankingScreenInfoLabel *m_songInfo;
 	OsuUIRankingScreenRankingPanel *m_rankingPanel;
 	CBaseUIImage *m_rankingTitle;
 	CBaseUIImage *m_rankingGrade;
 
 	OsuScore::GRADE m_grade;
+	float m_fUnstableRate;
 };
 
 #endif

@@ -77,8 +77,10 @@ private:
 	ConVar *m_osu_mod_target_100_percent_ref;
 	ConVar *m_osu_mod_target_50_percent_ref;
 
+	// shit code
 	float m_fAccuracyXOffset;
 	float m_fAccuracyYOffset;
+	float m_fScoreHeight;
 
 	float m_fComboAnim1;
 	float m_fComboAnim2;
