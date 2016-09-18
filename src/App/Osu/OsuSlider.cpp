@@ -846,19 +846,19 @@ void OsuSlider::onHit(OsuScore::HIT result, long delta, bool startOrEnd, float t
 		if (!startOrEnd)
 		{
 			m_fStartHitAnimation = 0.001f; // quickfix for 1 frame missing images
-			anim->moveQuadOut(&m_fStartHitAnimation, 1.0f, OsuGameRules::osu_circle_fade_out_time.getFloat(), true);
+			anim->moveQuadOut(&m_fStartHitAnimation, 1.0f, OsuGameRules::getFadeOutTime(m_beatmap), true);
 		}
 		else
 		{
 			if (m_iRepeat % 2 != 0)
 			{
 				m_fEndHitAnimation = 0.001f; // quickfix for 1 frame missing images
-				anim->moveQuadOut(&m_fEndHitAnimation, 1.0f, OsuGameRules::osu_circle_fade_out_time.getFloat(), true);
+				anim->moveQuadOut(&m_fEndHitAnimation, 1.0f, OsuGameRules::getFadeOutTime(m_beatmap), true);
 			}
 			else
 			{
 				m_fStartHitAnimation = 0.001f; // quickfix for 1 frame missing images
-				anim->moveQuadOut(&m_fStartHitAnimation, 1.0f, OsuGameRules::osu_circle_fade_out_time.getFloat(), true);
+				anim->moveQuadOut(&m_fStartHitAnimation, 1.0f, OsuGameRules::getFadeOutTime(m_beatmap), true);
 			}
 		}
 
@@ -884,7 +884,7 @@ void OsuSlider::onHit(OsuScore::HIT result, long delta, bool startOrEnd, float t
 		m_bFinished = true;
 
 		m_fEndSliderBodyFadeAnimation = 0.001f; // quickfix for 1 frame missing images
-		anim->moveQuadOut(&m_fEndSliderBodyFadeAnimation, 1.0f, OsuGameRules::osu_circle_fade_out_time.getFloat(), true);
+		anim->moveQuadOut(&m_fEndSliderBodyFadeAnimation, 1.0f, OsuGameRules::getFadeOutTime(m_beatmap), true);
 	}
 }
 
@@ -909,12 +909,12 @@ void OsuSlider::onRepeatHit(bool successful, bool sliderend)
 		if (sliderend)
 		{
 			m_fEndHitAnimation = 0.001f; // quickfix for 1 frame missing images
-			anim->moveQuadOut(&m_fEndHitAnimation, 1.0f, OsuGameRules::osu_circle_fade_out_time.getFloat(), true);
+			anim->moveQuadOut(&m_fEndHitAnimation, 1.0f, OsuGameRules::getFadeOutTime(m_beatmap), true);
 		}
 		else
 		{
 			m_fStartHitAnimation = 0.001f; // quickfix for 1 frame missing images
-			anim->moveQuadOut(&m_fStartHitAnimation, 1.0f, OsuGameRules::osu_circle_fade_out_time.getFloat(), true);
+			anim->moveQuadOut(&m_fStartHitAnimation, 1.0f, OsuGameRules::getFadeOutTime(m_beatmap), true);
 		}
 
 		// add score

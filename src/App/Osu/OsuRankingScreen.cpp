@@ -23,7 +23,9 @@
 #include "OsuBeatmap.h"
 #include "OsuBeatmapDifficulty.h"
 #include "OsuSongBrowser2.h"
+#include "OsuTooltipOverlay.h"
 
+#include "OsuUIRankingScreenInfoLabel.h"
 #include "OsuUIRankingScreenRankingPanel.h"
 
 ConVar osu_rankingscreen_topbar_height_percent("osu_rankingscreen_topbar_height_percent", 0.785f);
@@ -38,6 +40,9 @@ OsuRankingScreen::OsuRankingScreen(Osu *osu) : OsuScreenBackable(osu)
 	m_rankings->setDrawBackground(false);
 	m_rankings->setDrawScrollbars(false);
 	m_container->addBaseUIElement(m_rankings);
+
+	m_songInfo = new OsuUIRankingScreenInfoLabel(m_osu, 0, 0, 0, 0, "");
+	m_container->addBaseUIElement(m_songInfo);
 
 	m_rankingTitle = new CBaseUIImage(m_osu->getSkin()->getRankingTitle()->getName(), 0, 0, 0, 0, "");
 	m_rankingTitle->setDrawBackground(false);
@@ -55,6 +60,7 @@ OsuRankingScreen::OsuRankingScreen(Osu *osu) : OsuScreenBackable(osu)
 	m_rankings->getContainer()->addBaseUIElement(m_rankingGrade);
 
 	setGrade(OsuScore::GRADE_D);
+	m_fUnstableRate = 0.0f;
 }
 
 OsuRankingScreen::~OsuRankingScreen()
@@ -76,6 +82,7 @@ void OsuRankingScreen::draw(Graphics *g)
 	g->fillRect(0, 0, m_osu->getScreenWidth(), m_rankingTitle->getSize().y*osu_rankingscreen_topbar_height_percent.getFloat());
 
 	m_rankingTitle->draw(g);
+	m_songInfo->draw(g);
 
 	OsuScreenBackable::draw(g);
 }
@@ -86,6 +93,15 @@ void OsuRankingScreen::update()
 	if (!m_bVisible) return;
 
 	m_container->update();
+
+	// unstable rate tooltip
+	if (m_rankingPanel->isMouseInside())
+	{
+		m_osu->getTooltipOverlay()->begin();
+		m_osu->getTooltipOverlay()->addLine("Accuracy:");
+		m_osu->getTooltipOverlay()->addLine(UString::format("Unstable Rate: %g", m_fUnstableRate));
+		m_osu->getTooltipOverlay()->end();
+	}
 }
 
 void OsuRankingScreen::setVisible(bool visible)
@@ -103,6 +119,13 @@ void OsuRankingScreen::setScore(OsuScore *score)
 {
 	m_rankingPanel->setScore(score);
 	setGrade(score->getGrade());
+	m_fUnstableRate = score->getUnstableRate();
+}
+
+void OsuRankingScreen::setBeatmapInfo(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff)
+{
+	m_songInfo->setFromBeatmap(beatmap, diff);
+	m_songInfo->setPlayer(convar->getConVarByName("name")->getString());
 }
 
 void OsuRankingScreen::updateLayout()
@@ -111,6 +134,8 @@ void OsuRankingScreen::updateLayout()
 
 	m_container->setSize(m_osu->getScreenSize());
 	m_rankings->setSize(m_osu->getScreenSize());
+
+	m_songInfo->setSize(m_osu->getScreenWidth(), m_rankingTitle->getSize().y*osu_rankingscreen_topbar_height_percent.getFloat());
 
 	m_rankingTitle->setImage(m_osu->getSkin()->getRankingTitle());
 	m_rankingTitle->setScale(Osu::getImageScale(m_osu, m_rankingTitle->getImage(), 75.0f), Osu::getImageScale(m_osu, m_rankingTitle->getImage(), 75.0f));

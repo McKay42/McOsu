@@ -13,6 +13,8 @@
 class McFont;
 
 class Osu;
+class OsuBeatmap;
+class OsuBeatmapDifficulty;
 
 class OsuUISongBrowserInfoLabel : public CBaseUIElement
 {
@@ -20,6 +22,8 @@ public:
 	OsuUISongBrowserInfoLabel(Osu *osu, float xPos, float yPos, float xSize, float ySize, UString name);
 
 	void draw(Graphics *g);
+
+	void setFromBeatmap(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff);
 
 	void setArtist(UString artist) {m_sArtist = artist;}
 	void setTitle(UString title) {m_sTitle = title;}

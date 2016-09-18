@@ -30,6 +30,7 @@ public:
 	void onResolutionChange(Vector2 newResolution);
 
 	void setVisible(bool visible);
+	void setContinueEnabled(bool continueEnabled);
 
 private:
 	void updateLayout();
@@ -58,6 +59,8 @@ private:
 	float m_fWarningArrowsAnimX;
 	float m_fWarningArrowsAnimY;
 	bool m_bInitialWarningArrowFlyIn;
+
+	bool m_bContinueEnabled;
 };
 
 #endif

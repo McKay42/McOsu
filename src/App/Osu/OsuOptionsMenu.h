@@ -107,6 +107,7 @@ private:
 	CBaseUIElement *m_resolutionSelectButton;
 	CBaseUILabel *m_resolutionLabel;
 	CBaseUITextbox *m_osuFolderTextbox;
+	CBaseUITextbox *m_nameTextbox;
 
 	ConVar *m_waitingKey;
 

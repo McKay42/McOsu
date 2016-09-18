@@ -143,9 +143,11 @@ OsuBeatmap::OsuBeatmap(Osu *osu, UString filepath)
 	m_music = NULL;
 
 	m_iCurMusicPos = 0;
+	m_iPrevCurMusicPos = 0;
 	m_iLastMusicPosition = 0;
 	m_fLastMusicPositionForInterpolation = 0.0;
 
+	m_fHealth = 1.0f;
 	m_iNextHitObjectTime = 0;
 	m_iPreviousHitObjectTime = 0;
 	m_iPreviousFollowPointObjectIndex = -1;
@@ -734,6 +736,10 @@ void OsuBeatmap::update()
 	float smooth = std::pow(0.05*osu_effect_amplitude_smooth.getFloat(), engine->getFrameTime());
 	m_fAmplitude = smooth*m_fAmplitude + (1.0f - smooth)*amplitude;
 	*/
+
+	// TODO: update hp & drain
+
+	m_iPrevCurMusicPos = m_iCurMusicPos;
 }
 
 void OsuBeatmap::skipEmptySection()

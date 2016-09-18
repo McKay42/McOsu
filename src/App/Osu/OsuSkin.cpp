@@ -201,6 +201,7 @@ OsuSkin::OsuSkin(Osu *osu, UString filepath)
 	m_menuClick = NULL;
 	m_checkOn = NULL;
 	m_checkOff = NULL;
+	m_shutter = NULL;
 
 	m_spinnerApproachCircleColor = 0xffffffff;
 	m_sliderBorderColor = 0xffffffff;
@@ -477,6 +478,7 @@ void OsuSkin::load()
 	checkLoadSound(&m_menuClick, "menuclick", "OSU_SKIN_MENUCLICK_SND", true);
 	checkLoadSound(&m_checkOn, "check-on", "OSU_SKIN_CHECKON_SND", true);
 	checkLoadSound(&m_checkOff, "check-off", "OSU_SKIN_CHECKOFF_SND", true);
+	checkLoadSound(&m_shutter, "shutter", "OSU_SKIN_SHUTTER_SND", true);
 
 	// scaling
 	// HACKHACK: this is pure cancer
