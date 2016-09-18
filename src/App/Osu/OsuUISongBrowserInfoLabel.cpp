@@ -11,6 +11,8 @@
 #include "ResourceManager.h"
 
 #include "Osu.h"
+#include "OsuBeatmap.h"
+#include "OsuBeatmapDifficulty.h"
 
 OsuUISongBrowserInfoLabel::OsuUISongBrowserInfoLabel(Osu *osu, float xPos, float yPos, float xSize, float ySize, UString name) : CBaseUIElement(xPos, yPos, xSize, ySize, name)
 {
@@ -93,6 +95,24 @@ void OsuUISongBrowserInfoLabel::draw(Graphics *g)
 	g->translate((int)(m_vPos.x + (diffInfoStringWidth/2)*m_fDiffInfoScale), (int)(m_vPos.y + m_font->getHeight() + m_font->getHeight()*m_fSubTitleScale + m_font->getHeight()*m_fSongInfoScale + (m_font->getHeight()/2)*m_fDiffInfoScale + m_iMargin*3));
 	g->drawString(m_font, diffInfoText);
 	g->popTransform();
+}
+
+void OsuUISongBrowserInfoLabel::setFromBeatmap(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff)
+{
+	setArtist(diff->artist);
+	setTitle(diff->title);
+	setDiff(diff->name);
+	setMapper(diff->creator);
+
+	setLengthMS(beatmap->getLength()); // TODO: beatmap db
+	setBPM(diff->minBPM, diff->maxBPM);
+	setNumObjects(0); // TODO: beatmap db
+
+	setCS(diff->CS);
+	setAR(diff->AR);
+	setOD(diff->OD);
+	setHP(diff->HP);
+	setStars(0); // TODO: beatmap db
 }
 
 UString OsuUISongBrowserInfoLabel::buildTitleString()

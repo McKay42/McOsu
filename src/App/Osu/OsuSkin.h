@@ -172,6 +172,7 @@ public:
 	inline Sound *getMenuClick() {return m_menuClick;}
 	inline Sound *getCheckOn() {return m_checkOn;}
 	inline Sound *getCheckOff() {return m_checkOff;}
+	inline Sound *getShutter() {return m_shutter;}
 
 	inline bool isCursor2x() {return m_bCursor2x;}
 	inline bool isApproachCircle2x() {return m_bApproachCircle2x;}
@@ -412,6 +413,7 @@ private:
 	Sound *m_menuClick;
 	Sound *m_checkOn;
 	Sound *m_checkOff;
+	Sound *m_shutter;
 
 	std::vector<Color> m_comboColors;
 	std::vector<Color> m_beatmapComboColors;

@@ -456,7 +456,7 @@ void OsuCircle::onHit(OsuScore::HIT result, long delta, float targetDelta, float
 		m_beatmap->getSkin()->playHitCircleSound(m_iSampleType);
 
 		m_fHitAnimation = 0.001f; // quickfix for 1 frame missing images
-		anim->moveQuadOut(&m_fHitAnimation, 1.0f, OsuGameRules::osu_circle_fade_out_time.getFloat(), true);
+		anim->moveQuadOut(&m_fHitAnimation, 1.0f, OsuGameRules::getFadeOutTime(m_beatmap), true);
 	}
 
 	// add it, and we are finished

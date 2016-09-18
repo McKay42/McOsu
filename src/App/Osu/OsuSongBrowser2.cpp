@@ -828,20 +828,7 @@ void OsuSongBrowser2::onDifficultySelected(OsuBeatmap *beatmap, OsuBeatmapDiffic
 	m_selectedBeatmap = beatmap;
 
 	// update song info
-	m_songInfo->setArtist(diff->artist);
-	m_songInfo->setTitle(diff->title);
-	m_songInfo->setDiff(diff->name);
-	m_songInfo->setMapper(diff->creator);
-
-	m_songInfo->setLengthMS(beatmap->getLength()); // TODO: beatmap db
-	m_songInfo->setBPM(diff->minBPM, diff->maxBPM);
-	m_songInfo->setNumObjects(0); // TODO: beatmap db
-
-	m_songInfo->setCS(diff->CS);
-	m_songInfo->setAR(diff->AR);
-	m_songInfo->setOD(diff->OD);
-	m_songInfo->setHP(diff->HP);
-	m_songInfo->setStars(0); // TODO: beatmap db
+	m_songInfo->setFromBeatmap(beatmap, diff);
 
 	// start playing
 	if (play)

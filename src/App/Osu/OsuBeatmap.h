@@ -90,6 +90,8 @@ public:
 	float getRawOD();
 	float getOD();
 
+	inline float getHealth() {return m_fHealth;}
+
 	// generic
 	inline Vector2 getPlayfieldSize() {return m_vPlayfieldSize;}
 	inline Vector2 getPlayfieldCenter() {return m_vPlayfieldCenter;}
@@ -124,6 +126,7 @@ public:
 	void addHitResult(OsuScore::HIT hit, long delta, bool ignoreOnHitErrorBar = false, bool hitErrorBarOnly = false, bool ignoreCombo = false);
 	void addSliderBreak();
 	void addScorePoints(int points);
+	void addHealth(float health);
 	void playMissSound();
 
 	Vector2 osuCoords2Pixels(Vector2 coords);
@@ -195,10 +198,12 @@ private:
 	float m_fBeatLength;
 	float m_fAmplitude;
 	long m_iCurMusicPos;
-	unsigned long m_iLastMusicPosition;
-	double m_fLastMusicPositionForInterpolation;
+	long m_iPrevCurMusicPos;
+	unsigned long m_iLastMusicPosition; // for interpolation
+	double m_fLastMusicPositionForInterpolation; // for interpolation
 
 	// gameplay
+	float m_fHealth;
 	int m_iPreviousFollowPointObjectIndex;
 	long m_iNextHitObjectTime;
 	long m_iPreviousHitObjectTime;
