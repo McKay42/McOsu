@@ -25,7 +25,9 @@
 #include "OsuHUD.h"
 #include "OsuSkin.h"
 #include "OsuBeatmap.h"
+#include "OsuBeatmapDatabase.h"
 #include "OsuBeatmapDifficulty.h"
+#include "OsuNotificationOverlay.h"
 #include "OsuModSelector.h"
 #include "OsuKeyBindings.h"
 
@@ -38,6 +40,7 @@ ConVar osu_songbrowser_topbar_left_percent("osu_songbrowser_topbar_left_percent"
 ConVar osu_songbrowser_topbar_left_width_percent("osu_songbrowser_topbar_left_width_percent", 0.265f);
 ConVar osu_songbrowser_topbar_middle_width_percent("osu_songbrowser_topbar_middle_width_percent", 0.15f);
 ConVar osu_songbrowser_topbar_right_percent("osu_songbrowser_topbar_right_percent", 0.5f);
+ConVar osu_songbrowser_bottombar_percent("osu_songbrowser_bottombar_percent", 0.116f);
 
 OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 {
@@ -45,7 +48,6 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 
 	// convar refs
 	m_fps_max_ref = convar->getConVarByName("fps_max");
-	m_osu_songbrowser_bottombar_percent_ref = convar->getConVarByName("osu_songbrowser_bottombar_percent");
 
 	// engine settings
 	engine->getMouse()->addListener(this);
@@ -86,11 +88,9 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	m_songBrowser->setScrollResistance(15);
 
 	// beatmap database
-	m_importTimer = new Timer();
-	m_bBeatmapRefreshNeedsFileRefresh = true;
-	m_iCurRefreshBeatmap = 0;
-	m_iCurRefreshNumBeatmaps = 0;
+	m_db = new OsuBeatmapDatabase(m_osu);
 	m_bBeatmapRefreshScheduled = true;
+	m_iFullRefreshCounter = 0;
 
 	// behaviour
 	m_bHasSelectedAndIsPlaying = false;
@@ -109,6 +109,7 @@ OsuSongBrowser2::~OsuSongBrowser2()
 	SAFE_DELETE(m_topbarRight);
 	SAFE_DELETE(m_bottombar);
 	SAFE_DELETE(m_songBrowser);
+	SAFE_DELETE(m_db);
 }
 
 void OsuSongBrowser2::draw(Graphics *g)
@@ -120,7 +121,7 @@ void OsuSongBrowser2::draw(Graphics *g)
 	if (m_bBeatmapRefreshScheduled)
 	{
 		g->setColor(0xffffffff);
-		UString loadingMessage = UString::format("Loading beatmaps ... (%i %%)", (int)(((float)m_iCurRefreshBeatmap/(float)m_iCurRefreshNumBeatmaps)*100.0f));
+		UString loadingMessage = UString::format("Loading beatmaps ... (%i %%)", (int)(m_db->getProgress()*100.0f));
 		g->pushTransform();
 		g->translate(m_osu->getScreenWidth()/2 - m_osu->getTitleFont()->getStringWidth(loadingMessage)/2, m_osu->getScreenHeight() - 15);
 		g->drawString(m_osu->getTitleFont(), loadingMessage);
@@ -283,52 +284,13 @@ void OsuSongBrowser2::update()
 	// refresh logic (blocks every other call in the update() function below it!)
 	if (m_bBeatmapRefreshScheduled)
 	{
-		Timer t;
-		t.start();
+		m_db->update();
 
-		if (m_bBeatmapRefreshNeedsFileRefresh)
+		// check if we are finished loading
+		if (m_db->isFinished())
 		{
-			m_bBeatmapRefreshNeedsFileRefresh = false;
-			refreshBeatmaps();
-		}
-
-		while (m_bBeatmapRefreshScheduled && t.getElapsedTime() < 0.033f)
-		{
-			if (m_refreshBeatmaps.size() > 0)
-			{
-				UString fullBeatmapPath = m_sCurRefreshOsuSongFolder;
-				fullBeatmapPath.append(m_refreshBeatmaps[m_iCurRefreshBeatmap++]);
-				fullBeatmapPath.append("/");
-
-				OsuBeatmap *bm = new OsuBeatmap(m_osu, fullBeatmapPath);
-
-				// if the beatmap is valid, add it
-				if (bm->load())
-				{
-					OsuUISongBrowserButton *songButton = new OsuUISongBrowserButton(bm, m_songBrowser, this, 250, 250 + m_beatmaps.size()*50, 200, 50, "");
-
-					m_songBrowser->getContainer()->addBaseUIElement(songButton);
-					m_songButtons.push_back(songButton);
-					m_visibleSongButtons.push_back(songButton);
-					m_beatmaps.push_back(bm);
-				}
-				else
-				{
-					if (Osu::debug->getBool())
-						debugLog("Couldn't load(), deleting object.\n");
-					SAFE_DELETE(bm);
-				}
-			}
-
-			if (m_iCurRefreshBeatmap >= m_iCurRefreshNumBeatmaps)
-			{
-				m_bBeatmapRefreshScheduled = false;
-				m_importTimer->update();
-				debugLog("Refresh finished, added %i beatmaps in %f seconds.\n", m_beatmaps.size(), m_importTimer->getElapsedTime());
-				updateLayout();
-			}
-
-			t.update();
+			m_bBeatmapRefreshScheduled = false;
+			onDatabaseLoadingFinished();
 		}
 		return;
 	}
@@ -443,6 +405,10 @@ void OsuSongBrowser2::update()
 				scrollToSongButton(selectedSongButton);
 		}
 	}
+
+	// handle total reset reset
+	if (m_iFullRefreshCounter > 0 && engine->getTime() > m_fFullRefreshResetTime + 3.0f)
+		m_iFullRefreshCounter = 0;
 }
 
 void OsuSongBrowser2::onKeyDown(KeyboardEvent &key)
@@ -451,8 +417,7 @@ void OsuSongBrowser2::onKeyDown(KeyboardEvent &key)
 
 	if (m_bVisible && m_bBeatmapRefreshScheduled && (key == KEY_ESCAPE || key == (KEYCODE)OsuKeyBindings::GAME_PAUSE.getInt()))
 	{
-		m_bBeatmapRefreshScheduled = false;
-		updateLayout();
+		m_db->cancel();
 		key.consume();
 		return;
 	}
@@ -728,7 +693,7 @@ void OsuSongBrowser2::updateLayout()
 	m_topbarRight->setSize(m_osu->getScreenWidth() - m_topbarRight->getPos().x, m_osu->getSkin()->getSongSelectTop()->getHeight()*m_fSongSelectTopScale*osu_songbrowser_topbar_right_percent.getFloat());
 
 	// bottombar
-	int bottomBarHeight = m_osu->getScreenHeight()*m_osu_songbrowser_bottombar_percent_ref->getFloat();
+	int bottomBarHeight = m_osu->getScreenHeight()*osu_songbrowser_bottombar_percent.getFloat();
 
 	m_bottombar->setPosY(m_osu->getScreenHeight() - bottomBarHeight);
 	m_bottombar->setSize(m_osu->getScreenWidth(), bottomBarHeight);
@@ -788,6 +753,26 @@ OsuUISelectionButton *OsuSongBrowser2::addBottombarNavButton()
 	m_bottombar->addBaseUIElement(btn);
 	m_bottombarNavButtons.push_back(btn);
 	return btn;
+}
+
+void OsuSongBrowser2::onDatabaseLoadingFinished()
+{
+	m_beatmaps = m_db->getBeatmaps();
+
+	debugLog("OsuSongBrowser2::onDatabaseLoadingFinished() : %i beatmaps.\n", m_beatmaps.size());
+
+	for (int i=0; i<m_beatmaps.size(); i++)
+	{
+		OsuBeatmap *bm = m_beatmaps[i];
+
+		OsuUISongBrowserButton *songButton = new OsuUISongBrowserButton(bm, m_songBrowser, this, 250, 250 + m_beatmaps.size()*50, 200, 50, "");
+
+		m_songBrowser->getContainer()->addBaseUIElement(songButton);
+		m_songButtons.push_back(songButton);
+		m_visibleSongButtons.push_back(songButton);
+	}
+
+	updateLayout();
 }
 
 void OsuSongBrowser2::onBack()
@@ -857,38 +842,37 @@ void OsuSongBrowser2::refreshBeatmaps()
 		return;
 
 	// reset
-	m_bBeatmapRefreshNeedsFileRefresh = false;
 	m_selectedBeatmap = NULL;
 
 	// delete database
-	for (int i=0; i<m_beatmaps.size(); i++)
-	{
-		delete m_beatmaps[i];
-	}
 	m_songBrowser->clear();
 	m_songButtons.clear();
 	m_visibleSongButtons.clear();
 	m_beatmaps.clear();
-	m_refreshBeatmaps.clear();
 	m_previousRandomBeatmaps.clear();
 
-	// load all subfolders
-	UString osuSongFolder = convar->getConVarByName("osu_folder")->getString();
-	m_sLastOsuFolder = osuSongFolder;
-	osuSongFolder.append("Songs/");
-	m_sCurRefreshOsuSongFolder = osuSongFolder;
-	m_refreshBeatmaps = env->getFoldersInFolder(osuSongFolder);
+	// start loading
+	m_bBeatmapRefreshScheduled = true;
+	m_db->load();
 
-	debugLog("Building beatmap database ...\n");
-	debugLog("Found %i folders in osu! song folder.\n", m_refreshBeatmaps.size());
-	m_iCurRefreshNumBeatmaps = m_refreshBeatmaps.size();
-	m_iCurRefreshBeatmap = 0;
-
-	// if there are more than 0 beatmaps, schedule a refresh
-	if (m_refreshBeatmaps.size() > 0)
+	// check for total reset request
+	if (!m_db->foundChanges())
 	{
-		m_bBeatmapRefreshScheduled = true;
-		m_importTimer->start();
+		const int numPressesForTotalReset = 4;
+
+		m_fFullRefreshResetTime = engine->getTime();
+		m_iFullRefreshCounter++;
+		if (m_iFullRefreshCounter > numPressesForTotalReset)
+		{
+			m_iFullRefreshCounter = 0;
+			m_db->reset();
+			m_db->load();
+		}
+		else if (m_iFullRefreshCounter > 1)
+		{
+			int pressAgainCounter = (numPressesForTotalReset+1)-m_iFullRefreshCounter;
+			m_osu->getNotificationOverlay()->addNotification(UString::format(pressAgainCounter == 1 ? "Press again %i time to reload database ..." : "Press again %i times to reload database ...", pressAgainCounter), 0xffffff00);
+		}
 	}
 }
 
@@ -972,7 +956,9 @@ bool OsuSongBrowser2::searchMatcher(OsuBeatmap *beatmap, UString searchString)
 		CS,
 		OD,
 		HP,
-		BPM
+		BPM,
+		LENGTH,
+		STARS
 	};
 	const std::vector<std::pair<UString, keywordId>> keywords =
 	{
@@ -980,7 +966,9 @@ bool OsuSongBrowser2::searchMatcher(OsuBeatmap *beatmap, UString searchString)
 		std::pair<UString, keywordId>("cs", CS),
 		std::pair<UString, keywordId>("od", OD),
 		std::pair<UString, keywordId>("hp", HP),
-		std::pair<UString, keywordId>("bpm",BPM)
+		std::pair<UString, keywordId>("bpm",BPM),
+		std::pair<UString, keywordId>("length", LENGTH),
+		std::pair<UString, keywordId>("stars", STARS)
 	};
 
 	// split search string into tokens
@@ -1037,6 +1025,12 @@ bool OsuSongBrowser2::searchMatcher(OsuBeatmap *beatmap, UString searchString)
 									break;
 								case BPM:
 									compareValue = diffs[d]->maxBPM;
+									break;
+								case LENGTH:
+									compareValue = diffs[d]->lengthMS / 1000;
+									break;
+								case STARS:
+									compareValue = diffs[d]->starsNoMod;
 									break;
 								}
 

@@ -106,13 +106,13 @@ void OsuUISongBrowserInfoLabel::setFromBeatmap(OsuBeatmap *beatmap, OsuBeatmapDi
 
 	setLengthMS(beatmap->getLength()); // TODO: beatmap db
 	setBPM(diff->minBPM, diff->maxBPM);
-	setNumObjects(0); // TODO: beatmap db
+	setNumObjects(diff->numObjects); // TODO: beatmap db
 
 	setCS(diff->CS);
 	setAR(diff->AR);
 	setOD(diff->OD);
 	setHP(diff->HP);
-	setStars(0); // TODO: beatmap db
+	setStars(diff->starsNoMod); // TODO: beatmap db
 }
 
 UString OsuUISongBrowserInfoLabel::buildTitleString()

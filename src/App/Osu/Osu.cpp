@@ -23,7 +23,6 @@
 
 #include "OsuMainMenu.h"
 #include "OsuOptionsMenu.h"
-#include "OsuSongBrowser.h"
 #include "OsuSongBrowser2.h"
 #include "OsuModSelector.h"
 #include "OsuRankingScreen.h"
@@ -40,6 +39,8 @@
 
 #include "OsuHitObject.h"
 #include "OsuSlider.h"
+
+#include "OsuBeatmapDatabase.h"
 
 void DUMMY_OSU_LETTERBOXING(UString oldValue, UString newValue) {;}
 void DUMMY_OSU_VOLUME_MUSIC_ARGS(UString oldValue, UString newValue) {;}
@@ -122,7 +123,6 @@ Osu::Osu()
 
   	// vars
 	m_skin = NULL;
-	m_songBrowser = NULL;
 	m_songBrowser2 = NULL;
 	m_modSelector = NULL;
 
@@ -190,7 +190,6 @@ Osu::Osu()
 	m_tooltipOverlay = new OsuTooltipOverlay(this);
 	m_mainMenu = new OsuMainMenu(this);
 	m_optionsMenu = new OsuOptionsMenu(this);
-	m_songBrowser = NULL;
 	//m_songBrowser = new OsuSongBrowser(this);
 	m_songBrowser2 = NULL;
 	m_songBrowser2 = new OsuSongBrowser2(this);
@@ -205,8 +204,6 @@ Osu::Osu()
 	m_screens.push_back(m_modSelector);
 	m_screens.push_back(m_pauseMenu);
 	m_screens.push_back(m_hud);
-	if (m_songBrowser != NULL)
-		m_screens.push_back(m_songBrowser);
 	if (m_songBrowser2 != NULL)
 		m_screens.push_back(m_songBrowser2);
 	m_screens.push_back(m_optionsMenu);
@@ -221,10 +218,6 @@ Osu::Osu()
 	//m_songBrowser2->setVisible(true);
 	//m_pauseMenu->setVisible(true);
 	m_rankingScreen->setVisible(true);
-
-	// debug
-	if (m_songBrowser != NULL)
-		m_songBrowser->onStartDebugMap();
 }
 
 Osu::~Osu()
@@ -293,8 +286,6 @@ void Osu::draw(Graphics *g)
 	}
 	else // if we are not playing
 	{
-		if (m_songBrowser != NULL)
-			m_songBrowser->draw(g);
 		if (m_songBrowser2 != NULL)
 			m_songBrowser2->draw(g);
 		m_modSelector->draw(g);
@@ -381,8 +372,6 @@ void Osu::update()
 
 		if (!isInPlayMode())
 		{
-			if (m_songBrowser != NULL)
-				m_songBrowser->setVisible(m_modSelector->isVisible());
 			if (m_songBrowser2 != NULL)
 				m_songBrowser2->setVisible(m_modSelector->isVisible());
 		}
@@ -393,12 +382,10 @@ void Osu::update()
 	{
 		m_bToggleSongBrowserScheduled = false;
 
-		if (m_songBrowser != NULL)
-			m_songBrowser->setVisible(!m_songBrowser->isVisible());
 		if (m_songBrowser2 != NULL)
 			m_songBrowser2->setVisible(!m_songBrowser2->isVisible());
 
-		m_mainMenu->setVisible(!((m_songBrowser != NULL && m_songBrowser->isVisible()) || (m_songBrowser2 != NULL && m_songBrowser2->isVisible())));
+		m_mainMenu->setVisible(!(m_songBrowser2 != NULL && m_songBrowser2->isVisible()));
 		updateConfineCursor();
 	}
 	if (m_bToggleOptionsMenuScheduled)
@@ -413,8 +400,6 @@ void Osu::update()
 		m_bToggleRankingScreenScheduled = false;
 
 		m_rankingScreen->setVisible(!m_rankingScreen->isVisible());
-		if (m_songBrowser != NULL)
-			m_songBrowser->setVisible(!m_rankingScreen->isVisible());
 		if (m_songBrowser2 != NULL)
 			m_songBrowser2->setVisible(!m_rankingScreen->isVisible());
 	}
@@ -438,7 +423,7 @@ void Osu::update()
 	}
 
 	// handle mousewheel volume change
-	if (((m_songBrowser != NULL && (!m_songBrowser->isVisible() || engine->getKeyboard()->isAltDown())) || ((m_songBrowser2 != NULL && (!m_songBrowser2->isVisible() || engine->getKeyboard()->isAltDown()))) ) && !m_optionsMenu->isVisible())
+	if ((m_songBrowser2 != NULL && (!m_songBrowser2->isVisible() || engine->getKeyboard()->isAltDown())) && !m_optionsMenu->isVisible())
 	{
 		if ((!(isInPlayMode() && !m_pauseMenu->isVisible()) && !m_rankingScreen->isVisible()) || (isInPlayMode() && !osu_disable_mousewheel.getBool()) || engine->getKeyboard()->isAltDown())
 		{
@@ -862,9 +847,7 @@ void Osu::onPlayEnd(bool quit)
 
 OsuBeatmap *Osu::getSelectedBeatmap()
 {
-	if (m_songBrowser != NULL)
-		return m_songBrowser->getSelectedBeatmap();
-	else if (m_songBrowser2 != NULL)
+	if (m_songBrowser2 != NULL)
 		return m_songBrowser2->getSelectedBeatmap();
 	return NULL;
 }
@@ -953,7 +936,7 @@ float Osu::getPitchMultiplier()
 
 bool Osu::isInPlayMode()
 {
-	return (m_songBrowser != NULL && m_songBrowser->hasSelectedAndIsPlaying()) || (m_songBrowser2 != NULL && m_songBrowser2->hasSelectedAndIsPlaying());
+	return (m_songBrowser2 != NULL && m_songBrowser2->hasSelectedAndIsPlaying());
 }
 
 
