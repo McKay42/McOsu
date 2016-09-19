@@ -47,14 +47,27 @@ OsuBeatmapDifficulty::OsuBeatmapDifficulty(Osu *osu, UString filepath, UString f
 
 	previewTime = 0;
 	mode = 0;
+	lengthMS = 0;
 
 	backgroundImage = NULL;
 	localoffset = 0;
 	minBPM = 0;
 	maxBPM = 0;
+	numObjects = 0;
+	starsNoMod = 0;
 }
 
-bool OsuBeatmapDifficulty::loadMetadata()
+void OsuBeatmapDifficulty::unload()
+{
+	loaded = false;
+
+	hitcircles = std::vector<HITCIRCLE>();
+	sliders = std::vector<SLIDER>();
+	spinners = std::vector<SPINNER>();
+	///timingpoints = std::vector<TIMINGPOINT>(); // currently commented for main menu button animation
+}
+
+bool OsuBeatmapDifficulty::loadMetadataRaw()
 {
 	if (Osu::debug->getBool())
 		debugLog("OsuBeatmapDifficulty::loadMetadata() : %s\n", m_sFilePath.toUtf8());
@@ -319,9 +332,11 @@ bool OsuBeatmapDifficulty::loadMetadata()
 	return true;
 }
 
-bool OsuBeatmapDifficulty::load(OsuBeatmap *beatmap, std::vector<OsuHitObject*> *hitobjects)
+bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject*> *hitobjects)
 {
 	unload();
+	loadMetadataRaw();
+	combocolors = std::vector<Color>();
 	timingpoints = std::vector<TIMINGPOINT>();
 
 	// open osu file
@@ -627,16 +642,6 @@ bool OsuBeatmapDifficulty::load(OsuBeatmap *beatmap, std::vector<OsuHitObject*> 
 
 	loaded = true;
 	return true;
-}
-
-void OsuBeatmapDifficulty::unload()
-{
-	loaded = false;
-
-	hitcircles = std::vector<HITCIRCLE>();
-	sliders = std::vector<SLIDER>();
-	spinners = std::vector<SPINNER>();
-	///timingpoints = std::vector<TIMINGPOINT>(); // currently commented for main menu button animation
 }
 
 void OsuBeatmapDifficulty::loadBackgroundImage()

@@ -15,7 +15,6 @@ class OsuMainMenu;
 class OsuPauseMenu;
 class OsuOptionsMenu;
 class OsuModSelector;
-class OsuSongBrowser;
 class OsuSongBrowser2;
 class OsuRankingScreen;
 class OsuNotificationOverlay;
@@ -166,7 +165,6 @@ private:
 	// interfaces
 	OsuMainMenu *m_mainMenu;
 	OsuOptionsMenu *m_optionsMenu;
-	OsuSongBrowser *m_songBrowser;
 	OsuSongBrowser2 *m_songBrowser2;
 	OsuModSelector *m_modSelector;
 	OsuRankingScreen *m_rankingScreen;

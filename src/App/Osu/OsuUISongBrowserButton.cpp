@@ -86,7 +86,13 @@ OsuUISongBrowserButton::OsuUISongBrowserButton(OsuBeatmap *beatmap, CBaseUIScrol
 		    	const unsigned long diff1 = (a->AR+1)*(a->CS+1)*(a->HP+1)*(a->OD+1)*(a->maxBPM > 0 ? a->maxBPM : 1);
 		    	const unsigned long diff2 = (b->AR+1)*(b->CS+1)*(b->HP+1)*(b->OD+1)*(b->maxBPM > 0 ? b->maxBPM : 1);
 
-		        return diff1 < diff2;
+		    	const float stars1 = a->starsNoMod;
+		    	const float stars2 = b->starsNoMod;
+
+		    	if (stars1 > 0 && stars2 > 0)
+		    		return stars1 < stars2;
+		    	else
+		    		return diff1 < diff2;
 		    }
 		};
 		std::sort(difficulties.begin(), difficulties.end(), SortComparator());

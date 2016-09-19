@@ -179,51 +179,9 @@ OsuBeatmap::~OsuBeatmap()
 	m_difficulties.clear();
 }
 
-bool OsuBeatmap::load()
+void OsuBeatmap::setDifficulties(std::vector<OsuBeatmapDifficulty*> diffs)
 {
-	UString searchpath = m_sFilePath;
-	std::vector<UString> files = env->getFilesInFolder(searchpath);
-
-	if (Osu::debug->getBool())
-		debugLog("OsuBeatmap::load() : %s\n", m_sFilePath.toUtf8());
-
-	for (int i=0; i<files.size(); i++)
-	{
-		UString ext = env->getFileExtensionFromFilePath(files[i]);
-
-		UString fullFilePath = m_sFilePath;
-		fullFilePath.append(files[i]);
-
-		// load diffs
-		if (ext == "osu")
-		{
-			OsuBeatmapDifficulty *diff = new OsuBeatmapDifficulty(m_osu, fullFilePath, m_sFilePath);
-
-			// try to load it. if successful, save it, else cleanup and continue to the next osu file
-			if (!diff->loadMetadata())
-			{
-				if (Osu::debug->getBool())
-				{
-					debugLog("OsuBeatmap::load() : Couldn't loadMetadata(), deleting object.\n");
-					if (diff->mode == 0)
-						engine->showMessageWarning("OsuBeatmap::load()", "Couldn't loadMetadata()\n");
-				}
-				SAFE_DELETE(diff);
-				continue;
-			}
-
-			m_difficulties.push_back(diff);
-		}
-	}
-
-	if (m_difficulties.size() == 0)
-	{
-		//debugLog("Osu Error: Found no diffs in beatmap folder! (%s)\n", m_sFilePath.toUtf8());
-		//engine->showMessageError("Error", "Found no diffs in beatmap folder!");
-		return false;
-	}
-
-	return true;
+	m_difficulties = diffs;
 }
 
 void OsuBeatmap::draw(Graphics *g)
@@ -877,7 +835,7 @@ bool OsuBeatmap::play()
 	// actually load the difficulty (and the hitobjects)
 	if (!m_selectedDifficulty->loaded)
 	{
-		if (!m_selectedDifficulty->load(this, &m_hitobjects))
+		if (!m_selectedDifficulty->loadRaw(this, &m_hitobjects))
 			return false;
 	}
 
@@ -1080,6 +1038,8 @@ unsigned long OsuBeatmap::getLength()
 {
 	if (m_music != NULL && m_music->isAsyncReady())
 		return m_music->getLengthMS();
+	else if (m_difficulties.size() > 0) // a bit shitty, but it should work fine
+		return m_difficulties[0]->lengthMS;
 	else
 		return 0;
 }

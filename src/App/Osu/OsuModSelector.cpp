@@ -21,7 +21,6 @@
 #include "OsuSkin.h"
 #include "OsuBeatmap.h"
 #include "OsuBeatmapDifficulty.h"
-#include "OsuSongBrowser.h"
 #include "OsuTooltipOverlay.h"
 #include "OsuKeyBindings.h"
 #include "OsuGameRules.h"

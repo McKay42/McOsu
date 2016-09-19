@@ -127,8 +127,10 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 
 	addSection("General");
 
-	addSubSection("osu!folder (Skins & Songs)");
+	addSubSection("osu!folder (Skins & Songs & Database)");
 	m_osuFolderTextbox = addTextbox(convar->getConVarByName("osu_folder")->getString(), convar->getConVarByName("osu_folder"));
+	addSpacer();
+	addCheckbox("Use osu!.db database (read-only)", convar->getConVarByName("osu_database_enabled"));
 
 	addSubSection("Player Name");
 	m_nameTextbox = addTextbox(convar->getConVarByName("name")->getString(), convar->getConVarByName("name"));
