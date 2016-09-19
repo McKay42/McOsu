@@ -20,7 +20,6 @@
 #include "Osu.h"
 #include "OsuSkin.h"
 #include "OsuBeatmap.h"
-#include "OsuSongBrowser.h"
 #include "OsuKeyBindings.h"
 #include "OsuHUD.h"
 

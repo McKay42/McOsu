@@ -35,12 +35,13 @@ public:
 	OsuBeatmap(Osu *osu, UString filepath);
 	virtual ~OsuBeatmap();
 
-	bool load(); // loads the metadata of all difficulties and adds them
-
 	void draw(Graphics *g);
 	void update();
 
 	void skipEmptySection();
+
+	// database logic
+	void setDifficulties(std::vector<OsuBeatmapDifficulty*> diffs);
 
 	// callbacks called by the Osu class
 	void onUpdateMods();
@@ -103,9 +104,9 @@ public:
 	inline float getSliderFollowCircleDiameter() {return m_fSliderFollowCircleDiameter;}
 	inline float getPlayfieldRotation() const {return m_fPlayfieldRotation;}
 
-	inline int getSelectedDifficultyIndex() {return m_iSelectedDifficulty;} // DEPRECATED
 	inline OsuBeatmapDifficulty *getSelectedDifficulty() {return m_selectedDifficulty;}
 	inline std::vector<OsuBeatmapDifficulty*> getDifficulties() {return m_difficulties;}
+	inline int getNumDifficulties() {return m_difficulties.size();}
 
 	inline bool isPlaying() {return m_bIsPlaying;}
 	inline bool isPaused() {return m_bIsPaused;}
