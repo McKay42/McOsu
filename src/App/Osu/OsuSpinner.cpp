@@ -261,7 +261,7 @@ void OsuSpinner::update(long curPos)
 			angleDiff = engine->getFrameTime() * 1000.0f * AUTO_MULTIPLIER * m_beatmap->getOsu()->getSpeedMultiplier();
 		else // user spin
 		{
-			Vector2 mouseDelta = engine->getMouse()->getPos() - m_beatmap->osuCoords2Pixels(Vector2(OsuGameRules::OSU_COORD_WIDTH/2, OsuGameRules::OSU_COORD_HEIGHT/2));
+			Vector2 mouseDelta = engine->getMouse()->getPos() - m_beatmap->osuCoords2Pixels(Vector2(m_vRawPos.x, m_vRawPos.y));
 			float currentMouseAngle = (float) atan2(mouseDelta.y, mouseDelta.x);
 			angleDiff = (currentMouseAngle - m_fLastMouseAngle);
 			if (std::abs(angleDiff) > 0.001f)

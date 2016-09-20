@@ -620,6 +620,11 @@ void OsuOptionsMenu::updateOsuFolder()
 	convar->getConVarByName("osu_folder")->setValue(newOsuFolder);
 }
 
+void OsuOptionsMenu::updateName()
+{
+	convar->getConVarByName("name")->setValue(m_nameTextbox->getText());
+}
+
 void OsuOptionsMenu::onBack()
 {
 	engine->getSound()->play(m_osu->getSkin()->getMenuClick());
@@ -1060,7 +1065,9 @@ void OsuOptionsMenu::save()
 		debugLog("DEACTIVATED SAVE!!!!\n");
 		return;
 	}
+
 	updateOsuFolder();
+	updateName();
 
 	debugLog("Osu: Saving user config file ...\n");
 
