@@ -14,6 +14,8 @@ class Osu;
 class OsuHitObject;
 class OsuBeatmap;
 
+class BackgroundImagePathLoader;
+
 class OsuBeatmapDifficulty
 {
 public:
@@ -25,6 +27,7 @@ public:
 
 	void loadBackgroundImage();
 	void unloadBackgroundImage();
+	void loadBackgroundImagePath();
 
 	struct HITCIRCLE
 	{
@@ -142,6 +145,9 @@ private:
 
 	UString m_sFilePath;
 	UString m_sFolder;
+
+	// custom
+	BackgroundImagePathLoader *m_backgroundImagePathLoader;
 };
 
 #endif

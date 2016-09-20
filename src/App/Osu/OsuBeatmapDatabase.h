@@ -14,6 +14,9 @@ class Timer;
 
 class Osu;
 class OsuBeatmap;
+class OsuFile;
+
+class OsuBeatmapDatabaseLoader;
 
 class OsuBeatmapDatabase
 {
@@ -35,8 +38,10 @@ public:
 	bool foundChanges() {return m_bFoundChanges;}
 
 private:
+	friend class OsuBeatmapDatabaseLoader;
+
 	void loadRaw();
-	void loadDB();
+	void loadDB(OsuFile *db);
 
 	OsuBeatmap *loadRawBeatmap(UString beatmapPath);
 
