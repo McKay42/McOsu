@@ -1,6 +1,6 @@
 //================ Copyright (c) 2016, PG, All rights reserved. =================//
 //
-// Purpose:		database wrapper
+// Purpose:		osu type file io helper
 //
 // $NoKeywords: $osudb
 //===============================================================================//
@@ -17,7 +17,7 @@ class OsuFile
 public:
 	struct TIMINGPOINT
 	{
-		double bpm;
+		double msPerBeat;
 		double offset;
 		bool notinherited;
 	};

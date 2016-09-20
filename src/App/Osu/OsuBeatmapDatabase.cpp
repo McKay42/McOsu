@@ -1,6 +1,6 @@
 //================ Copyright (c) 2016, PG, All rights reserved. =================//
 //
-// Purpose:		osu!.db loader
+// Purpose:		osu!.db + raw loader
 //
 // $NoKeywords: $osubdb
 //===============================================================================//
@@ -10,6 +10,7 @@
 #include "Engine.h"
 #include "ConVar.h"
 #include "Timer.h"
+#include "ResourceManager.h"
 
 #include "Osu.h"
 #include "OsuNotificationOverlay.h"
@@ -31,7 +32,57 @@ ConVar osu_folder("osu_folder", "/media/pg/Win7/Program Files (x86)/osu!/");
 
 #endif
 
-ConVar osu_database_enabled("osu_database_enabled", false);
+ConVar osu_database_enabled("osu_database_enabled", true);
+
+class OsuBeatmapDatabaseLoader : public Resource
+{
+public:
+	OsuBeatmapDatabaseLoader(OsuBeatmapDatabase *db)
+	{
+		m_db = db;
+		m_bNeedRawLoad = false;
+
+		m_bAsyncReady = false;
+		m_bReady = false;
+	};
+
+protected:
+	virtual void init()
+	{
+		// legacy loading, if db is not found or by convar
+		if (m_bNeedRawLoad)
+			m_db->loadRaw();
+
+		m_bReady = true;
+		delete this; // commit sudoku
+	}
+	virtual void initAsync()
+	{
+		// check if osu database exists, load file completely
+		UString filePath = osu_folder.getString();
+		filePath.append("osu!.db");
+		OsuFile *db = new OsuFile(filePath);
+
+		// load database
+		if (db->isReady() && osu_database_enabled.getBool())
+		{
+			m_db->m_fLoadingProgress = 0.5f;
+			m_db->loadDB(db);
+		}
+		else
+			m_bNeedRawLoad = true;
+
+		// cleanup
+		SAFE_DELETE(db);
+
+		m_bAsyncReady = true;
+	}
+	virtual void destroy() {;}
+
+private:
+	OsuBeatmapDatabase *m_db;
+	bool m_bNeedRawLoad;
+};
 
 OsuBeatmapDatabase::OsuBeatmapDatabase(Osu *osu)
 {
@@ -120,10 +171,10 @@ void OsuBeatmapDatabase::update()
 
 void OsuBeatmapDatabase::load()
 {
-	if (osu_database_enabled.getBool())
-		loadDB();
-	else
-		loadRaw();
+	m_fLoadingProgress = 0.0f;
+	OsuBeatmapDatabaseLoader *loader = new OsuBeatmapDatabaseLoader(this);
+	engine->getResourceManager()->requestNextLoadAsync();
+	engine->getResourceManager()->loadResource(loader);
 }
 
 void OsuBeatmapDatabase::cancel()
@@ -187,11 +238,8 @@ void OsuBeatmapDatabase::loadRaw()
 	m_bIsFirstLoad = false;
 }
 
-void OsuBeatmapDatabase::loadDB()
+void OsuBeatmapDatabase::loadDB(OsuFile *db)
 {
-	UString filePath = osu_folder.getString();
-	filePath.append("osu!.db");
-
 	// reset
 	for (int i=0; i<m_beatmaps.size(); i++)
 	{
@@ -199,18 +247,21 @@ void OsuBeatmapDatabase::loadDB()
 	}
 	m_beatmaps.clear();
 
-	debugLog("Database: Reading %s ...\n", filePath.toUtf8());
-	OsuFile db(filePath);
+	if (!db->isReady())
+	{
+		debugLog("Database: Couldn't read, database not ready!\n");
+		return;
+	}
 
 	m_importTimer->start();
 
 	// read header
-	m_iVersion = db.readInt();
-	m_iFolderCount = db.readInt();
-	db.readBool();
-	db.readDateTime();
-	m_sPlayerName = db.readString();
-	m_iNumBeatmapsToLoad = db.readInt();
+	m_iVersion = db->readInt();
+	m_iFolderCount = db->readInt();
+	db->readBool();
+	db->readDateTime();
+	m_sPlayerName = db->readString();
+	m_iNumBeatmapsToLoad = db->readInt();
 
 	debugLog("Database: version = %i, folderCount = %i, playerName = %s, numDiffs = %i\n", m_iVersion, m_iFolderCount, m_sPlayerName.toUtf8(), m_iNumBeatmapsToLoad);
 	if (m_iVersion < 20140609)
@@ -230,127 +281,126 @@ void OsuBeatmapDatabase::loadDB()
 		if (Osu::debug->getBool())
 			debugLog("Database: Reading beatmap %i/%i ...\n", (i+1), m_iNumBeatmapsToLoad);
 
-		unsigned int size = db.readInt();
-		UString artistName = db.readString();
-		UString artistNameUnicode = db.readString();
-		UString songTitle = db.readString();
-		UString songTitleUnicode = db.readString();
-		UString creatorName = db.readString();
-		UString difficultyName = db.readString();
-		UString audioFileName = db.readString();
-		UString md5hash = db.readString();
-		UString osuFileName = db.readString();
-		unsigned char rankedStatus = db.readByte();
-		unsigned short numCircles = db.readShort();
-		unsigned short numSliders = db.readShort();
-		unsigned short numSpinners = db.readShort();
-		unsigned long lastModificationTime = db.readLong();
-		float AR = db.readFloat();
-		float CS = db.readFloat();
-		float HP = db.readFloat();
-		float OD = db.readFloat();
-		double sliderMultiplier = db.readDouble();
+		unsigned int size = db->readInt();
+		UString artistName = db->readString();
+		UString artistNameUnicode = db->readString();
+		UString songTitle = db->readString();
+		UString songTitleUnicode = db->readString();
+		UString creatorName = db->readString();
+		UString difficultyName = db->readString();
+		UString audioFileName = db->readString();
+		UString md5hash = db->readString();
+		UString osuFileName = db->readString();
+		unsigned char rankedStatus = db->readByte();
+		unsigned short numCircles = db->readShort();
+		unsigned short numSliders = db->readShort();
+		unsigned short numSpinners = db->readShort();
+		unsigned long lastModificationTime = db->readLong();
+		float AR = db->readFloat();
+		float CS = db->readFloat();
+		float HP = db->readFloat();
+		float OD = db->readFloat();
+		double sliderMultiplier = db->readDouble();
 
 		//debugLog("Database: Entry #%i: size = %u, artist = %s, songtitle = %s, creator = %s, diff = %s, audiofilename = %s, md5hash = %s, osufilename = %s\n", i, size, artistName.toUtf8(), songTitle.toUtf8(), creatorName.toUtf8(), difficultyName.toUtf8(), audioFileName.toUtf8(), md5hash.toUtf8(), osuFileName.toUtf8());
 		//debugLog("rankedStatus = %i, numCircles = %i, numSliders = %i, numSpinners = %i, lastModificationTime = %lu\n", (int)rankedStatus, numCircles, numSliders, numSpinners, lastModificationTime);
 		//debugLog("AR = %f, CS = %f, HP = %f, OD = %f, sliderMultiplier = %f\n", AR, CS, HP, OD, sliderMultiplier);
 
-		unsigned int numOsuStandardStarRatings = db.readInt();
+		unsigned int numOsuStandardStarRatings = db->readInt();
 		//debugLog("%i star ratings for osu!standard\n", numOsuStandardStarRatings);
 		float numOsuStandardStars = 0.0f;
 		for (int s=0; s<numOsuStandardStarRatings; s++)
 		{
-			db.readByte(); // ObjType
-			unsigned int mods = db.readInt();
-			db.readByte(); // ObjType
-			double starRating = db.readDouble();
+			db->readByte(); // ObjType
+			unsigned int mods = db->readInt();
+			db->readByte(); // ObjType
+			double starRating = db->readDouble();
 			//debugLog("%f stars for %u\n", starRating, mods);
 
 			if (mods == 0)
 				numOsuStandardStars = starRating;
 		}
 
-		unsigned int numTaikoStarRatings = db.readInt();
+		unsigned int numTaikoStarRatings = db->readInt();
 		//debugLog("%i star ratings for taiko\n", numTaikoStarRatings);
 		for (int s=0; s<numTaikoStarRatings; s++)
 		{
-			db.readByte(); // ObjType
-			db.readInt();
-			db.readByte(); // ObjType
-			db.readDouble();
+			db->readByte(); // ObjType
+			db->readInt();
+			db->readByte(); // ObjType
+			db->readDouble();
 		}
 
-		unsigned int numCtbStarRatings = db.readInt();
+		unsigned int numCtbStarRatings = db->readInt();
 		//debugLog("%i star ratings for ctb\n", numCtbStarRatings);
 		for (int s=0; s<numCtbStarRatings; s++)
 		{
-			db.readByte(); // ObjType
-			db.readInt();
-			db.readByte(); // ObjType
-			db.readDouble();
+			db->readByte(); // ObjType
+			db->readInt();
+			db->readByte(); // ObjType
+			db->readDouble();
 		}
 
-		unsigned int numManiaStarRatings = db.readInt();
+		unsigned int numManiaStarRatings = db->readInt();
 		//debugLog("%i star ratings for mania\n", numManiaStarRatings);
 		for (int s=0; s<numManiaStarRatings; s++)
 		{
-			db.readByte(); // ObjType
-			db.readInt();
-			db.readByte(); // ObjType
-			db.readDouble();
+			db->readByte(); // ObjType
+			db->readInt();
+			db->readByte(); // ObjType
+			db->readDouble();
 		}
 
-		unsigned int drainTime = db.readInt(); // seconds
-		unsigned int duration = db.readInt(); // milliseconds
-		unsigned int previewTime = db.readInt();
+		unsigned int drainTime = db->readInt(); // seconds
+		unsigned int duration = db->readInt(); // milliseconds
+		unsigned int previewTime = db->readInt();
 
 		//debugLog("drainTime = %i sec, duration = %i ms, previewTime = %i ms\n", drainTime, duration, previewTime);
 
-		unsigned int numTimingPoints = db.readInt();
+		unsigned int numTimingPoints = db->readInt();
 		//debugLog("%i timingpoints\n", numTimingPoints);
+		std::vector<OsuFile::TIMINGPOINT> timingPoints;
 		for (int t=0; t<numTimingPoints; t++)
 		{
-			OsuFile::TIMINGPOINT timingPoint = db.readTimingPoint();
+			timingPoints.push_back(db->readTimingPoint());
 		}
 
-		unsigned int beatmapID = db.readInt();
-		unsigned int beatmapSetID = db.readInt();
-		unsigned int threadID = db.readInt();
+		unsigned int beatmapID = db->readInt();
+		unsigned int beatmapSetID = db->readInt();
+		unsigned int threadID = db->readInt();
 
-		unsigned char osuStandardGrade = db.readByte();
-		unsigned char taikoGrade = db.readByte();
-		unsigned char ctbGrade = db.readByte();
-		unsigned char maniaGrade = db.readByte();
+		unsigned char osuStandardGrade = db->readByte();
+		unsigned char taikoGrade = db->readByte();
+		unsigned char ctbGrade = db->readByte();
+		unsigned char maniaGrade = db->readByte();
 		//debugLog("beatmapID = %i, beatmapSetID = %i, threadID = %i, osuStandardGrade = %i, taikoGrade = %i, ctbGrade = %i, maniaGrade = %i\n", beatmapID, beatmapSetID, threadID, osuStandardGrade, taikoGrade, ctbGrade, maniaGrade);
 
-		short localOffset = db.readShort();
-		float stackLeniency = db.readFloat();
-		unsigned char mode = db.readByte();
+		short localOffset = db->readShort();
+		float stackLeniency = db->readFloat();
+		unsigned char mode = db->readByte();
 		//debugLog("localOffset = %i, stackLeniency = %f, mode = %i\n", localOffset, stackLeniency, mode);
 
-		UString songSource = db.readString();
-		UString songTags = db.readString();
+		UString songSource = db->readString();
+		UString songTags = db->readString();
 		//debugLog("songSource = %s, songTags = %s\n", songSource.toUtf8(), songTags.toUtf8());
 
-		short onlineOffset = db.readShort();
-		UString songTitleFont = db.readString();
-		bool unplayed = db.readBool();
-		unsigned long lastTimePlayed = db.readLong();
-		bool isOsz2 = db.readBool();
-		UString path = db.readString();
-		unsigned long lastOnlineCheck = db.readLong();
+		short onlineOffset = db->readShort();
+		UString songTitleFont = db->readString();
+		bool unplayed = db->readBool();
+		unsigned long lastTimePlayed = db->readLong();
+		bool isOsz2 = db->readBool();
+		UString path = db->readString();
+		unsigned long lastOnlineCheck = db->readLong();
 		//debugLog("onlineOffset = %i, songTitleFont = %s, unplayed = %i, lastTimePlayed = %lu, isOsz2 = %i, path = %s, lastOnlineCheck = %lu\n", onlineOffset, songTitleFont.toUtf8(), (int)unplayed, lastTimePlayed, (int)isOsz2, path.toUtf8(), lastOnlineCheck);
 
-		bool ignoreBeatmapSounds = db.readBool();
-		bool ignoreBeatmapSkin = db.readBool();
-		bool disableStoryboard = db.readBool();
-		bool disableVideo = db.readBool();
-		bool visualOverride = db.readBool();
-		int lastEditTime = db.readInt();
-		unsigned char maniaScrollSpeed = db.readByte();
+		bool ignoreBeatmapSounds = db->readBool();
+		bool ignoreBeatmapSkin = db->readBool();
+		bool disableStoryboard = db->readBool();
+		bool disableVideo = db->readBool();
+		bool visualOverride = db->readBool();
+		int lastEditTime = db->readInt();
+		unsigned char maniaScrollSpeed = db->readByte();
 		//debugLog("ignoreBeatmapSounds = %i, ignoreBeatmapSkin = %i, disableStoryboard = %i, disableVideo = %i, visualOverride = %i, maniaScrollSpeed = %i\n", (int)ignoreBeatmapSounds, (int)ignoreBeatmapSkin, (int)disableStoryboard, (int)disableVideo, (int)visualOverride, maniaScrollSpeed);
-
-		//break;
 
 		// build beatmap & diffs from all the data
 		UString beatmapPath = songFolder;
@@ -396,7 +446,7 @@ void OsuBeatmapDatabase::loadDB()
 			diff->OD = OD;
 			diff->sliderMultiplier = sliderMultiplier;
 
-			diff->backgroundImageName = ""; // TODO
+			diff->backgroundImageName = "";
 
 			diff->previewTime = previewTime;
 
@@ -406,7 +456,38 @@ void OsuBeatmapDatabase::loadDB()
 			diff->numObjects = numCircles + numSliders + numSpinners;
 			diff->starsNoMod = numOsuStandardStars;
 
-			// TODO: timingpoints & calculate bpm range
+			// calculate bpm range
+			float minBeatLength = 0;
+			float maxBeatLength = std::numeric_limits<float>::max();
+			for (int t=0; t<timingPoints.size(); t++)
+			{
+				if (timingPoints[t].msPerBeat >= 0)
+				{
+					if (timingPoints[t].msPerBeat > minBeatLength)
+						minBeatLength = timingPoints[t].msPerBeat;
+					if (timingPoints[t].msPerBeat < maxBeatLength)
+						maxBeatLength = timingPoints[t].msPerBeat;
+				}
+			}
+
+			// convert from msPerBeat to BPM
+			const float msPerMinute = 1 * 60 * 1000;
+			if (minBeatLength != 0)
+				minBeatLength = msPerMinute / minBeatLength;
+			if (maxBeatLength != 0)
+				maxBeatLength = msPerMinute / maxBeatLength;
+
+			diff->minBPM = (int)std::round(minBeatLength);
+			diff->maxBPM = (int)std::round(maxBeatLength);
+
+			// build temp partial timingpoints, only used for menu animations
+			for (int t=0; t<timingPoints.size(); t++)
+			{
+				OsuBeatmapDifficulty::TIMINGPOINT tp;
+				tp.offset = timingPoints[t].offset;
+				tp.msPerBeat = timingPoints[t].msPerBeat;
+				diff->timingpoints.push_back(tp);
+			}
 
 			diffs.push_back(diff);
 		}

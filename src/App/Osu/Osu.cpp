@@ -54,7 +54,7 @@ ConVar osu_disable_mousewheel("osu_disable_mousewheel", false);
 ConVar osu_confine_cursor_windowed("osu_confine_cursor_windowed", false, DUMMY_OSU_LETTERBOXING);
 ConVar osu_confine_cursor_fullscreen("osu_confine_cursor_fullscreen", true, DUMMY_OSU_LETTERBOXING);
 
-ConVar osu_skin("osu_skin", "osu!default", DUMMY_OSU_VOLUME_MUSIC_ARGS);
+ConVar osu_skin("osu_skin", "default", DUMMY_OSU_VOLUME_MUSIC_ARGS);
 ConVar osu_skin_reload("osu_skin_reload", DUMMY_OSU_MODS);
 
 ConVar osu_volume_master("osu_volume_master", 0.5f, DUMMY_OSU_VOLUME_MUSIC_ARGS);
@@ -212,12 +212,12 @@ Osu::Osu()
 
 	// make primary screen visible
 	//m_optionsMenu->setVisible(true);
-	//m_mainMenu->setVisible(true);
+	m_mainMenu->setVisible(true);
 	//m_modSelector->setVisible(true);
 	//m_songBrowser->setVisible(true);
 	//m_songBrowser2->setVisible(true);
 	//m_pauseMenu->setVisible(true);
-	m_rankingScreen->setVisible(true);
+	//m_rankingScreen->setVisible(true);
 }
 
 Osu::~Osu()
