@@ -818,6 +818,7 @@ void OsuBeatmap::selectDifficulty(OsuBeatmapDifficulty *difficulty, bool deleteI
 
 void OsuBeatmap::deselect(bool deleteImages)
 {
+	m_iContinueMusicPos = 0;
 	engine->getSound()->stop(m_music);
 	unloadMusic();
 	unloadHitObjects();
