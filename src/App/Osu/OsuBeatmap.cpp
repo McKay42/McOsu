@@ -122,6 +122,7 @@ OsuBeatmap::OsuBeatmap(Osu *osu, UString filepath)
 	m_bIsWaiting = false;
 	m_bIsRestartScheduled = false;
 	m_bIsRestartScheduledQuick = false;
+	m_iContinueMusicPos = 0;
 
 	m_bIsSpinnerActive = false;
 	m_bIsInSkippableSection = false;
@@ -468,6 +469,7 @@ void OsuBeatmap::update()
 
 	// update current music position (this variable does not include any offsets!)
 	m_iCurMusicPos = getMusicPositionMSInterpolated();
+	m_iContinueMusicPos = m_music->getPositionMS();
 
 	// handle timewarp
 	if (osu_mod_timewarp.getBool())
@@ -770,7 +772,12 @@ void OsuBeatmap::keyReleased2()
 
 void OsuBeatmap::select()
 {
+	// if possible, continue playing where we left off
+	if (m_music != NULL && (m_music->isPlaying()))
+		m_iContinueMusicPos = m_music->getPositionMS();
+
 	selectDifficulty(m_iSelectedDifficulty == -1 ? 0 : m_iSelectedDifficulty);
+
 	loadMusic();
 	handlePreviewPlay();
 }
@@ -1355,7 +1362,10 @@ void OsuBeatmap::handlePreviewPlay()
 		engine->getSound()->stop(m_music);
 		if (engine->getSound()->play(m_music))
 		{
-			m_music->setPositionMS(m_selectedDifficulty->previewTime);
+			if (m_iContinueMusicPos != 0)
+				m_music->setPositionMS(m_iContinueMusicPos);
+			else
+				m_music->setPositionMS(m_selectedDifficulty->previewTime);
 			m_music->setVolume(m_osu_volume_music_ref->getFloat());
 		}
 	}

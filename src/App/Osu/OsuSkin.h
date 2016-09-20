@@ -144,6 +144,7 @@ public:
 	inline Image *getSongSelectTop() {return m_songSelectTop;}
 	inline Image *getSongSelectBottom() {return m_songSelectBottom;}
 	inline Image *getMenuButtonBackground() {return m_menuButtonBackground;}
+	inline Image *getStar() {return m_star;}
 	inline Image *getRankingPanel() {return m_rankingPanel;}
 	inline Image *getRankingGraph() {return m_rankingGraph;}
 	inline Image *getRankingTitle() {return m_rankingTitle;}
@@ -208,6 +209,7 @@ public:
 	inline bool isPauseContinue2x() {return m_bPauseContinue2x;}
 
 	inline bool isMenuButtonBackground2x() {return m_bMenuButtonBackground2x;}
+	inline bool isStar2x() {return m_bStar2x;}
 	inline bool isRankingPanel2x() {return m_bRankingPanel2x;}
 	inline bool isRankingMaxCombo2x() {return m_bRankingMaxCombo2x;}
 	inline bool isRankingAccuracy2x() {return m_bRankingAccuracy2x;}
@@ -370,6 +372,7 @@ private:
 	Image *m_songSelectTop;
 	Image *m_songSelectBottom;
 	Image *m_menuButtonBackground;
+	Image *m_star;
 	Image *m_rankingPanel;
 	Image *m_rankingGraph;
 	Image *m_rankingTitle;
@@ -461,6 +464,7 @@ private:
 	bool m_bPauseContinue2x;
 
 	bool m_bMenuButtonBackground2x;
+	bool m_bStar2x;
 	bool m_bRankingPanel2x;
 	bool m_bRankingMaxCombo2x;
 	bool m_bRankingAccuracy2x;

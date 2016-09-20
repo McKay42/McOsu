@@ -41,7 +41,7 @@ OsuRankingScreen::OsuRankingScreen(Osu *osu) : OsuScreenBackable(osu)
 	m_rankings->setDrawScrollbars(false);
 	m_container->addBaseUIElement(m_rankings);
 
-	m_songInfo = new OsuUIRankingScreenInfoLabel(m_osu, 0, 0, 0, 0, "");
+	m_songInfo = new OsuUIRankingScreenInfoLabel(m_osu, 5, 5, 0, 0, "");
 	m_container->addBaseUIElement(m_songInfo);
 
 	m_rankingTitle = new CBaseUIImage(m_osu->getSkin()->getRankingTitle()->getName(), 0, 0, 0, 0, "");

@@ -177,6 +177,7 @@ private:
 	float m_fWaitTime;
 	bool m_bContinueScheduled;
 	Vector2 m_vContinueCursorPoint;
+	unsigned long m_iContinueMusicPos;
 
 	std::vector<OsuBeatmapDifficulty*> m_difficulties;
 	OsuBeatmapDifficulty *m_selectedDifficulty;

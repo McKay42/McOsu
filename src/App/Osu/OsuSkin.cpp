@@ -158,6 +158,7 @@ OsuSkin::OsuSkin(Osu *osu, UString filepath)
 	m_songSelectTop = m_missingTexture;
 	m_songSelectBottom = m_missingTexture;
 	m_menuButtonBackground = m_missingTexture;
+	m_star = m_missingTexture;
 	m_rankingPanel = m_missingTexture;
 	m_rankingGraph = m_missingTexture;
 	m_rankingTitle = m_missingTexture;
@@ -245,6 +246,7 @@ OsuSkin::OsuSkin(Osu *osu, UString filepath)
 	m_bPauseContinue2x = false;
 
 	m_bMenuButtonBackground2x = false;
+	m_bStar2x = false;
 	m_bRankingPanel2x = false;
 	m_bRankingMaxCombo2x = false;
 	m_bRankingAccuracy2x = false;
@@ -431,6 +433,7 @@ void OsuSkin::load()
 	checkLoadImage(&m_songSelectTop, "songselect-top", "OSU_SKIN_SONGSELECT_TOP");
 	checkLoadImage(&m_songSelectBottom, "songselect-bottom", "OSU_SKIN_SONGSELECT_BOTTOM");
 	checkLoadImage(&m_menuButtonBackground, "menu-button-background", "OSU_SKIN_MENU_BUTTON_BACKGROUND");
+	checkLoadImage(&m_star, "star", "OSU_SKIN_STAR");
 	checkLoadImage(&m_rankingPanel, "ranking-panel", "OSU_SKIN_RANKING_PANEL");
 	checkLoadImage(&m_rankingGraph, "ranking-graph", "OSU_SKIN_RANKING_GRAPH");
 	checkLoadImage(&m_rankingTitle, "ranking-title", "OSU_SKIN_RANKING_TITLE");
@@ -547,6 +550,8 @@ void OsuSkin::load()
 
 	if (m_menuButtonBackground != NULL && m_menuButtonBackground->getFilePath().find("@2x") != -1)
 		m_bMenuButtonBackground2x = true;
+	if (m_star != NULL && m_star->getFilePath().find("@2x") != -1)
+		m_bStar2x = true;
 	if (m_rankingPanel != NULL && m_rankingPanel->getFilePath().find("@2x") != -1)
 		m_bRankingPanel2x = true;
 	if (m_rankingMaxCombo != NULL && m_rankingMaxCombo->getFilePath().find("@2x") != -1)
