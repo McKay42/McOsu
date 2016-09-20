@@ -380,23 +380,18 @@ void OsuSpinner::onHit()
 	m_bDrawRPM = false;
 
 	// calculate hit result
-	OsuBeatmap::HIT result = OsuBeatmap::HIT_NULL;
+	OsuScore::HIT result = OsuScore::HIT_NULL;
 	if (m_fRatio >= 1.0f)
-		result = OsuBeatmap::HIT_300;
+		result = OsuScore::HIT_300;
 	else if (m_fRatio >= 0.9f && !OsuGameRules::osu_mod_ming3012.getBool())
-		result = OsuBeatmap::HIT_100;
+		result = OsuScore::HIT_100;
 	else if (m_fRatio >= 0.75f)
-		result = OsuBeatmap::HIT_50;
+		result = OsuScore::HIT_50;
 	else
-		result = OsuBeatmap::HIT_MISS;
+		result = OsuScore::HIT_MISS;
 
-	// sound and hit animation
-	if (result == OsuBeatmap::HIT_MISS)
-	{
-		if (m_beatmap->getCombo() > 20)
-			engine->getSound()->play(m_beatmap->getSkin()->getCombobreak());
-	}
-	else
+	// sound
+	if (result != OsuScore::HIT_MISS)
 		m_beatmap->getSkin()->playHitCircleSound(m_iSampleType);
 
 	// add it, and we are finished
@@ -416,15 +411,14 @@ void OsuSpinner::rotate(float rad)
 	// added one whole rotation...
 	if (floor(newRotations/360.0f) > m_fRotations/360.0f)
 	{
-		//TODO seems to give 1100 points per spin but also an extra 100 for some spinners
+		// TODO seems to give 1100 points per spin but also an extra 100 for some spinners
 		if ((int)(newRotations/360.0f) > (int)(m_fRotationsNeeded)+1)
 		{
 			// extra rotations
-			///data.changeScore(1000);
+			m_beatmap->addScorePoints(1000);
 			engine->getSound()->play(m_beatmap->getSkin()->getSpinnerBonus());
 		}
-		///data.changeScore(100);
-		///engine->getSound()->play(m_beatmap->getSkin()->getSpinnerSpinSound());
+		m_beatmap->addScorePoints(100);
 	}
 
 	// spinner sound

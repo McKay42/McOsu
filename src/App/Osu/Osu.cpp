@@ -23,9 +23,9 @@
 
 #include "OsuMainMenu.h"
 #include "OsuOptionsMenu.h"
-#include "OsuSongBrowser.h"
 #include "OsuSongBrowser2.h"
 #include "OsuModSelector.h"
+#include "OsuRankingScreen.h"
 #include "OsuKeyBindings.h"
 #include "OsuNotificationOverlay.h"
 #include "OsuTooltipOverlay.h"
@@ -33,17 +33,20 @@
 #include "OsuPauseMenu.h"
 #include "OsuBeatmap.h"
 #include "OsuBeatmapDifficulty.h"
+#include "OsuScore.h"
 #include "OsuSkin.h"
 #include "OsuHUD.h"
 
 #include "OsuHitObject.h"
 #include "OsuSlider.h"
 
+#include "OsuBeatmapDatabase.h"
+
 void DUMMY_OSU_LETTERBOXING(UString oldValue, UString newValue) {;}
 void DUMMY_OSU_VOLUME_MUSIC_ARGS(UString oldValue, UString newValue) {;}
 void DUMMY_OSU_MODS(void) {;}
 
-ConVar osu_version("osu_version", 24.0f);
+ConVar osu_version("osu_version", 25.0f);
 ConVar osu_debug("osu_debug", false);
 
 ConVar osu_disable_mousebuttons("osu_disable_mousebuttons", false);
@@ -95,6 +98,7 @@ Osu::Osu()
 	engine->getConsoleBox()->setRequireShiftToActivate(true);
 	engine->getSound()->setVolume(osu_volume_master.getFloat());
 	engine->getMouse()->addListener(this);
+	convar->getConVarByName("name")->setValue("Guest");
 	convar->getConVarByName("console_overlay")->setValue(0.0f);
 	convar->getConVarByName("vsync")->setValue(0.0f);
 	convar->getConVarByName("fps_max")->setValue(420.0f);
@@ -119,7 +123,6 @@ Osu::Osu()
 
   	// vars
 	m_skin = NULL;
-	m_songBrowser = NULL;
 	m_songBrowser2 = NULL;
 	m_modSelector = NULL;
 
@@ -135,6 +138,7 @@ Osu::Osu()
 	m_bToggleModSelectionScheduled = false;
 	m_bToggleSongBrowserScheduled = false;
 	m_bToggleOptionsMenuScheduled = false;
+	m_bToggleRankingScreenScheduled = false;
 
 	m_bModAuto = false;
 	m_bModAutopilot = false;
@@ -160,6 +164,7 @@ Osu::Osu()
 
 	// load a few select subsystems very early
 	m_notificationOverlay = new OsuNotificationOverlay(this);
+	m_score = new OsuScore(this);
 
 	// exec the config file (this must be right here!)
 	Console::execConfigFile("osu");
@@ -185,21 +190,20 @@ Osu::Osu()
 	m_tooltipOverlay = new OsuTooltipOverlay(this);
 	m_mainMenu = new OsuMainMenu(this);
 	m_optionsMenu = new OsuOptionsMenu(this);
-	m_songBrowser = NULL;
 	//m_songBrowser = new OsuSongBrowser(this);
 	m_songBrowser2 = NULL;
 	m_songBrowser2 = new OsuSongBrowser2(this);
 	m_modSelector = new OsuModSelector(this);
+	m_rankingScreen = new OsuRankingScreen(this);
 	m_pauseMenu = new OsuPauseMenu(this);
 	m_hud = new OsuHUD(this);
 
 	// the order in this vector will define in which order events are handled/consumed
 	m_screens.push_back(m_notificationOverlay);
+	m_screens.push_back(m_rankingScreen);
 	m_screens.push_back(m_modSelector);
 	m_screens.push_back(m_pauseMenu);
 	m_screens.push_back(m_hud);
-	if (m_songBrowser != NULL)
-	m_screens.push_back(m_songBrowser);
 	if (m_songBrowser2 != NULL)
 		m_screens.push_back(m_songBrowser2);
 	m_screens.push_back(m_optionsMenu);
@@ -213,10 +217,7 @@ Osu::Osu()
 	//m_songBrowser->setVisible(true);
 	//m_songBrowser2->setVisible(true);
 	//m_pauseMenu->setVisible(true);
-
-	// debug
-	if (m_songBrowser != NULL)
-		m_songBrowser->onStartDebugMap();
+	//m_rankingScreen->setVisible(true);
 }
 
 Osu::~Osu()
@@ -227,6 +228,7 @@ Osu::~Osu()
 	}
 
 	SAFE_DELETE(m_skin);
+	SAFE_DELETE(m_score);
 
 	SAFE_DELETE(m_frameBuffer);
 	SAFE_DELETE(m_backBuffer);
@@ -264,7 +266,7 @@ void Osu::draw(Graphics *g)
 
 		// special cursor handling
 		const bool allowDrawCursor = !osu_hide_cursor_during_gameplay.getBool() || getSelectedBeatmap()->isPaused();
-		float fadingCursorAlpha = 1.0f - clamp<float>((float)getSelectedBeatmap()->getCombo()/osu_mod_fadingcursor_combo.getFloat(), 0.0f, 1.0f);
+		float fadingCursorAlpha = 1.0f - clamp<float>((float)m_score->getCombo()/osu_mod_fadingcursor_combo.getFloat(), 0.0f, 1.0f);
 		if (m_pauseMenu->isVisible() || getSelectedBeatmap()->isContinueScheduled())
 			fadingCursorAlpha = 1.0f;
 
@@ -284,13 +286,12 @@ void Osu::draw(Graphics *g)
 	}
 	else // if we are not playing
 	{
-		if (m_songBrowser != NULL)
-			m_songBrowser->draw(g);
 		if (m_songBrowser2 != NULL)
 			m_songBrowser2->draw(g);
 		m_modSelector->draw(g);
 		m_mainMenu->draw(g);
 		m_optionsMenu->draw(g);
+		m_rankingScreen->draw(g);
 
 		if (osu_draw_fps.getBool())
 			m_hud->drawFps(g);
@@ -331,7 +332,7 @@ void Osu::update()
 		getSelectedBeatmap()->update();
 
 		if (engine->getKeyboard()->isControlDown() && engine->getKeyboard()->isAltDown() && engine->getMouse()->isLeftDown())
-			getSelectedBeatmap()->seekPercent(engine->getMouse()->getPos().x/getScreenWidth());
+			getSelectedBeatmap()->seekPercent(clamp<float>(engine->getMouse()->getPos().x/getScreenWidth(), 0.0f, 0.99f));
 
 		// skip button clicking
 		if (getSelectedBeatmap()->isInSkippableSection() && !getSelectedBeatmap()->isPaused())
@@ -371,22 +372,20 @@ void Osu::update()
 
 		if (!isInPlayMode())
 		{
-			if (m_songBrowser != NULL)
-				m_songBrowser->setVisible(m_modSelector->isVisible());
 			if (m_songBrowser2 != NULL)
 				m_songBrowser2->setVisible(m_modSelector->isVisible());
 		}
+
 		m_modSelector->setVisible(!m_modSelector->isVisible());
 	}
 	if (m_bToggleSongBrowserScheduled)
 	{
 		m_bToggleSongBrowserScheduled = false;
 
-		if (m_songBrowser != NULL)
-			m_songBrowser->setVisible(!m_songBrowser->isVisible());
 		if (m_songBrowser2 != NULL)
 			m_songBrowser2->setVisible(!m_songBrowser2->isVisible());
-		m_mainMenu->setVisible(!((m_songBrowser != NULL && m_songBrowser->isVisible()) || (m_songBrowser2 != NULL && m_songBrowser2->isVisible())));
+
+		m_mainMenu->setVisible(!(m_songBrowser2 != NULL && m_songBrowser2->isVisible()));
 		updateConfineCursor();
 	}
 	if (m_bToggleOptionsMenuScheduled)
@@ -395,6 +394,14 @@ void Osu::update()
 
 		m_optionsMenu->setVisible(!m_optionsMenu->isVisible());
 		m_mainMenu->setVisible(!m_optionsMenu->isVisible());
+	}
+	if (m_bToggleRankingScreenScheduled)
+	{
+		m_bToggleRankingScreenScheduled = false;
+
+		m_rankingScreen->setVisible(!m_rankingScreen->isVisible());
+		if (m_songBrowser2 != NULL)
+			m_songBrowser2->setVisible(!m_rankingScreen->isVisible());
 	}
 
 	// handle cursor visibility if outside of internal resolution
@@ -416,9 +423,9 @@ void Osu::update()
 	}
 
 	// handle mousewheel volume change
-	if (((m_songBrowser != NULL && (!m_songBrowser->isVisible() || engine->getKeyboard()->isAltDown())) || ((m_songBrowser2 != NULL && (!m_songBrowser2->isVisible() || engine->getKeyboard()->isAltDown()))) ) && !m_optionsMenu->isVisible())
+	if ((m_songBrowser2 != NULL && (!m_songBrowser2->isVisible() || engine->getKeyboard()->isAltDown())) && !m_optionsMenu->isVisible())
 	{
-		if (!(isInPlayMode() && !m_pauseMenu->isVisible()) || !osu_disable_mousewheel.getBool() || engine->getKeyboard()->isAltDown())
+		if ((!(isInPlayMode() && !m_pauseMenu->isVisible()) && !m_rankingScreen->isVisible()) || (isInPlayMode() && !osu_disable_mousewheel.getBool()) || engine->getKeyboard()->isAltDown())
 		{
 			int wheelDelta = engine->getMouse()->getWheelDeltaVertical();
 			if (wheelDelta != 0)
@@ -509,6 +516,25 @@ void Osu::onKeyDown(KeyboardEvent &key)
 		volumeDown();
 		key.consume();
 	}
+
+	// disable mouse buttons hotkey
+	if (key == (KEYCODE)OsuKeyBindings::DISABLE_MOUSE_BUTTONS.getInt())
+	{
+		if (osu_disable_mousebuttons.getBool())
+		{
+			osu_disable_mousebuttons.setValue(0.0f);
+			m_notificationOverlay->addNotification("Mouse buttons are enabled.");
+		}
+		else
+		{
+			osu_disable_mousebuttons.setValue(1.0f);
+			m_notificationOverlay->addNotification("Mouse buttons are disabled.");
+		}
+	}
+
+	// screenshots
+	if (key == (KEYCODE)OsuKeyBindings::SAVE_SCREENSHOT.getInt())
+		saveScreenshot();
 
 	// local hotkeys
 
@@ -731,6 +757,11 @@ void Osu::toggleOptionsMenu()
 	m_bToggleOptionsMenuScheduled = true;
 }
 
+void Osu::toggleRankingScreen()
+{
+	m_bToggleRankingScreenScheduled = true;
+}
+
 void Osu::volumeDown()
 {
 	float newVolume = clamp<float>(osu_volume_master.getFloat() - osu_volume_change_interval.getFloat(), 0.0f, 1.0f);
@@ -745,10 +776,16 @@ void Osu::volumeUp()
 	m_hud->animateVolumeChange();
 }
 
-void Osu::stopRidiculouslyLongApplauseSound()
+void Osu::saveScreenshot()
 {
-	if (m_skin->getApplause() != NULL && m_skin->getApplause()->isPlaying())
-		engine->getSound()->stop(m_skin->getApplause());
+	engine->getSound()->play(m_skin->getShutter());
+	int screenshotNumber = 0;
+	while (env->fileExists(UString::format("screenshots/screenshot%i.png", screenshotNumber)))
+	{
+		screenshotNumber++;
+	}
+	std::vector<unsigned char> pixels = engine->getGraphics()->getScreenshot();
+	Image::saveToImage(&pixels[0], engine->getGraphics()->getResolution().x, engine->getGraphics()->getResolution().y, UString::format("screenshots/screenshot%i.png", screenshotNumber));
 }
 
 
@@ -757,7 +794,6 @@ void Osu::onBeforePlayStart()
 {
 	debugLog("Osu::onBeforePlayStart()\n");
 
-	stopRidiculouslyLongApplauseSound();
 	engine->getSound()->play(m_skin->getMenuHit());
 
 	updateMods();
@@ -784,7 +820,11 @@ void Osu::onPlayEnd(bool quit)
 	debugLog("Osu::onPlayEnd()\n");
 
 	if (!quit)
+	{
+		m_rankingScreen->setScore(m_score);
+		m_rankingScreen->setBeatmapInfo(getSelectedBeatmap(), getSelectedBeatmap()->getSelectedDifficulty());
 		engine->getSound()->play(m_skin->getApplause());
+	}
 
 	m_mainMenu->setVisible(false);
 	m_modSelector->setVisible(false);
@@ -793,16 +833,21 @@ void Osu::onPlayEnd(bool quit)
 	env->setCursorVisible(false);
 	m_bShouldCursorBeVisible = false;
 
-	toggleSongBrowser();
+	if (m_songBrowser2 != NULL)
+		m_songBrowser2->onPlayEnd(quit);
+
+	if (quit)
+		toggleSongBrowser();
+	else
+		toggleRankingScreen();
+
 	updateConfineCursor();
 }
 
 
 OsuBeatmap *Osu::getSelectedBeatmap()
 {
-	if (m_songBrowser != NULL)
-		return m_songBrowser->getSelectedBeatmap();
-	else if (m_songBrowser2 != NULL)
+	if (m_songBrowser2 != NULL)
 		return m_songBrowser2->getSelectedBeatmap();
 	return NULL;
 }
@@ -829,6 +874,26 @@ float Osu::getCSDifficultyMultiplier()
 		difficultyMultiplier = 0.5f;
 
 	return difficultyMultiplier;
+}
+
+float Osu::getScoreMultiplier()
+{
+	float multiplier = 1.0f;
+
+	if (m_bModEZ)
+		multiplier *= 0.5f;
+	if (m_bModHT)
+		multiplier *= 0.3f;
+	if (m_bModHR)
+		multiplier *= 1.06f;
+	if (m_bModDT || m_bModNC)
+		multiplier *= 1.12f;
+	if (m_bModHD)
+		multiplier *= 1.06f;
+	if (m_bModSpunout)
+		multiplier *= 0.9f;
+
+	return multiplier;
 }
 
 float Osu::getRawSpeedMultiplier()
@@ -871,7 +936,7 @@ float Osu::getPitchMultiplier()
 
 bool Osu::isInPlayMode()
 {
-	return (m_songBrowser != NULL && m_songBrowser->hasSelectedAndIsPlaying()) || (m_songBrowser2 != NULL && m_songBrowser2->hasSelectedAndIsPlaying());
+	return (m_songBrowser2 != NULL && m_songBrowser2->hasSelectedAndIsPlaying());
 }
 
 

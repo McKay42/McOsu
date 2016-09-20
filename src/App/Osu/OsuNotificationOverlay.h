@@ -34,6 +34,8 @@ public:
 
 	void addNotification(UString text, Color textColor = 0xffffffff, bool waitForKey = false);
 
+	void stopWaitingForKey();
+
 	void addKeyListener(OsuNotificationOverlayKeyListener *keyListener) {m_keyListener = keyListener;}
 
 	bool isVisible();

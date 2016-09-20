@@ -42,7 +42,6 @@ OsuUISongBrowserButton::OsuUISongBrowserButton(OsuBeatmap *beatmap, CBaseUIScrol
 	m_font = beatmap->getOsu()->getSongBrowserFont();
 	m_fontBold = beatmap->getOsu()->getSongBrowserFontBold();
 
-	// force loading
 	m_bVisible = false;
 
 	/*
@@ -86,7 +85,13 @@ OsuUISongBrowserButton::OsuUISongBrowserButton(OsuBeatmap *beatmap, CBaseUIScrol
 		    	const unsigned long diff1 = (a->AR+1)*(a->CS+1)*(a->HP+1)*(a->OD+1)*(a->maxBPM > 0 ? a->maxBPM : 1);
 		    	const unsigned long diff2 = (b->AR+1)*(b->CS+1)*(b->HP+1)*(b->OD+1)*(b->maxBPM > 0 ? b->maxBPM : 1);
 
-		        return diff1 < diff2;
+		    	const float stars1 = a->starsNoMod;
+		    	const float stars2 = b->starsNoMod;
+
+		    	if (stars1 > 0 && stars2 > 0)
+		    		return stars1 < stars2;
+		    	else
+		    		return diff1 < diff2;
 		    }
 		};
 		std::sort(difficulties.begin(), difficulties.end(), SortComparator());
@@ -153,9 +158,9 @@ void OsuUISongBrowserButton::draw(Graphics *g)
 	// draw menu button background
 	g->setColor(m_bSelected ? activeBackgroundColor : (isChild() ? inactiveDifficultyBackgroundColor : inactiveBackgroundColor));
 	g->pushTransform();
-	g->scale(m_fScale, m_fScale);
-	g->translate(m_vPos.x + m_vSize.x/2, m_vPos.y + m_vSize.y/2);
-	g->drawImage(skin->getMenuButtonBackground());
+		g->scale(m_fScale, m_fScale);
+		g->translate(m_vPos.x + m_vSize.x/2, m_vPos.y + m_vSize.y/2);
+		g->drawImage(skin->getMenuButtonBackground());
 	g->popTransform();
 
 	// draw beatmap background
@@ -170,11 +175,11 @@ void OsuUISongBrowserButton::draw(Graphics *g)
 
 		g->setColor(0xffffffff);
 		g->pushTransform();
-		g->scale(beatmapBackgroundScale, beatmapBackgroundScale);
-		g->translate(pos.x + (int)centerOffset.x, pos.y + (int)centerOffset.y);
-		g->pushClipRect(clipRect);
-		g->drawImage(beatmapBackground);
-		g->popClipRect();
+			g->scale(beatmapBackgroundScale, beatmapBackgroundScale);
+			g->translate(pos.x + (int)centerOffset.x, pos.y + (int)centerOffset.y);
+			g->pushClipRect(clipRect);
+				g->drawImage(beatmapBackground);
+			g->popClipRect();
 		g->popTransform();
 
 		// debug cliprect bounding box
@@ -190,36 +195,63 @@ void OsuUISongBrowserButton::draw(Graphics *g)
 		*/
 	}
 
-	// draw
+	// draw title
 	float titleScale = (size.y*m_fTitleScale) / m_font->getHeight();
 	g->setColor(m_bSelected ? skin->getSongSelectActiveText() : skin->getSongSelectInactiveText());
 	if (isChild() && !m_bSelected)
 		g->setAlpha(0.2f);
 	g->pushTransform();
-	g->scale(titleScale, titleScale);
-	g->translate(pos.x + textXOffset, pos.y + size.y*m_fTextMarginScale + m_font->getHeight()*titleScale);
-	g->drawString(m_font, titleText);
+		g->scale(titleScale, titleScale);
+		g->translate(pos.x + textXOffset, pos.y + size.y*m_fTextMarginScale + m_font->getHeight()*titleScale);
+		g->drawString(m_font, titleText);
 	g->popTransform();
 
+	// draw subtitle
 	float subTitleScale = (size.y*m_fSubTitleScale) / m_font->getHeight();
 	g->setColor(m_bSelected ? skin->getSongSelectActiveText() : skin->getSongSelectInactiveText());
 	if (isChild() && !m_bSelected)
 		g->setAlpha(0.2f);
 	g->pushTransform();
-	g->scale(subTitleScale, subTitleScale);
-	g->translate(pos.x + textXOffset, pos.y + size.y*m_fTextMarginScale + m_font->getHeight()*titleScale + size.y*m_fTextSpacingScale + m_font->getHeight()*subTitleScale);
-	g->drawString(m_font, subTitleText);
+		g->scale(subTitleScale, subTitleScale);
+		g->translate(pos.x + textXOffset, pos.y + size.y*m_fTextMarginScale + m_font->getHeight()*titleScale + size.y*m_fTextSpacingScale + m_font->getHeight()*subTitleScale*0.85f);
+		g->drawString(m_font, subTitleText);
 	g->popTransform();
 
 	if (isChild())
 	{
+		// draw diff name
 		float diffScale = (size.y*m_fDiffScale) / m_fontBold->getHeight();
 		g->setColor(m_bSelected ? skin->getSongSelectActiveText() : skin->getSongSelectInactiveText());
 		g->pushTransform();
-		g->scale(diffScale, diffScale);
-		g->translate(pos.x + textXOffset, pos.y + size.y*m_fTextMarginScale + m_font->getHeight()*titleScale + size.y*m_fTextSpacingScale + m_font->getHeight()*subTitleScale + size.y*m_fTextSpacingScale + m_fontBold->getHeight()*diffScale);
-		g->drawString(m_fontBold, diffText);
+			g->scale(diffScale, diffScale);
+			g->translate(pos.x + textXOffset, pos.y + size.y*m_fTextMarginScale + m_font->getHeight()*titleScale + size.y*m_fTextSpacingScale + m_font->getHeight()*subTitleScale*0.85f + size.y*m_fTextSpacingScale + m_fontBold->getHeight()*diffScale*0.8f);
+			g->drawString(m_fontBold, diffText);
 		g->popTransform();
+
+		// draw stars
+		if (m_child->starsNoMod > 0)
+		{
+			const float starOffsetY = (size.y*0.85);
+			const float starWidth = (size.y*0.20);
+			const float starScale = starWidth / skin->getStar()->getHeight();
+			const int numFullStars = std::min((int)m_child->starsNoMod, 50);
+			const float partialStarScale = m_child->starsNoMod - numFullStars;
+
+			g->setColor(m_bSelected ? skin->getSongSelectActiveText() : skin->getSongSelectInactiveText());
+			for (int i=0; i<numFullStars; i++)
+			{
+				g->pushTransform();
+					g->scale(starScale, starScale);
+					g->translate(pos.x + textXOffset + starWidth/2 + i*starWidth*1.5f, pos.y + starOffsetY);
+					g->drawImage(skin->getStar());
+				g->popTransform();
+			}
+			g->pushTransform();
+				g->scale(starScale*partialStarScale, starScale*partialStarScale);
+				g->translate(pos.x + textXOffset + starWidth/2 + numFullStars*starWidth*1.5f, pos.y + starOffsetY);
+				g->drawImage(skin->getStar());
+			g->popTransform();
+		}
 	}
 
 	// debug inner bounding box

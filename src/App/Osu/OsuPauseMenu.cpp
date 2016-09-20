@@ -20,7 +20,6 @@
 #include "Osu.h"
 #include "OsuSkin.h"
 #include "OsuBeatmap.h"
-#include "OsuSongBrowser.h"
 #include "OsuKeyBindings.h"
 #include "OsuHUD.h"
 
@@ -59,6 +58,8 @@ OsuPauseMenu::OsuPauseMenu(Osu *osu) : OsuScreen()
 	m_fWarningArrowsAnimX = 0.0f;
 	m_fWarningArrowsAnimY = 0.0f;
 	m_bInitialWarningArrowFlyIn = true;
+
+	m_bContinueEnabled = true;
 
 	m_container = new CBaseUIContainer(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight(), "");
 
@@ -132,6 +133,8 @@ void OsuPauseMenu::update()
 
 void OsuPauseMenu::onContinueClicked()
 {
+	if (!m_bContinueEnabled) return;
+
 	engine->getSound()->play(m_osu->getSkin()->getMenuHit());
 	if (m_osu->getSelectedBeatmap() != NULL)
 		m_osu->getSelectedBeatmap()->pause();
@@ -203,9 +206,24 @@ void OsuPauseMenu::onKeyDown(KeyboardEvent &e)
 		if (!engine->getKeyboard()->isAltDown() && e == KEY_DOWN)
 		{
 			OsuPauseMenuButton *nextSelectedButton = m_buttons[0];
+
+			// get first visible button
+			for (int i=0; i<m_buttons.size(); i++)
+			{
+				if (!m_buttons[i]->isVisible())
+					continue;
+
+				nextSelectedButton = m_buttons[i];
+				break;
+			}
+
+			// next selection logic
 			bool next = false;
 			for (int i=0; i<m_buttons.size(); i++)
 			{
+				if (!m_buttons[i]->isVisible())
+					continue;
+
 				if (next)
 				{
 					nextSelectedButton = m_buttons[i];
@@ -221,9 +239,24 @@ void OsuPauseMenu::onKeyDown(KeyboardEvent &e)
 		if (!engine->getKeyboard()->isAltDown() && e == KEY_UP)
 		{
 			OsuPauseMenuButton *nextSelectedButton = m_buttons[m_buttons.size()-1];
+
+			// get first visible button
+			for (int i=m_buttons.size()-1; i>=0; i--)
+			{
+				if (!m_buttons[i]->isVisible())
+					continue;
+
+				nextSelectedButton = m_buttons[i];
+				break;
+			}
+
+			// next selection logic
 			bool next = false;
 			for (int i=m_buttons.size()-1; i>=0; i--)
 			{
+				if (!m_buttons[i]->isVisible())
+					continue;
+
 				if (next)
 				{
 					nextSelectedButton = m_buttons[i];
@@ -332,6 +365,13 @@ void OsuPauseMenu::setVisible(bool visible)
 	}
 
 	m_osu->updateConfineCursor();
+}
+
+void OsuPauseMenu::setContinueEnabled(bool continueEnabled)
+{
+	m_bContinueEnabled = continueEnabled;
+	if (m_buttons.size() > 0)
+		m_buttons[0]->setVisible(m_bContinueEnabled);
 }
 
 OsuPauseMenuButton *OsuPauseMenu::addButton()

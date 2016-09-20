@@ -15,7 +15,6 @@ class OsuSliderCurveEqualDistanceMulti;
 
 class Shader;
 class VertexArrayObject;
-class VertexBuffer;
 
 class OsuSlider : public OsuHitObject
 {
@@ -59,7 +58,7 @@ private:
 
 	void updateAnimations(long curPos);
 
-	void onHit(OsuBeatmap::HIT result, long delta, bool startOrEnd, float targetDelta = 0.0f, float targetAngle = 0.0f);
+	void onHit(OsuScore::HIT result, long delta, bool startOrEnd, float targetDelta = 0.0f, float targetAngle = 0.0f);
 	void onRepeatHit(bool successful, bool sliderend);
 	void onTickHit(bool successful, int tickIndex);
 	void onSliderBreak();
@@ -101,8 +100,8 @@ private:
 	Vector2 m_vCurPoint;
 	Vector2 m_vCurPointRaw;
 
-	OsuBeatmap::HIT m_startResult;
-	OsuBeatmap::HIT m_endResult;
+	OsuScore::HIT m_startResult;
+	OsuScore::HIT m_endResult;
 	bool m_bStartFinished;
 	float m_fStartHitAnimation;
 	bool m_bEndFinished;
@@ -156,7 +155,6 @@ protected:
 	static int UNIT_CONE_DIVIDES;
 	static std::vector<float> UNIT_CONE;
 	static VertexArrayObject *MASTER_CIRCLE_VAO;
-	static VertexBuffer *MASTER_CIRCLE_VB;
 	static float MASTER_CIRCLE_VAO_RADIUS;
 
 	void drawFillCircle(Graphics *g, Vector2 center);
