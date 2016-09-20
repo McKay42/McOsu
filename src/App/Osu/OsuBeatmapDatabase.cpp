@@ -455,6 +455,8 @@ void OsuBeatmapDatabase::loadDB(OsuFile *db)
 			diff->localoffset = localOffset;
 			diff->numObjects = numCircles + numSliders + numSpinners;
 			diff->starsNoMod = numOsuStandardStars;
+			diff->ID = beatmapID;
+			diff->setID = beatmapSetID;
 
 			// calculate bpm range
 			float minBeatLength = 0;
@@ -493,8 +495,10 @@ void OsuBeatmapDatabase::loadDB(OsuFile *db)
 		}
 	}
 
+	// TODO: store every beatmap immediately, then go through every beatmap to decide where to insert the current diff into
+	// (instead of hoping that the database has all diffs of a set perfectly in order)
+
 	m_importTimer->update();
-	debugLog("Refresh finished, added %i beatmaps in %f seconds.\n", m_beatmaps.size(), m_importTimer->getElapsedTime());
 
 	// signal that we are done
 	m_fLoadingProgress = 1.0f;

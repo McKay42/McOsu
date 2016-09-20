@@ -124,6 +124,8 @@ public:
 	int maxBPM;
 	int numObjects;
 	float starsNoMod;
+	int ID;
+	int setID;
 
 	struct TIMING_INFO
 	{
