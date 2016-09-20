@@ -174,6 +174,8 @@ void OsuUIModSelectorModButton::setState(unsigned int state, UString modName, US
 	// set initial state image
 	if (m_states.size() == 1)
 		setImageResourceName(m_states[0].img->getName());
+	else if (m_iState > -1 && m_iState < m_states.size()) // update current state image
+		setImageResourceName(m_states[m_iState].img->getName());
 }
 
 UString OsuUIModSelectorModButton::getActiveModName()

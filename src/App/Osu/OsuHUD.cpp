@@ -17,6 +17,7 @@
 #include "OsuSkin.h"
 #include "OsuBeatmap.h"
 #include "OsuGameRules.h"
+#include "OsuScore.h"
 
 #include "OsuHitObject.h"
 #include "OsuCircle.h"
@@ -106,7 +107,7 @@ void OsuHUD::draw(Graphics *g)
 		g->pushTransform();
 			if (m_osu->getModTarget() && osu_draw_target_heatmap.getBool())
 				g->translate(0, m_osu->getSelectedBeatmap()->getHitcircleDiameter());
-			drawStatistics(g, m_osu->getSelectedBeatmap()->getNumMisses(), m_osu->getSelectedBeatmap()->getBPM(), OsuGameRules::getApproachRateForSpeedMultiplier(m_osu->getSelectedBeatmap(), m_osu->getSelectedBeatmap()->getSpeedMultiplier()), m_osu->getSelectedBeatmap()->getCS(), OsuGameRules::getOverallDifficultyForSpeedMultiplier(m_osu->getSelectedBeatmap(), m_osu->getSelectedBeatmap()->getSpeedMultiplier()), m_osu->getSelectedBeatmap()->getNPS(), m_osu->getSelectedBeatmap()->getND(), m_osu->getScore()->getUnstableRate());
+			drawStatistics(g, m_osu->getScore()->getNumMisses(), m_osu->getSelectedBeatmap()->getBPM(), OsuGameRules::getApproachRateForSpeedMultiplier(m_osu->getSelectedBeatmap(), m_osu->getSelectedBeatmap()->getSpeedMultiplier()), m_osu->getSelectedBeatmap()->getCS(), OsuGameRules::getOverallDifficultyForSpeedMultiplier(m_osu->getSelectedBeatmap(), m_osu->getSelectedBeatmap()->getSpeedMultiplier()), m_osu->getSelectedBeatmap()->getNPS(), m_osu->getSelectedBeatmap()->getND(), m_osu->getScore()->getUnstableRate());
 		g->popTransform();
 
 		/*
