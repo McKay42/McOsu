@@ -83,6 +83,8 @@ OsuBeatmapDifficulty::OsuBeatmapDifficulty(Osu *osu, UString filepath, UString f
 	maxBPM = 0;
 	numObjects = 0;
 	starsNoMod = 0;
+	ID = 0;
+	setID = 0;
 
 	m_backgroundImagePathLoader = NULL;
 }
@@ -674,6 +676,7 @@ void OsuBeatmapDifficulty::loadBackgroundImage()
 	{
 		UString uniqueResourceName = fullBackgroundImageFilePath;
 		uniqueResourceName.append(name);
+		uniqueResourceName.append(UString::format("%i%i", ID, setID));
 		engine->getResourceManager()->requestNextLoadAsync();
 		backgroundImage = engine->getResourceManager()->loadImageAbs(fullBackgroundImageFilePath, uniqueResourceName);
 	}
@@ -754,14 +757,19 @@ OsuBeatmapDifficulty::TIMING_INFO OsuBeatmapDifficulty::getTimingInfoForTime(uns
 	ti.offset = 0;
 	ti.beatLengthBase = 1;
 	ti.beatLength = 1;
-	ti.volume = 1;
+	ti.volume = 100;
 	ti.sampleType = 0;
 	ti.sampleSet = 0;
 
 	if (timingpoints.size() <= 0)
 		return ti;
 
-	// initial values (get first non-inherited timingpoint as base)
+	// initial values
+	ti.volume = timingpoints[0].volume;
+	ti.sampleSet = timingpoints[0].sampleSet;
+	ti.sampleType = timingpoints[0].sampleType;
+
+	// initial timing values (get first non-inherited timingpoint as base)
 	for (int i=0; i<timingpoints.size(); i++)
 	{
 		TIMINGPOINT *t = &timingpoints[i];
