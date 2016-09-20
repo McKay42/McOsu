@@ -499,6 +499,7 @@ void OsuBeatmapDatabase::loadDB(OsuFile *db)
 	// (instead of hoping that the database has all diffs of a set perfectly in order)
 
 	m_importTimer->update();
+	debugLog("Refresh finished, added %i beatmaps in %f seconds.\n", m_beatmaps.size(), m_importTimer->getElapsedTime());
 
 	// signal that we are done
 	m_fLoadingProgress = 1.0f;
