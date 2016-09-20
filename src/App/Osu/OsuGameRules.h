@@ -21,7 +21,9 @@ public:
 	//	Hitobject Animations  //
 	//************************//
 
-	static ConVar osu_circle_fade_out_time;
+	static ConVar osu_hitobject_fade_out_time;
+	static ConVar osu_hitobject_fade_out_time_speed_multiplier_min;
+
 	static ConVar osu_circle_fade_out_scale;
 
 	static ConVar osu_slider_followcircle_fadein_fade_time;
@@ -32,6 +34,11 @@ public:
 	static ConVar osu_slider_followcircle_fadeout_scale_time;
 	static ConVar osu_slider_followcircle_tick_pulse_time;
 	static ConVar osu_slider_followcircle_tick_pulse_scale;
+
+	static float getFadeOutTime(OsuBeatmap *beatmap) // this scales the fadeout duration with the current speed multiplier
+	{
+		return osu_hitobject_fade_out_time.getFloat()*(1.0f/std::max(beatmap->getSpeedMultiplier(), osu_hitobject_fade_out_time_speed_multiplier_min.getFloat()));
+	}
 
 
 
@@ -174,31 +181,31 @@ public:
 		return mapDifficultyRange(beatmap->getOD(), 3.0f, 5.0f, 7.5f);
 	}
 
-	static OsuBeatmap::HIT getHitResult(long delta, OsuBeatmap *beatmap)
+	static OsuScore::HIT getHitResult(long delta, OsuBeatmap *beatmap)
 	{
 		delta = std::abs(delta);
 
-		OsuBeatmap::HIT result = OsuBeatmap::HIT_NULL;
+		OsuScore::HIT result = OsuScore::HIT_NULL;
 
 		if (!osu_mod_ming3012.getBool())
 		{
 			if (delta <= (long)getHitWindow300(beatmap))
-				result = OsuBeatmap::HIT_300;
+				result = OsuScore::HIT_300;
 			else if (delta <= (long)getHitWindow100(beatmap))
-				result = OsuBeatmap::HIT_100;
+				result = OsuScore::HIT_100;
 			else if (delta <= (long)getHitWindow50(beatmap))
-				result = OsuBeatmap::HIT_50;
+				result = OsuScore::HIT_50;
 			else if (delta <= (long)getHitWindowMiss(beatmap))
-				result = OsuBeatmap::HIT_MISS;
+				result = OsuScore::HIT_MISS;
 		}
 		else
 		{
 			if (delta <= (long)getHitWindow300(beatmap))
-				result = OsuBeatmap::HIT_300;
+				result = OsuScore::HIT_300;
 			else if (delta <= (long)getHitWindow50(beatmap))
-				result = OsuBeatmap::HIT_50;
+				result = OsuScore::HIT_50;
 			else if (delta <= (long)getHitWindowMiss(beatmap))
-				result = OsuBeatmap::HIT_MISS;
+				result = OsuScore::HIT_MISS;
 		}
 
 		return result;

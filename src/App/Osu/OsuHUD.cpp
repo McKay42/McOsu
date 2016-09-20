@@ -32,6 +32,7 @@ ConVar osu_cursor_trail_alpha("osu_cursor_trail_alpha", 1.0f);
 ConVar osu_hud_scale("osu_hud_scale", 1.0f);
 ConVar osu_hud_hiterrorbar_scale("osu_hud_hiterrorbar_scale", 1.0f);
 ConVar osu_hud_combo_scale("osu_hud_combo_scale", 1.0f);
+ConVar osu_hud_score_scale("osu_hud_score_scale", 1.0f);
 ConVar osu_hud_accuracy_scale("osu_hud_accuracy_scale", 1.0f);
 ConVar osu_hud_progressbar_scale("osu_hud_progressbar_scale", 1.0f);
 ConVar osu_hud_playfield_border_size("osu_hud_playfield_border_size", 5.0f);
@@ -42,6 +43,7 @@ ConVar osu_draw_hud("osu_draw_hud", true);
 ConVar osu_draw_hiterrorbar("osu_draw_hiterrorbar", true);
 ConVar osu_draw_progressbar("osu_draw_progressbar", true);
 ConVar osu_draw_combo("osu_draw_combo", true);
+ConVar osu_draw_score("osu_draw_score", true);
 ConVar osu_draw_accuracy("osu_draw_accuracy", true);
 ConVar osu_draw_target_heatmap("osu_draw_target_heatmap", true);
 
@@ -78,6 +80,7 @@ OsuHUD::OsuHUD(Osu *osu)
 
 	m_fAccuracyXOffset = 0.0f;
 	m_fAccuracyYOffset = 0.0f;
+	m_fScoreHeight = 0.0f;
 
 	m_fComboAnim1 = 0.0f;
 	m_fComboAnim2 = 0.0f;
@@ -103,17 +106,28 @@ void OsuHUD::draw(Graphics *g)
 		g->pushTransform();
 			if (m_osu->getModTarget() && osu_draw_target_heatmap.getBool())
 				g->translate(0, m_osu->getSelectedBeatmap()->getHitcircleDiameter());
-			drawStatistics(g, m_osu->getSelectedBeatmap()->getNumMisses(), m_osu->getSelectedBeatmap()->getBPM(), OsuGameRules::getApproachRateForSpeedMultiplier(m_osu->getSelectedBeatmap(), m_osu->getSelectedBeatmap()->getSpeedMultiplier()), m_osu->getSelectedBeatmap()->getCS(), OsuGameRules::getOverallDifficultyForSpeedMultiplier(m_osu->getSelectedBeatmap(), m_osu->getSelectedBeatmap()->getSpeedMultiplier()), m_osu->getSelectedBeatmap()->getNPS(), m_osu->getSelectedBeatmap()->getND(), m_osu->getSelectedBeatmap()->getUnstableRate());
+			drawStatistics(g, m_osu->getSelectedBeatmap()->getNumMisses(), m_osu->getSelectedBeatmap()->getBPM(), OsuGameRules::getApproachRateForSpeedMultiplier(m_osu->getSelectedBeatmap(), m_osu->getSelectedBeatmap()->getSpeedMultiplier()), m_osu->getSelectedBeatmap()->getCS(), OsuGameRules::getOverallDifficultyForSpeedMultiplier(m_osu->getSelectedBeatmap(), m_osu->getSelectedBeatmap()->getSpeedMultiplier()), m_osu->getSelectedBeatmap()->getNPS(), m_osu->getSelectedBeatmap()->getND(), m_osu->getScore()->getUnstableRate());
 		g->popTransform();
 
+		/*
+		g->setColor(0xffffffff);
+		g->pushTransform();
+			g->translate(100, 100);
+			g->drawString(m_tempFont, UString::format("HP: %f", m_osu->getSelectedBeatmap()->getHealth()));
+		g->popTransform();
+		*/
+
+		if (osu_draw_score.getBool())
+			drawScore(g, m_osu->getScore()->getScore());
+
 		if (osu_draw_combo.getBool())
-			drawCombo(g, m_osu->getSelectedBeatmap()->getCombo());
+			drawCombo(g, m_osu->getScore()->getCombo());
 
 		if (osu_draw_progressbar.getBool())
 			drawProgressBar(g, m_osu->getSelectedBeatmap()->getPercentFinished(), m_osu->getSelectedBeatmap()->isWaiting());
 
 		if (osu_draw_accuracy.getBool())
-			drawAccuracy(g, m_osu->getSelectedBeatmap()->getAccuracy()*100.0f);
+			drawAccuracy(g, m_osu->getScore()->getAccuracy()*100.0f);
 
 		if (osu_draw_hiterrorbar.getBool() && !m_osu->getSelectedBeatmap()->isSpinnerActive())
 			drawHitErrorBar(g, OsuGameRules::getHitWindow300(m_osu->getSelectedBeatmap()), OsuGameRules::getHitWindow100(m_osu->getSelectedBeatmap()), OsuGameRules::getHitWindow50(m_osu->getSelectedBeatmap()));
@@ -139,13 +153,20 @@ void OsuHUD::drawDummy(Graphics *g)
 
 	drawWarningArrows(g);
 
-	drawCombo(g, 420);
+	if (osu_draw_combo.getBool())
+		drawCombo(g, 420);
 
-	drawProgressBar(g, 0.25f, false);
+	if (osu_draw_score.getBool())
+		drawScore(g, 123456789);
 
-	drawAccuracy(g, 100.0f);
+	if (osu_draw_progressbar.getBool())
+		drawProgressBar(g, 0.25f, false);
 
-	drawHitErrorBar(g, 50, 100, 150);
+	if (osu_draw_accuracy.getBool())
+		drawAccuracy(g, 100.0f);
+
+	if (osu_draw_hiterrorbar.getBool())
+		drawHitErrorBar(g, 50, 100, 150);
 }
 
 void OsuHUD::update()
@@ -447,6 +468,7 @@ void OsuHUD::drawScoreNumber(Graphics *g, int number, float scale, bool drawLead
 	}
 
 	// draw them
+	// NOTE: just using the width here is incorrect, but it is the quickest solution instead of painstakingly reverse-engineering how osu does it
 	float lastWidth = m_osu->getSkin()->getScore0()->getWidth();
 	for (int i=0; i<digits.size(); i++)
 	{
@@ -508,6 +530,17 @@ void OsuHUD::drawScoreNumber(Graphics *g, int number, float scale, bool drawLead
 	}
 }
 
+void OsuHUD::drawComboSimple(Graphics *g, int combo, float scale)
+{
+	g->pushTransform();
+		drawScoreNumber(g, combo, scale);
+
+		// draw 'x' at the end
+		g->translate(m_osu->getSkin()->getScoreX()->getWidth()*0.5f*scale, 0);
+		g->drawImage(m_osu->getSkin()->getScoreX());
+	g->popTransform();
+}
+
 void OsuHUD::drawCombo(Graphics *g, int combo)
 {
 	g->setColor(0xffffffff);
@@ -547,6 +580,56 @@ void OsuHUD::drawCombo(Graphics *g, int combo)
 	g->popTransform();
 }
 
+void OsuHUD::drawScore(Graphics *g, int score)
+{
+	g->setColor(0xffffffff);
+
+	int numDigits = 1;
+	int scoreCopy = score;
+	while (scoreCopy >= 10)
+	{
+		scoreCopy /= 10;
+		numDigits++;
+	}
+
+	const float scale = m_osu->getImageScale(m_osu, m_osu->getSkin()->getScore0(), 13*1.5f) * osu_hud_scale.getFloat() * osu_hud_score_scale.getFloat();
+	m_fScoreHeight = m_osu->getSkin()->getScore0()->getHeight()*scale;
+	const int offset = 2;
+	g->pushTransform();
+		g->scale(scale, scale);
+		g->translate(m_osu->getScreenWidth() - m_osu->getSkin()->getScore0()->getWidth()*scale*numDigits - offset*(numDigits-1), m_osu->getSkin()->getScore0()->getHeight()*scale/2);
+		drawScoreNumber(g, score, scale, false, offset);
+	g->popTransform();
+}
+
+void OsuHUD::drawAccuracySimple(Graphics *g, float accuracy, float scale)
+{
+	// get integer & fractional parts of the number
+	// see drawAccuracy() for explanation
+	const int accuracyInt = (int)accuracy;
+	const int accuracyFrac = clamp<int>(((int)(std::round((accuracy - accuracyInt)*1000.0f))) / 10, 0, 99);
+
+	// draw it
+	const int spacingOffset = 2;
+	g->pushTransform();
+		drawScoreNumber(g, accuracyInt, scale, true, spacingOffset);
+
+		// draw dot '.' between the integer and fractional part
+		g->setColor(0xffffffff);
+		g->translate(m_osu->getSkin()->getScoreDot()->getWidth()*0.5f*scale, 0);
+		g->drawImage(m_osu->getSkin()->getScoreDot());
+		g->translate(m_osu->getSkin()->getScoreDot()->getWidth()*0.5f*scale, 0);
+		g->translate(spacingOffset, 0); // extra spacing
+
+		drawScoreNumber(g, accuracyFrac, scale, true, spacingOffset);
+
+		// draw '%' at the end
+		g->setColor(0xffffffff);
+		g->translate(m_osu->getSkin()->getScorePercent()->getWidth()*0.5f*scale, 0);
+		g->drawImage(m_osu->getSkin()->getScorePercent());
+	g->popTransform();
+}
+
 void OsuHUD::drawAccuracy(Graphics *g, float accuracy)
 {
 	g->setColor(0xffffffff);
@@ -569,7 +652,8 @@ void OsuHUD::drawAccuracy(Graphics *g, float accuracy)
 		const float xOffset = m_osu->getSkin()->getScore0()->getWidth()*scale*numDigits + m_osu->getSkin()->getScoreDot()->getWidth()*scale + m_osu->getSkin()->getScorePercent()->getWidth()*scale + spacingOffset*numDigits + 1;
 
 		m_fAccuracyXOffset = m_osu->getScreenWidth() - xOffset - offset;
-		m_fAccuracyYOffset = m_osu->getSkin()->getScore0()->getHeight()*scale/2 + offset*2;
+		m_fAccuracyYOffset = (osu_draw_score.getBool() ? m_fScoreHeight : 0.0f) + m_osu->getSkin()->getScore0()->getHeight()*scale/2 + offset*2;
+
 		g->scale(scale, scale);
 		g->translate(m_fAccuracyXOffset, m_fAccuracyYOffset);
 
@@ -726,16 +810,23 @@ void OsuHUD::drawHitErrorBar(Graphics *g, float hitWindow300, float hitWindow100
 
 void OsuHUD::drawProgressBar(Graphics *g, float percent, bool waiting)
 {
+	if (!osu_draw_accuracy.getBool())
+		m_fAccuracyXOffset = m_osu->getScreenWidth();
+
 	const float num_segments = 15*8;
 	const int offset = 20;
 	const float radius = m_osu->getUIScale(m_osu, 10.5f) * osu_hud_scale.getFloat() * osu_hud_progressbar_scale.getFloat();
-	const float circularMetreScale = ((2*radius)/m_osu->getSkin()->getCircularmetre()->getWidth()) * 1.3f; // HACKHACK: the skin image is NOT border to border; hardcoded 1.3 multiplier
+	const float circularMetreScale = ((2*radius)/m_osu->getSkin()->getCircularmetre()->getWidth()) * 1.3f; // hardcoded 1.3 multiplier?!
 	const float actualCircularMetreScale = ((2*radius)/m_osu->getSkin()->getCircularmetre()->getWidth());
 	Vector2 center = Vector2(m_fAccuracyXOffset - radius - offset, m_fAccuracyYOffset);
 
 	// clamp to top edge of screen
 	if (center.y - (m_osu->getSkin()->getCircularmetre()->getHeight()*actualCircularMetreScale + 5)/2.0f < 0)
 		center.y += std::abs(center.y - (m_osu->getSkin()->getCircularmetre()->getHeight()*actualCircularMetreScale + 5)/2.0f);
+
+	// clamp to bottom edge of score numbers
+	if (osu_draw_score.getBool() && center.y-radius < m_fScoreHeight)
+		center.y = m_fScoreHeight + radius;
 
 	const float theta = 2 * PI / float(num_segments);
 	const float s = sinf(theta); // precalculate the sine and cosine

@@ -80,7 +80,7 @@ void OsuNotificationOverlay::onKeyDown(KeyboardEvent &e)
 	{
 		if (m_bWaitForKey)
 			e.consume();
-		m_bWaitForKey = false;
+		stopWaitingForKey();
 	}
 
 	// key binding logic
@@ -163,6 +163,11 @@ void OsuNotificationOverlay::addNotification(UString text, Color textColor, bool
 		anim->moveQuadOut(&m_notification1.alpha, 0.0f, fadeOutTime, osu_notification_duration.getFloat(), false);
 
 	anim->moveQuadOut(&m_notification1.backgroundAnim, 1.0f, 0.15f, 0.0f, true);
+}
+
+void OsuNotificationOverlay::stopWaitingForKey()
+{
+	m_bWaitForKey = false;
 }
 
 bool OsuNotificationOverlay::isVisible()

@@ -14,16 +14,20 @@ class Osu;
 class OsuHitObject;
 class OsuBeatmap;
 
+class BackgroundImagePathLoader;
+
 class OsuBeatmapDifficulty
 {
 public:
 	OsuBeatmapDifficulty(Osu *osu, UString filepath, UString folder);
-
-	bool loadMetadata();
-	bool load(OsuBeatmap *beatmap, std::vector<OsuHitObject*> *hitobjects);
 	void unload();
+
+	bool loadMetadataRaw();
+	bool loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject*> *hitobjects);
+
 	void loadBackgroundImage();
 	void unloadBackgroundImage();
+	void loadBackgroundImagePath();
 
 	struct HITCIRCLE
 	{
@@ -83,6 +87,7 @@ public:
 
 	UString title;
 	UString audioFileName;
+	unsigned long lengthMS;
 
 	float stackLeniency;
 
@@ -117,6 +122,8 @@ public:
 	long localoffset;
 	int minBPM;
 	int maxBPM;
+	int numObjects;
+	float starsNoMod;
 
 	struct TIMING_INFO
 	{
@@ -138,6 +145,9 @@ private:
 
 	UString m_sFilePath;
 	UString m_sFolder;
+
+	// custom
+	BackgroundImagePathLoader *m_backgroundImagePathLoader;
 };
 
 #endif

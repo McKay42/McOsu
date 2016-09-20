@@ -24,12 +24,12 @@ ConVar osu_mod_target_300_percent("osu_mod_target_300_percent", 0.5f);
 ConVar osu_mod_target_100_percent("osu_mod_target_100_percent", 0.7f);
 ConVar osu_mod_target_50_percent("osu_mod_target_50_percent", 0.95f);
 
-void OsuHitObject::drawHitResult(Graphics *g, OsuBeatmap *beatmap, Vector2 rawPos, OsuBeatmap::HIT result, float animPercent)
+void OsuHitObject::drawHitResult(Graphics *g, OsuBeatmap *beatmap, Vector2 rawPos, OsuScore::HIT result, float animPercent)
 {
 	drawHitResult(g, beatmap->getSkin(), beatmap->getHitcircleDiameter(), beatmap->getRawHitcircleDiameter(), rawPos, result, animPercent);
 }
 
-void OsuHitObject::drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiameter, float rawHitcircleDiameter, Vector2 rawPos, OsuBeatmap::HIT result, float animPercent)
+void OsuHitObject::drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiameter, float rawHitcircleDiameter, Vector2 rawPos, OsuScore::HIT result, float animPercent)
 {
 	const float osuCoordScaleMultiplier = hitcircleDiameter / rawHitcircleDiameter;
 
@@ -39,30 +39,40 @@ void OsuHitObject::drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiam
 		float hitImageScale = 1.0f;
 		switch (result)
 		{
-		case OsuBeatmap::HIT_MISS:
+		case OsuScore::HIT_MISS:
 			hitImageScale = (rawHitcircleDiameter / (128.0f * (skin->isHit02x() ? 2.0f : 1.0f))) * osuCoordScaleMultiplier;
 			break;
-		case OsuBeatmap::HIT_50:
+		case OsuScore::HIT_50:
 			hitImageScale = (rawHitcircleDiameter / (128.0f * (skin->isHit502x() ? 2.0f : 1.0f))) * osuCoordScaleMultiplier;
 			break;
-		case OsuBeatmap::HIT_100:
+		case OsuScore::HIT_100:
 			hitImageScale = (rawHitcircleDiameter / (128.0f * (skin->isHit1002x() ? 2.0f : 1.0f))) * osuCoordScaleMultiplier;
 			break;
+		/*
+		case OsuScore::HIT_300:
+			hitImageScale = (rawHitcircleDiameter / (128.0f * (skin->isHit3002x() ? 2.0f : 1.0f))) * osuCoordScaleMultiplier;
+			break;
+		*/
 		}
 		g->scale(hitImageScale*osu_hitresult_scale.getFloat(), hitImageScale*osu_hitresult_scale.getFloat());
 		g->translate(rawPos.x, rawPos.y);
 		switch (result)
 		{
-		case OsuBeatmap::HIT_MISS:
+		case OsuScore::HIT_MISS:
 			g->translate(0, (1.0f-animPercent)*(1.0f-animPercent)*(1.0f-animPercent)*skin->getHit0()->getHeight()*1.25f);
 			g->drawImage(skin->getHit0());
 			break;
-		case OsuBeatmap::HIT_50:
+		case OsuScore::HIT_50:
 			g->drawImage(skin->getHit50());
 			break;
-		case OsuBeatmap::HIT_100:
+		case OsuScore::HIT_100:
 			g->drawImage(skin->getHit100());
 			break;
+		/*
+		case OsuScore::HIT_300:
+			g->drawImage(skin->getHit300());
+			break;
+		*/
 		}
 	g->popTransform();
 }
@@ -135,18 +145,18 @@ void OsuHitObject::update(long curPos)
 		m_hitResults.erase(m_hitResults.begin());
 }
 
-void OsuHitObject::addHitResult(OsuBeatmap::HIT result, long delta, Vector2 posRaw, float targetDelta, float targetAngle, bool ignoreOnHitErrorBar, bool ignoreCombo)
+void OsuHitObject::addHitResult(OsuScore::HIT result, long delta, Vector2 posRaw, float targetDelta, float targetAngle, bool ignoreOnHitErrorBar, bool ignoreCombo)
 {
-	if (m_beatmap->getOsu()->getModTarget() && result != OsuBeatmap::HIT_MISS && targetDelta >= 0.0f)
+	if (m_beatmap->getOsu()->getModTarget() && result != OsuScore::HIT_MISS && targetDelta >= 0.0f)
 	{
-		if (targetDelta < osu_mod_target_300_percent.getFloat() && (result == OsuBeatmap::HIT_300 || result == OsuBeatmap::HIT_100))
-			result = OsuBeatmap::HIT_300;
+		if (targetDelta < osu_mod_target_300_percent.getFloat() && (result == OsuScore::HIT_300 || result == OsuScore::HIT_100))
+			result = OsuScore::HIT_300;
 		else if (targetDelta < osu_mod_target_100_percent.getFloat())
-			result = OsuBeatmap::HIT_100;
+			result = OsuScore::HIT_100;
 		else if (targetDelta < osu_mod_target_50_percent.getFloat())
-			result = OsuBeatmap::HIT_50;
+			result = OsuScore::HIT_50;
 		else
-			result = OsuBeatmap::HIT_MISS;
+			result = OsuScore::HIT_MISS;
 
 		m_beatmap->getOsu()->getHUD()->addTarget(targetDelta, targetAngle);
 	}

@@ -9,6 +9,7 @@
 #define OSUBEATMAP_H
 
 #include "cbase.h"
+#include "OsuScore.h"
 
 #include <mutex>
 #include "WinMinGW.Mutex.h" // necessary due to incomplete implementation in mingw-w64
@@ -24,37 +25,23 @@ class OsuBeatmapDifficulty;
 class OsuBeatmap
 {
 public:
-	enum HIT
-	{
-		HIT_NULL,
-		HIT_MISS,
-		HIT_50,
-		HIT_100,
-		HIT_300,
-		/*
-		HIT_100K,
-		HIT_300K,
-		HIT_300G,
-		*/
-		HIT_SLIDER10,
-		HIT_SLIDER30
-	};
-
 	struct CLICK
 	{
 		long musicPos;
 		double realTime;
 	};
 
+public:
 	OsuBeatmap(Osu *osu, UString filepath);
 	virtual ~OsuBeatmap();
-
-	bool load(); // loads the metadata of all difficulties and adds them
 
 	void draw(Graphics *g);
 	void update();
 
 	void skipEmptySection();
+
+	// database logic
+	void setDifficulties(std::vector<OsuBeatmapDifficulty*> diffs);
 
 	// callbacks called by the Osu class
 	void onUpdateMods();
@@ -73,6 +60,7 @@ public:
 	void pause(bool quitIfWaiting = true);
 	void pausePreviewMusic();
 	void stop(bool quit = true);
+	void fail();
 
 	void setVolume(float volume);
 	void setSpeed(float speed);
@@ -83,10 +71,6 @@ public:
 	inline Sound *getMusic() const {return m_music;}
 	unsigned long getLength();
 	float getPercentFinished();
-
-	inline int getCombo() {return m_iCombo;}
-	inline float getAccuracy() {return m_fAccuracy;}
-	inline float getUnstableRate() {return m_fUnstableRate;}
 
 	// live statistics
 	int getBPM();
@@ -107,6 +91,8 @@ public:
 	float getRawOD();
 	float getOD();
 
+	inline float getHealth() {return m_fHealth;}
+
 	// generic
 	inline Vector2 getPlayfieldSize() {return m_vPlayfieldSize;}
 	inline Vector2 getPlayfieldCenter() {return m_vPlayfieldCenter;}
@@ -119,8 +105,8 @@ public:
 	inline float getPlayfieldRotation() const {return m_fPlayfieldRotation;}
 
 	inline OsuBeatmapDifficulty *getSelectedDifficulty() {return m_selectedDifficulty;}
-	inline int getSelectedDifficultyIndex() {return m_iSelectedDifficulty;}
 	inline std::vector<OsuBeatmapDifficulty*> getDifficulties() {return m_difficulties;}
+	inline int getNumDifficulties() {return m_difficulties.size();}
 
 	inline bool isPlaying() {return m_bIsPlaying;}
 	inline bool isPaused() {return m_bIsPaused;}
@@ -138,8 +124,11 @@ public:
 
 	// OsuHitObject and other helper functions
 	void consumeClickEvent();
-	void addHitResult(HIT hit, long delta, bool ignoreOnHitErrorBar = false, bool hitErrorBarOnly = false, bool ignoreCombo = false);
+	void addHitResult(OsuScore::HIT hit, long delta, bool ignoreOnHitErrorBar = false, bool hitErrorBarOnly = false, bool ignoreCombo = false);
 	void addSliderBreak();
+	void addScorePoints(int points);
+	void addHealth(float health);
+	void playMissSound();
 
 	Vector2 osuCoords2Pixels(Vector2 coords);
 	Vector2 getCursorPos();
@@ -162,8 +151,8 @@ private:
 	void updatePlayfieldMetrics();
 	void updateHitobjectMetrics();
 
-	Vector2 originalOsuCoords2Stack(Vector2 coords);
 	void calculateStacks();
+	Vector2 originalOsuCoords2Stack(Vector2 coords);
 
 	unsigned long getMusicPositionMSInterpolated();
 
@@ -188,6 +177,7 @@ private:
 	float m_fWaitTime;
 	bool m_bContinueScheduled;
 	Vector2 m_vContinueCursorPoint;
+	unsigned long m_iContinueMusicPos;
 
 	std::vector<OsuBeatmapDifficulty*> m_difficulties;
 	OsuBeatmapDifficulty *m_selectedDifficulty;
@@ -209,26 +199,22 @@ private:
 	// sound
 	float m_fBeatLength;
 	float m_fAmplitude;
-
-	float m_fSongPercentBeforeStop;
 	long m_iCurMusicPos;
-	unsigned long m_iLastMusicPosition;
-	double m_fLastMusicPositionForInterpolation;
-
-	// score
-	int m_iCombo;
-	float m_fAccuracy;
-	float m_fUnstableRate;
-	std::vector<HIT> m_hitresults;
-	std::vector<int> m_hitdeltas;
+	long m_iPrevCurMusicPos;
+	unsigned long m_iLastMusicPosition; // for interpolation
+	double m_fLastMusicPositionForInterpolation; // for interpolation
 
 	// gameplay
+	float m_fHealth;
 	int m_iPreviousFollowPointObjectIndex;
 	long m_iNextHitObjectTime;
 	long m_iPreviousHitObjectTime;
 	Vector2 m_vAutoCursorPos;
 	float m_fPlayfieldRotation;
 	int m_iAutoCursorDanceIndex;
+	float m_fTimeshockTimeLimit;
+	float m_fTimeshockTime;
+	float m_fTimeshockTimer;
 
 	bool m_bClick1Held;
 	bool m_bClick2Held;

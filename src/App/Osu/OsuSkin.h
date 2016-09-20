@@ -74,6 +74,10 @@ public:
 	inline Image *getHit0() {return m_hit0;}
 	inline Image *getHit50() {return m_hit50;}
 	inline Image *getHit100() {return m_hit100;}
+	inline Image *getHit100k() {return m_hit100k;}
+	inline Image *getHit300() {return m_hit300;}
+	inline Image *getHit300g() {return m_hit300g;}
+	inline Image *getHit300k() {return m_hit300k;}
 
 	inline Image *getSliderGradient() {return m_sliderGradient;}
 	inline Image *getSliderGradientTrack() {return m_sliderGradientTrack;}
@@ -140,6 +144,20 @@ public:
 	inline Image *getSongSelectTop() {return m_songSelectTop;}
 	inline Image *getSongSelectBottom() {return m_songSelectBottom;}
 	inline Image *getMenuButtonBackground() {return m_menuButtonBackground;}
+	inline Image *getStar() {return m_star;}
+	inline Image *getRankingPanel() {return m_rankingPanel;}
+	inline Image *getRankingGraph() {return m_rankingGraph;}
+	inline Image *getRankingTitle() {return m_rankingTitle;}
+	inline Image *getRankingMaxCombo() {return m_rankingMaxCombo;}
+	inline Image *getRankingAccuracy() {return m_rankingAccuracy;}
+	inline Image *getRankingA() {return m_rankingA;}
+	inline Image *getRankingB() {return m_rankingB;}
+	inline Image *getRankingC() {return m_rankingC;}
+	inline Image *getRankingD() {return m_rankingD;}
+	inline Image *getRankingS() {return m_rankingS;}
+	inline Image *getRankingSH() {return m_rankingSH;}
+	inline Image *getRankingX() {return m_rankingX;}
+	inline Image *getRankingXH() {return m_rankingXH;}
 
 	inline Image *getBeatmapImportSpinner() {return m_beatmapImportSpinner;}
 	inline Image *getLoadingSpinner() {return m_loadingSpinner;}
@@ -155,6 +173,7 @@ public:
 	inline Sound *getMenuClick() {return m_menuClick;}
 	inline Sound *getCheckOn() {return m_checkOn;}
 	inline Sound *getCheckOff() {return m_checkOff;}
+	inline Sound *getShutter() {return m_shutter;}
 
 	inline bool isCursor2x() {return m_bCursor2x;}
 	inline bool isApproachCircle2x() {return m_bApproachCircle2x;}
@@ -167,6 +186,10 @@ public:
 	inline bool isHit02x() {return m_bHit02x;}
 	inline bool isHit502x() {return m_bHit502x;}
 	inline bool isHit1002x() {return m_bHit1002x;}
+	inline bool isHit100k2x() {return m_bHit100k2x;}
+	inline bool isHit3002x() {return m_bHit3002x;}
+	inline bool isHit300g2x() {return m_bHit300g2x;}
+	inline bool isHit300k2x() {return m_bHit300k2x;}
 	inline bool isSpinnerApproachCircle2x() {return m_bSpinnerApproachCircle2x;}
 	inline bool isSpinnerBottom2x() {return m_bSpinnerBottom2x;}
 	inline bool isSpinnerCircle2x() {return m_bSpinnerCircle2x;}
@@ -186,6 +209,18 @@ public:
 	inline bool isPauseContinue2x() {return m_bPauseContinue2x;}
 
 	inline bool isMenuButtonBackground2x() {return m_bMenuButtonBackground2x;}
+	inline bool isStar2x() {return m_bStar2x;}
+	inline bool isRankingPanel2x() {return m_bRankingPanel2x;}
+	inline bool isRankingMaxCombo2x() {return m_bRankingMaxCombo2x;}
+	inline bool isRankingAccuracy2x() {return m_bRankingAccuracy2x;}
+	inline bool isRankingA2x() {return m_bRankingA2x;}
+	inline bool isRankingB2x() {return m_bRankingB2x;}
+	inline bool isRankingC2x() {return m_bRankingC2x;}
+	inline bool isRankingD2x() {return m_bRankingD2x;}
+	inline bool isRankingS2x() {return m_bRankingS2x;}
+	inline bool isRankingSH2x() {return m_bRankingSH2x;}
+	inline bool isRankingX2x() {return m_bRankingX2x;}
+	inline bool isRankingXH2x() {return m_bRankingXH2x;}
 
 	// skin.ini
 	inline float getVersion() {return m_fVersion;}
@@ -267,6 +302,10 @@ private:
 	Image *m_hit0;
 	Image *m_hit50;
 	Image *m_hit100;
+	Image *m_hit100k;
+	Image *m_hit300;
+	Image *m_hit300g;
+	Image *m_hit300k;
 
 	Image *m_sliderGradient;
 	Image *m_sliderGradientTrack;
@@ -333,6 +372,20 @@ private:
 	Image *m_songSelectTop;
 	Image *m_songSelectBottom;
 	Image *m_menuButtonBackground;
+	Image *m_star;
+	Image *m_rankingPanel;
+	Image *m_rankingGraph;
+	Image *m_rankingTitle;
+	Image *m_rankingMaxCombo;
+	Image *m_rankingAccuracy;
+	Image *m_rankingA;
+	Image *m_rankingB;
+	Image *m_rankingC;
+	Image *m_rankingD;
+	Image *m_rankingS;
+	Image *m_rankingSH;
+	Image *m_rankingX;
+	Image *m_rankingXH;
 
 	Image *m_beatmapImportSpinner;
 	Image *m_loadingSpinner;
@@ -363,6 +416,7 @@ private:
 	Sound *m_menuClick;
 	Sound *m_checkOn;
 	Sound *m_checkOff;
+	Sound *m_shutter;
 
 	std::vector<Color> m_comboColors;
 	std::vector<Color> m_beatmapComboColors;
@@ -387,6 +441,10 @@ private:
 	bool m_bHit02x;
 	bool m_bHit502x;
 	bool m_bHit1002x;
+	bool m_bHit100k2x;
+	bool m_bHit3002x;
+	bool m_bHit300g2x;
+	bool m_bHit300k2x;
 	bool m_bSpinnerApproachCircle2x;
 	bool m_bSpinnerBottom2x;
 	bool m_bSpinnerCircle2x;
@@ -406,6 +464,18 @@ private:
 	bool m_bPauseContinue2x;
 
 	bool m_bMenuButtonBackground2x;
+	bool m_bStar2x;
+	bool m_bRankingPanel2x;
+	bool m_bRankingMaxCombo2x;
+	bool m_bRankingAccuracy2x;
+	bool m_bRankingA2x;
+	bool m_bRankingB2x;
+	bool m_bRankingC2x;
+	bool m_bRankingD2x;
+	bool m_bRankingS2x;
+	bool m_bRankingSH2x;
+	bool m_bRankingX2x;
+	bool m_bRankingXH2x;
 
 	// skin.ini
 	float m_fVersion;

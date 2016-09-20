@@ -15,7 +15,6 @@
 
 #include "Shader.h"
 #include "VertexArrayObject.h"
-#include "VertexBuffer.h"
 #include "RenderTarget.h"
 
 #include "Osu.h"
@@ -25,6 +24,7 @@
 
 ConVar osu_slider_ball_tint_combo_color("osu_slider_ball_tint_combo_color", true);
 ConVar osu_slider_body_color_saturation("osu_slider_body_color_saturation", 1.0f);
+ConVar osu_slider_body_alpha_multiplier("osu_slider_body_alpha_multiplier", 1.0f);
 
 ConVar osu_snaking_sliders("osu_snaking_sliders", true);
 ConVar osu_mod_hd_slider_fade_percent("osu_mod_hd_slider_fade_percent", 0.6f);
@@ -50,7 +50,6 @@ float OsuSliderCurve::CURVE_POINTS_SEPERATION = 2.5f; // bigger value = less ste
 int OsuSliderCurve::UNIT_CONE_DIVIDES = 42; // can probably lower this a little bit, but not under 32
 std::vector<float> OsuSliderCurve::UNIT_CONE;
 VertexArrayObject *OsuSliderCurve::MASTER_CIRCLE_VAO = NULL;
-VertexBuffer *OsuSliderCurve::MASTER_CIRCLE_VB = NULL;
 float OsuSliderCurve::MASTER_CIRCLE_VAO_RADIUS = 0.0f;
 
 OsuSlider::OsuSlider(char type, int repeat, float pixelLength, std::vector<Vector2> points, std::vector<float> ticks, float sliderTime, float sliderTimeWithoutRepeats, long time, int sampleType, int comboNumber, int colorCounter, OsuBeatmap *beatmap) : OsuHitObject(time, sampleType, comboNumber, colorCounter, beatmap)
@@ -135,8 +134,8 @@ OsuSlider::OsuSlider(char type, int repeat, float pixelLength, std::vector<Vecto
 	m_fHiddenAlpha = 0.0f;
 	m_fHiddenSlowFadeAlpha = 0.0f;
 
-	m_startResult = OsuBeatmap::HIT_NULL;
-	m_endResult = OsuBeatmap::HIT_NULL;
+	m_startResult = OsuScore::HIT_NULL;
+	m_endResult = OsuScore::HIT_NULL;
 	m_bStartFinished = false;
 	m_fStartHitAnimation = 0.0f;
 	m_bEndFinished = false;
@@ -587,7 +586,7 @@ void OsuSlider::update(long curPos)
 		if (m_beatmap->getOsu()->getModAuto())
 		{
 			if (curPos >= m_iTime)
-				onHit(OsuBeatmap::HIT_300, 0, false);
+				onHit(OsuScore::HIT_300, 0, false);
 		}
 		else
 		{
@@ -601,9 +600,9 @@ void OsuSlider::update(long curPos)
 					if (cursorDelta < m_beatmap->getHitcircleDiameter()/2.0f)
 					{
 						long delta = curPos - (long)m_iTime;
-						OsuBeatmap::HIT result = OsuGameRules::getHitResult(delta, m_beatmap);
+						OsuScore::HIT result = OsuGameRules::getHitResult(delta, m_beatmap);
 
-						if (result != OsuBeatmap::HIT_NULL)
+						if (result != OsuScore::HIT_NULL)
 						{
 							const float targetDelta = cursorDelta / (m_beatmap->getHitcircleDiameter()/2.0f);
 							const float targetAngle = rad2deg(atan2(m_beatmap->getCursorPos().y - pos.y, m_beatmap->getCursorPos().x - pos.x));
@@ -622,7 +621,7 @@ void OsuSlider::update(long curPos)
 				// if this is a miss after waiting
 				if (delta > (long)OsuGameRules::getHitWindow50(m_beatmap))
 				{
-					m_startResult = OsuBeatmap::HIT_MISS;
+					m_startResult = OsuScore::HIT_MISS;
 					onHit(m_startResult, delta, false);
 				}
 			}
@@ -658,7 +657,7 @@ void OsuSlider::update(long curPos)
 			if (curPos >= m_iTime + m_iObjectDuration)
 			{
 				m_bHeldTillEnd = true;
-				onHit(OsuBeatmap::HIT_300, 0, true);
+				onHit(OsuScore::HIT_300, 0, true);
 			}
 		}
 		else
@@ -670,19 +669,19 @@ void OsuSlider::update(long curPos)
 				m_endResult = OsuGameRules::getHitResult(holdDelta, m_beatmap);
 
 				// slider lenience: only allow HIT_300 delta
-				if (m_endResult != OsuBeatmap::HIT_300)
-					m_endResult = OsuBeatmap::HIT_MISS;
+				if (m_endResult != OsuScore::HIT_300)
+					m_endResult = OsuScore::HIT_MISS;
 				else
 					m_bHeldTillEnd = true;
 
 				if ((m_beatmap->isClickHeld() || m_beatmap->getOsu()->getModRelax()) && m_bCursorInside)
-					m_endResult = OsuBeatmap::HIT_300;
+					m_endResult = OsuScore::HIT_300;
 
 
-				if (m_endResult == OsuBeatmap::HIT_NULL) // this may happen
-					m_endResult = OsuBeatmap::HIT_MISS;
-				if (m_startResult == OsuBeatmap::HIT_NULL) // this may also happen
-					m_startResult = OsuBeatmap::HIT_MISS;
+				if (m_endResult == OsuScore::HIT_NULL) // this may happen
+					m_endResult = OsuScore::HIT_MISS;
+				if (m_startResult == OsuScore::HIT_NULL) // this may also happen
+					m_startResult = OsuScore::HIT_MISS;
 
 
 				// handle total slider result (currently startcircle + repeats + ticks + endcircle)
@@ -690,9 +689,9 @@ void OsuSlider::update(long curPos)
 				float numMaxPossibleHits = 1 + m_clicks.size() + 1;
 				float numActualHits = 0;
 
-				if (m_startResult != OsuBeatmap::HIT_MISS)
+				if (m_startResult != OsuScore::HIT_MISS)
 					numActualHits++;
-				if (m_endResult != OsuBeatmap::HIT_MISS)
+				if (m_endResult != OsuScore::HIT_MISS)
 					numActualHits++;
 
 				for (int i=0; i<m_clicks.size(); i++)
@@ -703,17 +702,17 @@ void OsuSlider::update(long curPos)
 
 				float percent = numActualHits / numMaxPossibleHits;
 
-				bool allow300 = osu_slider_scorev2.getBool() ? (m_startResult == OsuBeatmap::HIT_300) : true;
-				bool allow100 = osu_slider_scorev2.getBool() ? (m_startResult == OsuBeatmap::HIT_300 || m_startResult == OsuBeatmap::HIT_100) : true;
+				bool allow300 = osu_slider_scorev2.getBool() ? (m_startResult == OsuScore::HIT_300) : true;
+				bool allow100 = osu_slider_scorev2.getBool() ? (m_startResult == OsuScore::HIT_300 || m_startResult == OsuScore::HIT_100) : true;
 
 				if (percent >= 0.999f && allow300)
-					m_endResult = OsuBeatmap::HIT_300;
+					m_endResult = OsuScore::HIT_300;
 				else if (percent >= 0.5f && allow100 && !OsuGameRules::osu_mod_ming3012.getBool())
-					m_endResult = OsuBeatmap::HIT_100;
+					m_endResult = OsuScore::HIT_100;
 				else if (percent > 0.0f)
-					m_endResult = OsuBeatmap::HIT_50;
+					m_endResult = OsuScore::HIT_50;
 				else
-					m_endResult = OsuBeatmap::HIT_MISS;
+					m_endResult = OsuScore::HIT_MISS;
 
 				//debugLog("percent = %f\n", percent);
 
@@ -814,8 +813,8 @@ void OsuSlider::onClickEvent(Vector2 cursorPos, std::vector<OsuBeatmap::CLICK> &
 		{
 			const long delta = (long)clicks[0].musicPos - (long)m_iTime;
 
-			OsuBeatmap::HIT result = OsuGameRules::getHitResult(delta, m_beatmap);
-			if (result != OsuBeatmap::HIT_NULL)
+			OsuScore::HIT result = OsuGameRules::getHitResult(delta, m_beatmap);
+			if (result != OsuScore::HIT_NULL)
 			{
 				const float targetDelta = cursorDelta / (m_beatmap->getHitcircleDiameter()/2.0f);
 				const float targetAngle = rad2deg(atan2(cursorPos.y - pos.y, cursorPos.x - pos.x));
@@ -828,15 +827,17 @@ void OsuSlider::onClickEvent(Vector2 cursorPos, std::vector<OsuBeatmap::CLICK> &
 	}
 }
 
-void OsuSlider::onHit(OsuBeatmap::HIT result, long delta, bool startOrEnd, float targetDelta, float targetAngle)
+void OsuSlider::onHit(OsuScore::HIT result, long delta, bool startOrEnd, float targetDelta, float targetAngle)
 {
 	if (m_points.size() == 0)
 		return;
 
+	// start + end of a slider add +30 points, if successful
+
 	//debugLog("startOrEnd = %i,    m_iCurRepeat = %i\n", (int)startOrEnd, m_iCurRepeat);
 
 	// sound and hit animation
-	if (result == OsuBeatmap::HIT_MISS)
+	if (result == OsuScore::HIT_MISS)
 		onSliderBreak();
 	else
 	{
@@ -845,21 +846,24 @@ void OsuSlider::onHit(OsuBeatmap::HIT result, long delta, bool startOrEnd, float
 		if (!startOrEnd)
 		{
 			m_fStartHitAnimation = 0.001f; // quickfix for 1 frame missing images
-			anim->moveQuadOut(&m_fStartHitAnimation, 1.0f, OsuGameRules::osu_circle_fade_out_time.getFloat(), true);
+			anim->moveQuadOut(&m_fStartHitAnimation, 1.0f, OsuGameRules::getFadeOutTime(m_beatmap), true);
 		}
 		else
 		{
 			if (m_iRepeat % 2 != 0)
 			{
 				m_fEndHitAnimation = 0.001f; // quickfix for 1 frame missing images
-				anim->moveQuadOut(&m_fEndHitAnimation, 1.0f, OsuGameRules::osu_circle_fade_out_time.getFloat(), true);
+				anim->moveQuadOut(&m_fEndHitAnimation, 1.0f, OsuGameRules::getFadeOutTime(m_beatmap), true);
 			}
 			else
 			{
 				m_fStartHitAnimation = 0.001f; // quickfix for 1 frame missing images
-				anim->moveQuadOut(&m_fStartHitAnimation, 1.0f, OsuGameRules::osu_circle_fade_out_time.getFloat(), true);
+				anim->moveQuadOut(&m_fStartHitAnimation, 1.0f, OsuGameRules::getFadeOutTime(m_beatmap), true);
 			}
 		}
+
+		// add score
+		m_beatmap->addScorePoints(30);
 	}
 
 	// add it, and we are finished
@@ -880,7 +884,7 @@ void OsuSlider::onHit(OsuBeatmap::HIT result, long delta, bool startOrEnd, float
 		m_bFinished = true;
 
 		m_fEndSliderBodyFadeAnimation = 0.001f; // quickfix for 1 frame missing images
-		anim->moveQuadOut(&m_fEndSliderBodyFadeAnimation, 1.0f, OsuGameRules::osu_circle_fade_out_time.getFloat(), true);
+		anim->moveQuadOut(&m_fEndSliderBodyFadeAnimation, 1.0f, OsuGameRules::getFadeOutTime(m_beatmap), true);
 	}
 }
 
@@ -888,6 +892,8 @@ void OsuSlider::onRepeatHit(bool successful, bool sliderend)
 {
 	if (m_points.size() == 0)
 		return;
+
+	// repeat hit of a slider adds +30 points, if successful
 
 	// sound and hit animation
 	if (!successful)
@@ -898,18 +904,21 @@ void OsuSlider::onRepeatHit(bool successful, bool sliderend)
 		anim->moveLinear(&m_fFollowCircleTickAnimationScale, 1.0f, OsuGameRules::osu_slider_followcircle_tick_pulse_time.getFloat(), true);
 
 		m_beatmap->getSkin()->playHitCircleSound(m_iSampleType);
-		m_beatmap->addHitResult(OsuBeatmap::HIT_300, 0, true);
+		m_beatmap->addHitResult(OsuScore::HIT_300, 0, true);
 
 		if (sliderend)
 		{
 			m_fEndHitAnimation = 0.001f; // quickfix for 1 frame missing images
-			anim->moveQuadOut(&m_fEndHitAnimation, 1.0f, OsuGameRules::osu_circle_fade_out_time.getFloat(), true);
+			anim->moveQuadOut(&m_fEndHitAnimation, 1.0f, OsuGameRules::getFadeOutTime(m_beatmap), true);
 		}
 		else
 		{
 			m_fStartHitAnimation = 0.001f; // quickfix for 1 frame missing images
-			anim->moveQuadOut(&m_fStartHitAnimation, 1.0f, OsuGameRules::osu_circle_fade_out_time.getFloat(), true);
+			anim->moveQuadOut(&m_fStartHitAnimation, 1.0f, OsuGameRules::getFadeOutTime(m_beatmap), true);
 		}
+
+		// add score
+		m_beatmap->addScorePoints(30);
 	}
 }
 
@@ -917,6 +926,8 @@ void OsuSlider::onTickHit(bool successful, int tickIndex)
 {
 	if (m_points.size() == 0)
 		return;
+
+	// tick hit of a slider adds +10 points, if successful
 
 	// tick drawing visibility
 	int numMissingTickClicks = 0;
@@ -936,15 +947,15 @@ void OsuSlider::onTickHit(bool successful, int tickIndex)
 		m_fFollowCircleTickAnimationScale = 0.0f;
 		anim->moveLinear(&m_fFollowCircleTickAnimationScale, 1.0f, OsuGameRules::osu_slider_followcircle_tick_pulse_time.getFloat(), true);
 		engine->getSound()->play(m_beatmap->getSkin()->getSliderTick());
-		m_beatmap->addHitResult(OsuBeatmap::HIT_SLIDER30, 0, true);
+		m_beatmap->addHitResult(OsuScore::HIT_SLIDER30, 0, true);
+
+		// add score
+		m_beatmap->addScorePoints(10);
 	}
 }
 
 void OsuSlider::onSliderBreak()
 {
-	if (m_beatmap->getCombo() > 20)
-		engine->getSound()->play(m_beatmap->getSkin()->getCombobreak());
-
 	m_beatmap->addSliderBreak();
 
 	//TEMP:
@@ -962,8 +973,8 @@ void OsuSlider::onReset(long curPos)
 	m_iLastClickHeld = 0;
 	m_bCursorLeft = true;
 	m_bHeldTillEnd = false;
-	m_startResult = OsuBeatmap::HIT_NULL;
-	m_endResult = OsuBeatmap::HIT_NULL;
+	m_startResult = OsuScore::HIT_NULL;
+	m_endResult = OsuScore::HIT_NULL;
 
 	anim->deleteExistingAnimation(&m_fFollowCircleTickAnimationScale);
 	anim->deleteExistingAnimation(&m_fStartHitAnimation);
@@ -1078,18 +1089,13 @@ OsuSliderCurve::OsuSliderCurve(OsuSlider *parent, OsuBeatmap *beatmap)
 			UNIT_CONE.push_back(-1.0f);
 		}
 	}
-
-	/*
 	if (MASTER_CIRCLE_VAO == NULL)
 	{
 		MASTER_CIRCLE_VAO = new VertexArrayObject();
 		MASTER_CIRCLE_VAO->setType(VertexArrayObject::TYPE_TRIANGLE_FAN);
 	}
-	*/
-	if (MASTER_CIRCLE_VB == NULL)
-	{
-		MASTER_CIRCLE_VB = new VertexBuffer();
-	}
+
+
 
 	m_slider = parent;
 	m_beatmap = beatmap;
@@ -1118,6 +1124,8 @@ void OsuSliderCurve::draw(Graphics *g, Color color, float alpha)
 void OsuSliderCurve::draw(Graphics *g, Color color, float alpha, float t, float t2)
 {
 	if (!osu_slider_draw_body.getBool())
+		return;
+	if (osu_slider_body_alpha_multiplier.getFloat() <= 0.0f || alpha <= 0.0f)
 		return;
 
 	OsuSkin *skin = m_beatmap->getSkin();
@@ -1208,7 +1216,7 @@ void OsuSliderCurve::draw(Graphics *g, Color color, float alpha, float t, float 
 		BLEND_SHADER->setUniform3f("col_body", COLOR_GET_Rf(bodyColor)/* + COLOR_GET_Rf(color)*amplitudeMultiplier*/, COLOR_GET_Gf(bodyColor)/* + COLOR_GET_Gf(color)*amplitudeMultiplier*/, COLOR_GET_Bf(bodyColor)/* + COLOR_GET_Bf(color)*amplitudeMultiplier*/);
 
 		g->setColor(0xffffffff);
-		g->setAlpha(alpha);
+		g->setAlpha(alpha*osu_slider_body_alpha_multiplier.getFloat());
 		skin->getSliderGradient()->bind();
 		drawFillSliderBody2(g, drawUpTo, drawFrom);
 
@@ -1377,25 +1385,12 @@ void OsuSliderCurve::drawFillSliderBody2(Graphics *g, int drawUpTo, int drawFrom
 	if (radius != MASTER_CIRCLE_VAO_RADIUS)
 	{
 		MASTER_CIRCLE_VAO_RADIUS = radius;
-		/*
 		MASTER_CIRCLE_VAO->clear();
 		for (int i=0; i<UNIT_CONE.size()/5; i++)
 		{
 			MASTER_CIRCLE_VAO->addVertex(Vector3((radius * UNIT_CONE[i * 5 + 2]), (radius * UNIT_CONE[i * 5 + 3]), UNIT_CONE[i * 5 + 4]));
 			MASTER_CIRCLE_VAO->addTexcoord(Vector2(UNIT_CONE[i * 5 + 0], UNIT_CONE[i * 5 + 1]));
 		}
-		*/
-
-		std::vector<Vector3> vertices;
-		std::vector<Vector2> texCoords;
-		vertices.reserve(UNIT_CONE.size()/5);
-		texCoords.reserve(UNIT_CONE.size()/5);
-		for (int i=0; i<UNIT_CONE.size()/5; i++)
-		{
-			vertices.push_back(Vector3((radius * UNIT_CONE[i * 5 + 2]), (radius * UNIT_CONE[i * 5 + 3]), UNIT_CONE[i * 5 + 4]));
-			texCoords.push_back(Vector2(UNIT_CONE[i * 5 + 0], UNIT_CONE[i * 5 + 1]));
-		}
-		MASTER_CIRCLE_VB->set(&vertices, &texCoords);
 	}
 
 	g->pushTransform();
@@ -1409,8 +1404,7 @@ void OsuSliderCurve::drawFillSliderBody2(Graphics *g, int drawUpTo, int drawFrom
 		float y = m_beatmap->osuCoords2Pixels(m_curvePoints[i]).y;
 
 		g->translate(x-startX, y-startY, 0);
-		//g->drawVAO(MASTER_CIRCLE_VAO);
-		g->drawVB(MASTER_CIRCLE_VB);
+		g->drawVAO(MASTER_CIRCLE_VAO);
 
 		startX = x;
 		startY = y;

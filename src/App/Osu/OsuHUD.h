@@ -32,6 +32,8 @@ public:
 	void drawBeatmapImportSpinner(Graphics *g);
 	void drawVolumeChange(Graphics *g);
 	void drawScoreNumber(Graphics *g, int number, float scale = 1.0f, bool drawLeadingZeroes = false, int offset = 2);
+	void drawComboSimple(Graphics *g, int combo, float scale = 1.0f); // used by OsuRankingScreen
+	void drawAccuracySimple(Graphics *g, float accuracy, float scale = 1.0f); // used by OsuRankingScreen
 	void drawWarningArrow(Graphics *g, Vector2 pos, bool flipVertically, bool originLeft = true);
 
 	void animateCombo();
@@ -39,7 +41,6 @@ public:
 	void addTarget(float delta, float angle);
 
 	void animateVolumeChange();
-
 	void animateCursorExpand();
 	void animateCursorShrink();
 
@@ -53,6 +54,7 @@ private:
 	void drawFps(Graphics *g, McFont *font, float fps);
 	void drawAccuracy(Graphics *g, float accuracy);
 	void drawCombo(Graphics *g, int combo);
+	void drawScore(Graphics *g, int score);
 
 	void drawSkip(Graphics *g);
 	void drawWarningArrows(Graphics *g, float hitcircleDiameter = 0.0f);
@@ -75,8 +77,10 @@ private:
 	ConVar *m_osu_mod_target_100_percent_ref;
 	ConVar *m_osu_mod_target_50_percent_ref;
 
+	// shit code
 	float m_fAccuracyXOffset;
 	float m_fAccuracyYOffset;
+	float m_fScoreHeight;
 
 	float m_fComboAnim1;
 	float m_fComboAnim2;
