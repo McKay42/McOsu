@@ -51,6 +51,7 @@ public:
 private:
 	virtual void updateLayout();
 	void updateOsuFolder();
+	void updateName();
 
 	void save();
 
