@@ -13,6 +13,7 @@
 
 class Osu;
 class OsuBeatmap;
+class OsuBeatmapDatabase;
 class OsuBeatmapDifficulty;
 
 class OsuUISelectionButton;
@@ -25,10 +26,12 @@ class CBaseUIScrollView;
 
 class McFont;
 class ConVar;
-class Timer;
 
 class OsuSongBrowser2 : public OsuScreenBackable, public MouseListener
 {
+public:
+	static void drawSelectedBeatmapBackgroundImage(Graphics *g, Osu *osu);
+
 public:
 	OsuSongBrowser2(Osu *osu);
 	virtual ~OsuSongBrowser2();
@@ -49,6 +52,8 @@ public:
 
 	void onResolutionChange(Vector2 newResolution);
 
+	void onPlayEnd(bool quit = true);	// called when a beatmap is finished playing (or the player quit)
+
 	void refreshBeatmaps();
 
 	void onDifficultySelected(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff, bool fromClick = false, bool play = false);
@@ -62,15 +67,16 @@ public:
 	static bool searchMatcher(OsuBeatmap *beatmap, UString searchString);
 
 private:
-	void updateLayout();
+	virtual void updateLayout();
 	void scheduleSearchUpdate(bool immediately = false);
 
 	OsuUISelectionButton *addBottombarNavButton();
 
 	ConVar *m_fps_max_ref;
-	ConVar *m_osu_songbrowser_bottombar_percent_ref;
 
-	void onBack();
+	void onDatabaseLoadingFinished();
+
+	virtual void onBack();
 	void onSelectionMods();
 	void onSelectionRandom();
 	void onSelectionOptions();
@@ -101,16 +107,13 @@ private:
 	CBaseUIScrollView *m_songBrowser;
 
 	// beatmap database
-	Timer *m_importTimer;
+	OsuBeatmapDatabase *m_db;
 	std::vector<OsuBeatmap*> m_beatmaps;
 	std::vector<OsuUISongBrowserButton*> m_songButtons;
 	bool m_bBeatmapRefreshScheduled;
-	bool m_bBeatmapRefreshNeedsFileRefresh;
-	int m_iCurRefreshNumBeatmaps;
-	int m_iCurRefreshBeatmap;
-	UString m_sCurRefreshOsuSongFolder;
-	std::vector<UString> m_refreshBeatmaps;
 	UString m_sLastOsuFolder;
+	int m_iFullRefreshCounter;
+	float m_fFullRefreshResetTime;
 
 	// keys
 	bool m_bF1Pressed;

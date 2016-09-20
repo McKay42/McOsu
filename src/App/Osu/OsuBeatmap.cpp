@@ -44,6 +44,7 @@ ConVar osu_draw_hitobjects("osu_draw_hitobjects", true);
 
 ConVar osu_global_offset("osu_global_offset", 0.0f);
 ConVar osu_interpolate_music_pos("osu_interpolate_music_pos", true, "Interpolate song position with engine time if the BASS audio library reports the same position more than once");
+ConVar osu_combobreak_sound_combo("osu_combobreak_sound_combo", 20, "Only play the combobreak sound if the combo is higher than this");
 
 ConVar osu_ar_override("osu_ar_override", -1.0f);
 ConVar osu_cs_override("osu_cs_override", -1.0f);
@@ -63,7 +64,6 @@ ConVar osu_number_scale_multiplier("osu_number_scale_multiplier", 1.0f);
 
 ConVar osu_background_dim("osu_background_dim", 0.9f);
 ConVar osu_background_brightness("osu_background_brightness", 0.0f);
-ConVar osu_hiterrorbar_misses("osu_hiterrorbar_misses", true);
 ConVar osu_hiterrorbar_misaims("osu_hiterrorbar_misaims", true);
 ConVar osu_debug_hiterrorbar_misaims("osu_debug_hiterrorbar_misaims", false);
 
@@ -91,6 +91,11 @@ ConVar osu_mod_artimewarp_multiplier("osu_mod_artimewarp_multiplier", 0.5f);
 ConVar osu_mod_arwobble("osu_mod_arwobble", false);
 ConVar osu_mod_arwobble_strength("osu_mod_arwobble_strength", 1.0f);
 ConVar osu_mod_arwobble_interval("osu_mod_arwobble_interval", 7.0f);
+ConVar osu_mod_shirone("osu_mod_shirone", false);
+ConVar osu_mod_shirone_combo("osu_mod_shirone_combo", 20.0f);
+ConVar osu_mod_timeshock("osu_mod_timeshock", false);
+ConVar osu_mod_timeshock_duration("osu_mod_timeshock_duration", 1.25f);
+ConVar osu_mod_timeshock_amount("osu_mod_timeshock_amount", 2.0f);
 
 ConVar osu_early_note_time("osu_early_note_time", 1000.0f, "Timeframe in ms at the beginning of a beatmap which triggers a starting delay for easier reading");
 ConVar osu_skip_time("osu_skip_time", 5000.0f, "Timeframe in ms within a beatmap which allows skipping if it doesn't contain any hitobjects");
@@ -117,6 +122,7 @@ OsuBeatmap::OsuBeatmap(Osu *osu, UString filepath)
 	m_bIsWaiting = false;
 	m_bIsRestartScheduled = false;
 	m_bIsRestartScheduledQuick = false;
+	m_iContinueMusicPos = 0;
 
 	m_bIsSpinnerActive = false;
 	m_bIsInSkippableSection = false;
@@ -137,21 +143,20 @@ OsuBeatmap::OsuBeatmap(Osu *osu, UString filepath)
 	m_fSliderFollowCircleDiameter = 0.0f;
 	m_music = NULL;
 
-	m_fSongPercentBeforeStop = 0.0f;
-
 	m_iCurMusicPos = 0;
+	m_iPrevCurMusicPos = 0;
 	m_iLastMusicPosition = 0;
 	m_fLastMusicPositionForInterpolation = 0.0;
 
-	m_iCombo = 0;
-	m_fAccuracy = 1.0f;
-	m_fUnstableRate = 0.0f;
-
+	m_fHealth = 1.0f;
 	m_iNextHitObjectTime = 0;
 	m_iPreviousHitObjectTime = 0;
 	m_iPreviousFollowPointObjectIndex = -1;
 	m_fPlayfieldRotation = 0.0f;
 	m_iAutoCursorDanceIndex = 0;
+	m_fTimeshockTimer = 0.0f;
+	m_fTimeshockTime = 0.0f;
+	m_fTimeshockTimeLimit = 0.0f;
 
 	m_bClick1Held = false;
 	m_bClick2Held = false;
@@ -175,51 +180,9 @@ OsuBeatmap::~OsuBeatmap()
 	m_difficulties.clear();
 }
 
-bool OsuBeatmap::load()
+void OsuBeatmap::setDifficulties(std::vector<OsuBeatmapDifficulty*> diffs)
 {
-	UString searchpath = m_sFilePath;
-	std::vector<UString> files = env->getFilesInFolder(searchpath);
-
-	if (Osu::debug->getBool())
-		debugLog("OsuBeatmap::load() : %s\n", m_sFilePath.toUtf8());
-
-	for (int i=0; i<files.size(); i++)
-	{
-		UString ext = env->getFileExtensionFromFilePath(files[i]);
-
-		UString fullFilePath = m_sFilePath;
-		fullFilePath.append(files[i]);
-
-		// load diffs
-		if (ext == "osu")
-		{
-			OsuBeatmapDifficulty *diff = new OsuBeatmapDifficulty(m_osu, fullFilePath, m_sFilePath);
-
-			// try to load it. if successful, save it, else cleanup and continue to the next osu file
-			if (!diff->loadMetadata())
-			{
-				if (Osu::debug->getBool())
-				{
-					debugLog("OsuBeatmap::load() : Couldn't loadMetadata(), deleting object.\n");
-					if (diff->mode == 0)
-						engine->showMessageWarning("OsuBeatmap::load()", "Couldn't loadMetadata()\n");
-				}
-				SAFE_DELETE(diff);
-				continue;
-			}
-
-			m_difficulties.push_back(diff);
-		}
-	}
-
-	if (m_difficulties.size() == 0)
-	{
-		//debugLog("Osu Error: Found no diffs in beatmap folder! (%s)\n", m_sFilePath.toUtf8());
-		//engine->showMessageError("Error", "Found no diffs in beatmap folder!");
-		return false;
-	}
-
-	return true;
+	m_difficulties = diffs;
 }
 
 void OsuBeatmap::draw(Graphics *g)
@@ -297,6 +260,26 @@ void OsuBeatmap::draw(Graphics *g)
 			m_hitobjects[i]->draw2(g);
 		}
 	}
+
+	if (osu_mod_timeshock.getBool() && m_fTimeshockTimer > 0.0f)
+	{
+		unsigned long nextHitObjectTime = m_music->getLengthMS()*m_fTimeshockTime - osu_mod_timeshock_amount.getFloat()*1000;
+		Vector2 nextHitObjectPos;
+		for (int i=0; i<m_hitobjects.size(); i++)
+		{
+			int nextIndex = i+1 < m_hitobjects.size() ? i+1 : i;
+			if (m_hitobjects[nextIndex]->getTime() > nextHitObjectTime)
+			{
+				nextHitObjectPos = m_hitobjects[i]->getRawPosAt(nextHitObjectTime);
+				break;
+			}
+		}
+
+		nextHitObjectPos = osuCoords2Pixels(nextHitObjectPos);
+		g->setColor(0xff00ff00);
+		g->drawRect(nextHitObjectPos.x-100, nextHitObjectPos.y-100, 200, 200);
+	}
+
 
 	// debug stuff
 	if (osu_debug_hiterrorbar_misaims.getBool())
@@ -466,8 +449,27 @@ void OsuBeatmap::update()
 	updateHitobjectMetrics();
 	updatePlayfieldMetrics();
 
+	// handle timeshock
+	if (osu_mod_timeshock.getBool())
+	{
+		if (m_fTimeshockTimer > 0.0f)
+		{
+			debugLog("percent = %f\n", m_fTimeshockTimer);
+			unsigned long newPos = m_music->getLengthMS()*m_fTimeshockTime - (unsigned long)((m_fTimeshockTimer*osu_mod_timeshock_amount.getFloat()*1000));
+			m_music->setPositionMS(newPos);
+			if (m_fTimeshockTimer >= 1.0f)
+			{
+				m_fTimeshockTimer = 0.0f;
+				m_music->setPositionMS(m_music->getLengthMS()*m_fTimeshockTime - (unsigned long)(osu_mod_timeshock_amount.getFloat()*1000));
+			}
+			m_iLastMusicPosition = newPos;
+			resetHitObjects(newPos);
+		}
+	}
+
 	// update current music position (this variable does not include any offsets!)
 	m_iCurMusicPos = getMusicPositionMSInterpolated();
+	m_iContinueMusicPos = m_music->getPositionMS();
 
 	// handle timewarp
 	if (osu_mod_timewarp.getBool())
@@ -645,11 +647,7 @@ void OsuBeatmap::update()
 		{
 			// nightmare mod: extra klicks = sliderbreak
 			if ((m_osu->getModNM() || osu_mod_jigsaw1.getBool()) && !m_bIsInSkippableSection)
-			{
-				if (getCombo() > 20)
-					engine->getSound()->play(getSkin()->getCombobreak());
 				addSliderBreak();
-			}
 			m_clicks.clear();
 		}
 	}
@@ -698,6 +696,10 @@ void OsuBeatmap::update()
 	float smooth = std::pow(0.05*osu_effect_amplitude_smooth.getFloat(), engine->getFrameTime());
 	m_fAmplitude = smooth*m_fAmplitude + (1.0f - smooth)*amplitude;
 	*/
+
+	// TODO: update hp & drain
+
+	m_iPrevCurMusicPos = m_iCurMusicPos;
 }
 
 void OsuBeatmap::skipEmptySection()
@@ -770,7 +772,12 @@ void OsuBeatmap::keyReleased2()
 
 void OsuBeatmap::select()
 {
+	// if possible, continue playing where we left off
+	if (m_music != NULL && (m_music->isPlaying()))
+		m_iContinueMusicPos = m_music->getPositionMS();
+
 	selectDifficulty(m_iSelectedDifficulty == -1 ? 0 : m_iSelectedDifficulty);
+
 	loadMusic();
 	handlePreviewPlay();
 }
@@ -831,12 +838,11 @@ bool OsuBeatmap::play()
 	// reset everything, including deleting any previously loaded hitobjects from another diff which we might just have played
 	unloadHitObjects();
 	resetScore();
-	m_fSongPercentBeforeStop = 0.0f;
 
 	// actually load the difficulty (and the hitobjects)
 	if (!m_selectedDifficulty->loaded)
 	{
-		if (!m_selectedDifficulty->load(this, &m_hitobjects))
+		if (!m_selectedDifficulty->loadRaw(this, &m_hitobjects))
 			return false;
 	}
 
@@ -880,7 +886,6 @@ void OsuBeatmap::actualRestart()
 	// reset everything
 	resetScore();
 	resetHitObjects(-1000);
-	m_fSongPercentBeforeStop = 0.0f;
 
 	updatePlayfieldMetrics();
 
@@ -983,11 +988,15 @@ void OsuBeatmap::stop(bool quit)
 	m_bIsPlaying = false;
 	m_bIsPaused = false;
 	m_bContinueScheduled = false;
-	m_fSongPercentBeforeStop = m_music->getPosition();
-	engine->getSound()->stop(m_music);
 	resetHitObjects();
 
 	m_osu->onPlayEnd(quit);
+}
+
+void OsuBeatmap::fail()
+{
+	// TODO:
+	stop();
 }
 
 void OsuBeatmap::setVolume(float volume)
@@ -1036,6 +1045,8 @@ unsigned long OsuBeatmap::getLength()
 {
 	if (m_music != NULL && m_music->isAsyncReady())
 		return m_music->getLengthMS();
+	else if (m_difficulties.size() > 0) // a bit shitty, but it should work fine
+		return m_difficulties[0]->lengthMS;
 	else
 		return 0;
 }
@@ -1174,12 +1185,15 @@ void OsuBeatmap::consumeClickEvent()
 	m_clicks.erase(m_clicks.begin());
 }
 
-void OsuBeatmap::addHitResult(HIT hit, long delta, bool ignoreOnHitErrorBar, bool hitErrorBarOnly, bool ignoreCombo)
+void OsuBeatmap::addHitResult(OsuScore::HIT hit, long delta, bool ignoreOnHitErrorBar, bool hitErrorBarOnly, bool ignoreCombo)
 {
-	// handle sudden death
+	if (m_fTimeshockTimer > 0.0f)
+		return;
+
+	// handle perfect & sudden death
 	if (m_osu->getModSS())
 	{
-		if (hit != HIT_300)
+		if (hit != OsuScore::HIT_300 && hit != OsuScore::HIT_SLIDER10 && hit != OsuScore::HIT_SLIDER30 && !hitErrorBarOnly)
 		{
 			restart();
 			return;
@@ -1187,99 +1201,61 @@ void OsuBeatmap::addHitResult(HIT hit, long delta, bool ignoreOnHitErrorBar, boo
 	}
 	else if (m_osu->getModSD())
 	{
-		if (hit == HIT_MISS)
+		if (hit == OsuScore::HIT_MISS)
 		{
-			restart();
+			fail();
 			return;
 		}
 	}
 
-	// handle hits (and misses)
-	if (hit != HIT_MISS)
+	if (hit == OsuScore::HIT_MISS)
 	{
-		if (!ignoreOnHitErrorBar)
-		{
-			m_hitdeltas.push_back((int)delta);
-			m_osu->getHUD()->addHitError(delta);
-		}
+		playMissSound();
 
-		if (!ignoreCombo)
+		// handle timeshock
+		if (osu_mod_timeshock.getBool())
 		{
-			m_iCombo++;
-			m_osu->getHUD()->animateCombo();
+			m_fTimeshockTime = m_music->getPosition();
+			if (m_fTimeshockTime > m_fTimeshockTimeLimit)
+			{
+				m_fTimeshockTimeLimit = m_fTimeshockTime;
+				m_fTimeshockTimer = 0.001f;
+				anim->moveQuadInOut(&m_fTimeshockTimer, 1.0f, osu_mod_timeshock_duration.getFloat(), true);
+			}
 		}
 	}
-	else // misses
-	{
-		if (osu_hiterrorbar_misses.getBool() && !ignoreOnHitErrorBar && delta <= (long)OsuGameRules::getHitWindow50(this))
-			m_osu->getHUD()->addHitError(delta, true);
 
-		m_iCombo = 0;
-	}
-
-	// store the result
-	if (!hitErrorBarOnly)
-		m_hitresults.push_back(hit);
-
-	// TODO: performance of the loop every time
-	// recalculate accuracy
-	int numMisses = 0;
-	int num50s = 0;
-	int num100s = 0;
-	int num300s = 0;
-	for (int i=0; i<m_hitresults.size(); i++)
-	{
-		switch (m_hitresults[i])
-		{
-		case HIT_MISS:
-			numMisses++;
-			break;
-		case HIT_50:
-			num50s++;
-			break;
-		case HIT_100:
-			num100s++;
-			break;
-		case HIT_300:
-			num300s++;
-			break;
-		}
-	}
-	m_iNumMisses = numMisses;
-
-	const float totalHitPoints = num50s*(1.0f/6.0f)+ num100s*(2.0f/6.0f) + num300s;
-	const float totalNumHits = numMisses + num50s + num100s + num300s;
-
-	if ((totalHitPoints == 0.0f || totalNumHits == 0.0f) && m_hitresults.size() < 1)
-		m_fAccuracy = 1.0f;
-	else
-		m_fAccuracy = totalHitPoints / totalNumHits;
-
-	// recalculate unstable rate
-	float averageDelta = 0.0f;
-	m_fUnstableRate = 0.0f;
-	if (m_hitdeltas.size() > 0)
-	{
-		for (int i=0; i<m_hitdeltas.size(); i++)
-		{
-			averageDelta += (float)m_hitdeltas[i];
-		}
-		averageDelta /= (float)m_hitdeltas.size();
-		for (int i=0; i<m_hitdeltas.size(); i++)
-		{
-			m_fUnstableRate += ((float)m_hitdeltas[i] - averageDelta)*((float)m_hitdeltas[i] - averageDelta);
-		}
-		m_fUnstableRate /= (float)m_hitdeltas.size();
-		m_fUnstableRate = std::sqrt(m_fUnstableRate)*10;
-
-		// compensate for speed
-		m_fUnstableRate /= getSpeedMultiplier();
-	}
+	m_osu->getScore()->addHitResult(this, hit, delta, ignoreOnHitErrorBar, hitErrorBarOnly, ignoreCombo);
 }
 
 void OsuBeatmap::addSliderBreak()
 {
-	m_iCombo = 0;
+	// handle perfect & sudden death
+	if (m_osu->getModSS())
+	{
+		restart();
+		return;
+	}
+	else if (m_osu->getModSD())
+	{
+		fail();
+		return;
+	}
+
+	playMissSound();
+
+	m_osu->getScore()->addSliderBreak();
+}
+
+void OsuBeatmap::addScorePoints(int points)
+{
+	m_osu->getScore()->addPoints(points);
+}
+
+void OsuBeatmap::playMissSound()
+{
+	if (m_osu->getScore()->getCombo() > osu_combobreak_sound_combo.getInt())
+		engine->getSound()->play(getSkin()->getCombobreak());
 }
 
 Vector2 OsuBeatmap::osuCoords2Pixels(Vector2 coords)
@@ -1370,23 +1346,28 @@ Vector2 OsuBeatmap::getCursorPos()
 	else if (m_osu->getModAuto() || m_osu->getModAutopilot())
 		return m_vAutoCursorPos;
 	else
-		return engine->getMouse()->getPos();
+	{
+		Vector2 pos = engine->getMouse()->getPos();
+		if (osu_mod_shirone.getBool() && m_osu->getScore()->getCombo() > 0) // <3
+			return pos + Vector2(std::sin((m_iCurMusicPos/20.0f)*1.15f)*((float)m_osu->getScore()->getCombo()/osu_mod_shirone_combo.getFloat()), std::cos((m_iCurMusicPos/20.0f)*1.3f)*((float)m_osu->getScore()->getCombo()/osu_mod_shirone_combo.getFloat()));
+		else
+			return pos;
+	}
 }
 
 void OsuBeatmap::handlePreviewPlay()
 {
-	if (engine->getSound()->play(m_music) && m_selectedDifficulty != NULL)
+	if (m_music != NULL && (!m_music->isPlaying() || m_music->getPosition() > 0.95f) && m_selectedDifficulty != NULL)
 	{
-		if (m_fSongPercentBeforeStop == 0.0f)
-			m_music->setPositionMS(m_selectedDifficulty->previewTime);
-		else
+		engine->getSound()->stop(m_music);
+		if (engine->getSound()->play(m_music))
 		{
-			m_music->setPosition(m_fSongPercentBeforeStop);
-			m_fSongPercentBeforeStop = 0.0f;
+			if (m_iContinueMusicPos != 0)
+				m_music->setPositionMS(m_iContinueMusicPos);
+			else
+				m_music->setPositionMS(m_selectedDifficulty->previewTime);
+			m_music->setVolume(m_osu_volume_music_ref->getFloat());
 		}
-
-		// just to be sure
-		m_music->setVolume(m_osu_volume_music_ref->getFloat());
 	}
 }
 
@@ -1441,12 +1422,7 @@ void OsuBeatmap::resetHitObjects(long curPos)
 
 void OsuBeatmap::resetScore()
 {
-	m_iCombo = 0;
-	m_fAccuracy = 1.0f;
-	m_fUnstableRate = 0.0f;
-	m_hitresults = std::vector<HIT>();
-	m_hitdeltas = std::vector<int>();
-	m_iNumMisses = 0;
+	m_osu->getScore()->reset();
 }
 
 void OsuBeatmap::updateAutoCursorPos()
@@ -1614,12 +1590,6 @@ void OsuBeatmap::updateHitobjectMetrics()
 	m_fSliderFollowCircleScale = (m_fSliderFollowCircleDiameter / (259.0f * (skin->isSliderFollowCircle2x() ? 2.0f : 1.0f)))*0.85f; // this is a bit strange, but seems to work perfect with 0.85
 }
 
-Vector2 OsuBeatmap::originalOsuCoords2Stack(Vector2 coords)
-{
-	// this transforms original raw coordinates just before they are used for the stack calculation
-	return coords;
-}
-
 void OsuBeatmap::calculateStacks()
 {
 	if (!osu_stacking.getBool())
@@ -1720,6 +1690,12 @@ void OsuBeatmap::calculateStacks()
 		if (m_hitobjects[i]->getStack() != 0)
 			m_hitobjects[i]->updateStackPosition(stackOffset);
 	}
+}
+
+Vector2 OsuBeatmap::originalOsuCoords2Stack(Vector2 coords)
+{
+	// this transforms original raw coordinates just before they are used for the stack calculation
+	return coords;
 }
 
 unsigned long OsuBeatmap::getMusicPositionMSInterpolated()

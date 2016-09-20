@@ -24,6 +24,34 @@
 
 ConVar osu_mod_random("osu_mod_random", false);
 
+class BackgroundImagePathLoader : public Resource
+{
+public:
+	BackgroundImagePathLoader(OsuBeatmapDifficulty *diff)
+	{
+		m_diff = diff;
+
+		m_bAsyncReady = false;
+		m_bReady = false;
+	};
+
+protected:
+	virtual void init()
+	{
+		m_bReady = true; // this is up here on purpose
+		m_diff->loadBackgroundImage(); // this immediately deletes us, which is allowed since the init() function is the last event and nothing happens after the call in here
+	}
+	virtual void initAsync()
+	{
+		m_diff->loadBackgroundImagePath();
+		m_bAsyncReady = true;
+	}
+	virtual void destroy() {;}
+
+private:
+	OsuBeatmapDifficulty *m_diff;
+};
+
 OsuBeatmapDifficulty::OsuBeatmapDifficulty(Osu *osu, UString filepath, UString folder)
 {
 	m_osu = osu;
@@ -47,14 +75,29 @@ OsuBeatmapDifficulty::OsuBeatmapDifficulty(Osu *osu, UString filepath, UString f
 
 	previewTime = 0;
 	mode = 0;
+	lengthMS = 0;
 
 	backgroundImage = NULL;
 	localoffset = 0;
 	minBPM = 0;
 	maxBPM = 0;
+	numObjects = 0;
+	starsNoMod = 0;
+
+	m_backgroundImagePathLoader = NULL;
 }
 
-bool OsuBeatmapDifficulty::loadMetadata()
+void OsuBeatmapDifficulty::unload()
+{
+	loaded = false;
+
+	hitcircles = std::vector<HITCIRCLE>();
+	sliders = std::vector<SLIDER>();
+	spinners = std::vector<SPINNER>();
+	///timingpoints = std::vector<TIMINGPOINT>(); // currently commented for main menu button animation
+}
+
+bool OsuBeatmapDifficulty::loadMetadataRaw()
 {
 	if (Osu::debug->getBool())
 		debugLog("OsuBeatmapDifficulty::loadMetadata() : %s\n", m_sFilePath.toUtf8());
@@ -243,16 +286,6 @@ bool OsuBeatmapDifficulty::loadMetadata()
 	// build sound file path
 	fullSoundFilePath = m_sFolder;
 	fullSoundFilePath.append(audioFileName);
-	// temporarily disabled check, it's not really necessary here already
-	/*
-	if (!env->fileExists(fullSoundFilePath))
-	{
-		UString errorMessage = "Error: Couldn't find sound file";
-		debugLog("Osu Error: Couldn't find sound file (%s)!\n", fullSoundFilePath.toUtf8());
-		//m_osu->getNotificationOverlay()->addNotification(errorMessage, 0xffff0000);
-		return false;
-	}
-	*/
 
 	// calculate BPM range
 	if (timingpoints.size() > 0)
@@ -272,37 +305,24 @@ bool OsuBeatmapDifficulty::loadMetadata()
 		};
 		std::sort(timingpoints.begin(), timingpoints.end(), TimingPointSortComparator());
 
+		// calculate bpm range
 		float tempMinBPM = 0;
 		float tempMaxBPM = std::numeric_limits<float>::max();
-
-		float beatLength = std::abs(timingpoints[0].msPerBeat);
-
-		// get first non-inherited timingpoint as a base
-		for (int i=0; i<timingpoints.size(); i++)
-		{
-			if (timingpoints[i].msPerBeat >= 0) // NOT inherited
-			{
-				beatLength = timingpoints[i].msPerBeat;
-				break;
-			}
-		}
-		// now go through all normally
 		for (int i=0; i<timingpoints.size(); i++)
 		{
 			TIMINGPOINT *t = &timingpoints[i];
 
 			if (t->msPerBeat >= 0) // NOT inherited
-				beatLength = std::abs(t->msPerBeat);
-
-			if (beatLength > tempMinBPM)
-				tempMinBPM = beatLength;
-
-			if (beatLength < tempMaxBPM)
-				tempMaxBPM = beatLength;
+			{
+				if (t->msPerBeat > tempMinBPM)
+					tempMinBPM = t->msPerBeat;
+				if (t->msPerBeat < tempMaxBPM)
+					tempMaxBPM = t->msPerBeat;
+			}
 		}
 
 		// convert from msPerBeat to BPM
-		float msPerMinute = 1 * 60 * 1000;
+		const float msPerMinute = 1 * 60 * 1000;
 		if (tempMinBPM != 0)
 			tempMinBPM = msPerMinute / tempMinBPM;
 		if (tempMaxBPM != 0)
@@ -319,9 +339,11 @@ bool OsuBeatmapDifficulty::loadMetadata()
 	return true;
 }
 
-bool OsuBeatmapDifficulty::load(OsuBeatmap *beatmap, std::vector<OsuHitObject*> *hitobjects)
+bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject*> *hitobjects)
 {
 	unload();
+	combocolors = std::vector<Color>();
+	loadMetadataRaw();
 	timingpoints = std::vector<TIMINGPOINT>();
 
 	// open osu file
@@ -601,6 +623,13 @@ bool OsuBeatmapDifficulty::load(OsuBeatmap *beatmap, std::vector<OsuHitObject*> 
 	for (int i=0; i<spinners.size(); i++)
 	{
 		OsuBeatmapDifficulty::SPINNER *s = &spinners[i];
+
+		if (osu_mod_random.getBool())
+		{
+			s->x = clamp<int>(s->x - ((rand() % OsuGameRules::OSU_COORD_WIDTH) / 1.25f) * (rand() % 2 == 0 ? 1.0f : -1.0f), 0, OsuGameRules::OSU_COORD_WIDTH);
+			s->y = clamp<int>(s->y - ((rand() & OsuGameRules::OSU_COORD_HEIGHT) / 1.25f) * (rand() % 2 == 0 ? 1.0f : -1.0f), 0, OsuGameRules::OSU_COORD_HEIGHT);
+		}
+
 		hitobjects->push_back(new OsuSpinner(s->x, s->y, s->time, s->sampleType, s->endTime, beatmap));
 	}
 
@@ -622,28 +651,30 @@ bool OsuBeatmapDifficulty::load(OsuBeatmap *beatmap, std::vector<OsuHitObject*> 
 	return true;
 }
 
-void OsuBeatmapDifficulty::unload()
-{
-	loaded = false;
-
-	hitcircles = std::vector<HITCIRCLE>();
-	sliders = std::vector<SLIDER>();
-	spinners = std::vector<SPINNER>();
-	///timingpoints = std::vector<TIMINGPOINT>(); // currently commented for main menu button animation
-}
-
 void OsuBeatmapDifficulty::loadBackgroundImage()
 {
-	if (backgroundImage != NULL)
+	if (m_backgroundImagePathLoader != NULL) // handle loader cleanup
+	{
+		if (m_backgroundImagePathLoader->isReady())
+			SAFE_DELETE(m_backgroundImagePathLoader);
+	}
+	else if (backgroundImageName.length() < 1) // dynamically load background image path from osu file if it wasn't set by the database
+	{
+		m_backgroundImagePathLoader = new BackgroundImagePathLoader(this);
+		engine->getResourceManager()->requestNextLoadAsync();
+		engine->getResourceManager()->loadResource(m_backgroundImagePathLoader);
 		return;
+	}
+
+	if (backgroundImage != NULL || backgroundImageName.length() < 1) return;
 
 	UString fullBackgroundImageFilePath = m_sFolder;
 	fullBackgroundImageFilePath.append(backgroundImageName);
 	if (env->fileExists(fullBackgroundImageFilePath)) // to prevent resource manager warnings
 	{
-		engine->getResourceManager()->requestNextLoadAsync();
 		UString uniqueResourceName = fullBackgroundImageFilePath;
 		uniqueResourceName.append(name);
+		engine->getResourceManager()->requestNextLoadAsync();
 		backgroundImage = engine->getResourceManager()->loadImageAbs(fullBackgroundImageFilePath, uniqueResourceName);
 	}
 }
@@ -656,6 +687,51 @@ void OsuBeatmapDifficulty::unloadBackgroundImage()
 	Image *tempPointer = backgroundImage;
 	backgroundImage = NULL;
 	engine->getResourceManager()->destroyResource(tempPointer);
+}
+
+void OsuBeatmapDifficulty::loadBackgroundImagePath()
+{
+	if (backgroundImage != NULL || backgroundImageName.length() > 0) return;
+
+	// open osu file
+	File file(m_sFilePath);
+	if (!file.canRead())
+	{
+		if (Osu::debug->getBool())
+			debugLog("OsuBeatmapDifficulty::loadBackgroundImagePath() couldn't read %s\n", m_sFilePath.toUtf8());
+		return;
+	}
+
+	int curBlock = -1;
+	while (file.canRead())
+	{
+		UString uCurLine = file.readLine();
+		const char *curLineChar = uCurLine.toUtf8();
+		std::string curLine(curLineChar);
+
+		if (curLine.find("//") == std::string::npos) // ignore comments
+		{
+			if (curLine.find("[Events]") != std::string::npos)
+				curBlock = 0;
+			else if (curLine.find("[Colours]") != std::string::npos)
+				break; // stop early
+
+			switch (curBlock)
+			{
+			case 0: // Events
+				{
+					char stringBuffer[1024];
+					memset(stringBuffer, '\0', 1024);
+					float temp;
+					if (sscanf(curLineChar, " %f , %f , \"%1023[^\"]\"", &temp, &temp, stringBuffer) == 3)
+					{
+						backgroundImageName = UString(stringBuffer);
+					}
+				}
+				break;
+			}
+		}
+	}
 }
 
 float OsuBeatmapDifficulty::getSliderTimeForSlider(SLIDER *slider)

@@ -15,12 +15,13 @@ class OsuMainMenu;
 class OsuPauseMenu;
 class OsuOptionsMenu;
 class OsuModSelector;
-class OsuSongBrowser;
 class OsuSongBrowser2;
+class OsuRankingScreen;
 class OsuNotificationOverlay;
 class OsuTooltipOverlay;
 class OsuBeatmap;
 class OsuScreen;
+class OsuScore;
 class OsuSkin;
 class OsuHUD;
 
@@ -76,11 +77,12 @@ public:
 	void toggleModSelection(bool waitForF1KeyUp = false);
 	void toggleSongBrowser();
 	void toggleOptionsMenu();
+	void toggleRankingScreen();
 
 	void volumeDown();
 	void volumeUp();
 
-	void stopRidiculouslyLongApplauseSound();
+	void saveScreenshot();
 
 	void reloadSkin() {onSkinReload();}
 
@@ -95,6 +97,8 @@ public:
 	inline OsuNotificationOverlay *getNotificationOverlay() {return m_notificationOverlay;}
 	inline OsuTooltipOverlay *getTooltipOverlay() {return m_tooltipOverlay;}
 	inline OsuModSelector *getModSelector() {return m_modSelector;}
+	inline OsuRankingScreen *getRankingScreen() {return m_rankingScreen;}
+	inline OsuScore *getScore() {return m_score;}
 
 	inline RenderTarget *getFrameBuffer() {return m_frameBuffer;}
 	inline McFont *getTitleFont() {return m_titleFont;}
@@ -104,6 +108,7 @@ public:
 
 	float getDifficultyMultiplier();
 	float getCSDifficultyMultiplier();
+	float getScoreMultiplier();
 	float getRawSpeedMultiplier();	// without override
 	float getSpeedMultiplier();		// with override
 	float getPitchMultiplier();
@@ -160,14 +165,15 @@ private:
 	// interfaces
 	OsuMainMenu *m_mainMenu;
 	OsuOptionsMenu *m_optionsMenu;
-	OsuSongBrowser *m_songBrowser;
 	OsuSongBrowser2 *m_songBrowser2;
 	OsuModSelector *m_modSelector;
+	OsuRankingScreen *m_rankingScreen;
 	OsuPauseMenu *m_pauseMenu;
 	OsuSkin *m_skin;
 	OsuHUD *m_hud;
 	OsuTooltipOverlay *m_tooltipOverlay;
 	OsuNotificationOverlay *m_notificationOverlay;
+	OsuScore *m_score;
 
 	std::vector<OsuScreen*> m_screens;
 
@@ -207,6 +213,7 @@ private:
 	bool m_bToggleModSelectionScheduled;
 	bool m_bToggleSongBrowserScheduled;
 	bool m_bToggleOptionsMenuScheduled;
+	bool m_bToggleRankingScreenScheduled;
 
 	// cursor
 	bool m_bShouldCursorBeVisible;

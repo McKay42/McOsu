@@ -25,6 +25,21 @@ public:
 	static ConVar GAME_PAUSE;
 	static ConVar SKIP_CUTSCENE;
 	static ConVar QUICK_RETRY;
+	static ConVar SAVE_SCREENSHOT;
+	static ConVar DISABLE_MOUSE_BUTTONS;
+
+	static ConVar MOD_EASY;
+	static ConVar MOD_NOFAIL;
+	static ConVar MOD_HALFTIME;
+	static ConVar MOD_HARDROCK;
+	static ConVar MOD_SUDDENDEATH;
+	static ConVar MOD_DOUBLETIME;
+	static ConVar MOD_HIDDEN;
+	static ConVar MOD_FLASHLIGHT;
+	static ConVar MOD_RELAX;
+	static ConVar MOD_AUTOPILOT;
+	static ConVar MOD_SPUNOUT;
+	static ConVar MOD_AUTO;
 };
 
 #endif

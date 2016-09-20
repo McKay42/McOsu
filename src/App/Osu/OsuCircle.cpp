@@ -378,7 +378,7 @@ void OsuCircle::update(long curPos)
 		if (m_beatmap->getOsu()->getModAuto())
 		{
 			if (curPos >= m_iTime)
-				onHit(OsuBeatmap::HIT_300, 0);
+				onHit(OsuScore::HIT_300, 0);
 		}
 		else
 		{
@@ -393,8 +393,8 @@ void OsuCircle::update(long curPos)
 
 					if (cursorDelta < m_beatmap->getHitcircleDiameter()/2.0f)
 					{
-						OsuBeatmap::HIT result = OsuGameRules::getHitResult(delta, m_beatmap);
-						if (result != OsuBeatmap::HIT_NULL)
+						OsuScore::HIT result = OsuGameRules::getHitResult(delta, m_beatmap);
+						if (result != OsuScore::HIT_NULL)
 						{
 							const float targetDelta = cursorDelta / (m_beatmap->getHitcircleDiameter()/2.0f);
 							const float targetAngle = rad2deg(atan2(m_beatmap->getCursorPos().y - pos.y, m_beatmap->getCursorPos().x - pos.x));
@@ -411,7 +411,7 @@ void OsuCircle::update(long curPos)
 
 				// if this is a miss after waiting
 				if (delta > (long)OsuGameRules::getHitWindow50(m_beatmap))
-					onHit(OsuBeatmap::HIT_MISS, delta);
+					onHit(OsuScore::HIT_MISS, delta);
 			}
 			else
 				m_bWaiting = false;
@@ -436,8 +436,8 @@ void OsuCircle::onClickEvent(Vector2 cursorPos, std::vector<OsuBeatmap::CLICK> &
 	{
 		const long delta = (long)clicks[0].musicPos - (long)m_iTime;
 
-		OsuBeatmap::HIT result = OsuGameRules::getHitResult(delta, m_beatmap);
-		if (result != OsuBeatmap::HIT_NULL)
+		OsuScore::HIT result = OsuGameRules::getHitResult(delta, m_beatmap);
+		if (result != OsuScore::HIT_NULL)
 		{
 			const float targetDelta = cursorDelta / (m_beatmap->getHitcircleDiameter()/2.0f);
 			const float targetAngle = rad2deg(atan2(cursorPos.y - pos.y, cursorPos.x - pos.x));
@@ -448,20 +448,15 @@ void OsuCircle::onClickEvent(Vector2 cursorPos, std::vector<OsuBeatmap::CLICK> &
 	}
 }
 
-void OsuCircle::onHit(OsuBeatmap::HIT result, long delta, float targetDelta, float targetAngle)
+void OsuCircle::onHit(OsuScore::HIT result, long delta, float targetDelta, float targetAngle)
 {
 	// sound and hit animation
-	if (result == OsuBeatmap::HIT_MISS)
-	{
-		if (m_beatmap->getCombo() > 20)
-			engine->getSound()->play(m_beatmap->getSkin()->getCombobreak());
-	}
-	else
+	if (result != OsuScore::HIT_MISS)
 	{
 		m_beatmap->getSkin()->playHitCircleSound(m_iSampleType);
 
 		m_fHitAnimation = 0.001f; // quickfix for 1 frame missing images
-		anim->moveQuadOut(&m_fHitAnimation, 1.0f, OsuGameRules::osu_circle_fade_out_time.getFloat(), true);
+		anim->moveQuadOut(&m_fHitAnimation, 1.0f, OsuGameRules::getFadeOutTime(m_beatmap), true);
 	}
 
 	// add it, and we are finished

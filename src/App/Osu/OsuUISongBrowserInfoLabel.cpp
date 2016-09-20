@@ -11,6 +11,8 @@
 #include "ResourceManager.h"
 
 #include "Osu.h"
+#include "OsuBeatmap.h"
+#include "OsuBeatmapDifficulty.h"
 
 OsuUISongBrowserInfoLabel::OsuUISongBrowserInfoLabel(Osu *osu, float xPos, float yPos, float xSize, float ySize, UString name) : CBaseUIElement(xPos, yPos, xSize, ySize, name)
 {
@@ -95,6 +97,24 @@ void OsuUISongBrowserInfoLabel::draw(Graphics *g)
 	g->popTransform();
 }
 
+void OsuUISongBrowserInfoLabel::setFromBeatmap(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff)
+{
+	setArtist(diff->artist);
+	setTitle(diff->title);
+	setDiff(diff->name);
+	setMapper(diff->creator);
+
+	setLengthMS(beatmap->getLength()); // TODO: beatmap db
+	setBPM(diff->minBPM, diff->maxBPM);
+	setNumObjects(diff->numObjects); // TODO: beatmap db
+
+	setCS(diff->CS);
+	setAR(diff->AR);
+	setOD(diff->OD);
+	setHP(diff->HP);
+	setStars(diff->starsNoMod); // TODO: beatmap db
+}
+
 UString OsuUISongBrowserInfoLabel::buildTitleString()
 {
 	UString titleString = m_sArtist;
@@ -117,7 +137,7 @@ UString OsuUISongBrowserInfoLabel::buildSubTitleString()
 
 UString OsuUISongBrowserInfoLabel::buildSongInfoString()
 {
-	const unsigned long fullSeconds = (m_iLengthMS*(1.0 / m_osu->getSpeedMultiplier())) / 1000;
+	const unsigned long fullSeconds = (m_iLengthMS*(1.0 / m_osu->getSpeedMultiplier())) / 1000.0;
 	const int minutes = fullSeconds / 60;
 	const int seconds = fullSeconds % 60;
 
