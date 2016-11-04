@@ -133,14 +133,8 @@ private:
 class OsuSliderCurve
 {
 public:
-	static Shader *BLEND_SHADER;
-
-public:
 	OsuSliderCurve(OsuSlider *parent, OsuBeatmap *beatmap);
 	virtual ~OsuSliderCurve();
-
-	void draw(Graphics *g, Color color, float alpha);
-	void draw(Graphics *g, Color color, float alpha, float t, float t2 = 0.0f);
 
 	virtual void updateStackPosition(float stackMulStackOffset);
 
@@ -150,16 +144,13 @@ public:
 	inline float getStartAngle() const {return m_fStartAngle;}
 	inline float getEndAngle() const {return m_fEndAngle;}
 
+	inline std::vector<Vector2> getPoints() {return m_curvePoints;}
+
 protected:
 	static float CURVE_POINTS_SEPERATION;
-	static int UNIT_CONE_DIVIDES;
-	static std::vector<float> UNIT_CONE;
-	static VertexArrayObject *MASTER_CIRCLE_VAO;
-	static float MASTER_CIRCLE_VAO_RADIUS;
 
 	void drawFillCircle(Graphics *g, Vector2 center);
 	void drawFillSliderBody(Graphics *g, int drawUpTo);
-	void drawFillSliderBody2(Graphics *g, int drawUpTo, int drawFrom = 0);
 
 	OsuBeatmap *m_beatmap;
 	OsuSlider *m_slider;
@@ -170,13 +161,6 @@ protected:
 	std::vector<Vector2> m_originalCurvePoints;
 	float m_fStartAngle;
 	float m_fEndAngle;
-
-private:
-	// rendering optimization
-	float m_fBoundingBoxMinX;
-	float m_fBoundingBoxMaxX;
-	float m_fBoundingBoxMinY;
-	float m_fBoundingBoxMaxY;
 };
 
 

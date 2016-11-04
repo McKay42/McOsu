@@ -766,7 +766,7 @@ Color OsuSkin::getComboColorForCounter(int i)
 	else if (m_comboColors.size() > 0)
 		return m_comboColors[i % m_comboColors.size()];
 	else
-		return COLOR(255, 255, 255, 255);
+		return COLOR(255, 0, 255, 0);
 }
 
 void OsuSkin::setBeatmapComboColors(std::vector<Color> colors)
