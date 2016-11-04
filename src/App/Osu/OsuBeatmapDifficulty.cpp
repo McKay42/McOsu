@@ -684,8 +684,8 @@ void OsuBeatmapDifficulty::loadBackgroundImage()
 
 void OsuBeatmapDifficulty::unloadBackgroundImage()
 {
-	//if (backgroundImage != NULL)
-	//	debugLog("Unloading %s\n", backgroundImage->getFilePath().toUtf8());
+	if (Osu::debug->getBool() && backgroundImage != NULL)
+		debugLog("Unloading %s\n", backgroundImage->getFilePath().toUtf8());
 
 	Image *tempPointer = backgroundImage;
 	backgroundImage = NULL;

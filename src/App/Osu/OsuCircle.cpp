@@ -24,12 +24,14 @@ ConVar osu_circle_number_rainbow("osu_circle_number_rainbow", false);
 ConVar osu_draw_numbers("osu_draw_numbers", true);
 ConVar osu_draw_approach_circles("osu_draw_approach_circles", true);
 
+ConVar osu_slider_draw_endcircle("osu_slider_draw_endcircle", true);
+
 int OsuCircle::rainbowNumber = 0;
 int OsuCircle::rainbowColorCounter = 0;
 
 void OsuCircle::drawCircle(Graphics *g, OsuBeatmap *beatmap, Vector2 rawPos, int number, int colorCounter, float approachScale, float alpha, float numberAlpha, bool drawNumber, bool overrideHDApproachCircle)
 {
-	drawCircle(g, beatmap->getSkin(), beatmap->osuCoords2Pixels(rawPos), beatmap->getHitcircleDiameter(), beatmap->getNumberScale(), beatmap->getHitcircleOverlapScale(), beatmap->getOsu()->getModHD(), number, colorCounter, approachScale, alpha, numberAlpha, drawNumber, overrideHDApproachCircle);
+	drawCircle(g, beatmap->getSkin(), beatmap->osuCoords2Pixels(rawPos), beatmap->getHitcircleDiameter(), beatmap->getNumberScale(), beatmap->getHitcircleOverlapScale(), number, colorCounter, approachScale, alpha, numberAlpha, drawNumber, overrideHDApproachCircle);
 }
 
 void OsuCircle::drawApproachCircle(Graphics *g, OsuBeatmap *beatmap, Vector2 rawPos, int number, int colorCounter, float approachScale, float alpha, bool overrideHDApproachCircle)
@@ -43,7 +45,7 @@ void OsuCircle::drawApproachCircle(Graphics *g, OsuBeatmap *beatmap, Vector2 raw
 	drawApproachCircle(g, beatmap->getSkin(), beatmap->osuCoords2Pixels(rawPos), comboColor, beatmap->getHitcircleDiameter(), approachScale, alpha, beatmap->getOsu()->getModHD(), overrideHDApproachCircle);
 }
 
-void OsuCircle::drawCircle(Graphics *g, OsuSkin *skin, Vector2 pos, float hitcircleDiameter, float numberScale, float overlapScale, bool modHD, int number, int colorCounter, float approachScale, float alpha, float numberAlpha, bool drawNumber, bool overrideHDApproachCircle)
+void OsuCircle::drawCircle(Graphics *g, OsuSkin *skin, Vector2 pos, float hitcircleDiameter, float numberScale, float overlapScale, int number, int colorCounter, float approachScale, float alpha, float numberAlpha, bool drawNumber, bool overrideHDApproachCircle)
 {
 	if (alpha <= 0.0f)
 		return;
@@ -91,26 +93,35 @@ void OsuCircle::drawCircle(Graphics *g, OsuSkin *skin, Vector2 pos, float hitcir
 
 void OsuCircle::drawSliderStartCircle(Graphics *g, OsuBeatmap *beatmap, Vector2 rawPos, int number, int colorCounter, float approachScale, float alpha, float numberAlpha, bool drawNumber, bool overrideHDApproachCircle)
 {
+	drawSliderStartCircle(g, beatmap->getSkin(), beatmap->osuCoords2Pixels(rawPos), beatmap->getHitcircleDiameter(), beatmap->getNumberScale(), beatmap->getHitcircleOverlapScale(), number, colorCounter, approachScale, alpha, numberAlpha, drawNumber, overrideHDApproachCircle);
+}
+
+void OsuCircle::drawSliderStartCircle(Graphics *g, OsuSkin *skin, Vector2 pos, float hitcircleDiameter, float numberScale, float hitcircleOverlapScale, int number, int colorCounter, float approachScale, float alpha, float numberAlpha, bool drawNumber, bool overrideHDApproachCircle)
+{
 	if (alpha <= 0.0f)
 		return;
 
-	OsuSkin *skin = beatmap->getSkin();
+	// if no sliderstartcircle image is preset, fallback to default circle
+	if (skin->getSliderStartCircle() == skin->getMissingTexture())
+	{
+		drawCircle(g, skin, pos, hitcircleDiameter, numberScale, hitcircleOverlapScale, number, colorCounter, approachScale, alpha, numberAlpha, drawNumber, overrideHDApproachCircle); // normal
+		return;
+	}
 
 	rainbowNumber = number;
 	rainbowColorCounter = colorCounter;
 
-	const Vector2 pos = beatmap->osuCoords2Pixels(rawPos);
 	const Color comboColor = skin->getComboColorForCounter(colorCounter);
 
 	// approach circle
 	///drawApproachCircle(g, skin, pos, comboColor, beatmap->getHitcircleDiameter(), approachScale, alpha, beatmap->getOsu()->getModHD(), overrideHDApproachCircle); // they are now drawn separately in draw2()
 
 	// circle
-	const float circleImageScale = beatmap->getHitcircleDiameter() / (128.0f * (skin->isSliderStartCircle2x() ? 2.0f : 1.0f));
+	const float circleImageScale = hitcircleDiameter / (128.0f * (skin->isSliderStartCircle2x() ? 2.0f : 1.0f));
 	drawHitCircle(g, skin->getSliderStartCircle(), pos, comboColor, circleImageScale, alpha);
 
 	// overlay
-	const float circleOverlayImageScale = beatmap->getHitcircleDiameter() / (128.0f * (skin->isSliderStartCircleOverlay2x() ? 2.0f : 1.0f));
+	const float circleOverlayImageScale = hitcircleDiameter / (128.0f * (skin->isSliderStartCircleOverlay2x() ? 2.0f : 1.0f));
 	if (skin->getSliderStartCircleOverlay() != skin->getMissingTexture())
 	{
 		if (!skin->getHitCircleOverlayAboveNumber())
@@ -119,7 +130,7 @@ void OsuCircle::drawSliderStartCircle(Graphics *g, OsuBeatmap *beatmap, Vector2 
 
 	// number
 	if (drawNumber)
-		drawHitCircleNumber(g, skin, beatmap->getNumberScale(), beatmap->getHitcircleOverlapScale(), pos, number, numberAlpha);
+		drawHitCircleNumber(g, skin, numberScale, hitcircleOverlapScale, pos, number, numberAlpha);
 
 	// overlay
 	if (skin->getSliderStartCircleOverlay() != skin->getMissingTexture())
@@ -131,25 +142,34 @@ void OsuCircle::drawSliderStartCircle(Graphics *g, OsuBeatmap *beatmap, Vector2 
 
 void OsuCircle::drawSliderEndCircle(Graphics *g, OsuBeatmap *beatmap, Vector2 rawPos, int number, int colorCounter, float approachScale, float alpha, float numberAlpha, bool drawNumber, bool overrideHDApproachCircle)
 {
-	if (alpha <= 0.0f)
+	drawSliderEndCircle(g, beatmap->getSkin(), beatmap->osuCoords2Pixels(rawPos), beatmap->getHitcircleDiameter(), beatmap->getNumberScale(), beatmap->getHitcircleOverlapScale(), number, colorCounter, approachScale, alpha, numberAlpha, drawNumber, overrideHDApproachCircle);
+}
+
+void OsuCircle::drawSliderEndCircle(Graphics *g, OsuSkin *skin, Vector2 pos, float hitcircleDiameter, float numberScale, float overlapScale, int number, int colorCounter, float approachScale, float alpha, float numberAlpha, bool drawNumber, bool overrideHDApproachCircle)
+{
+	if (alpha <= 0.0f || !osu_slider_draw_endcircle.getBool())
 		return;
 
-	OsuSkin *skin = beatmap->getSkin();
+	// if no sliderendcircle image is preset, fallback to default circle
+	if (skin->getSliderEndCircle() == skin->getMissingTexture())
+	{
+		drawCircle(g, skin, pos, hitcircleDiameter, numberScale, overlapScale, number, colorCounter, approachScale, alpha, numberAlpha, drawNumber, overrideHDApproachCircle);
+		return;
+	}
 
 	rainbowNumber = number;
 	rainbowColorCounter = colorCounter;
 
-	const Vector2 pos = beatmap->osuCoords2Pixels(rawPos);
 	const Color comboColor = skin->getComboColorForCounter(colorCounter);
 
 	// circle
-	const float circleImageScale = beatmap->getHitcircleDiameter() / (128.0f * (skin->isSliderEndCircle2x() ? 2.0f : 1.0f));
+	const float circleImageScale = hitcircleDiameter / (128.0f * (skin->isSliderEndCircle2x() ? 2.0f : 1.0f));
 	drawHitCircle(g, skin->getSliderEndCircle(), pos, comboColor, circleImageScale, alpha);
 
 	// overlay
 	if (skin->getSliderEndCircleOverlay() != skin->getMissingTexture())
 	{
-		const float circleOverlayImageScale = beatmap->getHitcircleDiameter() / (128.0f * (skin->isSliderEndCircleOverlay2x() ? 2.0f : 1.0f));
+		const float circleOverlayImageScale = hitcircleDiameter / (128.0f * (skin->isSliderEndCircleOverlay2x() ? 2.0f : 1.0f));
 		drawHitCircleOverlay(g, skin->getSliderEndCircleOverlay(), pos, circleOverlayImageScale, alpha);
 	}
 }

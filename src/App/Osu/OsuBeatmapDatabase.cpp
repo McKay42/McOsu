@@ -1,6 +1,6 @@
 //================ Copyright (c) 2016, PG, All rights reserved. =================//
 //
-// Purpose:		osu!.db + raw loader
+// Purpose:		osu!.db + collection.db + raw loader
 //
 // $NoKeywords: $osubdb
 //===============================================================================//
@@ -112,6 +112,7 @@ OsuBeatmapDatabase::~OsuBeatmapDatabase()
 
 void OsuBeatmapDatabase::reset()
 {
+	m_collections.clear();
 	for (int i=0; i<m_beatmaps.size(); i++)
 	{
 		delete m_beatmaps[i];
@@ -272,10 +273,15 @@ void OsuBeatmapDatabase::loadDB(OsuFile *db)
 	}
 
 	// read beatmapInfos
+	struct BeatmapSet
+	{
+		unsigned int setID;
+		UString path;
+		std::vector<OsuBeatmapDifficulty*> diffs;
+	};
 	UString songFolder = osu_folder.getString();
 	songFolder.append("Songs/");
-	std::vector<OsuBeatmapDifficulty*> diffs;
-	unsigned int lastBeatmapSetID = 0;
+	std::vector<BeatmapSet> beatmapSets;
 	for (int i=0; i<m_iNumBeatmapsToLoad; i++)
 	{
 		if (Osu::debug->getBool())
@@ -410,18 +416,6 @@ void OsuBeatmapDatabase::loadDB(OsuFile *db)
 		fullFilePath.append("/");
 		fullFilePath.append(osuFileName);
 
-		if (beatmapSetID != lastBeatmapSetID || i >= m_iNumBeatmapsToLoad-1) // if a new set begins, all diffs stored until now belongs to the "current" beatmap
-		{
-			if (diffs.size() > 0) // only create a beatmap if we have diffs
-			{
-				OsuBeatmap *bm = new OsuBeatmap(m_osu, beatmapPath);
-				bm->setDifficulties(diffs);
-				diffs.clear();
-				m_beatmaps.push_back(bm);
-			}
-			lastBeatmapSetID = beatmapSetID;
-		}
-
 		// fill diff with data
 		if (mode == 0) // only use osu!standard diffs
 		{
@@ -438,6 +432,7 @@ void OsuBeatmapDatabase::loadDB(OsuFile *db)
 			diff->name = difficultyName;
 			diff->source = songSource;
 			diff->tags = songTags;
+			diff->md5hash = md5hash;
 			diff->beatmapId = beatmapID;
 
 			diff->AR = AR;
@@ -491,15 +486,127 @@ void OsuBeatmapDatabase::loadDB(OsuFile *db)
 				diff->timingpoints.push_back(tp);
 			}
 
-			diffs.push_back(diff);
+			// now, search if the current set (to which this diff would belong) already exists and add it there, or if it doesn't exist then create the set
+			bool beatmapSetExists = false;
+			for (int s=0; s<beatmapSets.size(); s++)
+			{
+				if (beatmapSets[s].setID == beatmapSetID)
+				{
+					beatmapSetExists = true;
+					beatmapSets[s].diffs.push_back(diff);
+					break;
+				}
+			}
+			if (!beatmapSetExists)
+			{
+				BeatmapSet s;
+				s.setID = beatmapSetID;
+				s.path = beatmapPath;
+				s.diffs.push_back(diff);
+				beatmapSets.push_back(s);
+			}
 		}
 	}
 
-	// TODO: store every beatmap immediately, then go through every beatmap to decide where to insert the current diff into
-	// (instead of hoping that the database has all diffs of a set perfectly in order)
+	// we now have a collection of BeatmapSets (where one set is equal to one beatmap and all of its diffs), build the actual OsuBeatmap objects
+	for (int i=0; i<beatmapSets.size(); i++)
+	{
+		if (beatmapSets[i].diffs.size() > 0) // sanity check
+		{
+			OsuBeatmap *bm = new OsuBeatmap(m_osu, beatmapSets[i].path);
+			bm->setDifficulties(beatmapSets[i].diffs);
+			m_beatmaps.push_back(bm);
+		}
+	}
 
 	m_importTimer->update();
 	debugLog("Refresh finished, added %i beatmaps in %f seconds.\n", m_beatmaps.size(), m_importTimer->getElapsedTime());
+
+	// signal that we are almost done
+	m_fLoadingProgress = 0.75f;
+
+	// load collection.db
+	UString collectionFilePath = osu_folder.getString();
+	collectionFilePath.append("collection.db");
+	OsuFile collectionFile(collectionFilePath);
+	if (collectionFile.isReady())
+	{
+		struct RawCollection
+		{
+			UString name;
+			std::vector<UString> hashes;
+		};
+
+		int version = collectionFile.readInt();
+		int numCollections = collectionFile.readInt();
+
+		debugLog("Collection: version = %i, numCollections = %i\n", version, numCollections);
+		for (int i=0; i<numCollections; i++)
+		{
+			UString name = collectionFile.readString();
+			int numBeatmaps = collectionFile.readInt();
+
+			RawCollection rc;
+			rc.name = name;
+
+			if (Osu::debug->getBool())
+				debugLog("Raw Collection #%i: name = %s, numBeatmaps = %i\n", i, name.toUtf8(), numBeatmaps);
+
+			for (int b=0; b<numBeatmaps; b++)
+			{
+				UString md5hash = collectionFile.readString();
+				rc.hashes.push_back(md5hash);
+			}
+
+			if (rc.hashes.size() > 0)
+			{
+				// collect OsuBeatmaps corresponding to this collection
+				Collection c;
+				c.name = rc.name;
+
+				for (int h=0; h<rc.hashes.size(); h++)
+				{
+					for (int b=0; b<m_beatmaps.size(); b++)
+					{
+						std::vector<OsuBeatmapDifficulty*> diffs = m_beatmaps[b]->getDifficulties();
+						for (int d=0; d<diffs.size(); d++)
+						{
+							if (diffs[d]->md5hash == rc.hashes[h])
+							{
+								// we have found the beatmap, if it isn't already in the collection then add it
+								bool beatmapIsAlreadyInCollection = false;
+								for (int m=0; m<c.beatmaps.size(); m++)
+								{
+									if (c.beatmaps[m] == m_beatmaps[b])
+									{
+										beatmapIsAlreadyInCollection = true;
+										break;
+									}
+								}
+								if (!beatmapIsAlreadyInCollection)
+									c.beatmaps.push_back(m_beatmaps[b]);
+								break;
+							}
+						}
+					}
+				}
+
+				// add the collection
+				if (c.beatmaps.size() > 0) // sanity check
+					m_collections.push_back(c);
+			}
+		}
+
+		if (Osu::debug->getBool())
+		{
+			for (int i=0; i<m_collections.size(); i++)
+			{
+				debugLog("Collection #%i: name = %s, numBeatmaps = %i\n", i, m_collections[i].name.toUtf8(), m_collections[i].beatmaps.size());
+			}
+		}
+	}
+	else
+		debugLog("OsuBeatmapDatabase::loadDB() : Couldn't load collection.db");
 
 	// signal that we are done
 	m_fLoadingProgress = 1.0f;
