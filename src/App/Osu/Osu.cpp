@@ -38,7 +38,7 @@
 #include "OsuHUD.h"
 
 #include "OsuHitObject.h"
-#include "OsuSlider.h"
+#include "OsuSliderRenderer.h"
 
 #include "OsuBeatmapDatabase.h"
 
@@ -46,7 +46,7 @@ void DUMMY_OSU_LETTERBOXING(UString oldValue, UString newValue) {;}
 void DUMMY_OSU_VOLUME_MUSIC_ARGS(UString oldValue, UString newValue) {;}
 void DUMMY_OSU_MODS(void) {;}
 
-ConVar osu_version("osu_version", 25.0f);
+ConVar osu_version("osu_version", 26.0f);
 ConVar osu_debug("osu_debug", false);
 
 ConVar osu_disable_mousebuttons("osu_disable_mousebuttons", false);
@@ -486,9 +486,10 @@ void Osu::onKeyDown(KeyboardEvent &key)
 	// global hotkeys
 
 	// special hotkeys
-	if (engine->getKeyboard()->isAltDown() && engine->getKeyboard()->isControlDown() && key == KEY_R && OsuSliderCurve::BLEND_SHADER != NULL)
+	if (engine->getKeyboard()->isAltDown() && engine->getKeyboard()->isControlDown() && key == KEY_R)
 	{
-		OsuSliderCurve::BLEND_SHADER->recompile();
+		if (OsuSliderRenderer::BLEND_SHADER != NULL)
+			OsuSliderRenderer::BLEND_SHADER->recompile();
 		key.consume();
 	}
 	else if (engine->getKeyboard()->isAltDown() && engine->getKeyboard()->isControlDown() && key == KEY_S)

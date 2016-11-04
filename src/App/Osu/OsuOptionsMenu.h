@@ -86,6 +86,7 @@ private:
 	OsuUISlider *addSlider(UString text, float min = 0.0f, float max = 1.0f, ConVar *cvar = NULL, float label1Width = 0.0f);
 	CBaseUITextbox *addTextbox(UString text, ConVar *cvar = NULL);
 	CBaseUIElement *addSkinPreview();
+	CBaseUIElement *addSliderPreview();
 
 	Osu *m_osu;
 	CBaseUIContainer *m_container;

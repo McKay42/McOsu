@@ -21,10 +21,9 @@
 #include "OsuCircle.h"
 #include "OsuSkin.h"
 #include "OsuGameRules.h"
+#include "OsuSliderRenderer.h"
 
 ConVar osu_slider_ball_tint_combo_color("osu_slider_ball_tint_combo_color", true);
-ConVar osu_slider_body_color_saturation("osu_slider_body_color_saturation", 1.0f);
-ConVar osu_slider_body_alpha_multiplier("osu_slider_body_alpha_multiplier", 1.0f);
 
 ConVar osu_snaking_sliders("osu_snaking_sliders", true);
 ConVar osu_mod_hd_slider_fade_percent("osu_mod_hd_slider_fade_percent", 0.6f);
@@ -32,12 +31,9 @@ ConVar osu_mod_hd_slider_fade("osu_mod_hd_slider_fade", true);
 ConVar osu_mod_hd_slider_fast_fade("osu_mod_hd_slider_fast_fade", false);
 
 ConVar osu_slider_break_epilepsy("osu_slider_break_epilepsy", false);
-ConVar osu_slider_rainbow("osu_slider_rainbow", false);
-ConVar osu_slider_debug("osu_slider_debug", false);
 ConVar osu_slider_scorev2("osu_slider_scorev2", false);
 
 ConVar osu_slider_draw_body("osu_slider_draw_body", true);
-ConVar osu_slider_draw_endcircle("osu_slider_draw_endcircle", true);
 ConVar osu_slider_shrink("osu_slider_shrink", false);
 ConVar osu_slider_reverse_arrow_black_threshold("osu_slider_reverse_arrow_black_threshold", 1.0f, "Blacken reverse arrows if the average color brightness percentage is above this value"); // looks too shitty atm
 
@@ -45,12 +41,9 @@ ConVar *OsuSlider::m_osu_playfield_mirror_horizontal_ref = NULL;
 ConVar *OsuSlider::m_osu_playfield_mirror_vertical_ref = NULL;
 ConVar *OsuSlider::m_osu_playfield_rotation_ref = NULL;
 
-Shader *OsuSliderCurve::BLEND_SHADER = NULL;
 float OsuSliderCurve::CURVE_POINTS_SEPERATION = 2.5f; // bigger value = less steps, more blocky sliders
-int OsuSliderCurve::UNIT_CONE_DIVIDES = 42; // can probably lower this a little bit, but not under 32
-std::vector<float> OsuSliderCurve::UNIT_CONE;
-VertexArrayObject *OsuSliderCurve::MASTER_CIRCLE_VAO = NULL;
-float OsuSliderCurve::MASTER_CIRCLE_VAO_RADIUS = 0.0f;
+
+
 
 OsuSlider::OsuSlider(char type, int repeat, float pixelLength, std::vector<Vector2> points, std::vector<float> ticks, float sliderTime, float sliderTimeWithoutRepeats, long time, int sampleType, int comboNumber, int colorCounter, OsuBeatmap *beatmap) : OsuHitObject(time, sampleType, comboNumber, colorCounter, beatmap)
 {
@@ -184,8 +177,13 @@ void OsuSlider::draw(Graphics *g)
 		}
 
 		// draw slider body
-		if (alpha > 0.0f)
-			m_curve->draw(g, skin->getComboColorForCounter(m_iColorCounter), alpha, sliderSnake, sliderSnakeStart);
+		if (alpha > 0.0f && osu_slider_draw_body.getBool())
+		{
+			std::vector<Vector2> screenPoints = m_curve->getPoints();
+			OsuBeatmap *beatmap = m_beatmap;
+			std::transform(screenPoints.begin(), screenPoints.end(), screenPoints.begin(), [beatmap](Vector2 p) -> Vector2 { return beatmap->osuCoords2Pixels(p); });
+			OsuSliderRenderer::draw(g, m_beatmap->getOsu(), screenPoints, m_beatmap->getHitcircleDiameter(), sliderSnakeStart, sliderSnake, skin->getComboColorForCounter(m_iColorCounter), alpha, getTime());
+		}
 
 		// draw slider ticks
 		// HACKHACK: hardcoded 0.125 multiplier, seems to be correct though (1/8)
@@ -224,7 +222,7 @@ void OsuSlider::draw(Graphics *g)
 			}
 
 			// end circle
-			if (osu_slider_draw_endcircle.getBool() && ((!m_bEndFinished && m_iRepeat % 2 != 0) || !sliderRepeatEndCircleFinished))
+			if (((!m_bEndFinished && m_iRepeat % 2 != 0) || !sliderRepeatEndCircleFinished))
 				drawEndCircle(g, alpha, sliderSnake);
 
 			// start circle
@@ -313,7 +311,12 @@ void OsuSlider::draw(Graphics *g)
 
 	// draw start/end circle hit animation, slider body fade animation, followcircle
 	if (m_fEndSliderBodyFadeAnimation > 0.0f && m_fEndSliderBodyFadeAnimation != 1.0f && !m_beatmap->getOsu()->getModHD() && !osu_slider_shrink.getBool())
-		m_curve->draw(g, m_beatmap->getSkin()->getComboColorForCounter(m_iColorCounter), 1.0f - m_fEndSliderBodyFadeAnimation);
+	{
+		std::vector<Vector2> screenPoints = m_curve->getPoints();
+		OsuBeatmap *beatmap = m_beatmap;
+		std::transform(screenPoints.begin(), screenPoints.end(), screenPoints.begin(), [beatmap](Vector2 p) -> Vector2 { return beatmap->osuCoords2Pixels(p); });
+		OsuSliderRenderer::draw(g, m_beatmap->getOsu(), screenPoints, m_beatmap->getHitcircleDiameter(), 0, 1, skin->getComboColorForCounter(m_iColorCounter), 1.0f - m_fEndSliderBodyFadeAnimation, getTime());
+	}
 
 	if (m_fStartHitAnimation > 0.0f && m_fStartHitAnimation != 1.0f && !m_beatmap->getOsu()->getModHD())
 	{
@@ -327,18 +330,14 @@ void OsuSlider::draw(Graphics *g)
 
 		g->pushTransform();
 			g->scale((1.0f+scale*OsuGameRules::osu_circle_fade_out_scale.getFloat()), (1.0f+scale*OsuGameRules::osu_circle_fade_out_scale.getFloat()));
-
-			// explanation for this is in drawStartCircle()
-			if (skin->getSliderStartCircle() != skin->getMissingTexture() && m_iCurRepeat < 1)
+			if (m_iCurRepeat < 1)
 				OsuCircle::drawSliderStartCircle(g, m_beatmap, m_curve->pointAt(0.0f), m_iComboNumber, m_iColorCounter, 1.0f, alpha, alpha, drawNumber);
-			else if (skin->getSliderEndCircle() != skin->getMissingTexture() && m_iCurRepeat > 0)
-				OsuCircle::drawSliderEndCircle(g, m_beatmap, m_curve->pointAt(0.0f), m_iComboNumber, m_iColorCounter, 1.0f, alpha, alpha, drawNumber);
 			else
-				OsuCircle::drawCircle(g, m_beatmap, m_curve->pointAt(0.0f), m_iComboNumber, m_iColorCounter, 1.0f, alpha, alpha, drawNumber);
+				OsuCircle::drawSliderEndCircle(g, m_beatmap, m_curve->pointAt(0.0f), m_iComboNumber, m_iColorCounter, 1.0f, alpha, alpha, drawNumber);
 		g->popTransform();
 	}
 
-	if (osu_slider_draw_endcircle.getBool() && m_fEndHitAnimation > 0.0f && m_fEndHitAnimation != 1.0f && !m_beatmap->getOsu()->getModHD())
+	if (m_fEndHitAnimation > 0.0f && m_fEndHitAnimation != 1.0f && !m_beatmap->getOsu()->getModHD())
 	{
 		float alpha = 1.0f - m_fEndHitAnimation;
 		//alpha = -alpha*(alpha-2.0f); // quad out alpha
@@ -348,10 +347,7 @@ void OsuSlider::draw(Graphics *g)
 
 		g->pushTransform();
 			g->scale((1.0f+scale*OsuGameRules::osu_circle_fade_out_scale.getFloat()), (1.0f+scale*OsuGameRules::osu_circle_fade_out_scale.getFloat()));
-			if (skin->getSliderEndCircle() != skin->getMissingTexture())
-				OsuCircle::drawSliderEndCircle(g, m_beatmap, m_curve->pointAt(1.0f), m_iComboNumber, m_iColorCounter, 1.0f, alpha, 0.0f, false);
-			else
-				OsuCircle::drawCircle(g, m_beatmap, m_curve->pointAt(1.0f), m_iComboNumber, m_iColorCounter, 1.0f, alpha, 0.0f, false);
+			OsuCircle::drawSliderEndCircle(g, m_beatmap, m_curve->pointAt(1.0f), m_iComboNumber, m_iColorCounter, 1.0f, alpha, 0.0f, false);
 		g->popTransform();
 	}
 
@@ -457,22 +453,15 @@ void OsuSlider::draw2(Graphics *g)
 
 void OsuSlider::drawStartCircle(Graphics *g, float alpha)
 {
-	// if sliderendcircle exists, and we are past the first circle, only draw sliderendcircle on both start and end from then on
-	// if sliderstartcircle exists, use it only until the end of the first circle
-	if (m_beatmap->getSkin()->getSliderEndCircle() != m_beatmap->getSkin()->getMissingTexture() && m_bStartFinished)
+	if (m_bStartFinished)
 		OsuCircle::drawSliderEndCircle(g, m_beatmap, m_curve->pointAt(0.0f), m_iComboNumber, m_iColorCounter, 1.0f, alpha, 0.0f, false, false);
-	else if (m_beatmap->getSkin()->getSliderStartCircle() != m_beatmap->getSkin()->getMissingTexture() && !m_bStartFinished)
-		OsuCircle::drawSliderStartCircle(g, m_beatmap, m_curve->pointAt(0.0f), m_iComboNumber, m_iColorCounter, m_fApproachScale, alpha, m_fHiddenAlpha, !m_bHideNumberAfterFirstRepeatHit, m_bOverrideHDApproachCircle);
 	else
-		OsuCircle::drawCircle(g, m_beatmap, m_curve->pointAt(0.0f), m_iComboNumber, m_iColorCounter, m_fApproachScale, alpha, m_fHiddenAlpha, !m_bHideNumberAfterFirstRepeatHit, m_bOverrideHDApproachCircle); // normal
+		OsuCircle::drawSliderStartCircle(g, m_beatmap, m_curve->pointAt(0.0f), m_iComboNumber, m_iColorCounter, m_fApproachScale, alpha, m_fHiddenAlpha, !m_bHideNumberAfterFirstRepeatHit, m_bOverrideHDApproachCircle);
 }
 
 void OsuSlider::drawEndCircle(Graphics *g, float alpha, float sliderSnake)
 {
-	if (m_beatmap->getSkin()->getSliderEndCircle() != m_beatmap->getSkin()->getMissingTexture())
-		OsuCircle::drawSliderEndCircle(g, m_beatmap, m_curve->pointAt(sliderSnake), m_iComboNumber, m_iColorCounter, 1.0f, alpha, 0.0f, false, false);
-	else
-		OsuCircle::drawCircle(g, m_beatmap, m_curve->pointAt(sliderSnake), m_iComboNumber, m_iColorCounter, 1.0f, alpha, 0.0f, false, false); // normal
+	OsuCircle::drawSliderEndCircle(g, m_beatmap, m_curve->pointAt(sliderSnake), m_iComboNumber, m_iColorCounter, 1.0f, alpha, 0.0f, false, false);
 }
 
 void OsuSlider::update(long curPos)
@@ -1047,56 +1036,6 @@ void OsuSlider::onReset(long curPos)
 
 OsuSliderCurve::OsuSliderCurve(OsuSlider *parent, OsuBeatmap *beatmap)
 {
-	// static globals
-	if (BLEND_SHADER == NULL)
-	{
-		// build shader
-		BLEND_SHADER = new Shader("slider.vsh", "slider.fsh");
-
-		// build unit cone
-		{
-			// tip of the cone
-			// texture coordinates
-			UNIT_CONE.push_back(1.0f);
-			UNIT_CONE.push_back(0.0f);
-
-			// position
-			UNIT_CONE.push_back(0.0f);
-			UNIT_CONE.push_back(0.0f);
-			UNIT_CONE.push_back(0.0f);
-
-			for (int j=0; j<UNIT_CONE_DIVIDES; ++j)
-			{
-				float phase = j * (float) PI * 2.0f / UNIT_CONE_DIVIDES;
-
-				// texture coordinates
-				UNIT_CONE.push_back(0.0f);
-				UNIT_CONE.push_back(0.0f);
-
-				// positon
-				UNIT_CONE.push_back((float)std::sin(phase));
-				UNIT_CONE.push_back((float)std::cos(phase));
-				UNIT_CONE.push_back(-1.0f);
-			}
-
-			// texture coordinates
-			UNIT_CONE.push_back(0.0f);
-			UNIT_CONE.push_back(0.0f);
-
-			// positon
-			UNIT_CONE.push_back((float)std::sin(0.0f));
-			UNIT_CONE.push_back((float)std::cos(0.0f));
-			UNIT_CONE.push_back(-1.0f);
-		}
-	}
-	if (MASTER_CIRCLE_VAO == NULL)
-	{
-		MASTER_CIRCLE_VAO = new VertexArrayObject();
-		MASTER_CIRCLE_VAO->setType(VertexArrayObject::TYPE_TRIANGLE_FAN);
-	}
-
-
-
 	m_slider = parent;
 	m_beatmap = beatmap;
 
@@ -1104,140 +1043,10 @@ OsuSliderCurve::OsuSliderCurve(OsuSlider *parent, OsuBeatmap *beatmap)
 
 	m_fStartAngle = 0.0f;
 	m_fEndAngle = 0.0f;
-
-	// rendering optimization
-	m_fBoundingBoxMinX = 0.0f;
-	m_fBoundingBoxMaxX = 0.0f;
-	m_fBoundingBoxMinY = 0.0f;
-	m_fBoundingBoxMaxY = 0.0f;
 }
 
 OsuSliderCurve::~OsuSliderCurve()
 {
-}
-
-void OsuSliderCurve::draw(Graphics *g, Color color, float alpha)
-{
-	draw(g, color, alpha, 1.0f);
-}
-
-void OsuSliderCurve::draw(Graphics *g, Color color, float alpha, float t, float t2)
-{
-	if (!osu_slider_draw_body.getBool())
-		return;
-	if (osu_slider_body_alpha_multiplier.getFloat() <= 0.0f || alpha <= 0.0f)
-		return;
-
-	OsuSkin *skin = m_beatmap->getSkin();
-
-	t = clamp<float>(t, 0.0f, 1.0f);
-	int drawFrom = clamp<int>((int)std::round(m_curvePoints.size() * t2), 0, m_curvePoints.size());
-	int drawUpTo = clamp<int>((int)std::round(m_curvePoints.size() * t), 0, m_curvePoints.size());
-
-	// debug sliders
-	float circleImageScale = m_beatmap->getHitcircleDiameter() / (float) skin->getHitCircle()->getWidth();
-	if (osu_slider_debug.getBool())
-	{
-		g->setColor(color);
-		g->setAlpha(alpha);
-		for (int i=drawFrom; i<drawUpTo; i++)
-		{
-			VertexArrayObject vao;
-			vao.setType(VertexArrayObject::TYPE_QUADS);
-			Vector2 point = m_beatmap->osuCoords2Pixels(m_curvePoints[i]);
-
-			int width = skin->getHitCircle()->getWidth();
-			int height = skin->getHitCircle()->getHeight();
-
-			g->pushTransform();
-				g->scale(circleImageScale, circleImageScale);
-				g->translate(point.x, point.y);
-
-				int x = -width/2;
-				int y = -height/2;
-
-				vao.addTexcoord(0, 0);
-				vao.addVertex(x, y, -1.0f);
-
-				vao.addTexcoord(0, 1);
-				vao.addVertex(x, y+height, -1.0f);
-
-				vao.addTexcoord(1, 1);
-				vao.addVertex(x+width, y+height, -1.0f);
-
-				vao.addTexcoord(1, 0);
-				vao.addVertex(x+width, y, -1.0f);
-
-				skin->getHitCircle()->bind();
-				g->drawVAO(&vao);
-				skin->getHitCircle()->unbind();
-			g->popTransform();
-		}
-		return; // nothing more to draw here
-	}
-
-	// rendering optimization reset
-	m_fBoundingBoxMinX = std::numeric_limits<float>::max();
-	m_fBoundingBoxMaxX = 0.0f;
-	m_fBoundingBoxMinY = std::numeric_limits<float>::max();
-	m_fBoundingBoxMaxY = 0.0f;
-
-	// draw entire slider into framebuffer
-	g->setDepthBuffer(true);
-	g->setBlending(false);
-	{
-		m_beatmap->getOsu()->getFrameBuffer()->enable();
-
-		Color borderColor = skin->getSliderBorderColor();
-		Color bodyColor = m_beatmap->getOsu()->getSkin()->isSliderTrackOverridden() ? skin->getSliderTrackOverride() : color;
-
-		if (osu_slider_rainbow.getBool())
-		{
-			float frequency = 0.3f;
-			float time = engine->getTime()*20;
-
-			char red1	= std::sin(frequency*time + 0 + m_slider->getTime()) * 127 + 128;
-			char green1	= std::sin(frequency*time + 2 + m_slider->getTime()) * 127 + 128;
-			char blue1	= std::sin(frequency*time + 4 + m_slider->getTime()) * 127 + 128;
-
-			char red2	= std::sin(frequency*time*1.5f + 0 + m_slider->getTime()) * 127 + 128;
-			char green2	= std::sin(frequency*time*1.5f + 2 + m_slider->getTime()) * 127 + 128;
-			char blue2	= std::sin(frequency*time*1.5f + 4 + m_slider->getTime()) * 127 + 128;
-
-			borderColor = COLOR(255, red1, green1, blue1);
-			bodyColor = COLOR(255, red2, green2, blue2);
-		}
-
-		///float amplitudeMultiplier = 1.0f - (1.0f - m_beatmap->getAmplitude())*(1.0f - m_beatmap->getAmplitude());
-
-		BLEND_SHADER->enable();
-		BLEND_SHADER->setUniform1f("bodyColorSaturation", osu_slider_body_color_saturation.getFloat());
-		BLEND_SHADER->setUniform3f("col_border", COLOR_GET_Rf(borderColor), COLOR_GET_Gf(borderColor), COLOR_GET_Bf(borderColor));
-		BLEND_SHADER->setUniform3f("col_body", COLOR_GET_Rf(bodyColor)/* + COLOR_GET_Rf(color)*amplitudeMultiplier*/, COLOR_GET_Gf(bodyColor)/* + COLOR_GET_Gf(color)*amplitudeMultiplier*/, COLOR_GET_Bf(bodyColor)/* + COLOR_GET_Bf(color)*amplitudeMultiplier*/);
-
-		g->setColor(0xffffffff);
-		g->setAlpha(alpha*osu_slider_body_alpha_multiplier.getFloat());
-		skin->getSliderGradient()->bind();
-		drawFillSliderBody2(g, drawUpTo, drawFrom);
-
-		BLEND_SHADER->disable();
-
-		m_beatmap->getOsu()->getFrameBuffer()->disable();
-	}
-	g->setBlending(true);
-	g->setDepthBuffer(false);
-
-	// now draw the slider to the screen (with alpha blending enabled again)
-	int pixelFudge = 2;
-	m_fBoundingBoxMinX -= pixelFudge;
-	m_fBoundingBoxMaxX += pixelFudge;
-	m_fBoundingBoxMinY -= pixelFudge;
-	m_fBoundingBoxMaxY += pixelFudge;
-	m_beatmap->getOsu()->getFrameBuffer()->drawRect(g, m_fBoundingBoxMinX, m_fBoundingBoxMinY, m_fBoundingBoxMaxX - m_fBoundingBoxMinX, m_fBoundingBoxMaxY - m_fBoundingBoxMinY);
-	///m_beatmap->getOsu()->getFrameBuffer()->draw(g, 0, 0);
-
-	//g->setColor(0xffffffff);
-	//g->drawRect(m_fBoundingBoxMinX, m_fBoundingBoxMinY, m_fBoundingBoxMaxX - m_fBoundingBoxMinX, m_fBoundingBoxMaxY - m_fBoundingBoxMinY);
 }
 
 void OsuSliderCurve::drawFillSliderBody(Graphics *g, int drawUpTo)
@@ -1376,50 +1185,6 @@ void OsuSliderCurve::drawFillSliderBody(Graphics *g, int drawUpTo)
 		// draw it
 		g->drawVAO(&vao);
 	}
-}
-
-void OsuSliderCurve::drawFillSliderBody2(Graphics *g, int drawUpTo, int drawFrom)
-{
-	// generate master circle vao (centered) if the size changed
-	float radius = m_beatmap->getHitcircleDiameter()/2.0f;
-	if (radius != MASTER_CIRCLE_VAO_RADIUS)
-	{
-		MASTER_CIRCLE_VAO_RADIUS = radius;
-		MASTER_CIRCLE_VAO->clear();
-		for (int i=0; i<UNIT_CONE.size()/5; i++)
-		{
-			MASTER_CIRCLE_VAO->addVertex(Vector3((radius * UNIT_CONE[i * 5 + 2]), (radius * UNIT_CONE[i * 5 + 3]), UNIT_CONE[i * 5 + 4]));
-			MASTER_CIRCLE_VAO->addTexcoord(Vector2(UNIT_CONE[i * 5 + 0], UNIT_CONE[i * 5 + 1]));
-		}
-	}
-
-	g->pushTransform();
-
-	// now, translate and draw the master vao for every curve step
-	float startX = 0.0f;
-	float startY = 0.0f;
-	for (int i=drawFrom; i<drawUpTo; ++i)
-	{
-		float x = m_beatmap->osuCoords2Pixels(m_curvePoints[i]).x;
-		float y = m_beatmap->osuCoords2Pixels(m_curvePoints[i]).y;
-
-		g->translate(x-startX, y-startY, 0);
-		g->drawVAO(MASTER_CIRCLE_VAO);
-
-		startX = x;
-		startY = y;
-
-		if (x-radius < m_fBoundingBoxMinX)
-			m_fBoundingBoxMinX = x-radius;
-		if (x+radius > m_fBoundingBoxMaxX)
-			m_fBoundingBoxMaxX = x+radius;
-		if (y-radius < m_fBoundingBoxMinY)
-			m_fBoundingBoxMinY = y-radius;
-		if (y+radius > m_fBoundingBoxMaxY)
-			m_fBoundingBoxMaxY = y+radius;
-	}
-
-	g->popTransform();
 }
 
 void OsuSliderCurve::drawFillCircle(Graphics *g, Vector2 center)

@@ -138,9 +138,8 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen()
 	m_updateAvailableButton->setColor(0x2200ff00);
 	m_updateAvailableButton->setTextColor(0x22ffffff);
 
-	m_todo.push_back("- UI Scaling");
-	m_todo.push_back("- Beatmap Skin");
-	m_todo.push_back("- Score & HP");
+	m_todo.push_back("- Beatmap Skins");
+	m_todo.push_back("- HP Drain");
 	m_todo.push_back("- Skin Anim.");
 	m_todo.push_back("- Skin Prefix");
 	m_todo.push_back("- Replays");
