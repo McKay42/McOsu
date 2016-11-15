@@ -101,7 +101,7 @@ void OsuUISongBrowserSongDifficultyButton::onSelected(bool wasSelected)
 {
 	if (!wasSelected)
 		m_beatmap->selectDifficulty(m_diff, false);
-	m_songBrowser->onDifficultySelected(m_beatmap, m_diff, true, wasSelected);
+	m_songBrowser->onDifficultySelected(m_beatmap, m_diff, wasSelected);
 	m_songBrowser->scrollToSongButton(this);
 
 	// automatically deselect previous selection
