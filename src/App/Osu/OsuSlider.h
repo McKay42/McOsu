@@ -191,33 +191,33 @@ private:
 	std::vector<float> m_curveDistances;
 };
 
-
 class OsuSliderCurveTypeBezier2 : public OsuSliderCurveType
 {
 public:
-	OsuSliderCurveTypeBezier2(std::vector<Vector2> points);
+	OsuSliderCurveTypeBezier2(const std::vector<Vector2> &points);
+	virtual ~OsuSliderCurveTypeBezier2() {;}
 
-	Vector2 pointAt(float t);
+	virtual Vector2 pointAt(float t);
 
 private:
 	static long binomialCoefficient(int n, int k);
 	static double bernstein(int i, int n, float t);
 
-	std::vector<Vector2> m_points;
+	std::vector<Vector2> m_points2;
 };
-
 
 class OsuSliderCurveTypeCentripetalCatmullRom : public OsuSliderCurveType
 {
 public:
-	OsuSliderCurveTypeCentripetalCatmullRom(std::vector<Vector2> points);
+	OsuSliderCurveTypeCentripetalCatmullRom(const std::vector<Vector2> &points);
+	virtual ~OsuSliderCurveTypeCentripetalCatmullRom() {;}
 
-	Vector2 pointAt(float t);
+	virtual Vector2 pointAt(float t);
 
 private:
 	float m_time[4];
 
-	std::vector<Vector2> m_points;
+	std::vector<Vector2> m_points2;
 };
 
 

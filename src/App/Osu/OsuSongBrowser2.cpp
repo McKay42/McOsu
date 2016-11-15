@@ -663,12 +663,9 @@ void OsuSongBrowser2::onPlayEnd(bool quit)
 	m_bHasSelectedAndIsPlaying = false;
 }
 
-void OsuSongBrowser2::onDifficultySelected(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff, bool fromClick, bool play)
+void OsuSongBrowser2::onDifficultySelected(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff, bool play)
 {
 	// remember it
-	// if this is the last one, and we selected with a click, restart the memory
-	if (fromClick && m_previousRandomBeatmaps.size() < 2)
-		m_previousRandomBeatmaps.clear();
 	if (beatmap != m_selectedBeatmap)
 		m_previousRandomBeatmaps.push_back(beatmap);
 
@@ -1316,20 +1313,31 @@ void OsuSongBrowser2::onSelectionOptions()
 
 void OsuSongBrowser2::selectSongButton(OsuUISongBrowserButton *songButton)
 {
-	songButton->select();
+	if (songButton != NULL && !songButton->isSelected())
+		songButton->select();
 }
 
 void OsuSongBrowser2::selectRandomBeatmap()
 {
-	if (m_visibleSongButtons.size() < 1)
+	// filter songButtons
+	std::vector<CBaseUIElement*> elements = m_songBrowser->getContainer()->getAllBaseUIElements();
+	std::vector<OsuUISongBrowserSongButton*> songButtons;
+	for (int i=0; i<elements.size(); i++)
+	{
+		OsuUISongBrowserSongButton *songButton = dynamic_cast<OsuUISongBrowserSongButton*>(elements[i]);
+		if (songButton != NULL && songButton->getBeatmap() != NULL)	// only allow songButtons
+			songButtons.push_back(songButton);
+	}
+
+	if (songButtons.size() < 1)
 		return;
 
 	// remember previous
 	if (m_previousRandomBeatmaps.size() == 0 && m_selectedBeatmap != NULL)
 		m_previousRandomBeatmaps.push_back(m_selectedBeatmap);
 
-	int randomIndex = rand() % m_visibleSongButtons.size();
-	OsuUISongBrowserButton *songButton = m_visibleSongButtons[randomIndex];
+	int randomIndex = rand() % songButtons.size();
+	OsuUISongBrowserSongButton *songButton = dynamic_cast<OsuUISongBrowserSongButton*>(songButtons[randomIndex]);
 	selectSongButton(songButton);
 }
 
@@ -1337,19 +1345,36 @@ void OsuSongBrowser2::selectPreviousRandomBeatmap()
 {
 	if (m_previousRandomBeatmaps.size() > 0)
 	{
+		OsuBeatmap *currentRandomBeatmap = m_previousRandomBeatmaps.back();
 		if (m_previousRandomBeatmaps.size() > 1 && m_previousRandomBeatmaps[m_previousRandomBeatmaps.size()-1] == m_selectedBeatmap)
 			m_previousRandomBeatmaps.pop_back(); // deletes the current beatmap which may also be at the top (so we don't switch to ourself)
 
-		// select it, if we can find it (and remove it from memory)
-		OsuBeatmap *previousRandomBeatmap = m_previousRandomBeatmaps.back();
-		for (int i=0; i<m_visibleSongButtons.size(); i++)
+		// filter songButtons
+		std::vector<CBaseUIElement*> elements = m_songBrowser->getContainer()->getAllBaseUIElements();
+		std::vector<OsuUISongBrowserSongButton*> songButtons;
+		for (int i=0; i<elements.size(); i++)
 		{
-			if (m_visibleSongButtons[i]->getBeatmap() != NULL && m_visibleSongButtons[i]->getBeatmap() == previousRandomBeatmap)
+			OsuUISongBrowserSongButton *songButton = dynamic_cast<OsuUISongBrowserSongButton*>(elements[i]);
+			if (songButton != NULL && songButton->getBeatmap() != NULL)	// only allow songButtons
+				songButtons.push_back(songButton);
+		}
+
+		// select it, if we can find it (and remove it from memory)
+		bool foundIt = false;
+		OsuBeatmap *previousRandomBeatmap = m_previousRandomBeatmaps.back();
+		for (int i=0; i<songButtons.size(); i++)
+		{
+			if (songButtons[i]->getBeatmap() != NULL && songButtons[i]->getBeatmap() == previousRandomBeatmap)
 			{
 				m_previousRandomBeatmaps.pop_back();
-				selectSongButton(m_visibleSongButtons[i]);
+				selectSongButton(songButtons[i]);
+				foundIt = true;
 				break;
 			}
 		}
+
+		// if we didn't find it then restore the current random beatmap, which got pop_back()'d above (shit logic)
+		if (!foundIt)
+			m_previousRandomBeatmaps.push_back(currentRandomBeatmap);
 	}
 }

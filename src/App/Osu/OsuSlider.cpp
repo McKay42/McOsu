@@ -1268,9 +1268,9 @@ void OsuSliderCurveType::init(float approxlength)
 
 
 
-OsuSliderCurveTypeBezier2::OsuSliderCurveTypeBezier2(std::vector<Vector2> points)
+OsuSliderCurveTypeBezier2::OsuSliderCurveTypeBezier2(const std::vector<Vector2> &points) : OsuSliderCurveType()
 {
-	m_points = points;
+	m_points2 = points;
 
 	// approximate by finding the length of all points
 	// (which should be the max possible length of the curve)
@@ -1286,13 +1286,13 @@ OsuSliderCurveTypeBezier2::OsuSliderCurveTypeBezier2(std::vector<Vector2> points
 Vector2 OsuSliderCurveTypeBezier2::pointAt(float t)
 {
 	Vector2 c;
-	int n = m_points.size() - 1;
+	int n = m_points2.size() - 1;
 
 	for (int i=0; i<=n; i++)
 	{
 		double b = bernstein(i, n, t);
-		c.x += m_points[i].x * b;
-		c.y += m_points[i].y * b;
+		c.x += m_points2[i].x * b;
+		c.y += m_points2[i].y * b;
 	}
 	return c;
 }
@@ -1315,7 +1315,7 @@ double OsuSliderCurveTypeBezier2::bernstein(int i, int n, float t)
 	return binomialCoefficient(n, i) * std::pow(t, i) * std::pow(1 - t, n - i);
 }
 
-OsuSliderCurveTypeCentripetalCatmullRom::OsuSliderCurveTypeCentripetalCatmullRom(std::vector<Vector2> points)
+OsuSliderCurveTypeCentripetalCatmullRom::OsuSliderCurveTypeCentripetalCatmullRom(const std::vector<Vector2> &points) : OsuSliderCurveType()
 {
 	if (points.size() != 4)
 	{
@@ -1323,7 +1323,7 @@ OsuSliderCurveTypeCentripetalCatmullRom::OsuSliderCurveTypeCentripetalCatmullRom
 		return;
 	}
 
-	m_points = points;
+	m_points2 = points;
 	m_time[0] = 0.0f;
 	float approxLength = 0;
 
@@ -1350,12 +1350,12 @@ Vector2 OsuSliderCurveTypeCentripetalCatmullRom::pointAt(float t)
 {
 	t = t * (m_time[2] - m_time[1]) + m_time[1];
 
-	Vector2 A1 = m_points[0]*((m_time[1] - t) / (m_time[1] - m_time[0]))
-		  +(m_points[1]*((t - m_time[0]) / (m_time[1] - m_time[0])));
-	Vector2 A2 = m_points[1]*((m_time[2] - t) / (m_time[2] - m_time[1]))
-		  +(m_points[2]*((t - m_time[1]) / (m_time[2] - m_time[1])));
-	Vector2 A3 = m_points[2]*((m_time[3] - t) / (m_time[3] - m_time[2]))
-		  +(m_points[3]*((t - m_time[2]) / (m_time[3] - m_time[2])));
+	Vector2 A1 = m_points2[0]*((m_time[1] - t) / (m_time[1] - m_time[0]))
+		  +(m_points2[1]*((t - m_time[0]) / (m_time[1] - m_time[0])));
+	Vector2 A2 = m_points2[1]*((m_time[2] - t) / (m_time[2] - m_time[1]))
+		  +(m_points2[2]*((t - m_time[1]) / (m_time[2] - m_time[1])));
+	Vector2 A3 = m_points2[2]*((m_time[3] - t) / (m_time[3] - m_time[2]))
+		  +(m_points2[3]*((t - m_time[2]) / (m_time[3] - m_time[2])));
 
 	Vector2 B1 = A1*((m_time[2] - t) / (m_time[2] - m_time[0]))
 		  +(A2*((t - m_time[0]) / (m_time[2] - m_time[0])));
