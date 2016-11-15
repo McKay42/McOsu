@@ -57,7 +57,7 @@ public:
 
 	void onPlayEnd(bool quit = true);	// called when a beatmap is finished playing (or the player quit)
 
-	void onDifficultySelected(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff, bool fromClick = false, bool play = false);
+	void onDifficultySelected(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff, bool play = false);
 
 	void refreshBeatmaps();
 	void scrollToSongButton(OsuUISongBrowserButton *songButton, bool alignOnTop = false);

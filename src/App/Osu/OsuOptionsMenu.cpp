@@ -183,6 +183,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("VSync", convar->getConVarByName("vsync"));
 	addCheckbox("Show FPS Counter", convar->getConVarByName("osu_draw_fps"));
 	addSpacer();
+	addCheckbox("Unlimited FPS", convar->getConVarByName("fps_unlimited"));
 	addSlider("FPS Limiter:", 60.0f, 1000.0f, convar->getConVarByName("fps_max"))->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeInt) );
 
 	addSubSection("Layout");

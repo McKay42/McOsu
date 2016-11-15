@@ -1360,6 +1360,10 @@ void OsuBeatmap::handlePreviewPlay()
 {
 	if (m_music != NULL && (!m_music->isPlaying() || m_music->getPosition() > 0.95f) && m_selectedDifficulty != NULL)
 	{
+		// this is an assumption, but should be good enough for most songs
+		if (m_music->getPosition() > 0.95f)
+			m_iContinueMusicPos = 0;
+
 		engine->getSound()->stop(m_music);
 		if (engine->getSound()->play(m_music))
 		{
