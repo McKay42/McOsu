@@ -2,13 +2,16 @@
 
 **[DOWNLOAD > https://github.com/McKay42/McOsu/releases](https://github.com/McKay42/McOsu/releases)**
 
+**Quick tutorial by Omgforz: [https://www.youtube.com/watch?v=PCLpOdcMQuc](https://www.youtube.com/watch?v=PCLpOdcMQuc)**
+
 **Discord** (Feedback, Requests, Bug reports, etc.): https://discord.gg/3UQnt7X
 
-An unofficial open-source client for [osu!](https://osu.ppy.sh) with the main focus on making practicing easier and customizing gameplay.
+An unofficial open-source client for [osu!](https://osu.ppy.sh) with the main focus on making practicing easier and customizing gameplay. If you have never played osu! before then I do not recommend using this client, as there are no gameplay tutorials in here.
 
-It is running on my own small cross-platform game engine written in C++, which still needs to be cleaned up before I can upload it here.
-Binaries will be available for **Windows** and **Linux**, and maybe macOS in the future.
-Note that Linux support is not as polished as Windows, and some functions such as native fullscreen mode do not work there yet.
+Runs on McEngine: [https://github.com/McKay42/McEngine](https://github.com/McKay42/McEngine)
+
+Binaries are available for **Windows** and **Linux**, and maybe macOS in the future.
+Note that Linux support is not as polished as Windows, and some functions such as native fullscreen mode or raw input do not work there yet.
 
 ##Notable features which osu! doesn't have (yet) in comparison:
 - Mid-play empty section skipping
