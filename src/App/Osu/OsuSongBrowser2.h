@@ -99,6 +99,7 @@ private:
 	void selectPreviousRandomBeatmap();
 
 	Osu *m_osu;
+	std::mt19937 m_rngalg;
 
 	// top bar
 	float m_fSongSelectTopScale;
