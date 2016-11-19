@@ -20,6 +20,7 @@ class OsuBeatmapDifficulty
 {
 public:
 	OsuBeatmapDifficulty(Osu *osu, UString filepath, UString folder);
+	~OsuBeatmapDifficulty();
 	void unload();
 
 	bool loadMetadataRaw();

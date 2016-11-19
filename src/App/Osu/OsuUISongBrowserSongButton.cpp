@@ -25,11 +25,14 @@ OsuUISongBrowserSongButton *OsuUISongBrowserSongButton::previousButton = NULL;
 OsuUISongBrowserSongButton::OsuUISongBrowserSongButton(Osu *osu, OsuSongBrowser2 *songBrowser, CBaseUIScrollView *view, float xPos, float yPos, float xSize, float ySize, UString name, OsuBeatmap *beatmap) : OsuUISongBrowserButton(osu, songBrowser, view, xPos, yPos, xSize, ySize, name)
 {
 	m_beatmap = beatmap;
-
 	m_diff = NULL;
 
+	previousButton = NULL; // reset
+
+	// settings
 	setHideIfSelected(true);
 
+	// labels
 	/*
 	m_sTitle = "Title";
 	m_sArtist = "Artist";
@@ -188,7 +191,7 @@ void OsuUISongBrowserSongButton::update()
 	if (m_fImageLoadScheduledTime != 0.0f && engine->getTime() > m_fImageLoadScheduledTime)
 	{
 		m_fImageLoadScheduledTime = 0.0f;
-		if (m_diff != NULL)
+		if (isVisible() && m_diff != NULL) // only load if we are still visible
 			m_diff->loadBackgroundImage();
 	}
 }
