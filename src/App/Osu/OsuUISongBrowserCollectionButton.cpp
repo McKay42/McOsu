@@ -21,6 +21,8 @@ OsuUISongBrowserCollectionButton::OsuUISongBrowserCollectionButton(Osu *osu, Osu
 	m_sCollectionName = collectionName;
 	m_children = children;
 
+	previousButton = NULL; // reset
+
 	m_fTitleScale = 0.35f;
 
 	setOffsetPercent(0.075f*0.5f);

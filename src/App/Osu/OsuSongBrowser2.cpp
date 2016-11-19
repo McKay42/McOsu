@@ -276,6 +276,15 @@ void OsuSongBrowser2::draw(Graphics *g)
 	}
 	g->popTransform();
 	*/
+
+	// debug thumbnail resource loading
+	/*
+	g->setColor(0xffffffff);
+	g->pushTransform();
+		g->translate(m_osu->getScreenWidth()/5, m_osu->getScreenHeight()/3);
+		g->drawString(m_osu->getSongBrowserFont(), UString::format("%i", engine->getResourceManager()->getNumResources()));
+	g->popTransform();
+	*/
 }
 
 void OsuSongBrowser2::drawSelectedBeatmapBackgroundImage(Graphics *g, Osu *osu)
@@ -706,8 +715,17 @@ void OsuSongBrowser2::refreshBeatmaps()
 	m_selectedBeatmap = NULL;
 
 	// delete database
-	m_songBrowser->clear();
+	m_songBrowser->getContainer()->empty();
+	for (int i=0; i<m_songButtons.size(); i++)
+	{
+		delete m_songButtons[i];
+	}
 	m_songButtons.clear();
+	for (int i=0; i<m_collectionButtons.size(); i++)
+	{
+		delete m_collectionButtons[i];
+	}
+	m_collectionButtons.clear();
 	m_visibleSongButtons.clear();
 	m_beatmaps.clear();
 	m_previousRandomBeatmaps.clear();
@@ -1219,7 +1237,7 @@ CBaseUIButton *OsuSongBrowser2::addTopBarRightButton(UString text)
 
 void OsuSongBrowser2::onDatabaseLoadingFinished()
 {
-	m_beatmaps = m_db->getBeatmaps(); // having a copy of the vector in here is actually completely unnecessary
+	m_beatmaps = std::vector<OsuBeatmap*>(m_db->getBeatmaps()); // having a copy of the vector in here is actually completely unnecessary
 
 	debugLog("OsuSongBrowser2::onDatabaseLoadingFinished() : %i beatmaps.\n", m_beatmaps.size());
 

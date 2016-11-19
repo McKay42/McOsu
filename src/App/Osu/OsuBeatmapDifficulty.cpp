@@ -89,6 +89,11 @@ OsuBeatmapDifficulty::OsuBeatmapDifficulty(Osu *osu, UString filepath, UString f
 	m_backgroundImagePathLoader = NULL;
 }
 
+OsuBeatmapDifficulty::~OsuBeatmapDifficulty()
+{
+	unloadBackgroundImage();
+}
+
 void OsuBeatmapDifficulty::unload()
 {
 	loaded = false;
