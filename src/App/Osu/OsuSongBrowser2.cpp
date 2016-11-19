@@ -49,6 +49,8 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 {
 	m_osu = osu;
 
+	m_rngalg = std::mt19937(time(0));
+
 	// convar refs
 	m_fps_max_ref = convar->getConVarByName("fps_max");
 
@@ -1336,7 +1338,8 @@ void OsuSongBrowser2::selectRandomBeatmap()
 	if (m_previousRandomBeatmaps.size() == 0 && m_selectedBeatmap != NULL)
 		m_previousRandomBeatmaps.push_back(m_selectedBeatmap);
 
-	int randomIndex = rand() % songButtons.size();
+	std::uniform_int_distribution<int> rng(0, songButtons.size()-1);
+	int randomIndex = rng(m_rngalg);
 	OsuUISongBrowserSongButton *songButton = dynamic_cast<OsuUISongBrowserSongButton*>(songButtons[randomIndex]);
 	selectSongButton(songButton);
 }
