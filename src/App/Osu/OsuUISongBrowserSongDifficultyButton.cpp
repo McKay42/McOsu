@@ -24,6 +24,8 @@ OsuUISongBrowserSongDifficultyButton::OsuUISongBrowserSongDifficultyButton(Osu *
 	m_beatmap = beatmap;
 	m_diff = diff;
 
+	previousButton = NULL; // reset
+
 	/*
 	m_sTitle = "Title";
 	m_sArtist = "Artist";

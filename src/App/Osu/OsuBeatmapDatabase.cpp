@@ -242,6 +242,7 @@ void OsuBeatmapDatabase::loadRaw()
 void OsuBeatmapDatabase::loadDB(OsuFile *db)
 {
 	// reset
+	m_collections.clear();
 	for (int i=0; i<m_beatmaps.size(); i++)
 	{
 		delete m_beatmaps[i];
