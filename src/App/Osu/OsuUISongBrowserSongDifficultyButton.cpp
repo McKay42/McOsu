@@ -40,6 +40,7 @@ OsuUISongBrowserSongDifficultyButton::OsuUISongBrowserSongDifficultyButton(Osu *
 
 	m_fDiffScale = 0.18f;
 
+	// settings
 	setHideIfSelected(false);
 	setOffsetPercent(0.075f);
 	setInactiveBackgroundColor(COLOR(255, 0, 150, 236));
@@ -114,5 +115,6 @@ void OsuUISongBrowserSongDifficultyButton::onSelected(bool wasSelected)
 
 void OsuUISongBrowserSongDifficultyButton::onDeselected()
 {
-	// do nothing
+	// since unselected elements will NOT get a setVisible(false) event by the scrollview, we have to manually hide them if unselected
+	setVisible(false); // this also unloads the thumbnail
 }
