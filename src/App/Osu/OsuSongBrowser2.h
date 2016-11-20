@@ -127,8 +127,6 @@ private:
 	std::vector<OsuUISongBrowserCollectionButton*> m_collectionButtons;
 	bool m_bBeatmapRefreshScheduled;
 	UString m_sLastOsuFolder;
-	int m_iFullRefreshCounter;
-	float m_fFullRefreshResetTime;
 
 	// keys
 	bool m_bF1Pressed;
