@@ -21,6 +21,9 @@
 #include "RenderTarget.h"
 #include "Shader.h"
 
+#include "CWindowManager.h"
+//#include "DebugMonitor.h"
+
 #include "OsuMainMenu.h"
 #include "OsuOptionsMenu.h"
 #include "OsuSongBrowser2.h"
@@ -157,6 +160,14 @@ Osu::Osu()
 
 	m_bShouldCursorBeVisible = false;
 
+	// debug
+	m_windowManager = new CWindowManager();
+	/*
+	DebugMonitor *dm = new DebugMonitor();
+	m_windowManager->addWindow(dm);
+	dm->open();
+	*/
+
 	// renderer
 	g_vInternalResolution = engine->getScreenSize();
 	m_frameBuffer = new RenderTarget(0, 0, getScreenWidth(), getScreenHeight());
@@ -222,6 +233,8 @@ Osu::Osu()
 
 Osu::~Osu()
 {
+	SAFE_DELETE(m_windowManager);
+
 	for (int i=0; i<m_screens.size(); i++)
 	{
 		SAFE_DELETE(m_screens[i]);
@@ -281,6 +294,8 @@ void Osu::draw(Graphics *g)
 
 		m_hud->drawVolumeChange(g);
 
+		m_windowManager->draw(g);
+
 		if (!(m_bModAuto || m_bModAutopilot) && allowDrawCursor)
 			m_hud->drawCursor(g, getSelectedBeatmap()->getCursorPos(), osu_mod_fadingcursor.getBool() ? fadingCursorAlpha : 1.0f);
 	}
@@ -297,6 +312,8 @@ void Osu::draw(Graphics *g)
 			m_hud->drawFps(g);
 
 		m_hud->drawVolumeChange(g);
+
+		m_windowManager->draw(g);
 
 		m_hud->drawCursor(g, engine->getMouse()->getPos());
 	}
@@ -321,6 +338,8 @@ void Osu::draw(Graphics *g)
 
 void Osu::update()
 {
+	m_windowManager->update();
+
 	for (int i=0; i<m_screens.size(); i++)
 	{
 		m_screens[i]->update();

@@ -19,6 +19,8 @@
 
 #include "OsuUISongBrowserSongDifficultyButton.h"
 
+ConVar osu_songbrowser_thumbnail_delay("osu_songbrowser_thumbnail_delay", 0.1f);
+
 float OsuUISongBrowserSongButton::thumbnailYRatio = 1.333333f;
 OsuUISongBrowserSongButton *OsuUISongBrowserSongButton::previousButton = NULL;
 
@@ -26,6 +28,7 @@ OsuUISongBrowserSongButton::OsuUISongBrowserSongButton(Osu *osu, OsuSongBrowser2
 {
 	m_beatmap = beatmap;
 	m_diff = NULL;
+	m_parent = NULL;
 
 	previousButton = NULL; // reset
 
@@ -38,17 +41,6 @@ OsuUISongBrowserSongButton::OsuUISongBrowserSongButton(Osu *osu, OsuSongBrowser2
 	m_sArtist = "Artist";
 	m_sMapper = "Mapper";
 	*/
-
-	if (m_beatmap != NULL && m_beatmap->getDifficulties().size() > 0)
-	{
-		OsuBeatmapDifficulty *defaultDiff = m_beatmap->getDifficulties()[0];
-
-		m_diff = defaultDiff;
-
-		m_sTitle = defaultDiff->title;
-		m_sArtist = defaultDiff->artist;
-		m_sMapper = defaultDiff->creator;
-	}
 
 	m_fImageLoadScheduledTime = 0.0f;
 	m_fTextOffset = 0.0f;
@@ -83,9 +75,22 @@ OsuUISongBrowserSongButton::OsuUISongBrowserSongButton(Osu *osu, OsuSongBrowser2
 		// and add them
 		for (int i=0; i<difficulties.size(); i++)
 		{
-			OsuUISongBrowserButton *songButton = new OsuUISongBrowserSongDifficultyButton(m_osu, m_songBrowser, m_view, 0, 0, 0, 0, "", m_beatmap, difficulties[i]);
+			OsuUISongBrowserSongButton *songButton = new OsuUISongBrowserSongDifficultyButton(m_osu, m_songBrowser, m_view, 0, 0, 0, 0, "", m_beatmap, difficulties[i]);
+			songButton->setParent(this);
 			m_children.push_back(songButton);
 		}
+	}
+
+	// select representative default diff for parent (beatmap button)
+	if (m_beatmap != NULL && m_children.size() > 0)
+	{
+		OsuBeatmapDifficulty *defaultDiff = (dynamic_cast<OsuUISongBrowserSongButton*>(m_children[m_children.size()-1]))->getDiff();
+
+		m_diff = defaultDiff;
+
+		m_sTitle = defaultDiff->title;
+		m_sArtist = defaultDiff->artist;
+		m_sMapper = defaultDiff->creator;
 	}
 
 	updateLayout();
@@ -248,27 +253,31 @@ void OsuUISongBrowserSongButton::onDeselected()
 	{
 		m_children[i]->deselect();
 	}
-	m_beatmap->deselect();
+	m_beatmap->deselect(false);
 	m_songBrowser->rebuildSongButtons(false);
+
+	// after the songbrowser has now rebuilt the layout, check if we are still visible or could potentially unload
+	checkLoadUnloadImage();
 }
 
 void OsuUISongBrowserSongButton::checkLoadUnloadImage()
 {
-	// dynamically load thumbnails
+	// dynamically load/unload thumbnails
 	if (m_bVisible)
 	{
 		// visibility delay, don't load immediately but only if we are visible for a minimum amount of time (to avoid useless loads)
-		m_fImageLoadScheduledTime = engine->getTime() + 0.1f;
+		m_fImageLoadScheduledTime = engine->getTime() + osu_songbrowser_thumbnail_delay.getFloat();
 
 		// the actual loading is happening in OsuUISongBrowserSongButton::update()
 	}
 	else
 	{
-		// TODO: only allow unloading on children if the parent has been deselected!
-		// 		 currently, if the first child (m_children[0]) gets unloaded then the parent logically loses the thumbnail
-		// also, if we switch beatmaps then the deselect() will cause all children to unload, thus also unloading the parent thumbnail
-
+		// block/stop all potentially scheduled loads
 		m_fImageLoadScheduledTime = 0.0f;
+
+		// in pure OsuUISongBrowserSongButtons, m_diff will be the default diff which represents this beatmap (selected in the constructor)
+		// in OsuUISongBrowserSongDifficultyButtons, m_diff will be the diff this button is responsible for
+
 		if (m_diff != NULL)
 		{
 			// only allow unloading if we are not selected and no children of us are selected
@@ -282,7 +291,18 @@ void OsuUISongBrowserSongButton::checkLoadUnloadImage()
 				}
 			}
 
-			if (!isSelected() && !areChildrenSelected)
+			bool isChild = m_parent != NULL;
+			bool isChildBlockingUnload = false;
+			if (isChild)
+			{
+				// only allow unloading if we are not the representative child of the parent, and if our parent is not selected
+				// this also forces the thumbnails of the currently opened beatmap (all diffs) to not be unloaded (even if some diffs become invisible due to scrolling)
+				// TODO: if a beatmap has a shitload of diffs, this will keep all images loaded and could potentially crash on GPUs with very little VRAM
+				if (m_diff == m_parent->getDiff() || m_parent->isSelected())
+					isChildBlockingUnload = true;
+			}
+
+			if (!isSelected() && !areChildrenSelected && !isChildBlockingUnload)
 				m_diff->unloadBackgroundImage();
 		}
 	}

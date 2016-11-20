@@ -281,8 +281,17 @@ void OsuSongBrowser2::draw(Graphics *g)
 	/*
 	g->setColor(0xffffffff);
 	g->pushTransform();
-		g->translate(m_osu->getScreenWidth()/5, m_osu->getScreenHeight()/3);
-		g->drawString(m_osu->getSongBrowserFont(), UString::format("%i", engine->getResourceManager()->getNumResources()));
+		g->translate(m_osu->getScreenWidth()/6, m_osu->getScreenHeight()/3);
+		g->drawString(m_osu->getSongBrowserFont(), UString::format("res %i", engine->getResourceManager()->getNumResources()));
+		g->translate(0, m_osu->getSongBrowserFont()->getHeight()*2);
+		int numVisibleSongButtons = 0;
+		std::vector<CBaseUIElement*> *elements = m_songBrowser->getContainer()->getAllBaseUIElementsPointer();
+		for (int i=0; i<elements->size(); i++)
+		{
+			if ((*elements)[i]->isVisible())
+				numVisibleSongButtons++;
+		}
+		g->drawString(m_osu->getSongBrowserFont(), UString::format("vis %i", numVisibleSongButtons));
 	g->popTransform();
 	*/
 }
