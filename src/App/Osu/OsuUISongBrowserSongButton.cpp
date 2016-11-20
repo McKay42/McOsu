@@ -166,6 +166,10 @@ void OsuUISongBrowserSongButton::drawTitle(Graphics *g, float deselectedAlpha)
 		g->scale(titleScale, titleScale);
 		g->translate(pos.x + m_fTextOffset, pos.y + size.y*m_fTextMarginScale + m_font->getHeight()*titleScale);
 		g->drawString(m_font, buildTitleString());
+
+		// debugging
+		//g->drawString(m_font, UString::format("%i, %i", m_diff->setID, m_diff->ID));
+
 	g->popTransform();
 }
 

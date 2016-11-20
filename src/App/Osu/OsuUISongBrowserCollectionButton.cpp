@@ -14,6 +14,8 @@
 #include "OsuBeatmap.h"
 #include "OsuSongBrowser2.h"
 
+#include "OsuBeatmapDifficulty.h"
+
 OsuUISongBrowserCollectionButton *OsuUISongBrowserCollectionButton::previousButton = NULL;
 
 OsuUISongBrowserCollectionButton::OsuUISongBrowserCollectionButton(Osu *osu, OsuSongBrowser2 *songBrowser, CBaseUIScrollView *view, float xPos, float yPos, float xSize, float ySize, UString name, UString collectionName, std::vector<OsuUISongBrowserButton*> children) : OsuUISongBrowserButton(osu, songBrowser, view, xPos, yPos, xSize, ySize, name)
@@ -109,5 +111,13 @@ UString OsuUISongBrowserCollectionButton::buildTitleString()
 			numChildren += m_children[i]->getBeatmap()->getDifficulties().size();
 	}
 	titleString.append(UString::format((numChildren == 1 ? " (%i map)" : " (%i maps)"), numChildren));
+
+	// debugging
+	/*
+	titleString.append(" ");
+	if (m_children.size() > 0)
+		titleString.append(UString::format("%i, %i", m_children[0]->getBeatmap()->getDifficulties()[0]->setID, m_children[0]->getBeatmap()->getDifficulties()[0]->ID));
+	*/
+
 	return titleString;
 }
