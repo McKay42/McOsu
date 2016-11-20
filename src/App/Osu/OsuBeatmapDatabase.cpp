@@ -276,7 +276,7 @@ void OsuBeatmapDatabase::loadDB(OsuFile *db)
 	// read beatmapInfos
 	struct BeatmapSet
 	{
-		unsigned int setID;
+		int setID;
 		UString path;
 		std::vector<OsuBeatmapDifficulty*> diffs;
 	};
@@ -373,7 +373,7 @@ void OsuBeatmapDatabase::loadDB(OsuFile *db)
 		}
 
 		unsigned int beatmapID = db->readInt();
-		unsigned int beatmapSetID = db->readInt();
+		int beatmapSetID = db->readInt(); // fucking bullshit, this is NOT an unsigned integer as is described on the wiki, it can and is -1 sometimes
 		unsigned int threadID = db->readInt();
 
 		unsigned char osuStandardGrade = db->readByte();
@@ -510,13 +510,57 @@ void OsuBeatmapDatabase::loadDB(OsuFile *db)
 	}
 
 	// we now have a collection of BeatmapSets (where one set is equal to one beatmap and all of its diffs), build the actual OsuBeatmap objects
+	// first, build all beatmaps which have a valid setID (trusting the values from the osu database)
 	for (int i=0; i<beatmapSets.size(); i++)
 	{
 		if (beatmapSets[i].diffs.size() > 0) // sanity check
 		{
-			OsuBeatmap *bm = new OsuBeatmap(m_osu, beatmapSets[i].path);
-			bm->setDifficulties(beatmapSets[i].diffs);
-			m_beatmaps.push_back(bm);
+			if (beatmapSets[i].setID > 0)
+			{
+				OsuBeatmap *bm = new OsuBeatmap(m_osu, beatmapSets[i].path);
+				bm->setDifficulties(beatmapSets[i].diffs);
+				m_beatmaps.push_back(bm);
+			}
+		}
+	}
+	// second, handle all diffs which have an invalid setID, and group them exclusively by artist and title (diffs with the same artist and title will end up in the same beatmap object)
+	// this goes through every individual diff in a "set" (not really a set because its ID is either 0 or -1) instead of trusting the ID values from the osu database
+	for (int i=0; i<beatmapSets.size(); i++)
+	{
+		if (beatmapSets[i].diffs.size() > 0) // sanity check
+		{
+			if (beatmapSets[i].setID < 1)
+			{
+				for (int b=0; b<beatmapSets[i].diffs.size(); b++)
+				{
+					OsuBeatmapDifficulty *diff = beatmapSets[i].diffs[b];
+
+					// try finding an already existing beatmap with matching artist and title
+					bool existsAlready = false;
+					for (int e=0; e<m_beatmaps.size(); e++)
+					{
+						if (m_beatmaps[e]->getTitle() == diff->title && m_beatmaps[e]->getArtist() == diff->artist)
+						{
+							existsAlready = true;
+
+							// we have found a matching beatmap, add ourself to its diffs
+							m_beatmaps[e]->getDifficultiesPointer()->push_back(diff);
+
+							break;
+						}
+					}
+
+					// if we couldn't find any beatmap with our title and artist, create a new one
+					if (!existsAlready)
+					{
+						OsuBeatmap *bm = new OsuBeatmap(m_osu, beatmapSets[i].path);
+						std::vector<OsuBeatmapDifficulty*> diffs;
+						diffs.push_back(beatmapSets[i].diffs[b]);
+						bm->setDifficulties(diffs);
+						m_beatmaps.push_back(bm);
+					}
+				}
+			}
 		}
 	}
 
