@@ -100,7 +100,6 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	// beatmap database
 	m_db = new OsuBeatmapDatabase(m_osu);
 	m_bBeatmapRefreshScheduled = true;
-	m_iFullRefreshCounter = 0;
 
 	// behaviour
 	m_bHasSelectedAndIsPlaying = false;
@@ -396,10 +395,6 @@ void OsuSongBrowser2::update()
 			scrollToCurrentlySelectedSongButton();
 		}
 	}
-
-	// handle total reset reset
-	if (m_iFullRefreshCounter > 0 && engine->getTime() > m_fFullRefreshResetTime + 3.0f)
-		m_iFullRefreshCounter = 0;
 }
 
 void OsuSongBrowser2::onKeyDown(KeyboardEvent &key)
@@ -742,26 +737,6 @@ void OsuSongBrowser2::refreshBeatmaps()
 	// start loading
 	m_bBeatmapRefreshScheduled = true;
 	m_db->load();
-
-	// check for total reset request
-	if (!m_db->foundChanges())
-	{
-		const int numPressesForTotalReset = 4;
-
-		m_fFullRefreshResetTime = engine->getTime();
-		m_iFullRefreshCounter++;
-		if (m_iFullRefreshCounter > numPressesForTotalReset)
-		{
-			m_iFullRefreshCounter = 0;
-			m_db->reset();
-			m_db->load();
-		}
-		else if (m_iFullRefreshCounter > 1)
-		{
-			int pressAgainCounter = (numPressesForTotalReset+1)-m_iFullRefreshCounter;
-			m_osu->getNotificationOverlay()->addNotification(UString::format(pressAgainCounter == 1 ? "Press again %i time to reload database ..." : "Press again %i times to reload database ...", pressAgainCounter), 0xffffff00);
-		}
-	}
 }
 
 void OsuSongBrowser2::scrollToSongButton(OsuUISongBrowserButton *songButton, bool alignOnTop)
@@ -1256,7 +1231,7 @@ void OsuSongBrowser2::onDatabaseLoadingFinished()
 		OsuUISongBrowserSongButton *songButton = new OsuUISongBrowserSongButton(m_osu, this, m_songBrowser, 250, 250 + m_beatmaps.size()*50, 200, 50, "", m_beatmaps[i]);
 
 		m_songButtons.push_back(songButton);
-		///m_visibleSongButtons.push_back(songButton);
+		m_visibleSongButtons.push_back(songButton);
 	}
 
 	std::vector<OsuBeatmapDatabase::Collection> collections = m_db->getCollections();
@@ -1278,7 +1253,7 @@ void OsuSongBrowser2::onDatabaseLoadingFinished()
 		OsuUISongBrowserCollectionButton *collectionButton = new OsuUISongBrowserCollectionButton(m_osu, this, m_songBrowser, 250, 250 + m_beatmaps.size()*50, 200, 50, "", collections[i].name, children);
 
 		m_collectionButtons.push_back(collectionButton);
-		m_visibleSongButtons.push_back(collectionButton);
+		///m_visibleSongButtons.push_back(collectionButton);
 	}
 
 	rebuildSongButtons();

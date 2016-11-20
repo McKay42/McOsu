@@ -31,14 +31,20 @@ public:
 	{
 		m_diff = diff;
 
+		m_bDead = false;
+
 		m_bAsyncReady = false;
 		m_bReady = false;
 	};
+
+	void kill() {m_bDead = true;}
 
 protected:
 	virtual void init()
 	{
 		m_bReady = true; // this is up here on purpose
+		if (m_bDead) return;
+
 		if (m_diff->shouldBackgroundImageBeLoaded()) // check if we still really need to load the image (could have changed while loading the path)
 			m_diff->loadBackgroundImage(); // this immediately deletes us, which is allowed since the init() function is the last event and nothing happens after the call in here
 		else
@@ -46,6 +52,12 @@ protected:
 	}
 	virtual void initAsync()
 	{
+		if (m_bDead)
+		{
+			m_bAsyncReady = true;
+			return;
+		}
+
 		m_diff->loadBackgroundImagePath();
 		m_bAsyncReady = true;
 	}
@@ -53,6 +65,7 @@ protected:
 
 private:
 	OsuBeatmapDifficulty *m_diff;
+	bool m_bDead;
 };
 
 OsuBeatmapDifficulty::OsuBeatmapDifficulty(Osu *osu, UString filepath, UString folder)
@@ -95,6 +108,11 @@ OsuBeatmapDifficulty::OsuBeatmapDifficulty(Osu *osu, UString filepath, UString f
 
 OsuBeatmapDifficulty::~OsuBeatmapDifficulty()
 {
+	if (m_backgroundImagePathLoader != NULL)
+	{
+		m_backgroundImagePathLoader->kill();
+		engine->getResourceManager()->destroyResource(m_backgroundImagePathLoader);
+	}
 	unloadBackgroundImage();
 }
 
