@@ -219,8 +219,8 @@ void OsuBeatmapDatabase::loadRaw()
 		m_bFoundChanges = m_iNumBeatmapsToLoad > 0;
 		if (m_bFoundChanges)
 			m_osu->getNotificationOverlay()->addNotification(UString::format(m_iNumBeatmapsToLoad == 1 ? "Adding %i new beatmap." : "Adding %i new beatmaps.", m_iNumBeatmapsToLoad), 0xff00ff00);
-		else
-			m_osu->getNotificationOverlay()->addNotification(UString::format("No new beatmaps detected.", m_iNumBeatmapsToLoad), 0xff00ff00);
+		//else
+		//	m_osu->getNotificationOverlay()->addNotification(UString::format("No new beatmaps detected.", m_iNumBeatmapsToLoad), 0xff00ff00);
 	}
 
 	debugLog("Database: Building beatmap database ...\n");
@@ -235,6 +235,8 @@ void OsuBeatmapDatabase::loadRaw()
 		m_bRawBeatmapLoadScheduled = true;
 		m_importTimer->start();
 	}
+	else
+		m_fLoadingProgress = 1.0f;
 
 	m_bIsFirstLoad = false;
 }
