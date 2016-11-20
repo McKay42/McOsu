@@ -39,7 +39,10 @@ protected:
 	virtual void init()
 	{
 		m_bReady = true; // this is up here on purpose
-		m_diff->loadBackgroundImage(); // this immediately deletes us, which is allowed since the init() function is the last event and nothing happens after the call in here
+		if (m_diff->shouldBackgroundImageBeLoaded()) // check if we still really need to load the image (could have changed while loading the path)
+			m_diff->loadBackgroundImage(); // this immediately deletes us, which is allowed since the init() function is the last event and nothing happens after the call in here
+		else
+			m_diff->deleteBackgroundImagePathLoader(); // same here
 	}
 	virtual void initAsync()
 	{
@@ -59,6 +62,7 @@ OsuBeatmapDifficulty::OsuBeatmapDifficulty(Osu *osu, UString filepath, UString f
 	loaded = false;
 	m_sFilePath = filepath;
 	m_sFolder = folder;
+	m_bShouldBackgroundImageBeLoaded = false;
 
 	// default values
 	stackLeniency = 0.7f;
@@ -658,12 +662,19 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 	return true;
 }
 
+void OsuBeatmapDifficulty::deleteBackgroundImagePathLoader()
+{
+	SAFE_DELETE(m_backgroundImagePathLoader);
+}
+
 void OsuBeatmapDifficulty::loadBackgroundImage()
 {
+	m_bShouldBackgroundImageBeLoaded = true;
+
 	if (m_backgroundImagePathLoader != NULL) // handle loader cleanup
 	{
 		if (m_backgroundImagePathLoader->isReady())
-			SAFE_DELETE(m_backgroundImagePathLoader);
+			deleteBackgroundImagePathLoader();
 	}
 	else if (backgroundImageName.length() < 1) // dynamically load background image path from osu file if it wasn't set by the database
 	{
@@ -689,6 +700,8 @@ void OsuBeatmapDifficulty::loadBackgroundImage()
 
 void OsuBeatmapDifficulty::unloadBackgroundImage()
 {
+	m_bShouldBackgroundImageBeLoaded = false;
+
 	if (Osu::debug->getBool() && backgroundImage != NULL)
 		debugLog("Unloading %s\n", backgroundImage->getFilePath().toUtf8());
 

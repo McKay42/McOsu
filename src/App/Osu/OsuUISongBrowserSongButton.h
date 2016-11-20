@@ -26,9 +26,13 @@ public:
 	virtual void updateLayout();
 
 	void setVisible(bool visible);
+	void setParent(OsuUISongBrowserSongButton *parent) {m_parent = parent;}
 
 	virtual OsuBeatmap *getBeatmap() {return m_beatmap;}
 	virtual std::vector<OsuUISongBrowserButton*> getChildren();
+
+	inline OsuBeatmapDifficulty *getDiff() {return m_diff;}
+	inline OsuUISongBrowserSongButton *getParent() {return m_parent;}
 
 protected:
 	virtual void onSelected(bool wasSelected);
@@ -37,6 +41,8 @@ protected:
 	void drawBeatmapBackgroundThumbnail(Graphics *g, Image *image);
 	void drawTitle(Graphics *g, float deselectedAlpha = 1.0f);
 	void drawSubTitle(Graphics *g, float deselectedAlpha = 1.0f);
+
+	void checkLoadUnloadImage();
 
 	UString buildTitleString()
 	{
@@ -68,9 +74,8 @@ private:
 	static float thumbnailYRatio;
 	static OsuUISongBrowserSongButton *previousButton;
 
-	void checkLoadUnloadImage();
-
 	OsuBeatmap *m_beatmap;
+	OsuUISongBrowserSongButton *m_parent;
 
 	float m_fImageLoadScheduledTime;
 };
