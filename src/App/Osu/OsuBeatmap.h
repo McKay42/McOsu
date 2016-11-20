@@ -106,6 +106,7 @@ public:
 
 	inline OsuBeatmapDifficulty *getSelectedDifficulty() {return m_selectedDifficulty;}
 	inline std::vector<OsuBeatmapDifficulty*> getDifficulties() {return m_difficulties;}
+	inline std::vector<OsuBeatmapDifficulty*> *getDifficultiesPointer() {return &m_difficulties;}
 	inline int getNumDifficulties() {return m_difficulties.size();}
 
 	inline bool isPlaying() {return m_bIsPlaying;}
