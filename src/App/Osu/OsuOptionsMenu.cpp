@@ -33,6 +33,7 @@
 #include "OsuUIButton.h"
 #include "OsuUISlider.h"
 #include "OsuUIBackButton.h"
+#include "OsuUIContextMenu.h"
 
 #include <iostream>
 #include <fstream>
@@ -158,7 +159,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_options->setHorizontalScrolling(false);
 	m_container->addBaseUIElement(m_options);
 
-	m_contextMenu = new OsuUIListBoxContextMenu(50, 50, 150, 0, "", m_options);
+	m_contextMenu = new OsuUIContextMenu(50, 50, 150, 0, "", m_options);
 
 	//**************************************************************************************************************************//
 
@@ -1249,126 +1250,4 @@ void OsuOptionsMenu::save()
 	out << "osu_skin " << convar->getConVarByName("osu_skin")->getString().toUtf8() << "\n";
 
 	out.close();
-}
-
-
-
-OsuUIListBoxContextMenu::OsuUIListBoxContextMenu(float xPos, float yPos, float xSize, float ySize, UString name, CBaseUIScrollView *parent) : CBaseUIElement(xPos, yPos, xSize, ySize, name)
-{
-	m_parent = parent;
-	m_container = new CBaseUIContainer(xPos, yPos, xSize, ySize, name);
-	m_iYCounter = 0;
-	m_iWidthCounter = 0;
-
-	m_bVisible = false;
-	m_bVisible2 = false;
-	m_clickCallback = NULL;
-}
-
-OsuUIListBoxContextMenu::~OsuUIListBoxContextMenu()
-{
-	SAFE_DELETE(m_container);
-}
-
-void OsuUIListBoxContextMenu::draw(Graphics *g)
-{
-	if (!m_bVisible || !m_bVisible2) return;
-
-	// draw background
-	g->setColor(0xff222222);
-	g->fillRect(m_vPos.x+1, m_vPos.y+1, m_vSize.x-1, m_vSize.y-1);
-
-	// draw frame
-	g->setColor(0xffffffff);
-	g->drawRect(m_vPos.x, m_vPos.y, m_vSize.x, m_vSize.y);
-
-	m_container->draw(g);
-}
-
-void OsuUIListBoxContextMenu::update()
-{
-	CBaseUIElement::update();
-	if (!m_bVisible || !m_bVisible2) return;
-
-	m_container->update();
-}
-
-void OsuUIListBoxContextMenu::onResized()
-{
-	m_container->setSize(m_vSize);
-}
-
-void OsuUIListBoxContextMenu::onMoved()
-{
-	m_container->setPos(m_vPos);
-}
-
-void OsuUIListBoxContextMenu::onMouseDownOutside()
-{
-	setVisible2(false);
-}
-
-void OsuUIListBoxContextMenu::onFocusStolen()
-{
-	m_container->stealFocus();
-}
-
-void OsuUIListBoxContextMenu::begin()
-{
-	m_iYCounter = 0;
-	m_iWidthCounter = 0;
-	m_container->clear();
-}
-
-void OsuUIListBoxContextMenu::addButton(UString text)
-{
-	int buttonHeight = 30;
-	int margin = 9;
-
-	CBaseUIButton *button = new CBaseUIButton(margin, m_iYCounter + margin, 0, buttonHeight, text, text);
-	button->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUIListBoxContextMenu::onClick) );
-	button->setWidthToContent(3);
-	button->setTextLeft(true);
-	button->setDrawFrame(false);
-	button->setDrawBackground(false);
-	m_container->addBaseUIElement(button);
-
-	if (button->getSize().x+2*margin > m_iWidthCounter)
-	{
-		m_iWidthCounter = button->getSize().x + 2*margin;
-		setSizeX(m_iWidthCounter);
-	}
-
-	m_iYCounter += buttonHeight;
-	setSizeY(m_iYCounter + 2*margin);
-}
-
-void OsuUIListBoxContextMenu::end()
-{
-	int margin = 9;
-
-	std::vector<CBaseUIElement*> *elements = m_container->getAllBaseUIElementsPointer();
-	for (int i=0; i<elements->size(); i++)
-	{
-		((*elements)[i])->setSizeX(m_iWidthCounter-2*margin);
-	}
-
-	setVisible2(true);
-}
-
-void OsuUIListBoxContextMenu::setVisible2(bool visible2)
-{
-	m_bVisible2 = visible2;
-
-	if (!m_bVisible2)
-		setSize(1,1); // reset size
-
-	m_parent->setScrollSizeToContent(); // and update parent scroll size
-}
-
-void OsuUIListBoxContextMenu::onClick(CBaseUIButton *button)
-{
-	setVisible2(false);
-	if (m_clickCallback != NULL)
-		m_clickCallback(button->getName());
 }
