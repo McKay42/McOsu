@@ -18,13 +18,16 @@ public:
 
 	virtual void draw(Graphics *g);
 
-	virtual OsuBeatmap *getBeatmap() {return NULL;}
+	virtual void setPreviousButton(OsuUISongBrowserCollectionButton *previousButton);
+	virtual OsuUISongBrowserCollectionButton *getPreviousButton();
+
+	virtual OsuBeatmap *getBeatmap() const {return NULL;}
 	virtual std::vector<OsuUISongBrowserButton*> getChildren();
 
 	inline UString getCollectionName() {return m_sCollectionName;}
 
 private:
-	static OsuUISongBrowserCollectionButton *previousButton;
+	static OsuUISongBrowserCollectionButton *s_previousButton;
 
 	virtual void onSelected(bool wasSelected);
 	virtual void onDeselected();
