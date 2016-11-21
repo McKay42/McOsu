@@ -16,11 +16,14 @@ class OsuBeatmap;
 class OsuBeatmapDatabase;
 class OsuBeatmapDifficulty;
 
+class OsuUIContextMenu;
 class OsuUISelectionButton;
 class OsuUISongBrowserInfoLabel;
 class OsuUISongBrowserButton;
 class OsuUISongBrowserSongButton;
 class OsuUISongBrowserCollectionButton;
+
+class OsuUISongBrowserDifficultyCollectionButton;
 
 class CBaseUIContainer;
 class CBaseUIImageButton;
@@ -82,12 +85,17 @@ private:
 	void scheduleSearchUpdate(bool immediately = false);
 
 	OsuUISelectionButton *addBottombarNavButton();
-	CBaseUIButton *addTopBarRightButton(UString text);
+	CBaseUIButton *addTopBarRightTabButton(UString text);
+	CBaseUIButton *addTopBarRightSortButton(UString text);
 
 	void onDatabaseLoadingFinished();
 
+	void onSortClicked(CBaseUIButton *button);
+	void onSortChange(UString text);
+
 	void onGroupNoGrouping();
 	void onGroupCollections();
+	void onGroupDifficulty();
 	void onAfterGroupChange();
 
 	void onSelectionMods();
@@ -110,7 +118,10 @@ private:
 
 	// top bar right
 	CBaseUIContainer *m_topbarRight;
-	std::vector<CBaseUIButton*> m_topbarRightButtons;
+	std::vector<CBaseUIButton*> m_topbarRightTabButtons;
+	std::vector<CBaseUIButton*> m_topbarRightSortButtons;
+	CBaseUIButton *m_sortButton;
+	OsuUIContextMenu *m_contextMenu;
 
 	// bottom bar
 	CBaseUIContainer *m_bottombar;
@@ -125,6 +136,7 @@ private:
 	std::vector<OsuUISongBrowserButton*> m_visibleSongButtons;
 	std::vector<OsuUISongBrowserSongButton*> m_songButtons;
 	std::vector<OsuUISongBrowserCollectionButton*> m_collectionButtons;
+	std::vector<OsuUISongBrowserDifficultyCollectionButton*> m_difficultyCollectionButtons;
 	bool m_bBeatmapRefreshScheduled;
 	UString m_sLastOsuFolder;
 

@@ -32,6 +32,7 @@ public:
 	void deselect();
 
 	void setVisible(bool visible);
+	void setChildren(std::vector<OsuUISongBrowserButton*> children) {m_children = children;}
 	void setActiveBackgroundColor(Color activeBackgroundColor) {m_activeBackgroundColor = activeBackgroundColor;}
 	void setInactiveBackgroundColor(Color inactiveBackgroundColor) {m_inactiveBackgroundColor = inactiveBackgroundColor;}
 	void setOffsetPercent(float offsetPercent) {m_fOffsetPercent = offsetPercent;}
@@ -41,7 +42,7 @@ public:
 	inline Vector2 getActualSize() {return m_vSize - 2*getActualOffset();}
 	inline Vector2 getActualPos() {return m_vPos + getActualOffset();}
 
-	virtual OsuBeatmap *getBeatmap() {return NULL;}
+	virtual OsuBeatmap *getBeatmap() const {return NULL;}
 	virtual std::vector<OsuUISongBrowserButton*> getChildren() {return m_children;}
 
 	inline bool isSelected() const {return m_bSelected;}
