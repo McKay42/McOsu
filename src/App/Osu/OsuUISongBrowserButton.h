@@ -14,7 +14,7 @@ class Osu;
 class OsuBeatmap;
 class OsuSongBrowser2;
 
-#include "CBaseUIScrollView.h"
+class CBaseUIScrollView;
 
 class OsuUISongBrowserButton : public CBaseUIButton
 {
