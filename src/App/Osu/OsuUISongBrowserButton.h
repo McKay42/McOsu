@@ -39,6 +39,7 @@ public:
 	void deselect();
 
 	void setVisible(bool visible);
+	void setChildren(std::vector<OsuUISongBrowserButton*> children) {m_children = children;}
 	void setActiveBackgroundColor(Color activeBackgroundColor) {m_activeBackgroundColor = activeBackgroundColor;}
 	void setInactiveBackgroundColor(Color inactiveBackgroundColor) {m_inactiveBackgroundColor = inactiveBackgroundColor;}
 	void setOffsetPercent(float offsetPercent) {m_fOffsetPercent = offsetPercent;}
@@ -53,7 +54,7 @@ public:
 	inline MOVE_AWAY_STATE getMoveAwayState() const {return moveAwayState;}
 
 
-	virtual OsuBeatmap *getBeatmap() {return NULL;}
+	virtual OsuBeatmap *getBeatmap() const {return NULL;}
 	virtual std::vector<OsuUISongBrowserButton*> getChildren() {return m_children;}
 
 	inline bool isSelected() const {return m_bSelected;}

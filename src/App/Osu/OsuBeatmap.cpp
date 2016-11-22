@@ -592,7 +592,8 @@ void OsuBeatmap::update()
 			}
 
 			// notes per second
-			if (m_hitobjects[i]->getTime() > m_iCurMusicPos-500 && m_hitobjects[i]->getTime() < m_iCurMusicPos+500)
+			const long npsHalfGateSizeMS = (long)(500.0f * getSpeedMultiplier());
+			if (m_hitobjects[i]->getTime() > m_iCurMusicPos-npsHalfGateSizeMS && m_hitobjects[i]->getTime() < m_iCurMusicPos+npsHalfGateSizeMS)
 				m_iNPS++;
 
 			// note density

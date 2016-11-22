@@ -16,18 +16,21 @@
 
 #include "OsuBeatmapDifficulty.h"
 
-OsuUISongBrowserCollectionButton *OsuUISongBrowserCollectionButton::previousButton = NULL;
+OsuUISongBrowserCollectionButton *OsuUISongBrowserCollectionButton::s_previousButton = NULL;
 
 OsuUISongBrowserCollectionButton::OsuUISongBrowserCollectionButton(Osu *osu, OsuSongBrowser2 *songBrowser, CBaseUIScrollView *view, float xPos, float yPos, float xSize, float ySize, UString name, UString collectionName, std::vector<OsuUISongBrowserButton*> children) : OsuUISongBrowserButton(osu, songBrowser, view, xPos, yPos, xSize, ySize, name)
 {
 	m_sCollectionName = collectionName;
 	m_children = children;
 
-	previousButton = NULL; // reset
+	s_previousButton = NULL; // reset
 
 	m_fTitleScale = 0.35f;
 
+	// settings
 	setOffsetPercent(0.075f*0.5f);
+	setInactiveBackgroundColor(COLOR(255, 35, 50, 143));
+	setActiveBackgroundColor(COLOR(255, 163, 240, 44));
 }
 
 void OsuUISongBrowserCollectionButton::draw(Graphics *g)
@@ -51,6 +54,16 @@ void OsuUISongBrowserCollectionButton::draw(Graphics *g)
 		g->translate(pos.x + textXOffset, pos.y + size.y/2 + (m_font->getHeight()*titleScale)/2);
 		g->drawString(m_font, titleString);
 	g->popTransform();
+}
+
+void OsuUISongBrowserCollectionButton::setPreviousButton(OsuUISongBrowserCollectionButton *previousButton)
+{
+	s_previousButton = previousButton;
+}
+
+OsuUISongBrowserCollectionButton *OsuUISongBrowserCollectionButton::getPreviousButton()
+{
+	return s_previousButton;
 }
 
 std::vector<OsuUISongBrowserButton*> OsuUISongBrowserCollectionButton::getChildren()
@@ -87,11 +100,11 @@ void OsuUISongBrowserCollectionButton::onSelected(bool wasSelected)
 	}
 
 	// automatically deselect previous selection
-	if (previousButton != NULL && previousButton != this)
-		previousButton->deselect();
+	if (getPreviousButton() != NULL && getPreviousButton() != this)
+		getPreviousButton()->deselect();
 	else
 		m_songBrowser->rebuildSongButtons(); // this is in the else-branch to avoid double execution (since it is already executed in deselect())
-	previousButton = this;
+	setPreviousButton(this);
 
 	m_songBrowser->scrollToSongButton(this, true);
 }

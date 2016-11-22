@@ -28,7 +28,7 @@ public:
 	void setVisible(bool visible);
 	void setParent(OsuUISongBrowserSongButton *parent) {m_parent = parent;}
 
-	virtual OsuBeatmap *getBeatmap() {return m_beatmap;}
+	virtual OsuBeatmap *getBeatmap() const {return m_beatmap;}
 	virtual std::vector<OsuUISongBrowserButton*> getChildren();
 
 	inline OsuBeatmapDifficulty *getDiff() {return m_diff;}
