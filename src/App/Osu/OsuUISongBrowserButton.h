@@ -23,6 +23,13 @@ public:
 	~OsuUISongBrowserButton();
 	void deleteAnimations();
 
+	enum class MOVE_AWAY_STATE
+	{
+		MOVE_UP,
+		MOVE_DOWN,
+		MOVE_CENTER
+	};
+
 	virtual void draw(Graphics *g);
 	virtual void update();
 
@@ -37,10 +44,15 @@ public:
 	void setInactiveBackgroundColor(Color inactiveBackgroundColor) {m_inactiveBackgroundColor = inactiveBackgroundColor;}
 	void setOffsetPercent(float offsetPercent) {m_fOffsetPercent = offsetPercent;}
 	void setHideIfSelected(bool hideIfSelected) {m_bHideIfSelected = hideIfSelected;}
+	void setOffsetAwaySelected(float offsetAwaySelected) {m_fOffsetAwaySelected = offsetAwaySelected;}
+	void setMoveAwayState(MOVE_AWAY_STATE moveAway) {moveAwayState = moveAway;}
 
 	Vector2 getActualOffset();
 	inline Vector2 getActualSize() {return m_vSize - 2*getActualOffset();}
 	inline Vector2 getActualPos() {return m_vPos + getActualOffset();}
+	inline float getOffsetAwaySelected() const {return m_fOffsetAwaySelected;}
+	inline MOVE_AWAY_STATE getMoveAwayState() const {return moveAwayState;}
+
 
 	virtual OsuBeatmap *getBeatmap() const {return NULL;}
 	virtual std::vector<OsuUISongBrowserButton*> getChildren() {return m_children;}
@@ -69,6 +81,8 @@ private:
 	static int marginPixelsX;
 	static int marginPixelsY;
 	static float lastHoverSoundTime;
+	static float maxOffsetAwaySelected;
+	static float moveAwaySpeed;
 
 	virtual void onClicked();
 	virtual void onMouseInside();
@@ -79,11 +93,16 @@ private:
 	float m_fHoverOffsetAnimation;
 	float m_fCenterOffsetAnimation;
 	float m_fCenterOffsetVelocityAnimation;
+	float m_fOffsetAwaySelected;
 
 	bool m_bHideIfSelected;
 
 	Color m_activeBackgroundColor;
 	Color m_inactiveBackgroundColor;
+
+
+	MOVE_AWAY_STATE moveAwayState;
+
 };
 
 #endif
