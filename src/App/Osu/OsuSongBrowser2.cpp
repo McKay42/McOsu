@@ -401,7 +401,7 @@ void OsuSongBrowser2::update()
 
 	// if cursor is to the left edge of the screen, force center currently selected beatmap/diff
 	if (engine->getMouse()->getPos().x < m_osu->getScreenWidth()*0.1f)
-		scrollToCurrentlySelectedSongButton();
+		scrollToSelectedSongButton();
 
 	// handle searching
 	if (m_fSearchWaitTime != 0.0f && engine->getTime() > m_fSearchWaitTime)
@@ -796,8 +796,7 @@ void OsuSongBrowser2::scrollToSongButton(OsuUISongBrowserButton *songButton, boo
 		m_songBrowser->scrollToY(-songButton->getRelPos().y + (alignOnTop ? (0) : (m_songBrowser->getSize().y/2 - songButton->getSize().y/2)));
 }
 
-void OsuSongBrowser2::scrollToCurrentlySelectedSongButton()
-{
+OsuUISongBrowserButton* OsuSongBrowser2::findCurrentlySelectedSongButton() const {
 	OsuUISongBrowserButton *selectedButton = NULL;
 	std::vector<CBaseUIElement*> elements = m_songBrowser->getContainer()->getAllBaseUIElements();
 	for (int i=0; i<elements.size(); i++)
@@ -806,6 +805,12 @@ void OsuSongBrowser2::scrollToCurrentlySelectedSongButton()
 		if (button != NULL && button->isSelected())
 			selectedButton = button;
 	}
+	return selectedButton;
+}
+
+void OsuSongBrowser2::scrollToSelectedSongButton()
+{
+	auto selectedButton = findCurrentlySelectedSongButton();
 	scrollToSongButton(selectedButton);
 }
 
@@ -1461,7 +1466,7 @@ void OsuSongBrowser2::onAfterGroupChange(CBaseUIButton *b)
 	}
 
 	if (isAnythingSelected)
-		scrollToCurrentlySelectedSongButton();
+		scrollToSelectedSongButton();
 	else
 	{
 		/*if (elements.size() > 0)
