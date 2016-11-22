@@ -22,9 +22,14 @@
 #include "CBaseUIContainer.h"
 #include "CBaseUIScrollView.h"
 
+#include <algorithm>
+
 int OsuUISongBrowserButton::marginPixelsX = 9;
 int OsuUISongBrowserButton::marginPixelsY = 9;
 float OsuUISongBrowserButton::lastHoverSoundTime = 0;
+float OsuUISongBrowserButton::maxOffsetAwaySelected = 12.0;
+float OsuUISongBrowserButton::moveAwaySpeed = 0.4;
+
 // Color OsuUISongBrowserButton::inactiveDifficultyBackgroundColor = COLOR(255, 0, 150, 236); // blue
 
 OsuUISongBrowserButton::OsuUISongBrowserButton(Osu *osu, OsuSongBrowser2 *songBrowser, CBaseUIScrollView *view, float xPos, float yPos, float xSize, float ySize, UString name) : CBaseUIButton(xPos, yPos, xSize, ySize, name, "")
@@ -48,6 +53,9 @@ OsuUISongBrowserButton::OsuUISongBrowserButton(Osu *osu, OsuSongBrowser2 *songBr
 
 	m_inactiveBackgroundColor = COLOR(255, 235, 73, 153); // pink
 	m_activeBackgroundColor = COLOR(255, 255, 255, 255); // white
+
+	moveAwayState = MOVE_AWAY_STATE::MOVE_CENTER;
+	m_fOffsetAwaySelected = 0.0f;
 }
 
 OsuUISongBrowserButton::~OsuUISongBrowserButton()
@@ -141,7 +149,47 @@ void OsuUISongBrowserButton::updateLayout()
 	}
 
 	setSize((int)(menuButtonBackground->getWidth()*m_fScale), (int)(menuButtonBackground->getHeight()*m_fScale));
-	setRelPosX(m_view->getSize().x - m_view->getSize().x*0.55f - m_view->getSize().x*m_fOffsetPercent - m_view->getSize().x*0.075f*m_fHoverOffsetAnimation + 0.04f*m_view->getSize().x*m_fCenterOffsetAnimation + 0.3f*m_view->getSize().x*m_fCenterOffsetVelocityAnimation);
+	setRelPosX(m_view->getSize().x*(0.04*m_fCenterOffsetAnimation + 0.3*m_fCenterOffsetVelocityAnimation - 0.075*m_fHoverOffsetAnimation - m_fOffsetPercent + 0.45));
+
+	switch(moveAwayState) {
+	// Undo the offset by moving to the opposite direction until it's 0 (center)
+	case MOVE_AWAY_STATE::MOVE_CENTER: {
+		auto offset = this->getOffsetAwaySelected();
+
+		float offsetDecrease;
+		if (offset < 0) {
+			offsetDecrease = -std::min(-offset, moveAwaySpeed);
+		} else {
+			offsetDecrease = std::min(offset, moveAwaySpeed);
+		}
+		setRelPosY(this->getRelPos().y - offsetDecrease);
+
+		this->setOffsetAwaySelected(offset - offsetDecrease);
+
+		//anim->moveQuadOut(&m_fOffsetAwaySelected, 0, 0.8, false);
+		break;
+
+	}
+	case MOVE_AWAY_STATE::MOVE_UP: {
+		if(-this->getOffsetAwaySelected() < maxOffsetAwaySelected)
+		{
+			setRelPosY(this->getRelPos().y - moveAwaySpeed);
+			this->setOffsetAwaySelected(this->getOffsetAwaySelected() - moveAwaySpeed);
+			//anim->moveQuadOut(&m_fOffsetAwaySelected, -maxOffsetAwaySelected, 0.8, false);
+		}
+		break;
+	}
+	case MOVE_AWAY_STATE::MOVE_DOWN: {
+		if(this->getOffsetAwaySelected() < maxOffsetAwaySelected)
+		{
+
+			setRelPosY(this->getRelPos().y + moveAwaySpeed);
+			this->setOffsetAwaySelected(this->getOffsetAwaySelected() + moveAwaySpeed);
+			//anim->moveQuadOut(&m_fOffsetAwaySelected, maxOffsetAwaySelected, 0.8, false);
+		}
+		break;
+	}
+	}
 }
 
 void OsuUISongBrowserButton::select()
@@ -244,6 +292,7 @@ void OsuUISongBrowserButton::onClicked()
 
 void OsuUISongBrowserButton::onMouseInside()
 {
+
 	CBaseUIButton::onMouseInside();
 
 	if (engine->getTime() > lastHoverSoundTime + 0.05f) // to avoid earraep
@@ -254,6 +303,29 @@ void OsuUISongBrowserButton::onMouseInside()
 	}
 
 	anim->moveQuadOut(&m_fHoverOffsetAnimation, 1.0f, 1.0f*(1.0f - m_fHoverOffsetAnimation), true);
+
+	//
+	// Move the rest of the buttons away from hovered over one
+	//
+
+	std::vector<CBaseUIElement*> els = m_view->getContainer()->getAllBaseUIElements();
+
+	auto const selected_iter = std::find(els.begin(),els.end(), this);
+	auto const selected_idx = selected_iter - els.begin();
+
+	std::vector<CBaseUIElement*> split_up(els.begin(), els.begin() + selected_idx);
+	std::vector<CBaseUIElement*> split_down(els.begin() + selected_idx, els.end());
+
+	for(auto &el: split_up) {
+		dynamic_cast<OsuUISongBrowserButton*>(el)->setMoveAwayState(MOVE_AWAY_STATE::MOVE_UP);
+	}
+
+	for(auto &el: split_down) {
+		dynamic_cast<OsuUISongBrowserButton*>(el)->setMoveAwayState(MOVE_AWAY_STATE::MOVE_DOWN);
+	}
+
+	// Move selected one to the center
+	dynamic_cast<OsuUISongBrowserButton*>(*selected_iter)->setMoveAwayState(MOVE_AWAY_STATE::MOVE_CENTER);
 }
 
 void OsuUISongBrowserButton::onMouseOutside()

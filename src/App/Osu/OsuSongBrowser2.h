@@ -64,9 +64,10 @@ public:
 
 	void refreshBeatmaps();
 	void scrollToSongButton(OsuUISongBrowserButton *songButton, bool alignOnTop = false);
-	void scrollToCurrentlySelectedSongButton();
+	void scrollToSelectedSongButton();
 	void rebuildSongButtons(bool unloadAllThumbnails = true);
 	void updateSongButtonLayout();
+	OsuUISongBrowserButton* findCurrentlySelectedSongButton() const;
 
 	void setVisible(bool visible);
 
