@@ -110,7 +110,9 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	addTopBarRightTabButton("Collections")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onGroupCollections) );
 	///addTopBarRightTabButton("By Artist");
 	addTopBarRightTabButton("By Difficulty")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onGroupDifficulty) );
-	addTopBarRightTabButton("No Grouping")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onGroupNoGrouping) );
+	m_noGroupingButton = addTopBarRightTabButton("No Grouping");
+	m_noGroupingButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onGroupNoGrouping) );
+	m_noGroupingButton->setTextBrightColor(COLOR(255, 0, 255, 0));
 
 	/*
 	addTopBarRightSortButton("")->setVisible(false);
@@ -428,13 +430,15 @@ void OsuSongBrowser2::update()
 			if (m_visibleSongButtons.size() > 1)
 				scrollToSongButton(m_visibleSongButtons[0]);
 			else if (m_visibleSongButtons.size() > 0)
+			{
 				selectSongButton(m_visibleSongButtons[0]);
+				m_songBrowser->scrollY(1);
+			}
 		}
 		else
 		{
-			m_visibleSongButtons = std::vector<OsuUISongBrowserButton*>(m_songButtons.begin(), m_songButtons.end());
-			rebuildSongButtons();
-			scrollToCurrentlySelectedSongButton();
+			// TODO: remember what which tab was selected, instead of defaulting back to no grouping
+			onGroupNoGrouping(m_noGroupingButton);
 		}
 	}
 }
@@ -848,6 +852,8 @@ void OsuSongBrowser2::updateSongButtonLayout()
 	// only the y axis is set, because the x axis is constantly animated and handled within the button classes themselves
 	std::vector<CBaseUIElement*> *elements = m_songBrowser->getContainer()->getAllBaseUIElementsPointer();
 	int yCounter = m_songBrowser->getSize().y/4;
+	if (elements->size() <= 1)
+		yCounter = m_songBrowser->getSize().y/2;
 	bool isSelected = false;
 	bool inOpenCollection = false;
 	bool wasCollectionButton = false;
@@ -1365,23 +1371,23 @@ void OsuSongBrowser2::onSortChange(UString text)
 	m_sortButton->setText(text);
 }
 
-void OsuSongBrowser2::onGroupNoGrouping()
+void OsuSongBrowser2::onGroupNoGrouping(CBaseUIButton *b)
 {
 	m_visibleSongButtons = std::vector<OsuUISongBrowserButton*>(m_songButtons.begin(), m_songButtons.end());
 	rebuildSongButtons();
 
-	onAfterGroupChange();
+	onAfterGroupChange(b);
 }
 
-void OsuSongBrowser2::onGroupCollections()
+void OsuSongBrowser2::onGroupCollections(CBaseUIButton *b)
 {
 	m_visibleSongButtons = std::vector<OsuUISongBrowserButton*>(m_collectionButtons.begin(), m_collectionButtons.end());
 	rebuildSongButtons();
 
-	onAfterGroupChange();
+	onAfterGroupChange(b);
 }
 
-void OsuSongBrowser2::onGroupDifficulty()
+void OsuSongBrowser2::onGroupDifficulty(CBaseUIButton *b)
 {
 	m_visibleSongButtons = std::vector<OsuUISongBrowserButton*>(m_songButtons.begin(), m_songButtons.end());
 
@@ -1428,11 +1434,20 @@ void OsuSongBrowser2::onGroupDifficulty()
 
 	rebuildSongButtons();
 
-	onAfterGroupChange();
+	onAfterGroupChange(b);
 }
 
-void OsuSongBrowser2::onAfterGroupChange()
+void OsuSongBrowser2::onAfterGroupChange(CBaseUIButton *b)
 {
+	// highlight current
+	for (int i=0; i<m_topbarRightTabButtons.size(); i++)
+	{
+		if (m_topbarRightTabButtons[i] == b)
+			m_topbarRightTabButtons[i]->setTextBrightColor(COLOR(255, 0, 255, 0));
+		else
+			m_topbarRightTabButtons[i]->setTextBrightColor(COLOR(255, 255, 255, 255));
+	}
+
 	std::vector<CBaseUIElement*> elements = m_songBrowser->getContainer()->getAllBaseUIElements();
 	bool isAnythingSelected = false;
 	for (int i=0; i<elements.size(); i++)
