@@ -116,7 +116,6 @@ void OsuUIContextMenu::end()
 
 void OsuUIContextMenu::setVisible2(bool visible2)
 {
-	debugLog("setVisible2( %i )\n", (int)visible2);
 	m_bVisible2 = visible2;
 
 	if (!m_bVisible2)

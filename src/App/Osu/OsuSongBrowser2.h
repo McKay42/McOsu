@@ -93,10 +93,10 @@ private:
 	void onSortClicked(CBaseUIButton *button);
 	void onSortChange(UString text);
 
-	void onGroupNoGrouping();
-	void onGroupCollections();
-	void onGroupDifficulty();
-	void onAfterGroupChange();
+	void onGroupNoGrouping(CBaseUIButton *b);
+	void onGroupCollections(CBaseUIButton *b);
+	void onGroupDifficulty(CBaseUIButton *b);
+	void onAfterGroupChange(CBaseUIButton *b);
 
 	void onSelectionMods();
 	void onSelectionRandom();
@@ -120,6 +120,7 @@ private:
 	CBaseUIContainer *m_topbarRight;
 	std::vector<CBaseUIButton*> m_topbarRightTabButtons;
 	std::vector<CBaseUIButton*> m_topbarRightSortButtons;
+	CBaseUIButton *m_noGroupingButton;
 	CBaseUIButton *m_sortButton;
 	OsuUIContextMenu *m_contextMenu;
 
