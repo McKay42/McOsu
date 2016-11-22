@@ -32,6 +32,7 @@
 #include "OsuKeyBindings.h"
 
 #include "OsuUIBackButton.h"
+#include "OsuUIContextMenu.h"
 #include "OsuUISelectionButton.h"
 #include "OsuUISongBrowserInfoLabel.h"
 #include "OsuUISongBrowserSongButton.h"
@@ -44,6 +45,34 @@ ConVar osu_songbrowser_topbar_middle_width_percent("osu_songbrowser_topbar_middl
 ConVar osu_songbrowser_topbar_right_height_percent("osu_songbrowser_topbar_right_height_percent", 0.5f);
 ConVar osu_songbrowser_topbar_right_percent("osu_songbrowser_topbar_right_percent", 0.378f);
 ConVar osu_songbrowser_bottombar_percent("osu_songbrowser_bottombar_percent", 0.116f);
+
+
+
+class OsuUISongBrowserDifficultyCollectionButton : public OsuUISongBrowserCollectionButton
+{
+public:
+	OsuUISongBrowserDifficultyCollectionButton(Osu *osu, OsuSongBrowser2 *songBrowser, CBaseUIScrollView *view, float xPos, float yPos, float xSize, float ySize, UString name, UString collectionName, std::vector<OsuUISongBrowserButton*> children) : OsuUISongBrowserCollectionButton(osu, songBrowser, view, xPos, yPos, xSize, ySize, name, collectionName, children)
+	{
+		s_previousButton = NULL;
+	}
+
+	virtual void setPreviousButton(OsuUISongBrowserCollectionButton *previousButton)
+	{
+		s_previousButton = previousButton;
+	}
+
+	virtual OsuUISongBrowserCollectionButton *getPreviousButton()
+	{
+		return s_previousButton;
+	}
+
+private:
+	static OsuUISongBrowserCollectionButton *s_previousButton;
+};
+
+OsuUISongBrowserCollectionButton *OsuUISongBrowserDifficultyCollectionButton::s_previousButton = NULL;
+
+
 
 OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 {
@@ -78,10 +107,21 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	// build topbar right
 	m_topbarRight = new CBaseUIContainer(0, 0, 0, 0, "");
 
-	addTopBarRightButton("Collections")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onGroupCollections) );
-	///addTopBarRightButton("By Artist");
-	///addTopBarRightButton("By Difficulty");
-	addTopBarRightButton("No Grouping")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onGroupNoGrouping) );
+	addTopBarRightTabButton("Collections")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onGroupCollections) );
+	///addTopBarRightTabButton("By Artist");
+	addTopBarRightTabButton("By Difficulty")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onGroupDifficulty) );
+	m_noGroupingButton = addTopBarRightTabButton("No Grouping");
+	m_noGroupingButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onGroupNoGrouping) );
+	m_noGroupingButton->setTextBrightColor(COLOR(255, 0, 255, 0));
+
+	/*
+	addTopBarRightSortButton("")->setVisible(false);
+	m_sortButton = addTopBarRightSortButton("By Date Added");
+	m_sortButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onSortClicked) );
+	m_contextMenu = new OsuUIContextMenu(50, 50, 150, 0, "");
+	m_contextMenu->setVisible(true);
+	m_topbarRight->addBaseUIElement(m_contextMenu);
+	*/
 
 	// build bottombar
 	m_bottombar = new CBaseUIContainer(0, 0, 0, 0, "");
@@ -122,6 +162,10 @@ OsuSongBrowser2::~OsuSongBrowser2()
 	for (int i=0; i<m_collectionButtons.size(); i++)
 	{
 		delete m_collectionButtons[i];
+	}
+	for (int i=0; i<m_difficultyCollectionButtons.size(); i++)
+	{
+		delete m_difficultyCollectionButtons[i];
 	}
 
 	SAFE_DELETE(m_topbarLeft);
@@ -386,13 +430,15 @@ void OsuSongBrowser2::update()
 			if (m_visibleSongButtons.size() > 1)
 				scrollToSongButton(m_visibleSongButtons[0]);
 			else if (m_visibleSongButtons.size() > 0)
+			{
 				selectSongButton(m_visibleSongButtons[0]);
+				m_songBrowser->scrollY(1);
+			}
 		}
 		else
 		{
-			m_visibleSongButtons = std::vector<OsuUISongBrowserButton*>(m_songButtons.begin(), m_songButtons.end());
-			rebuildSongButtons();
-			scrollToSelectedSongButton();
+			// TODO: remember what which tab was selected, instead of defaulting back to no grouping
+			onGroupNoGrouping(m_noGroupingButton);
 		}
 	}
 }
@@ -730,6 +776,11 @@ void OsuSongBrowser2::refreshBeatmaps()
 		delete m_collectionButtons[i];
 	}
 	m_collectionButtons.clear();
+	for (int i=0; i<m_difficultyCollectionButtons.size(); i++)
+	{
+		delete m_difficultyCollectionButtons[i];
+	}
+	m_difficultyCollectionButtons.clear();
 	m_visibleSongButtons.clear();
 	m_beatmaps.clear();
 	m_previousRandomBeatmaps.clear();
@@ -805,7 +856,9 @@ void OsuSongBrowser2::updateSongButtonLayout()
 	// this rebuilds the entire songButton layout (songButtons in relation to others)
 	// only the y axis is set, because the x axis is constantly animated and handled within the button classes themselves
 	std::vector<CBaseUIElement*> *elements = m_songBrowser->getContainer()->getAllBaseUIElementsPointer();
-	int yCounter = m_songBrowser->getSize().y/2;
+	int yCounter = m_songBrowser->getSize().y/4;
+	if (elements->size() <= 1)
+		yCounter = m_songBrowser->getSize().y/2;
 	bool isSelected = false;
 	bool inOpenCollection = false;
 	bool wasCollectionButton = false;
@@ -1158,13 +1211,22 @@ void OsuSongBrowser2::updateLayout()
 	m_topbarRight->setPosX(m_osu->getSkin()->getSongSelectTop()->getWidth()*m_fSongSelectTopScale*osu_songbrowser_topbar_right_percent.getFloat());
 	m_topbarRight->setSize(m_osu->getScreenWidth() - m_topbarRight->getPos().x, m_osu->getSkin()->getSongSelectTop()->getHeight()*m_fSongSelectTopScale*osu_songbrowser_topbar_right_height_percent.getFloat());
 
-	int topbarRightButtonMargin = 10;
-	int topbarRightButtonHeight = 30;
-	int topbarRightButtonWidth = clamp<float>((float)(m_topbarRight->getSize().x - 2*topbarRightButtonMargin) / (float)m_topbarRightButtons.size(), 0.0f, 200.0f);
-	for (int i=0; i<m_topbarRightButtons.size(); i++)
+	int topbarRightTabButtonMargin = 10;
+	int topbarRightTabButtonHeight = 30;
+	int topbarRightTabButtonWidth = clamp<float>((float)(m_topbarRight->getSize().x - 2*topbarRightTabButtonMargin) / (float)m_topbarRightTabButtons.size(), 0.0f, 200.0f);
+	for (int i=0; i<m_topbarRightTabButtons.size(); i++)
 	{
-		m_topbarRightButtons[i]->setSize(topbarRightButtonWidth, topbarRightButtonHeight);
-		m_topbarRightButtons[i]->setRelPos(m_topbarRight->getSize().x - (topbarRightButtonMargin + (m_topbarRightButtons.size()-i)*topbarRightButtonWidth), m_topbarRight->getSize().y-m_topbarRightButtons[i]->getSize().y);
+		m_topbarRightTabButtons[i]->setSize(topbarRightTabButtonWidth, topbarRightTabButtonHeight);
+		m_topbarRightTabButtons[i]->setRelPos(m_topbarRight->getSize().x - (topbarRightTabButtonMargin + (m_topbarRightTabButtons.size()-i)*topbarRightTabButtonWidth), m_topbarRight->getSize().y-m_topbarRightTabButtons[i]->getSize().y);
+	}
+
+	int topbarRightSortButtonMargin = 10;
+	int topbarRightSortButtonHeight = 30;
+	int topbarRightSortButtonWidth = clamp<float>((float)(m_topbarRight->getSize().x - 2*topbarRightSortButtonMargin) / (float)m_topbarRightSortButtons.size(), 0.0f, 200.0f);
+	for (int i=0; i<m_topbarRightSortButtons.size(); i++)
+	{
+		m_topbarRightSortButtons[i]->setSize(topbarRightSortButtonWidth, topbarRightSortButtonHeight);
+		m_topbarRightSortButtons[i]->setRelPos(m_topbarRight->getSize().x - (topbarRightSortButtonMargin + (m_topbarRightTabButtons.size()-i)*topbarRightSortButtonWidth), topbarRightSortButtonMargin);
 	}
 	m_topbarRight->update_pos();
 
@@ -1216,11 +1278,19 @@ OsuUISelectionButton *OsuSongBrowser2::addBottombarNavButton()
 	return btn;
 }
 
-CBaseUIButton *OsuSongBrowser2::addTopBarRightButton(UString text)
+CBaseUIButton *OsuSongBrowser2::addTopBarRightTabButton(UString text)
 {
 	CBaseUIButton *btn = new CBaseUIButton(0, 0, 0, 0, "", text);
 	m_topbarRight->addBaseUIElement(btn);
-	m_topbarRightButtons.push_back(btn);
+	m_topbarRightTabButtons.push_back(btn);
+	return btn;
+}
+
+CBaseUIButton *OsuSongBrowser2::addTopBarRightSortButton(UString text)
+{
+	CBaseUIButton *btn = new CBaseUIButton(0, 0, 0, 0, "", text);
+	m_topbarRight->addBaseUIElement(btn);
+	m_topbarRightSortButtons.push_back(btn);
 	return btn;
 }
 
@@ -1261,27 +1331,128 @@ void OsuSongBrowser2::onDatabaseLoadingFinished()
 		///m_visibleSongButtons.push_back(collectionButton);
 	}
 
+	// TODO:
+	for (int i=0; i<12; i++)
+	{
+		UString difficultyCollectionName = UString::format(i == 1 ? "%i star" : "%i stars", i);
+		if (i < 1)
+			difficultyCollectionName = "Below 1 star";
+		if (i > 10)
+			difficultyCollectionName = "Above 10 stars";
+
+		std::vector<OsuUISongBrowserButton*> children;
+		OsuUISongBrowserDifficultyCollectionButton *b = new OsuUISongBrowserDifficultyCollectionButton(m_osu, this, m_songBrowser, 250, 250, 200, 50, "", difficultyCollectionName, children);
+		m_difficultyCollectionButtons.push_back(b);
+	}
+	/*
+	for (int i=0; i<tempDifficultyCollectionSongButtons.size(); i++)
+	{
+
+	}
+	*/
+
 	rebuildSongButtons();
 }
 
-void OsuSongBrowser2::onGroupNoGrouping()
+void OsuSongBrowser2::onSortClicked(CBaseUIButton *button)
+{
+	m_contextMenu->setPos(button->getPos());
+	m_contextMenu->setRelPos(button->getRelPos());
+	m_contextMenu->begin();
+	m_contextMenu->addButton("By Artist");
+	m_contextMenu->addButton("By BPM");
+	m_contextMenu->addButton("By Creator");
+	m_contextMenu->addButton("By Date Added");
+	m_contextMenu->addButton("By Difficulty");
+	m_contextMenu->addButton("By Length");
+	m_contextMenu->addButton("By Rank Achieved");
+	m_contextMenu->addButton("By Title");
+	m_contextMenu->end();
+	m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onSortChange) );
+}
+
+void OsuSongBrowser2::onSortChange(UString text)
+{
+	m_sortButton->setText(text);
+}
+
+void OsuSongBrowser2::onGroupNoGrouping(CBaseUIButton *b)
 {
 	m_visibleSongButtons = std::vector<OsuUISongBrowserButton*>(m_songButtons.begin(), m_songButtons.end());
 	rebuildSongButtons();
 
-	onAfterGroupChange();
+	onAfterGroupChange(b);
 }
 
-void OsuSongBrowser2::onGroupCollections()
+void OsuSongBrowser2::onGroupCollections(CBaseUIButton *b)
 {
 	m_visibleSongButtons = std::vector<OsuUISongBrowserButton*>(m_collectionButtons.begin(), m_collectionButtons.end());
 	rebuildSongButtons();
 
-	onAfterGroupChange();
+	onAfterGroupChange(b);
 }
 
-void OsuSongBrowser2::onAfterGroupChange()
+void OsuSongBrowser2::onGroupDifficulty(CBaseUIButton *b)
 {
+	m_visibleSongButtons = std::vector<OsuUISongBrowserButton*>(m_songButtons.begin(), m_songButtons.end());
+
+	// sort by difficulty
+	struct SortComparator
+	{
+		bool operator() (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const
+		{
+			float diff1 = 0.0f;
+			float stars1 = 0.0f;
+			std::vector<OsuBeatmapDifficulty*> *aDiffs = a->getBeatmap()->getDifficultiesPointer();
+			for (int i=0; i<aDiffs->size(); i++)
+			{
+				OsuBeatmapDifficulty *d = (*aDiffs)[i];
+				if (d->starsNoMod > stars1)
+					stars1 = d->starsNoMod;
+
+				float tempDiff1 = (d->AR+1)*(d->CS+1)*(d->HP+1)*(d->OD+1)*(d->maxBPM > 0 ? d->maxBPM : 1);
+				if (tempDiff1 > diff1)
+					diff1 = tempDiff1;
+			}
+
+			float diff2 = 0.0f;
+			float stars2 = 0.0f;
+			std::vector<OsuBeatmapDifficulty*> *bDiffs = b->getBeatmap()->getDifficultiesPointer();
+			for (int i=0; i<bDiffs->size(); i++)
+			{
+				OsuBeatmapDifficulty *d = (*bDiffs)[i];
+				if (d->starsNoMod > stars2)
+					stars2 = d->starsNoMod;
+
+				float tempDiff2 = (d->AR+1)*(d->CS+1)*(d->HP+1)*(d->OD+1)*(d->maxBPM > 0 ? d->maxBPM : 1);
+				if (tempDiff2 > diff1)
+					diff2 = tempDiff2;
+			}
+
+			if (stars1 > 0 && stars2 > 0)
+				return stars1 < stars2;
+			else
+				return diff1 < diff2;
+		}
+	};
+	std::sort(m_visibleSongButtons.begin(), m_visibleSongButtons.end(), SortComparator());
+
+	rebuildSongButtons();
+
+	onAfterGroupChange(b);
+}
+
+void OsuSongBrowser2::onAfterGroupChange(CBaseUIButton *b)
+{
+	// highlight current
+	for (int i=0; i<m_topbarRightTabButtons.size(); i++)
+	{
+		if (m_topbarRightTabButtons[i] == b)
+			m_topbarRightTabButtons[i]->setTextBrightColor(COLOR(255, 0, 255, 0));
+		else
+			m_topbarRightTabButtons[i]->setTextBrightColor(COLOR(255, 255, 255, 255));
+	}
+
 	std::vector<CBaseUIElement*> elements = m_songBrowser->getContainer()->getAllBaseUIElements();
 	bool isAnythingSelected = false;
 	for (int i=0; i<elements.size(); i++)
@@ -1297,7 +1468,12 @@ void OsuSongBrowser2::onAfterGroupChange()
 	if (isAnythingSelected)
 		scrollToSelectedSongButton();
 	else
-		m_songBrowser->scrollToTop();
+	{
+		/*if (elements.size() > 0)
+			m_songBrowser->scrollToElement(elements[0]);
+		else*/
+			m_songBrowser->scrollToTop();
+	}
 }
 
 void OsuSongBrowser2::onSelectionMods()
