@@ -151,7 +151,6 @@ void OsuUISongBrowserButton::updateLayout()
 	setSize((int)(menuButtonBackground->getWidth()*m_fScale), (int)(menuButtonBackground->getHeight()*m_fScale));
 	setRelPosX(m_view->getSize().x*(0.04*m_fCenterOffsetAnimation + 0.3*m_fCenterOffsetVelocityAnimation - 0.075*m_fHoverOffsetAnimation - m_fOffsetPercent + 0.45));
 
-
 	switch(moveAwayState) {
 	// Undo the offset by moving to the opposite direction until it's 0 (center)
 	case MOVE_AWAY_STATE::MOVE_CENTER: {
@@ -304,7 +303,6 @@ void OsuUISongBrowserButton::onMouseInside()
 	}
 
 	anim->moveQuadOut(&m_fHoverOffsetAnimation, 1.0f, 1.0f*(1.0f - m_fHoverOffsetAnimation), true);
-
 
 	//
 	// Move the rest of the buttons away from hovered over one
