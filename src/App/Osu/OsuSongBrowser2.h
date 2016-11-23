@@ -67,6 +67,7 @@ public:
 	void scrollToSelectedSongButton();
 	void rebuildSongButtons(bool unloadAllThumbnails = true);
 	void updateSongButtonLayout();
+
 	OsuUISongBrowserButton* findCurrentlySelectedSongButton() const;
 
 	void setVisible(bool visible);
