@@ -80,8 +80,6 @@ public:
 	inline Image *getHit300k() {return m_hit300k;}
 
 	inline Image *getSliderGradient() {return m_sliderGradient;}
-	inline Image *getSliderGradientTrack() {return m_sliderGradientTrack;}
-	inline Image *getSliderGradientBody() {return m_sliderGradientBody;}
 	inline Image *getSliderb() {return m_sliderb;}
 	inline Image *getSliderFollowCircle() {return m_sliderFollowCircle;}
 	inline Image *getSliderScorePoint() {return m_sliderScorePoint;}
@@ -308,8 +306,6 @@ private:
 	Image *m_hit300k;
 
 	Image *m_sliderGradient;
-	Image *m_sliderGradientTrack;
-	Image *m_sliderGradientBody;
 	Image *m_sliderb;
 	Image *m_sliderFollowCircle;
 	Image *m_sliderScorePoint;

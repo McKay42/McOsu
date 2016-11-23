@@ -31,6 +31,7 @@ float OsuSliderRenderer::m_fBoundingBoxMaxY = 0.0f;
 
 ConVar osu_slider_debug("osu_slider_debug", false);
 ConVar osu_slider_rainbow("osu_slider_rainbow", false);
+ConVar osu_slider_use_gradient_image("osu_slider_use_gradient_image", false);
 
 ConVar osu_slider_body_alpha_multiplier("osu_slider_body_alpha_multiplier", 1.0f);
 ConVar osu_slider_body_color_saturation("osu_slider_body_color_saturation", 1.0f);
@@ -121,21 +122,21 @@ void OsuSliderRenderer::draw(Graphics *g, Osu *osu, const std::vector<Vector2> &
 			bodyColor = COLOR(255, red2, green2, blue2);
 		}
 
-		// bit of a hack, but it works. better than rough edges
-		if (osu_slider_border_size_multiplier.getFloat() < 0.01f)
-			borderColor = bodyColor;
-
-		BLEND_SHADER->enable();
-		BLEND_SHADER->setUniform1f("bodyColorSaturation", osu_slider_body_color_saturation.getFloat());
-		BLEND_SHADER->setUniform1f("borderSizeMultiplier", osu_slider_border_size_multiplier.getFloat());
-		BLEND_SHADER->setUniform3f("colBorder", COLOR_GET_Rf(borderColor), COLOR_GET_Gf(borderColor), COLOR_GET_Bf(borderColor));
-		BLEND_SHADER->setUniform3f("colBody", COLOR_GET_Rf(bodyColor), COLOR_GET_Gf(bodyColor), COLOR_GET_Bf(bodyColor));
+		if (!osu_slider_use_gradient_image.getBool())
+		{
+			BLEND_SHADER->enable();
+			BLEND_SHADER->setUniform1f("bodyColorSaturation", osu_slider_body_color_saturation.getFloat());
+			BLEND_SHADER->setUniform1f("borderSizeMultiplier", osu_slider_border_size_multiplier.getFloat());
+			BLEND_SHADER->setUniform3f("colBorder", COLOR_GET_Rf(borderColor), COLOR_GET_Gf(borderColor), COLOR_GET_Bf(borderColor));
+			BLEND_SHADER->setUniform3f("colBody", COLOR_GET_Rf(bodyColor), COLOR_GET_Gf(bodyColor), COLOR_GET_Bf(bodyColor));
+		}
 
 		g->setColor(0xffffffff);
 		osu->getSkin()->getSliderGradient()->bind();
 		drawFillSliderBody2(g, points, hitcircleDiameter/2.0f, drawFromIndex, drawUpToIndex);
 
-		BLEND_SHADER->disable();
+		if (!osu_slider_use_gradient_image.getBool())
+			BLEND_SHADER->disable();
 
 		osu->getFrameBuffer()->disable();
 	}

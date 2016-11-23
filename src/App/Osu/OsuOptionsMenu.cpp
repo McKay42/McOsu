@@ -280,6 +280,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_cursorSizeSlider->setAnimated(false);
 	addSpacer();
 	addSliderPreview();
+	addCheckbox("Use slidergradient.png", convar->getConVarByName("osu_slider_use_gradient_image"));
 	addCheckbox("Use combo color as tint for slider ball", convar->getConVarByName("osu_slider_ball_tint_combo_color"));
 	addCheckbox("Draw SliderEndCircle", convar->getConVarByName("osu_slider_draw_endcircle"));
 	addSlider("Slider Opacity", 0.0f, 1.0f, convar->getConVarByName("osu_slider_body_alpha_multiplier"));
