@@ -48,6 +48,9 @@ void main()
 	
 	// conditional variant
 	
+	if (borderSizeMultiplier < 0.01) // a bit of a hack, but better than rough edges
+		borderColor = outerShadowColor;
+	
 	if (tex_coord.x < outerShadowSize - transitionSize) // just shadow
 	{
 		float delta = tex_coord.x / (outerShadowSize - transitionSize);
