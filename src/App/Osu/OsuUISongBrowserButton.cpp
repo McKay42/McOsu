@@ -22,13 +22,9 @@
 #include "CBaseUIContainer.h"
 #include "CBaseUIScrollView.h"
 
-#include <algorithm>
-
 int OsuUISongBrowserButton::marginPixelsX = 9;
 int OsuUISongBrowserButton::marginPixelsY = 9;
 float OsuUISongBrowserButton::lastHoverSoundTime = 0;
-float OsuUISongBrowserButton::maxOffsetAwaySelected = 12.0;
-float OsuUISongBrowserButton::moveAwaySpeed = 0.4;
 
 // Color OsuUISongBrowserButton::inactiveDifficultyBackgroundColor = COLOR(255, 0, 150, 236); // blue
 
@@ -45,6 +41,7 @@ OsuUISongBrowserButton::OsuUISongBrowserButton(Osu *osu, OsuSongBrowser2 *songBr
 	m_bSelected = false;
 	m_bHideIfSelected = false;
 
+	m_fTargetRelPosY = yPos;
 	m_fScale = 1.0f;
 	m_fOffsetPercent = 0.0f;
 	m_fHoverOffsetAnimation = 0.0f;
@@ -54,8 +51,8 @@ OsuUISongBrowserButton::OsuUISongBrowserButton(Osu *osu, OsuSongBrowser2 *songBr
 	m_inactiveBackgroundColor = COLOR(255, 235, 73, 153); // pink
 	m_activeBackgroundColor = COLOR(255, 255, 255, 255); // white
 
-	moveAwayState = MOVE_AWAY_STATE::MOVE_CENTER;
-	m_fOffsetAwaySelected = 0.0f;
+	m_fHoverMoveAwayAnimation = 0.0f;
+	m_moveAwayState = MOVE_AWAY_STATE::MOVE_CENTER;
 }
 
 OsuUISongBrowserButton::~OsuUISongBrowserButton()
@@ -68,6 +65,7 @@ void OsuUISongBrowserButton::deleteAnimations()
 	anim->deleteExistingAnimation(&m_fCenterOffsetAnimation);
 	anim->deleteExistingAnimation(&m_fCenterOffsetVelocityAnimation);
 	anim->deleteExistingAnimation(&m_fHoverOffsetAnimation);
+	anim->deleteExistingAnimation(&m_fHoverMoveAwayAnimation);
 }
 
 void OsuUISongBrowserButton::draw(Graphics *g)
@@ -150,149 +148,36 @@ void OsuUISongBrowserButton::updateLayout()
 
 	setSize((int)(menuButtonBackground->getWidth()*m_fScale), (int)(menuButtonBackground->getHeight()*m_fScale));
 	setRelPosX(m_view->getSize().x*(0.04*m_fCenterOffsetAnimation + 0.3*m_fCenterOffsetVelocityAnimation - 0.075*m_fHoverOffsetAnimation - m_fOffsetPercent + 0.45));
-
-	switch(moveAwayState) {
-	// Undo the offset by moving to the opposite direction until it's 0 (center)
-	case MOVE_AWAY_STATE::MOVE_CENTER: {
-		auto offset = this->getOffsetAwaySelected();
-
-		float offsetDecrease;
-		if (offset < 0) {
-			offsetDecrease = -std::min(-offset, moveAwaySpeed);
-		} else {
-			offsetDecrease = std::min(offset, moveAwaySpeed);
-		}
-		setRelPosY(this->getRelPos().y - offsetDecrease);
-
-		this->setOffsetAwaySelected(offset - offsetDecrease);
-
-		//anim->moveQuadOut(&m_fOffsetAwaySelected, 0, 0.8, false);
-		break;
-
-	}
-	case MOVE_AWAY_STATE::MOVE_UP: {
-		if(-this->getOffsetAwaySelected() < maxOffsetAwaySelected)
-		{
-			setRelPosY(this->getRelPos().y - moveAwaySpeed);
-			this->setOffsetAwaySelected(this->getOffsetAwaySelected() - moveAwaySpeed);
-			//anim->moveQuadOut(&m_fOffsetAwaySelected, -maxOffsetAwaySelected, 0.8, false);
-		}
-		break;
-	}
-	case MOVE_AWAY_STATE::MOVE_DOWN: {
-		if(this->getOffsetAwaySelected() < maxOffsetAwaySelected)
-		{
-
-			setRelPosY(this->getRelPos().y + moveAwaySpeed);
-			this->setOffsetAwaySelected(this->getOffsetAwaySelected() + moveAwaySpeed);
-			//anim->moveQuadOut(&m_fOffsetAwaySelected, maxOffsetAwaySelected, 0.8, false);
-		}
-		break;
-	}
-	}
+	setRelPosY(m_fTargetRelPosY + getSize().y*0.125f*m_fHoverMoveAwayAnimation);
 }
 
 void OsuUISongBrowserButton::select()
 {
-	bool wasSelected = m_bSelected;
+	const bool wasSelected = m_bSelected;
 	m_bSelected = true;
+
+	// callback
 	onSelected(wasSelected);
-
-	/*
-	// this must be first, because of shared resource deletion by name
-	int scrollDiffY = m_vPos.y; // keep position consistent if children get removed above us
-	if (getPreviousParent() != NULL)
-	{
-		getPreviousParent()->deselect();
-
-		// compensate
-		scrollDiffY = scrollDiffY - m_vPos.y;
-		if (scrollDiffY > 0)
-			m_view->scrollY(scrollDiffY, false);
-	}
-	*/
-
-	// hide ourself, show children
-	/*
-	if (!isChild())
-	{
-		std::vector<OsuUISongBrowserButton*> children = getChildren();
-		if (children.size() > 0)
-		{
-			for (int i=0; i<children.size(); i++)
-			{
-				if (m_bRemoveParentOnSelection)
-					m_view->getContainer()->insertBaseUIElement(children[i], this);
-				else
-					m_view->getContainer()->insertBaseUIElementBack(children[i], this);
-				children[i]->setRelPos(getRelPos());
-				children[i]->setPos(getPos());
-				children[i]->setVisible(true);
-			}
-			if (m_bRemoveParentOnSelection)
-				m_view->getContainer()->removeBaseUIElement(this);
-
-			// update layout
-			m_songBrowser->updateSongButtonLayout();
-
-			// select diff immediately, but after the layout update!
-			if (m_bSelectFirstChildOnSelection)
-			{
-				if (selectTopChild)
-					children[0]->select();
-				else
-					children[children.size()-1]->select(clicked);
-			}
-
-			if (m_bRemoveParentOnSelection)
-				this->setVisible(false);
-		}
-	}
-	*/
 }
 
 void OsuUISongBrowserButton::deselect()
 {
 	m_bSelected = false;
+
+	// callback
 	onDeselected();
-
-	/*
-	// parent block
-	onDeselectParent();
-	m_bSelected = false;
-
-	// show ourself, hide children
-	std::vector<OsuUISongBrowserButton*> children = getChildren();
-	if (children.size() > 0)
-	{
-		// note that this does work fine with searching, because it adds elements based on relative other elements
-		// if the relative other elements can't be found, no insert or remove takes place
-		if (m_bRemoveParentOnSelection)
-			m_view->getContainer()->insertBaseUIElement(this, children[0]);
-		setRelPos(children[0]->getRelPos());
-		setPos(children[0]->getPos());
-		for (int i=0; i<children.size(); i++)
-		{
-			m_view->getContainer()->removeBaseUIElement(children[i]);
-			children[i]->setVisible(false);
-		}
-
-		// update layout
-		m_songBrowser->updateSongButtonLayout();
-	}
-	*/
 }
 
 void OsuUISongBrowserButton::onClicked()
 {
 	engine->getSound()->play(m_osu->getSkin()->getMenuClick());
 	CBaseUIButton::onClicked();
+
 	select();
 }
 
 void OsuUISongBrowserButton::onMouseInside()
 {
-
 	CBaseUIButton::onMouseInside();
 
 	if (engine->getTime() > lastHoverSoundTime + 0.05f) // to avoid earraep
@@ -305,33 +190,42 @@ void OsuUISongBrowserButton::onMouseInside()
 	anim->moveQuadOut(&m_fHoverOffsetAnimation, 1.0f, 1.0f*(1.0f - m_fHoverOffsetAnimation), true);
 
 	//
-	// Move the rest of the buttons away from hovered over one
+	// move the rest of the buttons away from hovered over one
 	//
 
-	std::vector<CBaseUIElement*> els = m_view->getContainer()->getAllBaseUIElements();
-
-	auto const selected_iter = std::find(els.begin(),els.end(), this);
-	auto const selected_idx = selected_iter - els.begin();
-
-	std::vector<CBaseUIElement*> split_up(els.begin(), els.begin() + selected_idx);
-	std::vector<CBaseUIElement*> split_down(els.begin() + selected_idx, els.end());
-
-	for(auto &el: split_up) {
-		dynamic_cast<OsuUISongBrowserButton*>(el)->setMoveAwayState(MOVE_AWAY_STATE::MOVE_UP);
+	std::vector<CBaseUIElement*> *els = m_view->getContainer()->getAllBaseUIElementsPointer();
+	bool foundCenter = false;
+	for (int i=0; i<els->size(); i++)
+	{
+		OsuUISongBrowserButton *b = dynamic_cast<OsuUISongBrowserButton*>((*els)[i]);
+		if (b != NULL) // sanity check
+		{
+			b->setMoveAwayState(foundCenter ? MOVE_AWAY_STATE::MOVE_DOWN : MOVE_AWAY_STATE::MOVE_UP);
+			if (b == this)
+			{
+				foundCenter = true;
+				b->setMoveAwayState(MOVE_AWAY_STATE::MOVE_CENTER);
+			}
+		}
 	}
-
-	for(auto &el: split_down) {
-		dynamic_cast<OsuUISongBrowserButton*>(el)->setMoveAwayState(MOVE_AWAY_STATE::MOVE_DOWN);
-	}
-
-	// Move selected one to the center
-	dynamic_cast<OsuUISongBrowserButton*>(*selected_iter)->setMoveAwayState(MOVE_AWAY_STATE::MOVE_CENTER);
 }
 
 void OsuUISongBrowserButton::onMouseOutside()
 {
 	CBaseUIButton::onMouseOutside();
 	anim->moveQuadOut(&m_fHoverOffsetAnimation, 0.0f, 1.0f*m_fHoverOffsetAnimation, true);
+
+	// only reset all other elements' state if we still should do so (possible frame delay of onMouseOutside coming together with the next element already getting onMouseInside!)
+	if (m_moveAwayState == MOVE_AWAY_STATE::MOVE_CENTER)
+	{
+		std::vector<CBaseUIElement*> *els = m_view->getContainer()->getAllBaseUIElementsPointer();
+		for (int i=0; i<els->size(); i++)
+		{
+			OsuUISongBrowserButton *b = dynamic_cast<OsuUISongBrowserButton*>((*els)[i]);
+			if (b != NULL) // sanity check
+				b->setMoveAwayState(MOVE_AWAY_STATE::MOVE_CENTER); // reset
+		}
+	}
 }
 
 void OsuUISongBrowserButton::setVisible(bool visible)
@@ -349,10 +243,55 @@ void OsuUISongBrowserButton::setVisible(bool visible)
 	updateLayout();
 }
 
+void OsuUISongBrowserButton::setTargetRelPosY(float targetRelPosY)
+{
+	m_fTargetRelPosY = targetRelPosY;
+	setRelPosY(m_fTargetRelPosY);
+}
+
 Vector2 OsuUISongBrowserButton::getActualOffset()
 {
 	const float hd2xMultiplier = m_osu->getSkin()->isMenuButtonBackground2x() ? 2.0f : 1.0f;
 	///const float correctedMarginPixelsX = (2*marginPixelsX + m_beatmap->getOsu()->getSkin()->getMenuButtonBackground()->getWidth()/hd2xMultiplier - 699)/2.0f;
 	const float correctedMarginPixelsY = (2*marginPixelsY + m_osu->getSkin()->getMenuButtonBackground()->getHeight()/hd2xMultiplier - 103.0f)/2.0f;
 	return Vector2((int)(marginPixelsX*m_fScale*hd2xMultiplier), (int)(correctedMarginPixelsY*m_fScale*hd2xMultiplier));
+}
+
+void OsuUISongBrowserButton::setMoveAwayState(OsuUISongBrowserButton::MOVE_AWAY_STATE moveAwayState)
+{
+	m_moveAwayState = moveAwayState;
+
+	// if we are not visible, destroy possibly existing animation
+	if (!isVisible())
+		anim->deleteExistingAnimation(&m_fHoverMoveAwayAnimation);
+
+	// only submit a new animation if we are visible, otherwise we would overwhelm the animationhandler with a shitload of requests every time for every button
+	// (if we are not visible we can just directly set the new value)
+	switch (m_moveAwayState)
+	{
+		case MOVE_AWAY_STATE::MOVE_CENTER:
+		{
+			if (!isVisible())
+				m_fHoverMoveAwayAnimation = 0.0f;
+			else
+				anim->moveQuartOut(&m_fHoverMoveAwayAnimation, 0, 0.7f, 0.05f, true); // add a tiny bit of delay to avoid jerky movement if the cursor is briefly between songbuttons while moving
+			break;
+		}
+		case MOVE_AWAY_STATE::MOVE_UP:
+		{
+			if (!isVisible())
+				m_fHoverMoveAwayAnimation = -1.0f;
+			else
+				anim->moveQuartOut(&m_fHoverMoveAwayAnimation, -1.0f, 0.7f, true);
+			break;
+		}
+		case MOVE_AWAY_STATE::MOVE_DOWN:
+		{
+			if (!isVisible())
+				m_fHoverMoveAwayAnimation = 1.0f;
+			else
+				anim->moveQuartOut(&m_fHoverMoveAwayAnimation, 1.0f, 0.7f, true);
+			break;
+		}
+	}
 }

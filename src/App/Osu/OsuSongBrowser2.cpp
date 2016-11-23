@@ -796,7 +796,8 @@ void OsuSongBrowser2::scrollToSongButton(OsuUISongBrowserButton *songButton, boo
 		m_songBrowser->scrollToY(-songButton->getRelPos().y + (alignOnTop ? (0) : (m_songBrowser->getSize().y/2 - songButton->getSize().y/2)));
 }
 
-OsuUISongBrowserButton* OsuSongBrowser2::findCurrentlySelectedSongButton() const {
+OsuUISongBrowserButton* OsuSongBrowser2::findCurrentlySelectedSongButton() const
+{
 	OsuUISongBrowserButton *selectedButton = NULL;
 	std::vector<CBaseUIElement*> elements = m_songBrowser->getContainer()->getAllBaseUIElements();
 	for (int i=0; i<elements.size(); i++)
@@ -891,7 +892,7 @@ void OsuSongBrowser2::updateSongButtonLayout()
 			}
 			wasCollectionButton = isCollectionButton;
 
-			songButton->setRelPosY(yCounter);
+			songButton->setTargetRelPosY(yCounter);
 			songButton->updateLayout();
 
 			yCounter += songButton->getActualSize().y;
