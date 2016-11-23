@@ -94,8 +94,6 @@ OsuSkin::OsuSkin(Osu *osu, UString filepath)
 	m_hit300k = m_missingTexture;
 
 	m_sliderGradient = m_missingTexture;
-	m_sliderGradientTrack = m_missingTexture;
-	m_sliderGradientBody = m_missingTexture;
 	m_sliderb = m_missingTexture;
 	m_sliderFollowCircle = m_missingTexture;
 	m_sliderScorePoint = m_missingTexture;
@@ -369,8 +367,6 @@ void OsuSkin::load()
 	checkLoadImage(&m_hit300k, "hit300k", "OSU_SKIN_HIT300K");
 
 	checkLoadImage(&m_sliderGradient, "slidergradient", "OSU_SKIN_SLIDERGRADIENT");
-	checkLoadImage(&m_sliderGradientTrack, "slidergradienttrack2", "OSU_SKIN_SLIDERGRADIENTTRACK");
-	checkLoadImage(&m_sliderGradientBody, "slidergradientbody", "OSU_SKIN_SLIDERGRADIENTBODY");
 	checkLoadImage(&m_sliderb, "sliderb", "OSU_SKIN_SLIDERB"); checkLoadImage(&m_sliderb, "sliderb0", "OSU_SKIN_SLIDERB");
 	checkLoadImage(&m_sliderScorePoint, "sliderscorepoint", "OSU_SKIN_SLIDERSCOREPOINT");
 	checkLoadImage(&m_sliderFollowCircle, "sliderfollowcircle", "OSU_SKIN_SLIDERFOLLOWCIRCLE");

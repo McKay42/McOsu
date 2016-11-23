@@ -274,7 +274,7 @@ void OsuUISongBrowserButton::setMoveAwayState(OsuUISongBrowserButton::MOVE_AWAY_
 			if (!isVisible())
 				m_fHoverMoveAwayAnimation = 0.0f;
 			else
-				anim->moveQuartOut(&m_fHoverMoveAwayAnimation, 0, 0.7f, 0.05f, true); // add a tiny bit of delay to avoid jerky movement if the cursor is briefly between songbuttons while moving
+				anim->moveQuartOut(&m_fHoverMoveAwayAnimation, 0, 0.7f, isMouseInside() ? 0.0f : 0.05f, true); // add a tiny bit of delay to avoid jerky movement if the cursor is briefly between songbuttons while moving
 			break;
 		}
 		case MOVE_AWAY_STATE::MOVE_UP:

@@ -161,6 +161,7 @@ private:
 	// search
 	UString m_sSearchString;
 	float m_fSearchWaitTime;
+	bool m_bInSearch;
 };
 
 #endif
