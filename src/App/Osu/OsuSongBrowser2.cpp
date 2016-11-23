@@ -148,6 +148,7 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 
 	// search
 	m_fSearchWaitTime = 0.0f;
+	m_bInSearch = false;
 
 	updateLayout();
 }
@@ -211,7 +212,7 @@ void OsuSongBrowser2::draw(Graphics *g)
 	combinedSearchText.append(searchText2);
 	McFont *searchTextFont = m_osu->getSubTitleFont();
 	float searchTextScale = 0.75f;
-	bool hasSearchSubTextVisible = m_sSearchString.length() > 0 && (m_fSearchWaitTime == 0.0f || m_visibleSongButtons.size() != m_songButtons.size());
+	bool hasSearchSubTextVisible = m_sSearchString.length() > 0 && m_bInSearch;
 	g->setColor(COLOR(m_sSearchString.length() > 0 ? 100 : 30, 0, 0, 0));
 	g->fillRect(m_songBrowser->getPos().x + m_songBrowser->getSize().x*0.75f - searchTextFont->getStringWidth(combinedSearchText)*searchTextScale/2 - (searchTextFont->getHeight()*searchTextScale)*0.5f, m_songBrowser->getPos().y, m_songBrowser->getSize().x, (searchTextFont->getHeight()*searchTextScale)*(hasSearchSubTextVisible ? 4.0f : 3.0f));
 	g->setColor(0xffffffff);
@@ -407,6 +408,7 @@ void OsuSongBrowser2::update()
 	if (m_fSearchWaitTime != 0.0f && engine->getTime() > m_fSearchWaitTime)
 	{
 		m_fSearchWaitTime = 0.0f;
+		m_bInSearch = true;
 
 		// empty the container
 		m_songBrowser->getContainer()->empty();
@@ -1445,6 +1447,10 @@ void OsuSongBrowser2::onGroupDifficulty(CBaseUIButton *b)
 
 void OsuSongBrowser2::onAfterGroupChange(CBaseUIButton *b)
 {
+	// delete possible search & text
+	m_bInSearch = false;
+	m_sSearchString = "";
+
 	// highlight current
 	for (int i=0; i<m_topbarRightTabButtons.size(); i++)
 	{
