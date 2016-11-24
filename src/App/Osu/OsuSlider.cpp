@@ -893,7 +893,7 @@ void OsuSlider::onRepeatHit(bool successful, bool sliderend)
 		anim->moveLinear(&m_fFollowCircleTickAnimationScale, 1.0f, OsuGameRules::osu_slider_followcircle_tick_pulse_time.getFloat(), true);
 
 		m_beatmap->getSkin()->playHitCircleSound(m_iSampleType);
-		m_beatmap->addHitResult(OsuScore::HIT_300, 0, true);
+		m_beatmap->addHitResult(OsuScore::HIT_300, 0, true, false, false, true); // ignore in hiterrorbar, increase combo, but don't count towards score!
 
 		if (sliderend)
 		{
