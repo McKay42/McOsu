@@ -125,7 +125,7 @@ public:
 
 	// OsuHitObject and other helper functions
 	void consumeClickEvent();
-	void addHitResult(OsuScore::HIT hit, long delta, bool ignoreOnHitErrorBar = false, bool hitErrorBarOnly = false, bool ignoreCombo = false);
+	void addHitResult(OsuScore::HIT hit, long delta, bool ignoreOnHitErrorBar = false, bool hitErrorBarOnly = false, bool ignoreCombo = false, bool ignoreScore = false);
 	void addSliderBreak();
 	void addScorePoints(int points);
 	void addHealth(float health);

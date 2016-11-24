@@ -1187,7 +1187,7 @@ void OsuBeatmap::consumeClickEvent()
 	m_clicks.erase(m_clicks.begin());
 }
 
-void OsuBeatmap::addHitResult(OsuScore::HIT hit, long delta, bool ignoreOnHitErrorBar, bool hitErrorBarOnly, bool ignoreCombo)
+void OsuBeatmap::addHitResult(OsuScore::HIT hit, long delta, bool ignoreOnHitErrorBar, bool hitErrorBarOnly, bool ignoreCombo, bool ignoreScore)
 {
 	if (m_fTimeshockTimer > 0.0f)
 		return;
@@ -1227,7 +1227,7 @@ void OsuBeatmap::addHitResult(OsuScore::HIT hit, long delta, bool ignoreOnHitErr
 		}
 	}
 
-	m_osu->getScore()->addHitResult(this, hit, delta, ignoreOnHitErrorBar, hitErrorBarOnly, ignoreCombo);
+	m_osu->getScore()->addHitResult(this, hit, delta, ignoreOnHitErrorBar, hitErrorBarOnly, ignoreCombo, ignoreScore);
 }
 
 void OsuBeatmap::addSliderBreak()
