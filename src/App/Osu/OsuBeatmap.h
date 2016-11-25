@@ -153,7 +153,6 @@ private:
 	void updateHitobjectMetrics();
 
 	void calculateStacks();
-	Vector2 originalOsuCoords2Stack(Vector2 coords);
 
 	unsigned long getMusicPositionMSInterpolated();
 

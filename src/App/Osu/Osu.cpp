@@ -201,8 +201,6 @@ Osu::Osu()
 	m_tooltipOverlay = new OsuTooltipOverlay(this);
 	m_mainMenu = new OsuMainMenu(this);
 	m_optionsMenu = new OsuOptionsMenu(this);
-	//m_songBrowser = new OsuSongBrowser(this);
-	m_songBrowser2 = NULL;
 	m_songBrowser2 = new OsuSongBrowser2(this);
 	m_modSelector = new OsuModSelector(this);
 	m_rankingScreen = new OsuRankingScreen(this);
@@ -215,8 +213,7 @@ Osu::Osu()
 	m_screens.push_back(m_modSelector);
 	m_screens.push_back(m_pauseMenu);
 	m_screens.push_back(m_hud);
-	if (m_songBrowser2 != NULL)
-		m_screens.push_back(m_songBrowser2);
+	m_screens.push_back(m_songBrowser2);
 	m_screens.push_back(m_optionsMenu);
 	m_screens.push_back(m_mainMenu);
 	m_screens.push_back(m_tooltipOverlay);
@@ -225,7 +222,6 @@ Osu::Osu()
 	//m_optionsMenu->setVisible(true);
 	m_mainMenu->setVisible(true);
 	//m_modSelector->setVisible(true);
-	//m_songBrowser->setVisible(true);
 	//m_songBrowser2->setVisible(true);
 	//m_pauseMenu->setVisible(true);
 	//m_rankingScreen->setVisible(true);
@@ -245,6 +241,9 @@ Osu::~Osu()
 
 	SAFE_DELETE(m_frameBuffer);
 	SAFE_DELETE(m_backBuffer);
+
+	if (OsuSliderRenderer::BLEND_SHADER != NULL)
+		SAFE_DELETE(OsuSliderRenderer::BLEND_SHADER);
 }
 
 void Osu::draw(Graphics *g)

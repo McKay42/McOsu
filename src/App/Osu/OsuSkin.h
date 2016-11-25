@@ -31,7 +31,7 @@ public:
 	void setSampleVolume(float volume);
 
 	void playHitCircleSound(int sampleType);
-	Sound *getSliderTick();
+	void playSliderTickSound();
 
 	// raw
 	inline Image *getMissingTexture() {return m_missingTexture;}
