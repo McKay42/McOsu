@@ -935,7 +935,7 @@ void OsuSlider::onTickHit(bool successful, int tickIndex)
 	{
 		m_fFollowCircleTickAnimationScale = 0.0f;
 		anim->moveLinear(&m_fFollowCircleTickAnimationScale, 1.0f, OsuGameRules::osu_slider_followcircle_tick_pulse_time.getFloat(), true);
-		engine->getSound()->play(m_beatmap->getSkin()->getSliderTick());
+		m_beatmap->getSkin()->playSliderTickSound();
 		m_beatmap->addHitResult(OsuScore::HIT_SLIDER30, 0, true);
 
 		// add score
