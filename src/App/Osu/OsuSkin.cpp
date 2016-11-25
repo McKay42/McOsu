@@ -810,19 +810,24 @@ void OsuSkin::playHitCircleSound(int sampleType)
 	}
 }
 
-Sound *OsuSkin::getSliderTick()
+void OsuSkin::playSliderTickSound()
 {
+	if (m_iSampleVolume <= 0)
+		return;
+
 	switch (m_iSampleSet)
 	{
 	case 3:
-		return m_drumSliderTick;
+		engine->getSound()->play(m_drumSliderTick);
+		break;
 	case 2:
-		return m_softSliderTick;
+		engine->getSound()->play(m_softSliderTick);
+		break;
 	default:
-		return m_normalSliderTick;
+		engine->getSound()->play(m_normalSliderTick);
+		break;
 	}
 }
-
 
 void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, UString resourceName, bool ignoreDefaultSkin)
 {

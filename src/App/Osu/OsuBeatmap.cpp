@@ -1688,19 +1688,13 @@ void OsuBeatmap::calculateStacks()
 		}
 	}
 
-	// update hit object positions
+	// update hitobject positions
 	float stackOffset = m_fRawHitcircleDiameter * STACK_OFFSET;
 	for (int i=0; i<m_hitobjects.size(); i++)
 	{
 		if (m_hitobjects[i]->getStack() != 0)
 			m_hitobjects[i]->updateStackPosition(stackOffset);
 	}
-}
-
-Vector2 OsuBeatmap::originalOsuCoords2Stack(Vector2 coords)
-{
-	// this transforms original raw coordinates just before they are used for the stack calculation
-	return coords;
 }
 
 unsigned long OsuBeatmap::getMusicPositionMSInterpolated()
