@@ -242,8 +242,7 @@ Osu::~Osu()
 	SAFE_DELETE(m_frameBuffer);
 	SAFE_DELETE(m_backBuffer);
 
-	if (OsuSliderRenderer::BLEND_SHADER != NULL)
-		SAFE_DELETE(OsuSliderRenderer::BLEND_SHADER);
+	SAFE_DELETE(OsuSliderRenderer::BLEND_SHADER);
 }
 
 void Osu::draw(Graphics *g)
