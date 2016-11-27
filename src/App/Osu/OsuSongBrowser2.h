@@ -76,10 +76,15 @@ public:
 	inline OsuBeatmap *getSelectedBeatmap() const {return m_selectedBeatmap;}
 
 private:
-	ConVar *m_fps_max_ref;
-
 	static bool searchMatcher(OsuBeatmap *beatmap, UString searchString);
 	static bool findSubstringInDifficulty(OsuBeatmapDifficulty *diff, UString searchString);
+
+	enum class GROUP
+	{
+		GROUP_NO_GROUPING,
+		GROUP_DIFFICULTY,
+		GROUP_COLLECTIONS
+	};
 
 	virtual void updateLayout();
 	virtual void onBack();
@@ -96,8 +101,8 @@ private:
 	void onSortChange(UString text);
 
 	void onGroupNoGrouping(CBaseUIButton *b);
-	void onGroupCollections(CBaseUIButton *b);
 	void onGroupDifficulty(CBaseUIButton *b);
+	void onGroupCollections(CBaseUIButton *b);
 	void onAfterGroupChange(CBaseUIButton *b);
 
 	void onSelectionMods();
@@ -108,8 +113,11 @@ private:
 	void selectRandomBeatmap();
 	void selectPreviousRandomBeatmap();
 
+	ConVar *m_fps_max_ref;
+
 	Osu *m_osu;
 	std::mt19937 m_rngalg;
+	GROUP m_group;
 
 	// top bar
 	float m_fSongSelectTopScale;

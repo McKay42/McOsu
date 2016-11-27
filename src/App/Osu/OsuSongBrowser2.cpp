@@ -79,6 +79,7 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	m_osu = osu;
 
 	m_rngalg = std::mt19937(time(0));
+	m_group = GROUP::GROUP_NO_GROUPING;
 
 	// convar refs
 	m_fps_max_ref = convar->getConVarByName("fps_max");
@@ -439,7 +440,7 @@ void OsuSongBrowser2::update()
 		}
 		else
 		{
-			// TODO: remember what which tab was selected, instead of defaulting back to no grouping
+			// TODO: remember which tab was selected, instead of defaulting back to no grouping
 			onGroupNoGrouping(m_noGroupingButton);
 		}
 	}
@@ -871,6 +872,15 @@ void OsuSongBrowser2::updateSongButtonLayout()
 
 		if (songButton != NULL)
 		{
+			// HACKHACK: fuck
+			if (songButton->getCollectionDiffHack())
+			{
+				if (m_group == GROUP::GROUP_COLLECTIONS)
+					songButton->setInactiveBackgroundColor(COLOR(255, 233, 104, 0));
+				else
+					songButton->setInactiveBackgroundColor(COLOR(255, 0, 150, 236));
+			}
+
 			// depending on the object type, layout differently
 			bool isCollectionButton = dynamic_cast<OsuUISongBrowserCollectionButton*>(songButton) != NULL;
 			bool isDiffButton = dynamic_cast<OsuUISongBrowserSongDifficultyButton*>(songButton) != NULL;
@@ -1318,12 +1328,44 @@ void OsuSongBrowser2::onDatabaseLoadingFinished()
 		std::vector<OsuUISongBrowserButton*> children;
 		for (int b=0; b<collections[i].beatmaps.size(); b++)
 		{
-			OsuBeatmap *beatmap = collections[i].beatmaps[b];
+			OsuBeatmap *beatmap = collections[i].beatmaps[b].first;
+			std::vector<OsuBeatmapDifficulty*> colDiffs = collections[i].beatmaps[b].second;
 			for (int sb=0; sb<m_songButtons.size(); sb++)
 			{
 				if (m_songButtons[sb]->getBeatmap() == beatmap)
 				{
+					std::vector<OsuUISongBrowserButton*> diffChildren = m_songButtons[sb]->getChildrenAbs();
+					std::vector<OsuUISongBrowserButton*> matchingDiffs;
+
+					for (int d=0; d<diffChildren.size(); d++)
+					{
+						OsuUISongBrowserSongButton *songButtonPointer = dynamic_cast<OsuUISongBrowserSongButton*>(diffChildren[d]);
+						for (int cd=0; cd<colDiffs.size(); cd++)
+						{
+							if (songButtonPointer != NULL && songButtonPointer->getDiff() == colDiffs[cd])
+								matchingDiffs.push_back(songButtonPointer);
+						}
+					}
+
+					// HACKHACK: fuck
+					if (matchingDiffs.size() != beatmap->getDifficultiesPointer()->size())
+					{
+						for (int md=0; md<matchingDiffs.size(); md++)
+						{
+							matchingDiffs[md]->setCollectionDiffHack(true);
+						}
+					}
+
+					// TODO: only add matched diffs, instead of the whole beatmap
+					/*
+					if (matchingDiffs.size() > 1)
+						children.push_back(m_songButtons[sb]);
+					else if (matchingDiffs.size() == 1)
+						children.push_back(matchingDiffs[0]);
+					*/
+
 					children.push_back(m_songButtons[sb]);
+
 					break;
 				}
 			}
@@ -1381,15 +1423,9 @@ void OsuSongBrowser2::onSortChange(UString text)
 
 void OsuSongBrowser2::onGroupNoGrouping(CBaseUIButton *b)
 {
+	m_group = GROUP::GROUP_NO_GROUPING;
+
 	m_visibleSongButtons = std::vector<OsuUISongBrowserButton*>(m_songButtons.begin(), m_songButtons.end());
-	rebuildSongButtons();
-
-	onAfterGroupChange(b);
-}
-
-void OsuSongBrowser2::onGroupCollections(CBaseUIButton *b)
-{
-	m_visibleSongButtons = std::vector<OsuUISongBrowserButton*>(m_collectionButtons.begin(), m_collectionButtons.end());
 	rebuildSongButtons();
 
 	onAfterGroupChange(b);
@@ -1397,6 +1433,8 @@ void OsuSongBrowser2::onGroupCollections(CBaseUIButton *b)
 
 void OsuSongBrowser2::onGroupDifficulty(CBaseUIButton *b)
 {
+	m_group = GROUP::GROUP_DIFFICULTY;
+
 	m_visibleSongButtons = std::vector<OsuUISongBrowserButton*>(m_songButtons.begin(), m_songButtons.end());
 
 	// sort by difficulty
@@ -1440,6 +1478,16 @@ void OsuSongBrowser2::onGroupDifficulty(CBaseUIButton *b)
 	};
 	std::sort(m_visibleSongButtons.begin(), m_visibleSongButtons.end(), SortComparator());
 
+	rebuildSongButtons();
+
+	onAfterGroupChange(b);
+}
+
+void OsuSongBrowser2::onGroupCollections(CBaseUIButton *b)
+{
+	m_group = GROUP::GROUP_COLLECTIONS;
+
+	m_visibleSongButtons = std::vector<OsuUISongBrowserButton*>(m_collectionButtons.begin(), m_collectionButtons.end());
 	rebuildSongButtons();
 
 	onAfterGroupChange(b);

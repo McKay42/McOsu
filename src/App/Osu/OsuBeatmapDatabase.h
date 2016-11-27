@@ -14,6 +14,7 @@ class Timer;
 
 class Osu;
 class OsuBeatmap;
+class OsuBeatmapDifficulty;
 class OsuFile;
 
 class OsuBeatmapDatabaseLoader;
@@ -24,7 +25,7 @@ public:
 	struct Collection
 	{
 		UString name;
-		std::vector<OsuBeatmap*> beatmaps;
+		std::vector<std::pair<OsuBeatmap*, std::vector<OsuBeatmapDifficulty*>>> beatmaps;
 	};
 
 public:
