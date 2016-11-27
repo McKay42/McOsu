@@ -611,29 +611,80 @@ void OsuBeatmapDatabase::loadDB(OsuFile *db)
 				Collection c;
 				c.name = rc.name;
 
+				// go through every hash of the collection
+				std::vector<OsuBeatmapDifficulty*> matchingDiffs;
 				for (int h=0; h<rc.hashes.size(); h++)
 				{
+					// for every hash, go through every beatmap
 					for (int b=0; b<m_beatmaps.size(); b++)
 					{
+						// for every beatmap, go through every diff and check if a diff hash matches, store those matching diffs
 						std::vector<OsuBeatmapDifficulty*> diffs = m_beatmaps[b]->getDifficulties();
 						for (int d=0; d<diffs.size(); d++)
 						{
 							if (diffs[d]->md5hash == rc.hashes[h])
+								matchingDiffs.push_back(diffs[d]);
+						}
+					}
+				}
+
+				// we now have an array of all OsuBeatmapDifficulty objects within this collection
+
+				// go through every found OsuBeatmapDifficulty
+				if (matchingDiffs.size() > 0)
+				{
+					for (int md=0; md<matchingDiffs.size(); md++)
+					{
+						OsuBeatmapDifficulty *diff = matchingDiffs[md];
+
+						// find the OsuBeatmap object corresponding to this diff
+						OsuBeatmap *beatmap = NULL;
+						for (int b=0; b<m_beatmaps.size(); b++)
+						{
+							std::vector<OsuBeatmapDifficulty*> diffs = m_beatmaps[b]->getDifficulties();
+							for (int d=0; d<diffs.size(); d++)
 							{
-								// we have found the beatmap, if it isn't already in the collection then add it
-								bool beatmapIsAlreadyInCollection = false;
-								for (int m=0; m<c.beatmaps.size(); m++)
+								if (diffs[d] == diff)
 								{
-									if (c.beatmaps[m] == m_beatmaps[b])
+									beatmap = m_beatmaps[b];
+									break;
+								}
+							}
+						}
+
+						// we now have one matching OsuBeatmap and OsuBeatmapDifficulty, add either of them if they don't exist yet
+						bool beatmapIsAlreadyInCollection = false;
+						for (int m=0; m<c.beatmaps.size(); m++)
+						{
+							if (c.beatmaps[m].first == beatmap)
+							{
+								beatmapIsAlreadyInCollection = true;
+
+								// the beatmap already exists, check if we have to add the current diff
+								bool diffIsAlreadyInCollection = false;
+								for (int d=0; d<c.beatmaps[m].second.size(); d++)
+								{
+									if (c.beatmaps[m].second[d] == diff)
 									{
-										beatmapIsAlreadyInCollection = true;
+										diffIsAlreadyInCollection = true;
 										break;
 									}
 								}
-								if (!beatmapIsAlreadyInCollection)
-									c.beatmaps.push_back(m_beatmaps[b]);
+
+								// add diff
+								if (!diffIsAlreadyInCollection && diff != NULL)
+									c.beatmaps[m].second.push_back(diff);
+
 								break;
 							}
+						}
+
+						// add beatmap
+						if (!beatmapIsAlreadyInCollection && beatmap != NULL && diff != NULL)
+						{
+							std::vector<OsuBeatmapDifficulty*> diffs;
+							diffs.push_back(diff);
+							c.beatmaps.push_back(std::pair<OsuBeatmap*, std::vector<OsuBeatmapDifficulty*>>(beatmap, diffs));
 						}
 					}
 				}

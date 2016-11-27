@@ -39,9 +39,14 @@ public:
 	void setOffsetPercent(float offsetPercent) {m_fOffsetPercent = offsetPercent;}
 	void setHideIfSelected(bool hideIfSelected) {m_bHideIfSelected = hideIfSelected;}
 
+	void setCollectionDiffHack(bool collectionDiffHack) {m_bCollectionDiffHack = collectionDiffHack;}
+
 	Vector2 getActualOffset();
 	inline Vector2 getActualSize() {return m_vSize - 2*getActualOffset();}
 	inline Vector2 getActualPos() {return m_vPos + getActualOffset();}
+	inline std::vector<OsuUISongBrowserButton*> getChildrenAbs() {return m_children;}
+
+	inline bool getCollectionDiffHack() const {return m_bCollectionDiffHack;}
 
 	virtual OsuBeatmap *getBeatmap() const {return NULL;}
 	virtual std::vector<OsuUISongBrowserButton*> getChildren() {return m_children;}
@@ -63,6 +68,7 @@ protected:
 	McFont *m_fontBold;
 
 	bool m_bSelected;
+	bool m_bCollectionDiffHack;
 
 	std::vector<OsuUISongBrowserButton*> m_children;
 
