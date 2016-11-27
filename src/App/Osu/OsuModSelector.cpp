@@ -217,6 +217,28 @@ void OsuModSelector::draw(Graphics *g)
 	}
 	else // normal mode, just draw everything
 	{
+		// disabled because it looks like shit
+		/*
+		// HACKHACK: disable GL_TEXTURE_2D (needs proper definition for flat/textured rendering vaos)
+		g->drawPixel(-1, -1);
+
+		// subtle background to guide users to move the cursor to the experimental mods
+		g->setColor(0xffffffff);
+		Color leftColor = 0x33ffffff;
+		Color rightColor = 0x00000000;
+		VertexArrayObject vao;
+		vao.setType(VertexArrayObject::TYPE_QUADS);
+		vao.addColor(leftColor);
+		vao.addVertex(Vector2(0,0));
+		vao.addColor(leftColor);
+		vao.addVertex(Vector2(0, m_osu->getScreenHeight()));
+		vao.addColor(rightColor);
+		vao.addVertex(Vector2(m_osu->getScreenWidth()*0.05f, m_osu->getScreenHeight()));
+		vao.addColor(rightColor);
+		vao.addVertex(Vector2(m_osu->getScreenWidth()*0.05f, 0));
+		g->drawVAO(&vao);
+		*/
+
 		m_container->draw(g);
 		m_overrideSliderContainer->draw(g);
 	}
@@ -286,13 +308,13 @@ void OsuModSelector::update()
 		if (!m_bExperimentalVisible)
 		{
 			m_bExperimentalVisible = true;
-			anim->moveQuadOut(&m_fExperimentalAnimation, 1.0f, (1.0f - m_fExperimentalAnimation)*0.15f, 0.0f, true);
+			anim->moveQuadOut(&m_fExperimentalAnimation, 1.0f, (1.0f - m_fExperimentalAnimation)*0.11f, 0.0f, true);
 		}
 	}
 	else if (m_bExperimentalVisible && !m_experimentalContainer->isMouseInside() && !m_experimentalContainer->isActive() && !experimentalModEnabled)
 	{
 		m_bExperimentalVisible = false;
-		anim->moveQuadIn(&m_fExperimentalAnimation, 0.0f, m_fExperimentalAnimation*0.15f, 0.0f, true);
+		anim->moveQuadIn(&m_fExperimentalAnimation, 0.0f, m_fExperimentalAnimation*0.11f, 0.0f, true);
 	}
 }
 
