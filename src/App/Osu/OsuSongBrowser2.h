@@ -16,13 +16,19 @@ class OsuBeatmap;
 class OsuBeatmapDatabase;
 class OsuBeatmapDifficulty;
 
+class OsuUIContextMenu;
 class OsuUISelectionButton;
 class OsuUISongBrowserInfoLabel;
 class OsuUISongBrowserButton;
+class OsuUISongBrowserSongButton;
+class OsuUISongBrowserCollectionButton;
+
+class OsuUISongBrowserDifficultyCollectionButton;
 
 class CBaseUIContainer;
 class CBaseUIImageButton;
 class CBaseUIScrollView;
+class CBaseUIButton;
 
 class McFont;
 class ConVar;
@@ -54,29 +60,51 @@ public:
 
 	void onPlayEnd(bool quit = true);	// called when a beatmap is finished playing (or the player quit)
 
-	void refreshBeatmaps();
+	void onDifficultySelected(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff, bool play = false);
 
-	void onDifficultySelected(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff, bool fromClick = false, bool play = false);
-	void scrollToSongButton(OsuUISongBrowserButton *songButton);
+	void refreshBeatmaps();
+	void scrollToSongButton(OsuUISongBrowserButton *songButton, bool alignOnTop = false);
+	void scrollToSelectedSongButton();
+	void rebuildSongButtons(bool unloadAllThumbnails = true);
+	void updateSongButtonLayout();
+
+	OsuUISongBrowserButton* findCurrentlySelectedSongButton() const;
 
 	void setVisible(bool visible);
 
 	inline bool hasSelectedAndIsPlaying() {return m_bHasSelectedAndIsPlaying;}
 	inline OsuBeatmap *getSelectedBeatmap() const {return m_selectedBeatmap;}
 
-	static bool searchMatcher(OsuBeatmap *beatmap, UString searchString);
-
 private:
+	static bool searchMatcher(OsuBeatmap *beatmap, UString searchString);
+	static bool findSubstringInDifficulty(OsuBeatmapDifficulty *diff, UString searchString);
+
+	enum class GROUP
+	{
+		GROUP_NO_GROUPING,
+		GROUP_DIFFICULTY,
+		GROUP_COLLECTIONS
+	};
+
 	virtual void updateLayout();
+	virtual void onBack();
+
 	void scheduleSearchUpdate(bool immediately = false);
 
 	OsuUISelectionButton *addBottombarNavButton();
-
-	ConVar *m_fps_max_ref;
+	CBaseUIButton *addTopBarRightTabButton(UString text);
+	CBaseUIButton *addTopBarRightSortButton(UString text);
 
 	void onDatabaseLoadingFinished();
 
-	virtual void onBack();
+	void onSortClicked(CBaseUIButton *button);
+	void onSortChange(UString text);
+
+	void onGroupNoGrouping(CBaseUIButton *b);
+	void onGroupDifficulty(CBaseUIButton *b);
+	void onGroupCollections(CBaseUIButton *b);
+	void onAfterGroupChange(CBaseUIButton *b);
+
 	void onSelectionMods();
 	void onSelectionRandom();
 	void onSelectionOptions();
@@ -85,9 +113,11 @@ private:
 	void selectRandomBeatmap();
 	void selectPreviousRandomBeatmap();
 
-	static bool findSubstringInDifficulty(OsuBeatmapDifficulty *diff, UString searchString);
+	ConVar *m_fps_max_ref;
 
 	Osu *m_osu;
+	std::mt19937 m_rngalg;
+	GROUP m_group;
 
 	// top bar
 	float m_fSongSelectTopScale;
@@ -98,6 +128,11 @@ private:
 
 	// top bar right
 	CBaseUIContainer *m_topbarRight;
+	std::vector<CBaseUIButton*> m_topbarRightTabButtons;
+	std::vector<CBaseUIButton*> m_topbarRightSortButtons;
+	CBaseUIButton *m_noGroupingButton;
+	CBaseUIButton *m_sortButton;
+	OsuUIContextMenu *m_contextMenu;
 
 	// bottom bar
 	CBaseUIContainer *m_bottombar;
@@ -109,11 +144,12 @@ private:
 	// beatmap database
 	OsuBeatmapDatabase *m_db;
 	std::vector<OsuBeatmap*> m_beatmaps;
-	std::vector<OsuUISongBrowserButton*> m_songButtons;
+	std::vector<OsuUISongBrowserButton*> m_visibleSongButtons;
+	std::vector<OsuUISongBrowserSongButton*> m_songButtons;
+	std::vector<OsuUISongBrowserCollectionButton*> m_collectionButtons;
+	std::vector<OsuUISongBrowserDifficultyCollectionButton*> m_difficultyCollectionButtons;
 	bool m_bBeatmapRefreshScheduled;
 	UString m_sLastOsuFolder;
-	int m_iFullRefreshCounter;
-	float m_fFullRefreshResetTime;
 
 	// keys
 	bool m_bF1Pressed;
@@ -131,9 +167,9 @@ private:
 	std::vector<OsuBeatmap*> m_previousRandomBeatmaps;
 
 	// search
-	std::vector<OsuUISongBrowserButton*> m_visibleSongButtons;
 	UString m_sSearchString;
 	float m_fSearchWaitTime;
+	bool m_bInSearch;
 };
 
 #endif

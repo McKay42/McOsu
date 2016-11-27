@@ -20,6 +20,7 @@ class OsuBeatmapDifficulty
 {
 public:
 	OsuBeatmapDifficulty(Osu *osu, UString filepath, UString folder);
+	~OsuBeatmapDifficulty();
 	void unload();
 
 	bool loadMetadataRaw();
@@ -96,6 +97,7 @@ public:
 	UString name; // difficulty name ("Version")
 	UString source;
 	UString tags;
+	UString md5hash;
 	long beatmapId;
 
 	float AR;
@@ -138,10 +140,15 @@ public:
 	};
 
 	TIMING_INFO getTimingInfoForTime(unsigned long positionMS);
+	inline bool shouldBackgroundImageBeLoaded() const {return m_bShouldBackgroundImageBeLoaded;}
 
 private:
+	friend class BackgroundImagePathLoader;
+
 	float getSliderTimeForSlider(SLIDER *slider);
 	float getTimingPointMultiplierForSlider(SLIDER *slider); // needed for slider ticks
+
+	void deleteBackgroundImagePathLoader();
 
 	Osu *m_osu;
 
@@ -149,6 +156,7 @@ private:
 	UString m_sFolder;
 
 	// custom
+	bool m_bShouldBackgroundImageBeLoaded;
 	BackgroundImagePathLoader *m_backgroundImagePathLoader;
 };
 

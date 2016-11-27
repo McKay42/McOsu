@@ -1,6 +1,6 @@
 //================ Copyright (c) 2016, PG, All rights reserved. =================//
 //
-// Purpose:		song browser element (beatmap, diff, collection, group, etc.)
+// Purpose:		song browser button base class
 //
 // $NoKeywords: $osusbb
 //===============================================================================//
@@ -11,6 +11,7 @@
 #include "SoundEngine.h"
 #include "ResourceManager.h"
 #include "AnimationHandler.h"
+#include "ConVar.h"
 
 #include "Osu.h"
 #include "OsuSkin.h"
@@ -21,106 +22,42 @@
 #include "CBaseUIContainer.h"
 #include "CBaseUIScrollView.h"
 
-OsuUISongBrowserButton *OsuUISongBrowserButton::previousParent = NULL;
-OsuUISongBrowserButton *OsuUISongBrowserButton::previousChild = NULL;
 int OsuUISongBrowserButton::marginPixelsX = 9;
 int OsuUISongBrowserButton::marginPixelsY = 9;
-float OsuUISongBrowserButton::thumbnailYRatio = 1.333333f;
 float OsuUISongBrowserButton::lastHoverSoundTime = 0;
-Color OsuUISongBrowserButton::inactiveBackgroundColor = COLOR(255, 235, 73, 153); // pink
-Color OsuUISongBrowserButton::activeBackgroundColor = COLOR(255, 255, 255, 255); // white
-Color OsuUISongBrowserButton::inactiveDifficultyBackgroundColor = COLOR(255, 0, 150, 236); // blue
 
-OsuUISongBrowserButton::OsuUISongBrowserButton(OsuBeatmap *beatmap, CBaseUIScrollView *view, OsuSongBrowser2 *songBrowser, float xPos, float yPos, float xSize, float ySize, UString name, OsuUISongBrowserButton *parent, OsuBeatmapDifficulty *child, bool isFirstChild) : CBaseUIButton(xPos, yPos, xSize, ySize, name, "")
+// Color OsuUISongBrowserButton::inactiveDifficultyBackgroundColor = COLOR(255, 0, 150, 236); // blue
+
+OsuUISongBrowserButton::OsuUISongBrowserButton(Osu *osu, OsuSongBrowser2 *songBrowser, CBaseUIScrollView *view, float xPos, float yPos, float xSize, float ySize, UString name) : CBaseUIButton(xPos, yPos, xSize, ySize, name, "")
 {
-	m_beatmap = beatmap;
+	m_osu = osu;
 	m_view = view;
 	m_songBrowser = songBrowser;
-	m_parent = parent;
-	m_child = child;
-	m_bIsFirstChild = isFirstChild;
-	m_font = beatmap->getOsu()->getSongBrowserFont();
-	m_fontBold = beatmap->getOsu()->getSongBrowserFontBold();
+
+	m_font = m_osu->getSongBrowserFont();
+	m_fontBold = m_osu->getSongBrowserFontBold();
 
 	m_bVisible = false;
-
-	/*
-	m_sTitle = "Title";
-	m_sArtist = "Artist";
-	m_sMapper = "Mapper";
-	m_sDiff = "Difficulty";
-	*/
-
-	OsuBeatmapDifficulty *diff = isChild() ? m_child : m_beatmap->getDifficulties()[0];
-
-	m_sTitle = diff->title;
-	m_sArtist = diff->artist;
-	m_sMapper = diff->creator;
-	if (isChild())
-		m_sDiff = diff->name;
-
 	m_bSelected = false;
+	m_bHideIfSelected = false;
+	m_bCollectionDiffHack = false;
+
+	m_fTargetRelPosY = yPos;
 	m_fScale = 1.0f;
-
-	m_fTextSpacingScale = 0.075f;
-	m_fTextMarginScale = 0.075f;
-	m_fTitleScale = 0.22f;
-	m_fSubTitleScale = 0.14f;
-	m_fDiffScale = 0.18f;
-
-	m_fImageLoadScheduledTime = 0.0f;
+	m_fOffsetPercent = 0.0f;
 	m_fHoverOffsetAnimation = 0.0f;
 	m_fCenterOffsetAnimation = 0.0f;
 	m_fCenterOffsetVelocityAnimation = 0.0f;
 
-	// build children
-	if (!isChild())
-	{
-		// sort difficulties by difficulty
-		std::vector<OsuBeatmapDifficulty*> difficulties = m_beatmap->getDifficulties();
-		struct SortComparator
-		{
-		    bool operator() (OsuBeatmapDifficulty const *a, OsuBeatmapDifficulty const *b) const
-		    {
-		    	const unsigned long diff1 = (a->AR+1)*(a->CS+1)*(a->HP+1)*(a->OD+1)*(a->maxBPM > 0 ? a->maxBPM : 1);
-		    	const unsigned long diff2 = (b->AR+1)*(b->CS+1)*(b->HP+1)*(b->OD+1)*(b->maxBPM > 0 ? b->maxBPM : 1);
+	m_inactiveBackgroundColor = COLOR(255, 235, 73, 153); // pink
+	m_activeBackgroundColor = COLOR(255, 255, 255, 255); // white
 
-		    	const float stars1 = a->starsNoMod;
-		    	const float stars2 = b->starsNoMod;
-
-		    	if (stars1 > 0 && stars2 > 0)
-		    		return stars1 < stars2;
-		    	else
-		    		return diff1 < diff2;
-		    }
-		};
-		std::sort(difficulties.begin(), difficulties.end(), SortComparator());
-
-		// and add them
-		for (int i=0; i<difficulties.size(); i++)
-		{
-			OsuUISongBrowserButton *songButton = new OsuUISongBrowserButton(beatmap, m_view, m_songBrowser, 0, 0, 0, 0, "", this, difficulties[i], i == 0);
-			m_children.push_back(songButton);
-		}
-	}
-
-	updateLayout();
+	m_fHoverMoveAwayAnimation = 0.0f;
+	m_moveAwayState = MOVE_AWAY_STATE::MOVE_CENTER;
 }
 
 OsuUISongBrowserButton::~OsuUISongBrowserButton()
 {
-	if (!m_bSelected)
-	{
-		for (int i=0; i<m_children.size(); i++)
-		{
-			delete m_children[i];
-		}
-		m_children.clear();
-	}
-
-	previousParent = NULL;
-	previousChild = NULL;
-
 	deleteAnimations();
 }
 
@@ -129,139 +66,48 @@ void OsuUISongBrowserButton::deleteAnimations()
 	anim->deleteExistingAnimation(&m_fCenterOffsetAnimation);
 	anim->deleteExistingAnimation(&m_fCenterOffsetVelocityAnimation);
 	anim->deleteExistingAnimation(&m_fHoverOffsetAnimation);
+	anim->deleteExistingAnimation(&m_fHoverMoveAwayAnimation);
 }
 
 void OsuUISongBrowserButton::draw(Graphics *g)
 {
 	if (!m_bVisible) return;
 
-	OsuSkin *skin = m_beatmap->getSkin();
+	drawMenuButtonBackground(g);
 
-	// debug bounding box
-	/*
-	g->setColor(0xffff0000);
-	g->drawLine(m_vPos.x, m_vPos.y, m_vPos.x+m_vSize.x, m_vPos.y);
-	g->drawLine(m_vPos.x, m_vPos.y, m_vPos.x, m_vPos.y+m_vSize.y);
-	g->drawLine(m_vPos.x, m_vPos.y+m_vSize.y, m_vPos.x+m_vSize.x, m_vPos.y+m_vSize.y);
-	g->drawLine(m_vPos.x+m_vSize.x, m_vPos.y, m_vPos.x+m_vSize.x, m_vPos.y+m_vSize.y);
-	*/
+	// debug inner bounding box
+	if (Osu::debug->getBool())
+	{
+		// scaling
+		const Vector2 pos = getActualPos();
+		const Vector2 size = getActualSize();
 
-	// build strings
-	UString titleText = buildTitleString();
-	UString subTitleText = buildSubTitleString();
-	UString diffText = buildDiffString();
+		g->setColor(0xffff00ff);
+		g->drawLine(pos.x, pos.y, pos.x+size.x, pos.y);
+		g->drawLine(pos.x, pos.y, pos.x, pos.y+size.y);
+		g->drawLine(pos.x, pos.y+size.y, pos.x+size.x, pos.y+size.y);
+		g->drawLine(pos.x+size.x, pos.y, pos.x+size.x, pos.y+size.y);
+	}
 
-	// scaling
-	const Vector2 pos = getActualPos();
-	const Vector2 size = getActualSize();
+	// debug outer/actual bounding box
+	if (Osu::debug->getBool())
+	{
+		g->setColor(0xffff0000);
+		g->drawLine(m_vPos.x, m_vPos.y, m_vPos.x+m_vSize.x, m_vPos.y);
+		g->drawLine(m_vPos.x, m_vPos.y, m_vPos.x, m_vPos.y+m_vSize.y);
+		g->drawLine(m_vPos.x, m_vPos.y+m_vSize.y, m_vPos.x+m_vSize.x, m_vPos.y+m_vSize.y);
+		g->drawLine(m_vPos.x+m_vSize.x, m_vPos.y, m_vPos.x+m_vSize.x, m_vPos.y+m_vSize.y);
+	}
+}
 
-	// draw menu button background
-	g->setColor(m_bSelected ? activeBackgroundColor : (isChild() ? inactiveDifficultyBackgroundColor : inactiveBackgroundColor));
+void OsuUISongBrowserButton::drawMenuButtonBackground(Graphics *g)
+{
+	g->setColor(m_bSelected ? m_activeBackgroundColor : m_inactiveBackgroundColor);
 	g->pushTransform();
 		g->scale(m_fScale, m_fScale);
 		g->translate(m_vPos.x + m_vSize.x/2, m_vPos.y + m_vSize.y/2);
-		g->drawImage(skin->getMenuButtonBackground());
+		g->drawImage(m_osu->getSkin()->getMenuButtonBackground());
 	g->popTransform();
-
-	// draw beatmap background
-	Image *beatmapBackground = isChild() ? m_child->backgroundImage : (m_beatmap->getDifficulties().size() > 0 ? m_beatmap->getDifficulties()[0]->backgroundImage : NULL);
-	int textXOffset = size.y*thumbnailYRatio + size.x*0.02f;
-	if (beatmapBackground != NULL)
-	{
-		float beatmapBackgroundScale = Osu::getImageScaleToFillResolution(beatmapBackground, Vector2(size.y*thumbnailYRatio, size.y))*1.05f;
-
-		Vector2 centerOffset = Vector2((size.y*thumbnailYRatio)/2, size.y/2);
-		Rect clipRect = Rect(pos.x-1, pos.y + 2, (int)(size.y*thumbnailYRatio)+4, size.y+1);
-
-		g->setColor(0xffffffff);
-		g->pushTransform();
-			g->scale(beatmapBackgroundScale, beatmapBackgroundScale);
-			g->translate(pos.x + (int)centerOffset.x, pos.y + (int)centerOffset.y);
-			g->pushClipRect(clipRect);
-				g->drawImage(beatmapBackground);
-			g->popClipRect();
-		g->popTransform();
-
-		// debug cliprect bounding box
-		/*
-		Vector2 clipRectPos = Vector2(clipRect.getX(), clipRect.getY());
-		Vector2 clipRectSize = Vector2(clipRect.getWidth(), clipRect.getHeight());
-
-		g->setColor(0xffffff00);
-		g->drawLine(clipRectPos.x, clipRectPos.y, clipRectPos.x+clipRectSize.x, clipRectPos.y);
-		g->drawLine(clipRectPos.x, clipRectPos.y, clipRectPos.x, clipRectPos.y+clipRectSize.y);
-		g->drawLine(clipRectPos.x, clipRectPos.y+clipRectSize.y, clipRectPos.x+clipRectSize.x, clipRectPos.y+clipRectSize.y);
-		g->drawLine(clipRectPos.x+clipRectSize.x, clipRectPos.y, clipRectPos.x+clipRectSize.x, clipRectPos.y+clipRectSize.y);
-		*/
-	}
-
-	// draw title
-	float titleScale = (size.y*m_fTitleScale) / m_font->getHeight();
-	g->setColor(m_bSelected ? skin->getSongSelectActiveText() : skin->getSongSelectInactiveText());
-	if (isChild() && !m_bSelected)
-		g->setAlpha(0.2f);
-	g->pushTransform();
-		g->scale(titleScale, titleScale);
-		g->translate(pos.x + textXOffset, pos.y + size.y*m_fTextMarginScale + m_font->getHeight()*titleScale);
-		g->drawString(m_font, titleText);
-	g->popTransform();
-
-	// draw subtitle
-	float subTitleScale = (size.y*m_fSubTitleScale) / m_font->getHeight();
-	g->setColor(m_bSelected ? skin->getSongSelectActiveText() : skin->getSongSelectInactiveText());
-	if (isChild() && !m_bSelected)
-		g->setAlpha(0.2f);
-	g->pushTransform();
-		g->scale(subTitleScale, subTitleScale);
-		g->translate(pos.x + textXOffset, pos.y + size.y*m_fTextMarginScale + m_font->getHeight()*titleScale + size.y*m_fTextSpacingScale + m_font->getHeight()*subTitleScale*0.85f);
-		g->drawString(m_font, subTitleText);
-	g->popTransform();
-
-	if (isChild())
-	{
-		// draw diff name
-		float diffScale = (size.y*m_fDiffScale) / m_fontBold->getHeight();
-		g->setColor(m_bSelected ? skin->getSongSelectActiveText() : skin->getSongSelectInactiveText());
-		g->pushTransform();
-			g->scale(diffScale, diffScale);
-			g->translate(pos.x + textXOffset, pos.y + size.y*m_fTextMarginScale + m_font->getHeight()*titleScale + size.y*m_fTextSpacingScale + m_font->getHeight()*subTitleScale*0.85f + size.y*m_fTextSpacingScale + m_fontBold->getHeight()*diffScale*0.8f);
-			g->drawString(m_fontBold, diffText);
-		g->popTransform();
-
-		// draw stars
-		if (m_child->starsNoMod > 0)
-		{
-			const float starOffsetY = (size.y*0.85);
-			const float starWidth = (size.y*0.20);
-			const float starScale = starWidth / skin->getStar()->getHeight();
-			const int numFullStars = std::min((int)m_child->starsNoMod, 50);
-			const float partialStarScale = m_child->starsNoMod - numFullStars;
-
-			g->setColor(m_bSelected ? skin->getSongSelectActiveText() : skin->getSongSelectInactiveText());
-			for (int i=0; i<numFullStars; i++)
-			{
-				g->pushTransform();
-					g->scale(starScale, starScale);
-					g->translate(pos.x + textXOffset + starWidth/2 + i*starWidth*1.5f, pos.y + starOffsetY);
-					g->drawImage(skin->getStar());
-				g->popTransform();
-			}
-			g->pushTransform();
-				g->scale(starScale*partialStarScale, starScale*partialStarScale);
-				g->translate(pos.x + textXOffset + starWidth/2 + numFullStars*starWidth*1.5f, pos.y + starOffsetY);
-				g->drawImage(skin->getStar());
-			g->popTransform();
-		}
-	}
-
-	// debug inner bounding box
-	/*
-	g->setColor(0xffff00ff);
-	g->drawLine(pos.x, pos.y, pos.x+size.x, pos.y);
-	g->drawLine(pos.x, pos.y, pos.x, pos.y+size.y);
-	g->drawLine(pos.x, pos.y+size.y, pos.x+size.x, pos.y+size.y);
-	g->drawLine(pos.x+size.x, pos.y, pos.x+size.x, pos.y+size.y);
-	*/
 }
 
 void OsuUISongBrowserButton::update()
@@ -278,25 +124,16 @@ void OsuUISongBrowserButton::update()
 
 	if (!m_bVisible) return;
 
-	// delayed image loading
-	if (m_fImageLoadScheduledTime != 0.0f && engine->getTime() > m_fImageLoadScheduledTime)
-	{
-		m_fImageLoadScheduledTime = 0.0f;
-		OsuBeatmapDifficulty *diff = isChild() ? m_child : (m_beatmap->getDifficulties().size() > 0 ? m_beatmap->getDifficulties()[0] : NULL);
-		if (diff != NULL)
-			diff->loadBackgroundImage();
-	}
-
 	// animations need constant layout updates anyway
 	updateLayout();
 }
 
 void OsuUISongBrowserButton::updateLayout()
 {
-	Image *menuButtonBackground = m_beatmap->getOsu()->getSkin()->getMenuButtonBackground();
-	Vector2 minimumSize = Vector2(699.0f, 103.0f)*(m_beatmap->getOsu()->getSkin()->isMenuButtonBackground2x() ? 2.0f : 1.0f);
+	Image *menuButtonBackground = m_osu->getSkin()->getMenuButtonBackground();
+	Vector2 minimumSize = Vector2(699.0f, 103.0f)*(m_osu->getSkin()->isMenuButtonBackground2x() ? 2.0f : 1.0f);
 	float minimumScale = Osu::getImageScaleToFitResolution(menuButtonBackground, minimumSize);
-	m_fScale = Osu::getImageScale(m_beatmap->getOsu(), menuButtonBackground->getSize()*minimumScale, 64.0f);
+	m_fScale = Osu::getImageScale(m_osu, menuButtonBackground->getSize()*minimumScale, 64.0f);
 
 	if (m_bVisible) // lag prevention (animationHandler overflow)
 	{
@@ -311,172 +148,33 @@ void OsuUISongBrowserButton::updateLayout()
 	}
 
 	setSize((int)(menuButtonBackground->getWidth()*m_fScale), (int)(menuButtonBackground->getHeight()*m_fScale));
-	setRelPosX(m_view->getSize().x - m_view->getSize().x*0.55f - (isChild() ? m_view->getSize().x*0.075f : 0) - m_view->getSize().x*0.075f*m_fHoverOffsetAnimation + 0.04f*m_view->getSize().x*m_fCenterOffsetAnimation + 0.3f*m_view->getSize().x*m_fCenterOffsetVelocityAnimation);
-
-	if (!isChild())
-	{
-		for (int i=0; i<m_children.size(); i++)
-		{
-			m_children[i]->updateLayout();
-		}
-	}
+	setRelPosX(m_view->getSize().x*(0.04*m_fCenterOffsetAnimation + 0.3*m_fCenterOffsetVelocityAnimation - 0.075*m_fHoverOffsetAnimation - m_fOffsetPercent + 0.45));
+	setRelPosY(m_fTargetRelPosY + getSize().y*0.125f*m_fHoverMoveAwayAnimation);
 }
 
-void OsuUISongBrowserButton::select(bool clicked, bool selectTopChild)
+void OsuUISongBrowserButton::select()
 {
-	// child block
-	if (isChild())
-	{
-		if (previousChild == this)
-		{
-			// start playing
-			// notify songbrowser
-			m_songBrowser->onDifficultySelected(m_beatmap, m_child, clicked, true);
-			m_songBrowser->scrollToSongButton(this);
-			return;
-		}
-
-		// deselect previous
-		if (previousChild != NULL)
-			previousChild->deselect(true);
-		previousChild = this;
-
-		// select it
-		m_beatmap->selectDifficulty(m_child, false);
-		m_bSelected = true;
-
-		// notify songbrowser
-		m_songBrowser->onDifficultySelected(m_beatmap, m_child, clicked);
-		m_songBrowser->scrollToSongButton(this);
-		return;
-	}
-
-	// parent block
-	if (previousParent == this)
-		return;
-
-	// this must be first, because of shared resource deletion by name
-	int scrollDiffY = m_vPos.y; // keep position consistent if children get removed above us
-	if (previousParent != NULL)
-	{
-		previousParent->deselect();
-
-		// compensate
-		scrollDiffY = scrollDiffY - m_vPos.y;
-		if (scrollDiffY > 0)
-			m_view->scrollY(scrollDiffY, false);
-	}
-	if (!isChild())
-		previousParent = this;
-
-	// now we can select ourself
-	m_beatmap->select();
+	const bool wasSelected = m_bSelected;
 	m_bSelected = true;
 
-	// hide ourself, show children
-	if (!isChild())
-	{
-		if (m_children.size() > 0)
-		{
-			for (int i=0; i<m_children.size(); i++)
-			{
-				m_view->getContainer()->insertBaseUIElement(m_children[i], this);
-				m_children[i]->setRelPos(getRelPos());
-				m_children[i]->setPos(getPos());
-				m_children[i]->setVisible(true);
-			}
-			m_view->getContainer()->removeBaseUIElement(this);
-
-			// update layout
-			m_songBrowser->onResolutionChange(m_beatmap->getOsu()->getScreenSize());
-
-			// select diff immediately, but after the layout update!
-			if (selectTopChild)
-				m_children[0]->select();
-			else
-				m_children[m_children.size()-1]->select(clicked);
-
-			this->setVisible(false);
-		}
-	}
+	// callback
+	onSelected(wasSelected);
 }
 
-void OsuUISongBrowserButton::deselect(bool child)
+void OsuUISongBrowserButton::deselect()
 {
-	// child block
-	if (child)
-	{
-		m_bSelected = false;
-		return;
-	}
-
-	// parent block
-	m_beatmap->deselect(false);
 	m_bSelected = false;
 
-	// show ourself, hide children
-	if (m_children.size() > 0)
-	{
-		// note that this does work fine with searching, because it adds elements based on relative other elements
-		// if the relative other elements can't be found, no insert or remove takes place
-		m_view->getContainer()->insertBaseUIElement(this, m_children[0]);
-		setRelPos(m_children[0]->getRelPos());
-		setPos(m_children[0]->getPos());
-		for (int i=0; i<m_children.size(); i++)
-		{
-			m_view->getContainer()->removeBaseUIElement(m_children[i]);
-			m_children[i]->setVisible(false);
-		}
-
-		// update layout
-		m_songBrowser->onResolutionChange(m_beatmap->getOsu()->getScreenSize());
-	}
-}
-
-void OsuUISongBrowserButton::checkLoadUnloadImage()
-{
-	// dynamically load thumbnails
-	OsuBeatmapDifficulty *diff = isChild() ? m_child : (m_beatmap->getDifficulties().size() > 0 ? m_beatmap->getDifficulties()[0] : NULL);
-	if (m_bVisible)
-	{
-		// visibility delay, don't load immediately but only if we are visible for a minimum amount of time (to avoid useless loads)
-		m_fImageLoadScheduledTime = engine->getTime() + 0.1f/* + (static_cast<float>(rand()) / static_cast<float>(RAND_MAX))*0.1f*(isChild() ? 0.0f : 1.0f)*/;
-	}
-	else
-	{
-		m_fImageLoadScheduledTime = 0.0f;
-		if (diff != NULL)
-		{
-			// only allow unloading if we are not selected and no children of us are selected
-			bool areChildrenSelected = false;
-			if (!isChild())
-			{
-				for (int i=0; i<m_children.size(); i++)
-				{
-					if (m_children[i]->isSelected())
-					{
-						areChildrenSelected = true;
-						break;
-					}
-				}
-			}
-			else // if we are a child, only allow unloading if the parent is also invisible and we are not the first child
-				areChildrenSelected = areChildrenSelected || m_parent->isSelected() || (m_parent->isVisible() && m_bIsFirstChild);
-
-			if (!isSelected() && !areChildrenSelected)
-				diff->unloadBackgroundImage();
-		}
-	}
+	// callback
+	onDeselected();
 }
 
 void OsuUISongBrowserButton::onClicked()
 {
-	if (previousParent == this)
-		return;
-
-	engine->getSound()->play(m_beatmap->getOsu()->getSkin()->getMenuClick());
+	engine->getSound()->play(m_osu->getSkin()->getMenuClick());
 	CBaseUIButton::onClicked();
-	select(true);
+
+	select();
 }
 
 void OsuUISongBrowserButton::onMouseInside()
@@ -486,42 +184,115 @@ void OsuUISongBrowserButton::onMouseInside()
 	if (engine->getTime() > lastHoverSoundTime + 0.05f) // to avoid earraep
 	{
 		if (engine->hasFocus())
-			engine->getSound()->play(m_beatmap->getOsu()->getSkin()->getMenuClick());
+			engine->getSound()->play(m_osu->getSkin()->getMenuClick());
 		lastHoverSoundTime = engine->getTime();
 	}
 
 	anim->moveQuadOut(&m_fHoverOffsetAnimation, 1.0f, 1.0f*(1.0f - m_fHoverOffsetAnimation), true);
+
+	//
+	// move the rest of the buttons away from hovered over one
+	//
+
+	std::vector<CBaseUIElement*> *els = m_view->getContainer()->getAllBaseUIElementsPointer();
+	bool foundCenter = false;
+	for (int i=0; i<els->size(); i++)
+	{
+		OsuUISongBrowserButton *b = dynamic_cast<OsuUISongBrowserButton*>((*els)[i]);
+		if (b != NULL) // sanity check
+		{
+			b->setMoveAwayState(foundCenter ? MOVE_AWAY_STATE::MOVE_DOWN : MOVE_AWAY_STATE::MOVE_UP);
+			if (b == this)
+			{
+				foundCenter = true;
+				b->setMoveAwayState(MOVE_AWAY_STATE::MOVE_CENTER);
+			}
+		}
+	}
 }
 
 void OsuUISongBrowserButton::onMouseOutside()
 {
 	CBaseUIButton::onMouseOutside();
-
 	anim->moveQuadOut(&m_fHoverOffsetAnimation, 0.0f, 1.0f*m_fHoverOffsetAnimation, true);
+
+	// only reset all other elements' state if we still should do so (possible frame delay of onMouseOutside coming together with the next element already getting onMouseInside!)
+	if (m_moveAwayState == MOVE_AWAY_STATE::MOVE_CENTER)
+	{
+		std::vector<CBaseUIElement*> *els = m_view->getContainer()->getAllBaseUIElementsPointer();
+		for (int i=0; i<els->size(); i++)
+		{
+			OsuUISongBrowserButton *b = dynamic_cast<OsuUISongBrowserButton*>((*els)[i]);
+			if (b != NULL) // sanity check
+				b->setMoveAwayState(MOVE_AWAY_STATE::MOVE_CENTER); // reset
+		}
+	}
 }
 
 void OsuUISongBrowserButton::setVisible(bool visible)
 {
 	m_bVisible = visible;
 
-	// this is called in all cases (outside viewing volume of scrollView, and if not visible because replaced by children)
-	// and also if the selection changes (due to previousParent and previousChild)
-	checkLoadUnloadImage();
-
-	// animation feel
+	// scrolling pinch effect
 	m_fCenterOffsetAnimation = 1.0f;
 	m_fHoverOffsetAnimation = 0.0f;
 	const float centerOffsetVelocityAnimationTarget = clamp<float>((std::abs(m_view->getVelocity().y))/3500.0f, 0.0f, 1.0f);
 	m_fCenterOffsetVelocityAnimation = centerOffsetVelocityAnimationTarget;
 	deleteAnimations();
 
+	// force early layout update
 	updateLayout();
+}
+
+void OsuUISongBrowserButton::setTargetRelPosY(float targetRelPosY)
+{
+	m_fTargetRelPosY = targetRelPosY;
+	setRelPosY(m_fTargetRelPosY);
 }
 
 Vector2 OsuUISongBrowserButton::getActualOffset()
 {
-	const float hd2xMultiplier = m_beatmap->getOsu()->getSkin()->isMenuButtonBackground2x() ? 2.0f : 1.0f;
+	const float hd2xMultiplier = m_osu->getSkin()->isMenuButtonBackground2x() ? 2.0f : 1.0f;
 	///const float correctedMarginPixelsX = (2*marginPixelsX + m_beatmap->getOsu()->getSkin()->getMenuButtonBackground()->getWidth()/hd2xMultiplier - 699)/2.0f;
-	const float correctedMarginPixelsY = (2*marginPixelsY + m_beatmap->getOsu()->getSkin()->getMenuButtonBackground()->getHeight()/hd2xMultiplier - 103.0f)/2.0f;
+	const float correctedMarginPixelsY = (2*marginPixelsY + m_osu->getSkin()->getMenuButtonBackground()->getHeight()/hd2xMultiplier - 103.0f)/2.0f;
 	return Vector2((int)(marginPixelsX*m_fScale*hd2xMultiplier), (int)(correctedMarginPixelsY*m_fScale*hd2xMultiplier));
+}
+
+void OsuUISongBrowserButton::setMoveAwayState(OsuUISongBrowserButton::MOVE_AWAY_STATE moveAwayState)
+{
+	m_moveAwayState = moveAwayState;
+
+	// if we are not visible, destroy possibly existing animation
+	if (!isVisible())
+		anim->deleteExistingAnimation(&m_fHoverMoveAwayAnimation);
+
+	// only submit a new animation if we are visible, otherwise we would overwhelm the animationhandler with a shitload of requests every time for every button
+	// (if we are not visible we can just directly set the new value)
+	switch (m_moveAwayState)
+	{
+		case MOVE_AWAY_STATE::MOVE_CENTER:
+		{
+			if (!isVisible())
+				m_fHoverMoveAwayAnimation = 0.0f;
+			else
+				anim->moveQuartOut(&m_fHoverMoveAwayAnimation, 0, 0.7f, isMouseInside() ? 0.0f : 0.05f, true); // add a tiny bit of delay to avoid jerky movement if the cursor is briefly between songbuttons while moving
+			break;
+		}
+		case MOVE_AWAY_STATE::MOVE_UP:
+		{
+			if (!isVisible())
+				m_fHoverMoveAwayAnimation = -1.0f;
+			else
+				anim->moveQuartOut(&m_fHoverMoveAwayAnimation, -1.0f, 0.7f, true);
+			break;
+		}
+		case MOVE_AWAY_STATE::MOVE_DOWN:
+		{
+			if (!isVisible())
+				m_fHoverMoveAwayAnimation = 1.0f;
+			else
+				anim->moveQuartOut(&m_fHoverMoveAwayAnimation, 1.0f, 0.7f, true);
+			break;
+		}
+	}
 }

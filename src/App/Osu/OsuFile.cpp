@@ -150,6 +150,9 @@ uint64_t OsuFile::decodeULEB128(const uint8_t *p, unsigned *n)
 
 	do
 	{
+		if (p > (const unsigned char*)(m_buffer+m_iFileSize-1))
+			break;
+
 		value += uint64_t(*p & 0x7f) << shift;
 		shift += 7;
 	}
