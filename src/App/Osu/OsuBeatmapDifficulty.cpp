@@ -31,18 +31,33 @@ public:
 	{
 		m_diff = diff;
 
+		m_bDead = false;
+
 		m_bAsyncReady = false;
 		m_bReady = false;
 	};
+
+	void kill() {m_bDead = true;}
 
 protected:
 	virtual void init()
 	{
 		m_bReady = true; // this is up here on purpose
-		m_diff->loadBackgroundImage(); // this immediately deletes us, which is allowed since the init() function is the last event and nothing happens after the call in here
+		if (m_bDead) return;
+
+		if (m_diff->shouldBackgroundImageBeLoaded()) // check if we still really need to load the image (could have changed while loading the path)
+			m_diff->loadBackgroundImage(); // this immediately deletes us, which is allowed since the init() function is the last event and nothing happens after the call in here
+		else
+			m_diff->deleteBackgroundImagePathLoader(); // same here
 	}
 	virtual void initAsync()
 	{
+		if (m_bDead)
+		{
+			m_bAsyncReady = true;
+			return;
+		}
+
 		m_diff->loadBackgroundImagePath();
 		m_bAsyncReady = true;
 	}
@@ -50,6 +65,7 @@ protected:
 
 private:
 	OsuBeatmapDifficulty *m_diff;
+	bool m_bDead;
 };
 
 OsuBeatmapDifficulty::OsuBeatmapDifficulty(Osu *osu, UString filepath, UString folder)
@@ -59,6 +75,7 @@ OsuBeatmapDifficulty::OsuBeatmapDifficulty(Osu *osu, UString filepath, UString f
 	loaded = false;
 	m_sFilePath = filepath;
 	m_sFolder = folder;
+	m_bShouldBackgroundImageBeLoaded = false;
 
 	// default values
 	stackLeniency = 0.7f;
@@ -87,6 +104,16 @@ OsuBeatmapDifficulty::OsuBeatmapDifficulty(Osu *osu, UString filepath, UString f
 	setID = 0;
 
 	m_backgroundImagePathLoader = NULL;
+}
+
+OsuBeatmapDifficulty::~OsuBeatmapDifficulty()
+{
+	if (m_backgroundImagePathLoader != NULL)
+	{
+		m_backgroundImagePathLoader->kill();
+		engine->getResourceManager()->destroyResource(m_backgroundImagePathLoader);
+	}
+	unloadBackgroundImage();
 }
 
 void OsuBeatmapDifficulty::unload()
@@ -653,12 +680,19 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 	return true;
 }
 
+void OsuBeatmapDifficulty::deleteBackgroundImagePathLoader()
+{
+	SAFE_DELETE(m_backgroundImagePathLoader);
+}
+
 void OsuBeatmapDifficulty::loadBackgroundImage()
 {
+	m_bShouldBackgroundImageBeLoaded = true;
+
 	if (m_backgroundImagePathLoader != NULL) // handle loader cleanup
 	{
 		if (m_backgroundImagePathLoader->isReady())
-			SAFE_DELETE(m_backgroundImagePathLoader);
+			deleteBackgroundImagePathLoader();
 	}
 	else if (backgroundImageName.length() < 1) // dynamically load background image path from osu file if it wasn't set by the database
 	{
@@ -684,8 +718,10 @@ void OsuBeatmapDifficulty::loadBackgroundImage()
 
 void OsuBeatmapDifficulty::unloadBackgroundImage()
 {
-	//if (backgroundImage != NULL)
-	//	debugLog("Unloading %s\n", backgroundImage->getFilePath().toUtf8());
+	m_bShouldBackgroundImageBeLoaded = false;
+
+	if (Osu::debug->getBool() && backgroundImage != NULL)
+		debugLog("Unloading %s\n", backgroundImage->getFilePath().toUtf8());
 
 	Image *tempPointer = backgroundImage;
 	backgroundImage = NULL;

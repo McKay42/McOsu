@@ -28,10 +28,12 @@
 #include "OsuGameRules.h"
 #include "OsuKeyBindings.h"
 #include "OsuCircle.h"
+#include "OsuSliderRenderer.h"
 
 #include "OsuUIButton.h"
 #include "OsuUISlider.h"
 #include "OsuUIBackButton.h"
+#include "OsuUIContextMenu.h"
 
 #include <iostream>
 #include <fstream>
@@ -62,7 +64,7 @@ public:
 			approachAlpha = -approachAlpha*(approachAlpha-2.0f);
 			approachAlpha = 1.0f;
 
-			OsuCircle::drawCircle(g, m_osu->getSkin(), m_vPos + Vector2(0, m_vSize.y/2) + Vector2(m_vSize.x*(1.0f/5.0f), 0.0f), hitcircleDiameter, numberScale, overlapScale, false, 42, 0, approachScale, approachAlpha, approachAlpha, true, false);
+			OsuCircle::drawCircle(g, m_osu->getSkin(), m_vPos + Vector2(0, m_vSize.y/2) + Vector2(m_vSize.x*(1.0f/5.0f), 0.0f), hitcircleDiameter, numberScale, overlapScale, 1, 0, approachScale, approachAlpha, approachAlpha, true, false);
 			OsuCircle::drawHitResult(g, m_osu->getSkin(), hitcircleDiameter, hitcircleDiameter, m_vPos + Vector2(0, m_vSize.y/2) + Vector2(m_vSize.x*(2.0f/5.0f), 0.0f), OsuScore::HIT_100, 1.0f);
 			OsuCircle::drawHitResult(g, m_osu->getSkin(), hitcircleDiameter, hitcircleDiameter, m_vPos + Vector2(0, m_vSize.y/2) + Vector2(m_vSize.x*(3.0f/5.0f), 0.0f), OsuScore::HIT_50, 1.0f);
 			OsuCircle::drawHitResult(g, m_osu->getSkin(), hitcircleDiameter, hitcircleDiameter, m_vPos + Vector2(0, m_vSize.y/2) + Vector2(m_vSize.x*(4.0f/5.0f), 0.0f), OsuScore::HIT_MISS, 1.0f);
@@ -103,6 +105,42 @@ private:
 	int m_iMode;
 };
 
+class OsuOptionsMenuSliderPreviewElement : public CBaseUIElement
+{
+public:
+	OsuOptionsMenuSliderPreviewElement(Osu *osu, float xPos, float yPos, float xSize, float ySize, UString name) : CBaseUIElement(xPos, yPos, xSize, ySize, name) {m_osu = osu;}
+
+	virtual void draw(Graphics *g)
+	{
+		const float hitcircleDiameter = m_vSize.y*0.5f;
+		const float numberScale = (hitcircleDiameter / (160.0f * (m_osu->getSkin()->isDefault12x() ? 2.0f : 1.0f))) * 1 * convar->getConVarByName("osu_number_scale_multiplier")->getFloat();
+		const float overlapScale = (hitcircleDiameter / (160.0f)) * 1 * convar->getConVarByName("osu_number_scale_multiplier")->getFloat();
+
+		const float length = (m_vSize.x-hitcircleDiameter);
+		const int numPoints = length;
+		const float pointDist = length / numPoints;
+		std::vector<Vector2> points;
+		for (int i=0; i<numPoints; i++)
+		{
+			int heightAdd = i;
+			if (i > numPoints/2)
+				heightAdd = numPoints-i;
+			float heightAddPercent = (float)heightAdd / (float)(numPoints/2.0f);
+			float temp = 1.0f - heightAddPercent;
+			temp *= temp;
+			heightAddPercent = 1.0f - temp;
+
+			points.push_back(Vector2(m_vPos.x + hitcircleDiameter/2 + i*pointDist, m_vPos.y + m_vSize.y/2 - hitcircleDiameter/3 + heightAddPercent*(m_vSize.y/2 - hitcircleDiameter/2)));
+		}
+		OsuSliderRenderer::draw(g, m_osu, points, hitcircleDiameter, 0, 1, m_osu->getSkin()->getComboColorForCounter(0));
+		OsuCircle::drawSliderStartCircle(g, m_osu->getSkin(), points[0], hitcircleDiameter, numberScale, overlapScale, 1);
+		OsuCircle::drawSliderEndCircle(g, m_osu->getSkin(), points[points.size()-1], hitcircleDiameter, numberScale, overlapScale, 0, 0, 1.0f, 1.0f, 0.0f, false, false);
+	}
+
+private:
+	Osu *m_osu;
+};
+
 
 
 OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
@@ -121,7 +159,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_options->setHorizontalScrolling(false);
 	m_container->addBaseUIElement(m_options);
 
-	m_contextMenu = new OsuUIListBoxContextMenu(50, 50, 150, 0, "", m_options);
+	m_contextMenu = new OsuUIContextMenu(50, 50, 150, 0, "", m_options);
 
 	//**************************************************************************************************************************//
 
@@ -146,6 +184,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("VSync", convar->getConVarByName("vsync"));
 	addCheckbox("Show FPS Counter", convar->getConVarByName("osu_draw_fps"));
 	addSpacer();
+	addCheckbox("Unlimited FPS", convar->getConVarByName("fps_unlimited"));
 	addSlider("FPS Limiter:", 60.0f, 1000.0f, convar->getConVarByName("fps_max"))->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeInt) );
 
 	addSubSection("Layout");
@@ -208,7 +247,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addButton("Sudden Death", &OsuKeyBindings::MOD_SUDDENDEATH)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
 	addButton("Double Time", &OsuKeyBindings::MOD_DOUBLETIME)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
 	addButton("Hidden", &OsuKeyBindings::MOD_HIDDEN)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addButton("Fashlight", &OsuKeyBindings::MOD_FLASHLIGHT)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addButton("Flashlight", &OsuKeyBindings::MOD_FLASHLIGHT)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
 	addButton("Relax", &OsuKeyBindings::MOD_RELAX)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
 	addButton("Autopilot", &OsuKeyBindings::MOD_AUTOPILOT)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
 	addButton("Spunout", &OsuKeyBindings::MOD_SPUNOUT)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
@@ -229,6 +268,8 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSpacer();
 	addSlider("Number Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_number_scale_multiplier"), 135.0f);
 	addSlider("HitResult Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_hitresult_scale"), 135.0f);
+	addCheckbox("Draw Numbers", convar->getConVarByName("osu_draw_numbers"));
+	addCheckbox("Draw ApproachCircles", convar->getConVarByName("osu_draw_approach_circles"));
 	addSpacer();
 	addCheckbox("Ignore Beatmap Sample Volume", convar->getConVarByName("osu_ignore_beatmap_sample_volume"));
 	addCheckbox("Ignore Beatmap Combo Colors", convar->getConVarByName("osu_ignore_beatmap_combo_colors"));
@@ -238,9 +279,13 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_cursorSizeSlider = addSlider("Cursor Size:", 0.01f, 5.0f, convar->getConVarByName("osu_cursor_scale"));
 	m_cursorSizeSlider->setAnimated(false);
 	addSpacer();
+	addSliderPreview();
+	addCheckbox("Use slidergradient.png", convar->getConVarByName("osu_slider_use_gradient_image"));
 	addCheckbox("Use combo color as tint for slider ball", convar->getConVarByName("osu_slider_ball_tint_combo_color"));
+	addCheckbox("Draw SliderEndCircle", convar->getConVarByName("osu_slider_draw_endcircle"));
+	addSlider("Slider Opacity", 0.0f, 1.0f, convar->getConVarByName("osu_slider_body_alpha_multiplier"));
 	addSlider("SliderBody Color Saturation", 0.0f, 1.0f, convar->getConVarByName("osu_slider_body_color_saturation"));
-	addSlider("SliderBody Opacity", 0.0f, 1.0f, convar->getConVarByName("osu_slider_body_alpha_multiplier"));
+	addSlider("SliderBorder Size", 0.0f, 9.0f, convar->getConVarByName("osu_slider_border_size_multiplier"));
 
 	//**************************************************************************************************************************//
 
@@ -284,9 +329,6 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_playfieldBorderSizeSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeInt) );
 
 	addSubSection("Hitobjects");
-	addCheckbox("Draw Numbers", convar->getConVarByName("osu_draw_numbers"));
-	addCheckbox("Draw ApproachCircles", convar->getConVarByName("osu_draw_approach_circles"));
-	addCheckbox("Draw SliderEndCircle", convar->getConVarByName("osu_slider_draw_endcircle"));
 	addCheckbox("Use New Hidden Fading Sliders", convar->getConVarByName("osu_mod_hd_slider_fade"));
 	addCheckbox("Use Fast Hidden Fading Sliders (!)", convar->getConVarByName("osu_mod_hd_slider_fast_fade"));
 	addCheckbox("Use Score V2 slider accuracy", convar->getConVarByName("osu_slider_scorev2"));
@@ -1058,6 +1100,20 @@ CBaseUIElement *OsuOptionsMenu::addSkinPreview()
 	return skinPreview;
 }
 
+CBaseUIElement *OsuOptionsMenu::addSliderPreview()
+{
+	CBaseUIElement *sliderPreview = new OsuOptionsMenuSliderPreviewElement(m_osu, 0, 0, 0, 200, "");
+	m_options->getContainer()->addBaseUIElement(sliderPreview);
+
+	OPTIONS_ELEMENT e;
+	e.elements.push_back(sliderPreview);
+	e.type = 7;
+	e.cvar = NULL;
+	m_elements.push_back(e);
+
+	return sliderPreview;
+}
+
 void OsuOptionsMenu::save()
 {
 	if (!osu_options_save_on_back.getBool())
@@ -1195,126 +1251,4 @@ void OsuOptionsMenu::save()
 	out << "osu_skin " << convar->getConVarByName("osu_skin")->getString().toUtf8() << "\n";
 
 	out.close();
-}
-
-
-
-OsuUIListBoxContextMenu::OsuUIListBoxContextMenu(float xPos, float yPos, float xSize, float ySize, UString name, CBaseUIScrollView *parent) : CBaseUIElement(xPos, yPos, xSize, ySize, name)
-{
-	m_parent = parent;
-	m_container = new CBaseUIContainer(xPos, yPos, xSize, ySize, name);
-	m_iYCounter = 0;
-	m_iWidthCounter = 0;
-
-	m_bVisible = false;
-	m_bVisible2 = false;
-	m_clickCallback = NULL;
-}
-
-OsuUIListBoxContextMenu::~OsuUIListBoxContextMenu()
-{
-	SAFE_DELETE(m_container);
-}
-
-void OsuUIListBoxContextMenu::draw(Graphics *g)
-{
-	if (!m_bVisible || !m_bVisible2) return;
-
-	// draw background
-	g->setColor(0xff222222);
-	g->fillRect(m_vPos.x+1, m_vPos.y+1, m_vSize.x-1, m_vSize.y-1);
-
-	// draw frame
-	g->setColor(0xffffffff);
-	g->drawRect(m_vPos.x, m_vPos.y, m_vSize.x, m_vSize.y);
-
-	m_container->draw(g);
-}
-
-void OsuUIListBoxContextMenu::update()
-{
-	CBaseUIElement::update();
-	if (!m_bVisible || !m_bVisible2) return;
-
-	m_container->update();
-}
-
-void OsuUIListBoxContextMenu::onResized()
-{
-	m_container->setSize(m_vSize);
-}
-
-void OsuUIListBoxContextMenu::onMoved()
-{
-	m_container->setPos(m_vPos);
-}
-
-void OsuUIListBoxContextMenu::onMouseDownOutside()
-{
-	setVisible2(false);
-}
-
-void OsuUIListBoxContextMenu::onFocusStolen()
-{
-	m_container->stealFocus();
-}
-
-void OsuUIListBoxContextMenu::begin()
-{
-	m_iYCounter = 0;
-	m_iWidthCounter = 0;
-	m_container->clear();
-}
-
-void OsuUIListBoxContextMenu::addButton(UString text)
-{
-	int buttonHeight = 30;
-	int margin = 9;
-
-	CBaseUIButton *button = new CBaseUIButton(margin, m_iYCounter + margin, 0, buttonHeight, text, text);
-	button->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUIListBoxContextMenu::onClick) );
-	button->setWidthToContent(3);
-	button->setTextLeft(true);
-	button->setDrawFrame(false);
-	button->setDrawBackground(false);
-	m_container->addBaseUIElement(button);
-
-	if (button->getSize().x+2*margin > m_iWidthCounter)
-	{
-		m_iWidthCounter = button->getSize().x + 2*margin;
-		setSizeX(m_iWidthCounter);
-	}
-
-	m_iYCounter += buttonHeight;
-	setSizeY(m_iYCounter + 2*margin);
-}
-
-void OsuUIListBoxContextMenu::end()
-{
-	int margin = 9;
-
-	std::vector<CBaseUIElement*> *elements = m_container->getAllBaseUIElementsPointer();
-	for (int i=0; i<elements->size(); i++)
-	{
-		((*elements)[i])->setSizeX(m_iWidthCounter-2*margin);
-	}
-
-	setVisible2(true);
-}
-
-void OsuUIListBoxContextMenu::setVisible2(bool visible2)
-{
-	m_bVisible2 = visible2;
-
-	if (!m_bVisible2)
-		setSize(1,1); // reset size
-
-	m_parent->setScrollSizeToContent(); // and update parent scroll size
-}
-
-void OsuUIListBoxContextMenu::onClick(CBaseUIButton *button)
-{
-	setVisible2(false);
-	if (m_clickCallback != NULL)
-		m_clickCallback(button->getName());
 }

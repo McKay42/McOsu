@@ -41,7 +41,7 @@ void OsuScore::reset()
 	m_hitdeltas = std::vector<int>();
 }
 
-void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignoreOnHitErrorBar, bool hitErrorBarOnly, bool ignoreCombo)
+void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignoreOnHitErrorBar, bool hitErrorBarOnly, bool ignoreCombo, bool ignoreScore)
 {
 	const int scoreComboMultiplier = std::max(m_iCombo-1, 0);
 
@@ -105,7 +105,8 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignor
 		difficultyMultiplier = 5;
 	if (sumDifficultyPoints > 24.0f)
 		difficultyMultiplier = 6;
-	m_iScore += hitValue + (int)(hitValue * (scoreComboMultiplier * difficultyMultiplier * m_osu->getScoreMultiplier()) / 25);
+	if (!ignoreScore)
+		m_iScore += hitValue + (int)(hitValue * (scoreComboMultiplier * difficultyMultiplier * m_osu->getScoreMultiplier()) / 25);
 
 	const float totalHitPoints = m_iNum50s*(1.0f/6.0f)+ m_iNum100s*(2.0f/6.0f) + m_iNum300s;
 	const float totalNumHits = m_iNumMisses + m_iNum50s + m_iNum100s + m_iNum300s;

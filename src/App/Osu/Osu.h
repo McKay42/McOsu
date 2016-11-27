@@ -11,6 +11,8 @@
 #include "App.h"
 #include "MouseListener.h"
 
+class CWindowManager;
+
 class OsuMainMenu;
 class OsuPauseMenu;
 class OsuOptionsMenu;
@@ -223,6 +225,9 @@ private:
 	McFont *m_subTitleFont;
 	McFont *m_songBrowserFont;
 	McFont *m_songBrowserFontBold;
+
+	// debugging
+	CWindowManager *m_windowManager;
 };
 
 #endif

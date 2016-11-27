@@ -592,7 +592,8 @@ void OsuBeatmap::update()
 			}
 
 			// notes per second
-			if (m_hitobjects[i]->getTime() > m_iCurMusicPos-500 && m_hitobjects[i]->getTime() < m_iCurMusicPos+500)
+			const long npsHalfGateSizeMS = (long)(500.0f * getSpeedMultiplier());
+			if (m_hitobjects[i]->getTime() > m_iCurMusicPos-npsHalfGateSizeMS && m_hitobjects[i]->getTime() < m_iCurMusicPos+npsHalfGateSizeMS)
 				m_iNPS++;
 
 			// note density
@@ -1186,7 +1187,7 @@ void OsuBeatmap::consumeClickEvent()
 	m_clicks.erase(m_clicks.begin());
 }
 
-void OsuBeatmap::addHitResult(OsuScore::HIT hit, long delta, bool ignoreOnHitErrorBar, bool hitErrorBarOnly, bool ignoreCombo)
+void OsuBeatmap::addHitResult(OsuScore::HIT hit, long delta, bool ignoreOnHitErrorBar, bool hitErrorBarOnly, bool ignoreCombo, bool ignoreScore)
 {
 	if (m_fTimeshockTimer > 0.0f)
 		return;
@@ -1226,7 +1227,7 @@ void OsuBeatmap::addHitResult(OsuScore::HIT hit, long delta, bool ignoreOnHitErr
 		}
 	}
 
-	m_osu->getScore()->addHitResult(this, hit, delta, ignoreOnHitErrorBar, hitErrorBarOnly, ignoreCombo);
+	m_osu->getScore()->addHitResult(this, hit, delta, ignoreOnHitErrorBar, hitErrorBarOnly, ignoreCombo, ignoreScore);
 }
 
 void OsuBeatmap::addSliderBreak()
@@ -1360,6 +1361,10 @@ void OsuBeatmap::handlePreviewPlay()
 {
 	if (m_music != NULL && (!m_music->isPlaying() || m_music->getPosition() > 0.95f) && m_selectedDifficulty != NULL)
 	{
+		// this is an assumption, but should be good enough for most songs
+		if (m_music->getPosition() > 0.95f)
+			m_iContinueMusicPos = 0;
+
 		engine->getSound()->stop(m_music);
 		if (engine->getSound()->play(m_music))
 		{
@@ -1588,7 +1593,7 @@ void OsuBeatmap::updateHitobjectMetrics()
 	m_fHitcircleOverlapScale = (m_fRawHitcircleDiameter / (160.0f)) * osuCoordScaleMultiplier * osu_number_scale_multiplier.getFloat();
 
 	m_fSliderFollowCircleDiameter = m_fHitcircleDiameter * (m_osu->getModNM() || osu_mod_jigsaw2.getBool() ? (1.0f*(1.0f - osu_mod_jigsaw_followcircle_radius_factor.getFloat()) + osu_mod_jigsaw_followcircle_radius_factor.getFloat()*2.4f) : 2.4f);
-	m_fSliderFollowCircleScale = (m_fSliderFollowCircleDiameter / (259.0f * (skin->isSliderFollowCircle2x() ? 2.0f : 1.0f)))*0.85f; // this is a bit strange, but seems to work perfect with 0.85
+	m_fSliderFollowCircleScale = (m_fSliderFollowCircleDiameter / (259.0f * (skin->isSliderFollowCircle2x() ? 2.0f : 1.0f)))*0.85f; // this is a bit strange, but seems to work perfectly with 0.85
 }
 
 void OsuBeatmap::calculateStacks()
@@ -1596,17 +1601,12 @@ void OsuBeatmap::calculateStacks()
 	if (!osu_stacking.getBool())
 		return;
 
-	updateHitobjectMetrics(); // needed for the calculations
-
-	//
-	// (c) 2015 Jeffrey Han (opsu!)
-	//
+	updateHitobjectMetrics(); // needed for the calculations (for m_fRawHitcircleDiameter)
 
 	debugLog("OsuBeatmap: Calculating stacks ...\n");
 
 	const float STACK_LENIENCE = 3.0f;
 	const float STACK_OFFSET = 0.05f;
-	const float STACK_TIMEOUT = 1000; // in ms
 
 	// reset
 	for (int i=0; i<m_hitobjects.size(); i++)
@@ -1614,89 +1614,87 @@ void OsuBeatmap::calculateStacks()
 		m_hitobjects[i]->setStack(0);
 	}
 
-	// reverse pass for stack calculation
-	for (int i=m_hitobjects.size()-1; i>0; i--)
+	// peppy's algorithm
+	// https://gist.github.com/peppy/1167470
+
+	for (int i=m_hitobjects.size()-1; i>=0; i--)
 	{
-		OsuHitObject *hitObjectI = m_hitobjects[i];
+		int n = i;
 
-		OsuSpinner *spinnerPointer = dynamic_cast<OsuSpinner*>(hitObjectI);
-		bool isSpinnerI = spinnerPointer != NULL;
+		OsuHitObject *objectI = m_hitobjects[i];
 
-		// already calculated, ignore spinners
-		if (hitObjectI->getStack() != 0 || isSpinnerI)
+		bool isSpinner = dynamic_cast<OsuSpinner*>(objectI) != NULL;
+
+		if (objectI->getStack() != 0 || isSpinner)
 			continue;
 
-		// search for hit objects in stack
-		for (int n=i-1; n>=0; n--)
+		bool isHitCircle = dynamic_cast<OsuCircle*>(objectI) != NULL;
+		bool isSlider = dynamic_cast<OsuSlider*>(objectI) != NULL;
+
+		if (isHitCircle)
 		{
-			OsuHitObject *hitObjectN = m_hitobjects[n];
-
-			OsuSpinner *spinnerPointer = dynamic_cast<OsuSpinner*>(hitObjectN);
-			bool isSpinnerN = spinnerPointer != NULL;
-
-			// again, ignore spinners
-			if (isSpinnerN)
-				continue;
-
-			OsuSlider *sliderPointer = dynamic_cast<OsuSlider*>(hitObjectN);
-			bool isSliderN = sliderPointer != NULL;
-
-			// check if in range stack calculation
-			float timeI = hitObjectI->getTime() - (STACK_TIMEOUT * m_selectedDifficulty->stackLeniency);
-			float timeN = isSliderN ? m_hitobjects[n]->getTime() + m_hitobjects[n]->getDuration() : hitObjectN->getTime();
-			if (timeI > timeN)
-				break;
-
-			// possible special case: if slider end in the stack,
-			// all next hit objects in stack move right down
-			if (isSliderN)
+			while (--n >= 0)
 			{
-				Vector2 p1 = originalOsuCoords2Stack(m_hitobjects[i]->getOriginalRawPosAt(hitObjectI->getTime()));
-				Vector2 p2 = originalOsuCoords2Stack(sliderPointer->getOriginalRawPosAt(sliderPointer->getTime() + sliderPointer->getDuration()));
-				float distance = (p2-p1).length();
+				OsuHitObject *objectN = m_hitobjects[n];
 
-				// check if hit object part of this stack
-				if (distance < STACK_LENIENCE * m_fXMultiplier)
+				bool isSpinnerN = dynamic_cast<OsuSpinner*>(objectN);
+
+				if (isSpinnerN)
+					continue;
+
+				if (objectI->getTime() - (OsuGameRules::getApproachTime(this) * m_selectedDifficulty->stackLeniency) > (objectN->getTime() + objectN->getDuration()))
+					break;
+
+				Vector2 objectNEndPosition = objectN->getOriginalRawPosAt(objectN->getTime() + objectN->getDuration());
+				if (objectN->getDuration() != 0 && (objectNEndPosition - objectI->getOriginalRawPosAt(objectI->getTime())).length() < STACK_LENIENCE)
 				{
-					int offset = hitObjectI->getStack() - hitObjectN->getStack() + 1;
+					int offset = objectI->getStack() - objectN->getStack() + 1;
 					for (int j=n+1; j<=i; j++)
 					{
-						OsuHitObject *hitObjectJ = m_hitobjects[j];
-						p1 = originalOsuCoords2Stack(m_hitobjects[j]->getOriginalRawPosAt(hitObjectJ->getTime()));
-						distance = (p2-p1).length();
-
-						// hit object below slider end
-						if (distance < STACK_LENIENCE * m_fXMultiplier)
-							hitObjectJ->setStack(hitObjectJ->getStack() - offset);
+						if ((objectNEndPosition - m_hitobjects[j]->getOriginalRawPosAt(m_hitobjects[j]->getTime())).length() < STACK_LENIENCE)
+							m_hitobjects[j]->setStack(m_hitobjects[j]->getStack() - offset);
 					}
-					break;  // slider end always start of the stack: reset calculation
+
+					break;
+				}
+
+				if ((objectN->getOriginalRawPosAt(objectN->getTime()) - objectI->getOriginalRawPosAt(objectI->getTime())).length() < STACK_LENIENCE)
+				{
+					objectN->setStack(objectI->getStack() + 1);
+					objectI = objectN;
 				}
 			}
-
-			// not a special case: stack moves up left
-			float distance = (originalOsuCoords2Stack(hitObjectI->getOriginalRawPosAt(0)) - originalOsuCoords2Stack(hitObjectN->getOriginalRawPosAt(0))).length();
-
-			if (distance < STACK_LENIENCE)
+		}
+		else if (isSlider)
+		{
+			while (--n >= 0)
 			{
-				hitObjectN->setStack(hitObjectI->getStack() + 1);
-				hitObjectI = hitObjectN;
+				OsuHitObject *objectN = m_hitobjects[n];
+
+				bool isSpinner = dynamic_cast<OsuSpinner*>(objectN) != NULL;
+
+				if (isSpinner)
+					continue;
+
+				if (objectI->getTime() - (OsuGameRules::getApproachTime(this) * m_selectedDifficulty->stackLeniency) > objectN->getTime())
+					break;
+
+				if (((objectN->getDuration() != 0 ? objectN->getOriginalRawPosAt(objectN->getTime() + objectN->getDuration()) : objectN->getOriginalRawPosAt(objectN->getTime())) - objectI->getOriginalRawPosAt(objectI->getTime())).length() < STACK_LENIENCE)
+				{
+					objectN->setStack(objectI->getStack() + 1);
+					objectI = objectN;
+				}
 			}
 		}
 	}
 
-	// update hit object positions
+	// update hitobject positions
 	float stackOffset = m_fRawHitcircleDiameter * STACK_OFFSET;
 	for (int i=0; i<m_hitobjects.size(); i++)
 	{
 		if (m_hitobjects[i]->getStack() != 0)
 			m_hitobjects[i]->updateStackPosition(stackOffset);
 	}
-}
-
-Vector2 OsuBeatmap::originalOsuCoords2Stack(Vector2 coords)
-{
-	// this transforms original raw coordinates just before they are used for the stack calculation
-	return coords;
 }
 
 unsigned long OsuBeatmap::getMusicPositionMSInterpolated()

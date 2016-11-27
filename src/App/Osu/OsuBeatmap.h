@@ -106,6 +106,7 @@ public:
 
 	inline OsuBeatmapDifficulty *getSelectedDifficulty() {return m_selectedDifficulty;}
 	inline std::vector<OsuBeatmapDifficulty*> getDifficulties() {return m_difficulties;}
+	inline std::vector<OsuBeatmapDifficulty*> *getDifficultiesPointer() {return &m_difficulties;}
 	inline int getNumDifficulties() {return m_difficulties.size();}
 
 	inline bool isPlaying() {return m_bIsPlaying;}
@@ -124,7 +125,7 @@ public:
 
 	// OsuHitObject and other helper functions
 	void consumeClickEvent();
-	void addHitResult(OsuScore::HIT hit, long delta, bool ignoreOnHitErrorBar = false, bool hitErrorBarOnly = false, bool ignoreCombo = false);
+	void addHitResult(OsuScore::HIT hit, long delta, bool ignoreOnHitErrorBar = false, bool hitErrorBarOnly = false, bool ignoreCombo = false, bool ignoreScore = false);
 	void addSliderBreak();
 	void addScorePoints(int points);
 	void addHealth(float health);
@@ -152,7 +153,6 @@ private:
 	void updateHitobjectMetrics();
 
 	void calculateStacks();
-	Vector2 originalOsuCoords2Stack(Vector2 coords);
 
 	unsigned long getMusicPositionMSInterpolated();
 

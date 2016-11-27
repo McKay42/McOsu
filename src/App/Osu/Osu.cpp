@@ -21,6 +21,9 @@
 #include "RenderTarget.h"
 #include "Shader.h"
 
+#include "CWindowManager.h"
+//#include "DebugMonitor.h"
+
 #include "OsuMainMenu.h"
 #include "OsuOptionsMenu.h"
 #include "OsuSongBrowser2.h"
@@ -38,7 +41,7 @@
 #include "OsuHUD.h"
 
 #include "OsuHitObject.h"
-#include "OsuSlider.h"
+#include "OsuSliderRenderer.h"
 
 #include "OsuBeatmapDatabase.h"
 
@@ -46,7 +49,7 @@ void DUMMY_OSU_LETTERBOXING(UString oldValue, UString newValue) {;}
 void DUMMY_OSU_VOLUME_MUSIC_ARGS(UString oldValue, UString newValue) {;}
 void DUMMY_OSU_MODS(void) {;}
 
-ConVar osu_version("osu_version", 25.0f);
+ConVar osu_version("osu_version", 26.0f);
 ConVar osu_debug("osu_debug", false);
 
 ConVar osu_disable_mousebuttons("osu_disable_mousebuttons", false);
@@ -157,6 +160,14 @@ Osu::Osu()
 
 	m_bShouldCursorBeVisible = false;
 
+	// debug
+	m_windowManager = new CWindowManager();
+	/*
+	DebugMonitor *dm = new DebugMonitor();
+	m_windowManager->addWindow(dm);
+	dm->open();
+	*/
+
 	// renderer
 	g_vInternalResolution = engine->getScreenSize();
 	m_frameBuffer = new RenderTarget(0, 0, getScreenWidth(), getScreenHeight());
@@ -190,8 +201,6 @@ Osu::Osu()
 	m_tooltipOverlay = new OsuTooltipOverlay(this);
 	m_mainMenu = new OsuMainMenu(this);
 	m_optionsMenu = new OsuOptionsMenu(this);
-	//m_songBrowser = new OsuSongBrowser(this);
-	m_songBrowser2 = NULL;
 	m_songBrowser2 = new OsuSongBrowser2(this);
 	m_modSelector = new OsuModSelector(this);
 	m_rankingScreen = new OsuRankingScreen(this);
@@ -204,8 +213,7 @@ Osu::Osu()
 	m_screens.push_back(m_modSelector);
 	m_screens.push_back(m_pauseMenu);
 	m_screens.push_back(m_hud);
-	if (m_songBrowser2 != NULL)
-		m_screens.push_back(m_songBrowser2);
+	m_screens.push_back(m_songBrowser2);
 	m_screens.push_back(m_optionsMenu);
 	m_screens.push_back(m_mainMenu);
 	m_screens.push_back(m_tooltipOverlay);
@@ -214,7 +222,6 @@ Osu::Osu()
 	//m_optionsMenu->setVisible(true);
 	m_mainMenu->setVisible(true);
 	//m_modSelector->setVisible(true);
-	//m_songBrowser->setVisible(true);
 	//m_songBrowser2->setVisible(true);
 	//m_pauseMenu->setVisible(true);
 	//m_rankingScreen->setVisible(true);
@@ -222,6 +229,8 @@ Osu::Osu()
 
 Osu::~Osu()
 {
+	SAFE_DELETE(m_windowManager);
+
 	for (int i=0; i<m_screens.size(); i++)
 	{
 		SAFE_DELETE(m_screens[i]);
@@ -232,6 +241,8 @@ Osu::~Osu()
 
 	SAFE_DELETE(m_frameBuffer);
 	SAFE_DELETE(m_backBuffer);
+
+	SAFE_DELETE(OsuSliderRenderer::BLEND_SHADER);
 }
 
 void Osu::draw(Graphics *g)
@@ -281,6 +292,8 @@ void Osu::draw(Graphics *g)
 
 		m_hud->drawVolumeChange(g);
 
+		m_windowManager->draw(g);
+
 		if (!(m_bModAuto || m_bModAutopilot) && allowDrawCursor)
 			m_hud->drawCursor(g, getSelectedBeatmap()->getCursorPos(), osu_mod_fadingcursor.getBool() ? fadingCursorAlpha : 1.0f);
 	}
@@ -297,6 +310,8 @@ void Osu::draw(Graphics *g)
 			m_hud->drawFps(g);
 
 		m_hud->drawVolumeChange(g);
+
+		m_windowManager->draw(g);
 
 		m_hud->drawCursor(g, engine->getMouse()->getPos());
 	}
@@ -321,6 +336,8 @@ void Osu::draw(Graphics *g)
 
 void Osu::update()
 {
+	m_windowManager->update();
+
 	for (int i=0; i<m_screens.size(); i++)
 	{
 		m_screens[i]->update();
@@ -486,9 +503,10 @@ void Osu::onKeyDown(KeyboardEvent &key)
 	// global hotkeys
 
 	// special hotkeys
-	if (engine->getKeyboard()->isAltDown() && engine->getKeyboard()->isControlDown() && key == KEY_R && OsuSliderCurve::BLEND_SHADER != NULL)
+	if (engine->getKeyboard()->isAltDown() && engine->getKeyboard()->isControlDown() && key == KEY_R)
 	{
-		OsuSliderCurve::BLEND_SHADER->recompile();
+		if (OsuSliderRenderer::BLEND_SHADER != NULL)
+			OsuSliderRenderer::BLEND_SHADER->recompile();
 		key.consume();
 	}
 	else if (engine->getKeyboard()->isAltDown() && engine->getKeyboard()->isControlDown() && key == KEY_S)

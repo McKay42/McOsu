@@ -13,8 +13,10 @@
 #include "CBaseUIElement.h"
 
 class Osu;
+
 class OsuUIButton;
 class OsuUISlider;
+class OsuUIContextMenu;
 
 class CBaseUIContainer;
 class CBaseUIImageButton;
@@ -26,8 +28,6 @@ class CBaseUILabel;
 class CBaseUITextbox;
 
 class ConVar;
-
-class OsuUIListBoxContextMenu;
 
 class OsuOptionsMenu : public OsuScreenBackable, public OsuNotificationOverlayKeyListener
 {
@@ -86,6 +86,7 @@ private:
 	OsuUISlider *addSlider(UString text, float min = 0.0f, float max = 1.0f, ConVar *cvar = NULL, float label1Width = 0.0f);
 	CBaseUITextbox *addTextbox(UString text, ConVar *cvar = NULL);
 	CBaseUIElement *addSkinPreview();
+	CBaseUIElement *addSliderPreview();
 
 	Osu *m_osu;
 	CBaseUIContainer *m_container;
@@ -112,47 +113,9 @@ private:
 
 	ConVar *m_waitingKey;
 
-	OsuUIListBoxContextMenu *m_contextMenu;
+	OsuUIContextMenu *m_contextMenu;
 
 	float m_fOsuFolderTextboxInvalidAnim;
-};
-
-class OsuUIListBoxContextMenu : public CBaseUIElement
-{
-public:
-	OsuUIListBoxContextMenu(float xPos, float yPos, float xSize, float ySize, UString name, CBaseUIScrollView *parent);
-	virtual ~OsuUIListBoxContextMenu();
-
-	void draw(Graphics *g);
-	void update();
-
-	typedef fastdelegate::FastDelegate1<UString> ButtonClickCallback;
-	void setClickCallback(ButtonClickCallback clickCallback) {m_clickCallback = clickCallback;}
-
-	void onResized();
-	void onMoved();
-	void onMouseDownOutside();
-	void onFocusStolen();
-
-	void begin();
-	void addButton(UString text);
-	void end();
-
-	void setVisible2(bool visible2);
-
-	bool isVisible() {return m_bVisible && m_bVisible2;}
-
-private:
-	CBaseUIContainer *m_container;
-	CBaseUIScrollView *m_parent;
-
-	void onClick(CBaseUIButton *button);
-	ButtonClickCallback m_clickCallback;
-
-	int m_iYCounter;
-	int m_iWidthCounter;
-
-	bool m_bVisible2;
 };
 
 #endif
