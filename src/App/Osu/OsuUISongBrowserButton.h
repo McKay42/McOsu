@@ -31,6 +31,8 @@ public:
 	void select();
 	void deselect();
 
+	void resetAnimations();
+
 	void setVisible(bool visible);
 	void setTargetRelPosY(float targetRelPosY);
 	void setChildren(std::vector<OsuUISongBrowserButton*> children) {m_children = children;}
@@ -88,7 +90,7 @@ private:
 	virtual void onMouseInside();
 	virtual void onMouseOutside();
 
-	void setMoveAwayState(MOVE_AWAY_STATE moveAwayState);
+	void setMoveAwayState(MOVE_AWAY_STATE moveAwayState, bool animate = true);
 
 	float m_fTargetRelPosY;
 	float m_fScale;

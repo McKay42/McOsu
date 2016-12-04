@@ -205,8 +205,10 @@ private:
 	bool m_bUIToggleCheck;
 	bool m_bTab;
 	bool m_bEscape;
-	bool m_bKey1;
-	bool m_bKey2;
+	bool m_bKeyboardKey1Down;
+	bool m_bKeyboardKey2Down;
+	bool m_bMouseKey1Down;
+	bool m_bMouseKey2Down;
 	bool m_bSkipScheduled;
 	bool m_bQuickRetryDown;
 	float m_fQuickRetryTime;

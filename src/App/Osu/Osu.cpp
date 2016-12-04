@@ -133,8 +133,10 @@ Osu::Osu()
 	m_bUIToggleCheck = false;
 	m_bTab = false;
 	m_bEscape = false;
-	m_bKey1 = false;
-	m_bKey2 = false;
+	m_bKeyboardKey1Down = false;
+	m_bKeyboardKey2Down = false;
+	m_bMouseKey1Down = false;
+	m_bMouseKey2Down = false;
 	m_bSkipScheduled = false;
 	m_bQuickRetryDown = false;
 
@@ -225,6 +227,30 @@ Osu::Osu()
 	//m_songBrowser2->setVisible(true);
 	//m_pauseMenu->setVisible(true);
 	//m_rankingScreen->setVisible(true);
+
+	// DEBUG: immediately start diff of a beatmap
+	/*
+	UString debugFolder = "c:/Program Files (x86)/osu!/Songs/249939 Fujijo Seitokai Shikkou-bu - Best FriendS/";
+	UString debugDiffFileName = "Fujijo Seitokai Shikkou-bu - Best FriendS (No Dap) [Insane].osu";
+	OsuBeatmap *debugBeatmap = new OsuBeatmap(this, debugFolder);
+	UString beatmapPath = debugFolder;
+	beatmapPath.append(debugDiffFileName);
+	OsuBeatmapDifficulty *debugDiff = new OsuBeatmapDifficulty(this, beatmapPath, debugFolder);
+	if (!debugDiff->loadMetadataRaw())
+		engine->showMessageError("OsuBeatmapDifficulty", "Couldn't debugDiff->loadMetadataRaw()!");
+	else
+	{
+		std::vector<OsuBeatmapDifficulty*> diffs;
+		diffs.push_back(debugDiff);
+		debugBeatmap->setDifficulties(diffs);
+
+		debugBeatmap->selectDifficulty(debugDiff);
+		m_songBrowser2->onDifficultySelected(debugBeatmap, debugDiff, true);
+		convar->getConVarByName("osu_volume_master")->setValue(1.0f);
+
+		// this will leak memory (one OsuBeatmap object and one OsuBeatmapDifficulty object), but who cares (since debug only)
+	}
+	*/
 }
 
 Osu::~Osu()
@@ -562,16 +588,16 @@ void Osu::onKeyDown(KeyboardEvent &key)
 		// while playing and not paused
 		if (!getSelectedBeatmap()->isPaused())
 		{
-			if (!m_bKey1 && key == (KEYCODE)OsuKeyBindings::LEFT_CLICK.getInt())
+			if (!m_bKeyboardKey1Down && key == (KEYCODE)OsuKeyBindings::LEFT_CLICK.getInt())
 			{
-				m_bKey1 = true;
+				m_bKeyboardKey1Down = true;
 				onKey1Change(true, false);
 				key.consume();
 			}
 
-			if (!m_bKey2 && key == (KEYCODE)OsuKeyBindings::RIGHT_CLICK.getInt())
+			if (!m_bKeyboardKey2Down && key == (KEYCODE)OsuKeyBindings::RIGHT_CLICK.getInt())
 			{
-				m_bKey2 = true;
+				m_bKeyboardKey2Down = true;
 				onKey2Change(true, false);
 				key.consume();
 			}
@@ -674,19 +700,17 @@ void Osu::onKeyDown(KeyboardEvent &key)
 void Osu::onKeyUp(KeyboardEvent &key)
 {
 	// clicks
-	if (key == (KEYCODE)OsuKeyBindings::LEFT_CLICK.getInt() && m_bKey1)
+	if (key == (KEYCODE)OsuKeyBindings::LEFT_CLICK.getInt() && m_bKeyboardKey1Down)
 	{
+		m_bKeyboardKey1Down = false;
 		if (isInPlayMode())
 			onKey1Change(false, false);
-
-		m_bKey1 = false;
 	}
-	if (key == (KEYCODE)OsuKeyBindings::RIGHT_CLICK.getInt() && m_bKey2)
+	if (key == (KEYCODE)OsuKeyBindings::RIGHT_CLICK.getInt() && m_bKeyboardKey2Down)
 	{
+		m_bKeyboardKey2Down = false;
 		if (isInPlayMode())
 			onKey2Change(false, false);
-
-		m_bKey2 = false;
 	}
 
 	// forward to all subsystems, if not consumed
@@ -730,14 +754,14 @@ void Osu::onLeftChange(bool down)
 	if (isInPlayMode() && !getSelectedBeatmap()->isPaused() && osu_disable_mousebuttons.getBool())
 		return;
 
-	if (!m_bKey1 && down)
+	if (!m_bMouseKey1Down && down)
 	{
-		m_bKey1 = true;
+		m_bMouseKey1Down = true;
 		onKey1Change(true, true);
 	}
-	else if (m_bKey1)
+	else if (m_bMouseKey1Down)
 	{
-		m_bKey1 = false;
+		m_bMouseKey1Down = false;
 		onKey1Change(false, true);
 	}
 }
@@ -747,14 +771,14 @@ void Osu::onRightChange(bool down)
 	if (isInPlayMode() && !getSelectedBeatmap()->isPaused() && osu_disable_mousebuttons.getBool())
 		return;
 
-	if (!m_bKey2 && down)
+	if (!m_bMouseKey2Down && down)
 	{
-		m_bKey2 = true;
+		m_bMouseKey2Down = true;
 		onKey2Change(true, true);
 	}
-	else if (m_bKey2)
+	else if (m_bMouseKey2Down)
 	{
-		m_bKey2 = false;
+		m_bMouseKey2Down = false;
 		onKey2Change(false, true);
 	}
 }
@@ -1162,9 +1186,9 @@ void Osu::onKey1Change(bool pressed, bool mouse)
 	{
 		if (!(mouse && osu_disable_mousebuttons.getBool()))
 		{
-			if (pressed)
+			if (pressed && !(m_bKeyboardKey1Down && m_bMouseKey1Down))
 				getSelectedBeatmap()->keyPressed1();
-			else
+			else if (!m_bKeyboardKey1Down && !m_bMouseKey1Down)
 				getSelectedBeatmap()->keyReleased1();
 		}
 	}
@@ -1173,9 +1197,9 @@ void Osu::onKey1Change(bool pressed, bool mouse)
 
 	if (doAnimate)
 	{
-		if (pressed)
+		if (pressed && !(m_bKeyboardKey1Down && m_bMouseKey1Down))
 			m_hud->animateCursorExpand();
-		else if (!pressed && !m_bKey2)
+		else if (!m_bKeyboardKey1Down && !m_bMouseKey1Down && !m_bKeyboardKey2Down && !m_bMouseKey2Down)
 			m_hud->animateCursorShrink();
 	}
 }
@@ -1186,9 +1210,9 @@ void Osu::onKey2Change(bool pressed, bool mouse)
 	{
 		if (!(mouse && osu_disable_mousebuttons.getBool()))
 		{
-			if (pressed)
+			if (pressed && !(m_bKeyboardKey2Down && m_bMouseKey2Down))
 				getSelectedBeatmap()->keyPressed2();
-			else
+			else if (!m_bKeyboardKey2Down && !m_bMouseKey2Down)
 				getSelectedBeatmap()->keyReleased2();
 		}
 	}
@@ -1197,9 +1221,9 @@ void Osu::onKey2Change(bool pressed, bool mouse)
 
 	if (doAnimate)
 	{
-		if (pressed)
+		if (pressed && !(m_bKeyboardKey2Down && m_bMouseKey2Down))
 			m_hud->animateCursorExpand();
-		else if (!pressed && !m_bKey1)
+		else if (!m_bKeyboardKey2Down && !m_bMouseKey2Down && !m_bKeyboardKey1Down && !m_bMouseKey1Down)
 			m_hud->animateCursorShrink();
 	}
 }

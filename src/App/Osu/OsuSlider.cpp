@@ -45,7 +45,7 @@ float OsuSliderCurve::CURVE_POINTS_SEPERATION = 2.5f; // bigger value = less ste
 
 
 
-OsuSlider::OsuSlider(char type, int repeat, float pixelLength, std::vector<Vector2> points, std::vector<float> ticks, float sliderTime, float sliderTimeWithoutRepeats, long time, int sampleType, int comboNumber, int colorCounter, OsuBeatmap *beatmap) : OsuHitObject(time, sampleType, comboNumber, colorCounter, beatmap)
+OsuSlider::OsuSlider(char type, int repeat, float pixelLength, std::vector<Vector2> points, std::vector<int> hitSounds, std::vector<float> ticks, float sliderTime, float sliderTimeWithoutRepeats, long time, int sampleType, int comboNumber, int colorCounter, OsuBeatmap *beatmap) : OsuHitObject(time, sampleType, comboNumber, colorCounter, beatmap)
 {
 	if (m_osu_playfield_mirror_horizontal_ref == NULL)
 		m_osu_playfield_mirror_horizontal_ref = convar->getConVarByName("osu_playfield_mirror_horizontal");
@@ -58,6 +58,7 @@ OsuSlider::OsuSlider(char type, int repeat, float pixelLength, std::vector<Vecto
 	m_iRepeat = repeat;
 	m_fPixelLength = pixelLength;
 	m_points = points;
+	m_hitSounds = hitSounds;
 	m_fSliderTime = sliderTime;
 	m_fSliderTimeWithoutRepeats = sliderTimeWithoutRepeats;
 
@@ -144,6 +145,7 @@ OsuSlider::OsuSlider(char type, int repeat, float pixelLength, std::vector<Vecto
 
 	m_iReverseArrowPos = 0;
 	m_iCurRepeat = 0;
+	m_iCurRepeatCounterForHitSounds = 0;
 	m_bInReverse = false;
 	m_bHideNumberAfterFirstRepeatHit = false;
 
@@ -438,7 +440,7 @@ void OsuSlider::draw2(Graphics *g)
 			if (skin->getSliderBallFlip())
 				ballAngle += (m_iCurRepeat % 2 == 0) ? 0 : 180;
 
-			float sliderbImageScale = m_beatmap->getHitcircleDiameter() / (float) skin->getSliderb()->getWidth();
+			float sliderbImageScale = m_beatmap->getHitcircleDiameter() / (128.0f * (skin->isSliderB2x() ? 2.0f : 1.0f));
 
 			g->setColor(skin->getAllowSliderBallTint() ? (osu_slider_ball_tint_combo_color.getBool() ? skin->getComboColorForCounter(m_iColorCounter) : skin->getSliderBallColor()) : 0xffffffff);
 			g->pushTransform();
@@ -783,7 +785,7 @@ float OsuSlider::getT(long pos, bool raw)
 		return t;
 	else
 	{
-		float floorVal = (float) floor(t);
+		float floorVal = (float) std::floor(t);
 		return ((int)floorVal % 2 == 0) ? t - floorVal : floorVal + 1 - t;
 	}
 }
@@ -830,7 +832,7 @@ void OsuSlider::onHit(OsuScore::HIT result, long delta, bool startOrEnd, float t
 		onSliderBreak();
 	else
 	{
-		m_beatmap->getSkin()->playHitCircleSound(m_iSampleType);
+		m_beatmap->getSkin()->playHitCircleSound(m_iCurRepeatCounterForHitSounds < m_hitSounds.size() ? m_hitSounds[m_iCurRepeatCounterForHitSounds] : m_iSampleType);
 
 		if (!startOrEnd)
 		{
@@ -875,6 +877,8 @@ void OsuSlider::onHit(OsuScore::HIT result, long delta, bool startOrEnd, float t
 		m_fEndSliderBodyFadeAnimation = 0.001f; // quickfix for 1 frame missing images
 		anim->moveQuadOut(&m_fEndSliderBodyFadeAnimation, 1.0f, OsuGameRules::getFadeOutTime(m_beatmap), true);
 	}
+
+	m_iCurRepeatCounterForHitSounds++;
 }
 
 void OsuSlider::onRepeatHit(bool successful, bool sliderend)
@@ -892,7 +896,7 @@ void OsuSlider::onRepeatHit(bool successful, bool sliderend)
 		m_fFollowCircleTickAnimationScale = 0.0f;
 		anim->moveLinear(&m_fFollowCircleTickAnimationScale, 1.0f, OsuGameRules::osu_slider_followcircle_tick_pulse_time.getFloat(), true);
 
-		m_beatmap->getSkin()->playHitCircleSound(m_iSampleType);
+		m_beatmap->getSkin()->playHitCircleSound(m_iCurRepeatCounterForHitSounds < m_hitSounds.size() ? m_hitSounds[m_iCurRepeatCounterForHitSounds] : m_iSampleType);
 		m_beatmap->addHitResult(OsuScore::HIT_300, 0, true, false, false, true); // ignore in hiterrorbar, increase combo, but don't count towards score!
 
 		if (sliderend)
@@ -909,6 +913,8 @@ void OsuSlider::onRepeatHit(bool successful, bool sliderend)
 		// add score
 		m_beatmap->addScorePoints(30);
 	}
+
+	m_iCurRepeatCounterForHitSounds++;
 }
 
 void OsuSlider::onTickHit(bool successful, int tickIndex)
@@ -964,6 +970,8 @@ void OsuSlider::onReset(long curPos)
 	m_bHeldTillEnd = false;
 	m_startResult = OsuScore::HIT_NULL;
 	m_endResult = OsuScore::HIT_NULL;
+
+	m_iCurRepeatCounterForHitSounds = 0;
 
 	anim->deleteExistingAnimation(&m_fFollowCircleTickAnimationScale);
 	anim->deleteExistingAnimation(&m_fStartHitAnimation);

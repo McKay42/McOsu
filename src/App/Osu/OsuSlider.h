@@ -28,7 +28,7 @@ public:
 	};
 
 public:
-	OsuSlider(char type, int repeat, float pixelLength, std::vector<Vector2> points, std::vector<float> ticks, float sliderTime, float sliderTimeWithoutRepeats, long time, int sampleType, int comboNumber, int colorCounter, OsuBeatmap *beatmap);
+	OsuSlider(char type, int repeat, float pixelLength, std::vector<Vector2> points, std::vector<int> hitSounds, std::vector<float> ticks, float sliderTime, float sliderTimeWithoutRepeats, long time, int sampleType, int comboNumber, int colorCounter, OsuBeatmap *beatmap);
 	virtual ~OsuSlider();
 
 	virtual void draw(Graphics *g);
@@ -71,6 +71,7 @@ private:
 	int m_iRepeat;
 	float m_fPixelLength;
 	std::vector<Vector2> m_points;
+	std::vector<int> m_hitSounds;
 	float m_fSliderTime;
 	float m_fSliderTimeWithoutRepeats;
 
@@ -117,6 +118,7 @@ private:
 
 	int m_iReverseArrowPos;
 	int m_iCurRepeat;
+	int m_iCurRepeatCounterForHitSounds;
 	bool m_bInReverse;
 	bool m_bHideNumberAfterFirstRepeatHit;
 

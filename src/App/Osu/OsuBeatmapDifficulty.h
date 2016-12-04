@@ -56,6 +56,7 @@ public:
 		int number;
 		int colorCounter;
 		std::vector<Vector2> points;
+		std::vector<int> hitSounds;
 
 		float sliderTime;
 		float sliderTimeWithoutRepeats;

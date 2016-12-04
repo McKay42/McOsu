@@ -833,6 +833,7 @@ void OsuSongBrowser2::rebuildSongButtons(bool unloadAllThumbnails)
 	for (int i=0; i<m_visibleSongButtons.size(); i++)
 	{
 		OsuUISongBrowserButton *button = m_visibleSongButtons[i];
+		button->resetAnimations();
 
 		// "parent"
 		if (!(button->isSelected() && button->isHiddenIfSelected()))
@@ -845,6 +846,7 @@ void OsuSongBrowser2::rebuildSongButtons(bool unloadAllThumbnails)
 			for (int c=0; c<recursiveChildren.size(); c++)
 			{
 				OsuUISongBrowserButton *button = recursiveChildren[c];
+				button->resetAnimations();
 
 				if (!(button->isSelected() && button->isHiddenIfSelected()))
 					m_songBrowser->getContainer()->addBaseUIElement(recursiveChildren[c]);
