@@ -231,6 +231,7 @@ OsuSkin::OsuSkin(Osu *osu, UString filepath)
 	m_bSpinnerTop2x= false;
 	m_bSpinnerMiddle2x= false;
 	m_bSpinnerMiddle22x= false;
+	m_bSliderB2x = false;
 	m_bSliderScorePoint2x = false;
 	m_bSliderStartCircle2x = false;
 	m_bSliderStartCircleOverlay2x = false;
@@ -523,6 +524,8 @@ void OsuSkin::load()
 		m_bSpinnerMiddle2x = true;
 	if (m_spinnerMiddle2 != NULL && m_spinnerMiddle2->getFilePath().find("@2x") != -1)
 		m_bSpinnerMiddle22x = true;
+	if (m_sliderb != NULL && m_sliderb->getFilePath().find("@2x") != -1)
+		m_bSliderB2x = true;
 	if (m_sliderScorePoint != NULL && m_sliderScorePoint->getFilePath().find("@2x") != -1)
 		m_bSliderScorePoint2x = true;
 	if (m_sliderStartCircle != NULL && m_sliderStartCircle->getFilePath().find("@2x") != -1)

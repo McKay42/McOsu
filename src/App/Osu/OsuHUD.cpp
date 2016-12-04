@@ -321,7 +321,7 @@ void OsuHUD::drawPlayfieldBorder(Graphics *g, Vector2 playfieldCenter, Vector2 p
 	// top
 	{
 		VertexArrayObject vao;
-		vao.setType(VertexArrayObject::TYPE_QUADS);
+		vao.setType(VertexArrayObject::PRIMITIVE::PRIMITIVE_QUADS);
 
 		vao.addVertex(playfieldBorderTopLeft);
 		vao.addColor(outerColor);
@@ -338,7 +338,7 @@ void OsuHUD::drawPlayfieldBorder(Graphics *g, Vector2 playfieldCenter, Vector2 p
 	// left
 	{
 		VertexArrayObject vao;
-		vao.setType(VertexArrayObject::TYPE_QUADS);
+		vao.setType(VertexArrayObject::PRIMITIVE::PRIMITIVE_QUADS);
 
 		vao.addVertex(playfieldBorderTopLeft);
 		vao.addColor(outerColor);
@@ -355,7 +355,7 @@ void OsuHUD::drawPlayfieldBorder(Graphics *g, Vector2 playfieldCenter, Vector2 p
 	// right
 	{
 		VertexArrayObject vao;
-		vao.setType(VertexArrayObject::TYPE_QUADS);
+		vao.setType(VertexArrayObject::PRIMITIVE::PRIMITIVE_QUADS);
 
 		vao.addVertex(playfieldBorderTopLeft + Vector2(playfieldBorderSize.x + 2*borderSize, 0));
 		vao.addColor(outerColor);
@@ -372,7 +372,7 @@ void OsuHUD::drawPlayfieldBorder(Graphics *g, Vector2 playfieldCenter, Vector2 p
 	// bottom
 	{
 		VertexArrayObject vao;
-		vao.setType(VertexArrayObject::TYPE_QUADS);
+		vao.setType(VertexArrayObject::PRIMITIVE::PRIMITIVE_QUADS);
 
 		vao.addVertex(playfieldBorderTopLeft + Vector2(borderSize, playfieldBorderSize.y + borderSize));
 		vao.addColor(innerColor);

@@ -194,6 +194,7 @@ public:
 	inline bool isSpinnerTop2x() {return m_bSpinnerTop2x;}
 	inline bool isSpinnerMiddle2x() {return m_bSpinnerMiddle2x;}
 	inline bool isSpinnerMiddle22x() {return m_bSpinnerMiddle22x;}
+	inline bool isSliderB2x() {return m_bSliderB2x;}
 	inline bool isSliderScorePoint2x() {return m_bSliderScorePoint2x;}
 	inline bool isSliderStartCircle2x() {return m_bSliderStartCircle2x;}
 	inline bool isSliderStartCircleOverlay2x() {return m_bSliderStartCircleOverlay2x;}
@@ -447,6 +448,7 @@ private:
 	bool m_bSpinnerTop2x;
 	bool m_bSpinnerMiddle2x;
 	bool m_bSpinnerMiddle22x;
+	bool m_bSliderB2x;
 	bool m_bSliderScorePoint2x;
 	bool m_bSliderStartCircle2x;
 	bool m_bSliderStartCircleOverlay2x;

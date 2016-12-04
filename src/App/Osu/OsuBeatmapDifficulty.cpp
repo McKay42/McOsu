@@ -535,6 +535,15 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 						s.colorCounter = colorCounter;
 						s.points = points;
 
+						if (tokens.size() > 8)
+						{
+							std::vector<UString> hitSoundTokens = tokens[8].split("|");
+							for (int i=0; i<hitSoundTokens.size(); i++)
+							{
+								s.hitSounds.push_back(hitSoundTokens[i].toInt());
+							}
+						}
+
 						sliders.push_back(s);
 					}
 					else if (type & 0x8) // spinner
@@ -647,7 +656,7 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 			}
 		}
 
-		hitobjects->push_back(new OsuSlider(s->type, s->repeat, s->pixelLength, s->points, s->ticks, s->sliderTime, s->sliderTimeWithoutRepeats, s->time, s->sampleType, s->number, s->colorCounter, beatmap));
+		hitobjects->push_back(new OsuSlider(s->type, s->repeat, s->pixelLength, s->points, s->hitSounds, s->ticks, s->sliderTime, s->sliderTimeWithoutRepeats, s->time, s->sampleType, s->number, s->colorCounter, beatmap));
 	}
 	for (int i=0; i<spinners.size(); i++)
 	{
