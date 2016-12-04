@@ -57,7 +57,7 @@ void OsuSliderRenderer::draw(Graphics *g, Osu *osu, const std::vector<Vector2> &
 		for (int i=drawFromIndex; i<drawUpToIndex; i++)
 		{
 			VertexArrayObject vao;
-			vao.setType(VertexArrayObject::TYPE_QUADS);
+			vao.setType(VertexArrayObject::PRIMITIVE::PRIMITIVE_QUADS);
 			Vector2 point = points[i];
 
 			int width = osu->getSkin()->getHitCircle()->getWidth();
@@ -241,7 +241,7 @@ void OsuSliderRenderer::checkUpdateVars(float hitcircleDiameter)
 	if (MASTER_CIRCLE_VAO == NULL)
 	{
 		MASTER_CIRCLE_VAO = new VertexArrayObject();
-		MASTER_CIRCLE_VAO->setType(VertexArrayObject::TYPE_TRIANGLE_FAN);
+		MASTER_CIRCLE_VAO->setType(VertexArrayObject::PRIMITIVE::PRIMITIVE_TRIANGLE_FAN);
 	}
 
 	// generate master circle mesh (centered) if the size changed
