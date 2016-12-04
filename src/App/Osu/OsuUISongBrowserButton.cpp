@@ -169,6 +169,11 @@ void OsuUISongBrowserButton::deselect()
 	onDeselected();
 }
 
+void OsuUISongBrowserButton::resetAnimations()
+{
+	setMoveAwayState(MOVE_AWAY_STATE::MOVE_CENTER, false);
+}
+
 void OsuUISongBrowserButton::onClicked()
 {
 	engine->getSound()->play(m_osu->getSkin()->getMenuClick());
@@ -258,12 +263,12 @@ Vector2 OsuUISongBrowserButton::getActualOffset()
 	return Vector2((int)(marginPixelsX*m_fScale*hd2xMultiplier), (int)(correctedMarginPixelsY*m_fScale*hd2xMultiplier));
 }
 
-void OsuUISongBrowserButton::setMoveAwayState(OsuUISongBrowserButton::MOVE_AWAY_STATE moveAwayState)
+void OsuUISongBrowserButton::setMoveAwayState(OsuUISongBrowserButton::MOVE_AWAY_STATE moveAwayState, bool animate)
 {
 	m_moveAwayState = moveAwayState;
 
 	// if we are not visible, destroy possibly existing animation
-	if (!isVisible())
+	if (!isVisible() || !animate)
 		anim->deleteExistingAnimation(&m_fHoverMoveAwayAnimation);
 
 	// only submit a new animation if we are visible, otherwise we would overwhelm the animationhandler with a shitload of requests every time for every button
@@ -272,7 +277,7 @@ void OsuUISongBrowserButton::setMoveAwayState(OsuUISongBrowserButton::MOVE_AWAY_
 	{
 		case MOVE_AWAY_STATE::MOVE_CENTER:
 		{
-			if (!isVisible())
+			if (!isVisible() || !animate)
 				m_fHoverMoveAwayAnimation = 0.0f;
 			else
 				anim->moveQuartOut(&m_fHoverMoveAwayAnimation, 0, 0.7f, isMouseInside() ? 0.0f : 0.05f, true); // add a tiny bit of delay to avoid jerky movement if the cursor is briefly between songbuttons while moving
@@ -280,7 +285,7 @@ void OsuUISongBrowserButton::setMoveAwayState(OsuUISongBrowserButton::MOVE_AWAY_
 		}
 		case MOVE_AWAY_STATE::MOVE_UP:
 		{
-			if (!isVisible())
+			if (!isVisible() || !animate)
 				m_fHoverMoveAwayAnimation = -1.0f;
 			else
 				anim->moveQuartOut(&m_fHoverMoveAwayAnimation, -1.0f, 0.7f, true);
@@ -288,7 +293,7 @@ void OsuUISongBrowserButton::setMoveAwayState(OsuUISongBrowserButton::MOVE_AWAY_
 		}
 		case MOVE_AWAY_STATE::MOVE_DOWN:
 		{
-			if (!isVisible())
+			if (!isVisible() || !animate)
 				m_fHoverMoveAwayAnimation = 1.0f;
 			else
 				anim->moveQuartOut(&m_fHoverMoveAwayAnimation, 1.0f, 0.7f, true);
