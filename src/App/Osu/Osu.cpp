@@ -1186,6 +1186,10 @@ void Osu::onKey1Change(bool pressed, bool mouse)
 	{
 		if (!(mouse && osu_disable_mousebuttons.getBool()))
 		{
+			// quickfix
+			if (osu_disable_mousebuttons.getBool())
+				m_bMouseKey1Down = false;
+
 			if (pressed && !(m_bKeyboardKey1Down && m_bMouseKey1Down))
 				getSelectedBeatmap()->keyPressed1();
 			else if (!m_bKeyboardKey1Down && !m_bMouseKey1Down)
@@ -1210,6 +1214,10 @@ void Osu::onKey2Change(bool pressed, bool mouse)
 	{
 		if (!(mouse && osu_disable_mousebuttons.getBool()))
 		{
+			// quickfix
+			if (osu_disable_mousebuttons.getBool())
+				m_bMouseKey2Down = false;
+
 			if (pressed && !(m_bKeyboardKey2Down && m_bMouseKey2Down))
 				getSelectedBeatmap()->keyPressed2();
 			else if (!m_bKeyboardKey2Down && !m_bMouseKey2Down)
