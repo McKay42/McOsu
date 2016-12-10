@@ -329,6 +329,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_playfieldBorderSizeSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeInt) );
 
 	addSubSection("Hitobjects");
+	addCheckbox("Shrinking Sliders", convar->getConVarByName("osu_slider_shrink"));
 	addCheckbox("Use New Hidden Fading Sliders", convar->getConVarByName("osu_mod_hd_slider_fade"));
 	addCheckbox("Use Fast Hidden Fading Sliders (!)", convar->getConVarByName("osu_mod_hd_slider_fast_fade"));
 	addCheckbox("Use Score V2 slider accuracy", convar->getConVarByName("osu_slider_scorev2"));
@@ -342,7 +343,6 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Rainbow Sliders", convar->getConVarByName("osu_slider_rainbow"));
 	addCheckbox("Rainbow Numbers", convar->getConVarByName("osu_circle_number_rainbow"));
 	addCheckbox("SliderBreak Epilepsy", convar->getConVarByName("osu_slider_break_epilepsy"));
-	addCheckbox("Shrinking Sliders", convar->getConVarByName("osu_slider_shrink"));
 	addCheckbox("Invisible Cursor", convar->getConVarByName("osu_hide_cursor_during_gameplay"));
 
 
