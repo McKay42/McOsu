@@ -1,7 +1,9 @@
 #version 110
 
 uniform sampler2D tex;
+uniform int style;
 uniform float bodyColorSaturation;
+uniform float bodyAlphaMultiplier;
 uniform float borderSizeMultiplier;
 uniform vec3 colBorder;
 uniform vec3 colBody;
@@ -33,12 +35,14 @@ vec4 getOuterBodyColor(in vec4 bodyColor)
 void main()
 {
 	float borderSize = defaultBorderSize*borderSizeMultiplier;
-	float transitionSize = defaultTransitionSize;
+	const float transitionSize = defaultTransitionSize;
 
+	// output var
 	vec4 out_color = vec4(0.0);
 	
+	// dynamic color calculations
 	vec4 borderColor = vec4(colBorder.x, colBorder.y, colBorder.z, 1.0);
-	vec4 bodyColor = vec4(colBody.x, colBody.y, colBody.z, 0.7);
+	vec4 bodyColor = vec4(colBody.x, colBody.y, colBody.z, 0.7*bodyAlphaMultiplier);
 	vec4 outerShadowColor = vec4(0, 0, 0, 0.25);
 	vec4 innerBodyColor = getInnerBodyColor(bodyColor);
 	vec4 outerBodyColor = getOuterBodyColor(bodyColor);
@@ -46,10 +50,20 @@ void main()
 	innerBodyColor.rgb *= bodyColorSaturation;
 	outerBodyColor.rgb *= bodyColorSaturation;
 	
-	// conditional variant
+	// osu!next style color modifications
+	if (style == 1)
+	{
+		outerBodyColor.rgb = bodyColor.rgb * bodyColorSaturation;
+		outerBodyColor.a = 1.0*bodyAlphaMultiplier;
+		innerBodyColor.rgb = bodyColor.rgb * 0.5 * bodyColorSaturation;
+		innerBodyColor.a = 0.0;
+	}
 	
-	if (borderSizeMultiplier < 0.01) // a bit of a hack, but better than rough edges
+	// a bit of a hack, but better than rough edges
+	if (borderSizeMultiplier < 0.01)
 		borderColor = outerShadowColor;
+	
+	// conditional variant
 	
 	if (tex_coord.x < outerShadowSize - transitionSize) // just shadow
 	{
@@ -71,9 +85,9 @@ void main()
 		out_color = mix(borderColor, outerBodyColor, delta);
 	}
 	if (tex_coord.x > outerShadowSize + borderSize + transitionSize) // outer body + inner body
-	{
+	{	
 		float size = outerShadowSize + borderSize + transitionSize;
-		float delta = (tex_coord.x - size) / (1.0-size);
+		float delta = ((tex_coord.x - size) / (1.0-size));
 		out_color = mix(outerBodyColor, innerBodyColor, delta);
 	}
 	
