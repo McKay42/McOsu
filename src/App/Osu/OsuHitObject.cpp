@@ -39,17 +39,17 @@ void OsuHitObject::drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiam
 		float hitImageScale = 1.0f;
 		switch (result)
 		{
-		case OsuScore::HIT_MISS:
+		case OsuScore::HIT::HIT_MISS:
 			hitImageScale = (rawHitcircleDiameter / (128.0f * (skin->isHit02x() ? 2.0f : 1.0f))) * osuCoordScaleMultiplier;
 			break;
-		case OsuScore::HIT_50:
+		case OsuScore::HIT::HIT_50:
 			hitImageScale = (rawHitcircleDiameter / (128.0f * (skin->isHit502x() ? 2.0f : 1.0f))) * osuCoordScaleMultiplier;
 			break;
-		case OsuScore::HIT_100:
+		case OsuScore::HIT::HIT_100:
 			hitImageScale = (rawHitcircleDiameter / (128.0f * (skin->isHit1002x() ? 2.0f : 1.0f))) * osuCoordScaleMultiplier;
 			break;
 		/*
-		case OsuScore::HIT_300:
+		case OsuScore::HIT::HIT_300:
 			hitImageScale = (rawHitcircleDiameter / (128.0f * (skin->isHit3002x() ? 2.0f : 1.0f))) * osuCoordScaleMultiplier;
 			break;
 		*/
@@ -58,18 +58,18 @@ void OsuHitObject::drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiam
 		g->translate(rawPos.x, rawPos.y);
 		switch (result)
 		{
-		case OsuScore::HIT_MISS:
+		case OsuScore::HIT::HIT_MISS:
 			g->translate(0, (1.0f-animPercent)*(1.0f-animPercent)*(1.0f-animPercent)*skin->getHit0()->getHeight()*1.25f);
 			g->drawImage(skin->getHit0());
 			break;
-		case OsuScore::HIT_50:
+		case OsuScore::HIT::HIT_50:
 			g->drawImage(skin->getHit50());
 			break;
-		case OsuScore::HIT_100:
+		case OsuScore::HIT::HIT_100:
 			g->drawImage(skin->getHit100());
 			break;
 		/*
-		case OsuScore::HIT_300:
+		case OsuScore::HIT::HIT_300:
 			g->drawImage(skin->getHit300());
 			break;
 		*/
@@ -102,6 +102,7 @@ OsuHitObject::OsuHitObject(long time, int sampleType, int comboNumber, int color
 
 	m_bVisible = false;
 	m_bFinished = false;
+	m_bBlocked = false;
 	m_bMisAim = false;
 	m_iAutopilotDelta = 0;
 	m_bOverrideHDApproachCircle = false;
@@ -147,16 +148,16 @@ void OsuHitObject::update(long curPos)
 
 void OsuHitObject::addHitResult(OsuScore::HIT result, long delta, Vector2 posRaw, float targetDelta, float targetAngle, bool ignoreOnHitErrorBar, bool ignoreCombo)
 {
-	if (m_beatmap->getOsu()->getModTarget() && result != OsuScore::HIT_MISS && targetDelta >= 0.0f)
+	if (m_beatmap->getOsu()->getModTarget() && result != OsuScore::HIT::HIT_MISS && targetDelta >= 0.0f)
 	{
-		if (targetDelta < osu_mod_target_300_percent.getFloat() && (result == OsuScore::HIT_300 || result == OsuScore::HIT_100))
-			result = OsuScore::HIT_300;
+		if (targetDelta < osu_mod_target_300_percent.getFloat() && (result == OsuScore::HIT::HIT_300 || result == OsuScore::HIT::HIT_100))
+			result = OsuScore::HIT::HIT_300;
 		else if (targetDelta < osu_mod_target_100_percent.getFloat())
-			result = OsuScore::HIT_100;
+			result = OsuScore::HIT::HIT_100;
 		else if (targetDelta < osu_mod_target_50_percent.getFloat())
-			result = OsuScore::HIT_50;
+			result = OsuScore::HIT::HIT_50;
 		else
-			result = OsuScore::HIT_MISS;
+			result = OsuScore::HIT::HIT_MISS;
 
 		m_beatmap->getOsu()->getHUD()->addTarget(targetDelta, targetAngle);
 	}

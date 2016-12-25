@@ -9,6 +9,7 @@
 
 #include "Engine.h"
 #include "ConVar.h"
+#include "Mouse.h"
 #include "ResourceManager.h"
 #include "AnimationHandler.h"
 #include "VertexArrayObject.h"
@@ -47,6 +48,7 @@ ConVar osu_draw_combo("osu_draw_combo", true);
 ConVar osu_draw_score("osu_draw_score", true);
 ConVar osu_draw_accuracy("osu_draw_accuracy", true);
 ConVar osu_draw_target_heatmap("osu_draw_target_heatmap", true);
+ConVar osu_draw_scrubbing_timeline("osu_draw_scrubbing_timeline", true);
 
 ConVar osu_draw_statistics_misses("osu_draw_statistics_misses", false);
 ConVar osu_draw_statistics_bpm("osu_draw_statistics_bpm", false);
@@ -99,22 +101,25 @@ OsuHUD::~OsuHUD()
 
 void OsuHUD::draw(Graphics *g)
 {
+	OsuBeatmap *beatmap = m_osu->getSelectedBeatmap();
+	if (beatmap == NULL) return; // sanity check
+
 	if (osu_draw_hud.getBool())
 	{
-		if (m_osu->getSelectedBeatmap()->isInSkippableSection())
+		if (beatmap->isInSkippableSection())
 			drawSkip(g);
 
 		g->pushTransform();
 			if (m_osu->getModTarget() && osu_draw_target_heatmap.getBool())
-				g->translate(0, m_osu->getSelectedBeatmap()->getHitcircleDiameter());
-			drawStatistics(g, m_osu->getScore()->getNumMisses(), m_osu->getSelectedBeatmap()->getBPM(), OsuGameRules::getApproachRateForSpeedMultiplier(m_osu->getSelectedBeatmap(), m_osu->getSelectedBeatmap()->getSpeedMultiplier()), m_osu->getSelectedBeatmap()->getCS(), OsuGameRules::getOverallDifficultyForSpeedMultiplier(m_osu->getSelectedBeatmap(), m_osu->getSelectedBeatmap()->getSpeedMultiplier()), m_osu->getSelectedBeatmap()->getNPS(), m_osu->getSelectedBeatmap()->getND(), m_osu->getScore()->getUnstableRate());
+				g->translate(0, beatmap->getHitcircleDiameter());
+			drawStatistics(g, m_osu->getScore()->getNumMisses(), beatmap->getBPM(), OsuGameRules::getApproachRateForSpeedMultiplier(beatmap, beatmap->getSpeedMultiplier()), beatmap->getCS(), OsuGameRules::getOverallDifficultyForSpeedMultiplier(beatmap, beatmap->getSpeedMultiplier()), beatmap->getNPS(), beatmap->getND(), m_osu->getScore()->getUnstableRate());
 		g->popTransform();
 
 		/*
 		g->setColor(0xffffffff);
 		g->pushTransform();
 			g->translate(100, 100);
-			g->drawString(m_tempFont, UString::format("HP: %f", m_osu->getSelectedBeatmap()->getHealth()));
+			g->drawString(m_tempFont, UString::format("HP: %f", beatmap->getHealth()));
 		g->popTransform();
 		*/
 
@@ -125,23 +130,119 @@ void OsuHUD::draw(Graphics *g)
 			drawCombo(g, m_osu->getScore()->getCombo());
 
 		if (osu_draw_progressbar.getBool())
-			drawProgressBar(g, m_osu->getSelectedBeatmap()->getPercentFinished(), m_osu->getSelectedBeatmap()->isWaiting());
+			drawProgressBar(g, beatmap->getPercentFinishedPlayable(), beatmap->isWaiting());
 
 		if (osu_draw_accuracy.getBool())
 			drawAccuracy(g, m_osu->getScore()->getAccuracy()*100.0f);
 
-		if (osu_draw_hiterrorbar.getBool() && !m_osu->getSelectedBeatmap()->isSpinnerActive())
-			drawHitErrorBar(g, OsuGameRules::getHitWindow300(m_osu->getSelectedBeatmap()), OsuGameRules::getHitWindow100(m_osu->getSelectedBeatmap()), OsuGameRules::getHitWindow50(m_osu->getSelectedBeatmap()));
+		if (osu_draw_hiterrorbar.getBool() && !beatmap->isSpinnerActive())
+			drawHitErrorBar(g, OsuGameRules::getHitWindow300(beatmap), OsuGameRules::getHitWindow100(beatmap), OsuGameRules::getHitWindow50(beatmap));
 
 		if (m_osu->getModTarget() && osu_draw_target_heatmap.getBool())
-			drawTargetHeatmap(g, m_osu->getSelectedBeatmap()->getHitcircleDiameter());
+			drawTargetHeatmap(g, beatmap->getHitcircleDiameter());
 	}
 
-	if (m_osu->getSelectedBeatmap()->shouldFlashWarningArrows())
-		drawWarningArrows(g, m_osu->getSelectedBeatmap()->getHitcircleDiameter());
+	if (beatmap->shouldFlashWarningArrows())
+		drawWarningArrows(g, beatmap->getHitcircleDiameter());
 
-	if (m_osu->getSelectedBeatmap()->isContinueScheduled())
-		drawContinue(g, m_osu->getSelectedBeatmap()->getContinueCursorPoint(), m_osu->getSelectedBeatmap()->getHitcircleDiameter());
+	if (beatmap->isContinueScheduled())
+		drawContinue(g, beatmap->getContinueCursorPoint(), beatmap->getHitcircleDiameter());
+
+	if (osu_draw_scrubbing_timeline.getBool() && m_osu->isSeeking())
+	{
+		Vector2 cursorPos = engine->getMouse()->getPos();
+
+		Color grey = 0xffbbbbbb;
+		Color green = 0xff00ff00;
+
+		McFont *timeFont = m_osu->getSubTitleFont();
+		const float currentTimeTopTextOffset = 7;
+		const float currentTimeLeftRightTextOffset = 5;
+		const float startAndEndTimeTextOffset = 5;
+		const unsigned long lengthFullMS = beatmap->getLength();
+		const unsigned long lengthMS = beatmap->getLengthPlayable();
+		const unsigned long startTimeMS = beatmap->getStartTimePlayable();
+		const unsigned long endTimeMS = startTimeMS + lengthMS;
+		const unsigned long currentTimeMS = beatmap->getTime();
+
+		// timeline
+		g->setColor(0xff000000);
+		g->drawLine(0, cursorPos.y+1, m_osu->getScreenWidth(), cursorPos.y+1);
+		g->setColor(grey);
+		g->drawLine(0, cursorPos.y, m_osu->getScreenWidth(), cursorPos.y);
+
+		// current time triangle
+		Vector2 triangleTip = Vector2(m_osu->getScreenWidth()*beatmap->getPercentFinishedPlayable(), cursorPos.y);
+		g->pushTransform();
+			g->translate(triangleTip.x + 1, triangleTip.y - m_osu->getSkin()->getSeekTriangle()->getHeight()/2.0f + 1);
+			g->setColor(0xff000000);
+			g->drawImage(m_osu->getSkin()->getSeekTriangle());
+			g->translate(-1, -1);
+			g->setColor(green);
+			g->drawImage(m_osu->getSkin()->getSeekTriangle());
+		g->popTransform();
+
+		// current time text
+		UString currentTimeText = UString::format("%i:%02i", (currentTimeMS/1000) / 60, (currentTimeMS/1000) % 60);
+		g->pushTransform();
+			g->translate(clamp<float>(triangleTip.x - timeFont->getStringWidth(currentTimeText)/2.0f, currentTimeLeftRightTextOffset, m_osu->getScreenWidth() - timeFont->getStringWidth(currentTimeText) - currentTimeLeftRightTextOffset) + 1, triangleTip.y - m_osu->getSkin()->getSeekTriangle()->getHeight() - currentTimeTopTextOffset + 1);
+			g->setColor(0xff000000);
+			g->drawString(timeFont, currentTimeText);
+			g->translate(-1, -1);
+			g->setColor(green);
+			g->drawString(timeFont, currentTimeText);
+		g->popTransform();
+
+		// start time text
+		UString startTimeText = UString::format("(%i:%02i)", (startTimeMS/1000) / 60, (startTimeMS/1000) % 60);
+		g->pushTransform();
+			g->translate(startAndEndTimeTextOffset + 1, triangleTip.y + startAndEndTimeTextOffset + timeFont->getHeight() + 1);
+			g->setColor(0xff000000);
+			g->drawString(timeFont, startTimeText);
+			g->translate(-1, -1);
+			g->setColor(grey);
+			g->drawString(timeFont, startTimeText);
+		g->popTransform();
+
+		// end time text
+		UString endTimeText = UString::format("%i:%02i", (endTimeMS/1000) / 60, (endTimeMS/1000) % 60);
+		g->pushTransform();
+			g->translate(m_osu->getScreenWidth() - timeFont->getStringWidth(endTimeText) - startAndEndTimeTextOffset + 1, triangleTip.y + startAndEndTimeTextOffset + timeFont->getHeight() + 1);
+			g->setColor(0xff000000);
+			g->drawString(timeFont, endTimeText);
+			g->translate(-1, -1);
+			g->setColor(grey);
+			g->drawString(timeFont, endTimeText);
+		g->popTransform();
+
+		// quicksave time triangle & text
+		if (m_osu->getQuickSaveTime() != 0.0f)
+		{
+			const float quickSaveTimeToPlayablePercent = clamp<float>(((lengthFullMS*m_osu->getQuickSaveTime())) / (float)endTimeMS, 0.0f, 1.0f);
+			triangleTip = Vector2(m_osu->getScreenWidth()*quickSaveTimeToPlayablePercent, cursorPos.y);
+			g->pushTransform();
+				g->rotate(180);
+				g->translate(triangleTip.x + 1, triangleTip.y + m_osu->getSkin()->getSeekTriangle()->getHeight()/2.0f + 1);
+				g->setColor(0xff000000);
+				g->drawImage(m_osu->getSkin()->getSeekTriangle());
+				g->translate(-1, -1);
+				g->setColor(grey);
+				g->drawImage(m_osu->getSkin()->getSeekTriangle());
+			g->popTransform();
+
+			// end time text
+			unsigned long quickSaveTimeMS = lengthFullMS*m_osu->getQuickSaveTime();
+			UString endTimeText = UString::format("%i:%02i", (quickSaveTimeMS/1000) / 60, (quickSaveTimeMS/1000) % 60);
+			g->pushTransform();
+				g->translate(clamp<float>(triangleTip.x - timeFont->getStringWidth(currentTimeText)/2.0f, currentTimeLeftRightTextOffset, m_osu->getScreenWidth() - timeFont->getStringWidth(currentTimeText) - currentTimeLeftRightTextOffset) + 1, triangleTip.y + m_osu->getSkin()->getSeekTriangle()->getHeight()*1.5f + currentTimeTopTextOffset + 1);
+				g->setColor(0xff000000);
+				g->drawString(timeFont, endTimeText);
+				g->translate(-1, -1);
+				g->setColor(grey);
+				g->drawString(timeFont, endTimeText);
+			g->popTransform();
+		}
+	}
 }
 
 void OsuHUD::drawDummy(Graphics *g)
@@ -320,8 +421,7 @@ void OsuHUD::drawPlayfieldBorder(Graphics *g, Vector2 playfieldCenter, Vector2 p
 
 	// top
 	{
-		VertexArrayObject vao;
-		vao.setType(VertexArrayObject::PRIMITIVE::PRIMITIVE_QUADS);
+		VertexArrayObject vao(Graphics::PRIMITIVE::PRIMITIVE_QUADS);
 
 		vao.addVertex(playfieldBorderTopLeft);
 		vao.addColor(outerColor);
@@ -337,8 +437,7 @@ void OsuHUD::drawPlayfieldBorder(Graphics *g, Vector2 playfieldCenter, Vector2 p
 
 	// left
 	{
-		VertexArrayObject vao;
-		vao.setType(VertexArrayObject::PRIMITIVE::PRIMITIVE_QUADS);
+		VertexArrayObject vao(Graphics::PRIMITIVE::PRIMITIVE_QUADS);
 
 		vao.addVertex(playfieldBorderTopLeft);
 		vao.addColor(outerColor);
@@ -354,8 +453,7 @@ void OsuHUD::drawPlayfieldBorder(Graphics *g, Vector2 playfieldCenter, Vector2 p
 
 	// right
 	{
-		VertexArrayObject vao;
-		vao.setType(VertexArrayObject::PRIMITIVE::PRIMITIVE_QUADS);
+		VertexArrayObject vao(Graphics::PRIMITIVE::PRIMITIVE_QUADS);
 
 		vao.addVertex(playfieldBorderTopLeft + Vector2(playfieldBorderSize.x + 2*borderSize, 0));
 		vao.addColor(outerColor);
@@ -371,8 +469,7 @@ void OsuHUD::drawPlayfieldBorder(Graphics *g, Vector2 playfieldCenter, Vector2 p
 
 	// bottom
 	{
-		VertexArrayObject vao;
-		vao.setType(VertexArrayObject::PRIMITIVE::PRIMITIVE_QUADS);
+		VertexArrayObject vao(Graphics::PRIMITIVE::PRIMITIVE_QUADS);
 
 		vao.addVertex(playfieldBorderTopLeft + Vector2(borderSize, playfieldBorderSize.y + borderSize));
 		vao.addColor(innerColor);

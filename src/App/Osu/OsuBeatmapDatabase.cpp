@@ -37,7 +37,7 @@ ConVar osu_database_enabled("osu_database_enabled", true);
 class OsuBeatmapDatabaseLoader : public Resource
 {
 public:
-	OsuBeatmapDatabaseLoader(OsuBeatmapDatabase *db)
+	OsuBeatmapDatabaseLoader(OsuBeatmapDatabase *db) : Resource()
 	{
 		m_db = db;
 		m_bNeedRawLoad = false;
@@ -66,7 +66,7 @@ protected:
 		// load database
 		if (db->isReady() && osu_database_enabled.getBool())
 		{
-			m_db->m_fLoadingProgress = 0.5f;
+			m_db->m_fLoadingProgress = 0.25f;
 			m_db->loadDB(db);
 		}
 		else
@@ -290,6 +290,8 @@ void OsuBeatmapDatabase::loadDB(OsuFile *db)
 		if (Osu::debug->getBool())
 			debugLog("Database: Reading beatmap %i/%i ...\n", (i+1), m_iNumBeatmapsToLoad);
 
+		m_fLoadingProgress = 0.25f + 0.5f*((float)(i+1)/(float)m_iNumBeatmapsToLoad);
+
 		unsigned int size = db->readInt();
 		UString artistName = db->readString();
 		UString artistNameUnicode = db->readString();
@@ -447,6 +449,7 @@ void OsuBeatmapDatabase::loadDB(OsuFile *db)
 			diff->backgroundImageName = "";
 
 			diff->previewTime = previewTime;
+			diff->lastModificationTime = lastModificationTime;
 
 			diff->fullSoundFilePath = beatmapPath;
 			diff->fullSoundFilePath.append(diff->audioFileName);
@@ -590,6 +593,8 @@ void OsuBeatmapDatabase::loadDB(OsuFile *db)
 		debugLog("Collection: version = %i, numCollections = %i\n", version, numCollections);
 		for (int i=0; i<numCollections; i++)
 		{
+			m_fLoadingProgress = 0.75f + 0.24f*((float)(i+1)/(float)numCollections);
+
 			UString name = collectionFile.readString();
 			int numBeatmaps = collectionFile.readInt();
 

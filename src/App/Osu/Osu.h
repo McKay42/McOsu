@@ -131,6 +131,8 @@ public:
 	inline bool getModNM() {return m_bModNM;}
 
 	bool isInPlayMode();
+	inline bool isSeeking() {return m_bSeeking;}
+	inline float getQuickSaveTime() {return m_fQuickSaveTime;}
 
 	void updateMods();
 	void updateConfineCursor();
@@ -212,6 +214,9 @@ private:
 	bool m_bSkipScheduled;
 	bool m_bQuickRetryDown;
 	float m_fQuickRetryTime;
+	bool m_bSeekKey;
+	bool m_bSeeking;
+	float m_fQuickSaveTime;
 
 	// async toggles
 	bool m_bToggleModSelectionScheduled;
