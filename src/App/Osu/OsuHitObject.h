@@ -31,6 +31,7 @@ public:
 	void setStack(int stack) {m_iStack = stack;}
 	void setForceDrawApproachCircle(bool firstNote) {m_bOverrideHDApproachCircle = firstNote;}
 	void setAutopilotDelta(long delta) {m_iAutopilotDelta = delta;}
+	void setBlocked(bool blocked) {m_bBlocked = blocked;}
 
 	virtual Vector2 getRawPosAt(long pos) = 0; // with stack calculation modifications
 	virtual Vector2 getOriginalRawPosAt(long pos) = 0; // without stack calculations
@@ -44,6 +45,7 @@ public:
 
 	inline bool isVisible() const {return m_bVisible;}
 	inline bool isFinished() const {return m_bFinished;}
+	inline bool isBlocked() const {return m_bBlocked;}
 	inline bool hasMisAimed() const {return m_bMisAim;}
 
 	virtual void onClickEvent(Vector2 cursorPos, std::vector<OsuBeatmap::CLICK> &clicks) {;}
@@ -74,6 +76,7 @@ protected:
 
 	int m_iStack;
 
+	bool m_bBlocked;
 	bool m_bOverrideHDApproachCircle;
 	bool m_bMisAim;
 	long m_iAutopilotDelta;

@@ -132,7 +132,7 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen()
 	m_pauseButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuMainMenu::onPausePressed) );
 	m_container->addBaseUIElement(m_pauseButton);
 
-	m_updateAvailableButton = new OsuUIButton(m_osu, 0, 0, 0, 0, "", "Checking for updates ...");
+	m_updateAvailableButton = new OsuUIButton(m_osu, 0, 0, 0, 0, "", Osu::debug->getBool() ? "Debug mode, update check disabled" : "Checking for updates ...");
 	m_updateAvailableButton->setUseDefaultSkin();
 	m_updateAvailableButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuMainMenu::onUpdatePressed) );
 	m_updateAvailableButton->setColor(0x2200ff00);
@@ -144,7 +144,6 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen()
 	m_todo.push_back("- Skin Prefix");
 	m_todo.push_back("- Replays");
 	m_todo.push_back("- Multiplayer");
-	m_todo.push_back("- Note Blocking");
 
 	m_updateChecker->checkForUpdates();
 }

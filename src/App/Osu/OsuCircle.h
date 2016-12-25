@@ -59,6 +59,7 @@ private:
 
 	bool m_bWaiting;
 	float m_fHitAnimation;
+	float m_fShakeAnimation;
 };
 
 #endif
