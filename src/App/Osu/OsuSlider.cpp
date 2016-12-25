@@ -43,8 +43,6 @@ ConVar *OsuSlider::m_osu_playfield_rotation_ref = NULL;
 
 float OsuSliderCurve::CURVE_POINTS_SEPERATION = 2.5f; // bigger value = less steps, more blocky sliders
 
-
-
 OsuSlider::OsuSlider(char type, int repeat, float pixelLength, std::vector<Vector2> points, std::vector<int> hitSounds, std::vector<float> ticks, float sliderTime, float sliderTimeWithoutRepeats, long time, int sampleType, int comboNumber, int colorCounter, OsuBeatmap *beatmap) : OsuHitObject(time, sampleType, comboNumber, colorCounter, beatmap)
 {
 	if (m_osu_playfield_mirror_horizontal_ref == NULL)
@@ -128,8 +126,8 @@ OsuSlider::OsuSlider(char type, int repeat, float pixelLength, std::vector<Vecto
 	m_fHiddenAlpha = 0.0f;
 	m_fHiddenSlowFadeAlpha = 0.0f;
 
-	m_startResult = OsuScore::HIT_NULL;
-	m_endResult = OsuScore::HIT_NULL;
+	m_startResult = OsuScore::HIT::HIT_NULL;
+	m_endResult = OsuScore::HIT::HIT_NULL;
 	m_bStartFinished = false;
 	m_fStartHitAnimation = 0.0f;
 	m_bEndFinished = false;
@@ -181,14 +179,30 @@ void OsuSlider::draw(Graphics *g)
 		// draw slider body
 		if (alpha > 0.0f && osu_slider_draw_body.getBool())
 		{
+			// TODO: this is a really shitty solution, maybe an OsuBeatmapCoordinateTransformer or sth?
+
 			std::vector<Vector2> screenPoints = m_curve->getPoints();
-			OsuBeatmap *beatmap = m_beatmap;
-			std::transform(screenPoints.begin(), screenPoints.end(), screenPoints.begin(), [beatmap](Vector2 p) -> Vector2 { return beatmap->osuCoords2Pixels(p); });
+			for (int p=0; p<screenPoints.size(); p++)
+			{
+				screenPoints[p] = m_beatmap->osuCoords2Pixels(screenPoints[p]);
+			}
+
+			/*
+			std::vector<std::vector<Vector2>> screenSegmentPoints = m_curve->getPointSegments();
+			for (int s=0; s<screenSegmentPoints.size(); s++)
+			{
+				for (int p=0; p<screenSegmentPoints[s].size(); p++)
+				{
+					screenSegmentPoints[s][p] = m_beatmap->osuCoords2Pixels(screenSegmentPoints[s][p]);
+				}
+			}
+			*/
+
 			OsuSliderRenderer::draw(g, m_beatmap->getOsu(), screenPoints, m_beatmap->getHitcircleDiameter(), sliderSnakeStart, sliderSnake, skin->getComboColorForCounter(m_iColorCounter), alpha, getTime());
+			//OsuSliderRenderer::drawMM(g, m_beatmap->getOsu(), screenSegmentPoints, m_beatmap->getHitcircleDiameter(), sliderSnakeStart, sliderSnake, skin->getComboColorForCounter(m_iColorCounter), alpha, getTime());
 		}
 
 		// draw slider ticks
-		// HACKHACK: hardcoded 0.125 multiplier, seems to be correct though (1/8)
 		float tickImageScale = (m_beatmap->getHitcircleDiameter() / (16.0f * (skin->isSliderScorePoint2x() ? 2.0f : 1.0f)))*0.125f;
 		for (int t=0; t<m_ticks.size(); t++)
 		{
@@ -259,7 +273,7 @@ void OsuSlider::draw(Graphics *g)
 				// end
 				if (m_iReverseArrowPos == 2 || m_iReverseArrowPos == 3)
 				{
-					/*Vector2 pos = m_beatmap->osuCoords2Pixels(m_curve->pointAt(sliderSnake));*/
+					/*Vector2 pos = m_beatmap->osuCoords2Pixels(m_curve->pointAt(sliderSnake));*/ // osu doesn't snake the reverse arrow
 					Vector2 pos = m_beatmap->osuCoords2Pixels(m_curve->pointAt(1.0f));
 					float rotation = m_curve->getEndAngle() - m_osu_playfield_rotation_ref->getFloat() - m_beatmap->getPlayfieldRotation();
 					if (m_beatmap->getOsu()->getModHR() || m_osu_playfield_mirror_horizontal_ref->getBool())
@@ -456,21 +470,21 @@ void OsuSlider::draw2(Graphics *g)
 void OsuSlider::drawStartCircle(Graphics *g, float alpha)
 {
 	if (m_bStartFinished)
-		OsuCircle::drawSliderEndCircle(g, m_beatmap, m_curve->pointAt(0.0f), m_iComboNumber, m_iColorCounter, 1.0f, alpha, 0.0f, false, false);
+		OsuCircle::drawSliderEndCircle(g, m_beatmap, m_curve->pointAt(0.0f), m_iComboNumber, m_iColorCounter, 1.0f, m_fHiddenAlpha, 0.0f, false, false);
 	else
-		OsuCircle::drawSliderStartCircle(g, m_beatmap, m_curve->pointAt(0.0f), m_iComboNumber, m_iColorCounter, m_fApproachScale, alpha, m_fHiddenAlpha, !m_bHideNumberAfterFirstRepeatHit, m_bOverrideHDApproachCircle);
+		OsuCircle::drawSliderStartCircle(g, m_beatmap, m_curve->pointAt(0.0f), m_iComboNumber, m_iColorCounter, m_fApproachScale, m_fHiddenAlpha, m_fHiddenAlpha, !m_bHideNumberAfterFirstRepeatHit, m_bOverrideHDApproachCircle);
 }
 
 void OsuSlider::drawEndCircle(Graphics *g, float alpha, float sliderSnake)
 {
-	OsuCircle::drawSliderEndCircle(g, m_beatmap, m_curve->pointAt(sliderSnake), m_iComboNumber, m_iColorCounter, 1.0f, alpha, 0.0f, false, false);
+	OsuCircle::drawSliderEndCircle(g, m_beatmap, m_curve->pointAt(sliderSnake), m_iComboNumber, m_iColorCounter, 1.0f, m_fHiddenAlpha, 0.0f, false, false);
 }
 
 void OsuSlider::update(long curPos)
 {
 	OsuHitObject::update(curPos);
 
-	//TEMP:
+	// TEMP:
 	if (m_fSliderBreakRapeTime != 0.0f && engine->getTime() > m_fSliderBreakRapeTime)
 	{
 		m_fSliderBreakRapeTime = 0.0f;
@@ -507,7 +521,7 @@ void OsuSlider::update(long curPos)
 
 		m_fHiddenSlowFadeAlpha = m_fHiddenAlpha;
 
-		// TODO: not yet correct fading, but close enough
+		// TODO: not yet correct fading, but close enough, actually not really
 		if (m_iDelta < m_iHiddenTimeDiff + m_iHiddenDecayTime)
 			m_fHiddenSlowFadeAlpha = 1.0f - clamp<float>((float)(curPos - (m_iTime - m_iHiddenTimeDiff - m_iHiddenDecayTime)) / (m_fSliderTime*osu_mod_hd_slider_fade_percent.getFloat()+m_iHiddenTimeDiff+m_iHiddenDecayTime), 0.0f, 1.0f);
 	}
@@ -577,7 +591,7 @@ void OsuSlider::update(long curPos)
 		if (m_beatmap->getOsu()->getModAuto())
 		{
 			if (curPos >= m_iTime)
-				onHit(OsuScore::HIT_300, 0, false);
+				onHit(OsuScore::HIT::HIT_300, 0, false);
 		}
 		else
 		{
@@ -593,7 +607,7 @@ void OsuSlider::update(long curPos)
 						long delta = curPos - (long)m_iTime;
 						OsuScore::HIT result = OsuGameRules::getHitResult(delta, m_beatmap);
 
-						if (result != OsuScore::HIT_NULL)
+						if (result != OsuScore::HIT::HIT_NULL)
 						{
 							const float targetDelta = cursorDelta / (m_beatmap->getHitcircleDiameter()/2.0f);
 							const float targetAngle = rad2deg(atan2(m_beatmap->getCursorPos().y - pos.y, m_beatmap->getCursorPos().x - pos.x));
@@ -612,7 +626,7 @@ void OsuSlider::update(long curPos)
 				// if this is a miss after waiting
 				if (delta > (long)OsuGameRules::getHitWindow50(m_beatmap))
 				{
-					m_startResult = OsuScore::HIT_MISS;
+					m_startResult = OsuScore::HIT::HIT_MISS;
 					onHit(m_startResult, delta, false);
 				}
 			}
@@ -648,7 +662,7 @@ void OsuSlider::update(long curPos)
 			if (curPos >= m_iTime + m_iObjectDuration)
 			{
 				m_bHeldTillEnd = true;
-				onHit(OsuScore::HIT_300, 0, true);
+				onHit(OsuScore::HIT::HIT_300, 0, true);
 			}
 		}
 		else
@@ -660,19 +674,19 @@ void OsuSlider::update(long curPos)
 				m_endResult = OsuGameRules::getHitResult(holdDelta, m_beatmap);
 
 				// slider lenience: only allow HIT_300 delta
-				if (m_endResult != OsuScore::HIT_300)
-					m_endResult = OsuScore::HIT_MISS;
+				if (m_endResult != OsuScore::HIT::HIT_300)
+					m_endResult = OsuScore::HIT::HIT_MISS;
 				else
 					m_bHeldTillEnd = true;
 
 				if ((m_beatmap->isClickHeld() || m_beatmap->getOsu()->getModRelax()) && m_bCursorInside)
-					m_endResult = OsuScore::HIT_300;
+					m_endResult = OsuScore::HIT::HIT_300;
 
 
-				if (m_endResult == OsuScore::HIT_NULL) // this may happen
-					m_endResult = OsuScore::HIT_MISS;
-				if (m_startResult == OsuScore::HIT_NULL) // this may also happen
-					m_startResult = OsuScore::HIT_MISS;
+				if (m_endResult == OsuScore::HIT::HIT_NULL) // this may happen
+					m_endResult = OsuScore::HIT::HIT_MISS;
+				if (m_startResult == OsuScore::HIT::HIT_NULL) // this may also happen
+					m_startResult = OsuScore::HIT::HIT_MISS;
 
 
 				// handle total slider result (currently startcircle + repeats + ticks + endcircle)
@@ -680,9 +694,9 @@ void OsuSlider::update(long curPos)
 				float numMaxPossibleHits = 1 + m_clicks.size() + 1;
 				float numActualHits = 0;
 
-				if (m_startResult != OsuScore::HIT_MISS)
+				if (m_startResult != OsuScore::HIT::HIT_MISS)
 					numActualHits++;
-				if (m_endResult != OsuScore::HIT_MISS)
+				if (m_endResult != OsuScore::HIT::HIT_MISS)
 					numActualHits++;
 
 				for (int i=0; i<m_clicks.size(); i++)
@@ -693,17 +707,17 @@ void OsuSlider::update(long curPos)
 
 				float percent = numActualHits / numMaxPossibleHits;
 
-				bool allow300 = osu_slider_scorev2.getBool() ? (m_startResult == OsuScore::HIT_300) : true;
-				bool allow100 = osu_slider_scorev2.getBool() ? (m_startResult == OsuScore::HIT_300 || m_startResult == OsuScore::HIT_100) : true;
+				bool allow300 = osu_slider_scorev2.getBool() ? (m_startResult == OsuScore::HIT::HIT_300) : true;
+				bool allow100 = osu_slider_scorev2.getBool() ? (m_startResult == OsuScore::HIT::HIT_300 || m_startResult == OsuScore::HIT::HIT_100) : true;
 
 				if (percent >= 0.999f && allow300)
-					m_endResult = OsuScore::HIT_300;
+					m_endResult = OsuScore::HIT::HIT_300;
 				else if (percent >= 0.5f && allow100 && !OsuGameRules::osu_mod_ming3012.getBool())
-					m_endResult = OsuScore::HIT_100;
+					m_endResult = OsuScore::HIT::HIT_100;
 				else if (percent > 0.0f)
-					m_endResult = OsuScore::HIT_50;
+					m_endResult = OsuScore::HIT::HIT_50;
 				else
-					m_endResult = OsuScore::HIT_MISS;
+					m_endResult = OsuScore::HIT::HIT_MISS;
 
 				//debugLog("percent = %f\n", percent);
 
@@ -792,7 +806,7 @@ float OsuSlider::getT(long pos, bool raw)
 
 void OsuSlider::onClickEvent(Vector2 cursorPos, std::vector<OsuBeatmap::CLICK> &clicks)
 {
-	if (m_points.size() == 0)
+	if (m_points.size() == 0 || m_bBlocked) // also handle note blocking here (doesn't need fancy shake logic, since sliders don't shake)
 		return;
 
 	if (!m_bStartFinished)
@@ -805,7 +819,7 @@ void OsuSlider::onClickEvent(Vector2 cursorPos, std::vector<OsuBeatmap::CLICK> &
 			const long delta = (long)clicks[0].musicPos - (long)m_iTime;
 
 			OsuScore::HIT result = OsuGameRules::getHitResult(delta, m_beatmap);
-			if (result != OsuScore::HIT_NULL)
+			if (result != OsuScore::HIT::HIT_NULL)
 			{
 				const float targetDelta = cursorDelta / (m_beatmap->getHitcircleDiameter()/2.0f);
 				const float targetAngle = rad2deg(atan2(cursorPos.y - pos.y, cursorPos.x - pos.x));
@@ -828,7 +842,7 @@ void OsuSlider::onHit(OsuScore::HIT result, long delta, bool startOrEnd, float t
 	//debugLog("startOrEnd = %i,    m_iCurRepeat = %i\n", (int)startOrEnd, m_iCurRepeat);
 
 	// sound and hit animation
-	if (result == OsuScore::HIT_MISS)
+	if (result == OsuScore::HIT::HIT_MISS)
 		onSliderBreak();
 	else
 	{
@@ -897,7 +911,7 @@ void OsuSlider::onRepeatHit(bool successful, bool sliderend)
 		anim->moveLinear(&m_fFollowCircleTickAnimationScale, 1.0f, OsuGameRules::osu_slider_followcircle_tick_pulse_time.getFloat(), true);
 
 		m_beatmap->getSkin()->playHitCircleSound(m_iCurRepeatCounterForHitSounds < m_hitSounds.size() ? m_hitSounds[m_iCurRepeatCounterForHitSounds] : m_iSampleType);
-		m_beatmap->addHitResult(OsuScore::HIT_300, 0, true, false, false, true); // ignore in hiterrorbar, increase combo, but don't count towards score!
+		m_beatmap->addHitResult(OsuScore::HIT::HIT_300, 0, true, true, false, true); // ignore in hiterrorbar, ignore for accuracy, increase combo, but don't count towards score!
 
 		if (sliderend)
 		{
@@ -942,7 +956,7 @@ void OsuSlider::onTickHit(bool successful, int tickIndex)
 		m_fFollowCircleTickAnimationScale = 0.0f;
 		anim->moveLinear(&m_fFollowCircleTickAnimationScale, 1.0f, OsuGameRules::osu_slider_followcircle_tick_pulse_time.getFloat(), true);
 		m_beatmap->getSkin()->playSliderTickSound();
-		m_beatmap->addHitResult(OsuScore::HIT_SLIDER30, 0, true);
+		m_beatmap->addHitResult(OsuScore::HIT::HIT_SLIDER30, 0, true);
 
 		// add score
 		m_beatmap->addScorePoints(10);
@@ -953,7 +967,7 @@ void OsuSlider::onSliderBreak()
 {
 	m_beatmap->addSliderBreak();
 
-	//TEMP:
+	// TEMP:
 	if (osu_slider_break_epilepsy.getBool())
 	{
 		m_fSliderBreakRapeTime = engine->getTime() + 0.15f;
@@ -968,8 +982,8 @@ void OsuSlider::onReset(long curPos)
 	m_iLastClickHeld = 0;
 	m_bCursorLeft = true;
 	m_bHeldTillEnd = false;
-	m_startResult = OsuScore::HIT_NULL;
-	m_endResult = OsuScore::HIT_NULL;
+	m_startResult = OsuScore::HIT::HIT_NULL;
+	m_endResult = OsuScore::HIT::HIT_NULL;
 
 	m_iCurRepeatCounterForHitSounds = 0;
 
@@ -1053,195 +1067,19 @@ OsuSliderCurve::OsuSliderCurve(OsuSlider *parent, OsuBeatmap *beatmap)
 	m_fEndAngle = 0.0f;
 }
 
-OsuSliderCurve::~OsuSliderCurve()
-{
-}
-
-void OsuSliderCurve::drawFillSliderBody(Graphics *g, int drawUpTo)
-{
-	// draw slider body half 1
-	{
-		VertexArrayObject vao;
-		Vector2 prevVertex1;
-		Vector2 prevVertex2;
-
-		for (int i=0; i<drawUpTo; i++)
-		{
-			Vector2 current = m_beatmap->osuCoords2Pixels(m_curvePoints[i]);
-			float angle;
-
-			if (i == 0)
-			{
-				angle = (PI - deg2rad(getStartAngle())) + PI;
-				if (m_beatmap->getOsu()->getModHR())
-					angle = -angle;
-			}
-			else if (i == m_curvePoints.size()-1)
-			{
-				angle = PI - deg2rad(getEndAngle());
-				if (m_beatmap->getOsu()->getModHR())
-					angle = -angle;
-			}
-			else if (i > 0 && i < m_curvePoints.size()-1)
-			{
-				Vector2 last = m_beatmap->osuCoords2Pixels(m_curvePoints[i-1]);
-				Vector2 next = m_beatmap->osuCoords2Pixels(m_curvePoints[i+1]);
-
-				Vector2 normal1 = (last - current).normalize();
-				Vector2 normal2 = (current - next).normalize();
-				Vector2 normal = (normal1 + normal2).normalize();
-
-				angle = atan2(normal.x, normal.y)+PI*0.5;
-			}
-
-			float offset = m_beatmap->getHitcircleDiameter()*0.5f;
-
-			Vector2 dir = Vector2(std::sin(angle), std::cos(angle))*offset;
-
-			Vector2 pos1 = current + dir; // outer
-			Vector2 pos2 = current; // inner
-
-			if (i > 0)
-			{
-				vao.addTexcoord(0, 0);
-				vao.addVertex(prevVertex1);
-				vao.addTexcoord(1, 0);
-				vao.addVertex(prevVertex2);
-				vao.addTexcoord(0, 0);
-				vao.addVertex(pos1);
-
-				vao.addTexcoord(1, 0);
-				vao.addVertex(prevVertex2);
-				vao.addTexcoord(0, 0);
-				vao.addVertex(pos1);
-				vao.addTexcoord(1, 0);
-				vao.addVertex(pos2);
-			}
-
-			// save
-			prevVertex1 = pos1;
-			prevVertex2 = pos2;
-		}
-
-		// draw it
-		g->drawVAO(&vao);
-	}
-
-	// draw slider body half 2
-	{
-		VertexArrayObject vao;
-		Vector2 prevVertex1;
-		Vector2 prevVertex2;
-
-		for (int i=0; i<drawUpTo; i++)
-		{
-			Vector2 current = m_beatmap->osuCoords2Pixels(m_curvePoints[i]);
-			float angle;
-
-			if (i == 0)
-			{
-				angle = (PI - deg2rad(getStartAngle())) + PI;
-				if (m_beatmap->getOsu()->getModHR())
-					angle = -angle;
-			}
-			else if (i == m_curvePoints.size()-1)
-			{
-				angle = PI - deg2rad(getEndAngle());
-				if (m_beatmap->getOsu()->getModHR())
-					angle = -angle;
-			}
-			else if (i > 0 && i < m_curvePoints.size()-1)
-			{
-				Vector2 last = m_beatmap->osuCoords2Pixels(m_curvePoints[i-1]);
-				Vector2 next = m_beatmap->osuCoords2Pixels(m_curvePoints[i+1]);
-
-				Vector2 normal1 = (last - current).normalize();
-				Vector2 normal2 = (current - next).normalize();
-				Vector2 normal = (normal1 + normal2).normalize();
-
-				angle = atan2(normal.x, normal.y)+PI*0.5;
-			}
-			float offset = m_beatmap->getHitcircleDiameter()*0.5f;
-
-			Vector2 dir = Vector2(std::sin(angle), std::cos(angle))*offset;
-
-			Vector2 pos1 = current; // outer
-			Vector2 pos2 = current - dir; // inner
-
-			if (i > 0)
-			{
-				vao.addTexcoord(1, 0);
-				vao.addVertex(prevVertex1);
-				vao.addTexcoord(0, 0);
-				vao.addVertex(prevVertex2);
-				vao.addTexcoord(1, 0);
-				vao.addVertex(pos1);
-
-				vao.addTexcoord(0, 0);
-				vao.addVertex(prevVertex2);
-				vao.addTexcoord(1, 0);
-				vao.addVertex(pos1);
-				vao.addTexcoord(0, 0);
-				vao.addVertex(pos2);
-			}
-
-			// save
-			prevVertex1 = pos1;
-			prevVertex2 = pos2;
-		}
-
-		// draw it
-		g->drawVAO(&vao);
-	}
-}
-
-void OsuSliderCurve::drawFillCircle(Graphics *g, Vector2 center)
-{
-	float radius = (m_beatmap->getHitcircleDiameter()/2.0f)*0.9f;
-	float num_segments = 15*8;
-
-	float theta = 2 * PI / float(num_segments);
-	float c = cosf(theta); // precalculate the sine and cosine
-	float s = sinf(theta);
-	float t;
-	float x = 0;
-	float y = -radius; // we start at the top
-
-	{
-		VertexArrayObject vao;
-		Vector2 prevVertex;
-		for (int i=0; i<num_segments+1; i++)
-		{
-			// build current vertex
-			Vector2 curVertex = Vector2(x + center.x, y + center.y);
-
-			// add vertex, triangle strip style (counter clockwise)
-			if (i > 0)
-			{
-				vao.addVertex(curVertex);
-				vao.addVertex(prevVertex);
-				vao.addVertex(center);
-			}
-
-			// apply the rotation matrix
-			t = x;
-			x = c * x - s * y;
-			y = s * t + c * y;
-
-			// save
-			prevVertex = curVertex;
-		}
-
-		// draw it
-		g->drawVAO(&vao);
-	}
-}
-
 void OsuSliderCurve::updateStackPosition(float stackMulStackOffset)
 {
 	for (int i=0; i<m_originalCurvePoints.size() && i<m_curvePoints.size(); i++)
 	{
 		m_curvePoints[i] = m_originalCurvePoints[i] - Vector2(stackMulStackOffset, stackMulStackOffset * (m_beatmap->getOsu()->getModHR() ? -1.0f : 1.0f));
+	}
+
+	for (int s=0; s<m_originalCurvePointSegments.size() && s<m_curvePointSegments.size(); s++)
+	{
+		for (int p=0; p<m_originalCurvePointSegments[s].size() && p<m_curvePointSegments[s].size(); p++)
+		{
+			m_curvePointSegments[s][p] = m_originalCurvePointSegments[s][p] - Vector2(stackMulStackOffset, stackMulStackOffset * (m_beatmap->getOsu()->getModHR() ? -1.0f : 1.0f));
+		}
 	}
 }
 
@@ -1273,6 +1111,21 @@ void OsuSliderCurveType::init(float approxlength)
 	}
 }
 
+void OsuSliderCurveType::initCustom(std::vector<Vector2> points)
+{
+	m_points = points;
+	m_iNCurve = points.size();
+
+	// find the distance of each point from the previous point (needed for some curve types)
+	m_fTotalDistance = 0.0f;
+	for (int i=0; i<m_iNCurve; i++)
+	{
+		float curDist = (i == 0) ? 0 : (m_points[i] - m_points[i-1]).length();
+
+		m_curveDistances.push_back(curDist);
+		m_fTotalDistance += curDist;
+	}
+}
 
 
 
@@ -1287,8 +1140,12 @@ OsuSliderCurveTypeBezier2::OsuSliderCurveTypeBezier2(const std::vector<Vector2> 
 	{
 		approxlength += (points[i] - points[i + 1]).length();
 	}
-
 	init(approxlength);
+
+	/*
+	BezierApproximator b(points);
+	initCustom(b.createBezier());
+	*/
 }
 
 Vector2 OsuSliderCurveTypeBezier2::pointAt(float t)
@@ -1541,7 +1398,12 @@ OsuSliderCurveCircumscribedCircle::OsuSliderCurveCircumscribedCircle(OsuSlider *
 			break;
 	}
 
-	m_originalCurvePoints = m_curvePoints; // backup
+	// add the segment (no special logic here for SliderCurveCircumscribedCircle, just add the entire vector)
+	m_curvePointSegments.push_back(m_curvePoints);
+
+	// backup (for dynamic updateStackPosition() recalculation)
+	m_originalCurvePoints = m_curvePoints;
+	m_originalCurvePointSegments = m_curvePointSegments;
 }
 
 void OsuSliderCurveCircumscribedCircle::updateStackPosition(float stackMulStackOffset)
@@ -1607,10 +1469,12 @@ void OsuSliderCurveEqualDistanceMulti::init(std::vector<OsuSliderCurveType*> cur
 	Vector2 lastCurve = curCurve->getCurvePoints()[0];
 	float lastDistanceAt = 0;
 
-	// length of Curve should equal pixel length (in 640x480)
+	// length of the curve should be equal to the pixel length
 	float pixelLength = m_slider->getPixelLength();
 
 	// for each distance, try to get in between the two points that are between it
+	Vector2 lastCurvePointForNextSegmentStart;
+	std::vector<Vector2> curCurvePoints;
 	for (int i=0; i<m_iNCurve+1; i++)
 	{
 		int prefDistance = (int) ((i * pixelLength) / m_iNCurve);
@@ -1622,7 +1486,21 @@ void OsuSliderCurveEqualDistanceMulti::init(std::vector<OsuSliderCurveType*> cur
 
 			if (curPoint >= curCurve->getCurvesCount())
 			{
+				// jump to next curve
 				curCurveIndex++;
+
+				// when jumping to the next curve, add the current segment to the list of segments
+				if (curCurvePoints.size() > 0)
+				{
+					m_curvePointSegments.push_back(curCurvePoints);
+					curCurvePoints.clear();
+
+					// prepare the next segment by setting/adding the starting point to the exact end point of the previous segment
+					// this also enables an optimization, namely that startcaps only have to be drawn [for every segment] if the startpoint != endpoint in the loop
+					if (m_curvePoints.size() > 0)
+						curCurvePoints.push_back(lastCurvePointForNextSegmentStart);
+				}
+
 				if (curCurveIndex < curvesList.size())
 				{
 					curCurve = curvesList[curCurveIndex];
@@ -1642,8 +1520,11 @@ void OsuSliderCurveEqualDistanceMulti::init(std::vector<OsuSliderCurveType*> cur
 		}
 		Vector2 thisCurve = curCurve->getCurvePoints()[curPoint];
 
+		// TODO: there's some major fuckery going on with the indices here, from the raw opsu curve code translation. fix that sometime
+
 		// interpolate the point between the two closest distances
 		m_curvePoints.push_back(Vector2(0,0));
+		curCurvePoints.push_back(Vector2(0,0));
 		if (distanceAt - lastDistanceAt > 1)
 		{
 			float t = (prefDistance - lastDistanceAt) / (distanceAt - lastDistanceAt);
@@ -1651,9 +1532,56 @@ void OsuSliderCurveEqualDistanceMulti::init(std::vector<OsuSliderCurveType*> cur
 		}
 		else
 			m_curvePoints[i] = thisCurve;
+
+		// add the point to the current segment (this is not using the lerp'd point! would cause mm mesh artifacts if it did)
+		lastCurvePointForNextSegmentStart = thisCurve;
+		curCurvePoints[curCurvePoints.size()-1] = thisCurve;
 	}
 
-	// calculate start and end angles for possible repeats
+	// if we only had one segment, no jump to any next curve has occurred (and therefore no insertion of the segment into the vector)
+	// manually add the lone segment here
+	if (curCurvePoints.size() > 0)
+		m_curvePointSegments.push_back(curCurvePoints);
+
+	// make sure that the uninterpolated segment points are exactly as long as the pixelLength
+	// this is necessary because we can't use the lerp'd points for the segments
+	float segmentedLength = 0.0f;
+	for (int s=0; s<m_curvePointSegments.size(); s++)
+	{
+		for (int p=0; p<m_curvePointSegments[s].size(); p++)
+		{
+			segmentedLength += (p == 0) ? 0 : (m_curvePointSegments[s][p] - m_curvePointSegments[s][p-1]).length();
+		}
+	}
+	// TODO: this is still incorrect. sliders are sometimes too long or start too late
+	if (segmentedLength > pixelLength)
+	{
+		float excess = segmentedLength - pixelLength;
+		while (excess > 0)
+		{
+			for (int s=m_curvePointSegments.size()-1; s>=0; s--)
+			{
+				for (int p=m_curvePointSegments[s].size()-1; p>=0; p--)
+				{
+					const float curLength = (p == 0) ? 0 : (m_curvePointSegments[s][p] - m_curvePointSegments[s][p-1]).length();
+					if (curLength >= excess)
+					{
+						Vector2 segmentVector = (m_curvePointSegments[s][p] - m_curvePointSegments[s][p-1]).normalize();
+						m_curvePointSegments[s][p] = m_curvePointSegments[s][p] - segmentVector*excess;
+						excess = 0.0f;
+						break;
+					}
+					else
+					{
+						m_curvePointSegments[s].erase(m_curvePointSegments[s].begin() + p);
+						excess -= curLength;
+					}
+				}
+			}
+		}
+	}
+
+	// calculate start and end angles for possible repeats (good enough and cheaper than calculating it live every frame)
 	Vector2 c1 = m_curvePoints[0];
 	int cnt = 1;
 	Vector2 c2 = m_curvePoints[cnt++];
@@ -1672,7 +1600,9 @@ void OsuSliderCurveEqualDistanceMulti::init(std::vector<OsuSliderCurveType*> cur
 	}
 	m_fEndAngle = (float) (atan2(c2.y - c1.y, c2.x - c1.x) * 180 / PI);
 
-	m_originalCurvePoints = m_curvePoints; // backup
+	// backup (for dynamic updateStackPosition() recalculation)
+	m_originalCurvePoints = m_curvePoints;
+	m_originalCurvePointSegments = m_curvePointSegments;
 }
 
 Vector2 OsuSliderCurveEqualDistanceMulti::pointAt(float t)
@@ -1709,4 +1639,118 @@ Vector2 OsuSliderCurveEqualDistanceMulti::originalPointAt(float t)
 		float t2 = indexF - index;
 		return Vector2(lerp(poi.x, poi2.x, t2), lerp(poi.y, poi2.y, t2));
 	}
+}
+
+
+
+float BezierApproximator::TOLERANCE = 0.25f;
+float BezierApproximator::TOLERANCE_SQ = 0.25f * 0.25f;
+
+BezierApproximator::BezierApproximator(std::vector<Vector2> controlPoints)
+{
+	m_controlPoints = controlPoints;
+	m_iCount = m_controlPoints.size();
+
+	m_subdivisionBuffer1.resize(m_iCount);
+	m_subdivisionBuffer2.resize(m_iCount*2 - 1);
+}
+
+bool BezierApproximator::isFlatEnough(std::vector<Vector2> controlPoints)
+{
+    for (int i=1; i<controlPoints.size() - 1; i++)
+    {
+        if (std::pow((controlPoints[i - 1] - 2 * controlPoints[i] + controlPoints[i + 1]).length(), 2.0f) > TOLERANCE_SQ * 4)
+            return false;
+    }
+
+    return true;
+}
+
+void BezierApproximator::subdivide(std::vector<Vector2> &controlPoints, std::vector<Vector2> &l, std::vector<Vector2> &r)
+{
+	std::vector<Vector2> &midpoints = m_subdivisionBuffer1;
+
+    for (int i=0; i<m_iCount; ++i)
+    {
+        midpoints[i] = controlPoints[i];
+    }
+
+    for (int i=0; i<m_iCount; i++)
+    {
+        l[i] = midpoints[0];
+        r[m_iCount - i - 1] = midpoints[m_iCount - i - 1];
+
+        for (int j=0; j<m_iCount-i-1; j++)
+        {
+            midpoints[j] = (midpoints[j] + midpoints[j + 1]) / 2;
+        }
+    }
+}
+
+void BezierApproximator::approximate(std::vector<Vector2> &controlPoints, std::vector<Vector2> &output)
+{
+    std::vector<Vector2> &l = m_subdivisionBuffer2;
+    std::vector<Vector2> &r = m_subdivisionBuffer1;
+
+    subdivide(controlPoints, l, r);
+
+    for (int i=0; i<m_iCount-1; ++i)
+        l[m_iCount + i] = r[i + 1];
+
+    output.push_back(controlPoints[0]);
+    for (int i=1; i<m_iCount-1; ++i)
+    {
+        int index = 2 * i;
+        Vector2 p = 0.25f * (l[index - 1] + 2 * l[index] + l[index + 1]);
+        output.push_back(p);
+    }
+}
+
+std::vector<Vector2> BezierApproximator::createBezier()
+{
+	std::vector<Vector2> output;
+
+	if (m_iCount == 0)
+		return output;
+
+	std::stack<std::vector<Vector2>> toFlatten;
+	std::stack<std::vector<Vector2>> freeBuffers;
+
+	toFlatten.push(m_controlPoints);
+
+	std::vector<Vector2> &leftChild = m_subdivisionBuffer2;
+
+	while (toFlatten.size() > 0)
+	{
+		std::vector<Vector2> parent = toFlatten.top();
+		toFlatten.pop();
+
+		if (isFlatEnough(parent))
+		{
+			approximate(parent, output);
+			freeBuffers.push(parent);
+			continue;
+		}
+
+		std::vector<Vector2> rightChild;
+		if (freeBuffers.size() > 0)
+		{
+			rightChild = freeBuffers.top();
+			freeBuffers.pop();
+		}
+		else
+			rightChild.resize(m_iCount);
+        subdivide(parent, leftChild, rightChild);
+
+        for (int i=0; i<m_iCount; ++i)
+        {
+            parent[i] = leftChild[i];
+        }
+
+        toFlatten.push(rightChild);
+        toFlatten.push(parent);
+	}
+
+	output.push_back(m_controlPoints[m_iCount - 1]);
+	return output;
 }

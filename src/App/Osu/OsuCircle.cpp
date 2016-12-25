@@ -20,6 +20,8 @@
 ConVar osu_circle_color_saturation("osu_circle_color_saturation", 0.75f);
 ConVar osu_circle_rainbow("osu_circle_rainbow", false);
 ConVar osu_circle_number_rainbow("osu_circle_number_rainbow", false);
+ConVar osu_circle_shake_duration("osu_circle_shake_duration", 0.120f);
+ConVar osu_circle_shake_strength("osu_circle_shake_strength", 8.0f);
 
 ConVar osu_draw_numbers("osu_draw_numbers", true);
 ConVar osu_draw_approach_circles("osu_draw_approach_circles", true);
@@ -329,6 +331,7 @@ OsuCircle::OsuCircle(int x, int y, long time, int sampleType, int comboNumber, i
 
 	m_bWaiting = false;
 	m_fHitAnimation = 0.0f;
+	m_fShakeAnimation = 0.0f;
 }
 
 OsuCircle::~OsuCircle()
@@ -362,7 +365,20 @@ void OsuCircle::draw(Graphics *g)
 
 	// draw circle
 	const bool hd = m_beatmap->getOsu()->getModHD();
-	drawCircle(g, m_beatmap, m_vRawPos, m_iComboNumber, m_iColorCounter, m_bWaiting && !hd ? 1.0f : m_fApproachScale, m_bWaiting && !hd ? 1.0f : m_fAlpha, m_bWaiting && !hd ? 1.0f : m_fAlpha, true, m_bOverrideHDApproachCircle);
+	Vector2 shakeCorrectedPos = m_vRawPos;
+	if (engine->getTime() < m_fShakeAnimation) // handle note blocking shaking
+	{
+		float smooth = 1.0f - ((m_fShakeAnimation - engine->getTime()) / osu_circle_shake_duration.getFloat()); // goes from 0 to 1
+		if (smooth < 0.5f)
+			smooth = smooth / 0.5f;
+		else
+			smooth = (1.0f - smooth) / 0.5f;
+		// (now smooth goes from 0 to 1 to 0 linearly)
+		smooth = -smooth*(smooth-2); // quad out
+		smooth = -smooth*(smooth-2); // quad out twice
+		shakeCorrectedPos.x += std::sin(engine->getTime()*120) * smooth * osu_circle_shake_strength.getFloat();
+	}
+	drawCircle(g, m_beatmap, shakeCorrectedPos, m_iComboNumber, m_iColorCounter, m_bWaiting && !hd ? 1.0f : m_fApproachScale, m_bWaiting && !hd ? 1.0f : m_fAlpha, m_bWaiting && !hd ? 1.0f : m_fAlpha, true, m_bOverrideHDApproachCircle);
 }
 
 void OsuCircle::draw2(Graphics *g)
@@ -398,7 +414,7 @@ void OsuCircle::update(long curPos)
 		if (m_beatmap->getOsu()->getModAuto())
 		{
 			if (curPos >= m_iTime)
-				onHit(OsuScore::HIT_300, 0);
+				onHit(OsuScore::HIT::HIT_300, 0);
 		}
 		else
 		{
@@ -414,7 +430,7 @@ void OsuCircle::update(long curPos)
 					if (cursorDelta < m_beatmap->getHitcircleDiameter()/2.0f)
 					{
 						OsuScore::HIT result = OsuGameRules::getHitResult(delta, m_beatmap);
-						if (result != OsuScore::HIT_NULL)
+						if (result != OsuScore::HIT::HIT_NULL)
 						{
 							const float targetDelta = cursorDelta / (m_beatmap->getHitcircleDiameter()/2.0f);
 							const float targetAngle = rad2deg(atan2(m_beatmap->getCursorPos().y - pos.y, m_beatmap->getCursorPos().x - pos.x));
@@ -431,7 +447,7 @@ void OsuCircle::update(long curPos)
 
 				// if this is a miss after waiting
 				if (delta > (long)OsuGameRules::getHitWindow50(m_beatmap))
-					onHit(OsuScore::HIT_MISS, delta);
+					onHit(OsuScore::HIT::HIT_MISS, delta);
 			}
 			else
 				m_bWaiting = false;
@@ -454,10 +470,17 @@ void OsuCircle::onClickEvent(Vector2 cursorPos, std::vector<OsuBeatmap::CLICK> &
 
 	if (cursorDelta < m_beatmap->getHitcircleDiameter()/2.0f)
 	{
+		// note blocking & shake
+		if (m_bBlocked)
+		{
+			m_fShakeAnimation = engine->getTime() + osu_circle_shake_duration.getFloat();
+			return; // ignore click event completely
+		}
+
 		const long delta = (long)clicks[0].musicPos - (long)m_iTime;
 
 		OsuScore::HIT result = OsuGameRules::getHitResult(delta, m_beatmap);
-		if (result != OsuScore::HIT_NULL)
+		if (result != OsuScore::HIT::HIT_NULL)
 		{
 			const float targetDelta = cursorDelta / (m_beatmap->getHitcircleDiameter()/2.0f);
 			const float targetAngle = rad2deg(atan2(cursorPos.y - pos.y, cursorPos.x - pos.x));
@@ -471,7 +494,7 @@ void OsuCircle::onClickEvent(Vector2 cursorPos, std::vector<OsuBeatmap::CLICK> &
 void OsuCircle::onHit(OsuScore::HIT result, long delta, float targetDelta, float targetAngle)
 {
 	// sound and hit animation
-	if (result != OsuScore::HIT_MISS)
+	if (result != OsuScore::HIT::HIT_MISS)
 	{
 		m_beatmap->getSkin()->playHitCircleSound(m_iSampleType);
 
@@ -489,6 +512,7 @@ void OsuCircle::onReset(long curPos)
 	OsuHitObject::onReset(curPos);
 
 	m_bWaiting = false;
+	m_fShakeAnimation = 0.0f;
 
 	anim->deleteExistingAnimation(&m_fHitAnimation);
 

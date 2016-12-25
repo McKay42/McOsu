@@ -22,17 +22,20 @@ public:
 
 public:
 	static void draw(Graphics *g, Osu *osu, const std::vector<Vector2> &points, float hitcircleDiameter, float from = 0.0f, float to = 1.0f, Color color = 0xffffffff, float alpha = 1.0f, long sliderTimeForRainbow = 0);
+	static void drawMM(Graphics *g, Osu *osu, const std::vector<std::vector<Vector2>> &points, float hitcircleDiameter, float from = 0.0f, float to = 1.0f, Color color = 0xffffffff, float alpha = 1.0f, long sliderTimeForRainbow = 0);
 
 private:
-	static void drawFillSliderBody2(Graphics *g, const std::vector<Vector2> &points, float radius, int drawFromIndex = -1, int drawUpToIndex = -1);
+	static void drawFillSliderBodyPeppy(Graphics *g, const std::vector<Vector2> &points, float radius, int drawFromIndex, int drawUpToIndex);
+	static void drawFillSliderBodyMM(Graphics *g, const std::vector<std::vector<Vector2>> &points, float radius, int drawFromIndex, int drawUpToIndex);
 
 	static void checkUpdateVars(float hitcircleDiameter);
 
 	// base mesh
-	static int UNIT_CONE_DIVIDES;
-	static std::vector<float> UNIT_CONE;
-	static VertexArrayObject *MASTER_CIRCLE_VAO;
-	static float MASTER_CIRCLE_VAO_RADIUS;
+	static float MESH_CENTER_HEIGHT;
+	static int UNIT_CIRCLE_SUBDIVIDES;
+	static std::vector<float> UNIT_CIRCLE;
+	static VertexArrayObject *UNIT_CIRCLE_VAO;
+	static float UNIT_CIRCLE_VAO_RADIUS;
 
 	// tiny rendering optimization
 	static float m_fBoundingBoxMinX;

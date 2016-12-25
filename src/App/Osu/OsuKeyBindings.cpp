@@ -20,9 +20,13 @@ ConVar OsuKeyBindings::DECREASE_LOCAL_OFFSET("osu_key_decrease_local_offset", (i
 
 ConVar OsuKeyBindings::GAME_PAUSE("osu_key_game_pause", (int)KEY_ESCAPE);
 ConVar OsuKeyBindings::SKIP_CUTSCENE("osu_key_skip_cutscene", (int)KEY_SPACE);
+ConVar OsuKeyBindings::SEEK_TIME("osu_key_seek_time", (int)KEY_SHIFT);
 ConVar OsuKeyBindings::QUICK_RETRY("osu_key_quick_retry", (int)KEY_BACKSPACE);
+ConVar OsuKeyBindings::QUICK_SAVE("osu_key_quick_save", (int)KEY_F6);
+ConVar OsuKeyBindings::QUICK_LOAD("osu_key_quick_load", (int)KEY_F7);
 ConVar OsuKeyBindings::SAVE_SCREENSHOT("osu_key_save_screenshot", (int)KEY_F12);
 ConVar OsuKeyBindings::DISABLE_MOUSE_BUTTONS("osu_key_disable_mouse_buttons", (int)KEY_F10);
+ConVar OsuKeyBindings::BOSS_KEY("osu_key_boss", (int)KEY_INSERT);
 
 ConVar OsuKeyBindings::MOD_EASY("osu_key_mod_easy", (int)KEY_Q);
 ConVar OsuKeyBindings::MOD_NOFAIL("osu_key_mod_nofail", (int)KEY_W);
