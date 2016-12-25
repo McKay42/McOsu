@@ -73,6 +73,12 @@ public:
 		unsigned long endTime;
 	};
 
+	struct BREAK
+	{
+		int startTime;
+		int endTime;
+	};
+
 	struct TIMINGPOINT
 	{
 		long offset;
@@ -111,11 +117,13 @@ public:
 	UString backgroundImageName;
 
 	unsigned long previewTime;
+	unsigned long lastModificationTime;
 
 	// objects
 	std::vector<HITCIRCLE> hitcircles;
 	std::vector<SLIDER> sliders;
 	std::vector<SPINNER> spinners;
+	std::vector<BREAK> breaks;
 	std::vector<TIMINGPOINT> timingpoints;
 	std::vector<Color> combocolors;
 
@@ -142,6 +150,8 @@ public:
 
 	TIMING_INFO getTimingInfoForTime(unsigned long positionMS);
 	inline bool shouldBackgroundImageBeLoaded() const {return m_bShouldBackgroundImageBeLoaded;}
+	bool isInBreak(unsigned long positionMS);
+	unsigned long getBreakDuration(unsigned long positionMS);
 
 private:
 	friend class BackgroundImagePathLoader;

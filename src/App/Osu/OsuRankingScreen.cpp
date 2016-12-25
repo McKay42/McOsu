@@ -59,7 +59,7 @@ OsuRankingScreen::OsuRankingScreen(Osu *osu) : OsuScreenBackable(osu)
 	m_rankingGrade->setDrawFrame(false);
 	m_rankings->getContainer()->addBaseUIElement(m_rankingGrade);
 
-	setGrade(OsuScore::GRADE_D);
+	setGrade(OsuScore::GRADE::GRADE_D);
 	m_fUnstableRate = 0.0f;
 }
 
@@ -173,31 +173,31 @@ void OsuRankingScreen::setGrade(OsuScore::GRADE grade)
 	Vector2 hardcodedOsuRankingGradeImageSize = Vector2(369, 422);
 	switch (grade)
 	{
-	case OsuScore::GRADE_XH:
+	case OsuScore::GRADE::GRADE_XH:
 		hardcodedOsuRankingGradeImageSize *= (m_osu->getSkin()->isRankingXH2x() ? 2.0f : 1.0f);
 		m_rankingGrade->setImage(m_osu->getSkin()->getRankingXH());
 		break;
-	case OsuScore::GRADE_SH:
+	case OsuScore::GRADE::GRADE_SH:
 		hardcodedOsuRankingGradeImageSize *= (m_osu->getSkin()->isRankingSH2x() ? 2.0f : 1.0f);
 		m_rankingGrade->setImage(m_osu->getSkin()->getRankingSH());
 		break;
-	case OsuScore::GRADE_X:
+	case OsuScore::GRADE::GRADE_X:
 		hardcodedOsuRankingGradeImageSize *= (m_osu->getSkin()->isRankingX2x() ? 2.0f : 1.0f);
 		m_rankingGrade->setImage(m_osu->getSkin()->getRankingX());
 		break;
-	case OsuScore::GRADE_S:
+	case OsuScore::GRADE::GRADE_S:
 		hardcodedOsuRankingGradeImageSize *= (m_osu->getSkin()->isRankingS2x() ? 2.0f : 1.0f);
 		m_rankingGrade->setImage(m_osu->getSkin()->getRankingS());
 		break;
-	case OsuScore::GRADE_A:
+	case OsuScore::GRADE::GRADE_A:
 		hardcodedOsuRankingGradeImageSize *= (m_osu->getSkin()->isRankingA2x() ? 2.0f : 1.0f);
 		m_rankingGrade->setImage(m_osu->getSkin()->getRankingA());
 		break;
-	case OsuScore::GRADE_B:
+	case OsuScore::GRADE::GRADE_B:
 		hardcodedOsuRankingGradeImageSize *= (m_osu->getSkin()->isRankingB2x() ? 2.0f : 1.0f);
 		m_rankingGrade->setImage(m_osu->getSkin()->getRankingB());
 		break;
-	case OsuScore::GRADE_C:
+	case OsuScore::GRADE::GRADE_C:
 		hardcodedOsuRankingGradeImageSize *= (m_osu->getSkin()->isRankingC2x() ? 2.0f : 1.0f);
 		m_rankingGrade->setImage(m_osu->getSkin()->getRankingC());
 		break;

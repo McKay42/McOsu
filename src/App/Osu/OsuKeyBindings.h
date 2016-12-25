@@ -24,9 +24,13 @@ public:
 
 	static ConVar GAME_PAUSE;
 	static ConVar SKIP_CUTSCENE;
+	static ConVar SEEK_TIME;
 	static ConVar QUICK_RETRY;
+	static ConVar QUICK_SAVE;
+	static ConVar QUICK_LOAD;
 	static ConVar SAVE_SCREENSHOT;
 	static ConVar DISABLE_MOUSE_BUTTONS;
+	static ConVar BOSS_KEY;
 
 	static ConVar MOD_EASY;
 	static ConVar MOD_NOFAIL;

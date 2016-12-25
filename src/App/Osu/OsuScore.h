@@ -16,7 +16,7 @@ class OsuBeatmap;
 class OsuScore
 {
 public:
-	enum HIT
+	enum class HIT
 	{
 		HIT_NULL,
 		HIT_MISS,
@@ -32,7 +32,7 @@ public:
 		HIT_SLIDER30
 	};
 
-	enum GRADE
+	enum class GRADE
 	{
 		GRADE_XH,
 		GRADE_SH,
@@ -74,7 +74,9 @@ private:
 
 	std::vector<HIT> m_hitresults;
 	std::vector<int> m_hitdeltas;
+
 	GRADE m_grade;
+
 	int m_iScore;
 	int m_iCombo;
 	int m_iComboMax;
