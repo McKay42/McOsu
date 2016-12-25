@@ -19,7 +19,7 @@
 const char *OsuUpdateChecker::GITHUB_API_RELEASE_URL = "https://api.github.com/repos/McKay42/McOsu/releases";
 const char *OsuUpdateChecker::GITHUB_RELEASE_DOWNLOAD_URL = "https://github.com/McKay42/McOsu/releases";
 
-OsuUpdateChecker::OsuUpdateChecker()
+OsuUpdateChecker::OsuUpdateChecker() : Resource()
 {
 }
 
@@ -35,6 +35,8 @@ void OsuUpdateChecker::destroy()
 
 void OsuUpdateChecker::checkForUpdates()
 {
+	if (Osu::debug->getBool()) return;
+
 	destroy();
 	engine->getResourceManager()->requestNextLoadAsync();
 	engine->getResourceManager()->loadResource(this);

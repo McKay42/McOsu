@@ -56,6 +56,7 @@ OsuSpinner::OsuSpinner(int x, int y, long time, int sampleType, long endTime, Os
 
 OsuSpinner::~OsuSpinner()
 {
+	engine->getSound()->stop(m_beatmap->getSkin()->getSpinnerSpinSound());
 	delete[] m_storedDeltaAngles;
 	m_storedDeltaAngles = NULL;
 }
@@ -230,7 +231,10 @@ void OsuSpinner::update(long curPos)
 	OsuHitObject::update(curPos);
 
 	if (m_beatmap->isPaused())
+	{
+		engine->getSound()->stop(m_beatmap->getSkin()->getSpinnerSpinSound());
 		return;
+	}
 
 	// if we have not been clicked yet, check if we are in the timeframe of a miss, also handle auto and relax
 	if (!m_bFinished)
@@ -349,6 +353,8 @@ void OsuSpinner::onReset(long curPos)
 {
 	OsuHitObject::onReset(curPos);
 
+	engine->getSound()->stop(m_beatmap->getSkin()->getSpinnerSpinSound());
+
 	m_bClickedOnce = false;
 
 	m_fRPM = 0.0f;
@@ -380,18 +386,18 @@ void OsuSpinner::onHit()
 	m_bDrawRPM = false;
 
 	// calculate hit result
-	OsuScore::HIT result = OsuScore::HIT_NULL;
+	OsuScore::HIT result = OsuScore::HIT::HIT_NULL;
 	if (m_fRatio >= 1.0f)
-		result = OsuScore::HIT_300;
+		result = OsuScore::HIT::HIT_300;
 	else if (m_fRatio >= 0.9f && !OsuGameRules::osu_mod_ming3012.getBool())
-		result = OsuScore::HIT_100;
+		result = OsuScore::HIT::HIT_100;
 	else if (m_fRatio >= 0.75f)
-		result = OsuScore::HIT_50;
+		result = OsuScore::HIT::HIT_50;
 	else
-		result = OsuScore::HIT_MISS;
+		result = OsuScore::HIT::HIT_MISS;
 
 	// sound
-	if (result != OsuScore::HIT_MISS)
+	if (result != OsuScore::HIT::HIT_MISS)
 		m_beatmap->getSkin()->playHitCircleSound(m_iSampleType);
 
 	// add it, and we are finished

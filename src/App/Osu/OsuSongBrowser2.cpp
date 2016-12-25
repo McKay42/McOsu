@@ -110,6 +110,7 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 
 	addTopBarRightTabButton("Collections")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onGroupCollections) );
 	///addTopBarRightTabButton("By Artist");
+	///addTopBarRightTabButton("By Date Added")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onGroupDateAdded) );
 	addTopBarRightTabButton("By Difficulty")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onGroupDifficulty) );
 	m_noGroupingButton = addTopBarRightTabButton("No Grouping");
 	m_noGroupingButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onGroupNoGrouping) );
@@ -664,18 +665,7 @@ void OsuSongBrowser2::onKeyDown(KeyboardEvent &key)
 
 	// selection select
 	if (key == KEY_ENTER)
-	{
-		std::vector<CBaseUIElement*> *elements = m_songBrowser->getContainer()->getAllBaseUIElementsPointer();
-		for (int i=0; i<elements->size(); i++)
-		{
-			OsuUISongBrowserSongDifficultyButton *songDifficultyButton = dynamic_cast<OsuUISongBrowserSongDifficultyButton*>((*elements)[i]);
-			if (songDifficultyButton != NULL && songDifficultyButton->isSelected())
-			{
-				songDifficultyButton->select();
-				break;
-			}
-		}
-	}
+		playSelectedDifficulty();
 
 	key.consume();
 }
@@ -1315,6 +1305,8 @@ void OsuSongBrowser2::onDatabaseLoadingFinished()
 
 	debugLog("OsuSongBrowser2::onDatabaseLoadingFinished() : %i beatmaps.\n", m_beatmaps.size());
 
+
+
 	// build buttons
 	for (int i=0; i<m_beatmaps.size(); i++)
 	{
@@ -1428,6 +1420,43 @@ void OsuSongBrowser2::onGroupNoGrouping(CBaseUIButton *b)
 	m_group = GROUP::GROUP_NO_GROUPING;
 
 	m_visibleSongButtons = std::vector<OsuUISongBrowserButton*>(m_songButtons.begin(), m_songButtons.end());
+	rebuildSongButtons();
+
+	onAfterGroupChange(b);
+}
+
+void OsuSongBrowser2::onGroupDateAdded(CBaseUIButton *b)
+{
+	m_group = GROUP::GROUP_DATE_ADDED;
+
+	m_visibleSongButtons = std::vector<OsuUISongBrowserButton*>(m_songButtons.begin(), m_songButtons.end());
+
+	// sort by date added
+	struct SortComparator
+	{
+		bool operator() (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const
+		{
+			unsigned long time1 = 0;
+			unsigned long time2 = 0;
+			std::vector<OsuBeatmapDifficulty*> *aDiffs = a->getBeatmap()->getDifficultiesPointer();
+			for (int i=0; i<aDiffs->size(); i++)
+			{
+				if ((*aDiffs)[i]->lastModificationTime > time1)
+					time1 = (*aDiffs)[i]->lastModificationTime;
+			}
+
+			std::vector<OsuBeatmapDifficulty*> *bDiffs = b->getBeatmap()->getDifficultiesPointer();
+			for (int i=0; i<bDiffs->size(); i++)
+			{
+				if ((*bDiffs)[i]->lastModificationTime > time2)
+					time2 = (*bDiffs)[i]->lastModificationTime;
+			}
+
+			return time1 < time2;
+		}
+	};
+	std::sort(m_visibleSongButtons.begin(), m_visibleSongButtons.end(), SortComparator());
+
 	rebuildSongButtons();
 
 	onAfterGroupChange(b);
@@ -1619,5 +1648,19 @@ void OsuSongBrowser2::selectPreviousRandomBeatmap()
 		// if we didn't find it then restore the current random beatmap, which got pop_back()'d above (shit logic)
 		if (!foundIt)
 			m_previousRandomBeatmaps.push_back(currentRandomBeatmap);
+	}
+}
+
+void OsuSongBrowser2::playSelectedDifficulty()
+{
+	std::vector<CBaseUIElement*> *elements = m_songBrowser->getContainer()->getAllBaseUIElementsPointer();
+	for (int i=0; i<elements->size(); i++)
+	{
+		OsuUISongBrowserSongDifficultyButton *songDifficultyButton = dynamic_cast<OsuUISongBrowserSongDifficultyButton*>((*elements)[i]);
+		if (songDifficultyButton != NULL && songDifficultyButton->isSelected())
+		{
+			songDifficultyButton->select();
+			break;
+		}
 	}
 }

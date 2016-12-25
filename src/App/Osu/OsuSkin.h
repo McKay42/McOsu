@@ -161,6 +161,7 @@ public:
 	inline Image *getLoadingSpinner() {return m_loadingSpinner;}
 	inline Image *getCircleEmpty() {return m_circleEmpty;}
 	inline Image *getCircleFull() {return m_circleFull;}
+	inline Image *getSeekTriangle() {return m_seekTriangle;}
 
 	inline Sound *getSpinnerBonus() {return m_spinnerBonus;}
 	inline Sound *getSpinnerSpinSound() {return m_spinnerSpinSound;}
@@ -249,7 +250,7 @@ private:
 	bool parseSkinINI(UString filepath);
 	bool compareFilenameWithSkinElementName(UString filename, UString skinElementName);
 	void checkLoadImage(Image **addressOfPointer, UString skinElementName, UString resourceName, bool ignoreDefaultSkin = false);
-	void checkLoadSound(Sound **addressOfPointer, UString skinElementName, UString resourceName, bool isOverlayable = false, bool isSample = false);
+	void checkLoadSound(Sound **addressOfPointer, UString skinElementName, UString resourceName, bool isOverlayable = false, bool isSample = false, bool loop = false);
 
 	void onEffectVolumeChange(UString oldValue, UString newValue);
 
@@ -388,6 +389,7 @@ private:
 	Image *m_loadingSpinner;
 	Image *m_circleEmpty;
 	Image *m_circleFull;
+	Image *m_seekTriangle;
 
 	Sound *m_normalHitNormal;
 	Sound *m_normalHitWhistle;

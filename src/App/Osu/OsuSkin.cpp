@@ -30,6 +30,7 @@ void DUMMY_OSU_VOLUME_EFFECTS_ARGS(UString oldValue, UString newValue) {;}
 ConVar osu_volume_effects("osu_volume_effects", 1.0f, DUMMY_OSU_VOLUME_EFFECTS_ARGS);
 ConVar osu_skin_hd("osu_skin_hd", true);
 ConVar osu_skin_load_async("osu_skin_load_async", false, "VERY experimental, changing skins too quickly will crash the engine (due to known behaviour)");
+ConVar osu_skin_color_index_add("osu_skin_color_index_add", 0);
 
 ConVar osu_ignore_beatmap_combo_colors("osu_ignore_beatmap_combo_colors", false);
 ConVar osu_ignore_beatmap_sample_volume("osu_ignore_beatmap_sample_volume", false);
@@ -175,6 +176,7 @@ OsuSkin::OsuSkin(Osu *osu, UString filepath)
 	m_loadingSpinner = m_missingTexture;
 	m_circleEmpty = m_missingTexture;
 	m_circleFull = m_missingTexture;
+	m_seekTriangle = m_missingTexture;
 
 	m_normalHitNormal = NULL;
 	m_normalHitWhistle = NULL;
@@ -449,6 +451,7 @@ void OsuSkin::load()
 	checkLoadImage(&m_loadingSpinner, "loading-spinner", "OSU_SKIN_LOADING_SPINNER");
 	checkLoadImage(&m_circleEmpty, "circle-empty", "OSU_SKIN_CIRCLE_EMPTY");
 	checkLoadImage(&m_circleFull, "circle-full", "OSU_SKIN_CIRCLE_FULL");
+	checkLoadImage(&m_seekTriangle, "seektriangle", "OSU_SKIN_SEEKTRIANGLE");
 
 	// sounds
 
@@ -469,7 +472,7 @@ void OsuSkin::load()
 	checkLoadSound(&m_drumHitClap, "drum-hitclap", "OSU_SKIN_DRUMHITCLAP_SND", true, true);
 	checkLoadSound(&m_drumSliderTick, "drum-slidertick", "OSU_SKIN_DRUMSLIDERTICK_SND", true, true);
 	checkLoadSound(&m_spinnerBonus, "spinnerbonus", "OSU_SKIN_SPINNERBONUS_SND", true, true);
-	checkLoadSound(&m_spinnerSpinSound, "spinnerspin", "OSU_SKIN_SPINNERSPIN_SND", false, true);
+	checkLoadSound(&m_spinnerSpinSound, "spinnerspin", "OSU_SKIN_SPINNERSPIN_SND", false, true, true);
 
 	// others
 	checkLoadSound(&m_combobreak, "combobreak", "OSU_SKIN_COMBOBREAK_SND", true);
@@ -760,6 +763,7 @@ void OsuSkin::setSampleVolume(float volume)
 
 Color OsuSkin::getComboColorForCounter(int i)
 {
+	i += osu_skin_color_index_add.getInt();
 	if (m_beatmapComboColors.size() > 0 && !osu_ignore_beatmap_combo_colors.getBool())
 		return m_beatmapComboColors[i % m_beatmapComboColors.size()];
 	else if (m_comboColors.size() > 0)
@@ -909,7 +913,7 @@ void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, 
 	}
 }
 
-void OsuSkin::checkLoadSound(Sound **addressOfPointer, UString skinElementName, UString resourceName, bool isOverlayable, bool isSample)
+void OsuSkin::checkLoadSound(Sound **addressOfPointer, UString skinElementName, UString resourceName, bool isOverlayable, bool isSample, bool loop)
 {
 	// we are already loaded
 	if (*addressOfPointer != NULL)
@@ -932,13 +936,13 @@ void OsuSkin::checkLoadSound(Sound **addressOfPointer, UString skinElementName, 
 	{
 		if (osu_skin_load_async.getBool())
 			engine->getResourceManager()->requestNextLoadAsync();
-		*addressOfPointer = engine->getResourceManager()->loadSoundAbs(defaultpath1, defaultResourceName);
+		*addressOfPointer = engine->getResourceManager()->loadSoundAbs(defaultpath1, defaultResourceName, false, false, loop);
 	}
 	else if (env->fileExists(defaultpath2))
 	{
 		if (osu_skin_load_async.getBool())
 			engine->getResourceManager()->requestNextLoadAsync();
-		*addressOfPointer = engine->getResourceManager()->loadSoundAbs(defaultpath2, defaultResourceName);
+		*addressOfPointer = engine->getResourceManager()->loadSoundAbs(defaultpath2, defaultResourceName, false, false, loop);
 	}
 
 	// and then the actual specified skin
@@ -957,13 +961,13 @@ void OsuSkin::checkLoadSound(Sound **addressOfPointer, UString skinElementName, 
 	{
 		if (osu_skin_load_async.getBool())
 			engine->getResourceManager()->requestNextLoadAsync();
-		*addressOfPointer = engine->getResourceManager()->loadSoundAbs(filepath1, resourceName);
+		*addressOfPointer = engine->getResourceManager()->loadSoundAbs(filepath1, resourceName, false, false, loop);
 	}
 	else if (env->fileExists(filepath2))
 	{
 		if (osu_skin_load_async.getBool())
 			engine->getResourceManager()->requestNextLoadAsync();
-		*addressOfPointer = engine->getResourceManager()->loadSoundAbs(filepath2, resourceName);
+		*addressOfPointer = engine->getResourceManager()->loadSoundAbs(filepath2, resourceName, false, false, loop);
 	}
 
 	if ((*addressOfPointer) != NULL)

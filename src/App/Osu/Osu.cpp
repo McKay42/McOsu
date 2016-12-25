@@ -41,7 +41,6 @@
 #include "OsuHUD.h"
 
 #include "OsuHitObject.h"
-#include "OsuSliderRenderer.h"
 
 #include "OsuBeatmapDatabase.h"
 
@@ -49,7 +48,7 @@ void DUMMY_OSU_LETTERBOXING(UString oldValue, UString newValue) {;}
 void DUMMY_OSU_VOLUME_MUSIC_ARGS(UString oldValue, UString newValue) {;}
 void DUMMY_OSU_MODS(void) {;}
 
-ConVar osu_version("osu_version", 26.0f);
+ConVar osu_version("osu_version", 27.0f);
 ConVar osu_debug("osu_debug", false);
 
 ConVar osu_disable_mousebuttons("osu_disable_mousebuttons", false);
@@ -73,6 +72,7 @@ ConVar osu_quick_retry_delay("osu_quick_retry_delay", 0.27f);
 ConVar osu_mods("osu_mods", "", DUMMY_OSU_VOLUME_MUSIC_ARGS);
 ConVar osu_mod_fadingcursor("osu_mod_fadingcursor", false);
 ConVar osu_mod_fadingcursor_combo("osu_mod_fadingcursor_combo", 50.0f);
+ConVar osu_mod_endless("osu_mod_endless", false);
 
 ConVar osu_letterboxing("osu_letterboxing", true, DUMMY_OSU_LETTERBOXING);
 ConVar osu_resolution("osu_resolution", "1280x720", DUMMY_OSU_VOLUME_MUSIC_ARGS);
@@ -106,6 +106,13 @@ Osu::Osu()
 	convar->getConVarByName("vsync")->setValue(0.0f);
 	convar->getConVarByName("fps_max")->setValue(420.0f);
 	osu_resolution.setValue(UString::format("%ix%i", engine->getScreenWidth(), engine->getScreenHeight()));
+	UString userDataPath = env->getUserDataPath();
+	if (userDataPath.length() > 1)
+	{
+		UString defaultOsuFolder = userDataPath;
+		defaultOsuFolder.append("\\osu!\\");
+		m_osu_folder_ref->setValue(defaultOsuFolder);
+	}
 
 	// convar callbacks
 	osu_skin.setCallback( fastdelegate::MakeDelegate(this, &Osu::onSkinChange) );
@@ -139,6 +146,10 @@ Osu::Osu()
 	m_bMouseKey2Down = false;
 	m_bSkipScheduled = false;
 	m_bQuickRetryDown = false;
+	m_fQuickRetryTime = 0.0f;
+	m_bSeeking = false;
+	m_bSeekKey = false;
+	m_fQuickSaveTime = 0.0f;
 
 	m_bToggleModSelectionScheduled = false;
 	m_bToggleSongBrowserScheduled = false;
@@ -172,8 +183,8 @@ Osu::Osu()
 
 	// renderer
 	g_vInternalResolution = engine->getScreenSize();
-	m_frameBuffer = new RenderTarget(0, 0, getScreenWidth(), getScreenHeight());
-	m_backBuffer = new RenderTarget(0, 0, getScreenWidth(), getScreenHeight());
+	m_frameBuffer = engine->getResourceManager()->createRenderTarget(0, 0, getScreenWidth(), getScreenHeight());
+	m_backBuffer = engine->getResourceManager()->createRenderTarget(0, 0, getScreenWidth(), getScreenHeight());
 
 	// load a few select subsystems very early
 	m_notificationOverlay = new OsuNotificationOverlay(this);
@@ -230,8 +241,8 @@ Osu::Osu()
 
 	// DEBUG: immediately start diff of a beatmap
 	/*
-	UString debugFolder = "c:/Program Files (x86)/osu!/Songs/249939 Fujijo Seitokai Shikkou-bu - Best FriendS/";
-	UString debugDiffFileName = "Fujijo Seitokai Shikkou-bu - Best FriendS (No Dap) [Insane].osu";
+	UString debugFolder = "c:/Program Files (x86)/osu!/Songs/100348 Halozy - Sentimental Skyscraper/";
+	UString debugDiffFileName = "Halozy - Sentimental Skyscraper (Hollow Wings) [Myouren Hijiri].osu";
 	OsuBeatmap *debugBeatmap = new OsuBeatmap(this, debugFolder);
 	UString beatmapPath = debugFolder;
 	beatmapPath.append(debugDiffFileName);
@@ -246,7 +257,7 @@ Osu::Osu()
 
 		debugBeatmap->selectDifficulty(debugDiff);
 		m_songBrowser2->onDifficultySelected(debugBeatmap, debugDiff, true);
-		convar->getConVarByName("osu_volume_master")->setValue(1.0f);
+		//convar->getConVarByName("osu_volume_master")->setValue(1.0f);
 
 		// this will leak memory (one OsuBeatmap object and one OsuBeatmapDifficulty object), but who cares (since debug only)
 	}
@@ -264,11 +275,6 @@ Osu::~Osu()
 
 	SAFE_DELETE(m_skin);
 	SAFE_DELETE(m_score);
-
-	SAFE_DELETE(m_frameBuffer);
-	SAFE_DELETE(m_backBuffer);
-
-	SAFE_DELETE(OsuSliderRenderer::BLEND_SHADER);
 }
 
 void Osu::draw(Graphics *g)
@@ -370,15 +376,24 @@ void Osu::update()
 	}
 
 	// main beatmap update
+	m_bSeeking = false;
 	if (isInPlayMode())
 	{
 		getSelectedBeatmap()->update();
 
-		if (engine->getKeyboard()->isControlDown() && engine->getKeyboard()->isAltDown() && engine->getMouse()->isLeftDown())
-			getSelectedBeatmap()->seekPercent(clamp<float>(engine->getMouse()->getPos().x/getScreenWidth(), 0.0f, 0.99f));
+		// scrubbing/seeking
+		if ((engine->getKeyboard()->isControlDown() && engine->getKeyboard()->isAltDown()) || m_bSeekKey)
+		{
+			m_bSeeking = true;
+			const float percent = clamp<float>(engine->getMouse()->getPos().x/getScreenWidth(), 0.0f, 1.0f);
+			if (engine->getMouse()->isLeftDown())
+				getSelectedBeatmap()->seekPercentPlayable(percent);
+			if (engine->getMouse()->isRightDown())
+				m_fQuickSaveTime = clamp<float>((float)((getSelectedBeatmap()->getStartTimePlayable()+getSelectedBeatmap()->getLengthPlayable())*percent) / (float)getSelectedBeatmap()->getLength(), 0.0f, 1.0f);
+		}
 
 		// skip button clicking
-		if (getSelectedBeatmap()->isInSkippableSection() && !getSelectedBeatmap()->isPaused())
+		if (getSelectedBeatmap()->isInSkippableSection() && !getSelectedBeatmap()->isPaused() && !m_bSeeking)
 		{
 			// TODO: make this on click only, and not if held too. this can also cause earrape while scrubbing
 			if (engine->getMouse()->isLeftDown() || getSelectedBeatmap()->isClickHeld())
@@ -531,8 +546,7 @@ void Osu::onKeyDown(KeyboardEvent &key)
 	// special hotkeys
 	if (engine->getKeyboard()->isAltDown() && engine->getKeyboard()->isControlDown() && key == KEY_R)
 	{
-		if (OsuSliderRenderer::BLEND_SHADER != NULL)
-			OsuSliderRenderer::BLEND_SHADER->recompile();
+		engine->getResourceManager()->getShader("slider")->reload();
 		key.consume();
 	}
 	else if (engine->getKeyboard()->isAltDown() && engine->getKeyboard()->isControlDown() && key == KEY_S)
@@ -579,6 +593,10 @@ void Osu::onKeyDown(KeyboardEvent &key)
 	// screenshots
 	if (key == (KEYCODE)OsuKeyBindings::SAVE_SCREENSHOT.getInt())
 		saveScreenshot();
+
+	// boss key (minimize)
+	if (key == (KEYCODE)OsuKeyBindings::BOSS_KEY.getInt())
+		engine->getEnvironment()->minimize();
 
 	// local hotkeys
 
@@ -635,6 +653,12 @@ void Osu::onKeyDown(KeyboardEvent &key)
 				m_bF1 = true;
 				toggleModSelection(true);
 			}
+
+			// quick save/load
+			if (key == (KEYCODE)OsuKeyBindings::QUICK_SAVE.getInt())
+				m_fQuickSaveTime = getSelectedBeatmap()->getPercentFinished();
+			if (key == (KEYCODE)OsuKeyBindings::QUICK_LOAD.getInt())
+				getSelectedBeatmap()->seekPercent(m_fQuickSaveTime);
 		}
 
 		// while paused or maybe not paused
@@ -645,6 +669,10 @@ void Osu::onKeyDown(KeyboardEvent &key)
 			m_bQuickRetryDown = true;
 			m_fQuickRetryTime = engine->getTime() + osu_quick_retry_delay.getFloat();
 		}
+
+		// handle seeking
+		if (key == (KEYCODE)OsuKeyBindings::SEEK_TIME.getInt())
+			m_bSeekKey = true;
 	}
 
 	// forward to all subsystem, if not already consumed
@@ -672,7 +700,7 @@ void Osu::onKeyDown(KeyboardEvent &key)
 				key.consume();
 			}
 
-			// arrow keys local offset
+			// local offset
 			if (key == (KEYCODE)OsuKeyBindings::INCREASE_LOCAL_OFFSET.getInt())
 			{
 				long offsetAdd = engine->getKeyboard()->isAltDown() ? 1 : 5;
@@ -689,7 +717,7 @@ void Osu::onKeyDown(KeyboardEvent &key)
 
 		// if playing or not playing
 
-		// arrow keys volume
+		// volume
 		if (key == (KEYCODE)OsuKeyBindings::INCREASE_VOLUME.getInt())
 			volumeUp();
 		if (key == (KEYCODE)OsuKeyBindings::DECREASE_VOLUME.getInt())
@@ -736,6 +764,8 @@ void Osu::onKeyUp(KeyboardEvent &key)
 	}
 	if (key == (KEYCODE)OsuKeyBindings::QUICK_RETRY.getInt() || key == KEY_R)
 		m_bQuickRetryDown = false;
+	if (key == (KEYCODE)OsuKeyBindings::SEEK_TIME.getInt())
+		m_bSeekKey = false;
 }
 
 void Osu::onChar(KeyboardEvent &e)
@@ -854,6 +884,8 @@ void Osu::onPlayStart()
 	if (getSelectedBeatmap()->getSelectedDifficulty()->localoffset != 0)
 		m_notificationOverlay->addNotification(UString::format("Using local beatmap offset (%ld ms)", getSelectedBeatmap()->getSelectedDifficulty()->localoffset));
 
+	m_fQuickSaveTime = 0.0f; // reset
+
 	updateConfineCursor();
 }
 
@@ -863,9 +895,17 @@ void Osu::onPlayEnd(bool quit)
 
 	if (!quit)
 	{
-		m_rankingScreen->setScore(m_score);
-		m_rankingScreen->setBeatmapInfo(getSelectedBeatmap(), getSelectedBeatmap()->getSelectedDifficulty());
-		engine->getSound()->play(m_skin->getApplause());
+		if (!osu_mod_endless.getBool())
+		{
+			m_rankingScreen->setScore(m_score);
+			m_rankingScreen->setBeatmapInfo(getSelectedBeatmap(), getSelectedBeatmap()->getSelectedDifficulty());
+			engine->getSound()->play(m_skin->getApplause());
+		}
+		else
+		{
+			m_songBrowser2->playNextRandomBeatmap();
+			return; // nothing more to do here
+		}
 	}
 
 	m_mainMenu->setVisible(false);
@@ -957,7 +997,7 @@ float Osu::getSpeedMultiplier()
 {
 	float speedMultiplier = getRawSpeedMultiplier();
 
-	if (osu_speed_override.getFloat() > 0.0f)
+	if (osu_speed_override.getFloat() >= 0.0f)
 		return osu_speed_override.getFloat();
 
 	return speedMultiplier;
@@ -987,7 +1027,7 @@ void Osu::onResolutionChanged(Vector2 newResolution)
 {
 	if (!osu_resolution_enabled.getBool())
 		g_vInternalResolution = newResolution;
-	else
+	else if (!engine->isMinimized()) // if we just got minimized, ignore the resolution change (for the internal stuff)
 	{
 		// clamp internal resolution to actual resolution
 
@@ -1005,7 +1045,7 @@ void Osu::onResolutionChanged(Vector2 newResolution)
 		// disable internal resolution on specific conditions
 		if (g_vInternalResolution == engine->getScreenSize() || !env->isFullscreen())
 		{
-			debugLog("Internal resolution == Engine resolution || !Fullscreen, disabling resampler\n");
+			debugLog("Internal resolution == Engine resolution || !Fullscreen, disabling resampler (%i, %i)\n", (int)(g_vInternalResolution == engine->getScreenSize()), (int)(!env->isFullscreen()));
 			osu_resolution_enabled.setValue(0.0f);
 			g_vInternalResolution = engine->getScreenSize();
 		}
@@ -1137,7 +1177,7 @@ void Osu::onSpeedChange(UString oldValue, UString newValue)
 	if (getSelectedBeatmap() != NULL)
 	{
 		float speed = newValue.toFloat();
-		getSelectedBeatmap()->setSpeed(speed > 0.0f ? speed : getSpeedMultiplier());
+		getSelectedBeatmap()->setSpeed(speed >= 0.0f ? speed : getSpeedMultiplier());
 	}
 }
 
@@ -1197,6 +1237,7 @@ void Osu::onKey1Change(bool pressed, bool mouse)
 		}
 	}
 
+	// TODO: put the animations inside OsuBeatmap::keyPressed/released
 	bool doAnimate = !(isInPlayMode() && !getSelectedBeatmap()->isPaused() && mouse && osu_disable_mousebuttons.getBool());
 
 	if (doAnimate)
@@ -1225,6 +1266,7 @@ void Osu::onKey2Change(bool pressed, bool mouse)
 		}
 	}
 
+	// TODO: put the animations inside OsuBeatmap::keyPressed/released
 	bool doAnimate = !(isInPlayMode() && !getSelectedBeatmap()->isPaused() && mouse && osu_disable_mousebuttons.getBool());
 
 	if (doAnimate)

@@ -62,6 +62,8 @@ public:
 
 	void onDifficultySelected(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff, bool play = false);
 
+	void playNextRandomBeatmap() {selectRandomBeatmap();playSelectedDifficulty();}
+
 	void refreshBeatmaps();
 	void scrollToSongButton(OsuUISongBrowserButton *songButton, bool alignOnTop = false);
 	void scrollToSelectedSongButton();
@@ -82,6 +84,7 @@ private:
 	enum class GROUP
 	{
 		GROUP_NO_GROUPING,
+		GROUP_DATE_ADDED,
 		GROUP_DIFFICULTY,
 		GROUP_COLLECTIONS
 	};
@@ -101,6 +104,7 @@ private:
 	void onSortChange(UString text);
 
 	void onGroupNoGrouping(CBaseUIButton *b);
+	void onGroupDateAdded(CBaseUIButton *b);
 	void onGroupDifficulty(CBaseUIButton *b);
 	void onGroupCollections(CBaseUIButton *b);
 	void onAfterGroupChange(CBaseUIButton *b);
@@ -112,6 +116,7 @@ private:
 	void selectSongButton(OsuUISongBrowserButton *songButton);
 	void selectRandomBeatmap();
 	void selectPreviousRandomBeatmap();
+	void playSelectedDifficulty();
 
 	ConVar *m_fps_max_ref;
 
