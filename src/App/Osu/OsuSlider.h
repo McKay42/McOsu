@@ -136,7 +136,7 @@ class OsuSliderCurve
 {
 public:
 	OsuSliderCurve(OsuSlider *parent, OsuBeatmap *beatmap);
-	virtual ~OsuSliderCurve();
+	virtual ~OsuSliderCurve() {;}
 
 	virtual void updateStackPosition(float stackMulStackOffset);
 
@@ -147,18 +147,18 @@ public:
 	inline float getEndAngle() const {return m_fEndAngle;}
 
 	inline std::vector<Vector2> getPoints() {return m_curvePoints;}
+	inline std::vector<std::vector<Vector2>> getPointSegments() {return m_curvePointSegments;}
 
 protected:
 	static float CURVE_POINTS_SEPERATION;
-
-	void drawFillCircle(Graphics *g, Vector2 center);
-	void drawFillSliderBody(Graphics *g, int drawUpTo);
 
 	OsuBeatmap *m_beatmap;
 	OsuSlider *m_slider;
 	std::vector<Vector2> m_points;
 
 	// these must be explicitely set in one of the subclasses
+	std::vector<std::vector<Vector2>> m_curvePointSegments;
+	std::vector<std::vector<Vector2>> m_originalCurvePointSegments;
 	std::vector<Vector2> m_curvePoints;
 	std::vector<Vector2> m_originalCurvePoints;
 	float m_fStartAngle;
@@ -178,6 +178,7 @@ public:
 	virtual ~OsuSliderCurveType() {;}
 
 	void init(float approxlength);
+	void initCustom(std::vector<Vector2> points);
 
 	virtual Vector2 pointAt(float t) = 0;
 
@@ -189,8 +190,10 @@ public:
 private:
 	int m_iNCurve;
 	float m_fTotalDistance;
-	std::vector<Vector2> m_points;
 	std::vector<float> m_curveDistances;
+
+protected:
+	std::vector<Vector2> m_points;
 };
 
 class OsuSliderCurveTypeBezier2 : public OsuSliderCurveType
@@ -224,9 +227,9 @@ private:
 
 
 
-//******************//
-//	 Curve Classes	//
-//******************//
+//*******************//
+//	 Curve Classes	 //
+//*******************//
 
 class OsuSliderCurveEqualDistanceMulti : public OsuSliderCurve
 {
@@ -275,6 +278,29 @@ private:
 	float m_fRadius;
 	float m_fCalculationStartAngle;
 	float m_fCalculationEndAngle;
+};
+
+
+
+class BezierApproximator
+{
+public:
+	BezierApproximator(std::vector<Vector2> controlPoints);
+
+	std::vector<Vector2> createBezier();
+
+private:
+	static float TOLERANCE;
+	static float TOLERANCE_SQ;
+
+	bool isFlatEnough(std::vector<Vector2> controlPoints);
+	void subdivide(std::vector<Vector2> &controlPoints, std::vector<Vector2> &l, std::vector<Vector2> &r);
+	void approximate(std::vector<Vector2> &controlPoints, std::vector<Vector2> &output);
+
+	int m_iCount;
+	std::vector<Vector2> m_controlPoints;
+	std::vector<Vector2> m_subdivisionBuffer1;
+	std::vector<Vector2> m_subdivisionBuffer2;
 };
 
 #endif

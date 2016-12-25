@@ -64,10 +64,10 @@ public:
 			approachAlpha = -approachAlpha*(approachAlpha-2.0f);
 			approachAlpha = 1.0f;
 
-			OsuCircle::drawCircle(g, m_osu->getSkin(), m_vPos + Vector2(0, m_vSize.y/2) + Vector2(m_vSize.x*(1.0f/5.0f), 0.0f), hitcircleDiameter, numberScale, overlapScale, 1, 0, approachScale, approachAlpha, approachAlpha, true, false);
-			OsuCircle::drawHitResult(g, m_osu->getSkin(), hitcircleDiameter, hitcircleDiameter, m_vPos + Vector2(0, m_vSize.y/2) + Vector2(m_vSize.x*(2.0f/5.0f), 0.0f), OsuScore::HIT_100, 1.0f);
-			OsuCircle::drawHitResult(g, m_osu->getSkin(), hitcircleDiameter, hitcircleDiameter, m_vPos + Vector2(0, m_vSize.y/2) + Vector2(m_vSize.x*(3.0f/5.0f), 0.0f), OsuScore::HIT_50, 1.0f);
-			OsuCircle::drawHitResult(g, m_osu->getSkin(), hitcircleDiameter, hitcircleDiameter, m_vPos + Vector2(0, m_vSize.y/2) + Vector2(m_vSize.x*(4.0f/5.0f), 0.0f), OsuScore::HIT_MISS, 1.0f);
+			OsuCircle::drawCircle(g, m_osu->getSkin(), m_vPos + Vector2(0, m_vSize.y/2) + Vector2(m_vSize.x*(1.0f/5.0f), 0.0f), hitcircleDiameter, numberScale, overlapScale, 1, 42, approachScale, approachAlpha, approachAlpha, true, false);
+			OsuCircle::drawHitResult(g, m_osu->getSkin(), hitcircleDiameter, hitcircleDiameter, m_vPos + Vector2(0, m_vSize.y/2) + Vector2(m_vSize.x*(2.0f/5.0f), 0.0f), OsuScore::HIT::HIT_100, 1.0f);
+			OsuCircle::drawHitResult(g, m_osu->getSkin(), hitcircleDiameter, hitcircleDiameter, m_vPos + Vector2(0, m_vSize.y/2) + Vector2(m_vSize.x*(3.0f/5.0f), 0.0f), OsuScore::HIT::HIT_50, 1.0f);
+			OsuCircle::drawHitResult(g, m_osu->getSkin(), hitcircleDiameter, hitcircleDiameter, m_vPos + Vector2(0, m_vSize.y/2) + Vector2(m_vSize.x*(4.0f/5.0f), 0.0f), OsuScore::HIT::HIT_MISS, 1.0f);
 			OsuCircle::drawApproachCircle(g, m_osu->getSkin(), m_vPos + Vector2(0, m_vSize.y/2) + Vector2(m_vSize.x*(1.0f/5.0f), 0.0f), m_osu->getSkin()->getComboColorForCounter(42), hitcircleDiameter, approachScale, approachAlpha, false, false);
 		}
 		else if (m_iMode == 1)
@@ -116,6 +116,12 @@ public:
 		const float numberScale = (hitcircleDiameter / (160.0f * (m_osu->getSkin()->isDefault12x() ? 2.0f : 1.0f))) * 1 * convar->getConVarByName("osu_number_scale_multiplier")->getFloat();
 		const float overlapScale = (hitcircleDiameter / (160.0f)) * 1 * convar->getConVarByName("osu_number_scale_multiplier")->getFloat();
 
+		float approachScale = clamp<float>(1.0f + 1.5f - fmod(engine->getTime()*3, 3.0f), 0.0f, 2.5f);
+		float approachAlpha = clamp<float>(fmod(engine->getTime()*3, 3.0f)/1.5f, 0.0f, 1.0f);
+		approachAlpha = -approachAlpha*(approachAlpha-2.0f);
+		approachAlpha = -approachAlpha*(approachAlpha-2.0f);
+		approachAlpha = 1.0f;
+
 		const float length = (m_vSize.x-hitcircleDiameter);
 		const int numPoints = length;
 		const float pointDist = length / numPoints;
@@ -132,8 +138,10 @@ public:
 
 			points.push_back(Vector2(m_vPos.x + hitcircleDiameter/2 + i*pointDist, m_vPos.y + m_vSize.y/2 - hitcircleDiameter/3 + heightAddPercent*(m_vSize.y/2 - hitcircleDiameter/2)));
 		}
-		OsuSliderRenderer::draw(g, m_osu, points, hitcircleDiameter, 0, 1, m_osu->getSkin()->getComboColorForCounter(0));
-		OsuCircle::drawSliderStartCircle(g, m_osu->getSkin(), points[0], hitcircleDiameter, numberScale, overlapScale, 1);
+		OsuCircle::drawCircle(g, m_osu->getSkin(), points[numPoints/2], hitcircleDiameter, numberScale, overlapScale, 2, 420, approachScale, approachAlpha, approachAlpha, true, false);
+		OsuCircle::drawApproachCircle(g, m_osu->getSkin(), points[numPoints/2], m_osu->getSkin()->getComboColorForCounter(420), hitcircleDiameter, approachScale, approachAlpha, false, false);
+		OsuSliderRenderer::draw(g, m_osu, points, hitcircleDiameter, 0, 1, m_osu->getSkin()->getComboColorForCounter(420));
+		OsuCircle::drawSliderStartCircle(g, m_osu->getSkin(), points[0], hitcircleDiameter, numberScale, overlapScale, 1, 420);
 		OsuCircle::drawSliderEndCircle(g, m_osu->getSkin(), points[points.size()-1], hitcircleDiameter, numberScale, overlapScale, 0, 0, 1.0f, 1.0f, 0.0f, false, false);
 	}
 
@@ -185,7 +193,9 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Show FPS Counter", convar->getConVarByName("osu_draw_fps"));
 	addSpacer();
 	addCheckbox("Unlimited FPS", convar->getConVarByName("fps_unlimited"));
-	addSlider("FPS Limiter:", 60.0f, 1000.0f, convar->getConVarByName("fps_max"))->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeInt) );
+	CBaseUISlider *fpsSlider = addSlider("FPS Limiter:", 60.0f, 1000.0f, convar->getConVarByName("fps_max"));
+	fpsSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeInt) );
+	fpsSlider->setKeyDelta(60);
 
 	addSubSection("Layout");
 	OPTIONS_ELEMENT resolutionSelect = addButton("Select Resolution", UString::format("%ix%i", m_osu->getScreenWidth(), m_osu->getScreenHeight()));
@@ -209,14 +219,16 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSlider("Effects:", 0.0f, 1.0f, convar->getConVarByName("osu_volume_effects"), 70.0f);
 
 	addSubSection("Offset Adjustment");
-	addSlider("Global Offset:", -300.0f, 300.0f, convar->getConVarByName("osu_global_offset"))->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeInt) );
+	CBaseUISlider *offsetSlider = addSlider("Global Offset:", -300.0f, 300.0f, convar->getConVarByName("osu_global_offset"));
+	offsetSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeInt) );
+	offsetSlider->setKeyDelta(1);
 
 	//**************************************************************************************************************************//
 
 	addSection("Input");
 
 	addSubSection("Mouse");
-	addSlider("Sensitivity:", 0.4f, 6.0f, convar->getConVarByName("mouse_sensitivity"));
+	addSlider("Sensitivity:", 0.4f, 6.0f, convar->getConVarByName("mouse_sensitivity"))->setKeyDelta(0.1f);
 	addCheckbox("Raw Input", convar->getConVarByName("mouse_raw_input"));
 	addCheckbox("Map Absolute Raw Input to Window", convar->getConVarByName("mouse_raw_input_absolute_to_window"));
 	addCheckbox("Confine Cursor (Windowed)", convar->getConVarByName("osu_confine_cursor_windowed"));
@@ -231,6 +243,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSubSection("Keys - In-Game");
 	addButton("Game Pause", &OsuKeyBindings::GAME_PAUSE)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
 	addButton("Skip Cutscene", &OsuKeyBindings::SKIP_CUTSCENE)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addButton("Scrubbing (+ Click Drag!)", &OsuKeyBindings::SEEK_TIME)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
 	addButton("Increase Local Song Offset", &OsuKeyBindings::INCREASE_LOCAL_OFFSET)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
 	addButton("Decrease Local Song Offset", &OsuKeyBindings::DECREASE_LOCAL_OFFSET)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
 	addButton("Quick Retry (hold briefly)", &OsuKeyBindings::QUICK_RETRY)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
@@ -239,6 +252,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addButton("Increase Volume", &OsuKeyBindings::INCREASE_VOLUME)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
 	addButton("Decrease Volume", &OsuKeyBindings::DECREASE_VOLUME)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
 	addButton("Disable Mouse Buttons", &OsuKeyBindings::DISABLE_MOUSE_BUTTONS)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addButton("Boss Key (Minimize)", &OsuKeyBindings::BOSS_KEY)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
 	addSubSection("Keys - Mod Select");
 	addButton("Easy", &OsuKeyBindings::MOD_EASY)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
 	addButton("No Fail", &OsuKeyBindings::MOD_NOFAIL)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
@@ -266,8 +280,8 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_skinSelectButton = skinSelect.elements[0];
 	addButton("Reload Skin (CTRL+ALT+SHIFT+S)")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSkinReload) );
 	addSpacer();
-	addSlider("Number Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_number_scale_multiplier"), 135.0f);
-	addSlider("HitResult Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_hitresult_scale"), 135.0f);
+	addSlider("Number Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_number_scale_multiplier"), 135.0f)->setKeyDelta(0.1f);
+	addSlider("HitResult Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_hitresult_scale"), 135.0f)->setKeyDelta(0.1f);
 	addCheckbox("Draw Numbers", convar->getConVarByName("osu_draw_numbers"));
 	addCheckbox("Draw ApproachCircles", convar->getConVarByName("osu_draw_approach_circles"));
 	addSpacer();
@@ -278,14 +292,18 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Draw CursorTrail", convar->getConVarByName("osu_draw_cursor_trail"));
 	m_cursorSizeSlider = addSlider("Cursor Size:", 0.01f, 5.0f, convar->getConVarByName("osu_cursor_scale"));
 	m_cursorSizeSlider->setAnimated(false);
+	m_cursorSizeSlider->setKeyDelta(0.1f);
 	addSpacer();
 	addSliderPreview();
 	addCheckbox("Use slidergradient.png", convar->getConVarByName("osu_slider_use_gradient_image"));
+	addCheckbox("Use osu!next Slider Style", convar->getConVarByName("osu_slider_osu_next_style"));
 	addCheckbox("Use combo color as tint for slider ball", convar->getConVarByName("osu_slider_ball_tint_combo_color"));
+	addCheckbox("Use combo color as tint for slider border", convar->getConVarByName("osu_slider_border_tint_combo_color"));
 	addCheckbox("Draw SliderEndCircle", convar->getConVarByName("osu_slider_draw_endcircle"));
-	addSlider("Slider Opacity", 0.0f, 1.0f, convar->getConVarByName("osu_slider_body_alpha_multiplier"));
+	addSlider("Slider Opacity", 0.0f, 1.0f, convar->getConVarByName("osu_slider_alpha_multiplier"));
+	addSlider("SliderBody Opacity", 0.0f, 1.0f, convar->getConVarByName("osu_slider_body_alpha_multiplier"));
 	addSlider("SliderBody Color Saturation", 0.0f, 1.0f, convar->getConVarByName("osu_slider_body_color_saturation"));
-	addSlider("SliderBorder Size", 0.0f, 9.0f, convar->getConVarByName("osu_slider_border_size_multiplier"));
+	addSlider("SliderBorder Size", 0.0f, 9.0f, convar->getConVarByName("osu_slider_border_size_multiplier"))->setKeyDelta(0.1f);
 
 	//**************************************************************************************************************************//
 
@@ -295,6 +313,9 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSlider("Background Dim:", 0.0f, 1.0f, convar->getConVarByName("osu_background_dim"))->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
 	m_backgroundBrightnessSlider = addSlider("Background Brightness:", 0.0f, 1.0f, convar->getConVarByName("osu_background_brightness"));
 	m_backgroundBrightnessSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
+	addCheckbox("FadeIn Background during Breaks", convar->getConVarByName("osu_background_fade_during_breaks"));
+	addCheckbox("Show Approach Circle on First \"Hidden\" Object", convar->getConVarByName("osu_show_approach_circle_on_first_hidden_object"));
+	addCheckbox("Note Blocking (Noob Protection)", convar->getConVarByName("osu_note_blocking"));
 
 	addSubSection("HUD");
 	addCheckbox("Draw HUD", convar->getConVarByName("osu_draw_hud"));
@@ -302,6 +323,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Draw Accuracy", convar->getConVarByName("osu_draw_accuracy"));
 	addCheckbox("Draw ProgressBar", convar->getConVarByName("osu_draw_progressbar"));
 	addCheckbox("Draw HitErrorBar", convar->getConVarByName("osu_draw_hiterrorbar"));
+	addCheckbox("Draw Scrubbing Timeline", convar->getConVarByName("osu_draw_scrubbing_timeline"));
 	addSpacer();
 	addCheckbox("Draw Statistics: Misses", convar->getConVarByName("osu_draw_statistics_misses"));
 	addCheckbox("Draw Statistics: BPM", convar->getConVarByName("osu_draw_statistics_bpm"));
@@ -313,13 +335,20 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Draw Statistics: Unstable Rate", convar->getConVarByName("osu_draw_statistics_ur"));
 	addSpacer();
 	m_hudSizeSlider = addSlider("HUD Scale:", 0.1f, 3.0f, convar->getConVarByName("osu_hud_scale"), 165.0f);
+	m_hudSizeSlider->setKeyDelta(0.1f);
 	addSpacer();
 	m_hudComboScaleSlider = addSlider("Combo Scale:", 0.1f, 3.0f, convar->getConVarByName("osu_hud_combo_scale"), 165.0f);
+	m_hudComboScaleSlider->setKeyDelta(0.1f);
 	m_hudScoreScaleSlider = addSlider("Score Scale:", 0.1f, 3.0f, convar->getConVarByName("osu_hud_score_scale"), 165.0f);
+	m_hudScoreScaleSlider->setKeyDelta(0.1f);
 	m_hudAccuracyScaleSlider = addSlider("Accuracy Scale:", 0.1f, 3.0f, convar->getConVarByName("osu_hud_accuracy_scale"), 165.0f);
+	m_hudAccuracyScaleSlider->setKeyDelta(0.1f);
 	m_hudHiterrorbarScaleSlider = addSlider("HitErrorBar Scale:", 0.1f, 3.0f, convar->getConVarByName("osu_hud_hiterrorbar_scale"), 165.0f);
+	m_hudHiterrorbarScaleSlider->setKeyDelta(0.1f);
 	m_hudProgressbarScaleSlider = addSlider("ProgressBar Scale:", 0.1f, 3.0f, convar->getConVarByName("osu_hud_progressbar_scale"), 165.0f);
+	m_hudProgressbarScaleSlider->setKeyDelta(0.1f);
 	m_statisticsOverlayScaleSlider = addSlider("Statistics Scale:", 0.1f, 3.0f, convar->getConVarByName("osu_hud_statistics_scale"), 165.0f);
+	m_statisticsOverlayScaleSlider->setKeyDelta(0.1f);
 
 	addSubSection("Playfield");
 	addCheckbox("Draw FollowPoints", convar->getConVarByName("osu_draw_followpoints"));
@@ -327,6 +356,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSpacer();
 	m_playfieldBorderSizeSlider = addSlider("Playfield Border Size:", 0.0f, 500.0f, convar->getConVarByName("osu_hud_playfield_border_size"));
 	m_playfieldBorderSizeSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeInt) );
+	m_playfieldBorderSizeSlider->setKeyDelta(1.0f);
 
 	addSubSection("Hitobjects");
 	addCheckbox("Shrinking Sliders", convar->getConVarByName("osu_slider_shrink"));

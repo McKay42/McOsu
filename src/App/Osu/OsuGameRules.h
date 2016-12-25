@@ -185,27 +185,27 @@ public:
 	{
 		delta = std::abs(delta);
 
-		OsuScore::HIT result = OsuScore::HIT_NULL;
+		OsuScore::HIT result = OsuScore::HIT::HIT_NULL;
 
 		if (!osu_mod_ming3012.getBool())
 		{
 			if (delta <= (long)getHitWindow300(beatmap))
-				result = OsuScore::HIT_300;
+				result = OsuScore::HIT::HIT_300;
 			else if (delta <= (long)getHitWindow100(beatmap))
-				result = OsuScore::HIT_100;
+				result = OsuScore::HIT::HIT_100;
 			else if (delta <= (long)getHitWindow50(beatmap))
-				result = OsuScore::HIT_50;
+				result = OsuScore::HIT::HIT_50;
 			else if (delta <= (long)getHitWindowMiss(beatmap))
-				result = OsuScore::HIT_MISS;
+				result = OsuScore::HIT::HIT_MISS;
 		}
 		else
 		{
 			if (delta <= (long)getHitWindow300(beatmap))
-				result = OsuScore::HIT_300;
+				result = OsuScore::HIT::HIT_300;
 			else if (delta <= (long)getHitWindow50(beatmap))
-				result = OsuScore::HIT_50;
+				result = OsuScore::HIT::HIT_50;
 			else if (delta <= (long)getHitWindowMiss(beatmap))
-				result = OsuScore::HIT_MISS;
+				result = OsuScore::HIT::HIT_MISS;
 		}
 
 		return result;
@@ -219,24 +219,12 @@ public:
 
 	static float getRawHitCircleDiameter(float CS)
 	{
-		return 108.848f - (CS * 8.9646f);
+		return ((1.0f - 0.7f*(CS - 5.0f) / 5.0f) / 2.0f) * 128.0f; // gives the circle diameter in osu!pixels, goes negative above CS 12.1429
 	}
 
-	// note: these calculations are correct, even though it may not seem so due to magic numbers in osu_playfield_border_bottom_percent and osu_playfield_border_top_percent
 	static float getHitCircleXMultiplier(Osu *osu)
 	{
-		int swidth = osu->getScreenWidth();
-		int sheight = osu->getScreenHeight();
-
-		if (swidth * 3 > sheight * 4)
-			swidth = sheight * 4 / 3;
-		else
-			sheight = swidth * 3 / 4;
-
-		const float xMultiplier = swidth / 640.0f;
-		//const float yMultiplier = sheight / 480.0f;
-
-		return xMultiplier;
+		return getPlayfieldSize(osu).x / OSU_COORD_WIDTH; // scales osu!pixels to the actual playfield size
 	}
 
 	static float getHitCircleDiameter(OsuBeatmap *beatmap)
@@ -263,7 +251,7 @@ public:
 		const int bottomBorderSize = osu_playfield_border_bottom_percent.getFloat()*osu->getScreenHeight();
 		const int engineScreenHeight = osu->getScreenHeight() - bottomBorderSize - topBorderSize;
 
-		return osu->getScreenWidth()/(float)OSU_COORD_WIDTH > engineScreenHeight/(float)OSU_COORD_HEIGHT ? engineScreenHeight / (float)OSU_COORD_HEIGHT : engineScreenWidth / (float)OSU_COORD_WIDTH;
+		return osu->getScreenWidth()/(float)OSU_COORD_WIDTH > engineScreenHeight/(float)OSU_COORD_HEIGHT ? engineScreenHeight/(float)OSU_COORD_HEIGHT : engineScreenWidth/(float)OSU_COORD_WIDTH;
 	}
 
 	static Vector2 getPlayfieldSize(Osu *osu)

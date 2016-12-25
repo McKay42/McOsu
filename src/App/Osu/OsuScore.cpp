@@ -24,7 +24,7 @@ OsuScore::OsuScore(Osu *osu)
 
 void OsuScore::reset()
 {
-	m_grade = GRADE_N;
+	m_grade = OsuScore::GRADE::GRADE_N;
 	m_iScore = 0;
 	m_iCombo = 0;
 	m_iComboMax = 0;
@@ -46,7 +46,7 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignor
 	const int scoreComboMultiplier = std::max(m_iCombo-1, 0);
 
 	// handle hits (and misses)
-	if (hit != OsuScore::HIT_MISS)
+	if (hit != OsuScore::HIT::HIT_MISS)
 	{
 		if (!ignoreOnHitErrorBar)
 		{
@@ -76,18 +76,18 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignor
 
 		switch (hit)
 		{
-		case HIT_MISS:
+		case OsuScore::HIT::HIT_MISS:
 			m_iNumMisses++;
 			break;
-		case HIT_50:
+		case OsuScore::HIT::HIT_50:
 			m_iNum50s++;
 			hitValue = 50;
 			break;
-		case HIT_100:
+		case OsuScore::HIT::HIT_100:
 			m_iNum100s++;
 			hitValue = 100;
 			break;
-		case HIT_300:
+		case OsuScore::HIT::HIT_300:
 			m_iNum300s++;
 			hitValue = 300;
 			break;
@@ -121,17 +121,17 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignor
 		m_fAccuracy = totalHitPoints / totalNumHits;
 
 	// recalculate grade
-	m_grade = GRADE_D;
+	m_grade = OsuScore::GRADE::GRADE_D;
 	if (percent300s > 0.6f)
-		m_grade = GRADE_C;
+		m_grade = OsuScore::GRADE::GRADE_C;
 	if ((percent300s > 0.7f && m_iNumMisses == 0) || (percent300s > 0.8f))
-		m_grade = GRADE_B;
+		m_grade = OsuScore::GRADE::GRADE_B;
 	if ((percent300s > 0.8f && m_iNumMisses == 0) || (percent300s > 0.9f))
-		m_grade = GRADE_A;
+		m_grade = OsuScore::GRADE::GRADE_A;
 	if (percent300s > 0.9f && percent50s <= 0.01f && m_iNumMisses == 0)
-		m_grade = m_osu->getModHD() /* || m_osu->getModFlashlight() */ ? GRADE_SH : GRADE_S;
+		m_grade = m_osu->getModHD() /* || m_osu->getModFlashlight() */ ? OsuScore::GRADE::GRADE_SH : OsuScore::GRADE::GRADE_S;
 	if (m_iNumMisses == 0 && m_iNum50s == 0 && m_iNum100s == 0)
-		m_grade = m_osu->getModHD() /* || m_osu->getModFlashlight() */ ? GRADE_XH : GRADE_X;
+		m_grade = m_osu->getModHD() /* || m_osu->getModFlashlight() */ ? OsuScore::GRADE::GRADE_XH : OsuScore::GRADE::GRADE_X;
 
 	// recalculate unstable rate
 	float averageDelta = 0.0f;

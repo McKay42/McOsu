@@ -62,15 +62,21 @@ public:
 	void stop(bool quit = true);
 	void fail();
 
+	// music/sound
 	void setVolume(float volume);
 	void setSpeed(float speed);
 	void setPitch(float pitch);
 	void seekPercent(double percent);
+	void seekPercentPlayable(double percent);
 	void seekMS(unsigned long ms);
 
 	inline Sound *getMusic() const {return m_music;}
+	unsigned long getTime();
+	unsigned long getStartTimePlayable();
 	unsigned long getLength();
+	unsigned long getLengthPlayable();
 	float getPercentFinished();
+	float getPercentFinishedPlayable();
 
 	// live statistics
 	int getBPM();
@@ -206,6 +212,8 @@ private:
 
 	// gameplay
 	float m_fHealth;
+	float m_fBreakBackgroundFade;
+	bool m_bInBreak;
 	int m_iPreviousFollowPointObjectIndex;
 	long m_iNextHitObjectTime;
 	long m_iPreviousHitObjectTime;
@@ -222,6 +230,7 @@ private:
 	std::mutex m_clicksMutex;
 
 	std::vector<OsuHitObject*> m_hitobjects;
+	std::vector<OsuHitObject*> m_hitobjectsSortedByEndTime;
 	std::vector<OsuHitObject*> m_misaimObjects;
 
 	// statistics

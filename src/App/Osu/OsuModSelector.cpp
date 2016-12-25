@@ -323,6 +323,8 @@ void OsuModSelector::onKeyDown(KeyboardEvent &key)
 	if (!m_bVisible)
 		return;
 
+	m_overrideSliderContainer->onKeyDown(key);
+
 	if (key == KEY_1)
 		resetMods();
 
@@ -642,6 +644,7 @@ OsuModSelector::OVERRIDE_SLIDER OsuModSelector::addOverrideSlider(UString text, 
 	os.label->setTextColor(0xff777777);
 
 	os.slider->setBounds(min, max+1.0f);
+	os.slider->setKeyDelta(0.1f);
 	os.slider->setLiveUpdate(true);
 	os.slider->setAllowMouseWheel(false);
 
@@ -735,7 +738,7 @@ void OsuModSelector::onOverrideSliderChange(CBaseUISlider *slider)
 			float sliderValue = slider->getFloat()-1.0f;
 
 			// alt key allows rounding to only 1 decimal digit
-			if (engine->getKeyboard()->isAltDown())
+			if (!engine->getKeyboard()->isAltDown())
 				sliderValue = std::round(sliderValue * 10.0f) / 10.0f;
 			else
 				sliderValue = std::round(sliderValue * 100.0f) / 100.0f;
@@ -842,7 +845,7 @@ UString OsuModSelector::getOverrideSliderLabelText(OsuModSelector::OVERRIDE_SLID
 
 			// compensate and round
 			convarValue = OsuGameRules::getApproachRateForSpeedMultiplier(m_osu->getSelectedBeatmap());
-			if (engine->getKeyboard()->isAltDown())
+			if (!engine->getKeyboard()->isAltDown())
 				convarValue = std::round(convarValue * 10.0f) / 10.0f;
 			else
 				convarValue = std::round(convarValue * 100.0f) / 100.0f;
@@ -853,7 +856,7 @@ UString OsuModSelector::getOverrideSliderLabelText(OsuModSelector::OVERRIDE_SLID
 
 			// compensate and round
 			convarValue = OsuGameRules::getOverallDifficultyForSpeedMultiplier(m_osu->getSelectedBeatmap());
-			if (engine->getKeyboard()->isAltDown())
+			if (!engine->getKeyboard()->isAltDown())
 				convarValue = std::round(convarValue * 10.0f) / 10.0f;
 			else
 				convarValue = std::round(convarValue * 100.0f) / 100.0f;
