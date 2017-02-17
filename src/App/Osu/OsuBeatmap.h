@@ -18,6 +18,7 @@ class Sound;
 class ConVar;
 
 class Osu;
+class OsuVR;
 class OsuSkin;
 class OsuHitObject;
 class OsuBeatmapDifficulty;
@@ -36,6 +37,7 @@ public:
 	virtual ~OsuBeatmap();
 
 	void draw(Graphics *g);
+	void drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr);
 	void update();
 
 	void skipEmptySection();
@@ -44,7 +46,7 @@ public:
 	void setDifficulties(std::vector<OsuBeatmapDifficulty*> diffs);
 
 	// callbacks called by the Osu class
-	void onUpdateMods();
+	void onUpdateMods(bool rebuildSliderVertexBuffers = true); // this makes all the necessary internal updates to hitobjects when legacy osu mods or static mods change live (but also on start)
 	void keyPressed1();
 	void keyPressed2();
 	void keyReleased1();
@@ -52,9 +54,9 @@ public:
 
 	// songbrowser logic
 	void select(); // loads the music of the currently selected diff and starts playing from the previewTime (e.g. clicking on a beatmap)
-	void selectDifficulty(int index, bool deleteImage = true); // DEPRECATED deleteImage
-	void selectDifficulty(OsuBeatmapDifficulty *difficulty, bool deleteImage = true); // DEPRECATED deleteImage
-	void deselect(bool deleteImages = true); // stops + unloads the currently loaded music and deletes all hitobjects // DEPRECATED deleteImages
+	void selectDifficulty(int index, bool deleteImage = true); // DEPRECATED deleteImage parameter
+	void selectDifficulty(OsuBeatmapDifficulty *difficulty, bool deleteImage = true); // DEPRECATED deleteImage parameter
+	void deselect(bool deleteImages = true); // stops + unloads the currently loaded music and deletes all hitobjects // DEPRECATED deleteImages parameter
 	bool play();
 	void restart(bool quick = false);
 	void pause(bool quitIfWaiting = true);
@@ -103,11 +105,12 @@ public:
 	inline Vector2 getPlayfieldSize() {return m_vPlayfieldSize;}
 	inline Vector2 getPlayfieldCenter() {return m_vPlayfieldCenter;}
 	inline float getRawHitcircleDiameter() {return m_fRawHitcircleDiameter;} // in osu!pixels
-	inline float getHitcircleDiameter() {return m_fHitcircleDiameter;} // in actual scaled pixels to the current resolution
+	float getHitcircleDiameter(); // in actual scaled pixels to the current resolution
 	inline float getNumberScale() {return m_fNumberScale;}
 	inline float getHitcircleOverlapScale() {return m_fHitcircleOverlapScale;}
 	inline float getSliderFollowCircleScale() {return m_fSliderFollowCircleScale;}
 	inline float getSliderFollowCircleDiameter() {return m_fSliderFollowCircleDiameter;}
+	inline float getRawSliderFollowCircleDiameter() {return m_fRawSliderFollowCircleDiameter;}
 	inline float getPlayfieldRotation() const {return m_fPlayfieldRotation;}
 
 	inline OsuBeatmapDifficulty *getSelectedDifficulty() {return m_selectedDifficulty;}
@@ -122,7 +125,7 @@ public:
 	inline bool isInSkippableSection() {return m_bIsInSkippableSection;}
 	inline bool isSpinnerActive() {return m_bIsSpinnerActive;}
 	inline bool shouldFlashWarningArrows() {return m_bShouldFlashWarningArrows;}
-	inline bool isClickHeld() {return m_bClick1Held || m_bClick2Held;}
+	bool isClickHeld();
 
 	inline Vector2 getContinueCursorPoint() {return m_vContinueCursorPoint;}
 
@@ -137,9 +140,14 @@ public:
 	void addHealth(float health);
 	void playMissSound();
 
-	Vector2 osuCoords2Pixels(Vector2 coords);
+	Vector2 osuCoords2Pixels(Vector2 coords); // hitobjects should use this one (includes lots of special behaviour)
+	Vector2 osuCoords2RawPixels(Vector2 coords); // raw transform from osu!pixels to absolute screen pixels (without any mods whatsoever)
+	Vector2 osuCoords2VRPixels(Vector2 coords); // this gets called by osuCoords2Pixels() during a VR draw(), for easier backwards compatibility
+
+	Vector2 osuCoords2LegacyPixels(Vector2 coords); // only applies vanilla osu mods and static mods to the coordinates (used for generating the static slider mesh) centered at (0, 0, 0)
+
 	Vector2 getCursorPos();
-	inline float getAmplitude() {return m_fAmplitude;}
+	Vector2 getFirstPersonDelta();
 
 private:
 	void drawFollowPoints(Graphics *g);
@@ -157,6 +165,7 @@ private:
 	void updateAutoCursorPos();
 	void updatePlayfieldMetrics();
 	void updateHitobjectMetrics();
+	void updateSliderVertexBuffers();
 
 	void calculateStacks();
 
@@ -201,14 +210,16 @@ private:
 	float m_fHitcircleOverlapScale;
 	float m_fSliderFollowCircleScale;
 	float m_fSliderFollowCircleDiameter;
+	float m_fRawSliderFollowCircleDiameter;
 
 	// sound
 	float m_fBeatLength;
-	float m_fAmplitude;
 	long m_iCurMusicPos;
 	long m_iPrevCurMusicPos;
-	unsigned long m_iLastMusicPosition; // for interpolation
-	double m_fLastMusicPositionForInterpolation; // for interpolation
+	bool m_bWasSeekFrame; // workaround
+	double m_fInterpolatedMusicPos; // for interpolation
+	double m_fLastAudioTimeAccurateSet; // for interpolation
+	double m_fLastRealTimeForInterpolationDelta; // for interpolation
 
 	// gameplay
 	float m_fHealth;
@@ -220,9 +231,6 @@ private:
 	Vector2 m_vAutoCursorPos;
 	float m_fPlayfieldRotation;
 	int m_iAutoCursorDanceIndex;
-	float m_fTimeshockTimeLimit;
-	float m_fTimeshockTime;
-	float m_fTimeshockTimer;
 
 	bool m_bClick1Held;
 	bool m_bClick2Held;
@@ -239,7 +247,14 @@ private:
 	int m_iND;
 
 	// custom
+	bool m_bIsPreLoading;
+	int m_iPreLoadingIndex;
 	bool m_bWasHREnabled; // dynamic stack recalculation
+	float m_fPrevHitCircleDiameter; // dynamic slider vertex buffer recalculation
+	bool m_bWasHorizontalMirrorEnabled;
+	bool m_bWasVerticalMirrorEnabled;
+	bool m_bWasEZEnabled;
+	bool m_bIsVRDraw; // for switching legacy drawing to osuCoords2Pixels/osuCoords2VRPixels
 };
 
 #endif

@@ -27,10 +27,10 @@
 #include "CBaseUIContainer.h"
 #include "CBaseUIButton.h"
 
-#define MCOSU_VERSION "Alpha"
-#define MCOSU_BANNER "-Animated Skins are not working yet-"
-#define MCOSU_MAIN_BUTTON "McOsu!"
-#define MCOSU_MAIN_BUTTON_BACK "by McKay"
+#define MCOSU_VERSION_TEXT "Alpha"
+#define MCOSU_BANNER_TEXT "-SteamVR Bug! Random freezes on controller vibration-"
+UString OsuMainMenu::MCOSU_MAIN_BUTTON_TEXT = UString("McOsu!");
+#define MCOSU_MAIN_BUTTON_BACK_TEXT "by McKay"
 
 
 
@@ -95,6 +95,9 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen()
 {
 	m_osu = osu;
 
+	if (m_osu->isInVRMode())
+		MCOSU_MAIN_BUTTON_TEXT.append(" VR");
+
 	// engine settings
 	engine->getMouse()->addListener(this);
 
@@ -117,6 +120,7 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen()
 	m_bUpdateCheckFinished = false;
 	m_fUpdateStatusTime = 0.0f;
 	m_fUpdateButtonAnim = 0.0f;
+	m_bHasClickedUpdate = false;
 
 	m_container = new CBaseUIContainer(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight(), "");
 	m_mainButton = new OsuMainMenuMainButton(this, 0, 0, 1, 1, "", "");
@@ -138,6 +142,14 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen()
 	m_updateAvailableButton->setColor(0x2200ff00);
 	m_updateAvailableButton->setTextColor(0x22ffffff);
 
+	m_donationButton = new OsuUIButton(m_osu, 0, 0, 0, 0, "", "Donations :>");
+	m_donationButton->setUseDefaultSkin();
+	m_donationButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuMainMenu::onDonatePressed) );
+	m_donationButton->setColor(0x33f29303);
+	m_donationButton->setTextBrightColor(0x55172e62);
+	m_donationButton->setTextDarkColor(0x11ffffff);
+	m_donationButton->setAlphaAddOnHover(0.5f);
+
 	m_todo.push_back("- Beatmap Skins");
 	m_todo.push_back("- HP Drain");
 	m_todo.push_back("- Skin Anim.");
@@ -150,8 +162,13 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen()
 
 OsuMainMenu::~OsuMainMenu()
 {
+	// on shutdown, force open github page if an update is available and the user didn't click on the button
+	if (m_updateChecker->isUpdateAvailable() && !m_bHasClickedUpdate)
+		m_updateAvailableButton->click();
+
 	SAFE_DELETE(m_container);
 	SAFE_DELETE(m_updateAvailableButton);
+	SAFE_DELETE(m_donationButton);
 	SAFE_DELETE(m_updateChecker);
 }
 
@@ -183,45 +200,51 @@ void OsuMainMenu::draw(Graphics *g)
 	Rect mainButtonRect = Rect(m_vCenter.x - size.x/2.0f - m_fCenterOffsetAnim, m_vCenter.y - size.y/2.0f, size.x, size.y);
 
 	// draw banner
-	/*
-	float bannerStringWidth = smallFont->getStringWidth(MCOSU_BANNER);
-	int bannerDiff = 20;
-	int bannerMargin = 5;
-	int numBanners = (int)std::round(m_osu->getScreenWidth() / (bannerStringWidth + bannerDiff)) + 2;
+	if (m_osu->isInVRMode())
+	{
+		float bannerStringWidth = smallFont->getStringWidth(MCOSU_BANNER_TEXT);
+		int bannerDiff = 20;
+		int bannerMargin = 5;
+		int numBanners = (int)std::round(m_osu->getScreenWidth() / (bannerStringWidth + bannerDiff)) + 2;
 
-	g->setColor(0xff777777);
-	g->pushTransform();
-	g->translate(1, 1);
-	for (int i=-1; i<numBanners; i++)
-	{
+		g->setColor(0xffee7777);
 		g->pushTransform();
-		g->translate(i*bannerStringWidth + i*bannerDiff + fmod(engine->getTime()*30, bannerStringWidth + bannerDiff), smallFont->getHeight() + bannerMargin);
-		g->drawString(smallFont, MCOSU_BANNER);
+		g->translate(1, 1);
+		for (int i=-1; i<numBanners; i++)
+		{
+			g->pushTransform();
+			g->translate(i*bannerStringWidth + i*bannerDiff + fmod(engine->getTime()*30, bannerStringWidth + bannerDiff), smallFont->getHeight() + bannerMargin);
+			g->drawString(smallFont, MCOSU_BANNER_TEXT);
+			g->popTransform();
+		}
 		g->popTransform();
+		g->setColor(0xff555555);
+		for (int i=-1; i<numBanners; i++)
+		{
+			g->pushTransform();
+			g->translate(i*bannerStringWidth + i*bannerDiff + fmod(engine->getTime()*30, bannerStringWidth + bannerDiff), smallFont->getHeight() + bannerMargin);
+			g->drawString(smallFont, MCOSU_BANNER_TEXT);
+			g->popTransform();
+		}
 	}
-	g->popTransform();
-	g->setColor(0xff333333);
-	for (int i=-1; i<numBanners; i++)
+
+	// draw todolist
+	/*
+	if (!m_osu->isInVRMode())
 	{
+		g->setColor(0xff777777);
 		g->pushTransform();
-		g->translate(i*bannerStringWidth + i*bannerDiff + fmod(engine->getTime()*30, bannerStringWidth + bannerDiff), smallFont->getHeight() + bannerMargin);
-		g->drawString(smallFont, MCOSU_BANNER);
+		g->translate(7, m_osu->getScreenHeight()/2 - smallFont->getHeight()/2);
+		g->drawString(smallFont, "TODO:");
+		g->translate(0, 10);
+		for (int i=0; i<m_todo.size(); i++)
+		{
+			g->translate(0, smallFont->getHeight()+5);
+			g->drawString(smallFont, m_todo[i]);
+		}
 		g->popTransform();
 	}
 	*/
-
-	// draw todolist
-	g->setColor(0xff777777);
-	g->pushTransform();
-	g->translate(7, m_osu->getScreenHeight()/2 - smallFont->getHeight()/2);
-	g->drawString(smallFont, "TODO:");
-	g->translate(0, 10);
-	for (int i=0; i<m_todo.size(); i++)
-	{
-		g->translate(0, smallFont->getHeight()+5);
-		g->drawString(smallFont, m_todo[i]);
-	}
-	g->popTransform();
 
 	// draw container
 	m_container->draw(g);
@@ -235,6 +258,9 @@ void OsuMainMenu::draw(Graphics *g)
 	m_updateAvailableButton->draw(g);
 	if (m_bUpdateStatus)
 		g->pop3DScene();
+
+	// draw donation button
+	m_donationButton->draw(g);
 
 	// draw main button
 	if (m_fMainMenuAnim > 0.0f && m_fMainMenuAnim != 1.0f)
@@ -253,8 +279,8 @@ void OsuMainMenu::draw(Graphics *g)
 		g->setColor(0xffffffff);
 		g->pushTransform();
 		g->scale(fontScale, fontScale);
-		g->translate(m_vCenter.x - m_fCenterOffsetAnim - (titleFont->getStringWidth(MCOSU_MAIN_BUTTON)/2.0f)*fontScale, m_vCenter.y + (titleFont->getHeight()*fontScale)/2.25f);
-		g->drawString(titleFont, MCOSU_MAIN_BUTTON);
+		g->translate(m_vCenter.x - m_fCenterOffsetAnim - (titleFont->getStringWidth(MCOSU_MAIN_BUTTON_TEXT)/2.0f)*fontScale, m_vCenter.y + (titleFont->getHeight()*fontScale)/2.25f);
+		g->drawString(titleFont, MCOSU_MAIN_BUTTON_TEXT);
 		g->popTransform();
 
 	if (m_fMainMenuAnim > 0.0f && m_fMainMenuAnim != 1.0f)
@@ -265,8 +291,8 @@ void OsuMainMenu::draw(Graphics *g)
 			g->setColor(0xffffffff);
 			g->pushTransform();
 			g->scale(fontScale, fontScale);
-			g->translate(m_vCenter.x - m_fCenterOffsetAnim - (titleFont->getStringWidth(MCOSU_MAIN_BUTTON_BACK)/2.0f)*fontScale, m_vCenter.y + ((titleFont->getHeight()*fontScale)/2.25f)*4.0f);
-			g->drawString(titleFont, MCOSU_MAIN_BUTTON_BACK);
+			g->translate(m_vCenter.x - m_fCenterOffsetAnim - (titleFont->getStringWidth(MCOSU_MAIN_BUTTON_BACK_TEXT)/2.0f)*fontScale, m_vCenter.y + ((titleFont->getHeight()*fontScale)/2.25f)*4.0f);
+			g->drawString(titleFont, MCOSU_MAIN_BUTTON_BACK_TEXT);
 			g->popTransform();
 		}
 		g->pop3DScene();
@@ -277,7 +303,7 @@ void OsuMainMenu::draw(Graphics *g)
 
 void OsuMainMenu::drawVersionInfo(Graphics *g)
 {
-	UString versionString = MCOSU_VERSION;
+	UString versionString = MCOSU_VERSION_TEXT;
 	versionString.append(" ");
 	versionString.append(Osu::version->getString());
 	McFont *versionFont = engine->getResourceManager()->getFont("FONT_DEFAULT");
@@ -303,6 +329,8 @@ void OsuMainMenu::update()
 
 	m_container->update();
 	m_updateAvailableButton->update();
+	//if (m_osu->isInVRMode())
+		m_donationButton->update();
 
 	// handle automatic menu closing
 	if (m_fMainMenuButtonCloseTime != 0.0f && engine->getTime() > m_fMainMenuButtonCloseTime)
@@ -427,6 +455,9 @@ void OsuMainMenu::updateLayout()
 
 	m_updateAvailableButton->setSize(375, 50);
 	m_updateAvailableButton->setPos(m_osu->getScreenWidth()/2 - m_updateAvailableButton->getSize().x/2, m_osu->getScreenHeight() - m_updateAvailableButton->getSize().y - 10);
+
+	m_donationButton->setSize(150, 50);
+	m_donationButton->setPos(5, m_osu->getScreenHeight()/2.0f - m_donationButton->getSize().y/2.0f);
 
 	m_mainButton->setRelPos(m_vCenter - m_vSize/2.0f - Vector2(m_fCenterOffsetAnim, 0.0f));
 	m_mainButton->setSize(m_vSize);
@@ -573,9 +604,16 @@ void OsuMainMenu::onUpdatePressed()
 {
 	if (m_bUpdateCheckFinished && m_bUpdateStatus)
 	{
+		m_bHasClickedUpdate = true;
+
 		env->openURLInDefaultBrowser(OsuUpdateChecker::GITHUB_RELEASE_DOWNLOAD_URL);
 		env->minimize();
 	}
+}
+
+void OsuMainMenu::onDonatePressed()
+{
+	env->openURLInDefaultBrowser("https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=QFLYEQNMVANJU");
 }
 
 

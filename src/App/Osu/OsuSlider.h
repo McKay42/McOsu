@@ -14,6 +14,7 @@ class OsuSliderCurve;
 class OsuSliderCurveEqualDistanceMulti;
 
 class Shader;
+class VertexBuffer;
 class VertexArrayObject;
 
 class OsuSlider : public OsuHitObject
@@ -33,6 +34,8 @@ public:
 
 	virtual void draw(Graphics *g);
 	virtual void draw2(Graphics *g);
+	void draw2(Graphics *g, bool drawApproachCircle);
+	virtual void drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr);
 	virtual void update(long curPos);
 
 	void updateStackPosition(float stackOffset);
@@ -44,6 +47,8 @@ public:
 	virtual void onClickEvent(Vector2 cursorPos, std::vector<OsuBeatmap::CLICK> &clicks);
 	virtual void onReset(long curPos);
 
+	void rebuildVertexBuffer();
+
 	inline int getRepeat() const {return m_iRepeat;}
 	inline std::vector<Vector2> getRawPoints() const {return m_points;}
 	inline float getPixelLength() const {return m_fPixelLength;}
@@ -52,9 +57,13 @@ private:
 	static ConVar *m_osu_playfield_mirror_horizontal_ref;
 	static ConVar *m_osu_playfield_mirror_vertical_ref;
 	static ConVar *m_osu_playfield_rotation_ref;
+	static ConVar *m_osu_mod_fps_ref;
+	static ConVar *m_osu_slider_border_size_multiplier_ref;
 
 	void drawStartCircle(Graphics *g, float alpha);
 	void drawEndCircle(Graphics *g, float alpha, float sliderSnake = 1.0f);
+	void drawBody(Graphics *g, float alpha, float from, float to);
+	void drawBodyVR(Graphics *g, OsuVR *vr, Matrix4 &mvp, float alpha, float from, float to);
 
 	void updateAnimations(long curPos);
 
@@ -124,6 +133,11 @@ private:
 
 	//TEMP:
 	float m_fSliderBreakRapeTime;
+
+	bool m_bOnHitVRLeftControllerHapticFeedback;
+
+	VertexBuffer *m_vb;
+	VertexBuffer *m_vbVR2;
 };
 
 

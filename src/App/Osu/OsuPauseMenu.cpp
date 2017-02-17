@@ -273,7 +273,8 @@ void OsuPauseMenu::onKeyDown(KeyboardEvent &e)
 			m_selectedButton->click();
 	}
 
-	if (e != KEY_ESCAPE && e != (KEYCODE)OsuKeyBindings::GAME_PAUSE.getInt()) // needed for unpause in Osu.cpp
+	// consume ALL events, except for a few special binds which are allowed through (e.g. for unpause or changing the local offset in Osu.cpp)
+	if (e != KEY_ESCAPE && e != (KEYCODE)OsuKeyBindings::GAME_PAUSE.getInt() && e != (KEYCODE)OsuKeyBindings::INCREASE_LOCAL_OFFSET.getInt() && e != (KEYCODE)OsuKeyBindings::DECREASE_LOCAL_OFFSET.getInt())
 		e.consume();
 }
 

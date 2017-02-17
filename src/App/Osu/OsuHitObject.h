@@ -10,6 +10,8 @@
 
 #include "OsuBeatmap.h"
 
+class ConVar;
+
 class OsuHitObject
 {
 public:
@@ -22,6 +24,7 @@ public:
 
 	virtual void draw(Graphics *g);
 	virtual void draw2(Graphics *g){;}
+	virtual void drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr){;}
 	virtual void update(long curPos);
 
 	virtual void updateStackPosition(float stackOffset) = 0;
@@ -52,6 +55,8 @@ public:
 	virtual void onReset(long curPos);
 
 protected:
+	static ConVar *m_osu_approach_scale_multiplier_ref;
+
 	OsuBeatmap *m_beatmap;
 
 	bool m_bVisible;
