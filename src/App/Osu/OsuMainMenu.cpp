@@ -260,7 +260,7 @@ void OsuMainMenu::draw(Graphics *g)
 		g->pop3DScene();
 
 	// draw donation button
-	m_donationButton->draw(g);
+	//m_donationButton->draw(g);
 
 	// draw main button
 	if (m_fMainMenuAnim > 0.0f && m_fMainMenuAnim != 1.0f)
