@@ -25,6 +25,7 @@ OsuUISongBrowserInfoLabel::OsuUISongBrowserInfoLabel(Osu *osu, float xPos, float
 	m_fSubTitleScale = 0.6f*globalScaler;
 	m_fSongInfoScale = 0.7f*globalScaler;
 	m_fDiffInfoScale = 0.65f*globalScaler;
+	m_fOffsetInfoScale = 0.6f*globalScaler;
 
 	m_sArtist = "Artist";
 	m_sTitle = "Title";
@@ -41,6 +42,9 @@ OsuUISongBrowserInfoLabel::OsuUISongBrowserInfoLabel(Osu *osu, float xPos, float
 	m_fOD = 5.0f;
 	m_fHP = 5.0f;
 	m_fStars = 5.0f;
+
+	m_iLocalOffset = 0;
+	m_iOnlineOffset = 0;
 }
 
 void OsuUISongBrowserInfoLabel::draw(Graphics *g)
@@ -59,6 +63,7 @@ void OsuUISongBrowserInfoLabel::draw(Graphics *g)
 	const UString subTitleText = buildSubTitleString();
 	const UString songInfoText = buildSongInfoString();
 	const UString diffInfoText = buildDiffInfoString();
+	const UString offsetInfoText = buildOffsetInfoString();
 
 	// draw
 	g->setColor(0xffffffff);
@@ -95,6 +100,15 @@ void OsuUISongBrowserInfoLabel::draw(Graphics *g)
 	g->translate((int)(m_vPos.x + (diffInfoStringWidth/2)*m_fDiffInfoScale), (int)(m_vPos.y + m_font->getHeight() + m_font->getHeight()*m_fSubTitleScale + m_font->getHeight()*m_fSongInfoScale + (m_font->getHeight()/2)*m_fDiffInfoScale + m_iMargin*3));
 	g->drawString(m_font, diffInfoText);
 	g->popTransform();
+
+	float offsetInfoStringWidth = m_font->getStringWidth(offsetInfoText);
+	g->setColor(0xffffffff);
+	g->pushTransform();
+	g->translate((int)(-offsetInfoStringWidth/2), (int)(m_font->getHeight()/2));
+	g->scale(m_fOffsetInfoScale, m_fOffsetInfoScale);
+	g->translate((int)(m_vPos.x + (offsetInfoStringWidth/2)*m_fOffsetInfoScale), (int)(m_vPos.y + m_font->getHeight() + m_font->getHeight()*m_fSubTitleScale + m_font->getHeight()*m_fSongInfoScale + (m_font->getHeight()/2)*m_fDiffInfoScale + (m_font->getHeight()/2)*m_fOffsetInfoScale + m_iMargin*5));
+	g->drawString(m_font, offsetInfoText);
+	g->popTransform();
 }
 
 void OsuUISongBrowserInfoLabel::setFromBeatmap(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff)
@@ -104,15 +118,18 @@ void OsuUISongBrowserInfoLabel::setFromBeatmap(OsuBeatmap *beatmap, OsuBeatmapDi
 	setDiff(diff->name);
 	setMapper(diff->creator);
 
-	setLengthMS(beatmap->getLength()); // TODO: beatmap db
+	setLengthMS(beatmap->getLength());
 	setBPM(diff->minBPM, diff->maxBPM);
-	setNumObjects(diff->numObjects); // TODO: beatmap db
+	setNumObjects(diff->numObjects);
 
 	setCS(diff->CS);
 	setAR(diff->AR);
 	setOD(diff->OD);
 	setHP(diff->HP);
-	setStars(diff->starsNoMod); // TODO: beatmap db
+	setStars(diff->starsNoMod);
+
+	setLocalOffset(diff->localoffset);
+	setOnlineOffset(diff->onlineOffset);
 }
 
 UString OsuUISongBrowserInfoLabel::buildTitleString()
@@ -155,6 +172,11 @@ UString OsuUISongBrowserInfoLabel::buildDiffInfoString()
 	return UString::format("CS:%.2g AR:%.2g OD:%.2g HP:%.2g Stars:%.2g", m_fCS, m_fAR, m_fOD, m_fHP, m_fStars);
 }
 
+UString OsuUISongBrowserInfoLabel::buildOffsetInfoString()
+{
+	return UString::format("Your Offset: %ld ms / Online Offset: %ld ms", m_iLocalOffset, m_iOnlineOffset);
+}
+
 float OsuUISongBrowserInfoLabel::getMinimumWidth()
 {
 	/*
@@ -165,8 +187,9 @@ float OsuUISongBrowserInfoLabel::getMinimumWidth()
 	float subTitleWidth = 0;
 	float songInfoWidth = m_font->getStringWidth(buildSongInfoString()) * m_fSongInfoScale;
 	float diffInfoWidth = m_font->getStringWidth(buildDiffInfoString()) * m_fDiffInfoScale;
+	float offsetInfoWidth = m_font->getStringWidth(buildOffsetInfoString()) * m_fOffsetInfoScale;
 
-	return std::max(std::max(std::max(titleWidth, subTitleWidth), songInfoWidth), diffInfoWidth);
+	return std::max(std::max(std::max(std::max(titleWidth, subTitleWidth), songInfoWidth), diffInfoWidth), offsetInfoWidth);
 }
 
 float OsuUISongBrowserInfoLabel::getMinimumHeight()
@@ -175,6 +198,7 @@ float OsuUISongBrowserInfoLabel::getMinimumHeight()
 	float subTitleHeight = m_font->getHeight() * m_fSubTitleScale;
 	float songInfoHeight = m_font->getHeight() * m_fSongInfoScale;
 	float diffInfoHeight = m_font->getHeight() * m_fDiffInfoScale;
+	///float offsetInfoHeight = m_font->getHeight() * m_fOffsetInfoScale;
 
-	return titleHeight + subTitleHeight + songInfoHeight + diffInfoHeight + m_iMargin*3;
+	return titleHeight + subTitleHeight + songInfoHeight + diffInfoHeight/* + offsetInfoHeight*/ + m_iMargin*3; // this is commented on purpose (also, it should be m_iMargin*4 but the 3 is also on purpose)
 }

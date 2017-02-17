@@ -92,11 +92,13 @@ OsuBeatmapDifficulty::OsuBeatmapDifficulty(Osu *osu, UString filepath, UString f
 	sliderTickRate = 1;
 
 	previewTime = 0;
+	lastModificationTime = 0;
 	mode = 0;
 	lengthMS = 0;
 
 	backgroundImage = NULL;
 	localoffset = 0;
+	onlineOffset = 0;
 	minBPM = 0;
 	maxBPM = 0;
 	numObjects = 0;
@@ -505,6 +507,7 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 					{
 						// infinity sanity check (this only exists because of https://osu.ppy.sh/b/1029976)
 						// not a very elegant check, but it does the job
+						// TODO: fix this, breaks hitobjects with custom additions!
 						if (curLine.find("E") != std::string::npos || curLine.find("e") != std::string::npos)
 						{
 							debugLog("Bullshit slider in beatmap: %s\n\ncurLine = %s\n", m_sFilePath.toUtf8(), curLineChar);

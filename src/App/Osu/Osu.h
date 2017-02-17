@@ -13,6 +13,7 @@
 
 class CWindowManager;
 
+class OsuVR;
 class OsuMainMenu;
 class OsuPauseMenu;
 class OsuOptionsMenu;
@@ -26,6 +27,7 @@ class OsuScreen;
 class OsuScore;
 class OsuSkin;
 class OsuHUD;
+class OsuVRTutorial;
 
 class ConVar;
 class Image;
@@ -55,6 +57,7 @@ public:
 	virtual ~Osu();
 
 	virtual void draw(Graphics *g);
+	void drawVR(Graphics *g);
 	virtual void update();
 
 	virtual void onKeyDown(KeyboardEvent &e);
@@ -80,6 +83,7 @@ public:
 	void toggleSongBrowser();
 	void toggleOptionsMenu();
 	void toggleRankingScreen();
+	void toggleVRTutorial();
 
 	void volumeDown();
 	void volumeUp();
@@ -94,6 +98,7 @@ public:
 
 	OsuBeatmap *getSelectedBeatmap();
 
+	inline OsuVR *getVR() {return m_vr;}
 	inline OsuSkin *getSkin() {return m_skin;}
 	inline OsuHUD *getHUD() {return m_hud;}
 	inline OsuNotificationOverlay *getNotificationOverlay() {return m_notificationOverlay;}
@@ -131,8 +136,13 @@ public:
 	inline bool getModNM() {return m_bModNM;}
 
 	bool isInPlayMode();
+	bool isNotInPlayModeOrPaused();
+	bool isInVRMode();
+
 	inline bool isSeeking() {return m_bSeeking;}
 	inline float getQuickSaveTime() {return m_fQuickSaveTime;}
+
+	bool shouldFallBackToLegacySliderRenderer(); // certain mods or actions require OsuSliders to render dynamically (e.g. wobble or the CS override slider)
 
 	void updateMods();
 	void updateConfineCursor();
@@ -165,8 +175,11 @@ private:
 	ConVar *m_osu_folder_ref;
 	ConVar *m_osu_draw_hud_ref;
 	ConVar *m_osu_mod_fps_ref;
+	ConVar *m_osu_mod_wobble_ref;
+	ConVar *m_osu_mod_minimize_ref;
 
 	// interfaces
+	OsuVR *m_vr;
 	OsuMainMenu *m_mainMenu;
 	OsuOptionsMenu *m_optionsMenu;
 	OsuSongBrowser2 *m_songBrowser2;
@@ -178,6 +191,7 @@ private:
 	OsuTooltipOverlay *m_tooltipOverlay;
 	OsuNotificationOverlay *m_notificationOverlay;
 	OsuScore *m_score;
+	OsuVRTutorial *m_vrTutorial;
 
 	std::vector<OsuScreen*> m_screens;
 
@@ -223,6 +237,7 @@ private:
 	bool m_bToggleSongBrowserScheduled;
 	bool m_bToggleOptionsMenuScheduled;
 	bool m_bToggleRankingScreenScheduled;
+	bool m_bToggleVRTutorialScheduled;
 
 	// cursor
 	bool m_bShouldCursorBeVisible;

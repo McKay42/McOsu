@@ -36,6 +36,7 @@ public:
 
 	virtual void draw(Graphics *g);
 	virtual void draw2(Graphics *g);
+	virtual void drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr);
 	virtual void update(long curPos);
 
 	void updateStackPosition(float stackOffset);
@@ -60,6 +61,8 @@ private:
 	bool m_bWaiting;
 	float m_fHitAnimation;
 	float m_fShakeAnimation;
+
+	bool m_bOnHitVRLeftControllerHapticFeedback;
 };
 
 #endif

@@ -20,9 +20,13 @@
 ConVar osu_hitresult_scale("osu_hitresult_scale", 1.0f);
 ConVar osu_hitresult_duration("osu_hitresult_duration", 1.25f);
 
+ConVar osu_approach_scale_multiplier("osu_approach_scale_multiplier", 3.0f);
+
 ConVar osu_mod_target_300_percent("osu_mod_target_300_percent", 0.5f);
 ConVar osu_mod_target_100_percent("osu_mod_target_100_percent", 0.7f);
 ConVar osu_mod_target_50_percent("osu_mod_target_50_percent", 0.95f);
+
+ConVar *OsuHitObject::m_osu_approach_scale_multiplier_ref = &osu_approach_scale_multiplier;
 
 void OsuHitObject::drawHitResult(Graphics *g, OsuBeatmap *beatmap, Vector2 rawPos, OsuScore::HIT result, float animPercent)
 {
@@ -132,7 +136,7 @@ void OsuHitObject::update(long curPos)
 	{
 		// this calculates the default alpha and approach circle scale for playing without mods
 		float scale = (float)m_iDelta / (float)approachTime;
-		m_fApproachScale = 1 + scale * 3;
+		m_fApproachScale = 1 + scale * osu_approach_scale_multiplier.getFloat();
 
 		m_fFadeInScale = ((float)m_iDelta - (float)approachTime + (float)m_iFadeInTime) / (float)m_iFadeInTime;
 		m_fAlpha = clamp<float>(1.0f - m_fFadeInScale, 0.0f, 1.0f);
@@ -140,7 +144,10 @@ void OsuHitObject::update(long curPos)
 		m_bVisible = true;
 	}
 	else
+	{
+		m_fApproachScale = 1.0f;
 		m_bVisible = false;
+	}
 
 	if (m_hitResults.size() > 0 && engine->getTime() > m_hitResults[0].anim)
 		m_hitResults.erase(m_hitResults.begin());

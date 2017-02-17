@@ -17,6 +17,7 @@ public:
 	virtual ~OsuSpinner();
 
 	virtual void draw(Graphics *g);
+	virtual void drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr);
 	virtual void update(long curPos);
 
 	void updateStackPosition(float stackOffset) {;}
@@ -53,6 +54,8 @@ private:
 	float m_fRPM;
 
 	float m_fLastMouseAngle;
+	float m_fLastVRCursorAngle1;
+	float m_fLastVRCursorAngle2;
 	float m_fRatio;
 };
 
