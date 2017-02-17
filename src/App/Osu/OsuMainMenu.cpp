@@ -613,7 +613,7 @@ void OsuMainMenu::onUpdatePressed()
 
 void OsuMainMenu::onDonatePressed()
 {
-	env->openURLInDefaultBrowser("https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=QFLYEQNMVANJU");
+	
 }
 
 
