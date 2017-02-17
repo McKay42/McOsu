@@ -137,7 +137,7 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	m_songBrowser->setDrawBackground(false);
 	m_songBrowser->setDrawFrame(false);
 	m_songBrowser->setHorizontalScrolling(false);
-	m_songBrowser->setScrollResistance(15);
+	m_songBrowser->setScrollResistance(m_osu->isInVRMode() ? convar->getConVarByName("ui_scrollview_resistance")->getInt() : 15); // a bit shitty this check + convar, but works well enough
 
 	// beatmap database
 	m_db = new OsuBeatmapDatabase(m_osu);
@@ -1258,8 +1258,8 @@ void OsuSongBrowser2::updateLayout()
 	m_bottombar->update_pos();
 
 	// song browser
-	m_songBrowser->setPos(m_topbarRight->getPos().x, m_topbarRight->getPos().y + m_topbarRight->getSize().y + 2);
-	m_songBrowser->setSize(m_osu->getScreenWidth() - m_topbarRight->getPos().x + 1, m_osu->getScreenHeight() - m_songBrowser->getPos().y - m_bottombar->getSize().y+2);
+	m_songBrowser->setPos(m_topbarLeft->getPos().x + m_topbarLeft->getSize().x + 1, m_topbarRight->getPos().y + m_topbarRight->getSize().y + 2);
+	m_songBrowser->setSize(m_osu->getScreenWidth() - (m_topbarLeft->getPos().x + m_topbarLeft->getSize().x), m_osu->getScreenHeight() - m_songBrowser->getPos().y - m_bottombar->getSize().y+2);
 	updateSongButtonLayout();
 }
 

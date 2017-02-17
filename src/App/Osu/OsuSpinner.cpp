@@ -10,10 +10,13 @@
 #include "Engine.h"
 #include "ResourceManager.h"
 #include "SoundEngine.h"
+#include "OpenVRInterface.h"
+#include "OpenVRController.h"
 #include "Mouse.h"
 #include "ConVar.h"
 
 #include "Osu.h"
+#include "OsuVR.h"
 #include "OsuSkin.h"
 #include "OsuGameRules.h"
 
@@ -48,6 +51,8 @@ OsuSpinner::OsuSpinner(int x, int y, long time, int sampleType, long endTime, Os
 	m_fDeltaAngleOverflow = 0.0f;
 	m_fRPM = 0.0f;
 	m_fLastMouseAngle = 0.0f;
+	m_fLastVRCursorAngle1 = 0.0f;
+	m_fLastVRCursorAngle2 = 0.0f;
 	m_fRatio = 0.0f;
 
 	// spinners don't need misaims
@@ -73,7 +78,7 @@ void OsuSpinner::draw(Graphics *g)
 
 	const float globalScale = 1.0f; // adjustments
 	const float globalBaseSkinSize = 667; // the width of spinner-bottom.png in the default skin
-	const float globalBaseSize = m_beatmap->getPlayfieldSize().y + m_beatmap->getHitcircleDiameter()/2;
+	const float globalBaseSize = m_beatmap->getPlayfieldSize().y/* + m_beatmap->getHitcircleDiameter()/2*/;
 
 	const float clampedRatio = clamp<float>(m_fRatio, 0.0f, 1.0f);
 	float finishScaleRatio = clampedRatio;
@@ -226,6 +231,22 @@ void OsuSpinner::draw(Graphics *g)
 	}
 }
 
+void OsuSpinner::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
+{
+	///if (m_bVisible)
+	{
+		float clampedApproachScalePercent = m_fApproachScale - 1.0f; // goes from <m_osu_approach_scale_multiplier_ref> to 0
+		clampedApproachScalePercent = clamp<float>(clampedApproachScalePercent / m_osu_approach_scale_multiplier_ref->getFloat(), 0.0f, 1.0f); // goes from 1 to 0
+
+		Matrix4 translation;
+		translation.translate(0, 0, -clampedApproachScalePercent*vr->getApproachDistance());
+		Matrix4 finalMVP = mvp * translation;
+
+		vr->getShaderTexturedLegacyGeneric()->setUniformMatrix4fv("matrix", finalMVP);
+		draw(g);
+	}
+}
+
 void OsuSpinner::update(long curPos)
 {
 	OsuHitObject::update(curPos);
@@ -246,8 +267,7 @@ void OsuSpinner::update(long curPos)
 			return;
 		}
 
-		// HACKHACK: added 0.75 multiplier until i fix the rotation logic frametime bullshit code from opsu
-		m_fRotationsNeeded = (int)(((float)m_iObjectDuration / 1000.0f * OsuGameRules::getSpinnerSpins(m_beatmap))*0.75f) * (std::min(1.0f / m_beatmap->getOsu()->getSpeedMultiplier(), 1.0f));
+		m_fRotationsNeeded = OsuGameRules::getSpinnerRotationsForSpeedMultiplier(m_beatmap, m_iObjectDuration);
 
 		float fixedRate = /*(1.0f / convar->getConVarByName("fps_max")->getFloat())*/engine->getFrameTime();
 
@@ -265,9 +285,28 @@ void OsuSpinner::update(long curPos)
 			angleDiff = engine->getFrameTime() * 1000.0f * AUTO_MULTIPLIER * m_beatmap->getOsu()->getSpeedMultiplier();
 		else // user spin
 		{
-			Vector2 mouseDelta = engine->getMouse()->getPos() - m_beatmap->osuCoords2Pixels(Vector2(m_vRawPos.x, m_vRawPos.y));
-			float currentMouseAngle = (float) atan2(mouseDelta.y, mouseDelta.x);
+			Vector2 mouseDelta = engine->getMouse()->getPos() - m_beatmap->osuCoords2Pixels(m_vRawPos);
+			const float currentMouseAngle = (float)std::atan2(mouseDelta.y, mouseDelta.x);
 			angleDiff = (currentMouseAngle - m_fLastMouseAngle);
+
+			if (m_beatmap->getOsu()->isInVRMode())
+			{
+				Vector2 vrCursorDelta1 = m_beatmap->getOsu()->getVR()->getCursorPos1() - m_beatmap->osuCoords2VRPixels(m_vRawPos);
+				Vector2 vrCursorDelta2 = m_beatmap->getOsu()->getVR()->getCursorPos2() - m_beatmap->osuCoords2VRPixels(m_vRawPos);
+
+				const float currentVRCursorAngle1 = (float)std::atan2(vrCursorDelta1.x, vrCursorDelta1.y);
+				const float currentVRCursorAngle2 = (float)std::atan2(vrCursorDelta2.x, vrCursorDelta2.y);
+
+				angleDiff -= (currentVRCursorAngle1 - m_fLastVRCursorAngle1);
+				angleDiff -= (currentVRCursorAngle2 - m_fLastVRCursorAngle2);
+
+				if (std::abs(angleDiff) > 0.001f)
+				{
+					m_fLastVRCursorAngle1 = currentVRCursorAngle1;
+					m_fLastVRCursorAngle2 = currentVRCursorAngle2;
+				}
+			}
+
 			if (std::abs(angleDiff) > 0.001f)
 				m_fLastMouseAngle = currentMouseAngle;
 			else

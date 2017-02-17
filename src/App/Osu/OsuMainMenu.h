@@ -24,6 +24,9 @@ class CBaseUIContainer;
 class OsuMainMenu : public OsuScreen, public MouseListener
 {
 public:
+	static UString MCOSU_MAIN_BUTTON_TEXT;
+
+public:
 	friend class OsuMainMenuMainButton;
 	friend class OsuMainMenuButton;
 
@@ -66,13 +69,16 @@ private:
 
 	void onPausePressed();
 	void onUpdatePressed();
+	void onDonatePressed();
 
 	Osu *m_osu;
+
 	OsuUpdateChecker *m_updateChecker;
 	bool m_bUpdateStatus;
 	bool m_bUpdateCheckFinished;
 	float m_fUpdateStatusTime;
 	float m_fUpdateButtonAnim;
+	bool m_bHasClickedUpdate;
 
 	Vector2 m_vSize;
 	Vector2 m_vCenter;
@@ -90,6 +96,7 @@ private:
 
 	CBaseUIButton *m_pauseButton;
 	OsuUIButton *m_updateAvailableButton;
+	OsuUIButton *m_donationButton;
 
 	std::vector<UString> m_todo;
 

@@ -131,6 +131,7 @@ public:
 	UString fullSoundFilePath;
 	Image *backgroundImage;
 	long localoffset;
+	long onlineOffset;
 	int minBPM;
 	int maxBPM;
 	int numObjects;

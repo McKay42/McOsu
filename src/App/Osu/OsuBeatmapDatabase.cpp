@@ -400,7 +400,7 @@ void OsuBeatmapDatabase::loadDB(OsuFile *db)
 		bool unplayed = db->readBool();
 		unsigned long lastTimePlayed = db->readLong();
 		bool isOsz2 = db->readBool();
-		UString path = db->readString();
+		UString path = db->readString().trim(); // somehow, some beatmaps may have spaces at the start/end of their path, breaking the Windows API (e.g. https://osu.ppy.sh/s/215347), therefore the trim
 		unsigned long lastOnlineCheck = db->readLong();
 		//debugLog("onlineOffset = %i, songTitleFont = %s, unplayed = %i, lastTimePlayed = %lu, isOsz2 = %i, path = %s, lastOnlineCheck = %lu\n", onlineOffset, songTitleFont.toUtf8(), (int)unplayed, lastTimePlayed, (int)isOsz2, path.toUtf8(), lastOnlineCheck);
 
@@ -418,7 +418,6 @@ void OsuBeatmapDatabase::loadDB(OsuFile *db)
 		beatmapPath.append(path);
 		beatmapPath.append("/");
 		UString fullFilePath = beatmapPath;
-		fullFilePath.append("/");
 		fullFilePath.append(osuFileName);
 
 		// fill diff with data
@@ -454,6 +453,7 @@ void OsuBeatmapDatabase::loadDB(OsuFile *db)
 			diff->fullSoundFilePath = beatmapPath;
 			diff->fullSoundFilePath.append(diff->audioFileName);
 			diff->localoffset = localOffset;
+			diff->onlineOffset = (long)onlineOffset;
 			diff->numObjects = numCircles + numSliders + numSpinners;
 			diff->starsNoMod = numOsuStandardStars;
 			diff->ID = beatmapID;
