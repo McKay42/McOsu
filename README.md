@@ -52,6 +52,7 @@ Note that Linux support is not as polished as Windows, and some functions such a
 
 
 
--
+|
+
 Donations [here](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=QFLYEQNMVANJU)
 or [here](https://blockchain.info/address/1Ge15iP62y4uQeBUdexFymSX5UB1NQaBJK)
