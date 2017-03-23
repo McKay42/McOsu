@@ -1325,6 +1325,9 @@ float OsuBeatmap::getCS()
 
 	float CS = clamp<float>(m_selectedDifficulty->CS * m_osu->getCSDifficultyMultiplier(), 0.0f, 10.0f);
 
+	if (osu_cs_override.getFloat() >= 0.0f)
+		CS = osu_cs_override.getFloat();
+
 	if (osu_mod_minimize.getBool() && m_hitobjects.size() > 0)
 	{
 		if (m_hitobjects.size() > 0)
@@ -1333,9 +1336,6 @@ float OsuBeatmap::getCS()
 			CS *= percent;
 		}
 	}
-
-	if (osu_cs_override.getFloat() >= 0.0f)
-		CS = osu_cs_override.getFloat();
 
 	return CS;
 }
