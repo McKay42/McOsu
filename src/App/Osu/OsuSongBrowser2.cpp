@@ -5,6 +5,7 @@
 // $NoKeywords: $osusb
 //===============================================================================//
 
+#include <OsuDatabase.h>
 #include "OsuSongBrowser2.h"
 
 #include "Engine.h"
@@ -25,7 +26,6 @@
 #include "OsuHUD.h"
 #include "OsuSkin.h"
 #include "OsuBeatmap.h"
-#include "OsuBeatmapDatabase.h"
 #include "OsuBeatmapDifficulty.h"
 #include "OsuNotificationOverlay.h"
 #include "OsuModSelector.h"
@@ -128,6 +128,7 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	// build bottombar
 	m_bottombar = new CBaseUIContainer(0, 0, 0, 0, "");
 
+	///addBottombarNavButton();
 	addBottombarNavButton()->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onSelectionMods) );
 	addBottombarNavButton()->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onSelectionRandom) );
 	///addBottombarNavButton()->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser::onSelectionOptions) );
@@ -140,7 +141,7 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	m_songBrowser->setScrollResistance(m_osu->isInVRMode() ? convar->getConVarByName("ui_scrollview_resistance")->getInt() : 15); // a bit shitty this check + convar, but works well enough
 
 	// beatmap database
-	m_db = new OsuBeatmapDatabase(m_osu);
+	m_db = new OsuDatabase(m_osu);
 	m_bBeatmapRefreshScheduled = true;
 
 	// behaviour
@@ -1194,6 +1195,14 @@ void OsuSongBrowser2::updateLayout()
 	m_bottombarNavButtons[0]->setImageResourceNameOver(m_osu->getSkin()->getSelectionModsOver()->getName());
 	m_bottombarNavButtons[1]->setImageResourceName(m_osu->getSkin()->getSelectionRandom()->getName());
 	m_bottombarNavButtons[1]->setImageResourceNameOver(m_osu->getSkin()->getSelectionRandomOver()->getName());
+	/*
+	m_bottombarNavButtons[0]->setImageResourceName(m_osu->getSkin()->getSelectionMode()->getName());
+	m_bottombarNavButtons[0]->setImageResourceNameOver(m_osu->getSkin()->getSelectionModeOver()->getName());
+	m_bottombarNavButtons[1]->setImageResourceName(m_osu->getSkin()->getSelectionMods()->getName());
+	m_bottombarNavButtons[1]->setImageResourceNameOver(m_osu->getSkin()->getSelectionModsOver()->getName());
+	m_bottombarNavButtons[2]->setImageResourceName(m_osu->getSkin()->getSelectionRandom()->getName());
+	m_bottombarNavButtons[2]->setImageResourceNameOver(m_osu->getSkin()->getSelectionRandomOver()->getName());
+	*/
 	///m_bottombarNavButtons[2]->setImageResourceName(m_osu->getSkin()->getSelectionOptions()->getName());
 
 	//************************************************************************************************************************************//
@@ -1253,7 +1262,7 @@ void OsuSongBrowser2::updateLayout()
 	}
 	for (int i=0; i<m_bottombarNavButtons.size(); i++)
 	{
-		m_bottombarNavButtons[i]->setRelPosX(navBarStart + i*m_bottombarNavButtons[i]->getSize().x);
+		m_bottombarNavButtons[i]->setRelPosX((i == 0 ? navBarStart : 0) + (i > 0 ? m_bottombarNavButtons[i-1]->getRelPos().x + m_bottombarNavButtons[i-1]->getSize().x : 0));
 	}
 	m_bottombar->update_pos();
 
@@ -1316,7 +1325,7 @@ void OsuSongBrowser2::onDatabaseLoadingFinished()
 		m_visibleSongButtons.push_back(songButton);
 	}
 
-	std::vector<OsuBeatmapDatabase::Collection> collections = m_db->getCollections();
+	std::vector<OsuDatabase::Collection> collections = m_db->getCollections();
 	for (int i=0; i<collections.size(); i++)
 	{
 		std::vector<OsuUISongBrowserButton*> children;

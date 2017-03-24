@@ -46,12 +46,18 @@ public:
 
 	inline float getCursorDist1() {return m_fPlayfieldCursorDist1;} // 3d distance from controller to virtual 2d cursor on playfield
 	inline float getCursorDist2() {return m_fPlayfieldCursorDist2;} // 3d distance from controller to virtual 2d cursor on playfield
+	inline float getCursorDistSigned1() {return m_fPlayfieldCursorDistSigned1;} // 3d distance from controller to virtual 2d cursor on playfield
+	inline float getCursorDistSigned2() {return m_fPlayfieldCursorDistSigned2;} // 3d distance from controller to virtual 2d cursor on playfield
 
 	unsigned short getHapticPulseStrength();
+	unsigned short getSliderHapticPulseStrength();
 
 	inline bool isVirtualCursorOnScreen() {return m_bScreenIntersection;}
+	inline bool isUIActive() {return m_bIsUIActive;} // if the user is currently interacting with the UI (this includes the laser touching an element!)
 
 private:
+	static const char *OSUVR_CONFIG_FILE_NAME;
+
 	static float intersectRayPlane(Vector3 rayOrigin, Vector3 rayDir, Vector3 planeOrigin, Vector3 planeNormal);
 
 	void drawVRCursors(Graphics *g, Matrix4 &mvp);
@@ -59,12 +65,14 @@ private:
 	void updateLayout();
 
 	void save();
+	void resetMatrices();
 
 	float getDrawScale();
 	inline Vector2 getVirtualScreenSize() {return m_vVirtualScreenSize;}
 
 	void onScreenMatrixChange(UString oldValue, UString newValue);
 	void onPlayfieldMatrixChange(UString oldValue, UString newValue);
+	void onMatrixResetClicked();
 	void onKeyboardButtonClicked();
 	void onOffsetUpClicked();
 	void onOffsetDownClicked();
@@ -104,6 +112,8 @@ private:
 	Vector2 m_vPlayfieldCursorPos2;
 	float m_fPlayfieldCursorDist1;
 	float m_fPlayfieldCursorDist2;
+	float m_fPlayfieldCursorDistSigned1;
+	float m_fPlayfieldCursorDistSigned2;
 
 	float m_fAspect;
 	Vector2 m_vVirtualScreenSize;
@@ -114,9 +124,13 @@ private:
 	bool m_bScaleCheck;
 	bool m_bIsPlayerScalingPlayfield;
 	float m_fScaleBackup;
+	float m_fDefaultScreenScale;
+	float m_fDefaultPlayfieldScale;
 
+	bool m_bIsUIActive;
 	std::vector<OsuVRUIElement*> m_uiElements;
 	OsuVRUIElement *m_keyboardButton;
+	OsuVRUIElement *m_matrixResetButton;
 	OsuVRUIElement *m_offsetDownButton;
 	OsuVRUIElement *m_offsetUpButton;
 	OsuVRUISlider *m_volumeSlider;

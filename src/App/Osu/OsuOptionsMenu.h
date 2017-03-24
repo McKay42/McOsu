@@ -54,6 +54,8 @@ private:
 	virtual void updateLayout();
 	virtual void onBack();
 
+	static const char *OSU_CONFIG_FILE_NAME;
+
 	void updateOsuFolder();
 	void updateName();
 	void updateVRRenderTargetResolutionLabel();
@@ -128,6 +130,7 @@ private:
 	CBaseUILabel *m_vrRenderTargetResolutionLabel;
 	CBaseUISlider *m_vrApproachDistanceSlider;
 	CBaseUISlider *m_vrVibrationStrengthSlider;
+	CBaseUISlider *m_vrSliderVibrationStrengthSlider;
 	CBaseUISlider *m_vrHudDistanceSlider;
 	CBaseUISlider *m_vrHudScaleSlider;
 

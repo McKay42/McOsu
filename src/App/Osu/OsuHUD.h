@@ -60,6 +60,7 @@ private:
 	void drawAccuracy(Graphics *g, float accuracy);
 	void drawCombo(Graphics *g, int combo);
 	void drawScore(Graphics *g, int score);
+	void drawHP(Graphics *g, float health);
 
 	void drawSkip(Graphics *g);
 	void drawWarningArrows(Graphics *g, float hitcircleDiameter = 0.0f);

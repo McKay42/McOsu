@@ -15,7 +15,10 @@
 #include "Osu.h"
 #include "OsuSkin.h"
 #include "OsuGameRules.h"
+#include "OsuBeatmapStandard.h"
 #include "OsuHUD.h"
+
+ConVar osu_hitresult_draw_300s("osu_hitresult_draw_300s", false);
 
 ConVar osu_hitresult_scale("osu_hitresult_scale", 1.0f);
 ConVar osu_hitresult_duration("osu_hitresult_duration", 1.25f);
@@ -28,7 +31,7 @@ ConVar osu_mod_target_50_percent("osu_mod_target_50_percent", 0.95f);
 
 ConVar *OsuHitObject::m_osu_approach_scale_multiplier_ref = &osu_approach_scale_multiplier;
 
-void OsuHitObject::drawHitResult(Graphics *g, OsuBeatmap *beatmap, Vector2 rawPos, OsuScore::HIT result, float animPercent)
+void OsuHitObject::drawHitResult(Graphics *g, OsuBeatmapStandard *beatmap, Vector2 rawPos, OsuScore::HIT result, float animPercent)
 {
 	drawHitResult(g, beatmap->getSkin(), beatmap->getHitcircleDiameter(), beatmap->getRawHitcircleDiameter(), rawPos, result, animPercent);
 }
@@ -52,11 +55,9 @@ void OsuHitObject::drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiam
 		case OsuScore::HIT::HIT_100:
 			hitImageScale = (rawHitcircleDiameter / (128.0f * (skin->isHit1002x() ? 2.0f : 1.0f))) * osuCoordScaleMultiplier;
 			break;
-		/*
 		case OsuScore::HIT::HIT_300:
 			hitImageScale = (rawHitcircleDiameter / (128.0f * (skin->isHit3002x() ? 2.0f : 1.0f))) * osuCoordScaleMultiplier;
 			break;
-		*/
 		}
 		g->scale(hitImageScale*osu_hitresult_scale.getFloat(), hitImageScale*osu_hitresult_scale.getFloat());
 		g->translate(rawPos.x, rawPos.y);
@@ -72,11 +73,10 @@ void OsuHitObject::drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiam
 		case OsuScore::HIT::HIT_100:
 			g->drawImage(skin->getHit100());
 			break;
-		/*
 		case OsuScore::HIT::HIT_300:
-			g->drawImage(skin->getHit300());
+			if (osu_hitresult_draw_300s.getBool())
+				g->drawImage(skin->getHit300());
 			break;
-		*/
 		}
 	g->popTransform();
 }
@@ -116,9 +116,16 @@ OsuHitObject::OsuHitObject(long time, int sampleType, int comboNumber, int color
 
 void OsuHitObject::draw(Graphics *g)
 {
-	for (int i=0; i<m_hitResults.size(); i++)
+	if (m_hitResults.size() > 0)
 	{
-		drawHitResult(g, m_beatmap, m_beatmap->osuCoords2Pixels(m_hitResults[i].rawPos), m_hitResults[i].result, clamp<float>(((m_hitResults[i].anim-engine->getTime()) / osu_hitresult_duration.getFloat()), 0.0f, 1.0f));
+		OsuBeatmapStandard *beatmapStd = dynamic_cast<OsuBeatmapStandard*>(m_beatmap);
+		if (beatmapStd != NULL)
+		{
+			for (int i=0; i<m_hitResults.size(); i++)
+			{
+				drawHitResult(g, beatmapStd, beatmapStd->osuCoords2Pixels(m_hitResults[i].rawPos), m_hitResults[i].result, clamp<float>(((m_hitResults[i].anim-engine->getTime()) / osu_hitresult_duration.getFloat()), 0.0f, 1.0f));
+			}
+		}
 	}
 }
 
