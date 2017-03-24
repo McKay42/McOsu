@@ -13,7 +13,7 @@
 
 class Osu;
 class OsuBeatmap;
-class OsuBeatmapDatabase;
+class OsuDatabase;
 class OsuBeatmapDifficulty;
 
 class OsuUIContextMenu;
@@ -147,7 +147,7 @@ private:
 	CBaseUIScrollView *m_songBrowser;
 
 	// beatmap database
-	OsuBeatmapDatabase *m_db;
+	OsuDatabase *m_db;
 	std::vector<OsuBeatmap*> m_beatmaps;
 	std::vector<OsuUISongBrowserButton*> m_visibleSongButtons;
 	std::vector<OsuUISongBrowserSongButton*> m_songButtons;

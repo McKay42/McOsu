@@ -14,6 +14,7 @@ class OsuSliderCurve;
 class OsuSliderCurveEqualDistanceMulti;
 
 class Shader;
+class VertexBuffer;
 class VertexArrayObject;
 
 class OsuSlider : public OsuHitObject
@@ -28,11 +29,13 @@ public:
 	};
 
 public:
-	OsuSlider(char type, int repeat, float pixelLength, std::vector<Vector2> points, std::vector<int> hitSounds, std::vector<float> ticks, float sliderTime, float sliderTimeWithoutRepeats, long time, int sampleType, int comboNumber, int colorCounter, OsuBeatmap *beatmap);
+	OsuSlider(char type, int repeat, float pixelLength, std::vector<Vector2> points, std::vector<int> hitSounds, std::vector<float> ticks, float sliderTime, float sliderTimeWithoutRepeats, long time, int sampleType, int comboNumber, int colorCounter, OsuBeatmapStandard *beatmap);
 	virtual ~OsuSlider();
 
 	virtual void draw(Graphics *g);
 	virtual void draw2(Graphics *g);
+	void draw2(Graphics *g, bool drawApproachCircle);
+	virtual void drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr);
 	virtual void update(long curPos);
 
 	void updateStackPosition(float stackOffset);
@@ -41,8 +44,10 @@ public:
 	Vector2 getOriginalRawPosAt(long pos);
 	inline Vector2 getAutoCursorPos(long curPos) {return m_vCurPoint;}
 
-	virtual void onClickEvent(Vector2 cursorPos, std::vector<OsuBeatmap::CLICK> &clicks);
+	virtual void onClickEvent(std::vector<OsuBeatmap::CLICK> &clicks);
 	virtual void onReset(long curPos);
+
+	void rebuildVertexBuffer();
 
 	inline int getRepeat() const {return m_iRepeat;}
 	inline std::vector<Vector2> getRawPoints() const {return m_points;}
@@ -52,9 +57,14 @@ private:
 	static ConVar *m_osu_playfield_mirror_horizontal_ref;
 	static ConVar *m_osu_playfield_mirror_vertical_ref;
 	static ConVar *m_osu_playfield_rotation_ref;
+	static ConVar *m_osu_mod_fps_ref;
+	static ConVar *m_osu_slider_border_size_multiplier_ref;
+	static ConVar *m_epilepsy;
 
 	void drawStartCircle(Graphics *g, float alpha);
 	void drawEndCircle(Graphics *g, float alpha, float sliderSnake = 1.0f);
+	void drawBody(Graphics *g, float alpha, float from, float to);
+	void drawBodyVR(Graphics *g, OsuVR *vr, Matrix4 &mvp, float alpha, float from, float to);
 
 	void updateAnimations(long curPos);
 
@@ -64,6 +74,8 @@ private:
 	void onSliderBreak();
 
 	float getT(long pos, bool raw);
+
+	OsuBeatmapStandard *m_beatmap;
 
 	OsuSliderCurve *m_curve;
 
@@ -124,6 +136,11 @@ private:
 
 	//TEMP:
 	float m_fSliderBreakRapeTime;
+
+	bool m_bOnHitVRLeftControllerHapticFeedback;
+
+	VertexBuffer *m_vb;
+	VertexBuffer *m_vbVR2;
 };
 
 
@@ -282,6 +299,7 @@ private:
 
 
 
+/*
 class BezierApproximator
 {
 public:
@@ -302,5 +320,6 @@ private:
 	std::vector<Vector2> m_subdivisionBuffer1;
 	std::vector<Vector2> m_subdivisionBuffer2;
 };
+*/
 
 #endif

@@ -25,6 +25,7 @@ public:
 	void update();
 
 	void onKeyDown(KeyboardEvent &e);
+	void onKeyUp(KeyboardEvent &e);
 	void onChar(KeyboardEvent &e);
 
 	void onResolutionChange(Vector2 newResolution);
@@ -61,6 +62,8 @@ private:
 	bool m_bInitialWarningArrowFlyIn;
 
 	bool m_bContinueEnabled;
+	bool m_bClick1Down;
+	bool m_bClick2Down;
 };
 
 #endif

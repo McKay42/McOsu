@@ -5,7 +5,7 @@
 // $NoKeywords: $osumain
 //===============================================================================//
 
-#include "OsuMainMenu.h"
+#include "OsuUpdateHandler.h"
 
 #include "Engine.h"
 #include "SoundEngine.h"
@@ -20,17 +20,17 @@
 #include "OsuSkin.h"
 #include "OsuBeatmap.h"
 #include "OsuBeatmapDifficulty.h"
-#include "OsuUpdateChecker.h"
+#include "OsuMainMenu.h"
 
 #include "OsuUIButton.h"
 
 #include "CBaseUIContainer.h"
 #include "CBaseUIButton.h"
 
-#define MCOSU_VERSION "Alpha"
-#define MCOSU_BANNER "-Animated Skins are not working yet-"
-#define MCOSU_MAIN_BUTTON "McOsu!"
-#define MCOSU_MAIN_BUTTON_BACK "by McKay"
+#define MCOSU_VERSION_TEXT "Alpha"
+#define MCOSU_BANNER_TEXT "-SteamVR Bug! Random freezes on controller vibration-"
+UString OsuMainMenu::MCOSU_MAIN_BUTTON_TEXT = UString("McOsu");
+#define MCOSU_MAIN_BUTTON_BACK_TEXT "by McKay"
 
 
 
@@ -95,6 +95,9 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen()
 {
 	m_osu = osu;
 
+	if (m_osu->isInVRMode())
+		MCOSU_MAIN_BUTTON_TEXT.append(" VR");
+
 	// engine settings
 	engine->getMouse()->addListener(this);
 
@@ -112,13 +115,13 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen()
 	m_fMainMenuAnim2Target = 0.0f;
 	m_fMainMenuAnim3Target = 0.0f;
 
-	m_updateChecker = new OsuUpdateChecker();
-	m_bUpdateStatus = false;
-	m_bUpdateCheckFinished = false;
 	m_fUpdateStatusTime = 0.0f;
+	m_fUpdateButtonTextTime = 0.0f;
 	m_fUpdateButtonAnim = 0.0f;
+	m_fUpdateButtonAnimTime = 0.0f;
+	m_bHasClickedUpdate = false;
 
-	m_container = new CBaseUIContainer(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight(), "");
+	m_container = new CBaseUIContainer(-1, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight(), "");
 	m_mainButton = new OsuMainMenuMainButton(this, 0, 0, 1, 1, "", "");
 
 	m_container->addBaseUIElement(m_mainButton);
@@ -138,21 +141,30 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen()
 	m_updateAvailableButton->setColor(0x2200ff00);
 	m_updateAvailableButton->setTextColor(0x22ffffff);
 
-	m_todo.push_back("- Beatmap Skins");
-	m_todo.push_back("- HP Drain");
-	m_todo.push_back("- Skin Anim.");
-	m_todo.push_back("- Skin Prefix");
-	m_todo.push_back("- Replays");
-	m_todo.push_back("- Multiplayer");
+	m_githubButton = new OsuUIButton(m_osu, 0, 0, 0, 0, "", "Github");
+	m_githubButton->setUseDefaultSkin();
+	m_githubButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuMainMenu::onGithubPressed) );
+	m_githubButton->setColor(0x2923b9ff);
+	m_githubButton->setTextBrightColor(0x55172e62);
+	m_githubButton->setTextDarkColor(0x11ffffff);
+	m_githubButton->setAlphaAddOnHover(0.5f);
+	m_container->addBaseUIElement(m_githubButton);
 
-	m_updateChecker->checkForUpdates();
+	m_versionButton = new CBaseUIButton(0, 0, 0, 0, "", "");
+	UString versionString = MCOSU_VERSION_TEXT;
+	versionString.append(" ");
+	versionString.append(Osu::version->getString());
+	m_versionButton->setText(versionString);
+	m_versionButton->setDrawBackground(false);
+	m_versionButton->setDrawFrame(false);
+	m_versionButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuMainMenu::onVersionPressed) );
+	m_container->addBaseUIElement(m_versionButton);
 }
 
 OsuMainMenu::~OsuMainMenu()
 {
 	SAFE_DELETE(m_container);
 	SAFE_DELETE(m_updateAvailableButton);
-	SAFE_DELETE(m_updateChecker);
 }
 
 void OsuMainMenu::draw(Graphics *g)
@@ -160,7 +172,7 @@ void OsuMainMenu::draw(Graphics *g)
 	if (!m_bVisible)
 		return;
 
-	McFont *smallFont = engine->getResourceManager()->getFont("FONT_DEFAULT");
+	///McFont *smallFont = engine->getResourceManager()->getFont("FONT_DEFAULT");
 	McFont *titleFont = m_osu->getTitleFont();
 
 	// main button stuff
@@ -183,57 +195,46 @@ void OsuMainMenu::draw(Graphics *g)
 	Rect mainButtonRect = Rect(m_vCenter.x - size.x/2.0f - m_fCenterOffsetAnim, m_vCenter.y - size.y/2.0f, size.x, size.y);
 
 	// draw banner
-	/*
-	float bannerStringWidth = smallFont->getStringWidth(MCOSU_BANNER);
-	int bannerDiff = 20;
-	int bannerMargin = 5;
-	int numBanners = (int)std::round(m_osu->getScreenWidth() / (bannerStringWidth + bannerDiff)) + 2;
+	if (m_osu->isInVRMode())
+	{
+		McFont *bannerFont = m_osu->getSubTitleFont();
+		float bannerStringWidth = bannerFont->getStringWidth(MCOSU_BANNER_TEXT);
+		int bannerDiff = 20;
+		int bannerMargin = 5;
+		int numBanners = (int)std::round(m_osu->getScreenWidth() / (bannerStringWidth + bannerDiff)) + 2;
 
-	g->setColor(0xff777777);
-	g->pushTransform();
-	g->translate(1, 1);
-	for (int i=-1; i<numBanners; i++)
-	{
+		g->setColor(0xffee7777);
 		g->pushTransform();
-		g->translate(i*bannerStringWidth + i*bannerDiff + fmod(engine->getTime()*30, bannerStringWidth + bannerDiff), smallFont->getHeight() + bannerMargin);
-		g->drawString(smallFont, MCOSU_BANNER);
+		g->translate(1, 1);
+		for (int i=-1; i<numBanners; i++)
+		{
+			g->pushTransform();
+			g->translate(i*bannerStringWidth + i*bannerDiff + fmod(engine->getTime()*30, bannerStringWidth + bannerDiff), bannerFont->getHeight() + bannerMargin);
+			g->drawString(bannerFont, MCOSU_BANNER_TEXT);
+			g->popTransform();
+		}
 		g->popTransform();
+		g->setColor(0xff555555);
+		for (int i=-1; i<numBanners; i++)
+		{
+			g->pushTransform();
+			g->translate(i*bannerStringWidth + i*bannerDiff + fmod(engine->getTime()*30, bannerStringWidth + bannerDiff), bannerFont->getHeight() + bannerMargin);
+			g->drawString(bannerFont, MCOSU_BANNER_TEXT);
+			g->popTransform();
+		}
 	}
-	g->popTransform();
-	g->setColor(0xff333333);
-	for (int i=-1; i<numBanners; i++)
-	{
-		g->pushTransform();
-		g->translate(i*bannerStringWidth + i*bannerDiff + fmod(engine->getTime()*30, bannerStringWidth + bannerDiff), smallFont->getHeight() + bannerMargin);
-		g->drawString(smallFont, MCOSU_BANNER);
-		g->popTransform();
-	}
-	*/
-
-	// draw todolist
-	g->setColor(0xff777777);
-	g->pushTransform();
-	g->translate(7, m_osu->getScreenHeight()/2 - smallFont->getHeight()/2);
-	g->drawString(smallFont, "TODO:");
-	g->translate(0, 10);
-	for (int i=0; i<m_todo.size(); i++)
-	{
-		g->translate(0, smallFont->getHeight()+5);
-		g->drawString(smallFont, m_todo[i]);
-	}
-	g->popTransform();
 
 	// draw container
 	m_container->draw(g);
 
 	// draw update check button
-	if (m_bUpdateStatus)
+	if (m_osu->getUpdateHandler()->getStatus() == OsuUpdateHandler::STATUS::STATUS_SUCCESS_INSTALLATION)
 	{
 		g->push3DScene(Rect(m_updateAvailableButton->getPos().x, m_updateAvailableButton->getPos().y, m_updateAvailableButton->getSize().x, m_updateAvailableButton->getSize().y));
 		g->rotate3DScene(m_fUpdateButtonAnim*360.0f, 0, 0);
 	}
 	m_updateAvailableButton->draw(g);
-	if (m_bUpdateStatus)
+	if (m_osu->getUpdateHandler()->getStatus() == OsuUpdateHandler::STATUS::STATUS_SUCCESS_INSTALLATION)
 		g->pop3DScene();
 
 	// draw main button
@@ -243,19 +244,19 @@ void OsuMainMenu::draw(Graphics *g)
 		g->rotate3DScene(m_fMainMenuAnim1*360.0f, m_fMainMenuAnim2*360.0f, m_fMainMenuAnim3*360.0f);
 	}
 
-		g->setColor(0xff000000);
-		g->fillRect(mainButtonRect.getX(), mainButtonRect.getY(), mainButtonRect.getWidth(), mainButtonRect.getHeight());
-		g->setColor(0xffffffff);
-		g->drawRect(mainButtonRect.getX(), mainButtonRect.getY(), mainButtonRect.getWidth(), mainButtonRect.getHeight());
+	g->setColor(0xff000000);
+	g->fillRect(mainButtonRect.getX(), mainButtonRect.getY(), mainButtonRect.getWidth(), mainButtonRect.getHeight());
+	g->setColor(0xffffffff);
+	g->drawRect(mainButtonRect.getX(), mainButtonRect.getY(), mainButtonRect.getWidth(), mainButtonRect.getHeight());
 
-		float fontScale = 1.0f - pulseSub + m_fSizeAddAnim;
+	float fontScale = 1.0f - pulseSub + m_fSizeAddAnim;
 
-		g->setColor(0xffffffff);
-		g->pushTransform();
-		g->scale(fontScale, fontScale);
-		g->translate(m_vCenter.x - m_fCenterOffsetAnim - (titleFont->getStringWidth(MCOSU_MAIN_BUTTON)/2.0f)*fontScale, m_vCenter.y + (titleFont->getHeight()*fontScale)/2.25f);
-		g->drawString(titleFont, MCOSU_MAIN_BUTTON);
-		g->popTransform();
+	g->setColor(0xffffffff);
+	g->pushTransform();
+	g->scale(fontScale, fontScale);
+	g->translate(m_vCenter.x - m_fCenterOffsetAnim - (titleFont->getStringWidth(MCOSU_MAIN_BUTTON_TEXT)/2.0f)*fontScale, m_vCenter.y + (titleFont->getHeight()*fontScale)/2.25f);
+	g->drawString(titleFont, MCOSU_MAIN_BUTTON_TEXT);
+	g->popTransform();
 
 	if (m_fMainMenuAnim > 0.0f && m_fMainMenuAnim != 1.0f)
 	{
@@ -265,28 +266,12 @@ void OsuMainMenu::draw(Graphics *g)
 			g->setColor(0xffffffff);
 			g->pushTransform();
 			g->scale(fontScale, fontScale);
-			g->translate(m_vCenter.x - m_fCenterOffsetAnim - (titleFont->getStringWidth(MCOSU_MAIN_BUTTON_BACK)/2.0f)*fontScale, m_vCenter.y + ((titleFont->getHeight()*fontScale)/2.25f)*4.0f);
-			g->drawString(titleFont, MCOSU_MAIN_BUTTON_BACK);
+			g->translate(m_vCenter.x - m_fCenterOffsetAnim - (titleFont->getStringWidth(MCOSU_MAIN_BUTTON_BACK_TEXT)/2.0f)*fontScale, m_vCenter.y + ((titleFont->getHeight()*fontScale)/2.25f)*4.0f);
+			g->drawString(titleFont, MCOSU_MAIN_BUTTON_BACK_TEXT);
 			g->popTransform();
 		}
 		g->pop3DScene();
 	}
-
-	drawVersionInfo(g);
-}
-
-void OsuMainMenu::drawVersionInfo(Graphics *g)
-{
-	UString versionString = MCOSU_VERSION;
-	versionString.append(" ");
-	versionString.append(Osu::version->getString());
-	McFont *versionFont = engine->getResourceManager()->getFont("FONT_DEFAULT");
-
-	g->setColor(0xffffffff);
-	g->pushTransform();
-	g->translate(7, m_osu->getScreenHeight() - 7);
-	g->drawString(versionFont, versionString);
-	g->popTransform();
 }
 
 void OsuMainMenu::update()
@@ -335,25 +320,47 @@ void OsuMainMenu::update()
 		animMainButton();
 	}
 
-	// handle update checker
-	if (!m_bUpdateCheckFinished && m_updateChecker->isReady())
+	// handle update checker and status text
+	switch (m_osu->getUpdateHandler()->getStatus())
 	{
-		m_bUpdateCheckFinished = true;
-		m_bUpdateStatus = m_updateChecker->isUpdateAvailable();
-		if (m_bUpdateStatus)
+	case OsuUpdateHandler::STATUS::STATUS_UP_TO_DATE:
+		if (m_updateAvailableButton->isVisible())
 		{
+			m_updateAvailableButton->setText("");
+			m_updateAvailableButton->setVisible(false);
+		}
+		break;
+	case OsuUpdateHandler::STATUS::STATUS_CHECKING_FOR_UPDATE:
+		m_updateAvailableButton->setText("Checking for updates ...");
+		break;
+	case OsuUpdateHandler::STATUS::STATUS_DOWNLOADING_UPDATE:
+		m_updateAvailableButton->setText("Downloading ...");
+		break;
+	case OsuUpdateHandler::STATUS::STATUS_INSTALLING_UPDATE:
+		m_updateAvailableButton->setText("Installing ...");
+		break;
+	case OsuUpdateHandler::STATUS::STATUS_SUCCESS_INSTALLATION:
+		if (engine->getTime() > m_fUpdateButtonTextTime && anim->isAnimating(&m_fUpdateButtonAnim) && m_fUpdateButtonAnim > 0.175f)
+		{
+			m_fUpdateButtonTextTime = m_fUpdateButtonAnimTime;
+
 			m_updateAvailableButton->setColor(0xff00ff00);
 			m_updateAvailableButton->setTextColor(0xffffffff);
-			m_updateAvailableButton->setText(">>> Update available on Github! <<<");
 
-			m_fUpdateStatusTime = engine->getTime() + 0.5f;
+			if (m_updateAvailableButton->getText().find("ready") != -1)
+				m_updateAvailableButton->setText("Click here to restart now!");
+			else
+				m_updateAvailableButton->setText("A new version of McOsu is ready!");
 		}
-		else
-			m_updateAvailableButton->setVisible(false);
+		break;
+	case OsuUpdateHandler::STATUS::STATUS_ERROR:
+		m_updateAvailableButton->setText("Update Error! Click to retry ...");
+		break;
 	}
-	if (m_bUpdateStatus && engine->getTime() > m_fUpdateStatusTime)
+
+	if (m_osu->getUpdateHandler()->getStatus() == OsuUpdateHandler::STATUS::STATUS_SUCCESS_INSTALLATION && engine->getTime() > m_fUpdateButtonAnimTime)
 	{
-		m_fUpdateStatusTime = engine->getTime() + 4.0f;
+		m_fUpdateButtonAnimTime = engine->getTime() + 3.0f;
 		m_fUpdateButtonAnim = 0.0f;
 		anim->moveQuadInOut(&m_fUpdateButtonAnim, 1.0f, 0.5f, true);
 	}
@@ -388,6 +395,9 @@ void OsuMainMenu::onKeyDown(KeyboardEvent &e)
 
 void OsuMainMenu::onMiddleChange(bool down)
 {
+	if (!m_bVisible) return;
+
+	// debug anims
 	if (down && !anim->isAnimating(&m_fMainMenuAnim) && !m_bMenuElementsVisible)
 	{
 		animMainButton();
@@ -428,6 +438,12 @@ void OsuMainMenu::updateLayout()
 	m_updateAvailableButton->setSize(375, 50);
 	m_updateAvailableButton->setPos(m_osu->getScreenWidth()/2 - m_updateAvailableButton->getSize().x/2, m_osu->getScreenHeight() - m_updateAvailableButton->getSize().y - 10);
 
+	m_githubButton->setSize(100, 50);
+	m_githubButton->setRelPos(5, m_osu->getScreenHeight()/2.0f - m_githubButton->getSize().y/2.0f);
+
+	m_versionButton->setSizeToContent(8, 8);
+	m_versionButton->setRelPos(-1, m_osu->getScreenSize().y - m_versionButton->getSize().y);
+
 	m_mainButton->setRelPos(m_vCenter - m_vSize/2.0f - Vector2(m_fCenterOffsetAnim, 0.0f));
 	m_mainButton->setSize(m_vSize);
 
@@ -447,7 +463,7 @@ void OsuMainMenu::updateLayout()
 		m_menuElements[i]->setSize(m_mainButton->getSize().x + menuElementExtraWidth*offsetPercent - 2.0f*menuElementExtraWidth*(1.0f - offsetPercent), menuElementHeight);
 	}
 
-	m_container->setSize(m_osu->getScreenSize());
+	m_container->setSize(m_osu->getScreenSize() + Vector2(1,1));
 	m_container->update_pos();
 }
 
@@ -571,11 +587,20 @@ void OsuMainMenu::onPausePressed()
 
 void OsuMainMenu::onUpdatePressed()
 {
-	if (m_bUpdateCheckFinished && m_bUpdateStatus)
-	{
-		env->openURLInDefaultBrowser(OsuUpdateChecker::GITHUB_RELEASE_DOWNLOAD_URL);
-		env->minimize();
-	}
+	if (m_osu->getUpdateHandler()->getStatus() == OsuUpdateHandler::STATUS::STATUS_SUCCESS_INSTALLATION)
+		engine->restart();
+	else if (m_osu->getUpdateHandler()->getStatus() == OsuUpdateHandler::STATUS::STATUS_ERROR)
+		m_osu->getUpdateHandler()->checkForUpdates();
+}
+
+void OsuMainMenu::onGithubPressed()
+{
+	env->openURLInDefaultBrowser("https://github.com/McKay42/McOsu/");
+}
+
+void OsuMainMenu::onVersionPressed()
+{
+	m_osu->toggleChangelog();
 }
 
 

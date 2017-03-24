@@ -1,6 +1,6 @@
 //================ Copyright (c) 2016, PG, All rights reserved. =================//
 //
-// Purpose:		difficulty file loader and container
+// Purpose:		beatmap file loader and container (also generates hitobjects)
 //
 // $NoKeywords: $osudiff
 //===============================================================================//
@@ -13,9 +13,10 @@
 #include "File.h"
 
 #include "Osu.h"
-#include "OsuNotificationOverlay.h"
-#include "OsuGameRules.h"
 #include "OsuSkin.h"
+#include "OsuGameRules.h"
+#include "OsuBeatmapStandard.h"
+#include "OsuNotificationOverlay.h"
 
 #include "OsuHitObject.h"
 #include "OsuCircle.h"
@@ -24,6 +25,8 @@
 
 ConVar osu_mod_random("osu_mod_random", false);
 ConVar osu_show_approach_circle_on_first_hidden_object("osu_show_approach_circle_on_first_hidden_object", true);
+
+
 
 class BackgroundImagePathLoader : public Resource
 {
@@ -69,6 +72,8 @@ private:
 	bool m_bDead;
 };
 
+
+
 OsuBeatmapDifficulty::OsuBeatmapDifficulty(Osu *osu, UString filepath, UString folder)
 {
 	m_osu = osu;
@@ -92,11 +97,13 @@ OsuBeatmapDifficulty::OsuBeatmapDifficulty(Osu *osu, UString filepath, UString f
 	sliderTickRate = 1;
 
 	previewTime = 0;
+	lastModificationTime = 0;
 	mode = 0;
 	lengthMS = 0;
 
 	backgroundImage = NULL;
 	localoffset = 0;
+	onlineOffset = 0;
 	minBPM = 0;
 	maxBPM = 0;
 	numObjects = 0;
@@ -137,10 +144,6 @@ bool OsuBeatmapDifficulty::loadMetadataRaw()
 	File file(m_sFilePath);
 	if (!file.canRead())
 	{
-		//UString errorMessage = "Error: Couldn't load beatmap file";
-		//errorMessage.append(m_sFilePath);
-		//engine->showMessageError("Error", errorMessage);
-		///m_osu->getNotificationOverlay()->addNotification(errorMessage, 0xffff0000);
 		debugLog("Osu Error: Couldn't fopen() file %s\n", m_sFilePath.toUtf8());
 		return false;
 	}
@@ -376,7 +379,7 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 	unload();
 	combocolors = std::vector<Color>();
 	loadMetadataRaw();
-	timingpoints = std::vector<TIMINGPOINT>();
+	timingpoints = std::vector<TIMINGPOINT>(); // delete basic timingpoints which just got loaded by loadMetadataRaw(), just so we have a clean start
 
 	// open osu file
 	File file(m_sFilePath);
@@ -503,14 +506,6 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 					}
 					else if (type & 0x2) // slider
 					{
-						// infinity sanity check (this only exists because of https://osu.ppy.sh/b/1029976)
-						// not a very elegant check, but it does the job
-						if (curLine.find("E") != std::string::npos || curLine.find("e") != std::string::npos)
-						{
-							debugLog("Bullshit slider in beatmap: %s\n\ncurLine = %s\n", m_sFilePath.toUtf8(), curLineChar);
-							continue;
-						}
-
 						UString curLineString = UString(curLineChar);
 						std::vector<UString> tokens = curLineString.split(",");
 						if (tokens.size() < 8)
@@ -536,7 +531,11 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 						for (int i=1; i<sliderTokens.size(); i++)
 						{
 							std::vector<UString> sliderXY = sliderTokens[i].split(":");
-							if (sliderXY.size() != 2)
+
+							// array size check
+							// infinity sanity check (this only exists because of https://osu.ppy.sh/b/1029976)
+							// not a very elegant check, but it does the job
+							if (sliderXY.size() != 2 || sliderXY[0].find("E") != -1 || sliderXY[0].find("e") != -1 || sliderXY[1].find("E") != -1 || sliderXY[1].find("e") != -1)
 							{
 								debugLog("Invalid slider positions: %s\n\nIn Beatmap: %s\n", curLineChar, m_sFilePath.toUtf8());
 								continue;
@@ -549,7 +548,7 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 						SLIDER s;
 						s.type = sliderTokens[0][0];
 						s.repeat = (int)tokens[6].toFloat();
-						s.pixelLength = tokens[7].toFloat();
+						s.pixelLength = clamp<float>(tokens[7].toFloat(), -sanityRange, sanityRange);
 						s.time = time;
 						s.sampleType = hitSound;
 						s.number = comboNumber++;
@@ -644,53 +643,17 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 		{
 			float tickTOffset = 1.0f / (tickCount + 1);
 			float t = tickTOffset;
-			for (int i = 0; i < tickCount; i++, t += tickTOffset)
+			for (int i=0; i<tickCount; i++, t+=tickTOffset)
 			{
 				s->ticks.push_back(t);
 			}
 		}
 	}
 
-	// build all hitobjects
-	for (int i=0; i<hitcircles.size(); i++)
-	{
-		OsuBeatmapDifficulty::HITCIRCLE *c = &hitcircles[i];
-
-		if (osu_mod_random.getBool())
-		{
-			c->x = clamp<int>(c->x - (rand() % OsuGameRules::OSU_COORD_WIDTH) / 8, 0, OsuGameRules::OSU_COORD_WIDTH);
-			c->y = clamp<int>(c->y - (rand() & OsuGameRules::OSU_COORD_HEIGHT) / 8, 0, OsuGameRules::OSU_COORD_HEIGHT);
-		}
-
-		hitobjects->push_back(new OsuCircle(c->x, c->y, c->time, c->sampleType, c->number, c->colorCounter, beatmap));
-	}
-	for (int i=0; i<sliders.size(); i++)
-	{
-		OsuBeatmapDifficulty::SLIDER *s = &sliders[i];
-
-		if (osu_mod_random.getBool())
-		{
-			for (int p=0; p<s->points.size(); p++)
-			{
-				s->points[p].x = clamp<int>(s->points[p].x - (rand() % OsuGameRules::OSU_COORD_WIDTH) / 3, 0, OsuGameRules::OSU_COORD_WIDTH);
-				s->points[p].y = clamp<int>(s->points[p].y - (rand() % OsuGameRules::OSU_COORD_HEIGHT) / 3, 0, OsuGameRules::OSU_COORD_HEIGHT);
-			}
-		}
-
-		hitobjects->push_back(new OsuSlider(s->type, s->repeat, s->pixelLength, s->points, s->hitSounds, s->ticks, s->sliderTime, s->sliderTimeWithoutRepeats, s->time, s->sampleType, s->number, s->colorCounter, beatmap));
-	}
-	for (int i=0; i<spinners.size(); i++)
-	{
-		OsuBeatmapDifficulty::SPINNER *s = &spinners[i];
-
-		if (osu_mod_random.getBool())
-		{
-			s->x = clamp<int>(s->x - ((rand() % OsuGameRules::OSU_COORD_WIDTH) / 1.25f) * (rand() % 2 == 0 ? 1.0f : -1.0f), 0, OsuGameRules::OSU_COORD_WIDTH);
-			s->y = clamp<int>(s->y - ((rand() & OsuGameRules::OSU_COORD_HEIGHT) / 1.25f) * (rand() % 2 == 0 ? 1.0f : -1.0f), 0, OsuGameRules::OSU_COORD_HEIGHT);
-		}
-
-		hitobjects->push_back(new OsuSpinner(s->x, s->y, s->time, s->sampleType, s->endTime, beatmap));
-	}
+	// build hitobjects from the data we loaded from the beatmap file
+	OsuBeatmapStandard *beatmapStandard = dynamic_cast<OsuBeatmapStandard*>(beatmap);
+	if (beatmapStandard != NULL)
+		buildStandardHitObjects(beatmapStandard, hitobjects);
 
 	// sort hitobjects by starttime
 	struct HitObjectSortComparator
@@ -708,6 +671,8 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 		if (hitobjects->size() > 0)
 			(*hitobjects)[0]->setForceDrawApproachCircle(true);
 	}
+
+	debugLog("OsuBeatmapDifficulty::loadRaw() loaded %i hitobjects.\n", hitobjects->size());
 
 	loaded = true;
 	return true;
@@ -743,7 +708,7 @@ void OsuBeatmapDifficulty::loadBackgroundImage()
 	{
 		UString uniqueResourceName = fullBackgroundImageFilePath;
 		uniqueResourceName.append(name);
-		uniqueResourceName.append(UString::format("%i%i", ID, setID));
+		uniqueResourceName.append(UString::format("%i%i%i", ID, setID, rand())); // added rand for sanity
 		engine->getResourceManager()->requestNextLoadAsync();
 		backgroundImage = engine->getResourceManager()->loadImageAbs(fullBackgroundImageFilePath, uniqueResourceName);
 	}
@@ -806,6 +771,53 @@ void OsuBeatmapDifficulty::loadBackgroundImagePath()
 	}
 }
 
+void OsuBeatmapDifficulty::buildStandardHitObjects(OsuBeatmapStandard *beatmap, std::vector<OsuHitObject*> *hitobjects)
+{
+	if (beatmap == NULL || hitobjects == NULL) return;
+
+	for (int i=0; i<hitcircles.size(); i++)
+	{
+		OsuBeatmapDifficulty::HITCIRCLE *c = &hitcircles[i];
+
+		if (osu_mod_random.getBool())
+		{
+			c->x = clamp<int>(c->x - (rand() % OsuGameRules::OSU_COORD_WIDTH) / 8, 0, OsuGameRules::OSU_COORD_WIDTH);
+			c->y = clamp<int>(c->y - (rand() & OsuGameRules::OSU_COORD_HEIGHT) / 8, 0, OsuGameRules::OSU_COORD_HEIGHT);
+		}
+
+		hitobjects->push_back(new OsuCircle(c->x, c->y, c->time, c->sampleType, c->number, c->colorCounter, beatmap));
+	}
+
+	for (int i=0; i<sliders.size(); i++)
+	{
+		OsuBeatmapDifficulty::SLIDER *s = &sliders[i];
+
+		if (osu_mod_random.getBool())
+		{
+			for (int p=0; p<s->points.size(); p++)
+			{
+				s->points[p].x = clamp<int>(s->points[p].x - (rand() % OsuGameRules::OSU_COORD_WIDTH) / 3, 0, OsuGameRules::OSU_COORD_WIDTH);
+				s->points[p].y = clamp<int>(s->points[p].y - (rand() % OsuGameRules::OSU_COORD_HEIGHT) / 3, 0, OsuGameRules::OSU_COORD_HEIGHT);
+			}
+		}
+
+		hitobjects->push_back(new OsuSlider(s->type, s->repeat, s->pixelLength, s->points, s->hitSounds, s->ticks, s->sliderTime, s->sliderTimeWithoutRepeats, s->time, s->sampleType, s->number, s->colorCounter, beatmap));
+	}
+
+	for (int i=0; i<spinners.size(); i++)
+	{
+		OsuBeatmapDifficulty::SPINNER *s = &spinners[i];
+
+		if (osu_mod_random.getBool())
+		{
+			s->x = clamp<int>(s->x - ((rand() % OsuGameRules::OSU_COORD_WIDTH) / 1.25f) * (rand() % 2 == 0 ? 1.0f : -1.0f), 0, OsuGameRules::OSU_COORD_WIDTH);
+			s->y = clamp<int>(s->y - ((rand() & OsuGameRules::OSU_COORD_HEIGHT) / 1.25f) * (rand() % 2 == 0 ? 1.0f : -1.0f), 0, OsuGameRules::OSU_COORD_HEIGHT);
+		}
+
+		hitobjects->push_back(new OsuSpinner(s->x, s->y, s->time, s->sampleType, s->endTime, beatmap));
+	}
+}
+
 float OsuBeatmapDifficulty::getSliderTimeForSlider(SLIDER *slider)
 {
 	return getTimingInfoForTime(slider->time).beatLength * (slider->pixelLength / sliderMultiplier) / 100.0f;
@@ -817,6 +829,7 @@ float OsuBeatmapDifficulty::getTimingPointMultiplierForSlider(SLIDER *slider)
 	float beatLengthBase = t.beatLengthBase;
 	if (beatLengthBase == 0.0f) // sanity check
 		beatLengthBase = 1.0f;
+
 	return t.beatLength / beatLengthBase;
 }
 
@@ -877,16 +890,6 @@ OsuBeatmapDifficulty::TIMING_INFO OsuBeatmapDifficulty::getTimingInfoForTime(uns
 	return ti;
 }
 
-bool OsuBeatmapDifficulty::isInBreak(unsigned long positionMS)
-{
-	for (int i=0; i<breaks.size(); i++)
-	{
-		if ((int)positionMS > breaks[i].startTime && (int)positionMS < breaks[i].endTime)
-			return true;
-	}
-	return false;
-}
-
 unsigned long OsuBeatmapDifficulty::getBreakDuration(unsigned long positionMS)
 {
 	for (int i=0; i<breaks.size(); i++)
@@ -895,4 +898,14 @@ unsigned long OsuBeatmapDifficulty::getBreakDuration(unsigned long positionMS)
 			return (unsigned long)(breaks[i].endTime - breaks[i].startTime);
 	}
 	return 0;
+}
+
+bool OsuBeatmapDifficulty::isInBreak(unsigned long positionMS)
+{
+	for (int i=0; i<breaks.size(); i++)
+	{
+		if ((int)positionMS > breaks[i].startTime && (int)positionMS < breaks[i].endTime)
+			return true;
+	}
+	return false;
 }

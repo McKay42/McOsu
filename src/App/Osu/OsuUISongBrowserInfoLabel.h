@@ -40,6 +40,9 @@ public:
 	void setHP(float HP) {m_fHP = HP;}
 	void setStars(float stars) {m_fStars = stars;}
 
+	void setLocalOffset(long localOffset) {m_iLocalOffset = localOffset;}
+	void setOnlineOffset(long onlineOffset) {m_iOnlineOffset = onlineOffset;}
+
 	float getMinimumWidth();
 	float getMinimumHeight();
 
@@ -48,6 +51,7 @@ private:
 	UString buildSubTitleString();
 	UString buildSongInfoString();
 	UString buildDiffInfoString();
+	UString buildOffsetInfoString();
 
 	Osu *m_osu;
 	McFont *m_font;
@@ -56,6 +60,7 @@ private:
 	float m_fSubTitleScale;
 	float m_fSongInfoScale;
 	float m_fDiffInfoScale;
+	float m_fOffsetInfoScale;
 
 	UString m_sArtist;
 	UString m_sTitle;
@@ -72,6 +77,9 @@ private:
 	float m_fOD;
 	float m_fHP;
 	float m_fStars;
+
+	long m_iLocalOffset;
+	long m_iOnlineOffset;
 };
 
 #endif

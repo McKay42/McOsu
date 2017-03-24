@@ -21,6 +21,7 @@ public:
 
 	void setColor(Color color) {m_color = color; m_backupColor = color;}
 	void setUseDefaultSkin() {m_bDefaultSkin = true;}
+	void setAlphaAddOnHover(float alphaAddOnHover) {m_fAlphaAddOnHover = alphaAddOnHover;}
 
 	virtual void onMouseInside();
 	virtual void onMouseOutside();
@@ -37,6 +38,7 @@ private:
 	Color m_backupColor;
 	float m_fBrightness;
 	float m_fAnim;
+	float m_fAlphaAddOnHover;
 };
 
 #endif
