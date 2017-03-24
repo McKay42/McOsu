@@ -29,7 +29,7 @@ public:
 	};
 
 public:
-	OsuSlider(char type, int repeat, float pixelLength, std::vector<Vector2> points, std::vector<int> hitSounds, std::vector<float> ticks, float sliderTime, float sliderTimeWithoutRepeats, long time, int sampleType, int comboNumber, int colorCounter, OsuBeatmap *beatmap);
+	OsuSlider(char type, int repeat, float pixelLength, std::vector<Vector2> points, std::vector<int> hitSounds, std::vector<float> ticks, float sliderTime, float sliderTimeWithoutRepeats, long time, int sampleType, int comboNumber, int colorCounter, OsuBeatmapStandard *beatmap);
 	virtual ~OsuSlider();
 
 	virtual void draw(Graphics *g);
@@ -44,7 +44,7 @@ public:
 	Vector2 getOriginalRawPosAt(long pos);
 	inline Vector2 getAutoCursorPos(long curPos) {return m_vCurPoint;}
 
-	virtual void onClickEvent(Vector2 cursorPos, std::vector<OsuBeatmap::CLICK> &clicks);
+	virtual void onClickEvent(std::vector<OsuBeatmap::CLICK> &clicks);
 	virtual void onReset(long curPos);
 
 	void rebuildVertexBuffer();
@@ -59,6 +59,7 @@ private:
 	static ConVar *m_osu_playfield_rotation_ref;
 	static ConVar *m_osu_mod_fps_ref;
 	static ConVar *m_osu_slider_border_size_multiplier_ref;
+	static ConVar *m_epilepsy;
 
 	void drawStartCircle(Graphics *g, float alpha);
 	void drawEndCircle(Graphics *g, float alpha, float sliderSnake = 1.0f);
@@ -73,6 +74,8 @@ private:
 	void onSliderBreak();
 
 	float getT(long pos, bool raw);
+
+	OsuBeatmapStandard *m_beatmap;
 
 	OsuSliderCurve *m_curve;
 
@@ -296,6 +299,7 @@ private:
 
 
 
+/*
 class BezierApproximator
 {
 public:
@@ -316,5 +320,6 @@ private:
 	std::vector<Vector2> m_subdivisionBuffer1;
 	std::vector<Vector2> m_subdivisionBuffer2;
 };
+*/
 
 #endif

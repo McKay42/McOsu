@@ -127,7 +127,7 @@ void OsuModSelector::updateButtons()
 {
 	m_modButtonEasy = setModButtonOnGrid(0, 0, 0, "ez", "Reduces overall difficulty - larger circles, more forgiving HP drain, less accuracy required.", m_osu->getSkin()->getSelectionModEasy());
 	m_modButtonNofail = setModButtonOnGrid(1, 0, 0, "nf", "You can't fail. No matter what.", m_osu->getSkin()->getSelectionModNoFail());
-	m_modButtonNofail->setAvailable(false);
+	m_modButtonNofail->setAvailable(convar->getConVarByName("osu_drain_enabled")->getBool());
 	m_modButtonHalftime = setModButtonOnGrid(2, 0, 0, "ht", "Less zoom.", m_osu->getSkin()->getSelectionModHalfTime());
 	setModButtonOnGrid(4, 0, 0, "nm", "Massively reduced slider follow circle radius. Unnecessary clicks count as misses.", m_osu->getSkin()->getSelectionModNightmare());
 
@@ -330,7 +330,7 @@ void OsuModSelector::update()
 	{
 		m_bWaitForCSChangeFinished = false;
 		if (m_osu->isInPlayMode() && m_osu->getSelectedBeatmap() != NULL)
-			m_osu->getSelectedBeatmap()->onUpdateMods();
+			m_osu->getSelectedBeatmap()->onModUpdate();
 	}
 }
 

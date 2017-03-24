@@ -12,10 +12,12 @@
 
 class ConVar;
 
+class OsuBeatmapStandard;
+
 class OsuHitObject
 {
 public:
-	static void drawHitResult(Graphics *g, OsuBeatmap *beatmap, Vector2 rawPos, OsuScore::HIT result, float animPercent);
+	static void drawHitResult(Graphics *g, OsuBeatmapStandard *beatmap, Vector2 rawPos, OsuScore::HIT result, float animPercent);
 	static void drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiameter, float rawHitcircleDiameter, Vector2 rawPos, OsuScore::HIT result, float animPercent);
 
 public:
@@ -51,7 +53,7 @@ public:
 	inline bool isBlocked() const {return m_bBlocked;}
 	inline bool hasMisAimed() const {return m_bMisAim;}
 
-	virtual void onClickEvent(Vector2 cursorPos, std::vector<OsuBeatmap::CLICK> &clicks) {;}
+	virtual void onClickEvent(std::vector<OsuBeatmap::CLICK> &clicks) {;}
 	virtual void onReset(long curPos);
 
 protected:

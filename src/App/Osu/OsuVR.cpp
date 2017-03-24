@@ -30,26 +30,33 @@
 
 ConVar osu_vr_matrix_screen("osu_vr_matrix_screen");
 ConVar osu_vr_matrix_playfield("osu_vr_matrix_playfield");
+ConVar osu_vr_reset_matrices("osu_vr_reset_matrices");
 
 ConVar osu_vr_screen_scale("osu_vr_screen_scale", 1.64613f);
 ConVar osu_vr_playfield_scale("osu_vr_playfield_scale", 0.945593f);
 ConVar osu_vr_hud_scale("osu_vr_hud_scale", 4.0f);
 ConVar osu_vr_controller_pinch_scale_multiplier("osu_vr_controller_pinch_scale_multiplier", 2.0f);
+ConVar osu_vr_controller_warning_distance_enabled("osu_vr_controller_warning_distance_enabled", true);
+ConVar osu_vr_controller_warning_distance_start("osu_vr_controller_warning_distance_start", -0.20f);
+ConVar osu_vr_controller_warning_distance_end("osu_vr_controller_warning_distance_end", -0.30f);
 
 ConVar osu_vr_approach_distance("osu_vr_approach_distance", 15.0f, "distance from which hitobjects start flying + fading in, in meters");
 ConVar osu_vr_hud_distance("osu_vr_hud_distance", 15.0f, "distance at which the HUD is drawn, in meters");
 ConVar osu_vr_playfield_native_draw_scale("osu_vr_playfield_native_draw_scale", 0.003f);
 
-ConVar osu_vr_circle_hitbox_scale("osu_vr_circle_hitbox_scale", 1.5f, "scales the invisible hitbox radius of all hitobjects, to make it easier for new players in VR");
+ConVar osu_vr_circle_hitbox_scale("osu_vr_circle_hitbox_scale", 1.5f, "scales the invisible hitbox radius of all hitobjects, to make it feel better");
 
 ConVar osu_vr_cursor_alpha("osu_vr_cursor_alpha", 0.15f);
 
-ConVar osu_vr_controller_vibration_strength("osu_vr_controller_vibration_strength", 0.35f);
+ConVar osu_vr_controller_vibration_strength("osu_vr_controller_vibration_strength", 0.45f);
+ConVar osu_vr_slider_controller_vibration_strength("osu_vr_slider_controller_vibration_strength", /*0.05f*/0.0f);
 
 ConVar osu_vr_draw_playfield("osu_vr_draw_playfield", true);
 ConVar osu_vr_draw_floor("osu_vr_draw_floor", true);
 
 ConVar osu_vr_ui_offset("osu_vr_ui_offset", 0.1f);
+
+const char *OsuVR::OSUVR_CONFIG_FILE_NAME = "osuvrplayarea";
 
 
 
@@ -89,7 +96,8 @@ public:
 	inline const Vector2& getSize() const {return m_vSize;}
 
 	inline bool isVisible() {return m_bIsVisible;}
-	inline bool isCursorInside() {return m_bIsCursorInside;}
+	inline bool isActive() {return m_bIsActive && isVisible();}
+	inline bool isCursorInside() {return m_bIsCursorInside && isVisible();}
 
 protected:
 	OsuVR *m_vr;
@@ -165,14 +173,15 @@ public:
 
 		if (controller->getTrigger() > 0.95f || controller->isButtonPressed(OpenVRController::BUTTON::BUTTON_STEAMVR_TOUCHPAD))
 		{
-			// trigger click callback once if clicked within bounds
+			// trigger click callback once (until released again)
 			if (!m_bClickCheck)
 			{
 				m_bClickCheck = true;
-				m_bIsActive = true;
 
+				// within bounds
 				if (m_bIsCursorInside)
 				{
+					m_bIsActive = true;
 					if (m_clickVoidCallback != NULL)
 						m_clickVoidCallback();
 				}
@@ -411,13 +420,9 @@ OsuVR::OsuVR(Osu *osu)
 	// convar callbacks
 	osu_vr_matrix_screen.setCallback( fastdelegate::MakeDelegate(this, &OsuVR::onScreenMatrixChange) );
 	osu_vr_matrix_playfield.setCallback( fastdelegate::MakeDelegate(this, &OsuVR::onPlayfieldMatrixChange) );
+	osu_vr_reset_matrices.setCallback( fastdelegate::MakeDelegate(this, &OsuVR::resetMatrices) );
 
 	// vars
-	/*
-	m_screenMatrix.rotate(-90.0f, 0, 1, 0);
-	m_screenMatrix.translate(1.0f, 2.0f, -1.0f);
-	m_playfieldMatrix.translate(0, 1.5f, -1.0f);
-	*/
 	m_bMovingPlayfieldCheck = true;
 	m_bMovingPlayfieldAllow = true;
 	m_bMovingScreenCheck = true;
@@ -431,6 +436,8 @@ OsuVR::OsuVR(Osu *osu)
 	m_bPlayfieldIntersection2 = false;
 	m_fPlayfieldCursorDist1 = 0.0f;
 	m_fPlayfieldCursorDist2 = 0.0f;
+	m_fPlayfieldCursorDistSigned1 = 0.0f;
+	m_fPlayfieldCursorDistSigned2 = 0.0f;
 
 	m_fAspect = 1.0f;
 
@@ -440,6 +447,8 @@ OsuVR::OsuVR(Osu *osu)
 	m_bScaleCheck = true;
 	m_bIsPlayerScalingPlayfield = false;
 	m_fScaleBackup = osu_vr_screen_scale.getFloat();
+	m_fDefaultScreenScale = osu_vr_screen_scale.getFloat();
+	m_fDefaultPlayfieldScale = osu_vr_playfield_scale.getFloat();
 
 	m_vPlayfieldCursorPos1.x = 0;
 	m_vPlayfieldCursorPos1.y = 0;
@@ -475,10 +484,16 @@ OsuVR::OsuVR(Osu *osu)
 	m_scrubbingSlider = slider;
 	m_uiElements.push_back(m_scrubbingSlider);
 
+	button = new OsuVRUIImageButton(this, 0, 0, 0.30f, 0.30f, "OSU_VR_UI_ICON_RESET");
+	button->setClickCallback( fastdelegate::MakeDelegate(this, &OsuVR::onMatrixResetClicked) );
+	m_matrixResetButton = button;
+	m_uiElements.push_back(m_matrixResetButton);
+
 	// load/execute VR stuff only in VR builds
 	if (openvr->isReady())
 	{
 		engine->getResourceManager()->loadImage("ic_keyboard_white_48dp.png", "OSU_VR_UI_ICON_KEYBOARD");
+		engine->getResourceManager()->loadImage("ic_replay_white_48dp.png", "OSU_VR_UI_ICON_RESET");
 		engine->getResourceManager()->loadImage("ic_add_white_48dp.png", "OSU_VR_UI_ICON_PLUS");
 		engine->getResourceManager()->loadImage("ic_remove_white_48dp.png", "OSU_VR_UI_ICON_MINUS");
 
@@ -570,16 +585,10 @@ OsuVR::OsuVR(Osu *osu)
 		);
 
 		// set default matrices to conform to play area
-		Matrix4 screenRotation;
-		screenRotation.rotate(-90.0f, 0, 1, 0);
-		Matrix4 screenTranslation;
-		screenTranslation.translate(-openvr->getPlayAreaSize().y*0.4f, 2.0f, -openvr->getPlayAreaSize().x/2.0f);
-		m_screenMatrix = screenRotation * screenTranslation;
-		m_playfieldMatrix.translate(0, 1.5f, -(openvr->getPlayAreaSize().y/2.0f)*0.75f);
+		resetMatrices();
 
 		// execute the vr config file (this then overwrites the matrices with the user settings)
-		Console::execConfigFile("osuvr");
-		Console::execConfigFile("osuvrtest");
+		Console::execConfigFile(OSUVR_CONFIG_FILE_NAME);
 	}
 }
 
@@ -695,7 +704,7 @@ void OsuVR::drawVR(Graphics *g, Matrix4 &mvp, RenderTarget *screen)
 	}
 	m_shaderGenericTextured->disable();
 
-	// draw VR specific UI
+	// draw VR UI elements (buttons etc.)
 	for (int i=0; i<m_uiElements.size(); i++)
 	{
 		m_uiElements[i]->drawVR(g, finalScreenMatrix);
@@ -821,7 +830,7 @@ void OsuVR::drawVRPlayfieldDummy(Graphics *g, Matrix4 &mvp)
 
 void OsuVR::drawVRCursors(Graphics *g, Matrix4 &mvp)
 {
-	// HACKHACK: temp until i fix it
+	// HACKHACK: temp disable until i fix it
 	float prevValue = m_osu_draw_cursor_trail_ref->getFloat();
 	m_osu_draw_cursor_trail_ref->setValue(0.0f);
 
@@ -830,7 +839,7 @@ void OsuVR::drawVRCursors(Graphics *g, Matrix4 &mvp)
 		m_shaderTexturedLegacyGeneric->setUniformMatrix4fv("matrix", mvp);
 
 		g->pushTransform();
-			g->translate(0, 0, 0.8f); // to avoid z-fighting with the border and sliders (slider = 0.5, extra 0.5 for good measure)
+			g->translate(0, 0, 0.8f); // to avoid z-fighting with the border and sliders (slider = 0.5, extra 0.3 for good measure, but can't go above 0.999f!)
 			m_osu->getHUD()->drawCursor(g, m_vPlayfieldCursorPos1, osu_vr_cursor_alpha.getFloat());
 			g->translate(0, 0, 0.9f); // to avoid z-fighting with the first cursor
 			m_osu->getHUD()->drawCursor(g, m_vPlayfieldCursorPos2, osu_vr_cursor_alpha.getFloat());
@@ -920,7 +929,8 @@ void OsuVR::update()
 			Vector2 newCursorPos = Vector2(x*OsuGameRules::OSU_COORD_WIDTH, y*OsuGameRules::OSU_COORD_HEIGHT);
 			{
 				m_vPlayfieldCursorPos1 = newCursorPos;
-				m_fPlayfieldCursorDist1 = (leftController->getPosition() - m_vPlayfieldIntersectionPoint1).length();
+				m_fPlayfieldCursorDist1 = std::abs(leftIntersectionDistance);
+				m_fPlayfieldCursorDistSigned1 = leftIntersectionDistance;
 			}
 
 			/*
@@ -946,7 +956,8 @@ void OsuVR::update()
 			Vector2 newCursorPos = Vector2(x*OsuGameRules::OSU_COORD_WIDTH, y*OsuGameRules::OSU_COORD_HEIGHT);
 			{
 				m_vPlayfieldCursorPos2 = newCursorPos;
-				m_fPlayfieldCursorDist2 = (rightController->getPosition() - m_vPlayfieldIntersectionPoint2).length();
+				m_fPlayfieldCursorDist2 = std::abs(rightIntersectionDistance);
+				m_fPlayfieldCursorDistSigned2 = rightIntersectionDistance;
 			}
 
 			/*
@@ -1085,7 +1096,7 @@ void OsuVR::update()
 			m_bMovingPlayfieldAllow = true;
 	}
 
-	// if we are not drawing the VR playfield (e.g. because the player only wants to play regularly but with a virtual screen in VR), set the virtual cursor positions to somewhere they don't interfere
+	// HACKHACK: if we are not drawing the VR playfield (e.g. because the player only wants to play regularly but with a virtual screen in VR), set the virtual cursor positions to somewhere they don't interfere
 	if (!osu_vr_draw_playfield.getBool())
 	{
 		m_vPlayfieldCursorPos1 = Vector2(0, 9999);
@@ -1169,14 +1180,30 @@ void OsuVR::update()
 		}
 	}
 
+	// controller distance warning by color (if reaching too far behind/into the playfield)
+	float smallestDist = getCursorDistSigned1() < getCursorDistSigned2() ? getCursorDistSigned1() : getCursorDistSigned2();
+	if (osu_vr_controller_warning_distance_enabled.getBool() && smallestDist < osu_vr_controller_warning_distance_start.getFloat())
+	{
+		float interpStart = osu_vr_controller_warning_distance_start.getFloat();
+		float interpEnd = osu_vr_controller_warning_distance_end.getFloat();
+
+		float percent = 1.0f - ((interpEnd - smallestDist) / (interpEnd - interpStart));
+		openvr->setControllerColorOverride(COLORf(1.0f, percent, 0.0f, 0.0f));
+	}
+	else
+		openvr->setControllerColorOverride(0xff000000);
+
 	// update all VR UI elements
 	updateLayout();
 	float smallestBoundsY = std::numeric_limits<float>::min();
 	float largestBoundsX = 0.0f;
 	float largestBoundsY = std::numeric_limits<float>::max();
+	m_bIsUIActive = false;
 	for (int i=0; i<m_uiElements.size(); i++)
 	{
 		m_uiElements[i]->update(m_vScreenIntersectionPoint2D);
+
+		m_bIsUIActive = m_bIsUIActive || m_uiElements[i]->isActive() || m_uiElements[i]->isCursorInside();
 
 		float boundsX = m_uiElements[i]->getPos().x + m_uiElements[i]->getSize().x;
 		if (boundsX > largestBoundsX)
@@ -1209,6 +1236,7 @@ void OsuVR::update()
 
 	// handle UI element visibility depending on game state
 	m_keyboardButton->setVisible(!m_osu->isInPlayMode());
+	m_matrixResetButton->setVisible(!m_osu->isInPlayMode());
 	m_offsetDownButton->setVisible(m_osu->isInPlayMode());
 	m_offsetUpButton->setVisible(m_osu->isInPlayMode());
 	m_scrubbingSlider->setVisible(m_osu->isInPlayMode());
@@ -1248,9 +1276,15 @@ unsigned short OsuVR::getHapticPulseStrength()
 	return (unsigned short)(osu_vr_controller_vibration_strength.getFloat() * 3999.0f);
 }
 
+unsigned short OsuVR::getSliderHapticPulseStrength()
+{
+	return (unsigned short)(osu_vr_slider_controller_vibration_strength.getFloat() * 3999.0f);
+}
+
 void OsuVR::updateLayout()
 {
 	m_keyboardButton->setPosX(m_vVirtualScreenSize.x + osu_vr_ui_offset.getFloat());
+	m_matrixResetButton->setPos(m_vVirtualScreenSize.x + osu_vr_ui_offset.getFloat(), (-m_vVirtualScreenSize.y - m_matrixResetButton->getSize().y < m_keyboardButton->getPos().y + m_keyboardButton->getSize().y ? -(m_keyboardButton->getPos().y + m_keyboardButton->getSize().y) : m_vVirtualScreenSize.y + m_matrixResetButton->getSize().y));
 	m_volumeSlider->setPos(m_vVirtualScreenSize.x/2.0f - m_volumeSlider->getSize().x/2.0f, m_volumeSlider->getSize().y + osu_vr_ui_offset.getFloat());
 
 	const float gap = 0.05f;
@@ -1263,11 +1297,13 @@ void OsuVR::save()
 {
 	debugLog("Osu: Saving VR config file ...\n");
 
-	const char *userVRConfigFile = "cfg/osuvr.cfg";
+	UString userVRConfigFile = "cfg/";
+	userVRConfigFile.append(OSUVR_CONFIG_FILE_NAME);
+	userVRConfigFile.append(".cfg");
 
 	// write new config file
 	// thankfully this path is relative and hardcoded, and thus not susceptible to unicode characters
-	std::ofstream out(userVRConfigFile);
+	std::ofstream out(userVRConfigFile.toUtf8());
 	if (!out.good())
 	{
 		if (m_osu != NULL)
@@ -1303,6 +1339,20 @@ void OsuVR::save()
 	out.close();
 }
 
+void OsuVR::resetMatrices()
+{
+	Matrix4 screenRotation;
+	screenRotation.rotate(-90.0f, 0, 1, 0);
+	Matrix4 screenTranslation;
+	screenTranslation.translate(-openvr->getPlayAreaSize().y*0.4f, 2.0f, -openvr->getPlayAreaSize().x/2.0f);
+	m_screenMatrix = screenRotation * screenTranslation;
+	m_playfieldMatrix.identity();
+	m_playfieldMatrix.translate(0, 1.5f, -(openvr->getPlayAreaSize().y/2.0f)*0.5f);
+
+	osu_vr_screen_scale.setValue(m_fDefaultScreenScale);
+	osu_vr_playfield_scale.setValue(m_fDefaultPlayfieldScale);
+}
+
 float OsuVR::getDrawScale()
 {
 	return osu_vr_playfield_native_draw_scale.getFloat() * osu_vr_playfield_scale.getFloat();
@@ -1334,6 +1384,12 @@ void OsuVR::onPlayfieldMatrixChange(UString oldValue, UString newValue)
 		}
 		m_playfieldMatrix.set(newMatrix);
 	}
+}
+
+void OsuVR::onMatrixResetClicked()
+{
+	resetMatrices();
+	save();
 }
 
 void OsuVR::onKeyboardButtonClicked()

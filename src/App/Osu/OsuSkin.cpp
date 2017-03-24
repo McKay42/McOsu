@@ -19,8 +19,6 @@
 #include "Osu.h"
 #include "OsuNotificationOverlay.h"
 
-#define OSUSKIN_DEFAULT_SKIN_PATH "default/"
-
 #define OSU_BITMASK_HITWHISTLE 0x2
 #define OSU_BITMASK_HITFINISH 0x4
 #define OSU_BITMASK_HITCLAP 0x8
@@ -35,6 +33,7 @@ ConVar osu_skin_color_index_add("osu_skin_color_index_add", 0);
 ConVar osu_ignore_beatmap_combo_colors("osu_ignore_beatmap_combo_colors", false);
 ConVar osu_ignore_beatmap_sample_volume("osu_ignore_beatmap_sample_volume", false);
 
+const char *OsuSkin::OSUSKIN_DEFAULT_SKIN_PATH = ""; // set dynamically below in the constructor
 Image *OsuSkin::m_missingTexture = NULL;
 ConVar *OsuSkin::m_osu_skin_ref = NULL;
 
@@ -42,6 +41,11 @@ OsuSkin::OsuSkin(Osu *osu, UString filepath)
 {
 	m_osu = osu;
 	m_sFilePath = filepath;
+
+	if (m_osu->isInVRMode())
+		OSUSKIN_DEFAULT_SKIN_PATH = "defaultvr/";
+	else
+		OSUSKIN_DEFAULT_SKIN_PATH = "default/";
 
 	// convar refs
 	if (m_osu_skin_ref == NULL)
@@ -147,6 +151,8 @@ OsuSkin::OsuSkin(Osu *osu, UString filepath)
 	m_defaultButtonMiddle = m_missingTexture;
 	m_defaultButtonRight = m_missingTexture;
 	m_menuBack = m_missingTexture;
+	m_selectionMode = m_missingTexture;
+	m_selectionModeOver = m_missingTexture;
 	m_selectionMods = m_missingTexture;
 	m_selectionModsOver = m_missingTexture;
 	m_selectionRandom = m_missingTexture;
@@ -197,6 +203,7 @@ OsuSkin::OsuSkin(Osu *osu, UString filepath)
 	m_spinnerSpinSound = NULL;
 
 	m_combobreak = NULL;
+	m_failsound = NULL;
 	m_applause = NULL;
 	m_menuHit = NULL;
 	m_menuClick = NULL;
@@ -422,6 +429,8 @@ void OsuSkin::load()
 	checkLoadImage(&m_buttonMiddle, "button-middle", "OSU_SKIN_BUTTON_MIDDLE");
 	checkLoadImage(&m_buttonRight, "button-right", "OSU_SKIN_BUTTON_RIGHT");
 	checkLoadImage(&m_menuBack, "menu-back-0", "OSU_SKIN_MENU_BACK"); checkLoadImage(&m_menuBack, "menu-back", "OSU_SKIN_MENU_BACK");
+	checkLoadImage(&m_selectionMode, "selection-mode", "OSU_SKIN_SELECTION_MODE");
+	checkLoadImage(&m_selectionModeOver, "selection-mode-over", "OSU_SKIN_SELECTION_MODE_OVER");
 	checkLoadImage(&m_selectionMods, "selection-mods", "OSU_SKIN_SELECTION_MODS");
 	checkLoadImage(&m_selectionModsOver, "selection-mods-over", "OSU_SKIN_SELECTION_MODS_OVER");
 	checkLoadImage(&m_selectionRandom, "selection-random", "OSU_SKIN_SELECTION_RANDOM");
@@ -476,6 +485,7 @@ void OsuSkin::load()
 
 	// others
 	checkLoadSound(&m_combobreak, "combobreak", "OSU_SKIN_COMBOBREAK_SND", true);
+	checkLoadSound(&m_failsound, "failsound", "OSU_SKIN_FAILSOUND_SND");
 	checkLoadSound(&m_applause, "applause", "OSU_SKIN_APPLAUSE_SND");
 	checkLoadSound(&m_menuHit, "menuhit", "OSU_SKIN_MENUHIT_SND", true);
 	checkLoadSound(&m_menuClick, "menuclick", "OSU_SKIN_MENUCLICK_SND", true);
@@ -611,7 +621,7 @@ void OsuSkin::load()
 	debugLog("OsuSkin: HitCircleOverlap = %i\n", m_iHitCircleOverlap);
 
 	// delayed error notifications due to resource loading potentially blocking engine time
-	if (!parseSkinIni1Status && parseSkinIni2Status && m_osu_skin_ref->getString() != "default")
+	if (!parseSkinIni1Status && parseSkinIni2Status && m_osu_skin_ref->getString() != "default" && m_osu_skin_ref->getString() != "defaultvr")
 		m_osu->getNotificationOverlay()->addNotification("OsuSkin Error: Couldn't load skin.ini!", 0xffff0000);
 	else if (!parseSkinIni2Status)
 		m_osu->getNotificationOverlay()->addNotification("OsuSkin Error: Couldn't load DEFAULT skin.ini!!!", 0xffff0000);

@@ -26,6 +26,7 @@
 #include "OsuSkin.h"
 #include "OsuGameRules.h"
 #include "OsuSliderRenderer.h"
+#include "OsuBeatmapStandard.h"
 
 ConVar osu_slider_ball_tint_combo_color("osu_slider_ball_tint_combo_color", true);
 
@@ -46,10 +47,11 @@ ConVar *OsuSlider::m_osu_playfield_mirror_vertical_ref = NULL;
 ConVar *OsuSlider::m_osu_playfield_rotation_ref = NULL;
 ConVar *OsuSlider::m_osu_mod_fps_ref = NULL;
 ConVar *OsuSlider::m_osu_slider_border_size_multiplier_ref = NULL;
+ConVar *OsuSlider::m_epilepsy = NULL;
 
 float OsuSliderCurve::CURVE_POINTS_SEPERATION = 2.5f; // bigger value = less steps, more blocky sliders
 
-OsuSlider::OsuSlider(char type, int repeat, float pixelLength, std::vector<Vector2> points, std::vector<int> hitSounds, std::vector<float> ticks, float sliderTime, float sliderTimeWithoutRepeats, long time, int sampleType, int comboNumber, int colorCounter, OsuBeatmap *beatmap) : OsuHitObject(time, sampleType, comboNumber, colorCounter, beatmap)
+OsuSlider::OsuSlider(char type, int repeat, float pixelLength, std::vector<Vector2> points, std::vector<int> hitSounds, std::vector<float> ticks, float sliderTime, float sliderTimeWithoutRepeats, long time, int sampleType, int comboNumber, int colorCounter, OsuBeatmapStandard *beatmap) : OsuHitObject(time, sampleType, comboNumber, colorCounter, beatmap)
 {
 	if (m_osu_playfield_mirror_horizontal_ref == NULL)
 		m_osu_playfield_mirror_horizontal_ref = convar->getConVarByName("osu_playfield_mirror_horizontal");
@@ -61,6 +63,8 @@ OsuSlider::OsuSlider(char type, int repeat, float pixelLength, std::vector<Vecto
 		m_osu_mod_fps_ref = convar->getConVarByName("osu_mod_fps");
 	if (m_osu_slider_border_size_multiplier_ref == NULL)
 		m_osu_slider_border_size_multiplier_ref = convar->getConVarByName("osu_slider_border_size_multiplier");
+	if (m_epilepsy == NULL)
+		m_epilepsy = convar->getConVarByName("epilepsy");
 
 	m_cType = type;
 	m_iRepeat = repeat;
@@ -69,6 +73,8 @@ OsuSlider::OsuSlider(char type, int repeat, float pixelLength, std::vector<Vecto
 	m_hitSounds = hitSounds;
 	m_fSliderTime = sliderTime;
 	m_fSliderTimeWithoutRepeats = sliderTimeWithoutRepeats;
+
+	m_beatmap = beatmap;
 
 	// build raw ticks
 	for (int i=0; i<ticks.size(); i++)
@@ -700,7 +706,7 @@ void OsuSlider::drawBody(Graphics *g, float alpha, float from, float to)
 		const float scale = OsuGameRules::getPlayfieldScaleFactor(m_beatmap->getOsu());
 		Vector2 translation = OsuGameRules::getPlayfieldCenter(m_beatmap->getOsu());
 		if (m_osu_mod_fps_ref->getBool())
-			translation += m_beatmap->getFirstPersonDelta();
+			translation += m_beatmap->getFirstPersonCursorDelta();
 		OsuSliderRenderer::draw(g, m_beatmap->getOsu(), m_vb, translation, scale, m_beatmap->getHitcircleDiameter(), from, to, m_beatmap->getSkin()->getComboColorForCounter(m_iColorCounter), alpha, getTime());
 	}
 }
@@ -732,7 +738,7 @@ void OsuSlider::update(long curPos)
 	if (m_fSliderBreakRapeTime != 0.0f && engine->getTime() > m_fSliderBreakRapeTime)
 	{
 		m_fSliderBreakRapeTime = 0.0f;
-		convar->getConVarByName("epilepsy")->setValue(0.0f);
+		m_epilepsy->setValue(0.0f);
 	}
 
 	// animations must be updated even if we are finished
@@ -937,7 +943,7 @@ void OsuSlider::update(long curPos)
 		}
 	}
 
-	// handle slider end, repeats, ticks
+	// handle slider end, repeats, ticks, and constant VR controller vibration while sliding
 	if (!m_bEndFinished)
 	{
 		if ((m_beatmap->isClickHeld() || m_beatmap->getOsu()->getModRelax()) && m_bCursorInside)
@@ -1028,6 +1034,20 @@ void OsuSlider::update(long curPos)
 				onHit(m_endResult, 0, true); // delta doesn't matter here
 			}
 		}
+
+		// handle constant sliding vibration
+		if (m_beatmap->getOsu()->isInVRMode())
+		{
+			// clicks have priority over the constant sliding vibration, that's why this is at the bottom here AFTER the other function above have had a chance to call triggerHapticPulse()
+			// while sliding the slider, vibrate the controller constantly
+			if (m_bStartFinished && !m_bEndFinished && m_bCursorInside && !m_beatmap->isPaused() && !m_beatmap->isWaiting() && m_beatmap->isPlaying())
+			{
+				if (m_bOnHitVRLeftControllerHapticFeedback)
+					openvr->getLeftController()->triggerHapticPulse(m_beatmap->getOsu()->getVR()->getSliderHapticPulseStrength());
+				else
+					openvr->getRightController()->triggerHapticPulse(m_beatmap->getOsu()->getVR()->getSliderHapticPulseStrength());
+			}
+		}
 	}
 }
 
@@ -1108,13 +1128,15 @@ float OsuSlider::getT(long pos, bool raw)
 	}
 }
 
-void OsuSlider::onClickEvent(Vector2 cursorPos, std::vector<OsuBeatmap::CLICK> &clicks)
+void OsuSlider::onClickEvent(std::vector<OsuBeatmap::CLICK> &clicks)
 {
 	if (m_points.size() == 0 || m_bBlocked) // also handle note blocking here (doesn't need fancy shake logic, since sliders don't shake)
 		return;
 
 	if (!m_bStartFinished)
 	{
+		const Vector2 cursorPos = m_beatmap->getCursorPos();
+
 		const Vector2 pos = m_beatmap->osuCoords2Pixels(m_points[0]);
 		const float cursorDelta = (cursorPos - pos).length();
 
@@ -1291,7 +1313,7 @@ void OsuSlider::onSliderBreak()
 	if (osu_slider_break_epilepsy.getBool())
 	{
 		m_fSliderBreakRapeTime = engine->getTime() + 0.15f;
-		convar->getConVarByName("epilepsy")->setValue(1.0f);
+		m_epilepsy->setValue(1.0f);
 	}
 }
 
@@ -1367,7 +1389,7 @@ void OsuSlider::onReset(long curPos)
 	}
 
 	m_fSliderBreakRapeTime = 0.0f;
-	convar->getConVarByName("epilepsy")->setValue(0.0f);
+	m_epilepsy->setValue(0.0f);
 }
 
 void OsuSlider::rebuildVertexBuffer()
@@ -1888,6 +1910,13 @@ void OsuSliderCurveEqualDistanceMulti::init(std::vector<OsuSliderCurveType*> cur
 	if (curCurvePoints.size() > 0)
 		m_curvePointSegments.push_back(curCurvePoints);
 
+	// sanity check
+	if (m_curvePoints.size() == 0)
+	{
+		debugLog("OsuSliderCurveEqualDistanceMulti::init() Error: m_curvePoints.size() == 0!!! @ %ld\n", m_slider->getTime());
+		return;
+	}
+
 	// make sure that the uninterpolated segment points are exactly as long as the pixelLength
 	// this is necessary because we can't use the lerp'd points for the segments
 	float segmentedLength = 0.0f;
@@ -1899,7 +1928,7 @@ void OsuSliderCurveEqualDistanceMulti::init(std::vector<OsuSliderCurveType*> cur
 		}
 	}
 	// TODO: this is still incorrect. sliders are sometimes too long or start too late
-	if (segmentedLength > pixelLength)
+	if (segmentedLength > pixelLength && m_curvePointSegments.size() > 1 && m_curvePointSegments[0].size() > 1)
 	{
 		float excess = segmentedLength - pixelLength;
 		while (excess > 0)
@@ -1988,6 +2017,7 @@ Vector2 OsuSliderCurveEqualDistanceMulti::originalPointAt(float t)
 
 
 
+/*
 float BezierApproximator::TOLERANCE = 0.25f;
 float BezierApproximator::TOLERANCE_SQ = 0.25f * 0.25f;
 
@@ -2099,3 +2129,4 @@ std::vector<Vector2> BezierApproximator::createBezier()
 	output.push_back(m_controlPoints[m_iCount - 1]);
 	return output;
 }
+*/

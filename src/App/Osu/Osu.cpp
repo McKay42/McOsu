@@ -5,6 +5,7 @@
 // $NoKeywords: $osu
 //===============================================================================//
 
+#include <OsuDatabase.h>
 #include "Osu.h"
 
 #include "Engine.h"
@@ -33,26 +34,35 @@
 #include "OsuModSelector.h"
 #include "OsuRankingScreen.h"
 #include "OsuKeyBindings.h"
+#include "OsuUpdateHandler.h"
 #include "OsuNotificationOverlay.h"
 #include "OsuTooltipOverlay.h"
 #include "OsuGameRules.h"
 #include "OsuPauseMenu.h"
-#include "OsuBeatmap.h"
-#include "OsuBeatmapDifficulty.h"
 #include "OsuScore.h"
 #include "OsuSkin.h"
 #include "OsuHUD.h"
 #include "OsuVRTutorial.h"
+#include "OsuChangelog.h"
+
+#include "OsuBeatmap.h"
+#include "OsuBeatmapDifficulty.h"
+#include "OsuBeatmapStandard.h"
 
 #include "OsuHitObject.h"
-
-#include "OsuBeatmapDatabase.h"
 
 void DUMMY_OSU_LETTERBOXING(UString oldValue, UString newValue) {;}
 void DUMMY_OSU_VOLUME_MUSIC_ARGS(UString oldValue, UString newValue) {;}
 void DUMMY_OSU_MODS(void) {;}
 
-ConVar osu_version("osu_version", 27.0f);
+// release configuration
+bool Osu::autoUpdater = false;
+ConVar osu_version("osu_version", 28.3f);
+#ifdef MCENGINE_FEATURE_OPENVR
+ConVar osu_release_stream("osu_release_stream", "vr");
+#else
+ConVar osu_release_stream("osu_release_stream", "desktop");
+#endif
 ConVar osu_debug("osu_debug", false);
 
 ConVar osu_vr("osu_vr", false);
@@ -63,7 +73,7 @@ ConVar osu_disable_mousewheel("osu_disable_mousewheel", false);
 ConVar osu_confine_cursor_windowed("osu_confine_cursor_windowed", false, DUMMY_OSU_LETTERBOXING);
 ConVar osu_confine_cursor_fullscreen("osu_confine_cursor_fullscreen", true, DUMMY_OSU_LETTERBOXING);
 
-ConVar osu_skin("osu_skin", "default", DUMMY_OSU_VOLUME_MUSIC_ARGS);
+ConVar osu_skin("osu_skin", "", DUMMY_OSU_VOLUME_MUSIC_ARGS); // set dynamically below in the constructor
 ConVar osu_skin_reload("osu_skin_reload", DUMMY_OSU_MODS);
 
 ConVar osu_volume_master("osu_volume_master", 1.0f, DUMMY_OSU_VOLUME_MUSIC_ARGS);
@@ -106,9 +116,9 @@ Osu::Osu()
 
 	// engine settings/overrides
 	openvr->setDrawCallback( fastdelegate::MakeDelegate(this, &Osu::drawVR) );
-	if (openvr->isReady()) // automatically enable VR mode if it was compiled with and is available
+	if (openvr->isReady()) // automatically enable VR mode if it was compiled with OpenVR support and is available
 		osu_vr.setValue(1.0f);
-	env->setWindowTitle("McOsu!");
+	env->setWindowTitle("McOsu");
 	env->setCursorVisible(false);
 	engine->getConsoleBox()->setRequireShiftToActivate(true);
 	engine->getSound()->setVolume(osu_volume_master.getFloat());
@@ -118,6 +128,22 @@ Osu::Osu()
 	convar->getConVarByName("vsync")->setValue(0.0f);
 	convar->getConVarByName("fps_max")->setValue(420.0f);
 	osu_resolution.setValue(UString::format("%ix%i", engine->getScreenWidth(), engine->getScreenHeight()));
+
+	// VR specific settings
+	if (isInVRMode())
+	{
+		osu_skin.setValue("defaultvr");
+		convar->getConVarByName("osu_drain_enabled")->setValue(true);
+		convar->getConVarByName("osu_draw_hpbar")->setValue(true);
+		env->setWindowResizable(true);
+	}
+	else
+	{
+		osu_skin.setValue("default");
+		env->setWindowResizable(false);
+	}
+
+	// generate default osu! appdata user path
 	UString userDataPath = env->getUserDataPath();
 	if (userDataPath.length() > 1)
 	{
@@ -150,6 +176,7 @@ Osu::Osu()
 	m_skin = NULL;
 	m_songBrowser2 = NULL;
 	m_modSelector = NULL;
+	m_updateHandler = NULL;
 
 	m_bF1 = false;
 	m_bUIToggleCheck = false;
@@ -171,6 +198,7 @@ Osu::Osu()
 	m_bToggleOptionsMenuScheduled = false;
 	m_bToggleRankingScreenScheduled = false;
 	m_bToggleVRTutorialScheduled = false;
+	m_bToggleChangelogScheduled = false;
 
 	m_bModAuto = false;
 	m_bModAutopilot = false;
@@ -179,6 +207,7 @@ Osu::Osu()
 	m_bModTarget = false;
 	m_bModDT = false;
 	m_bModNC = false;
+	m_bModNF = false;
 	m_bModHT = false;
 	m_bModHD = false;
 	m_bModHR = false;
@@ -205,9 +234,10 @@ Osu::Osu()
 	// load a few select subsystems very early
 	m_notificationOverlay = new OsuNotificationOverlay(this);
 	m_score = new OsuScore(this);
+	m_updateHandler = new OsuUpdateHandler();
 
 	// exec the main config file (this must be right here!)
-	Console::execConfigFile("osu");
+	Console::execConfigFile(isInVRMode() ? "osuvr" : "osu");
 
 	// update mod settings
 	updateMods();
@@ -237,6 +267,7 @@ Osu::Osu()
 	m_pauseMenu = new OsuPauseMenu(this);
 	m_hud = new OsuHUD(this);
 	m_vrTutorial = new OsuVRTutorial(this);
+	m_changelog = new OsuChangelog(this);
 
 	// the order in this vector will define in which order events are handled/consumed
 	m_screens.push_back(m_notificationOverlay);
@@ -247,6 +278,7 @@ Osu::Osu()
 	m_screens.push_back(m_songBrowser2);
 	m_screens.push_back(m_optionsMenu);
 	m_screens.push_back(m_vrTutorial);
+	m_screens.push_back(m_changelog);
 	m_screens.push_back(m_mainMenu);
 	m_screens.push_back(m_tooltipOverlay);
 
@@ -256,16 +288,20 @@ Osu::Osu()
 	//m_songBrowser2->setVisible(true);
 	//m_pauseMenu->setVisible(true);
 	//m_rankingScreen->setVisible(true);
+	//m_changelog->setVisible(true);
+
 	if (isInVRMode() && osu_vr_tutorial.getBool())
 		m_vrTutorial->setVisible(true);
 	else
 		m_mainMenu->setVisible(true);
 
+	m_updateHandler->checkForUpdates();
+
 	/*
 	// DEBUG: immediately start diff of a beatmap
-	UString debugFolder = "c:/Program Files (x86)/osu!/Songs/54727 incinerate - Purgatorium/";
-	UString debugDiffFileName = "incinerate - Purgatorium (RikiH_) [Heaven].osu";
-	OsuBeatmap *debugBeatmap = new OsuBeatmap(this, debugFolder);
+	UString debugFolder = "c:/Program Files (x86)/osu!/Songs/415039 Arctic Monkeys - From the Ritz to the Rubble/";
+	UString debugDiffFileName = "Arctic Monkeys - From the Ritz to the Rubble (BOUYAAA) [Expert].osu";
+	OsuBeatmap *debugBeatmap = new OsuBeatmapStandard(this);
 	UString beatmapPath = debugFolder;
 	beatmapPath.append(debugDiffFileName);
 	OsuBeatmapDifficulty *debugDiff = new OsuBeatmapDifficulty(this, beatmapPath, debugFolder);
@@ -288,6 +324,11 @@ Osu::Osu()
 
 Osu::~Osu()
 {
+	// "leak" OsuUpdateHandler object, but not relevant since shutdown:
+	// this is the only way of handling instant user shutdown requests properly, there is no solution for active working threads besides letting the OS kill them when the main threads exits.
+	// we must not delete the update handler object, because the thread is potentially still accessing members during shutdown
+	m_updateHandler->stop(); // tell it to stop at the next cancellation point, depending on the OS/runtime and engine shutdown time it may get killed before that
+
 	SAFE_DELETE(m_windowManager);
 
 	for (int i=0; i<m_screens.size(); i++)
@@ -310,7 +351,7 @@ void Osu::draw(Graphics *g)
 	}
 
 	// if we are not using the native window resolution or in vr mode, draw into the buffer
-	if (osu_resolution_enabled.getBool() || osu_vr.getBool())
+	if (osu_resolution_enabled.getBool() || isInVRMode())
 		m_backBuffer->enable();
 
 	// draw everything in the correct order
@@ -336,8 +377,10 @@ void Osu::draw(Graphics *g)
 		if (m_pauseMenu->isVisible() || getSelectedBeatmap()->isContinueScheduled())
 			fadingCursorAlpha = 1.0f;
 
-		if ((m_bModAuto || m_bModAutopilot) && allowDrawCursor)
-			m_hud->drawCursor(g, m_osu_mod_fps_ref->getBool() ? OsuGameRules::getPlayfieldCenter(this) : getSelectedBeatmap()->getCursorPos(), osu_mod_fadingcursor.getBool() ? fadingCursorAlpha : 1.0f);
+		OsuBeatmapStandard *beatmapStd = dynamic_cast<OsuBeatmapStandard*>(getSelectedBeatmap());
+
+		if ((m_bModAuto || m_bModAutopilot) && allowDrawCursor && beatmapStd != NULL)
+			m_hud->drawCursor(g, m_osu_mod_fps_ref->getBool() ? OsuGameRules::getPlayfieldCenter(this) : beatmapStd->getCursorPos(), osu_mod_fadingcursor.getBool() ? fadingCursorAlpha : 1.0f);
 
 		m_pauseMenu->draw(g);
 		m_modSelector->draw(g);
@@ -350,13 +393,13 @@ void Osu::draw(Graphics *g)
 		m_windowManager->draw(g);
 
 		if (!(m_bModAuto || m_bModAutopilot) && allowDrawCursor && (!isInVRMode() || (m_vr->isVirtualCursorOnScreen() || engine->hasFocus())))
-			m_hud->drawCursor(g, getSelectedBeatmap()->getCursorPos(), osu_mod_fadingcursor.getBool() ? fadingCursorAlpha : 1.0f);
+			m_hud->drawCursor(g, beatmapStd != NULL ? beatmapStd->getCursorPos() : engine->getMouse()->getPos(), osu_mod_fadingcursor.getBool() ? fadingCursorAlpha : 1.0f);
 
 		// draw VR cursors for spectators
-		if (isInVRMode() && isInPlayMode() && !getSelectedBeatmap()->isPaused())
+		if (isInVRMode() && isInPlayMode() && !getSelectedBeatmap()->isPaused() && beatmapStd != NULL)
 		{
-			m_hud->drawCursor(g, getSelectedBeatmap()->osuCoords2RawPixels(m_vr->getCursorPos1() + Vector2(OsuGameRules::OSU_COORD_WIDTH/2, OsuGameRules::OSU_COORD_HEIGHT/2)), 1.0f);
-			m_hud->drawCursor(g, getSelectedBeatmap()->osuCoords2RawPixels(m_vr->getCursorPos2() + Vector2(OsuGameRules::OSU_COORD_WIDTH/2, OsuGameRules::OSU_COORD_HEIGHT/2)), 1.0f);
+			m_hud->drawCursor(g, beatmapStd->osuCoords2RawPixels(m_vr->getCursorPos1() + Vector2(OsuGameRules::OSU_COORD_WIDTH/2, OsuGameRules::OSU_COORD_HEIGHT/2)), 1.0f);
+			m_hud->drawCursor(g, beatmapStd->osuCoords2RawPixels(m_vr->getCursorPos2() + Vector2(OsuGameRules::OSU_COORD_WIDTH/2, OsuGameRules::OSU_COORD_HEIGHT/2)), 1.0f);
 		}
 	}
 	else // if we are not playing
@@ -366,6 +409,7 @@ void Osu::draw(Graphics *g)
 		m_modSelector->draw(g);
 		m_mainMenu->draw(g);
 		m_vrTutorial->draw(g);
+		m_changelog->draw(g);
 		m_optionsMenu->draw(g);
 		m_rankingScreen->draw(g);
 
@@ -385,7 +429,7 @@ void Osu::draw(Graphics *g)
 
 	// if we are not using the native window resolution;
 	// we must also do this if we are in VR mode, since we only draw once and the buffer is used to draw the virtual screen later. otherwise we wouldn't see anything on the desktop window
-	if (osu_resolution_enabled.getBool() || osu_vr.getBool())
+	if (osu_resolution_enabled.getBool() || isInVRMode())
 	{
 		// draw a scaled version from the buffer to the screen
 		m_backBuffer->disable();
@@ -401,7 +445,7 @@ void Osu::draw(Graphics *g)
 	}
 
 	// now, let OpenVR draw (this internally then calls the registered callback, meaning drawVR() here)
-	if (osu_vr.getBool())
+	if (isInVRMode())
 		openvr->draw(g);
 }
 
@@ -460,7 +504,7 @@ void Osu::update()
 		{
 			// TODO: make this on click only, and not if held too. this can also cause earrape while scrubbing
 			bool isAnyOsuKeyDown = (m_bKeyboardKey1Down || m_bKeyboardKey2Down || m_bMouseKey1Down || m_bMouseKey2Down);
-			bool isAnyVRKeyDown = isInVRMode() && (openvr->getLeftController()->isButtonPressed(OpenVRController::BUTTON::BUTTON_STEAMVR_TOUCHPAD) || openvr->getRightController()->isButtonPressed(OpenVRController::BUTTON::BUTTON_STEAMVR_TOUCHPAD)
+			bool isAnyVRKeyDown = isInVRMode() && !m_vr->isUIActive() && (openvr->getLeftController()->isButtonPressed(OpenVRController::BUTTON::BUTTON_STEAMVR_TOUCHPAD) || openvr->getRightController()->isButtonPressed(OpenVRController::BUTTON::BUTTON_STEAMVR_TOUCHPAD)
 												|| openvr->getLeftController()->getTrigger() > 0.95f || openvr->getRightController()->getTrigger() > 0.95f);
 			if (engine->getMouse()->isLeftDown() || isAnyOsuKeyDown || isAnyVRKeyDown)
 			{
@@ -535,6 +579,13 @@ void Osu::update()
 		m_mainMenu->setVisible(!m_mainMenu->isVisible());
 		m_vrTutorial->setVisible(!m_mainMenu->isVisible());
 	}
+	if (m_bToggleChangelogScheduled)
+	{
+		m_bToggleChangelogScheduled = false;
+
+		m_mainMenu->setVisible(!m_mainMenu->isVisible());
+		m_changelog->setVisible(!m_mainMenu->isVisible());
+	}
 
 	// handle cursor visibility if outside of internal resolution
 	// TODO: not a critical bug, but the real cursor gets visible way too early if sensitivity is > 1.0f, due to this using scaled/offset getMouse()->getPos()
@@ -555,7 +606,7 @@ void Osu::update()
 	}
 
 	// handle mousewheel volume change
-	if ((m_songBrowser2 != NULL && (!m_songBrowser2->isVisible() || engine->getKeyboard()->isAltDown())) && !m_optionsMenu->isVisible() && !m_vrTutorial->isVisible())
+	if ((m_songBrowser2 != NULL && (!m_songBrowser2->isVisible() || engine->getKeyboard()->isAltDown())) && !m_optionsMenu->isVisible() && !m_vrTutorial->isVisible() && !m_changelog->isVisible())
 	{
 		if ((!(isInPlayMode() && !m_pauseMenu->isVisible()) && !m_rankingScreen->isVisible()) || (isInPlayMode() && !osu_disable_mousewheel.getBool()) || engine->getKeyboard()->isAltDown())
 		{
@@ -585,6 +636,7 @@ void Osu::updateMods()
 	m_bModTarget = osu_mods.getString().find("practicetarget") != -1;
 	m_bModDT = osu_mods.getString().find("dt") != -1;
 	m_bModNC = osu_mods.getString().find("nc") != -1;
+	m_bModNF = osu_mods.getString().find("nf") != -1;
 	m_bModHT = osu_mods.getString().find("ht") != -1;
 	m_bModHD = osu_mods.getString().find("hd") != -1;
 	m_bModHR = osu_mods.getString().find("hr") != -1;
@@ -615,7 +667,7 @@ void Osu::updateMods()
 
 	// notify the possibly running beatmap of mod changes, for e.g. recalculating stacks dynamically if HR is toggled
 	if (getSelectedBeatmap() != NULL)
-		getSelectedBeatmap()->onUpdateMods();
+		getSelectedBeatmap()->onModUpdate();
 }
 
 void Osu::onKeyDown(KeyboardEvent &key)
@@ -737,7 +789,7 @@ void Osu::onKeyDown(KeyboardEvent &key)
 			}
 
 			// allow live mod changing while playing
-			if (!key.isConsumed() && key == KEY_F1 && !m_bF1)
+			if (!key.isConsumed() && key == KEY_F1 && !m_bF1 && !getSelectedBeatmap()->hasFailed()) // only if not failed though
 			{
 				m_bF1 = true;
 				toggleModSelection(true);
@@ -782,11 +834,18 @@ void Osu::onKeyDown(KeyboardEvent &key)
 			// toggle pause menu
 			if ((key == (KEYCODE)OsuKeyBindings::GAME_PAUSE.getInt() || key == KEY_ESCAPE) && !m_bEscape)
 			{
-				m_bEscape = true;
-				getSelectedBeatmap()->pause();
-				m_pauseMenu->setVisible(getSelectedBeatmap()->isPaused());
+				if (!getSelectedBeatmap()->hasFailed() || !m_pauseMenu->isVisible()) // you can open the pause menu while the failing animation is happening, but never close it then
+				{
+					m_bEscape = true;
+					getSelectedBeatmap()->pause();
+					m_pauseMenu->setVisible(getSelectedBeatmap()->isPaused());
 
-				key.consume();
+					key.consume();
+				}
+				else // pressing escape while in failed pause menu
+				{
+					getSelectedBeatmap()->stop(true);
+				}
 			}
 
 			// local offset
@@ -928,6 +987,11 @@ void Osu::toggleVRTutorial()
 	m_bToggleVRTutorialScheduled = true;
 }
 
+void Osu::toggleChangelog()
+{
+	m_bToggleChangelogScheduled = true;
+}
+
 void Osu::volumeDown()
 {
 	float newVolume = clamp<float>(osu_volume_master.getFloat() - osu_volume_change_interval.getFloat(), 0.0f, 1.0f);
@@ -1056,7 +1120,7 @@ float Osu::getScoreMultiplier()
 {
 	float multiplier = 1.0f;
 
-	if (m_bModEZ)
+	if (m_bModEZ/* || m_bModNF*/) // TODO: commented until proper drain is implemented
 		multiplier *= 0.5f;
 	if (m_bModHT)
 		multiplier *= 0.3f;
@@ -1248,6 +1312,12 @@ void Osu::onFocusLost()
 
 	// release cursor clip
 	env->setCursorClip(false, Rect());
+}
+
+bool Osu::onShutdown()
+{
+	// the only time where a shutdown could be problematic is while an update is being installed, so we block it here
+	return m_updateHandler == NULL || m_updateHandler->getStatus() != OsuUpdateHandler::STATUS::STATUS_INSTALLING_UPDATE;
 }
 
 void Osu::onSkinReload()

@@ -19,11 +19,14 @@
 #include "OsuVR.h"
 #include "OsuSkin.h"
 #include "OsuGameRules.h"
+#include "OsuBeatmapStandard.h"
 
-OsuSpinner::OsuSpinner(int x, int y, long time, int sampleType, long endTime, OsuBeatmap *beatmap) : OsuHitObject(time, sampleType, -1, -1, beatmap)
+OsuSpinner::OsuSpinner(int x, int y, long time, int sampleType, long endTime, OsuBeatmapStandard *beatmap) : OsuHitObject(time, sampleType, -1, -1, beatmap)
 {
 	m_vOriginalRawPos = Vector2(x,y);
 	m_vRawPos = m_vOriginalRawPos;
+
+	m_beatmap = beatmap;
 
 	m_iObjectDuration = endTime - time;
 	m_bDrawRPM = false;
@@ -253,7 +256,8 @@ void OsuSpinner::update(long curPos)
 
 	if (m_beatmap->isPaused())
 	{
-		engine->getSound()->stop(m_beatmap->getSkin()->getSpinnerSpinSound());
+		if (m_beatmap->getSkin()->getSpinnerSpinSound()->isPlaying())
+			engine->getSound()->stop(m_beatmap->getSkin()->getSpinnerSpinSound());
 		return;
 	}
 
@@ -375,7 +379,7 @@ void OsuSpinner::update(long curPos)
 	}
 }
 
-void OsuSpinner::onClickEvent(Vector2 cursorPos, std::vector<OsuBeatmap::CLICK> &clicks)
+void OsuSpinner::onClickEvent(std::vector<OsuBeatmap::CLICK> &clicks)
 {
 	if (m_bFinished)
 		return;

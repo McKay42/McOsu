@@ -43,6 +43,8 @@
 
 ConVar osu_options_save_on_back("osu_options_save_on_back", true);
 
+const char *OsuOptionsMenu::OSU_CONFIG_FILE_NAME = ""; // set dynamically below in the constructor
+
 
 
 class OsuOptionsMenuSkinPreviewElement : public CBaseUIElement
@@ -158,12 +160,18 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 {
 	m_osu = osu;
 
+	if (m_osu->isInVRMode())
+		OSU_CONFIG_FILE_NAME = "osuvr";
+	else
+		OSU_CONFIG_FILE_NAME = "osu";
+
 	m_osu->getNotificationOverlay()->addKeyListener(this);
 
 	m_waitingKey = NULL;
 	m_vrRenderTargetResolutionLabel = NULL;
 	m_vrApproachDistanceSlider = NULL;
 	m_vrVibrationStrengthSlider = NULL;
+	m_vrSliderVibrationStrengthSlider = NULL;
 	m_vrHudDistanceSlider = NULL;
 	m_vrHudScaleSlider = NULL;
 
@@ -184,7 +192,10 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSection("General");
 
 	addSubSection("");
-	addButton("Download osu! and get some beatmaps first!")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onDownloadOsuClicked) );
+	OsuUIButton *downloadOsuButton = addButton("Download osu! and get some beatmaps first!");
+	downloadOsuButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onDownloadOsuClicked) );
+	downloadOsuButton->setColor(0xff00ff00);
+	downloadOsuButton->setTextColor(0xffffffff);
 
 	addSubSection("osu!folder (Skins & Songs & Database)");
 	m_osuFolderTextbox = addTextbox(convar->getConVarByName("osu_folder")->getString(), convar->getConVarByName("osu_folder"));
@@ -257,7 +268,13 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 		addSpacer();
 		m_vrVibrationStrengthSlider = addSlider("Vibration Strength", 0.0f, 1.0f, convar->getConVarByName("osu_vr_controller_vibration_strength"));
 		m_vrVibrationStrengthSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
-		m_vrVibrationStrengthSlider->setKeyDelta(0.05f);
+		m_vrVibrationStrengthSlider->setKeyDelta(0.01f);
+		// TODO: enable this after SteamVR is fixed
+		/*
+		m_vrSliderVibrationStrengthSlider = addSlider("Slider Vibration Strength", 0.0f, 1.0f, convar->getConVarByName("osu_vr_slider_controller_vibration_strength"));
+		m_vrSliderVibrationStrengthSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
+		m_vrSliderVibrationStrengthSlider->setKeyDelta(0.01f);
+		*/
 		addSpacer();
 		addCheckbox("Spectator Camera (ALT + C)", convar->getConVarByName("vr_spectator_mode"));
 		addCheckbox("Auto Switch Primary Controller", convar->getConVarByName("vr_auto_switch_primary_controller"));
@@ -271,6 +288,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 		addCheckbox("Draw VR Playfield", convar->getConVarByName("osu_vr_draw_playfield"));
 		addCheckbox("Draw Desktop Playfield", convar->getConVarByName("osu_vr_draw_desktop_playfield"));
 		addSpacer();
+		addCheckbox("Controller Distance Color Warning", convar->getConVarByName("osu_vr_controller_warning_distance_enabled"));
 		addCheckbox("Show Tutorial on Startup", convar->getConVarByName("osu_vr_tutorial"));
 		addSpacer();
 	}
@@ -448,6 +466,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Rainbow Numbers", convar->getConVarByName("osu_circle_number_rainbow"));
 	addCheckbox("SliderBreak Epilepsy", convar->getConVarByName("osu_slider_break_epilepsy"));
 	addCheckbox("Invisible Cursor", convar->getConVarByName("osu_hide_cursor_during_gameplay"));
+	addCheckbox("Draw 300s", convar->getConVarByName("osu_hitresult_draw_300s"));
 
 
 
@@ -523,9 +542,12 @@ void OsuOptionsMenu::update()
 		{
 			m_fVibrationStrengthExampleTimer = engine->getTime() + 0.65f;
 
-			openvr->getLeftController()->triggerHapticPulse(m_osu->getVR()->getHapticPulseStrength());
-			openvr->getRightController()->triggerHapticPulse(m_osu->getVR()->getHapticPulseStrength());
+			openvr->getController()->triggerHapticPulse(m_osu->getVR()->getHapticPulseStrength());
 		}
+	}
+	if (m_vrSliderVibrationStrengthSlider != NULL && m_vrSliderVibrationStrengthSlider->isActive())
+	{
+		openvr->getController()->triggerHapticPulse(m_osu->getVR()->getSliderHapticPulseStrength());
 	}
 }
 
@@ -657,12 +679,12 @@ void OsuOptionsMenu::updateLayout()
 	m_container->setSize(m_osu->getScreenSize());
 
 	// options panel
-	int optionsWidth = (int)(m_osu->getScreenWidth()*0.5f);
+	int optionsWidth = (int)(m_osu->getScreenWidth()*0.525f);
 	m_options->setRelPosX(m_osu->getScreenWidth()/2 - optionsWidth/2);
 	m_options->setSize(optionsWidth, m_osu->getScreenHeight()+1);
 
 	bool enableHorizontalScrolling = false;
-	int sideMargin = 25;
+	int sideMargin = 25*2;
 	int spaceSpacing = 25;
 	int sectionSpacing = -15; // section title to first element
 	int subsectionSpacing = 15; // subsection title to first element
@@ -838,6 +860,7 @@ void OsuOptionsMenu::onSkinSelect()
 		m_contextMenu->setRelPos(m_skinSelectButton->getRelPos());
 		m_contextMenu->begin();
 		m_contextMenu->addButton("default");
+		m_contextMenu->addButton("defaultvr");
 		for (int i=0; i<skinFolders.size(); i++)
 		{
 			if (skinFolders[i] == "." || skinFolders[i] == "..") // is this universal in every file system? too lazy to check. should probably fix this in the engine and not here
@@ -872,6 +895,7 @@ void OsuOptionsMenu::onResolutionSelect()
 	std::vector<Vector2> resolutions;
 
 	// 4:3
+	resolutions.push_back(Vector2(800, 600));
     resolutions.push_back(Vector2(1024, 768));
     resolutions.push_back(Vector2(1152, 864));
     resolutions.push_back(Vector2(1280, 960));
@@ -1415,7 +1439,9 @@ void OsuOptionsMenu::save()
 
 	debugLog("Osu: Saving user config file ...\n");
 
-	const char *userConfigFile = "cfg/osu.cfg";
+	UString userConfigFile = "cfg/";
+	userConfigFile.append(OSU_CONFIG_FILE_NAME);
+	userConfigFile.append(".cfg");
 
 	// manual concommands (e.g. fullscreen, windowed, osu_resolution)
 	std::vector<ConVar*> manualConCommands;
@@ -1444,7 +1470,7 @@ void OsuOptionsMenu::save()
 	std::vector<UString> keepLines;
 	{
 		// in extra block because the File class would block the following std::ofstream from writing to it until it's destroyed
-		File in(userConfigFile);
+		File in(userConfigFile.toUtf8());
 		if (!in.canRead())
 			debugLog("Osu Error: Couldn't read user config file!\n");
 		else
@@ -1500,7 +1526,7 @@ void OsuOptionsMenu::save()
 
 	// write new config file
 	// thankfully this path is relative and hardcoded, and thus not susceptible to unicode characters
-	std::ofstream out(userConfigFile);
+	std::ofstream out(userConfigFile.toUtf8());
 	if (!out.good())
 	{
 		engine->showMessageError("Osu Error", "Couldn't write user config file!");

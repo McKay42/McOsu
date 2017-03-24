@@ -21,6 +21,7 @@
 #include "OsuSkin.h"
 #include "OsuBeatmap.h"
 #include "OsuKeyBindings.h"
+#include "OsuModSelector.h"
 #include "OsuHUD.h"
 
 ConVar osu_pause_dim_background("osu_pause_dim_background", true);
@@ -60,6 +61,8 @@ OsuPauseMenu::OsuPauseMenu(Osu *osu) : OsuScreen()
 	m_bInitialWarningArrowFlyIn = true;
 
 	m_bContinueEnabled = true;
+	m_bClick1Down = false;
+	m_bClick2Down = false;
 
 	m_container = new CBaseUIContainer(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight(), "");
 
@@ -175,6 +178,8 @@ void OsuPauseMenu::onSelectionChange()
 			m_fWarningArrowsAnimX = m_selectedButton->getPos().x;
 
 		anim->moveQuadOut(&m_fWarningArrowsAnimY, m_selectedButton->getPos().y, 0.1f);
+
+		engine->getSound()->play(m_osu->getSkin()->getMenuClick());
 	}
 }
 
@@ -190,12 +195,26 @@ void OsuPauseMenu::onKeyDown(KeyboardEvent &e)
 		onBackClicked();
 	else if (e == (KEYCODE)OsuKeyBindings::LEFT_CLICK.getInt() || e == (KEYCODE)OsuKeyBindings::RIGHT_CLICK.getInt())
 	{
-		for (int i=0; i<m_buttons.size(); i++)
+		bool fireButtonClick = false;
+		if (e == (KEYCODE)OsuKeyBindings::LEFT_CLICK.getInt() && !m_bClick1Down)
 		{
-			if (m_buttons[i]->isMouseInside())
+			m_bClick1Down = true;
+			fireButtonClick = true;
+		}
+		if (e == (KEYCODE)OsuKeyBindings::RIGHT_CLICK.getInt() && !m_bClick2Down)
+		{
+			m_bClick2Down = true;
+			fireButtonClick = true;
+		}
+		if (fireButtonClick)
+		{
+			for (int i=0; i<m_buttons.size(); i++)
 			{
-				m_buttons[i]->click();
-				break;
+				if (m_buttons[i]->isMouseInside())
+				{
+					m_buttons[i]->click();
+					break;
+				}
 			}
 		}
 	}
@@ -278,6 +297,14 @@ void OsuPauseMenu::onKeyDown(KeyboardEvent &e)
 		e.consume();
 }
 
+void OsuPauseMenu::onKeyUp(KeyboardEvent &e)
+{
+	if (e == (KEYCODE)OsuKeyBindings::LEFT_CLICK.getInt())
+		m_bClick1Down = false;
+	if (e == (KEYCODE)OsuKeyBindings::RIGHT_CLICK.getInt())
+		m_bClick2Down = false;
+}
+
 void OsuPauseMenu::onChar(KeyboardEvent &e)
 {
 	if (!m_bVisible) return;
@@ -292,6 +319,10 @@ void OsuPauseMenu::scheduleVisibilityChange(bool visible)
 		m_bScheduledVisibilityChange = true;
 		m_bScheduledVisibility = visible;
 	}
+
+	// HACKHACK:
+	if (!visible)
+		setContinueEnabled(true);
 }
 
 void OsuPauseMenu::updateButtons()
@@ -351,6 +382,14 @@ void OsuPauseMenu::onResolutionChange(Vector2 newResolution)
 void OsuPauseMenu::setVisible(bool visible)
 {
 	m_bVisible = visible;
+
+	if (m_osu->isInPlayMode() && m_osu->getSelectedBeatmap() != NULL)
+		setContinueEnabled(!m_osu->getSelectedBeatmap()->hasFailed());
+	else
+		setContinueEnabled(true);
+
+	// HACKHACK:
+	m_osu->getModSelector()->setVisible(false);
 
 	// reset
 	m_selectedButton = NULL;

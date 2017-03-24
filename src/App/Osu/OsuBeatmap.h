@@ -33,20 +33,23 @@ public:
 	};
 
 public:
-	OsuBeatmap(Osu *osu, UString filepath);
+	OsuBeatmap(Osu *osu);
 	virtual ~OsuBeatmap();
 
-	void draw(Graphics *g);
-	void drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr);
-	void update();
+	virtual void draw(Graphics *g);
+	virtual void drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr);
+	void drawDebug(Graphics *g);
+	void drawBackground(Graphics *g);
+	virtual void update();
 
-	void skipEmptySection();
+	virtual void onModUpdate() {;} // this should make all the necessary internal updates to hitobjects when legacy osu mods or static mods change live (but also on start)
+	virtual bool isLoading(); // allows subclasses to delay the playing start, e.g. to load something
 
 	// database logic
 	void setDifficulties(std::vector<OsuBeatmapDifficulty*> diffs);
 
 	// callbacks called by the Osu class
-	void onUpdateMods(bool rebuildSliderVertexBuffers = true); // this makes all the necessary internal updates to hitobjects when legacy osu mods or static mods change live (but also on start)
+	void skipEmptySection();
 	void keyPressed1();
 	void keyPressed2();
 	void keyReleased1();
@@ -83,13 +86,12 @@ public:
 	// live statistics
 	int getBPM();
 	float getSpeedMultiplier();
-	inline int getNumMisses() {return m_iNumMisses;}
 	inline int getNPS() {return m_iNPS;}
 	inline int getND() {return m_iND;}
 
 	// used by OsuHitObject children and OsuModSelector
 	inline Osu *getOsu() const {return m_osu;}
-	OsuSkin *getSkin();
+	OsuSkin *getSkin(); // maybe use this for beatmap skins, maybe
 	inline long getCurMusicPos() const {return m_iCurMusicPos;}
 
 	float getRawAR();
@@ -99,20 +101,11 @@ public:
 	float getRawOD();
 	float getOD();
 
+	// player
 	inline float getHealth() {return m_fHealth;}
+	inline bool hasFailed() {return m_bFailed;}
 
 	// generic
-	inline Vector2 getPlayfieldSize() {return m_vPlayfieldSize;}
-	inline Vector2 getPlayfieldCenter() {return m_vPlayfieldCenter;}
-	inline float getRawHitcircleDiameter() {return m_fRawHitcircleDiameter;} // in osu!pixels
-	float getHitcircleDiameter(); // in actual scaled pixels to the current resolution
-	inline float getNumberScale() {return m_fNumberScale;}
-	inline float getHitcircleOverlapScale() {return m_fHitcircleOverlapScale;}
-	inline float getSliderFollowCircleScale() {return m_fSliderFollowCircleScale;}
-	inline float getSliderFollowCircleDiameter() {return m_fSliderFollowCircleDiameter;}
-	inline float getRawSliderFollowCircleDiameter() {return m_fRawSliderFollowCircleDiameter;}
-	inline float getPlayfieldRotation() const {return m_fPlayfieldRotation;}
-
 	inline OsuBeatmapDifficulty *getSelectedDifficulty() {return m_selectedDifficulty;}
 	inline std::vector<OsuBeatmapDifficulty*> getDifficulties() {return m_difficulties;}
 	inline std::vector<OsuBeatmapDifficulty*> *getDifficultiesPointer() {return &m_difficulties;}
@@ -123,11 +116,8 @@ public:
 	inline bool isContinueScheduled() {return m_bContinueScheduled;}
 	inline bool isWaiting() {return m_bIsWaiting;}
 	inline bool isInSkippableSection() {return m_bIsInSkippableSection;}
-	inline bool isSpinnerActive() {return m_bIsSpinnerActive;}
 	inline bool shouldFlashWarningArrows() {return m_bShouldFlashWarningArrows;}
 	bool isClickHeld();
-
-	inline Vector2 getContinueCursorPoint() {return m_vContinueCursorPoint;}
 
 	UString getTitle();
 	UString getArtist();
@@ -137,20 +127,31 @@ public:
 	void addHitResult(OsuScore::HIT hit, long delta, bool ignoreOnHitErrorBar = false, bool hitErrorBarOnly = false, bool ignoreCombo = false, bool ignoreScore = false);
 	void addSliderBreak();
 	void addScorePoints(int points);
-	void addHealth(float health);
+	void addHealth(float percent);
 	void playMissSound();
 
-	Vector2 osuCoords2Pixels(Vector2 coords); // hitobjects should use this one (includes lots of special behaviour)
-	Vector2 osuCoords2RawPixels(Vector2 coords); // raw transform from osu!pixels to absolute screen pixels (without any mods whatsoever)
-	Vector2 osuCoords2VRPixels(Vector2 coords); // this gets called by osuCoords2Pixels() during a VR draw(), for easier backwards compatibility
+protected:
+	static ConVar *m_osu_draw_hitobjects_ref;
+	static ConVar *m_osu_vr_draw_desktop_playfield_ref;
+	static ConVar *m_osu_followpoints_prevfadetime_ref;
+	static ConVar *m_osu_global_offset_ref;
+	static ConVar *m_osu_early_note_time_ref;
+	static ConVar *m_osu_fail_time_ref;
 
-	Vector2 osuCoords2LegacyPixels(Vector2 coords); // only applies vanilla osu mods and static mods to the coordinates (used for generating the static slider mesh) centered at (0, 0, 0)
+	static ConVar *m_osu_volume_music_ref;
+	static ConVar *m_osu_speed_override_ref;
+	static ConVar *m_osu_pitch_override_ref;
 
-	Vector2 getCursorPos();
-	Vector2 getFirstPersonDelta();
+	// overridable child events
+	virtual void onBeforeLoad() {;} // called before hitobjects are loaded
+	virtual void onLoad() {;} // called after hitobjects have been loaded
+	virtual void onPlayStart() {;} // called when the player starts playing (everything has been loaded, including the music)
+	virtual void onBeforeStop() {;} // called before hitobjects are unloaded
+	virtual void onStop() {;} // called after hitobjects have been unloaded, but before Osu::onPlayEnd()
+	virtual void onPaused() {;}
 
-private:
-	void drawFollowPoints(Graphics *g);
+	bool canDraw();
+	bool canUpdate();
 
 	void actualRestart();
 
@@ -162,21 +163,9 @@ private:
 	void resetHitObjects(long curPos = 0);
 	void resetScore();
 
-	void updateAutoCursorPos();
-	void updatePlayfieldMetrics();
-	void updateHitobjectMetrics();
-	void updateSliderVertexBuffers();
-
-	void calculateStacks();
-
 	unsigned long getMusicPositionMSInterpolated();
 
-	static ConVar *m_osu_volume_music_ref;
-	static ConVar *m_osu_speed_override_ref;
-	static ConVar *m_osu_pitch_override_ref;
-
 	Osu *m_osu;
-	UString m_sFilePath;
 
 	// beatmap
 	bool m_bIsPlaying;
@@ -185,52 +174,34 @@ private:
 	bool m_bIsRestartScheduled;
 	bool m_bIsRestartScheduledQuick;
 
-	bool m_bIsSpinnerActive;
 	bool m_bIsInSkippableSection;
 	bool m_bShouldFlashWarningArrows;
 	int m_iSelectedDifficulty;
 	float m_fWaitTime;
 	bool m_bContinueScheduled;
-	Vector2 m_vContinueCursorPoint;
 	unsigned long m_iContinueMusicPos;
 
 	std::vector<OsuBeatmapDifficulty*> m_difficulties;
 	OsuBeatmapDifficulty *m_selectedDifficulty;
 	Sound *m_music;
 
-	// scaling & drawing
-	float m_fScaleFactor;
-	Vector2 m_vPlayfieldCenter;
-	Vector2 m_vPlayfieldOffset;
-	Vector2 m_vPlayfieldSize;
-	float m_fXMultiplier;
-	float m_fRawHitcircleDiameter;
-	float m_fHitcircleDiameter;
-	float m_fNumberScale;
-	float m_fHitcircleOverlapScale;
-	float m_fSliderFollowCircleScale;
-	float m_fSliderFollowCircleDiameter;
-	float m_fRawSliderFollowCircleDiameter;
-
 	// sound
-	float m_fBeatLength;
 	long m_iCurMusicPos;
-	long m_iPrevCurMusicPos;
-	bool m_bWasSeekFrame; // workaround
-	double m_fInterpolatedMusicPos; // for interpolation
-	double m_fLastAudioTimeAccurateSet; // for interpolation
-	double m_fLastRealTimeForInterpolationDelta; // for interpolation
+	bool m_bWasSeekFrame;
+	double m_fInterpolatedMusicPos;
+	double m_fLastAudioTimeAccurateSet;
+	double m_fLastRealTimeForInterpolationDelta;
 
-	// gameplay
+	// gameplay & state
+	bool m_bFailed;
+	float m_fFailTime;
 	float m_fHealth;
+	float m_fHealthReal;
 	float m_fBreakBackgroundFade;
 	bool m_bInBreak;
-	int m_iPreviousFollowPointObjectIndex;
+	OsuHitObject *m_currentHitObject;
 	long m_iNextHitObjectTime;
 	long m_iPreviousHitObjectTime;
-	Vector2 m_vAutoCursorPos;
-	float m_fPlayfieldRotation;
-	int m_iAutoCursorDanceIndex;
 
 	bool m_bClick1Held;
 	bool m_bClick2Held;
@@ -242,19 +213,11 @@ private:
 	std::vector<OsuHitObject*> m_misaimObjects;
 
 	// statistics
-	int m_iNumMisses;
 	int m_iNPS;
 	int m_iND;
 
 	// custom
-	bool m_bIsPreLoading;
-	int m_iPreLoadingIndex;
-	bool m_bWasHREnabled; // dynamic stack recalculation
-	float m_fPrevHitCircleDiameter; // dynamic slider vertex buffer recalculation
-	bool m_bWasHorizontalMirrorEnabled;
-	bool m_bWasVerticalMirrorEnabled;
-	bool m_bWasEZEnabled;
-	bool m_bIsVRDraw; // for switching legacy drawing to osuCoords2Pixels/osuCoords2VRPixels
+	int m_iPreviousFollowPointObjectIndex; // TODO: this shouldn't be in this class
 };
 
 #endif
