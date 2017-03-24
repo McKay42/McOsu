@@ -166,6 +166,8 @@ void OsuUISongBrowserButton::updateLayout()
 	float offsetX = minOffset - m_view->getSize().x*(percentCenterOffsetAnimation*m_fCenterOffsetAnimation*(1.0f - m_fCenterOffsetVelocityAnimation) + percentHoverOffsetAnimation*m_fHoverOffsetAnimation - percentVelocityOffsetAnimation*m_fCenterOffsetVelocityAnimation + m_fOffsetPercent);
 	if (offsetX < 0)
 		offsetX = 0;
+	if (offsetX > m_view->getSize().x - getActualSize().x*0.15f) // WARNING: hardcoded to match 0.85f above for buttonWidthCompensation
+		offsetX = m_view->getSize().x - getActualSize().x*0.15f;
 
 	setRelPosX(offsetX);
 	setRelPosY(m_fTargetRelPosY + getSize().y*0.125f*m_fHoverMoveAwayAnimation);

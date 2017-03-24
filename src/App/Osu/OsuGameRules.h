@@ -248,8 +248,8 @@ public:
 	//	Playfield  //
 	//*************//
 
-	static ConVar osu_playfield_border_top_percent;		// why peppy WHYYYYYYYYYYYYYYYY, is it so hard to make the playfield have a normal constant size and offset ffs
-	static ConVar osu_playfield_border_bottom_percent;	// i know this is due to the hp bar, but changing the size and position of the entire playfield just for the fucking hp bar is bullshit
+	static ConVar osu_playfield_border_top_percent;
+	static ConVar osu_playfield_border_bottom_percent;
 
 	static const int OSU_COORD_WIDTH = 512;
 	static const int OSU_COORD_HEIGHT = 384;

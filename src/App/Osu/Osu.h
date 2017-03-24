@@ -20,6 +20,7 @@ class OsuOptionsMenu;
 class OsuModSelector;
 class OsuSongBrowser2;
 class OsuRankingScreen;
+class OsuUpdateHandler;
 class OsuNotificationOverlay;
 class OsuTooltipOverlay;
 class OsuBeatmap;
@@ -28,6 +29,7 @@ class OsuScore;
 class OsuSkin;
 class OsuHUD;
 class OsuVRTutorial;
+class OsuChangelog;
 
 class ConVar;
 class Image;
@@ -39,6 +41,7 @@ class Osu : public App, public MouseListener
 public:
 	static ConVar *version;
 	static ConVar *debug;
+	static bool autoUpdater;
 
 	static Vector2 osuBaseResolution;
 
@@ -74,6 +77,7 @@ public:
 	virtual void onResolutionChanged(Vector2 newResolution);
 	virtual void onFocusGained();
 	virtual void onFocusLost();
+	virtual bool onShutdown();
 
 	void onBeforePlayStart();			// called just before OsuBeatmap->play()
 	void onPlayStart();					// called when a beatmap has successfully started playing
@@ -84,6 +88,7 @@ public:
 	void toggleOptionsMenu();
 	void toggleRankingScreen();
 	void toggleVRTutorial();
+	void toggleChangelog();
 
 	void volumeDown();
 	void volumeUp();
@@ -104,8 +109,10 @@ public:
 	inline OsuNotificationOverlay *getNotificationOverlay() {return m_notificationOverlay;}
 	inline OsuTooltipOverlay *getTooltipOverlay() {return m_tooltipOverlay;}
 	inline OsuModSelector *getModSelector() {return m_modSelector;}
+	inline OsuPauseMenu *getPauseMenu() {return m_pauseMenu;}
 	inline OsuRankingScreen *getRankingScreen() {return m_rankingScreen;}
 	inline OsuScore *getScore() {return m_score;}
+	inline OsuUpdateHandler *getUpdateHandler() {return m_updateHandler;}
 
 	inline RenderTarget *getFrameBuffer() {return m_frameBuffer;}
 	inline McFont *getTitleFont() {return m_titleFont;}
@@ -127,6 +134,7 @@ public:
 	inline bool getModTarget() {return m_bModTarget;}
 	inline bool getModDT() {return m_bModDT;}
 	inline bool getModNC() {return m_bModNC;}
+	inline bool getModNF() {return m_bModNF;}
 	inline bool getModHT() {return m_bModHT;}
 	inline bool getModHD() {return m_bModHD;}
 	inline bool getModHR() {return m_bModHR;}
@@ -192,6 +200,8 @@ private:
 	OsuNotificationOverlay *m_notificationOverlay;
 	OsuScore *m_score;
 	OsuVRTutorial *m_vrTutorial;
+	OsuChangelog *m_changelog;
+	OsuUpdateHandler *m_updateHandler;
 
 	std::vector<OsuScreen*> m_screens;
 
@@ -208,6 +218,7 @@ private:
 	bool m_bModTarget;
 	bool m_bModDT;
 	bool m_bModNC;
+	bool m_bModNF;
 	bool m_bModHT;
 	bool m_bModHD;
 	bool m_bModHR;
@@ -238,6 +249,7 @@ private:
 	bool m_bToggleOptionsMenuScheduled;
 	bool m_bToggleRankingScreenScheduled;
 	bool m_bToggleVRTutorialScheduled;
+	bool m_bToggleChangelogScheduled;
 
 	// cursor
 	bool m_bShouldCursorBeVisible;

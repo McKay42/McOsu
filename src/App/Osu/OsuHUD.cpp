@@ -19,6 +19,7 @@
 #include "OsuVR.h"
 #include "OsuSkin.h"
 #include "OsuBeatmap.h"
+#include "OsuBeatmapStandard.h"
 #include "OsuGameRules.h"
 #include "OsuScore.h"
 
@@ -35,6 +36,10 @@ ConVar osu_cursor_trail_alpha("osu_cursor_trail_alpha", 1.0f);
 
 ConVar osu_hud_scale("osu_hud_scale", 1.0f);
 ConVar osu_hud_hiterrorbar_scale("osu_hud_hiterrorbar_scale", 1.0f);
+ConVar osu_hud_hiterrorbar_width_percent("osu_hud_hiterrorbar_width_percent", 0.15f);
+ConVar osu_hud_hiterrorbar_height_percent("osu_hud_hiterrorbar_height_percent", 0.007f);
+ConVar osu_hud_hiterrorbar_bar_width_scale("osu_hud_hiterrorbar_bar_width_scale", 0.6f);
+ConVar osu_hud_hiterrorbar_bar_height_scale("osu_hud_hiterrorbar_bar_height_scale", 3.4f);
 ConVar osu_hud_combo_scale("osu_hud_combo_scale", 1.0f);
 ConVar osu_hud_score_scale("osu_hud_score_scale", 1.0f);
 ConVar osu_hud_accuracy_scale("osu_hud_accuracy_scale", 1.0f);
@@ -44,6 +49,7 @@ ConVar osu_hud_statistics_scale("osu_hud_statistics_scale", 1.0f);
 
 ConVar osu_draw_cursor_trail("osu_draw_cursor_trail", true);
 ConVar osu_draw_hud("osu_draw_hud", true);
+ConVar osu_draw_hpbar("osu_draw_hpbar", false);
 ConVar osu_draw_hiterrorbar("osu_draw_hiterrorbar", true);
 ConVar osu_draw_progressbar("osu_draw_progressbar", true);
 ConVar osu_draw_combo("osu_draw_combo", true);
@@ -51,6 +57,7 @@ ConVar osu_draw_score("osu_draw_score", true);
 ConVar osu_draw_accuracy("osu_draw_accuracy", true);
 ConVar osu_draw_target_heatmap("osu_draw_target_heatmap", true);
 ConVar osu_draw_scrubbing_timeline("osu_draw_scrubbing_timeline", true);
+ConVar osu_draw_continue("osu_draw_continue", true);
 
 ConVar osu_draw_statistics_misses("osu_draw_statistics_misses", false);
 ConVar osu_draw_statistics_bpm("osu_draw_statistics_bpm", false);
@@ -106,24 +113,24 @@ void OsuHUD::draw(Graphics *g)
 	OsuBeatmap *beatmap = m_osu->getSelectedBeatmap();
 	if (beatmap == NULL) return; // sanity check
 
+	OsuBeatmapStandard *beatmapStd = dynamic_cast<OsuBeatmapStandard*>(beatmap);
+
 	if (osu_draw_hud.getBool())
 	{
 		if (beatmap->isInSkippableSection())
 			drawSkip(g);
 
 		g->pushTransform();
-			if (m_osu->getModTarget() && osu_draw_target_heatmap.getBool())
-				g->translate(0, beatmap->getHitcircleDiameter());
+			if (m_osu->getModTarget() && osu_draw_target_heatmap.getBool() && beatmapStd != NULL)
+				g->translate(0, beatmapStd->getHitcircleDiameter());
 			drawStatistics(g, m_osu->getScore()->getNumMisses(), beatmap->getBPM(), OsuGameRules::getApproachRateForSpeedMultiplier(beatmap, beatmap->getSpeedMultiplier()), beatmap->getCS(), OsuGameRules::getOverallDifficultyForSpeedMultiplier(beatmap, beatmap->getSpeedMultiplier()), beatmap->getNPS(), beatmap->getND(), m_osu->getScore()->getUnstableRate());
 		g->popTransform();
 
-		/*
-		g->setColor(0xffffffff);
-		g->pushTransform();
-			g->translate(100, 100);
-			g->drawString(m_tempFont, UString::format("HP: %f", beatmap->getHealth()));
-		g->popTransform();
-		*/
+		if (osu_draw_hpbar.getBool())
+			drawHP(g, beatmap->getHealth());
+
+		if (osu_draw_hiterrorbar.getBool() && (beatmapStd == NULL || !beatmapStd->isSpinnerActive()))
+			drawHitErrorBar(g, OsuGameRules::getHitWindow300(beatmap), OsuGameRules::getHitWindow100(beatmap), OsuGameRules::getHitWindow50(beatmap));
 
 		if (osu_draw_score.getBool())
 			drawScore(g, m_osu->getScore()->getScore());
@@ -137,19 +144,17 @@ void OsuHUD::draw(Graphics *g)
 		if (osu_draw_accuracy.getBool())
 			drawAccuracy(g, m_osu->getScore()->getAccuracy()*100.0f);
 
-		if (osu_draw_hiterrorbar.getBool() && !beatmap->isSpinnerActive())
-			drawHitErrorBar(g, OsuGameRules::getHitWindow300(beatmap), OsuGameRules::getHitWindow100(beatmap), OsuGameRules::getHitWindow50(beatmap));
-
-		if (m_osu->getModTarget() && osu_draw_target_heatmap.getBool())
-			drawTargetHeatmap(g, beatmap->getHitcircleDiameter());
+		if (m_osu->getModTarget() && osu_draw_target_heatmap.getBool() && beatmapStd != NULL)
+			drawTargetHeatmap(g, beatmapStd->getHitcircleDiameter());
 	}
 
 	if (beatmap->shouldFlashWarningArrows())
-		drawWarningArrows(g, beatmap->getHitcircleDiameter());
+		drawWarningArrows(g, beatmapStd != NULL ? beatmapStd->getHitcircleDiameter() : 0);
 
-	if (beatmap->isContinueScheduled())
-		drawContinue(g, beatmap->getContinueCursorPoint(), beatmap->getHitcircleDiameter());
+	if (beatmap->isContinueScheduled() && beatmapStd != NULL && osu_draw_continue.getBool())
+		drawContinue(g, beatmapStd->getContinueCursorPoint(), beatmapStd->getHitcircleDiameter());
 
+	// TODO: put this in its own function
 	if (osu_draw_scrubbing_timeline.getBool() && m_osu->isSeeking())
 	{
 		Vector2 cursorPos = engine->getMouse()->getPos();
@@ -275,7 +280,7 @@ void OsuHUD::drawDummy(Graphics *g)
 
 void OsuHUD::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 {
-	OsuBeatmap *beatmap = m_osu->getSelectedBeatmap();
+	OsuBeatmapStandard *beatmap = dynamic_cast<OsuBeatmapStandard*>(m_osu->getSelectedBeatmap());
 	if (beatmap == NULL) return; // sanity check
 
 	vr->getShaderTexturedLegacyGeneric()->enable();
@@ -287,6 +292,15 @@ void OsuHUD::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 				drawSkip(g);
 
 			drawStatistics(g, m_osu->getScore()->getNumMisses(), beatmap->getBPM(), OsuGameRules::getApproachRateForSpeedMultiplier(beatmap, beatmap->getSpeedMultiplier()), beatmap->getCS(), OsuGameRules::getOverallDifficultyForSpeedMultiplier(beatmap, beatmap->getSpeedMultiplier()), beatmap->getNPS(), beatmap->getND(), m_osu->getScore()->getUnstableRate());
+
+			vr->getShaderUntexturedLegacyGeneric()->enable();
+			vr->getShaderUntexturedLegacyGeneric()->setUniformMatrix4fv("matrix", mvp);
+			{
+				if (osu_draw_hpbar.getBool() && !m_osu->getModNF())
+					drawHP(g, beatmap->getHealth());
+			}
+			vr->getShaderUntexturedLegacyGeneric()->disable();
+			vr->getShaderTexturedLegacyGeneric()->enable();
 
 			if (osu_draw_score.getBool())
 				drawScore(g, m_osu->getScore()->getScore());
@@ -303,6 +317,9 @@ void OsuHUD::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 
 		if (beatmap->shouldFlashWarningArrows())
 			drawWarningArrows(g, beatmap->getHitcircleDiameter());
+
+		if (beatmap->isLoading())
+			drawLoadingSmall(g);
 	}
 	vr->getShaderTexturedLegacyGeneric()->disable();
 }
@@ -315,6 +332,15 @@ void OsuHUD::drawVRDummy(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 		drawSkip(g);
 
 		drawStatistics(g, 0, 180, 9.0f, 4.0f, 8.0f, 4, 6, 90.0f);
+
+		vr->getShaderUntexturedLegacyGeneric()->enable();
+		vr->getShaderUntexturedLegacyGeneric()->setUniformMatrix4fv("matrix", mvp);
+		{
+			if (osu_draw_hpbar.getBool())
+				drawHP(g, 1.0f);
+		}
+		vr->getShaderUntexturedLegacyGeneric()->disable();
+		vr->getShaderTexturedLegacyGeneric()->enable();
 
 		if (osu_draw_score.getBool())
 			drawScore(g, 123456789);
@@ -732,7 +758,7 @@ void OsuHUD::drawCombo(Graphics *g, int combo)
 		g->setAlpha(m_fComboAnim2*0.65f);
 		g->pushTransform();
 			g->scale(scale, scale);
-			g->translate(offset, m_osu->getScreenHeight() - m_osu->getSkin()->getScore0()->getHeight()*scale/2.0f, 0.15f);
+			g->translate(offset, m_osu->getScreenHeight() - m_osu->getSkin()->getScore0()->getHeight()*scale/2.0f, m_osu->isInVRMode() ? 0.15f : 0.0f);
 			drawScoreNumber(g, combo, scale);
 
 			// draw 'x' at the end
@@ -748,7 +774,7 @@ void OsuHUD::drawCombo(Graphics *g, int combo)
 	scale = m_osu->getImageScale(m_osu, m_osu->getSkin()->getScore0(), 32) * animScaleMultiplier * osu_hud_scale.getFloat() * osu_hud_combo_scale.getFloat();
 	g->pushTransform();
 		g->scale(scale, scale);
-		g->translate(offset, m_osu->getScreenHeight() - m_osu->getSkin()->getScore0()->getHeight()*scale/2.0f, 0.45f);
+		g->translate(offset, m_osu->getScreenHeight() - m_osu->getSkin()->getScore0()->getHeight()*scale/2.0f, m_osu->isInVRMode() ? 0.45f : 0.0f);
 		drawScoreNumber(g, combo, scale);
 
 		// draw 'x' at the end
@@ -777,6 +803,35 @@ void OsuHUD::drawScore(Graphics *g, int score)
 		g->translate(m_osu->getScreenWidth() - m_osu->getSkin()->getScore0()->getWidth()*scale*numDigits - offset*(numDigits-1), m_osu->getSkin()->getScore0()->getHeight()*scale/2);
 		drawScoreNumber(g, score, scale, false, offset);
 	g->popTransform();
+}
+
+void OsuHUD::drawHP(Graphics *g, float health)
+{
+	if (health <= 0.0f) return;
+
+	float fadeStartPercent = 0.40f;
+	float fadeFinishPercent = 0.25f;
+	float greenBlueFactor = 1.0f;
+	if (health < fadeStartPercent)
+	{
+		if (health > fadeFinishPercent)
+			greenBlueFactor = (health - fadeFinishPercent) / std::abs(fadeStartPercent - fadeFinishPercent);
+		else
+			greenBlueFactor = 0.0f;
+	}
+	g->setColor(COLORf(1.0f, 1.0f, greenBlueFactor, greenBlueFactor));
+	g->fillRect(0, 0, m_osu->getScreenWidth()*0.5f*health, m_osu->getScreenHeight()*0.015f);
+	/*
+	g->pushTransform();
+		g->translate(100, 100);
+		g->drawString(m_tempFont, UString::format("HP: %i", (int)(health*100.0f)));
+		if (health < 0.01f)
+		{
+			g->translate(0, m_tempFont->getHeight());
+			g->drawString(m_tempFont, "RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP");
+		}
+	g->popTransform();
+	*/
 }
 
 void OsuHUD::drawAccuracySimple(Graphics *g, float accuracy, float scale)
@@ -859,7 +914,7 @@ void OsuHUD::drawSkip(Graphics *g)
 	g->setColor(0xffffffff);
 	g->pushTransform();
 		g->scale(scale, scale);
-		g->translate(m_osu->getScreenWidth() - m_osu->getSkin()->getPlaySkip()->getWidth()*scale/2.0f, m_osu->getScreenHeight() - m_osu->getSkin()->getPlaySkip()->getHeight()*scale/2.0f, 0.5f);
+		g->translate(m_osu->getScreenWidth() - m_osu->getSkin()->getPlaySkip()->getWidth()*scale/2.0f, m_osu->getScreenHeight() - m_osu->getSkin()->getPlaySkip()->getHeight()*scale/2.0f, m_osu->isInVRMode() ? 0.5f : 0.0f);
 		g->drawImage(m_osu->getSkin()->getPlaySkip());
 	g->popTransform();
 }
@@ -870,7 +925,7 @@ void OsuHUD::drawWarningArrow(Graphics *g, Vector2 pos, bool flipVertically, boo
 
 	g->pushTransform();
 		g->scale(flipVertically ? -scale : scale, scale);
-		g->translate(pos.x + (flipVertically ? (-m_osu->getSkin()->getPlayWarningArrow()->getWidth()*scale/2.0f) : (m_osu->getSkin()->getPlayWarningArrow()->getWidth()*scale/2.0f)) * (originLeft ? 1.0f : -1.0f), pos.y, 0.75f);
+		g->translate(pos.x + (flipVertically ? (-m_osu->getSkin()->getPlayWarningArrow()->getWidth()*scale/2.0f) : (m_osu->getSkin()->getPlayWarningArrow()->getWidth()*scale/2.0f)) * (originLeft ? 1.0f : -1.0f), pos.y, m_osu->isInVRMode() ? 0.75f : 0.0f);
 		g->drawImage(m_osu->getSkin()->getPlayWarningArrow());
 	g->popTransform();
 }
@@ -933,11 +988,11 @@ void OsuHUD::drawHitErrorBar(Graphics *g, float hitWindow300, float hitWindow100
 	const Color color100 = COLOR(255, 0, 255-brightnessSub, 0);
 	const Color color50 = COLOR(255, 255-brightnessSub, 165-brightnessSub, 0);
 
-	const Vector2 size = Vector2(m_osu->getScreenWidth()*0.15f, m_osu->getScreenHeight()*0.007f)*osu_hud_scale.getFloat()*osu_hud_hiterrorbar_scale.getFloat();
-	const Vector2 center = Vector2(m_osu->getScreenWidth()/2.0f, m_osu->getScreenHeight() - m_osu->getScreenHeight()*0.015*osu_hud_scale.getFloat()*osu_hud_hiterrorbar_scale.getFloat());
+	const Vector2 size = Vector2(m_osu->getScreenWidth()*osu_hud_hiterrorbar_width_percent.getFloat(), m_osu->getScreenHeight()*osu_hud_hiterrorbar_height_percent.getFloat())*osu_hud_scale.getFloat()*osu_hud_hiterrorbar_scale.getFloat();
+	const Vector2 center = Vector2(m_osu->getScreenWidth()/2.0f, m_osu->getScreenHeight() - m_osu->getScreenHeight()*2.15f*osu_hud_hiterrorbar_height_percent.getFloat()*osu_hud_scale.getFloat()*osu_hud_hiterrorbar_scale.getFloat());
 
-	const float entryHeight = size.y*3.4f;
-	const float entryWidth = size.y*0.6f;
+	const float entryHeight = size.y*osu_hud_hiterrorbar_bar_height_scale.getFloat();
+	const float entryWidth = size.y*osu_hud_hiterrorbar_bar_width_scale.getFloat();
 
 	const float totalHitWindowLength = hitWindow50;
 	const float percent100 = hitWindow100 / totalHitWindowLength;
@@ -1140,7 +1195,7 @@ void OsuHUD::drawProgressBarVR(Graphics *g, Matrix4 &mvp, OsuVR *vr, float perce
 		g->setColor(0xffffffff);
 		g->pushTransform();
 			g->scale(circularMetreScale, circularMetreScale);
-			g->translate(center.x, center.y, 0.65f);
+			g->translate(center.x, center.y, m_osu->isInVRMode() ? 0.65f : 0.0f);
 			g->drawImage(m_osu->getSkin()->getCircularmetre());
 		g->popTransform();
 	}
