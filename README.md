@@ -14,6 +14,7 @@ Binaries are available for **Windows** and **Linux**, and maybe macOS in the fut
 Note that Linux support is not as polished as Windows, and some functions such as native fullscreen mode or raw input do not work there yet.
 
 ## Notable features which osu! doesn't have (yet) in comparison:
+- Virtual Reality support (HTC Vive + Oculus Rift)
 - Mid-play empty section skipping
 - Beatmap scrubbing (CTRL + ALT + Click drag)
 - Override CS/AR/HP/OD
@@ -21,7 +22,6 @@ Note that Linux support is not as polished as Windows, and some functions such a
 - Change mods while playing
 - Actually useful target practice mod
 - Experimental mods (Wobble, First Person, Minimize, Playfield flipping, Jigsaw, etc.)
-- The choice to use Score V2 in singleplayer
 - Properly drawn playfield border
 - Arbitrary HUD scale (Combo counter, accuracy, etc.)
 - Enable/Disable approach circles, numbers, sliderendcircles, followpoints or any other element
