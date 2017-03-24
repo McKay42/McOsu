@@ -1,6 +1,6 @@
 //================ Copyright (c) 2016, PG, All rights reserved. =================//
 //
-// Purpose:		difficulty file loader and container
+// Purpose:		beatmap file loader and container (also generates hitobjects)
 //
 // $NoKeywords: $osudiff
 //===============================================================================//
@@ -10,11 +10,13 @@
 
 #include "cbase.h"
 
-class Osu;
-class OsuHitObject;
-class OsuBeatmap;
-
 class BackgroundImagePathLoader;
+
+class Osu;
+class OsuBeatmap;
+class OsuBeatmapStandard;
+
+class OsuHitObject;
 
 class OsuBeatmapDifficulty
 {
@@ -91,7 +93,7 @@ public:
 	bool loaded;
 
 	// metadata
-	int mode; // 0 = osu!, 1 = Taiko, 2 = Catch the Beat, 3 = osu!mania
+	int mode; // 0 = osu!standard, 1 = Taiko, 2 = Catch the Beat, 3 = osu!mania
 
 	UString title;
 	UString audioFileName;
@@ -131,6 +133,7 @@ public:
 	UString fullSoundFilePath;
 	Image *backgroundImage;
 	long localoffset;
+	long onlineOffset;
 	int minBPM;
 	int maxBPM;
 	int numObjects;
@@ -149,12 +152,16 @@ public:
 	};
 
 	TIMING_INFO getTimingInfoForTime(unsigned long positionMS);
+	unsigned long getBreakDuration(unsigned long positionMS);
+
 	inline bool shouldBackgroundImageBeLoaded() const {return m_bShouldBackgroundImageBeLoaded;}
 	bool isInBreak(unsigned long positionMS);
-	unsigned long getBreakDuration(unsigned long positionMS);
 
 private:
 	friend class BackgroundImagePathLoader;
+
+	// every supported type of beatmap/gamemode gets its own build function here. it should build the hitobject classes from the data loaded from disk.
+	void buildStandardHitObjects(OsuBeatmapStandard *beatmap, std::vector<OsuHitObject*> *hitobjects);
 
 	float getSliderTimeForSlider(SLIDER *slider);
 	float getTimingPointMultiplierForSlider(SLIDER *slider); // needed for slider ticks

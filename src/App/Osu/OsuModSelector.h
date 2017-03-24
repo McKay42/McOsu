@@ -46,6 +46,7 @@ public:
 	void setWaitForF1KeyUp(bool waitForF1KeyUp) {m_bWaitForF1KeyUp = waitForF1KeyUp;}
 
 	bool isInCompactMode();
+	bool isCSOverrideSliderActive();
 
 	void updateModConVar();
 	void updateOverrideSliders();
@@ -97,8 +98,11 @@ private:
 
 	bool m_bWaitForF1KeyUp;
 
+	bool m_bWaitForCSChangeFinished;
+
 	// override sliders
 	std::vector<OVERRIDE_SLIDER> m_overrideSliders;
+	CBaseUISlider *m_CSSlider;
 	CBaseUISlider *m_ARSlider;
 	CBaseUISlider *m_ODSlider;
 	CBaseUISlider *m_BPMSlider;

@@ -176,9 +176,19 @@ public:
 		return 400.0f; // opsu is using this here: (500.0f - (beatmap->getOD() * 10.0f)), while osu is just using 400 absolute ms hardcoded, not sure why
 	}
 
-	static float getSpinnerSpins(OsuBeatmap *beatmap)
+	static float getSpinnerSpins(OsuBeatmap *beatmap) // raw spins
 	{
 		return mapDifficultyRange(beatmap->getOD(), 3.0f, 5.0f, 7.5f);
+	}
+	static float getSpinnerRotationsForSpeedMultiplier(OsuBeatmap *beatmap, long spinnerDuration, float speedMultiplier)
+	{
+		// HACKHACK: added 0.75 multiplier until i fix the rotation logic frametime bullshit code from opsu
+		// this is also incorrect as fuck, but who cares about spinners anyway
+		return (int)(((float)spinnerDuration / 1000.0f * getSpinnerSpins(beatmap))*0.75f) * (std::min(1.0f / speedMultiplier, 1.0f));
+	}
+	static float getSpinnerRotationsForSpeedMultiplier(OsuBeatmap *beatmap, long spinnerDuration) // spinner length compensated rotations // respect all mods and overrides
+	{
+		return getSpinnerRotationsForSpeedMultiplier(beatmap, spinnerDuration, beatmap->getOsu()->getSpeedMultiplier());
 	}
 
 	static OsuScore::HIT getHitResult(long delta, OsuBeatmap *beatmap)
@@ -238,8 +248,8 @@ public:
 	//	Playfield  //
 	//*************//
 
-	static ConVar osu_playfield_border_top_percent;		// why peppy WHYYYYYYYYYYYYYYYY, is it so hard to make the playfield have a normal constant size and offset ffs
-	static ConVar osu_playfield_border_bottom_percent;	// i know this is due to the hp bar, but changing the size and position of the entire playfield just for the fucking hp bar is bullshit
+	static ConVar osu_playfield_border_top_percent;
+	static ConVar osu_playfield_border_bottom_percent;
 
 	static const int OSU_COORD_WIDTH = 512;
 	static const int OSU_COORD_HEIGHT = 384;

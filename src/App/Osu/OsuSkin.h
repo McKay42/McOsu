@@ -132,6 +132,8 @@ public:
 	inline Image *getDefaultButtonMiddle() {return m_defaultButtonMiddle;}
 	inline Image *getDefaultButtonRight() {return m_defaultButtonRight;}
 	inline Image *getMenuBack() {return m_menuBack;}
+	inline Image *getSelectionMode() {return m_selectionMode;}
+	inline Image *getSelectionModeOver() {return m_selectionModeOver;}
 	inline Image *getSelectionMods() {return m_selectionMods;}
 	inline Image *getSelectionModsOver() {return m_selectionModsOver;}
 	inline Image *getSelectionRandom() {return m_selectionRandom;}
@@ -167,6 +169,7 @@ public:
 	inline Sound *getSpinnerSpinSound() {return m_spinnerSpinSound;}
 
 	inline Sound *getCombobreak() {return m_combobreak;}
+	inline Sound *getFailsound() {return m_failsound;}
 	inline Sound *getApplause() {return m_applause;}
 	inline Sound *getMenuHit() {return m_menuHit;}
 	inline Sound *getMenuClick() {return m_menuClick;}
@@ -254,6 +257,7 @@ private:
 
 	void onEffectVolumeChange(UString oldValue, UString newValue);
 
+	static const char *OSUSKIN_DEFAULT_SKIN_PATH;
 	static ConVar *m_osu_skin_ref;
 
 	Osu *m_osu;
@@ -360,6 +364,8 @@ private:
 	Image *m_defaultButtonMiddle;
 	Image *m_defaultButtonRight;
 	Image *m_menuBack;
+	Image *m_selectionMode;
+	Image *m_selectionModeOver;
 	Image *m_selectionMods;
 	Image *m_selectionModsOver;
 	Image *m_selectionRandom;
@@ -410,6 +416,7 @@ private:
 	Sound *m_spinnerSpinSound;
 
 	Sound *m_combobreak;
+	Sound *m_failsound;
 	Sound *m_applause;
 	Sound *m_menuHit;
 	Sound *m_menuClick;
