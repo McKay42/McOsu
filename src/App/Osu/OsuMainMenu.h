@@ -12,7 +12,6 @@
 #include "MouseListener.h"
 
 class Osu;
-class OsuUpdateChecker;
 
 class OsuMainMenuMainButton;
 class OsuMainMenuButton;
@@ -23,6 +22,9 @@ class CBaseUIContainer;
 
 class OsuMainMenu : public OsuScreen, public MouseListener
 {
+public:
+	static UString MCOSU_MAIN_BUTTON_TEXT;
+
 public:
 	friend class OsuMainMenuMainButton;
 	friend class OsuMainMenuButton;
@@ -66,13 +68,16 @@ private:
 
 	void onPausePressed();
 	void onUpdatePressed();
+	void onGithubPressed();
+	void onVersionPressed();
 
 	Osu *m_osu;
-	OsuUpdateChecker *m_updateChecker;
-	bool m_bUpdateStatus;
-	bool m_bUpdateCheckFinished;
+
 	float m_fUpdateStatusTime;
+	float m_fUpdateButtonTextTime;
+	float m_fUpdateButtonAnimTime;
 	float m_fUpdateButtonAnim;
+	bool m_bHasClickedUpdate;
 
 	Vector2 m_vSize;
 	Vector2 m_vCenter;
@@ -82,17 +87,16 @@ private:
 	bool m_bMenuElementsVisible;
 	float m_fMainMenuButtonCloseTime;
 
-	float m_fShutdownScheduledTime;
-
 	CBaseUIContainer *m_container;
 	OsuMainMenuMainButton *m_mainButton;
 	std::vector<OsuMainMenuButton*> m_menuElements;
 
 	CBaseUIButton *m_pauseButton;
 	OsuUIButton *m_updateAvailableButton;
+	OsuUIButton *m_githubButton;
+	CBaseUIButton *m_versionButton;
 
-	std::vector<UString> m_todo;
-
+	// custom
 	float m_fMainMenuAnimTime;
 	float m_fMainMenuAnim;
 	float m_fMainMenuAnim1;
@@ -101,6 +105,8 @@ private:
 	float m_fMainMenuAnim1Target;
 	float m_fMainMenuAnim2Target;
 	float m_fMainMenuAnim3Target;
+
+	float m_fShutdownScheduledTime;
 };
 
 #endif

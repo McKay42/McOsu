@@ -10,10 +10,14 @@
 
 #include "OsuBeatmap.h"
 
+class ConVar;
+
+class OsuBeatmapStandard;
+
 class OsuHitObject
 {
 public:
-	static void drawHitResult(Graphics *g, OsuBeatmap *beatmap, Vector2 rawPos, OsuScore::HIT result, float animPercent);
+	static void drawHitResult(Graphics *g, OsuBeatmapStandard *beatmap, Vector2 rawPos, OsuScore::HIT result, float animPercent);
 	static void drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiameter, float rawHitcircleDiameter, Vector2 rawPos, OsuScore::HIT result, float animPercent);
 
 public:
@@ -22,6 +26,7 @@ public:
 
 	virtual void draw(Graphics *g);
 	virtual void draw2(Graphics *g){;}
+	virtual void drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr){;}
 	virtual void update(long curPos);
 
 	virtual void updateStackPosition(float stackOffset) = 0;
@@ -48,10 +53,12 @@ public:
 	inline bool isBlocked() const {return m_bBlocked;}
 	inline bool hasMisAimed() const {return m_bMisAim;}
 
-	virtual void onClickEvent(Vector2 cursorPos, std::vector<OsuBeatmap::CLICK> &clicks) {;}
+	virtual void onClickEvent(std::vector<OsuBeatmap::CLICK> &clicks) {;}
 	virtual void onReset(long curPos);
 
 protected:
+	static ConVar *m_osu_approach_scale_multiplier_ref;
+
 	OsuBeatmap *m_beatmap;
 
 	bool m_bVisible;

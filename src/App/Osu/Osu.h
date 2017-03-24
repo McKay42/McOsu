@@ -13,12 +13,14 @@
 
 class CWindowManager;
 
+class OsuVR;
 class OsuMainMenu;
 class OsuPauseMenu;
 class OsuOptionsMenu;
 class OsuModSelector;
 class OsuSongBrowser2;
 class OsuRankingScreen;
+class OsuUpdateHandler;
 class OsuNotificationOverlay;
 class OsuTooltipOverlay;
 class OsuBeatmap;
@@ -26,6 +28,8 @@ class OsuScreen;
 class OsuScore;
 class OsuSkin;
 class OsuHUD;
+class OsuVRTutorial;
+class OsuChangelog;
 
 class ConVar;
 class Image;
@@ -37,6 +41,7 @@ class Osu : public App, public MouseListener
 public:
 	static ConVar *version;
 	static ConVar *debug;
+	static bool autoUpdater;
 
 	static Vector2 osuBaseResolution;
 
@@ -55,6 +60,7 @@ public:
 	virtual ~Osu();
 
 	virtual void draw(Graphics *g);
+	void drawVR(Graphics *g);
 	virtual void update();
 
 	virtual void onKeyDown(KeyboardEvent &e);
@@ -71,6 +77,7 @@ public:
 	virtual void onResolutionChanged(Vector2 newResolution);
 	virtual void onFocusGained();
 	virtual void onFocusLost();
+	virtual bool onShutdown();
 
 	void onBeforePlayStart();			// called just before OsuBeatmap->play()
 	void onPlayStart();					// called when a beatmap has successfully started playing
@@ -80,6 +87,8 @@ public:
 	void toggleSongBrowser();
 	void toggleOptionsMenu();
 	void toggleRankingScreen();
+	void toggleVRTutorial();
+	void toggleChangelog();
 
 	void volumeDown();
 	void volumeUp();
@@ -94,13 +103,16 @@ public:
 
 	OsuBeatmap *getSelectedBeatmap();
 
+	inline OsuVR *getVR() {return m_vr;}
 	inline OsuSkin *getSkin() {return m_skin;}
 	inline OsuHUD *getHUD() {return m_hud;}
 	inline OsuNotificationOverlay *getNotificationOverlay() {return m_notificationOverlay;}
 	inline OsuTooltipOverlay *getTooltipOverlay() {return m_tooltipOverlay;}
 	inline OsuModSelector *getModSelector() {return m_modSelector;}
+	inline OsuPauseMenu *getPauseMenu() {return m_pauseMenu;}
 	inline OsuRankingScreen *getRankingScreen() {return m_rankingScreen;}
 	inline OsuScore *getScore() {return m_score;}
+	inline OsuUpdateHandler *getUpdateHandler() {return m_updateHandler;}
 
 	inline RenderTarget *getFrameBuffer() {return m_frameBuffer;}
 	inline McFont *getTitleFont() {return m_titleFont;}
@@ -122,6 +134,7 @@ public:
 	inline bool getModTarget() {return m_bModTarget;}
 	inline bool getModDT() {return m_bModDT;}
 	inline bool getModNC() {return m_bModNC;}
+	inline bool getModNF() {return m_bModNF;}
 	inline bool getModHT() {return m_bModHT;}
 	inline bool getModHD() {return m_bModHD;}
 	inline bool getModHR() {return m_bModHR;}
@@ -131,8 +144,13 @@ public:
 	inline bool getModNM() {return m_bModNM;}
 
 	bool isInPlayMode();
+	bool isNotInPlayModeOrPaused();
+	bool isInVRMode();
+
 	inline bool isSeeking() {return m_bSeeking;}
 	inline float getQuickSaveTime() {return m_fQuickSaveTime;}
+
+	bool shouldFallBackToLegacySliderRenderer(); // certain mods or actions require OsuSliders to render dynamically (e.g. wobble or the CS override slider)
 
 	void updateMods();
 	void updateConfineCursor();
@@ -165,8 +183,11 @@ private:
 	ConVar *m_osu_folder_ref;
 	ConVar *m_osu_draw_hud_ref;
 	ConVar *m_osu_mod_fps_ref;
+	ConVar *m_osu_mod_wobble_ref;
+	ConVar *m_osu_mod_minimize_ref;
 
 	// interfaces
+	OsuVR *m_vr;
 	OsuMainMenu *m_mainMenu;
 	OsuOptionsMenu *m_optionsMenu;
 	OsuSongBrowser2 *m_songBrowser2;
@@ -178,6 +199,9 @@ private:
 	OsuTooltipOverlay *m_tooltipOverlay;
 	OsuNotificationOverlay *m_notificationOverlay;
 	OsuScore *m_score;
+	OsuVRTutorial *m_vrTutorial;
+	OsuChangelog *m_changelog;
+	OsuUpdateHandler *m_updateHandler;
 
 	std::vector<OsuScreen*> m_screens;
 
@@ -194,6 +218,7 @@ private:
 	bool m_bModTarget;
 	bool m_bModDT;
 	bool m_bModNC;
+	bool m_bModNF;
 	bool m_bModHT;
 	bool m_bModHD;
 	bool m_bModHR;
@@ -223,6 +248,8 @@ private:
 	bool m_bToggleSongBrowserScheduled;
 	bool m_bToggleOptionsMenuScheduled;
 	bool m_bToggleRankingScreenScheduled;
+	bool m_bToggleVRTutorialScheduled;
+	bool m_bToggleChangelogScheduled;
 
 	// cursor
 	bool m_bShouldCursorBeVisible;

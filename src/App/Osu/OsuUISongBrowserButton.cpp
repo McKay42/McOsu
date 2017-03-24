@@ -137,7 +137,7 @@ void OsuUISongBrowserButton::updateLayout()
 
 	if (m_bVisible) // lag prevention (animationHandler overflow)
 	{
-		const float centerOffsetAnimationTarget = clamp<float>(std::abs((m_vPos.y+(m_vSize.y/2)-m_view->getPos().y-m_view->getSize().y/2)/(m_view->getSize().y/2)), 0.0f, 1.0f);
+		const float centerOffsetAnimationTarget = 1.0f - clamp<float>(std::abs((m_vPos.y+(m_vSize.y/2)-m_view->getPos().y-m_view->getSize().y/2)/(m_view->getSize().y/2)), 0.0f, 1.0f);
 		anim->moveQuadOut(&m_fCenterOffsetAnimation, centerOffsetAnimationTarget, 0.5f, true);
 
 		float centerOffsetVelocityAnimationTarget = clamp<float>((std::abs(m_view->getVelocity().y))/3500.0f, 0.0f, 1.0f);
@@ -148,7 +148,28 @@ void OsuUISongBrowserButton::updateLayout()
 	}
 
 	setSize((int)(menuButtonBackground->getWidth()*m_fScale), (int)(menuButtonBackground->getHeight()*m_fScale));
-	setRelPosX(m_view->getSize().x*(0.04*m_fCenterOffsetAnimation + 0.3*m_fCenterOffsetVelocityAnimation - 0.075*m_fHoverOffsetAnimation - m_fOffsetPercent + 0.35));
+
+	const float percentCenterOffsetAnimation = 0.035f;
+	const float percentVelocityOffsetAnimation = 0.35f;
+	const float percentHoverOffsetAnimation = 0.075f;
+
+	// this is the minimum offset necessary to not clip into the score scrollview (including all possible max animations which can push us to the left, worst case)
+	float minOffset = m_view->getSize().x*(percentCenterOffsetAnimation + percentHoverOffsetAnimation);
+
+	// also respect the width of the button image: push to the right until the edge of the button image can never be visible even if all animations are fully active
+	// the 0.85f here heuristically pushes the buttons a bit further to the right than would be necessary, to make animations work better on lower resolutions (would otherwise hit the left edge too early)
+	float buttonWidthCompensation = m_view->getSize().x - getActualSize().x*0.85f;
+	if (buttonWidthCompensation < 0)
+		buttonWidthCompensation = 0.0f;
+	minOffset += buttonWidthCompensation;
+
+	float offsetX = minOffset - m_view->getSize().x*(percentCenterOffsetAnimation*m_fCenterOffsetAnimation*(1.0f - m_fCenterOffsetVelocityAnimation) + percentHoverOffsetAnimation*m_fHoverOffsetAnimation - percentVelocityOffsetAnimation*m_fCenterOffsetVelocityAnimation + m_fOffsetPercent);
+	if (offsetX < 0)
+		offsetX = 0;
+	if (offsetX > m_view->getSize().x - getActualSize().x*0.15f) // WARNING: hardcoded to match 0.85f above for buttonWidthCompensation
+		offsetX = m_view->getSize().x - getActualSize().x*0.15f;
+
+	setRelPosX(offsetX);
 	setRelPosY(m_fTargetRelPosY + getSize().y*0.125f*m_fHoverMoveAwayAnimation);
 }
 

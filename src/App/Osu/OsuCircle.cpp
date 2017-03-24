@@ -11,11 +11,15 @@
 #include "ResourceManager.h"
 #include "AnimationHandler.h"
 #include "SoundEngine.h"
+#include "OpenVRInterface.h"
+#include "OpenVRController.h"
 #include "ConVar.h"
 
 #include "Osu.h"
+#include "OsuVR.h"
 #include "OsuSkin.h"
 #include "OsuGameRules.h"
+#include "OsuBeatmapStandard.h"
 
 ConVar osu_circle_color_saturation("osu_circle_color_saturation", 0.75f);
 ConVar osu_circle_rainbow("osu_circle_rainbow", false);
@@ -31,12 +35,12 @@ ConVar osu_slider_draw_endcircle("osu_slider_draw_endcircle", true);
 int OsuCircle::rainbowNumber = 0;
 int OsuCircle::rainbowColorCounter = 0;
 
-void OsuCircle::drawCircle(Graphics *g, OsuBeatmap *beatmap, Vector2 rawPos, int number, int colorCounter, float approachScale, float alpha, float numberAlpha, bool drawNumber, bool overrideHDApproachCircle)
+void OsuCircle::drawCircle(Graphics *g, OsuBeatmapStandard *beatmap, Vector2 rawPos, int number, int colorCounter, float approachScale, float alpha, float numberAlpha, bool drawNumber, bool overrideHDApproachCircle)
 {
 	drawCircle(g, beatmap->getSkin(), beatmap->osuCoords2Pixels(rawPos), beatmap->getHitcircleDiameter(), beatmap->getNumberScale(), beatmap->getHitcircleOverlapScale(), number, colorCounter, approachScale, alpha, numberAlpha, drawNumber, overrideHDApproachCircle);
 }
 
-void OsuCircle::drawApproachCircle(Graphics *g, OsuBeatmap *beatmap, Vector2 rawPos, int number, int colorCounter, float approachScale, float alpha, bool overrideHDApproachCircle)
+void OsuCircle::drawApproachCircle(Graphics *g, OsuBeatmapStandard *beatmap, Vector2 rawPos, int number, int colorCounter, float approachScale, float alpha, bool overrideHDApproachCircle)
 {
 	rainbowNumber = number;
 	rainbowColorCounter = colorCounter;
@@ -93,7 +97,7 @@ void OsuCircle::drawCircle(Graphics *g, OsuSkin *skin, Vector2 pos, float hitcir
 	drawHitCircleOverlay(g, skin->getHitCircleOverlay(), pos, circleOverlayImageScale, alpha);
 }
 
-void OsuCircle::drawSliderStartCircle(Graphics *g, OsuBeatmap *beatmap, Vector2 rawPos, int number, int colorCounter, float approachScale, float alpha, float numberAlpha, bool drawNumber, bool overrideHDApproachCircle)
+void OsuCircle::drawSliderStartCircle(Graphics *g, OsuBeatmapStandard *beatmap, Vector2 rawPos, int number, int colorCounter, float approachScale, float alpha, float numberAlpha, bool drawNumber, bool overrideHDApproachCircle)
 {
 	drawSliderStartCircle(g, beatmap->getSkin(), beatmap->osuCoords2Pixels(rawPos), beatmap->getHitcircleDiameter(), beatmap->getNumberScale(), beatmap->getHitcircleOverlapScale(), number, colorCounter, approachScale, alpha, numberAlpha, drawNumber, overrideHDApproachCircle);
 }
@@ -142,7 +146,7 @@ void OsuCircle::drawSliderStartCircle(Graphics *g, OsuSkin *skin, Vector2 pos, f
 	}
 }
 
-void OsuCircle::drawSliderEndCircle(Graphics *g, OsuBeatmap *beatmap, Vector2 rawPos, int number, int colorCounter, float approachScale, float alpha, float numberAlpha, bool drawNumber, bool overrideHDApproachCircle)
+void OsuCircle::drawSliderEndCircle(Graphics *g, OsuBeatmapStandard *beatmap, Vector2 rawPos, int number, int colorCounter, float approachScale, float alpha, float numberAlpha, bool drawNumber, bool overrideHDApproachCircle)
 {
 	drawSliderEndCircle(g, beatmap->getSkin(), beatmap->osuCoords2Pixels(rawPos), beatmap->getHitcircleDiameter(), beatmap->getNumberScale(), beatmap->getHitcircleOverlapScale(), number, colorCounter, approachScale, alpha, numberAlpha, drawNumber, overrideHDApproachCircle);
 }
@@ -243,7 +247,7 @@ void OsuCircle::drawHitCircle(Graphics *g, Image *hitCircleImage, Vector2 pos, C
 	g->popTransform();
 }
 
-void OsuCircle::drawHitCircleNumber(Graphics *g, OsuBeatmap *beatmap, Vector2 pos, int number, float numberAlpha)
+void OsuCircle::drawHitCircleNumber(Graphics *g, OsuBeatmapStandard *beatmap, Vector2 pos, int number, float numberAlpha)
 {
 	drawHitCircleNumber(g, beatmap->getSkin(), beatmap->getNumberScale(), beatmap->getHitcircleOverlapScale(), pos, number, numberAlpha);
 }
@@ -324,14 +328,18 @@ void OsuCircle::drawHitCircleNumber(Graphics *g, OsuSkin *skin, float numberScal
 
 
 
-OsuCircle::OsuCircle(int x, int y, long time, int sampleType, int comboNumber, int colorCounter, OsuBeatmap *beatmap) : OsuHitObject(time, sampleType, comboNumber, colorCounter, beatmap)
+OsuCircle::OsuCircle(int x, int y, long time, int sampleType, int comboNumber, int colorCounter, OsuBeatmapStandard *beatmap) : OsuHitObject(time, sampleType, comboNumber, colorCounter, beatmap)
 {
 	m_vOriginalRawPos = Vector2(x,y);
 	m_vRawPos = m_vOriginalRawPos;
 
+	m_beatmap = beatmap;
+
 	m_bWaiting = false;
 	m_fHitAnimation = 0.0f;
 	m_fShakeAnimation = 0.0f;
+
+	m_bOnHitVRLeftControllerHapticFeedback = false;
 }
 
 OsuCircle::~OsuCircle()
@@ -391,6 +399,23 @@ void OsuCircle::draw2(Graphics *g)
 	drawApproachCircle(g, m_beatmap, m_vRawPos, m_iComboNumber, m_iColorCounter, m_bWaiting && !hd ? 1.0f : m_fApproachScale, m_bWaiting && !hd ? 1.0f : m_fAlpha, m_bOverrideHDApproachCircle);
 }
 
+void OsuCircle::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
+{
+	// TODO: performance! if nothing of the circle is visible, then we don't have to calculate anything
+	///if (m_bVisible)
+	{
+		float clampedApproachScalePercent = m_fApproachScale - 1.0f; // goes from <m_osu_approach_scale_multiplier_ref> to 0
+		clampedApproachScalePercent = clamp<float>(clampedApproachScalePercent / m_osu_approach_scale_multiplier_ref->getFloat(), 0.0f, 1.0f); // goes from 1 to 0
+
+		Matrix4 translation;
+		translation.translate(0, 0, -clampedApproachScalePercent*vr->getApproachDistance());
+		Matrix4 finalMVP = mvp * translation;
+
+		vr->getShaderTexturedLegacyGeneric()->setUniformMatrix4fv("matrix", finalMVP);
+		draw(g);
+	}
+}
+
 void OsuCircle::update(long curPos)
 {
 	OsuHitObject::update(curPos);
@@ -420,20 +445,51 @@ void OsuCircle::update(long curPos)
 		{
 			const long delta = curPos - m_iTime;
 
-			if (m_beatmap->getOsu()->getModRelax())
+			if (m_beatmap->getOsu()->getModRelax() || m_beatmap->getOsu()->isInVRMode())
 			{
 				if (curPos >= m_iTime)
 				{
 					const Vector2 pos = m_beatmap->osuCoords2Pixels(m_vRawPos);
 					const float cursorDelta = (m_beatmap->getCursorPos() - pos).length();
 
-					if (cursorDelta < m_beatmap->getHitcircleDiameter()/2.0f)
+					float vrCursor1Delta = 0.0f;
+					float vrCursor2Delta = 0.0f;
+					bool vrCursor1Inside = false;
+					bool vrCursor2Inside = false;
+					if (m_beatmap->getOsu()->isInVRMode())
+					{
+						vrCursor1Delta = (m_beatmap->getOsu()->getVR()->getCursorPos1() - m_beatmap->osuCoords2VRPixels(m_vRawPos)).length();
+						vrCursor2Delta = (m_beatmap->getOsu()->getVR()->getCursorPos2() - m_beatmap->osuCoords2VRPixels(m_vRawPos)).length();
+						vrCursor1Inside = vrCursor1Delta < ((m_beatmap->getRawHitcircleDiameter()/2.0f) * m_beatmap->getOsu()->getVR()->getCircleHitboxScale());
+						vrCursor2Inside = vrCursor2Delta < ((m_beatmap->getRawHitcircleDiameter()/2.0f) * m_beatmap->getOsu()->getVR()->getCircleHitboxScale());
+					}
+
+					if ((cursorDelta < m_beatmap->getHitcircleDiameter()/2.0f && m_beatmap->getOsu()->getModRelax()) || (vrCursor1Inside || vrCursor2Inside))
 					{
 						OsuScore::HIT result = OsuGameRules::getHitResult(delta, m_beatmap);
+
 						if (result != OsuScore::HIT::HIT_NULL)
 						{
 							const float targetDelta = cursorDelta / (m_beatmap->getHitcircleDiameter()/2.0f);
 							const float targetAngle = rad2deg(atan2(m_beatmap->getCursorPos().y - pos.y, m_beatmap->getCursorPos().x - pos.x));
+
+							if (m_beatmap->getOsu()->isInVRMode())
+							{
+								// distance to circle
+								if (vrCursor1Delta < vrCursor2Delta)
+									m_bOnHitVRLeftControllerHapticFeedback = true;
+								else
+									m_bOnHitVRLeftControllerHapticFeedback = false;
+
+								// distance to playfield, if both cursors were valid (overrides distance to circle for haptic feedback)
+								if (vrCursor1Inside && vrCursor2Inside)
+								{
+									if (m_beatmap->getOsu()->getVR()->getCursorDist1() < m_beatmap->getOsu()->getVR()->getCursorDist2())
+										m_bOnHitVRLeftControllerHapticFeedback = true;
+									else
+										m_bOnHitVRLeftControllerHapticFeedback = false;
+								}
+							}
 
 							onHit(result, delta, targetDelta, targetAngle);
 						}
@@ -460,10 +516,12 @@ void OsuCircle::updateStackPosition(float stackOffset)
 	m_vRawPos = m_vOriginalRawPos - Vector2(m_iStack * stackOffset, m_iStack * stackOffset * (m_beatmap->getOsu()->getModHR() ? -1.0f : 1.0f));
 }
 
-void OsuCircle::onClickEvent(Vector2 cursorPos, std::vector<OsuBeatmap::CLICK> &clicks)
+void OsuCircle::onClickEvent(std::vector<OsuBeatmap::CLICK> &clicks)
 {
 	if (m_bFinished)
 		return;
+
+	const Vector2 cursorPos = m_beatmap->getCursorPos();
 
 	const Vector2 pos = m_beatmap->osuCoords2Pixels(m_vRawPos);
 	const float cursorDelta = (cursorPos - pos).length();
@@ -500,6 +558,14 @@ void OsuCircle::onHit(OsuScore::HIT result, long delta, float targetDelta, float
 
 		m_fHitAnimation = 0.001f; // quickfix for 1 frame missing images
 		anim->moveQuadOut(&m_fHitAnimation, 1.0f, OsuGameRules::getFadeOutTime(m_beatmap), true);
+
+		if (m_beatmap->getOsu()->isInVRMode())
+		{
+			if (m_bOnHitVRLeftControllerHapticFeedback)
+				openvr->getLeftController()->triggerHapticPulse(m_beatmap->getOsu()->getVR()->getHapticPulseStrength());
+			else
+				openvr->getRightController()->triggerHapticPulse(m_beatmap->getOsu()->getVR()->getHapticPulseStrength());
+		}
 	}
 
 	// add it, and we are finished

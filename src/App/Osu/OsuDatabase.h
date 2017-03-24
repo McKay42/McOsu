@@ -1,12 +1,12 @@
 //================ Copyright (c) 2016, PG, All rights reserved. =================//
 //
-// Purpose:		osu!.db + collection.db + raw loader
+// Purpose:		osu!.db + collection.db + raw loader + scores etc.
 //
 // $NoKeywords: $osubdb
 //===============================================================================//
 
-#ifndef OSUBEATMAPDATABASE_H
-#define OSUBEATMAPDATABASE_H
+#ifndef OSUDATABASE_H
+#define OSUDATABASE_H
 
 #include "cbase.h"
 
@@ -17,9 +17,9 @@ class OsuBeatmap;
 class OsuBeatmapDifficulty;
 class OsuFile;
 
-class OsuBeatmapDatabaseLoader;
+class OsuDatabaseLoader;
 
-class OsuBeatmapDatabase
+class OsuDatabase
 {
 public:
 	struct Collection
@@ -29,8 +29,8 @@ public:
 	};
 
 public:
-	OsuBeatmapDatabase(Osu *osu);
-	virtual ~OsuBeatmapDatabase();
+	OsuDatabase(Osu *osu);
+	virtual ~OsuDatabase();
 	void reset();
 
 	void update();
@@ -48,7 +48,7 @@ public:
 	inline bool foundChanges() {return m_bFoundChanges;}
 
 private:
-	friend class OsuBeatmapDatabaseLoader;
+	friend class OsuDatabaseLoader;
 
 	void loadRaw();
 	void loadDB(OsuFile *db);

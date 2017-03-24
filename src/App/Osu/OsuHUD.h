@@ -11,6 +11,8 @@
 #include "OsuScreen.h"
 
 class Osu;
+class OsuVR;
+
 class McFont;
 class ConVar;
 class Image;
@@ -23,11 +25,14 @@ public:
 
 	void draw(Graphics *g);
 	void drawDummy(Graphics *g);
+	void drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr);
+	void drawVRDummy(Graphics *g, Matrix4 &mvp, OsuVR *vr);
 	void update();
 
 	void drawCursor(Graphics *g, Vector2 pos, float alphaMultiplier = 1.0f);
 	void drawFps(Graphics *g) {drawFps(g, m_tempFont, m_fCurFps);}
 	void drawPlayfieldBorder(Graphics *g, Vector2 playfieldCenter, Vector2 playfieldSize, float hitcircleDiameter);
+	void drawPlayfieldBorder(Graphics *g, Vector2 playfieldCenter, Vector2 playfieldSize, float hitcircleDiameter, float borderSize);
 	void drawLoadingSmall(Graphics *g);
 	void drawBeatmapImportSpinner(Graphics *g);
 	void drawVolumeChange(Graphics *g);
@@ -55,12 +60,14 @@ private:
 	void drawAccuracy(Graphics *g, float accuracy);
 	void drawCombo(Graphics *g, int combo);
 	void drawScore(Graphics *g, int score);
+	void drawHP(Graphics *g, float health);
 
 	void drawSkip(Graphics *g);
 	void drawWarningArrows(Graphics *g, float hitcircleDiameter = 0.0f);
 	void drawContinue(Graphics *g, Vector2 cursor, float hitcircleDiameter = 0.0f);
 	void drawHitErrorBar(Graphics *g, float hitWindow300, float hitWindow100, float hitWindow50);
 	void drawProgressBar(Graphics *g, float percent, bool waiting);
+	void drawProgressBarVR(Graphics *g, Matrix4 &mvp, OsuVR *vr, float percent, bool waiting);
 	void drawStatistics(Graphics *g, int misses, int bpm, float ar, float cs, float od, int nps, int nd, int ur);
 	void drawTargetHeatmap(Graphics *g, float hitcircleDiameter);
 

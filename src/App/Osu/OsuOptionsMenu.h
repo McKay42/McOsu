@@ -48,26 +48,40 @@ public:
 
 	void setVisible(bool visible);
 
+	bool shouldDrawVRDummyHUD();
+
 private:
 	virtual void updateLayout();
+	virtual void onBack();
+
+	static const char *OSU_CONFIG_FILE_NAME;
+
 	void updateOsuFolder();
 	void updateName();
+	void updateVRRenderTargetResolutionLabel();
 
 	void save();
 
-	virtual void onBack();
 	void onFullscreenChange(CBaseUICheckbox *checkbox);
 	void onSkinSelect();
 	void onSkinSelect2(UString skinName);
 	void onSkinReload();
 	void onResolutionSelect();
 	void onResolutionSelect2(UString resolution);
+	void onOutputDeviceSelect();
+	void onOutputDeviceSelect2(UString outputDeviceName);
+	void onDownloadOsuClicked();
 
 	void onCheckboxChange(CBaseUICheckbox *checkbox);
 	void onSliderChange(CBaseUISlider *slider);
+	void onSliderChangeOneDecimalPlace(CBaseUISlider *slider);
+	void onSliderChangeOneDecimalPlaceMeters(CBaseUISlider *slider);
 	void onSliderChangeInt(CBaseUISlider *slider);
 	void onSliderChangePercent(CBaseUISlider *slider);
 	void onKeyBindingButtonPressed(CBaseUIButton *button);
+
+	void onSliderChangeVRSuperSampling(CBaseUISlider *slider);
+	void onSliderChangeVRAntiAliasing(CBaseUISlider *slider);
 
 	struct OPTIONS_ELEMENT
 	{
@@ -80,6 +94,7 @@ private:
 	void addSpacer();
 	CBaseUILabel *addSection(UString text);
 	CBaseUILabel *addSubSection(UString text);
+	CBaseUILabel *addLabel(UString text);
 	OsuUIButton *addButton(UString text, ConVar *cvar = NULL);
 	OPTIONS_ELEMENT addButton(UString text, UString labelText);
 	CBaseUICheckbox *addCheckbox(UString text, ConVar *cvar = NULL);
@@ -110,12 +125,21 @@ private:
 	CBaseUILabel *m_resolutionLabel;
 	CBaseUITextbox *m_osuFolderTextbox;
 	CBaseUITextbox *m_nameTextbox;
+	CBaseUIElement *m_outputDeviceSelectButton;
+	CBaseUILabel *m_outputDeviceLabel;
+	CBaseUILabel *m_vrRenderTargetResolutionLabel;
+	CBaseUISlider *m_vrApproachDistanceSlider;
+	CBaseUISlider *m_vrVibrationStrengthSlider;
+	CBaseUISlider *m_vrSliderVibrationStrengthSlider;
+	CBaseUISlider *m_vrHudDistanceSlider;
+	CBaseUISlider *m_vrHudScaleSlider;
 
 	ConVar *m_waitingKey;
 
 	OsuUIContextMenu *m_contextMenu;
 
 	float m_fOsuFolderTextboxInvalidAnim;
+	float m_fVibrationStrengthExampleTimer;
 };
 
 #endif

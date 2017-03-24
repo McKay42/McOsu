@@ -13,10 +13,11 @@
 class OsuSpinner : public OsuHitObject
 {
 public:
-	OsuSpinner(int x, int y, long time, int sampleType, long endTime, OsuBeatmap *beatmap);
+	OsuSpinner(int x, int y, long time, int sampleType, long endTime, OsuBeatmapStandard *beatmap);
 	virtual ~OsuSpinner();
 
 	virtual void draw(Graphics *g);
+	virtual void drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr);
 	virtual void update(long curPos);
 
 	void updateStackPosition(float stackOffset) {;}
@@ -25,12 +26,14 @@ public:
 	Vector2 getOriginalRawPosAt(long pos) {return m_vOriginalRawPos;}
 	Vector2 getAutoCursorPos(long curPos);
 
-	virtual void onClickEvent(Vector2 cursorPos, std::vector<OsuBeatmap::CLICK> &clicks);
+	virtual void onClickEvent(std::vector<OsuBeatmap::CLICK> &clicks);
 	virtual void onReset(long curPos);
 
 private:
 	void onHit();
 	void rotate(float rad);
+
+	OsuBeatmapStandard *m_beatmap;
 
 	Vector2 m_vRawPos;
 	Vector2 m_vOriginalRawPos;
@@ -53,6 +56,8 @@ private:
 	float m_fRPM;
 
 	float m_fLastMouseAngle;
+	float m_fLastVRCursorAngle1;
+	float m_fLastVRCursorAngle2;
 	float m_fRatio;
 };
 

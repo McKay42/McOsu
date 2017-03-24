@@ -1,12 +1,11 @@
 //================ Copyright (c) 2016, PG, All rights reserved. =================//
 //
-// Purpose:		osu!.db + collection.db + raw loader
+// Purpose:		osu!.db + collection.db + raw loader + scores etc.
 //
 // $NoKeywords: $osubdb
 //===============================================================================//
 
-#include "OsuBeatmapDatabase.h"
-
+#include <OsuDatabase.h>
 #include "Engine.h"
 #include "ConVar.h"
 #include "Timer.h"
@@ -17,6 +16,8 @@
 #include "OsuFile.h"
 #include "OsuBeatmap.h"
 #include "OsuBeatmapDifficulty.h"
+#include "OsuBeatmapStandard.h"
+#include "OsuBeatmapExample.h"
 
 #if defined(_WIN32) || defined(_WIN64) || defined(__WIN32__) || defined(__CYGWIN__) || defined(__CYGWIN32__) || defined(__TOS_WIN__) || defined(__WINDOWS__)
 
@@ -34,10 +35,10 @@ ConVar osu_folder("osu_folder", "/media/pg/Win7/Program Files (x86)/osu!/");
 
 ConVar osu_database_enabled("osu_database_enabled", true);
 
-class OsuBeatmapDatabaseLoader : public Resource
+class OsuDatabaseLoader : public Resource
 {
 public:
-	OsuBeatmapDatabaseLoader(OsuBeatmapDatabase *db) : Resource()
+	OsuDatabaseLoader(OsuDatabase *db) : Resource()
 	{
 		m_db = db;
 		m_bNeedRawLoad = false;
@@ -80,11 +81,11 @@ protected:
 	virtual void destroy() {;}
 
 private:
-	OsuBeatmapDatabase *m_db;
+	OsuDatabase *m_db;
 	bool m_bNeedRawLoad;
 };
 
-OsuBeatmapDatabase::OsuBeatmapDatabase(Osu *osu)
+OsuDatabase::OsuDatabase(Osu *osu)
 {
 	m_importTimer = new Timer();
 	m_bIsFirstLoad = true;
@@ -102,7 +103,7 @@ OsuBeatmapDatabase::OsuBeatmapDatabase(Osu *osu)
 	m_bRawBeatmapLoadScheduled = false;
 }
 
-OsuBeatmapDatabase::~OsuBeatmapDatabase()
+OsuDatabase::~OsuDatabase()
 {
 	for (int i=0; i<m_beatmaps.size(); i++)
 	{
@@ -110,7 +111,7 @@ OsuBeatmapDatabase::~OsuBeatmapDatabase()
 	}
 }
 
-void OsuBeatmapDatabase::reset()
+void OsuDatabase::reset()
 {
 	m_collections.clear();
 	for (int i=0; i<m_beatmaps.size(); i++)
@@ -125,7 +126,7 @@ void OsuBeatmapDatabase::reset()
 	m_osu->getNotificationOverlay()->addNotification("Rebuilding.", 0xff00ff00);
 }
 
-void OsuBeatmapDatabase::update()
+void OsuDatabase::update()
 {
 	// loadRaw() logic
 	if (m_bRawBeatmapLoadScheduled)
@@ -170,22 +171,22 @@ void OsuBeatmapDatabase::update()
 	}
 }
 
-void OsuBeatmapDatabase::load()
+void OsuDatabase::load()
 {
 	m_fLoadingProgress = 0.0f;
-	OsuBeatmapDatabaseLoader *loader = new OsuBeatmapDatabaseLoader(this);
+	OsuDatabaseLoader *loader = new OsuDatabaseLoader(this);
 	engine->getResourceManager()->requestNextLoadAsync();
 	engine->getResourceManager()->loadResource(loader);
 }
 
-void OsuBeatmapDatabase::cancel()
+void OsuDatabase::cancel()
 {
 	m_bRawBeatmapLoadScheduled = false;
 	m_fLoadingProgress = 1.0f; // force finished
 	m_bFoundChanges = true;
 }
 
-void OsuBeatmapDatabase::loadRaw()
+void OsuDatabase::loadRaw()
 {
 	m_sRawBeatmapLoadOsuSongFolder = osu_folder.getString();
 	m_sRawBeatmapLoadOsuSongFolder.append("Songs/");
@@ -241,7 +242,7 @@ void OsuBeatmapDatabase::loadRaw()
 	m_bIsFirstLoad = false;
 }
 
-void OsuBeatmapDatabase::loadDB(OsuFile *db)
+void OsuDatabase::loadDB(OsuFile *db)
 {
 	// reset
 	m_collections.clear();
@@ -273,6 +274,11 @@ void OsuBeatmapDatabase::loadDB(OsuFile *db)
 		debugLog("Database: Version is below 20140609, not supported.\n");
 		m_osu->getNotificationOverlay()->addNotification("osu!.db version too old, update osu! and try again!", 0xffff0000);
 		return;
+	}
+	if (m_iVersion < 20170222)
+	{
+		debugLog("Database: Version is quite old, below 20170222 ...\n");
+		m_osu->getNotificationOverlay()->addNotification("WARNING: osu!.db version is old, please update osu!", 0xffff0000);
 	}
 
 	// read beatmapInfos
@@ -400,7 +406,7 @@ void OsuBeatmapDatabase::loadDB(OsuFile *db)
 		bool unplayed = db->readBool();
 		unsigned long lastTimePlayed = db->readLong();
 		bool isOsz2 = db->readBool();
-		UString path = db->readString();
+		UString path = db->readString().trim(); // somehow, some beatmaps may have spaces at the start/end of their path, breaking the Windows API (e.g. https://osu.ppy.sh/s/215347), therefore the trim
 		unsigned long lastOnlineCheck = db->readLong();
 		//debugLog("onlineOffset = %i, songTitleFont = %s, unplayed = %i, lastTimePlayed = %lu, isOsz2 = %i, path = %s, lastOnlineCheck = %lu\n", onlineOffset, songTitleFont.toUtf8(), (int)unplayed, lastTimePlayed, (int)isOsz2, path.toUtf8(), lastOnlineCheck);
 
@@ -418,7 +424,6 @@ void OsuBeatmapDatabase::loadDB(OsuFile *db)
 		beatmapPath.append(path);
 		beatmapPath.append("/");
 		UString fullFilePath = beatmapPath;
-		fullFilePath.append("/");
 		fullFilePath.append(osuFileName);
 
 		// fill diff with data
@@ -454,6 +459,7 @@ void OsuBeatmapDatabase::loadDB(OsuFile *db)
 			diff->fullSoundFilePath = beatmapPath;
 			diff->fullSoundFilePath.append(diff->audioFileName);
 			diff->localoffset = localOffset;
+			diff->onlineOffset = (long)onlineOffset;
 			diff->numObjects = numCircles + numSliders + numSpinners;
 			diff->starsNoMod = numOsuStandardStars;
 			diff->ID = beatmapID;
@@ -522,7 +528,7 @@ void OsuBeatmapDatabase::loadDB(OsuFile *db)
 		{
 			if (beatmapSets[i].setID > 0)
 			{
-				OsuBeatmap *bm = new OsuBeatmap(m_osu, beatmapSets[i].path);
+				OsuBeatmap *bm = new OsuBeatmapStandard(m_osu);
 				bm->setDifficulties(beatmapSets[i].diffs);
 				m_beatmaps.push_back(bm);
 			}
@@ -558,7 +564,7 @@ void OsuBeatmapDatabase::loadDB(OsuFile *db)
 					// if we couldn't find any beatmap with our title and artist, create a new one
 					if (!existsAlready)
 					{
-						OsuBeatmap *bm = new OsuBeatmap(m_osu, beatmapSets[i].path);
+						OsuBeatmap *bm = new OsuBeatmapStandard(m_osu);
 						std::vector<OsuBeatmapDifficulty*> diffs;
 						diffs.push_back(beatmapSets[i].diffs[b]);
 						bm->setDifficulties(diffs);
@@ -715,7 +721,7 @@ void OsuBeatmapDatabase::loadDB(OsuFile *db)
 	m_fLoadingProgress = 1.0f;
 }
 
-OsuBeatmap *OsuBeatmapDatabase::loadRawBeatmap(UString beatmapPath)
+OsuBeatmap *OsuDatabase::loadRawBeatmap(UString beatmapPath)
 {
 	if (Osu::debug->getBool())
 		debugLog("OsuBeatmapDatabase::loadRawBeatmap() : %s\n", beatmapPath.toUtf8());
@@ -757,7 +763,7 @@ OsuBeatmap *OsuBeatmapDatabase::loadRawBeatmap(UString beatmapPath)
 	// if we found any valid diffs, create beatmap
 	if (diffs.size() > 0)
 	{
-		result = new OsuBeatmap(m_osu, beatmapPath);
+		result = new OsuBeatmapStandard(m_osu);
 		result->setDifficulties(diffs);
 	}
 

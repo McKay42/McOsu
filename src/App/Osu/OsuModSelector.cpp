@@ -50,6 +50,8 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen()
 
 	m_bWaitForF1KeyUp = false;
 
+	m_bWaitForCSChangeFinished = false;
+
 	m_previousDifficulty = NULL;
 
 	// build mod grid buttons
@@ -76,6 +78,7 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen()
 	OVERRIDE_SLIDER overrideHP = addOverrideSlider("HP Override", "HP:", convar->getConVarByName("osu_hp_override"));
 	OVERRIDE_SLIDER overrideBPM = addOverrideSlider("BPM Override", "BPM:", convar->getConVarByName("osu_speed_override"), 0.0f, 2.5f);
 	OVERRIDE_SLIDER overrideSpeed = addOverrideSlider("Speed Multiplier", "x", convar->getConVarByName("osu_speed_override"), 0.0f, 2.5f);
+	overrideCS.slider->setAnimated(false); // quick fix for otherwise possible inconsistencies due to slider vertex buffers and animated CS changes
 	overrideCS.slider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
 	overrideAR.slider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
 	overrideOD.slider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
@@ -85,6 +88,7 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen()
 	overrideSpeed.slider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
 	overrideSpeed.slider->setValue(-1.0f, false);
 
+	m_CSSlider = overrideCS.slider;
 	m_ARSlider = overrideAR.slider;
 	m_ODSlider = overrideOD.slider;
 	m_BPMSlider = overrideBPM.slider;
@@ -123,7 +127,7 @@ void OsuModSelector::updateButtons()
 {
 	m_modButtonEasy = setModButtonOnGrid(0, 0, 0, "ez", "Reduces overall difficulty - larger circles, more forgiving HP drain, less accuracy required.", m_osu->getSkin()->getSelectionModEasy());
 	m_modButtonNofail = setModButtonOnGrid(1, 0, 0, "nf", "You can't fail. No matter what.", m_osu->getSkin()->getSelectionModNoFail());
-	m_modButtonNofail->setAvailable(false);
+	m_modButtonNofail->setAvailable(convar->getConVarByName("osu_drain_enabled")->getBool());
 	m_modButtonHalftime = setModButtonOnGrid(2, 0, 0, "ht", "Less zoom.", m_osu->getSkin()->getSelectionModHalfTime());
 	setModButtonOnGrid(4, 0, 0, "nm", "Massively reduced slider follow circle radius. Unnecessary clicks count as misses.", m_osu->getSkin()->getSelectionModNightmare());
 
@@ -316,6 +320,18 @@ void OsuModSelector::update()
 		m_bExperimentalVisible = false;
 		anim->moveQuadIn(&m_fExperimentalAnimation, 0.0f, m_fExperimentalAnimation*0.11f, 0.0f, true);
 	}
+
+	// handle dynamic CS and slider vertex buffer updates
+	if (m_CSSlider->isActive())
+	{
+		m_bWaitForCSChangeFinished = true;
+	}
+	else if (m_bWaitForCSChangeFinished)
+	{
+		m_bWaitForCSChangeFinished = false;
+		if (m_osu->isInPlayMode() && m_osu->getSelectedBeatmap() != NULL)
+			m_osu->getSelectedBeatmap()->onModUpdate();
+	}
 }
 
 void OsuModSelector::onKeyDown(KeyboardEvent &key)
@@ -426,6 +442,11 @@ void OsuModSelector::setVisible(bool visible)
 bool OsuModSelector::isInCompactMode()
 {
 	return m_osu->isInPlayMode();
+}
+
+bool OsuModSelector::isCSOverrideSliderActive()
+{
+	return m_CSSlider->isActive();
 }
 
 void OsuModSelector::updateLayout()

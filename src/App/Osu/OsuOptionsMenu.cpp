@@ -13,6 +13,8 @@
 #include "Keyboard.h"
 #include "Environment.h"
 #include "ResourceManager.h"
+#include "OpenVRInterface.h"
+#include "OpenVRController.h"
 #include "Mouse.h"
 #include "File.h"
 
@@ -23,6 +25,7 @@
 #include "CBaseUITextbox.h"
 
 #include "Osu.h"
+#include "OsuVR.h"
 #include "OsuHUD.h"
 #include "OsuSkin.h"
 #include "OsuGameRules.h"
@@ -38,7 +41,9 @@
 #include <iostream>
 #include <fstream>
 
-ConVar osu_options_save_on_back("osu_options_save_on_back", true, "for debugging");
+ConVar osu_options_save_on_back("osu_options_save_on_back", true);
+
+const char *OsuOptionsMenu::OSU_CONFIG_FILE_NAME = ""; // set dynamically below in the constructor
 
 
 
@@ -155,10 +160,23 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 {
 	m_osu = osu;
 
+	if (m_osu->isInVRMode())
+		OSU_CONFIG_FILE_NAME = "osuvr";
+	else
+		OSU_CONFIG_FILE_NAME = "osu";
+
 	m_osu->getNotificationOverlay()->addKeyListener(this);
+
 	m_waitingKey = NULL;
+	m_vrRenderTargetResolutionLabel = NULL;
+	m_vrApproachDistanceSlider = NULL;
+	m_vrVibrationStrengthSlider = NULL;
+	m_vrSliderVibrationStrengthSlider = NULL;
+	m_vrHudDistanceSlider = NULL;
+	m_vrHudScaleSlider = NULL;
 
 	m_fOsuFolderTextboxInvalidAnim = 0.0f;
+	m_fVibrationStrengthExampleTimer = 0.0f;
 
 	m_container = new CBaseUIContainer(0, 0, 0, 0, "");
 
@@ -172,6 +190,12 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	//**************************************************************************************************************************//
 
 	addSection("General");
+
+	addSubSection("");
+	OsuUIButton *downloadOsuButton = addButton("Download osu! and get some beatmaps first!");
+	downloadOsuButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onDownloadOsuClicked) );
+	downloadOsuButton->setColor(0xff00ff00);
+	downloadOsuButton->setTextColor(0xffffffff);
 
 	addSubSection("osu!folder (Skins & Songs & Database)");
 	m_osuFolderTextbox = addTextbox(convar->getConVarByName("osu_folder")->getString(), convar->getConVarByName("osu_folder"));
@@ -192,7 +216,8 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("VSync", convar->getConVarByName("vsync"));
 	addCheckbox("Show FPS Counter", convar->getConVarByName("osu_draw_fps"));
 	addSpacer();
-	addCheckbox("Unlimited FPS", convar->getConVarByName("fps_unlimited"));
+	if (!m_osu->isInVRMode())
+		addCheckbox("Unlimited FPS", convar->getConVarByName("fps_unlimited"));
 	CBaseUISlider *fpsSlider = addSlider("FPS Limiter:", 60.0f, 1000.0f, convar->getConVarByName("fps_max"));
 	fpsSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeInt) );
 	fpsSlider->setKeyDelta(60);
@@ -211,7 +236,72 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 
 	//**************************************************************************************************************************//
 
+	if (m_osu->isInVRMode())
+	{
+		addSection("Virtual Reality");
+
+		addSubSection("Mixed Settings");
+		addSpacer();
+		m_vrRenderTargetResolutionLabel = addLabel("Final RenderTarget Resolution: %ix%i");
+		addSpacer();
+		CBaseUISlider *ssSlider = addSlider("SuperSampling Multiplier", 0.5f, 3.0f, convar->getConVarByName("vr_ss"), 230.0f);
+		ssSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeVRSuperSampling) );
+		ssSlider->setKeyDelta(0.1f);
+		ssSlider->setAnimated(false);
+		CBaseUISlider *aaSlider = addSlider("AntiAliasing (MSAA)", 0.0f, 16.0f, convar->getConVarByName("vr_aa"), 230.0f);
+		aaSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeVRAntiAliasing) );
+		aaSlider->setKeyDelta(2.0f);
+		aaSlider->setAnimated(false);
+		addSpacer();
+		addSlider("RenderModel Brightness", 0.1f, 10.0f, convar->getConVarByName("vr_controller_model_brightness_multiplier"))->setKeyDelta(0.1f);
+		addSlider("Background Brightness", 0.0f, 1.0f, convar->getConVarByName("vr_background_brightness"))->setKeyDelta(0.05f);
+		addSlider("VR Cursor Opacity", 0.0f, 1.0f, convar->getConVarByName("osu_vr_cursor_alpha"))->setKeyDelta(0.1f);
+		addSpacer();
+		m_vrApproachDistanceSlider = addSlider("Approach Distance", 1.0f, 50.0f, convar->getConVarByName("osu_vr_approach_distance"), 175.0f);
+		m_vrApproachDistanceSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeOneDecimalPlaceMeters) );
+		m_vrApproachDistanceSlider->setKeyDelta(1.0f);
+		m_vrHudDistanceSlider = addSlider("HUD Distance", 1.0f, 50.0f, convar->getConVarByName("osu_vr_hud_distance"), 175.0f);
+		m_vrHudDistanceSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeOneDecimalPlaceMeters) );
+		m_vrHudDistanceSlider->setKeyDelta(1.0f);
+		m_vrHudScaleSlider = addSlider("HUD Scale", 0.1f, 10.0f, convar->getConVarByName("osu_vr_hud_scale"));
+		m_vrHudScaleSlider->setKeyDelta(0.1f);
+		addSpacer();
+		m_vrVibrationStrengthSlider = addSlider("Vibration Strength", 0.0f, 1.0f, convar->getConVarByName("osu_vr_controller_vibration_strength"));
+		m_vrVibrationStrengthSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
+		m_vrVibrationStrengthSlider->setKeyDelta(0.01f);
+		// TODO: enable this after SteamVR is fixed
+		/*
+		m_vrSliderVibrationStrengthSlider = addSlider("Slider Vibration Strength", 0.0f, 1.0f, convar->getConVarByName("osu_vr_slider_controller_vibration_strength"));
+		m_vrSliderVibrationStrengthSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
+		m_vrSliderVibrationStrengthSlider->setKeyDelta(0.01f);
+		*/
+		addSpacer();
+		addCheckbox("Spectator Camera (ALT + C)", convar->getConVarByName("vr_spectator_mode"));
+		addCheckbox("Auto Switch Primary Controller", convar->getConVarByName("vr_auto_switch_primary_controller"));
+		addSpacer();
+		addCheckbox("Draw HMD to Window", convar->getConVarByName("vr_draw_hmd_to_window"));
+		addCheckbox("Draw Both Eyes to Window", convar->getConVarByName("vr_draw_hmd_to_window_draw_both_eyes"));
+		addCheckbox("Draw Floor", convar->getConVarByName("osu_vr_draw_floor"));
+		addCheckbox("Draw Controller Models", convar->getConVarByName("vr_draw_controller_models"));
+		addCheckbox("Draw Lighthouse Models", convar->getConVarByName("vr_draw_lighthouse_models"));
+		addSpacer();
+		addCheckbox("Draw VR Playfield", convar->getConVarByName("osu_vr_draw_playfield"));
+		addCheckbox("Draw Desktop Playfield", convar->getConVarByName("osu_vr_draw_desktop_playfield"));
+		addSpacer();
+		addCheckbox("Controller Distance Color Warning", convar->getConVarByName("osu_vr_controller_warning_distance_enabled"));
+		addCheckbox("Show Tutorial on Startup", convar->getConVarByName("osu_vr_tutorial"));
+		addSpacer();
+	}
+
+	//**************************************************************************************************************************//
+
 	addSection("Audio");
+
+	addSubSection("Devices");
+	OPTIONS_ELEMENT outputDeviceSelect = addButton("Select Output Device", "Default");
+	((CBaseUIButton*)outputDeviceSelect.elements[0])->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onOutputDeviceSelect) );
+	m_outputDeviceSelectButton = outputDeviceSelect.elements[0];
+	m_outputDeviceLabel = (CBaseUILabel*)outputDeviceSelect.elements[1];
 
 	addSubSection("Volume");
 	addSlider("Master:", 0.0f, 1.0f, convar->getConVarByName("osu_volume_master"), 70.0f);
@@ -376,6 +466,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Rainbow Numbers", convar->getConVarByName("osu_circle_number_rainbow"));
 	addCheckbox("SliderBreak Epilepsy", convar->getConVarByName("osu_slider_break_epilepsy"));
 	addCheckbox("Invisible Cursor", convar->getConVarByName("osu_hide_cursor_during_gameplay"));
+	addCheckbox("Draw 300s", convar->getConVarByName("osu_hitresult_draw_300s"));
 
 
 
@@ -435,6 +526,7 @@ void OsuOptionsMenu::update()
 		}
 	}
 
+	// flash osu!folder textbox red if incorrect
 	if (m_fOsuFolderTextboxInvalidAnim > engine->getTime())
 	{
 		char redness = std::abs(std::sin((m_fOsuFolderTextboxInvalidAnim - engine->getTime())*3))*128;
@@ -442,6 +534,21 @@ void OsuOptionsMenu::update()
 	}
 	else
 		m_osuFolderTextbox->setBackgroundColor(0xff000000);
+
+	// demo vibration strength while sliding
+	if (m_vrVibrationStrengthSlider != NULL && m_vrVibrationStrengthSlider->isActive())
+	{
+		if (engine->getTime() > m_fVibrationStrengthExampleTimer)
+		{
+			m_fVibrationStrengthExampleTimer = engine->getTime() + 0.65f;
+
+			openvr->getController()->triggerHapticPulse(m_osu->getVR()->getHapticPulseStrength());
+		}
+	}
+	if (m_vrSliderVibrationStrengthSlider != NULL && m_vrSliderVibrationStrengthSlider->isActive())
+	{
+		openvr->getController()->triggerHapticPulse(m_osu->getVR()->getSliderHapticPulseStrength());
+	}
 }
 
 void OsuOptionsMenu::onKeyDown(KeyboardEvent &e)
@@ -505,6 +612,12 @@ void OsuOptionsMenu::setVisible(bool visible)
 		m_contextMenu->setVisible2(false);
 }
 
+bool OsuOptionsMenu::shouldDrawVRDummyHUD()
+{
+	return isVisible();
+	/*return m_vrHudDistanceSlider != NULL && m_vrHudScaleSlider != NULL && (m_vrHudDistanceSlider->isActive() || m_vrHudScaleSlider->isActive());*/
+}
+
 void OsuOptionsMenu::updateLayout()
 {
 	// set all elements to the current convar values
@@ -512,7 +625,7 @@ void OsuOptionsMenu::updateLayout()
 	{
 		switch (m_elements[i].type)
 		{
-		case 4: // checkbox
+		case 5: // checkbox
 			if (m_elements[i].cvar != NULL)
 			{
 				for (int e=0; e<m_elements[i].elements.size(); e++)
@@ -523,7 +636,7 @@ void OsuOptionsMenu::updateLayout()
 				}
 			}
 			break;
-		case 5: // slider
+		case 6: // slider
 			if (m_elements[i].cvar != NULL)
 			{
 				if (m_elements[i].elements.size() == 3)
@@ -537,7 +650,7 @@ void OsuOptionsMenu::updateLayout()
 				}
 			}
 			break;
-		case 6: // textbox
+		case 7: // textbox
 			if (m_elements[i].cvar != NULL)
 			{
 				if (m_elements[i].elements.size() == 1)
@@ -553,8 +666,11 @@ void OsuOptionsMenu::updateLayout()
 
 	m_fullscreenCheckbox->setChecked(env->isFullscreen(), false);
 
-	// HACKHACK: temp, not correct anymore if skin loading fails
+	updateVRRenderTargetResolutionLabel();
+
+	// HACKHACK: temp, not correct anymore if loading fails
 	m_skinLabel->setText(convar->getConVarByName("osu_skin")->getString());
+	m_outputDeviceLabel->setText(engine->getSound()->getOutputDevice());
 
 	//************************************************************************************************************************************//
 
@@ -563,18 +679,19 @@ void OsuOptionsMenu::updateLayout()
 	m_container->setSize(m_osu->getScreenSize());
 
 	// options panel
-	int optionsWidth = (int)(m_osu->getScreenWidth()*0.5f);
+	int optionsWidth = (int)(m_osu->getScreenWidth()*0.525f);
 	m_options->setRelPosX(m_osu->getScreenWidth()/2 - optionsWidth/2);
 	m_options->setSize(optionsWidth, m_osu->getScreenHeight()+1);
 
 	bool enableHorizontalScrolling = false;
-	int sideMargin = 25;
+	int sideMargin = 25*2;
 	int spaceSpacing = 25;
 	int sectionSpacing = -15; // section title to first element
 	int subsectionSpacing = 15; // subsection title to first element
 	int sectionEndSpacing = 70; // last section element to next section title
 	int subsectionEndSpacing = 65; // last subsection element to next subsection title
 	int elementSpacing = 5;
+	int elementTextStartOffset = 11; // e.g. labels in front of sliders
 	int yCounter = sideMargin;
 	for (int i=0; i<m_elements.size(); i++)
 	{
@@ -596,7 +713,12 @@ void OsuOptionsMenu::updateLayout()
 			else
 				e->setSizeX(elementWidth);
 
-			e->setRelPosX(sideMargin);
+			int sideMarginAdd = 0;
+			CBaseUILabel *labelPointer = dynamic_cast<CBaseUILabel*>(e);
+			if (labelPointer != NULL)
+				sideMarginAdd += elementTextStartOffset;
+
+			e->setRelPosX(sideMargin + sideMarginAdd);
 			e->setRelPosY(yCounter);
 
 			yCounter += e->getSize().y;
@@ -622,7 +744,6 @@ void OsuOptionsMenu::updateLayout()
 			CBaseUIElement *e2 = m_elements[i].elements[1];
 			CBaseUIElement *e3 = m_elements[i].elements[2];
 
-			int offset = 11;
 			int labelSliderLabelOffset = 15;
 			int sliderSize = elementWidth - e1->getSize().x - e3->getSize().x;
 
@@ -632,12 +753,12 @@ void OsuOptionsMenu::updateLayout()
 				sliderSize = 100;
 			}
 
-			e1->setRelPos(sideMargin + offset, yCounter);
+			e1->setRelPos(sideMargin + elementTextStartOffset, yCounter);
 
-			e2->setRelPos(sideMargin + offset + e1->getSize().x + labelSliderLabelOffset, yCounter);
-			e2->setSizeX(sliderSize - 2*offset - labelSliderLabelOffset*2);
+			e2->setRelPos(sideMargin + elementTextStartOffset + e1->getSize().x + labelSliderLabelOffset, yCounter);
+			e2->setSizeX(sliderSize - 2*elementTextStartOffset - labelSliderLabelOffset*2);
 
-			e3->setRelPos(sideMargin + offset + e1->getSize().x + e2->getSize().x + 2*labelSliderLabelOffset, yCounter);
+			e3->setRelPos(sideMargin + elementTextStartOffset + e1->getSize().x + e2->getSize().x + 2*labelSliderLabelOffset, yCounter);
 			///e3->setSizeX(valueLabelSize - valueLabelOffset);
 
 			yCounter += e2->getSize().y;
@@ -674,6 +795,15 @@ void OsuOptionsMenu::updateLayout()
 	m_container->update_pos();
 }
 
+void OsuOptionsMenu::onBack()
+{
+	engine->getSound()->play(m_osu->getSkin()->getMenuClick());
+	m_osu->getNotificationOverlay()->stopWaitingForKey();
+	m_osu->toggleOptionsMenu();
+
+	save();
+}
+
 void OsuOptionsMenu::updateOsuFolder()
 {
 	// automatically insert a slash at the end if the user forgets
@@ -699,13 +829,13 @@ void OsuOptionsMenu::updateName()
 	convar->getConVarByName("name")->setValue(m_nameTextbox->getText());
 }
 
-void OsuOptionsMenu::onBack()
+void OsuOptionsMenu::updateVRRenderTargetResolutionLabel()
 {
-	engine->getSound()->play(m_osu->getSkin()->getMenuClick());
-	m_osu->getNotificationOverlay()->stopWaitingForKey();
-	m_osu->toggleOptionsMenu();
+	if (m_vrRenderTargetResolutionLabel == NULL || !openvr->isReady() || !m_osu->isInVRMode())
+		return;
 
-	save();
+	Vector2 vrRenderTargetResolution = openvr->getRenderTargetResolution();
+	m_vrRenderTargetResolutionLabel->setText(UString::format(m_vrRenderTargetResolutionLabel->getName().toUtf8(), (int)vrRenderTargetResolution.x, (int)vrRenderTargetResolution.y));
 }
 
 void OsuOptionsMenu::onFullscreenChange(CBaseUICheckbox *checkbox)
@@ -730,6 +860,7 @@ void OsuOptionsMenu::onSkinSelect()
 		m_contextMenu->setRelPos(m_skinSelectButton->getRelPos());
 		m_contextMenu->begin();
 		m_contextMenu->addButton("default");
+		m_contextMenu->addButton("defaultvr");
 		for (int i=0; i<skinFolders.size(); i++)
 		{
 			if (skinFolders[i] == "." || skinFolders[i] == "..") // is this universal in every file system? too lazy to check. should probably fix this in the engine and not here
@@ -764,6 +895,7 @@ void OsuOptionsMenu::onResolutionSelect()
 	std::vector<Vector2> resolutions;
 
 	// 4:3
+	resolutions.push_back(Vector2(800, 600));
     resolutions.push_back(Vector2(1024, 768));
     resolutions.push_back(Vector2(1152, 864));
     resolutions.push_back(Vector2(1280, 960));
@@ -854,6 +986,34 @@ void OsuOptionsMenu::onResolutionSelect2(UString resolution)
 		convar->getConVarByName("windowed")->execArgs(resolution);
 }
 
+void OsuOptionsMenu::onOutputDeviceSelect()
+{
+	std::vector<UString> outputDevices = engine->getSound()->getOutputDevices();
+
+    // build context menu
+	m_contextMenu->setPos(m_outputDeviceSelectButton->getPos());
+	m_contextMenu->setRelPos(m_outputDeviceSelectButton->getRelPos());
+	m_contextMenu->begin();
+	for (int i=0; i<outputDevices.size(); i++)
+	{
+		m_contextMenu->addButton(outputDevices[i]);
+	}
+	m_contextMenu->end();
+	m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onOutputDeviceSelect2) );
+}
+
+void OsuOptionsMenu::onOutputDeviceSelect2(UString outputDeviceName)
+{
+	engine->getSound()->setOutputDevice(outputDeviceName);
+	m_outputDeviceLabel->setText(engine->getSound()->getOutputDevice());
+	m_osu->reloadSkin(); // needed to reload sounds
+}
+
+void OsuOptionsMenu::onDownloadOsuClicked()
+{
+	env->openURLInDefaultBrowser("https://osu.ppy.sh/");
+}
+
 void OsuOptionsMenu::onCheckboxChange(CBaseUICheckbox *checkbox)
 {
 	for (int i=0; i<m_elements.size(); i++)
@@ -885,6 +1045,50 @@ void OsuOptionsMenu::onSliderChange(CBaseUISlider *slider)
 				{
 					CBaseUILabel *labelPointer = dynamic_cast<CBaseUILabel*>(m_elements[i].elements[2]);
 					labelPointer->setText(m_elements[i].cvar->getString());
+				}
+				break;
+			}
+		}
+	}
+}
+
+void OsuOptionsMenu::onSliderChangeOneDecimalPlace(CBaseUISlider *slider)
+{
+	for (int i=0; i<m_elements.size(); i++)
+	{
+		for (int e=0; e<m_elements[i].elements.size(); e++)
+		{
+			if (m_elements[i].elements[e] == slider)
+			{
+				if (m_elements[i].cvar != NULL)
+					m_elements[i].cvar->setValue(std::round(slider->getFloat()*10.0f)/10.0f); // round to 1 decimal place
+
+				if (m_elements[i].elements.size() == 3)
+				{
+					CBaseUILabel *labelPointer = dynamic_cast<CBaseUILabel*>(m_elements[i].elements[2]);
+					labelPointer->setText(m_elements[i].cvar->getString());
+				}
+				break;
+			}
+		}
+	}
+}
+
+void OsuOptionsMenu::onSliderChangeOneDecimalPlaceMeters(CBaseUISlider *slider)
+{
+	for (int i=0; i<m_elements.size(); i++)
+	{
+		for (int e=0; e<m_elements[i].elements.size(); e++)
+		{
+			if (m_elements[i].elements[e] == slider)
+			{
+				if (m_elements[i].cvar != NULL)
+					m_elements[i].cvar->setValue(std::round(slider->getFloat()*10.0f)/10.0f); // round to 1 decimal place
+
+				if (m_elements[i].elements.size() == 3)
+				{
+					CBaseUILabel *labelPointer = dynamic_cast<CBaseUILabel*>(m_elements[i].elements[2]);
+					labelPointer->setText(UString::format("%.1f m", m_elements[i].cvar->getFloat()));
 				}
 				break;
 			}
@@ -961,6 +1165,65 @@ void OsuOptionsMenu::onKeyBindingButtonPressed(CBaseUIButton *button)
 	}
 }
 
+void OsuOptionsMenu::onSliderChangeVRSuperSampling(CBaseUISlider *slider)
+{
+	for (int i=0; i<m_elements.size(); i++)
+	{
+		for (int e=0; e<m_elements[i].elements.size(); e++)
+		{
+			if (m_elements[i].elements[e] == slider)
+			{
+				if (m_elements[i].cvar != NULL)
+					m_elements[i].cvar->setValue(std::round(slider->getFloat()*10.0f)/10.0f); // round to 1 decimal place
+
+				if (m_elements[i].elements.size() == 3)
+				{
+					CBaseUILabel *labelPointer = dynamic_cast<CBaseUILabel*>(m_elements[i].elements[2]);
+					UString labelText = m_elements[i].cvar->getString();
+					labelText.append("x");
+					labelPointer->setText(labelText);
+				}
+				break;
+			}
+		}
+	}
+
+	updateVRRenderTargetResolutionLabel();
+}
+
+void OsuOptionsMenu::onSliderChangeVRAntiAliasing(CBaseUISlider *slider)
+{
+	for (int i=0; i<m_elements.size(); i++)
+	{
+		for (int e=0; e<m_elements[i].elements.size(); e++)
+		{
+			if (m_elements[i].elements[e] == slider)
+			{
+				int number = std::round(slider->getFloat()); // round to int
+				int aa = 0;
+				if (number > 8)
+					aa = 16;
+				else if (number > 4)
+					aa = 8;
+				else if (number > 2)
+					aa = 4;
+				else if (number > 0)
+					aa = 2;
+
+				if (m_elements[i].cvar != NULL)
+					m_elements[i].cvar->setValue(aa);
+
+				if (m_elements[i].elements.size() == 3)
+				{
+					CBaseUILabel *labelPointer = dynamic_cast<CBaseUILabel*>(m_elements[i].elements[2]);
+					labelPointer->setText(UString::format("%ix", aa));
+				}
+				break;
+			}
+		}
+	}
+}
+
 void OsuOptionsMenu::addSpacer()
 {
 	OPTIONS_ELEMENT e;
@@ -1006,6 +1269,23 @@ CBaseUILabel *OsuOptionsMenu::addSubSection(UString text)
 	return label;
 }
 
+CBaseUILabel *OsuOptionsMenu::addLabel(UString text)
+{
+	CBaseUILabel *label = new CBaseUILabel(0, 0, m_options->getSize().x, 25, text, text);
+	label->setSizeToContent(0, 0);
+	label->setDrawFrame(false);
+	label->setDrawBackground(false);
+	m_options->getContainer()->addBaseUIElement(label);
+
+	OPTIONS_ELEMENT e;
+	e.elements.push_back(label);
+	e.type = 3;
+	e.cvar = NULL;
+	m_elements.push_back(e);
+
+	return label;
+}
+
 OsuUIButton *OsuOptionsMenu::addButton(UString text, ConVar *cvar)
 {
 	OsuUIButton *button = new OsuUIButton(m_osu, 0, 0, m_options->getSize().x, 50, text, text);
@@ -1015,7 +1295,7 @@ OsuUIButton *OsuOptionsMenu::addButton(UString text, ConVar *cvar)
 
 	OPTIONS_ELEMENT e;
 	e.elements.push_back(button);
-	e.type = 3;
+	e.type = 4;
 	e.cvar = cvar;
 	m_elements.push_back(e);
 
@@ -1037,7 +1317,7 @@ OsuOptionsMenu::OPTIONS_ELEMENT OsuOptionsMenu::addButton(UString text, UString 
 	OPTIONS_ELEMENT e;
 	e.elements.push_back(button);
 	e.elements.push_back(label);
-	e.type = 3;
+	e.type = 4;
 	e.cvar = NULL;
 	m_elements.push_back(e);
 
@@ -1058,7 +1338,7 @@ CBaseUICheckbox *OsuOptionsMenu::addCheckbox(UString text, ConVar *cvar)
 
 	OPTIONS_ELEMENT e;
 	e.elements.push_back(checkbox);
-	e.type = 4;
+	e.type = 5;
 	e.cvar = cvar;
 	m_elements.push_back(e);
 
@@ -1096,7 +1376,7 @@ OsuUISlider *OsuOptionsMenu::addSlider(UString text, float min, float max, ConVa
 	e.elements.push_back(label1);
 	e.elements.push_back(slider);
 	e.elements.push_back(label2);
-	e.type = 5;
+	e.type = 6;
 	e.cvar = cvar;
 	m_elements.push_back(e);
 
@@ -1111,7 +1391,7 @@ CBaseUITextbox *OsuOptionsMenu::addTextbox(UString text, ConVar *cvar)
 
 	OPTIONS_ELEMENT e;
 	e.elements.push_back(textbox);
-	e.type = 6;
+	e.type = 7;
 	e.cvar = cvar;
 	m_elements.push_back(e);
 
@@ -1125,7 +1405,7 @@ CBaseUIElement *OsuOptionsMenu::addSkinPreview()
 
 	OPTIONS_ELEMENT e;
 	e.elements.push_back(skinPreview);
-	e.type = 7;
+	e.type = 8;
 	e.cvar = NULL;
 	m_elements.push_back(e);
 
@@ -1139,7 +1419,7 @@ CBaseUIElement *OsuOptionsMenu::addSliderPreview()
 
 	OPTIONS_ELEMENT e;
 	e.elements.push_back(sliderPreview);
-	e.type = 7;
+	e.type = 8;
 	e.cvar = NULL;
 	m_elements.push_back(e);
 
@@ -1159,7 +1439,9 @@ void OsuOptionsMenu::save()
 
 	debugLog("Osu: Saving user config file ...\n");
 
-	const char *userConfigFile = "cfg/osu.cfg";
+	UString userConfigFile = "cfg/";
+	userConfigFile.append(OSU_CONFIG_FILE_NAME);
+	userConfigFile.append(".cfg");
 
 	// manual concommands (e.g. fullscreen, windowed, osu_resolution)
 	std::vector<ConVar*> manualConCommands;
@@ -1168,6 +1450,7 @@ void OsuOptionsMenu::save()
 
 	removeConCommands.push_back(convar->getConVarByName("windowed"));
 	removeConCommands.push_back(convar->getConVarByName("osu_skin"));
+	removeConCommands.push_back(convar->getConVarByName("snd_output_device"));
 
 	if (m_fullscreenCheckbox->isChecked())
 	{
@@ -1187,7 +1470,7 @@ void OsuOptionsMenu::save()
 	std::vector<UString> keepLines;
 	{
 		// in extra block because the File class would block the following std::ofstream from writing to it until it's destroyed
-		File in(userConfigFile);
+		File in(userConfigFile.toUtf8());
 		if (!in.canRead())
 			debugLog("Osu Error: Couldn't read user config file!\n");
 		else
@@ -1243,7 +1526,7 @@ void OsuOptionsMenu::save()
 
 	// write new config file
 	// thankfully this path is relative and hardcoded, and thus not susceptible to unicode characters
-	std::ofstream out(userConfigFile);
+	std::ofstream out(userConfigFile.toUtf8());
 	if (!out.good())
 	{
 		engine->showMessageError("Osu Error", "Couldn't write user config file!");
@@ -1268,6 +1551,8 @@ void OsuOptionsMenu::save()
 	}
 
 	// hardcoded (!)
+	if (engine->getSound()->getOutputDevice() != "Default")
+		out << "snd_output_device " << engine->getSound()->getOutputDevice().toUtf8() << "\n";
 	if (!m_fullscreenCheckbox->isChecked())
 		out << "windowed " << engine->getScreenWidth() << "x" << engine->getScreenHeight() << "\n";
 

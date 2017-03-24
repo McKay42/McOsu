@@ -22,6 +22,7 @@ OsuUIButton::OsuUIButton(Osu *osu, float xPos, float yPos, float xSize, float yS
 	m_backupColor = m_color;
 	m_fBrightness = 0.85f;
 	m_fAnim = 0.0f;
+	m_fAlphaAddOnHover = 0.0f;
 }
 
 void OsuUIButton::draw(Graphics *g)
@@ -43,7 +44,7 @@ void OsuUIButton::draw(Graphics *g)
 	char red = std::max((unsigned int)(COLOR_GET_Ri(m_color)*m_fBrightness), (unsigned int)(m_fAnim*255.0f));
 	char green = std::max((unsigned int)(COLOR_GET_Gi(m_color)*m_fBrightness), (unsigned int)(m_fAnim*255.0f));
 	char blue = std::max((unsigned int)(COLOR_GET_Bi(m_color)*m_fBrightness), (unsigned int)(m_fAnim*255.0f));
-	g->setColor(COLOR(COLOR_GET_Ai(m_color), red, green, blue));
+	g->setColor(COLOR(clamp<int>(COLOR_GET_Ai(m_color) + (isMouseInside() ? (int)(m_fAlphaAddOnHover*255.0f) : 0), 0, 255), red, green, blue));
 
 	buttonLeft->bind();
 	g->drawQuad((int)m_vPos.x, (int)m_vPos.y, (int)leftWidth, (int)m_vSize.y);
