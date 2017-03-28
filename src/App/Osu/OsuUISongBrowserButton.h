@@ -49,6 +49,7 @@ public:
 	inline std::vector<OsuUISongBrowserButton*> getChildrenAbs() {return m_children;}
 
 	inline bool getCollectionDiffHack() const {return m_bCollectionDiffHack;}
+	inline int getSortHack() const {return m_iSortHack;}
 
 	virtual OsuBeatmap *getBeatmap() const {return NULL;}
 	virtual std::vector<OsuUISongBrowserButton*> getChildren() {return m_children;}
@@ -78,6 +79,7 @@ private:
 	static int marginPixelsX;
 	static int marginPixelsY;
 	static float lastHoverSoundTime;
+	static int sortHackCounter;
 
 	enum class MOVE_AWAY_STATE
 	{
@@ -99,6 +101,8 @@ private:
 	float m_fHoverMoveAwayAnimation;
 	float m_fCenterOffsetAnimation;
 	float m_fCenterOffsetVelocityAnimation;
+
+	int m_iSortHack;
 
 	bool m_bHideIfSelected;
 
