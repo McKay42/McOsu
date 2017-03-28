@@ -25,6 +25,7 @@
 int OsuUISongBrowserButton::marginPixelsX = 9;
 int OsuUISongBrowserButton::marginPixelsY = 9;
 float OsuUISongBrowserButton::lastHoverSoundTime = 0;
+int OsuUISongBrowserButton::sortHackCounter = 0;
 
 // Color OsuUISongBrowserButton::inactiveDifficultyBackgroundColor = COLOR(255, 0, 150, 236); // blue
 
@@ -48,6 +49,8 @@ OsuUISongBrowserButton::OsuUISongBrowserButton(Osu *osu, OsuSongBrowser2 *songBr
 	m_fHoverOffsetAnimation = 0.0f;
 	m_fCenterOffsetAnimation = 0.0f;
 	m_fCenterOffsetVelocityAnimation = 0.0f;
+
+	m_iSortHack = sortHackCounter++;
 
 	m_inactiveBackgroundColor = COLOR(255, 235, 73, 153); // pink
 	m_activeBackgroundColor = COLOR(255, 255, 255, 255); // white
