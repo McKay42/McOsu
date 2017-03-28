@@ -188,6 +188,18 @@ void OsuUISongBrowserSongButton::drawSubTitle(Graphics *g, float deselectedAlpha
 		g->scale(subTitleScale, subTitleScale);
 		g->translate(pos.x + m_fTextOffset, pos.y + size.y*m_fTextMarginScale + m_font->getHeight()*titleScale + size.y*m_fTextSpacingScale + m_font->getHeight()*subTitleScale*0.85f);
 		g->drawString(m_font, buildSubTitleString());
+
+		// debug stuff
+		/*
+		g->translate(-300, 0);
+		long long oldestTime = std::numeric_limits<long long>::min();
+		for (int i=0; i<m_beatmap->getNumDifficulties(); i++)
+		{
+			if ((*m_beatmap->getDifficultiesPointer())[i]->lastModificationTime > oldestTime)
+				oldestTime = (*m_beatmap->getDifficultiesPointer())[i]->lastModificationTime;
+		}
+		g->drawString(m_font, UString::format("t = %I64d", oldestTime));
+		*/
 	g->popTransform();
 }
 

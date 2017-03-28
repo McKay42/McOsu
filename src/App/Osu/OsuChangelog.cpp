@@ -40,12 +40,19 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	*/
 
 	CHANGELOG alpha29Steam;
-	alpha29Steam.title = "28.3 (Steam VR Alpha, ?)";
+	alpha29Steam.title = "28.4 (Steam VR Alpha, ?)";
+	alpha29Steam.changes.push_back("- Added preliminary primitive sorting options to songbrowser (Artist, BPM, Creator, Date Added, Difficulty, Length, Title)");
+	alpha29Steam.changes.push_back("- Slightly improved right-click absolute scrolling range in songbrowser");
+	alpha29Steam.changes.push_back("- Fixed negative slider durations causing early gameovers (Aspire...)");
+	alpha29Steam.changes.push_back("- Fixed incorrect music lengths while searching (-1 from db caused 2^32-1 due to unsigned integer conversion)");
+	alpha29Steam.changes.push_back("");
+	alpha29Steam.changes.push_back("- Added VR head model to spectator mode");
+	alpha29Steam.changes.push_back("- Added ConVars vr_head_rendermodel_name, vr_head_rendermodel_scale, vr_head_rendermodel_brightness");
 	alpha29Steam.changes.push_back("- Added option to draw 300s (bottom of Options, last one)");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("- Made slider parsing & curve generation more robust against abuse (Aspire...)");
-	alpha29Steam.changes.push_back("");
+	alpha29Steam.changes.push_back("- Made slider parsing & curve generation more robust against abuse, long loading times are not fixed though (Aspire...)");
 	alpha29Steam.changes.push_back("- Fixed experimental mod \"Minimize\" not working with CS Override as expected");
+	alpha29Steam.changes.push_back("- Fixed seeking/scrubbing not working properly while early waiting (green progressbar)");
+	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("- Fixed being able to continue spinning spinners while paused");
 	alpha29Steam.changes.push_back("- Fixed random invisible songbuttons in songbrowser on ultrawide resolutions (e.g. 21:9)");
 	changelogs.push_back(alpha29Steam);
