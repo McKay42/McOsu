@@ -14,10 +14,12 @@ class CBaseUIContainer;
 class CBaseUIScrollView;
 class CBaseUIButton;
 
+class Osu;
+
 class OsuUIContextMenu : public CBaseUIElement
 {
 public:
-	OsuUIContextMenu(float xPos, float yPos, float xSize, float ySize, UString name, CBaseUIScrollView *parent = NULL);
+	OsuUIContextMenu(Osu *osu, float xPos, float yPos, float xSize, float ySize, UString name, CBaseUIScrollView *parent = NULL);
 	virtual ~OsuUIContextMenu();
 
 	void draw(Graphics *g);
@@ -32,7 +34,7 @@ public:
 	void onFocusStolen();
 
 	void begin();
-	void addButton(UString text);
+	CBaseUIButton *addButton(UString text);
 	void end();
 
 	void setVisible2(bool visible2);
@@ -40,6 +42,8 @@ public:
 	bool isVisible() {return m_bVisible && m_bVisible2;}
 
 private:
+	Osu *m_osu;
+
 	CBaseUIContainer *m_container;
 	CBaseUIScrollView *m_parent;
 
@@ -50,6 +54,7 @@ private:
 	int m_iWidthCounter;
 
 	bool m_bVisible2;
+	float m_fAnimation;
 };
 
 #endif

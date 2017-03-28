@@ -548,6 +548,7 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 						SLIDER s;
 						s.type = sliderTokens[0][0];
 						s.repeat = (int)tokens[6].toFloat();
+						s.repeat = s.repeat >= 0 ? s.repeat : 0; // sanity check
 						s.pixelLength = clamp<float>(tokens[7].toFloat(), -sanityRange, sanityRange);
 						s.time = time;
 						s.sampleType = hitSound;
@@ -820,7 +821,8 @@ void OsuBeatmapDifficulty::buildStandardHitObjects(OsuBeatmapStandard *beatmap, 
 
 float OsuBeatmapDifficulty::getSliderTimeForSlider(SLIDER *slider)
 {
-	return getTimingInfoForTime(slider->time).beatLength * (slider->pixelLength / sliderMultiplier) / 100.0f;
+	const float duration = getTimingInfoForTime(slider->time).beatLength * (slider->pixelLength / sliderMultiplier) / 100.0f;
+	return duration >= 0.0f ? duration : 0.001f; // sanity check
 }
 
 float OsuBeatmapDifficulty::getTimingPointMultiplierForSlider(SLIDER *slider)

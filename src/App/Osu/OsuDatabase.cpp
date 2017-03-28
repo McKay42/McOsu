@@ -312,7 +312,7 @@ void OsuDatabase::loadDB(OsuFile *db)
 		unsigned short numCircles = db->readShort();
 		unsigned short numSliders = db->readShort();
 		unsigned short numSpinners = db->readShort();
-		unsigned long lastModificationTime = db->readLong();
+		long long lastModificationTime = db->readLongLong();
 		float AR = db->readFloat();
 		float CS = db->readFloat();
 		float HP = db->readFloat();
@@ -320,7 +320,7 @@ void OsuDatabase::loadDB(OsuFile *db)
 		double sliderMultiplier = db->readDouble();
 
 		//debugLog("Database: Entry #%i: size = %u, artist = %s, songtitle = %s, creator = %s, diff = %s, audiofilename = %s, md5hash = %s, osufilename = %s\n", i, size, artistName.toUtf8(), songTitle.toUtf8(), creatorName.toUtf8(), difficultyName.toUtf8(), audioFileName.toUtf8(), md5hash.toUtf8(), osuFileName.toUtf8());
-		//debugLog("rankedStatus = %i, numCircles = %i, numSliders = %i, numSpinners = %i, lastModificationTime = %lu\n", (int)rankedStatus, numCircles, numSliders, numSpinners, lastModificationTime);
+		//debugLog("rankedStatus = %i, numCircles = %i, numSliders = %i, numSpinners = %i, lastModificationTime = %ld\n", (int)rankedStatus, numCircles, numSliders, numSpinners, lastModificationTime);
 		//debugLog("AR = %f, CS = %f, HP = %f, OD = %f, sliderMultiplier = %f\n", AR, CS, HP, OD, sliderMultiplier);
 
 		unsigned int numOsuStandardStarRatings = db->readInt();
@@ -369,8 +369,10 @@ void OsuDatabase::loadDB(OsuFile *db)
 		}
 
 		unsigned int drainTime = db->readInt(); // seconds
-		unsigned int duration = db->readInt(); // milliseconds
-		unsigned int previewTime = db->readInt();
+		int duration = db->readInt(); // milliseconds
+		duration = duration >= 0 ? duration : 0; // sanity clamp
+		int previewTime = db->readInt();
+		previewTime = previewTime >= 0 ? previewTime : 0; // sanity clamp
 
 		//debugLog("drainTime = %i sec, duration = %i ms, previewTime = %i ms\n", drainTime, duration, previewTime);
 
@@ -404,10 +406,10 @@ void OsuDatabase::loadDB(OsuFile *db)
 		short onlineOffset = db->readShort();
 		UString songTitleFont = db->readString();
 		bool unplayed = db->readBool();
-		unsigned long lastTimePlayed = db->readLong();
+		long long lastTimePlayed = db->readLongLong();
 		bool isOsz2 = db->readBool();
 		UString path = db->readString().trim(); // somehow, some beatmaps may have spaces at the start/end of their path, breaking the Windows API (e.g. https://osu.ppy.sh/s/215347), therefore the trim
-		unsigned long lastOnlineCheck = db->readLong();
+		long long lastOnlineCheck = db->readLongLong();
 		//debugLog("onlineOffset = %i, songTitleFont = %s, unplayed = %i, lastTimePlayed = %lu, isOsz2 = %i, path = %s, lastOnlineCheck = %lu\n", onlineOffset, songTitleFont.toUtf8(), (int)unplayed, lastTimePlayed, (int)isOsz2, path.toUtf8(), lastOnlineCheck);
 
 		bool ignoreBeatmapSounds = db->readBool();

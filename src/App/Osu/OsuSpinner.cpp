@@ -64,7 +64,9 @@ OsuSpinner::OsuSpinner(int x, int y, long time, int sampleType, long endTime, Os
 
 OsuSpinner::~OsuSpinner()
 {
-	engine->getSound()->stop(m_beatmap->getSkin()->getSpinnerSpinSound());
+	if (m_beatmap->getSkin()->getSpinnerSpinSound()->isPlaying())
+		engine->getSound()->stop(m_beatmap->getSkin()->getSpinnerSpinSound());
+
 	delete[] m_storedDeltaAngles;
 	m_storedDeltaAngles = NULL;
 }
@@ -396,7 +398,8 @@ void OsuSpinner::onReset(long curPos)
 {
 	OsuHitObject::onReset(curPos);
 
-	engine->getSound()->stop(m_beatmap->getSkin()->getSpinnerSpinSound());
+	if (m_beatmap->getSkin()->getSpinnerSpinSound()->isPlaying())
+		engine->getSound()->stop(m_beatmap->getSkin()->getSpinnerSpinSound());
 
 	m_bClickedOnce = false;
 
@@ -447,7 +450,8 @@ void OsuSpinner::onHit()
 	addHitResult(result, 0, m_vRawPos, -1.0f);
 	m_bFinished = true;
 
-	engine->getSound()->stop(m_beatmap->getSkin()->getSpinnerSpinSound());
+	if (m_beatmap->getSkin()->getSpinnerSpinSound()->isPlaying())
+		engine->getSound()->stop(m_beatmap->getSkin()->getSpinnerSpinSound());
 }
 
 void OsuSpinner::rotate(float rad)
