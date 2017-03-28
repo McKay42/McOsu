@@ -305,6 +305,10 @@ void OsuBeatmap::update()
 	// handle music end
 	if (!m_bIsWaiting && !isLoading() && (m_music->isFinished() || (m_hitobjects.size() > 0 && m_hitobjects[m_hitobjects.size()-1]->getTime() + m_hitobjects[m_hitobjects.size()-1]->getDuration() + 1000 < m_iCurMusicPos)))
 	{
+		if (m_hitobjects.size())
+		{
+			debugLog("stopped because of time = %ld, duration = %ld\n", m_hitobjects[m_hitobjects.size()-1]->getTime(), m_hitobjects[m_hitobjects.size()-1]->getDuration());
+		}
 		stop(false);
 		return;
 	}
@@ -802,7 +806,8 @@ void OsuBeatmap::stop(bool quit)
 {
 	if (m_selectedDifficulty == NULL) return;
 
-	engine->getSound()->stop(getSkin()->getFailsound());
+	if (getSkin()->getFailsound()->isPlaying())
+		engine->getSound()->stop(getSkin()->getFailsound());
 
 	m_currentHitObject = NULL;
 
@@ -853,6 +858,7 @@ void OsuBeatmap::seekPercent(double percent)
 		return;
 
 	m_bWasSeekFrame = true;
+	m_fWaitTime = 0.0f;
 
 	m_music->setPosition(percent);
 
@@ -866,6 +872,7 @@ void OsuBeatmap::seekPercentPlayable(double percent)
 		return;
 
 	m_bWasSeekFrame = true;
+	m_fWaitTime = 0.0f;
 
 	double actualPlayPercent = percent;
 	if (m_hitobjects.size() > 0)
@@ -880,6 +887,7 @@ void OsuBeatmap::seekMS(unsigned long ms)
 		return;
 
 	m_bWasSeekFrame = true;
+	m_fWaitTime = 0.0f;
 
 	m_music->setPositionMS(ms);
 
@@ -908,7 +916,15 @@ unsigned long OsuBeatmap::getLength()
 	if (m_music != NULL && m_music->isAsyncReady())
 		return m_music->getLengthMS();
 	else if (m_difficulties.size() > 0) // a bit shitty, but it should work fine
-		return m_difficulties[0]->lengthMS;
+	{
+		unsigned long longest = 0;
+		for (int i=0; i<m_difficulties.size(); i++)
+		{
+			if (m_difficulties[i]->lengthMS > longest)
+				longest = m_difficulties[i]->lengthMS;
+		}
+		return longest;
+	}
 	else
 		return 0;
 }

@@ -68,6 +68,15 @@ long OsuFile::readLong()
 	return value;
 }
 
+long long OsuFile::readLongLong()
+{
+	if (!m_bReady || m_readPointer > m_buffer+m_iFileSize-1) return 0;
+
+	const long long value = (long long)*(long long*)m_readPointer;
+	m_readPointer += 8;
+	return value;
+}
+
 uint64_t OsuFile::readULEB128()
 {
 	if (!m_bReady || m_readPointer > m_buffer+m_iFileSize-1) return 0;

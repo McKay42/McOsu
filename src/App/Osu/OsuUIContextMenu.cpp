@@ -7,12 +7,17 @@
 
 #include "OsuUIContextMenu.h"
 
+#include "AnimationHandler.h"
+
 #include "CBaseUIContainer.h"
 #include "CBaseUIScrollView.h"
 #include "CBaseUIButton.h"
 
-OsuUIContextMenu::OsuUIContextMenu(float xPos, float yPos, float xSize, float ySize, UString name, CBaseUIScrollView *parent) : CBaseUIElement(xPos, yPos, xSize, ySize, name)
+#include "Osu.h"
+
+OsuUIContextMenu::OsuUIContextMenu(Osu *osu, float xPos, float yPos, float xSize, float ySize, UString name, CBaseUIScrollView *parent) : CBaseUIElement(xPos, yPos, xSize, ySize, name)
 {
+	m_osu = osu;
 	m_parent = parent;
 	m_container = new CBaseUIContainer(xPos, yPos, xSize, ySize, name);
 	m_iYCounter = 0;
@@ -21,6 +26,8 @@ OsuUIContextMenu::OsuUIContextMenu(float xPos, float yPos, float xSize, float yS
 	m_bVisible = false;
 	m_bVisible2 = false;
 	m_clickCallback = NULL;
+
+	m_fAnimation = 0.0f;
 }
 
 OsuUIContextMenu::~OsuUIContextMenu()
@@ -32,15 +39,26 @@ void OsuUIContextMenu::draw(Graphics *g)
 {
 	if (!m_bVisible || !m_bVisible2) return;
 
+	if (m_fAnimation > 0.0f && m_fAnimation < 1.0f)
+	{
+		g->push3DScene(Rect(m_vPos.x, m_vPos.y - m_vSize.y/2.0f, m_vSize.x, m_vSize.y));
+		g->rotate3DScene(-(1.0f - m_fAnimation)*90.0f, 0, 0);
+	}
+
 	// draw background
 	g->setColor(0xff222222);
+	g->setAlpha(m_fAnimation);
 	g->fillRect(m_vPos.x+1, m_vPos.y+1, m_vSize.x-1, m_vSize.y-1);
 
 	// draw frame
 	g->setColor(0xffffffff);
+	g->setAlpha(m_fAnimation*m_fAnimation);
 	g->drawRect(m_vPos.x, m_vPos.y, m_vSize.x, m_vSize.y);
 
 	m_container->draw(g);
+
+	if (m_fAnimation > 0.0f && m_fAnimation < 1.0f)
+		g->pop3DScene();
 }
 
 void OsuUIContextMenu::update()
@@ -78,7 +96,7 @@ void OsuUIContextMenu::begin()
 	m_container->clear();
 }
 
-void OsuUIContextMenu::addButton(UString text)
+CBaseUIButton *OsuUIContextMenu::addButton(UString text)
 {
 	int buttonHeight = 30;
 	int margin = 9;
@@ -99,6 +117,8 @@ void OsuUIContextMenu::addButton(UString text)
 
 	m_iYCounter += buttonHeight;
 	setSizeY(m_iYCounter + 2*margin);
+
+	return button;
 }
 
 void OsuUIContextMenu::end()
@@ -112,6 +132,9 @@ void OsuUIContextMenu::end()
 	}
 
 	setVisible2(true);
+
+	m_fAnimation = 0.001f;
+	anim->moveQuartOut(&m_fAnimation, 1.0f, 0.15f, true);
 }
 
 void OsuUIContextMenu::setVisible2(bool visible2)
