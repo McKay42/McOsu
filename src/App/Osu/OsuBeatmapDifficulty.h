@@ -119,7 +119,7 @@ public:
 	UString backgroundImageName;
 
 	unsigned long previewTime;
-	unsigned long lastModificationTime;
+	long long lastModificationTime;
 
 	// objects
 	std::vector<HITCIRCLE> hitcircles;

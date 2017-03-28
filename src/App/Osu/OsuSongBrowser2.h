@@ -29,6 +29,7 @@ class CBaseUIContainer;
 class CBaseUIImageButton;
 class CBaseUIScrollView;
 class CBaseUIButton;
+class CBaseUILabel;
 
 class McFont;
 class ConVar;
@@ -37,6 +38,11 @@ class OsuSongBrowser2 : public OsuScreenBackable, public MouseListener
 {
 public:
 	static void drawSelectedBeatmapBackgroundImage(Graphics *g, Osu *osu);
+
+	struct SORTING_COMPARATOR
+	{
+		virtual bool operator() (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const = 0;
+	};
 
 public:
 	OsuSongBrowser2(Osu *osu);
@@ -84,9 +90,27 @@ private:
 	enum class GROUP
 	{
 		GROUP_NO_GROUPING,
-		GROUP_DATE_ADDED,
-		GROUP_DIFFICULTY,
 		GROUP_COLLECTIONS
+		// incomplete
+	};
+
+	enum class SORT
+	{
+		SORT_ARTIST,
+		SORT_BPM,
+		SORT_CREATOR,
+		SORT_DATEADDED,
+		SORT_DIFFICULTY,
+		SORT_LENGTH,
+		SORT_RANKACHIEVED,
+		SORT_TITLE
+	};
+
+	struct SORTING_METHOD
+	{
+		SORT type;
+		UString name;
+		SORTING_COMPARATOR *comparator;
 	};
 
 	virtual void updateLayout();
@@ -104,10 +128,9 @@ private:
 	void onSortChange(UString text);
 
 	void onGroupNoGrouping(CBaseUIButton *b);
-	void onGroupDateAdded(CBaseUIButton *b);
-	void onGroupDifficulty(CBaseUIButton *b);
 	void onGroupCollections(CBaseUIButton *b);
-	void onAfterGroupChange(CBaseUIButton *b);
+
+	void onAfterSortingOrGroupChange(CBaseUIButton *b);
 
 	void onSelectionMods();
 	void onSelectionRandom();
@@ -123,6 +146,8 @@ private:
 	Osu *m_osu;
 	std::mt19937 m_rngalg;
 	GROUP m_group;
+	SORT m_sortingMethod;
+	std::vector<SORTING_METHOD> m_sortingMethods;
 
 	// top bar
 	float m_fSongSelectTopScale;
@@ -135,7 +160,9 @@ private:
 	CBaseUIContainer *m_topbarRight;
 	std::vector<CBaseUIButton*> m_topbarRightTabButtons;
 	std::vector<CBaseUIButton*> m_topbarRightSortButtons;
+	CBaseUILabel *m_groupLabel;
 	CBaseUIButton *m_noGroupingButton;
+	CBaseUILabel *m_sortLabel;
 	CBaseUIButton *m_sortButton;
 	OsuUIContextMenu *m_contextMenu;
 

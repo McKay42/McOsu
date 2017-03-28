@@ -136,6 +136,7 @@ OsuSlider::OsuSlider(char type, int repeat, float pixelLength, std::vector<Vecto
 	}
 
 	m_iObjectDuration = (long)m_fSliderTime;
+	m_iObjectDuration = m_iObjectDuration >= 0 ? m_iObjectDuration : 1; // force clamp to positive range
 
 	m_fSlidePercent = 0.0f;
 	m_fActualSlidePercent = 0.0f;

@@ -32,6 +32,7 @@ public:
 	short readShort();
 	int readInt();
 	long readLong();
+	long long readLongLong();
 	uint64_t readULEB128();
 	float readFloat();
 	double readDouble();
