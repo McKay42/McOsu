@@ -80,8 +80,8 @@ void OsuUISongBrowserSongDifficultyButton::draw(Graphics *g)
 		const float starOffsetY = (size.y*0.85);
 		const float starWidth = (size.y*0.20);
 		const float starScale = starWidth / skin->getStar()->getHeight();
-		const int numFullStars = std::min((int)m_diff->starsNoMod, 50);
-		const float partialStarScale = m_diff->starsNoMod - numFullStars;
+		const int numFullStars = std::min((int)m_diff->starsNoMod, 25);
+		const float partialStarScale = clamp<float>(m_diff->starsNoMod - numFullStars, 0.0f, 1.0f);
 
 		g->setColor(m_bSelected ? skin->getSongSelectActiveText() : skin->getSongSelectInactiveText());
 		for (int i=0; i<numFullStars; i++)
