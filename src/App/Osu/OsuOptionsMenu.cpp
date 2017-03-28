@@ -185,7 +185,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_options->setHorizontalScrolling(false);
 	m_container->addBaseUIElement(m_options);
 
-	m_contextMenu = new OsuUIContextMenu(50, 50, 150, 0, "", m_options);
+	m_contextMenu = new OsuUIContextMenu(m_osu, 50, 50, 150, 0, "", m_options);
 
 	//**************************************************************************************************************************//
 
