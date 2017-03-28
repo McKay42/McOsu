@@ -80,11 +80,19 @@ struct SortByArtist : public OsuSongBrowser2::SORTING_COMPARATOR
 	virtual ~SortByArtist() {;}
 	bool operator() (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const
 	{
-		std::wstring artistLowercase1 = std::wstring(a->getBeatmap()->getArtist().wc_str());
-		std::wstring artistLowercase2 = std::wstring(b->getBeatmap()->getArtist().wc_str());
+		if (a->getBeatmap() == NULL || b->getBeatmap() == NULL)
+			return a->getSortHack() < b->getSortHack();
+
+		std::wstring artistLowercase1 = std::wstring((a->getBeatmap()->getArtist().wc_str() == NULL || a->getBeatmap()->getArtist().length() < 1) ? L"" : a->getBeatmap()->getArtist().wc_str());
+		std::wstring artistLowercase2 = std::wstring((b->getBeatmap()->getArtist().wc_str() == NULL || b->getBeatmap()->getArtist().length() < 1) ? L"" : b->getBeatmap()->getArtist().wc_str());
+
+		// TODO: this fucking function crashes, why???!
 		std::transform(artistLowercase1.begin(), artistLowercase1.end(), artistLowercase1.begin(), std::towlower);
 		std::transform(artistLowercase2.begin(), artistLowercase2.end(), artistLowercase2.begin(), std::towlower);
 
+		// strict weak ordering!
+		if (artistLowercase1 == artistLowercase2)
+			return a->getSortHack() < b->getSortHack();
 		return artistLowercase1 < artistLowercase2;
 	}
 };
@@ -94,6 +102,9 @@ struct SortByBPM : public OsuSongBrowser2::SORTING_COMPARATOR
 	virtual ~SortByBPM() {;}
 	bool operator() (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const
 	{
+		if (a->getBeatmap() == NULL || b->getBeatmap() == NULL)
+			return a->getSortHack() < b->getSortHack();
+
 		int bpm1 = 0;
 		int bpm2 = 0;
 		std::vector<OsuBeatmapDifficulty*> *aDiffs = a->getBeatmap()->getDifficultiesPointer();
@@ -110,6 +121,9 @@ struct SortByBPM : public OsuSongBrowser2::SORTING_COMPARATOR
 				bpm2 = (*bDiffs)[i]->maxBPM;
 		}
 
+		// strict weak ordering!
+		if (bpm1 == bpm2)
+			return a->getSortHack() < b->getSortHack();
 		return bpm1 < bpm2;
 	}
 };
@@ -119,19 +133,25 @@ struct SortByCreator : public OsuSongBrowser2::SORTING_COMPARATOR
 	virtual ~SortByCreator() {;}
 	bool operator() (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const
 	{
+		if (a->getBeatmap() == NULL || b->getBeatmap() == NULL)
+			return a->getSortHack() < b->getSortHack();
+
 		std::wstring creatorLowercase1;
 		std::wstring creatorLowercase2;
 		std::vector<OsuBeatmapDifficulty*> *aDiffs = a->getBeatmap()->getDifficultiesPointer();
 		if (aDiffs->size() > 0)
-			creatorLowercase1 = std::wstring((*aDiffs)[aDiffs->size()-1]->creator.wc_str());
+			creatorLowercase1 = std::wstring(((*aDiffs)[aDiffs->size()-1]->creator.wc_str() == NULL || (*aDiffs)[aDiffs->size()-1]->creator.length() < 1) ? L"" : (*aDiffs)[aDiffs->size()-1]->creator.wc_str());
 
 		std::vector<OsuBeatmapDifficulty*> *bDiffs = b->getBeatmap()->getDifficultiesPointer();
 		if (bDiffs->size() > 0)
-			creatorLowercase2 = std::wstring((*bDiffs)[bDiffs->size()-1]->creator.wc_str());
+			creatorLowercase2 = std::wstring(((*bDiffs)[bDiffs->size()-1]->creator.wc_str() == NULL || (*bDiffs)[bDiffs->size()-1]->creator.length() < 1) ? L"" : (*bDiffs)[bDiffs->size()-1]->creator.wc_str());
 
 		std::transform(creatorLowercase1.begin(), creatorLowercase1.end(), creatorLowercase1.begin(), std::towlower);
 		std::transform(creatorLowercase2.begin(), creatorLowercase2.end(), creatorLowercase2.begin(), std::towlower);
 
+		// strict weak ordering!
+		if (creatorLowercase1 == creatorLowercase2)
+			return a->getSortHack() < b->getSortHack();
 		return creatorLowercase1 < creatorLowercase2;
 	}
 };
@@ -141,6 +161,9 @@ struct SortByDateAdded : public OsuSongBrowser2::SORTING_COMPARATOR
 	virtual ~SortByDateAdded() {;}
 	bool operator() (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const
 	{
+		if (a->getBeatmap() == NULL || b->getBeatmap() == NULL)
+			return a->getSortHack() < b->getSortHack();
+
 		long long time1 = std::numeric_limits<long long>::min();
 		long long time2 = std::numeric_limits<long long>::min();
 		std::vector<OsuBeatmapDifficulty*> *aDiffs = a->getBeatmap()->getDifficultiesPointer();
@@ -157,6 +180,9 @@ struct SortByDateAdded : public OsuSongBrowser2::SORTING_COMPARATOR
 				time2 = (*bDiffs)[i]->lastModificationTime;
 		}
 
+		// strict weak ordering!
+		if (time1 == time2)
+			return a->getSortHack() > b->getSortHack();
 		return time1 > time2;
 	}
 };
@@ -166,6 +192,9 @@ struct SortByDifficulty : public OsuSongBrowser2::SORTING_COMPARATOR
 	virtual ~SortByDifficulty() {;}
 	bool operator() (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const
 	{
+		if (a->getBeatmap() == NULL || b->getBeatmap() == NULL)
+			return a->getSortHack() < b->getSortHack();
+
 		float diff1 = 0.0f;
 		float stars1 = 0.0f;
 		std::vector<OsuBeatmapDifficulty*> *aDiffs = a->getBeatmap()->getDifficultiesPointer();
@@ -195,9 +224,19 @@ struct SortByDifficulty : public OsuSongBrowser2::SORTING_COMPARATOR
 		}
 
 		if (stars1 > 0 && stars2 > 0)
+		{
+			// strict weak ordering!
+			if (stars1 == stars2)
+				return a->getSortHack() < b->getSortHack();
 			return stars1 < stars2;
+		}
 		else
+		{
+			// strict weak ordering!
+			if (diff1 == diff2)
+				return a->getSortHack() < b->getSortHack();
 			return diff1 < diff2;
+		}
 	}
 };
 
@@ -206,6 +245,9 @@ struct SortByLength : public OsuSongBrowser2::SORTING_COMPARATOR
 	virtual ~SortByLength() {;}
 	bool operator() (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const
 	{
+		if (a->getBeatmap() == NULL || b->getBeatmap() == NULL)
+			return a->getSortHack() < b->getSortHack();
+
 		unsigned long length1 = 0;
 		unsigned long length2 = 0;
 		std::vector<OsuBeatmapDifficulty*> *aDiffs = a->getBeatmap()->getDifficultiesPointer();
@@ -222,6 +264,9 @@ struct SortByLength : public OsuSongBrowser2::SORTING_COMPARATOR
 				length2 = (*bDiffs)[i]->lengthMS;
 		}
 
+		// strict weak ordering!
+		if (length1 == length2)
+			return a->getSortHack() < b->getSortHack();
 		return length1 < length2;
 	}
 };
@@ -231,11 +276,18 @@ struct SortByTitle : public OsuSongBrowser2::SORTING_COMPARATOR
 	virtual ~SortByTitle() {;}
 	bool operator() (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const
 	{
-		std::wstring titleLowercase1 = std::wstring(a->getBeatmap()->getTitle().wc_str());
-		std::wstring titleLowercase2 = std::wstring(b->getBeatmap()->getTitle().wc_str());
+		if (a->getBeatmap() == NULL || b->getBeatmap() == NULL)
+			return a->getSortHack() < b->getSortHack();
+
+		std::wstring titleLowercase1 = std::wstring((a->getBeatmap()->getTitle().wc_str() == NULL || a->getBeatmap()->getTitle().length() < 1) ? L"" : a->getBeatmap()->getTitle().wc_str());
+		std::wstring titleLowercase2 = std::wstring((b->getBeatmap()->getTitle().wc_str() == NULL || b->getBeatmap()->getTitle().length() < 1) ? L"" : b->getBeatmap()->getTitle().wc_str());
+
 		std::transform(titleLowercase1.begin(), titleLowercase1.end(), titleLowercase1.begin(), std::towlower);
 		std::transform(titleLowercase2.begin(), titleLowercase2.end(), titleLowercase2.begin(), std::towlower);
 
+		// strict weak ordering!
+		if (titleLowercase1 == titleLowercase2)
+			return a->getSortHack() < b->getSortHack();
 		return titleLowercase1 < titleLowercase2;
 	}
 };
