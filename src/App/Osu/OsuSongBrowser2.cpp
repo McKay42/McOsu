@@ -86,7 +86,6 @@ struct SortByArtist : public OsuSongBrowser2::SORTING_COMPARATOR
 		std::wstring artistLowercase1 = std::wstring((a->getBeatmap()->getArtist().wc_str() == NULL || a->getBeatmap()->getArtist().length() < 1) ? L"" : a->getBeatmap()->getArtist().wc_str());
 		std::wstring artistLowercase2 = std::wstring((b->getBeatmap()->getArtist().wc_str() == NULL || b->getBeatmap()->getArtist().length() < 1) ? L"" : b->getBeatmap()->getArtist().wc_str());
 
-		// TODO: this fucking function crashes, why???!
 		std::transform(artistLowercase1.begin(), artistLowercase1.end(), artistLowercase1.begin(), std::towlower);
 		std::transform(artistLowercase2.begin(), artistLowercase2.end(), artistLowercase2.begin(), std::towlower);
 
