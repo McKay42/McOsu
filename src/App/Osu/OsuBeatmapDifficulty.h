@@ -21,6 +21,9 @@ class OsuHitObject;
 class OsuBeatmapDifficulty
 {
 public:
+	static ConVar *m_osu_slider_scorev2;
+
+public:
 	OsuBeatmapDifficulty(Osu *osu, UString filepath, UString folder);
 	~OsuBeatmapDifficulty();
 	void unload();
@@ -50,6 +53,7 @@ public:
 
 	struct SLIDER
 	{
+		int x,y;
 		char type;
 		int repeat;
 		float pixelLength;
@@ -157,6 +161,18 @@ public:
 	inline bool shouldBackgroundImageBeLoaded() const {return m_bShouldBackgroundImageBeLoaded;}
 	bool isInBreak(unsigned long positionMS);
 
+	// pp & star calculation
+	enum class SCORE_VERSION
+	{
+		SCORE_V1,
+		SCORE_V2
+	};
+	inline int getMaxCombo() {return m_iMaxCombo;}
+	double calculateStarDiff(OsuBeatmap *beatmap, double *aim, double *speed, double *rhythm_awkwardness);
+	double calculatePPv2(OsuBeatmap *beatmap, double aim, double speed, int combo = -1, int misses = 0, int c300 = -1, int c100 = 0, int c50 = 0/*, SCORE_VERSION scoreVersion = SCORE_VERSION::SCORE_V1*/);
+	static double calculateAcc(int c300, int c100, int c50, int misses);
+	static double calculateBaseStrain(double strain);
+
 private:
 	friend class BackgroundImagePathLoader;
 
@@ -176,6 +192,8 @@ private:
 	// custom
 	bool m_bShouldBackgroundImageBeLoaded;
 	BackgroundImagePathLoader *m_backgroundImagePathLoader;
+
+	int m_iMaxCombo;
 };
 
 #endif

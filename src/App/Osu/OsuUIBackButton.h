@@ -8,19 +8,26 @@
 #ifndef OSUUIBACKBUTTON_H
 #define OSUUIBACKBUTTON_H
 
-#include "CBaseUIImageButton.h"
+#include "CBaseUIButton.h"
 
-class OsuUIBackButton : public CBaseUIImageButton
+class Osu;
+
+class OsuUIBackButton : public CBaseUIButton
 {
 public:
-	OsuUIBackButton(UString imageResourceName, float xPos, float yPos, float xSize, float ySize, UString name);
+	OsuUIBackButton(Osu *osu, float xPos, float yPos, float xSize, float ySize, UString name);
 
-	void draw(Graphics *g);
+	virtual void draw(Graphics *g);
+	virtual void update();
 
 	virtual void onMouseInside();
 	virtual void onMouseOutside();
 
+	void updateLayout();
+
 private:
+	Osu *m_osu;
 	float m_fAnimation;
+	float m_fImageScale;
 };
 #endif

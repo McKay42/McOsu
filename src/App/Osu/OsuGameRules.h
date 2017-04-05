@@ -56,6 +56,17 @@ public:
 	//	Hitobject Timing  //
 	//********************//
 
+	static ConVar osu_hitwindow_300_min;
+	static ConVar osu_hitwindow_300_mid;
+	static ConVar osu_hitwindow_300_max;
+	static ConVar osu_hitwindow_100_min;
+	static ConVar osu_hitwindow_100_mid;
+	static ConVar osu_hitwindow_100_max;
+	static ConVar osu_hitwindow_50_min;
+	static ConVar osu_hitwindow_50_mid;
+	static ConVar osu_hitwindow_50_max;
+	static ConVar osu_hitwindow_miss;
+
 	static inline float getMinApproachTime()
 	{
 		return 1800.0f * (osu_mod_millhioref.getBool() ? osu_mod_millhioref_multiplier.getFloat() : 1.0f);
@@ -71,17 +82,17 @@ public:
 		return 450.0f * (osu_mod_millhioref.getBool() ? osu_mod_millhioref_multiplier.getFloat() : 1.0f);
 	}
 
-	static inline float getMinHitWindow300() {return 80.0f;}
-	static inline float getMidHitWindow300() {return 50.0f;}
-	static inline float getMaxHitWindow300() {return 20.0f;}
+	static inline float getMinHitWindow300() {return osu_hitwindow_300_min.getFloat();}
+	static inline float getMidHitWindow300() {return osu_hitwindow_300_mid.getFloat();}
+	static inline float getMaxHitWindow300() {return osu_hitwindow_300_max.getFloat();}
 
-	static inline float getMinHitWindow100() {return 140.0f;}
-	static inline float getMidHitWindow100() {return 100.0f;}
-	static inline float getMaxHitWindow100() {return 60.0f;}
+	static inline float getMinHitWindow100() {return osu_hitwindow_100_min.getFloat();}
+	static inline float getMidHitWindow100() {return osu_hitwindow_100_mid.getFloat();}
+	static inline float getMaxHitWindow100() {return osu_hitwindow_100_max.getFloat();}
 
-	static inline float getMinHitWindow50() {return 200.0f;}
-	static inline float getMidHitWindow50() {return 150.0f;}
-	static inline float getMaxHitWindow50() {return 100.0f;}
+	static inline float getMinHitWindow50() {return osu_hitwindow_50_min.getFloat();}
+	static inline float getMidHitWindow50() {return osu_hitwindow_50_mid.getFloat();}
+	static inline float getMaxHitWindow50() {return osu_hitwindow_50_max.getFloat();}
 
 	// AR 5 -> 1200 ms
 	static float mapDifficultyRange(float scaledDiff, float min, float mid, float max)
@@ -173,7 +184,7 @@ public:
 
 	static inline float getHitWindowMiss(OsuBeatmap *beatmap)
 	{
-		return 400.0f; // opsu is using this here: (500.0f - (beatmap->getOD() * 10.0f)), while osu is just using 400 absolute ms hardcoded, not sure why
+		return osu_hitwindow_miss.getFloat(); // opsu is using this here: (500.0f - (beatmap->getOD() * 10.0f)), while osu is just using 400 absolute ms hardcoded, not sure why
 	}
 
 	static float getSpinnerSpins(OsuBeatmap *beatmap) // raw spins

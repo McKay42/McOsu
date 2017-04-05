@@ -16,12 +16,20 @@ class Resource;
 class ConVar;
 
 class Osu;
+class OsuSkinImage;
 
 class OsuSkin
 {
 public:
+	static const char *OSUSKIN_DEFAULT_SKIN_PATH;
+
+	static ConVar *m_osu_skin_hd;
+
+public:
 	OsuSkin(Osu *osu, UString filepath);
 	virtual ~OsuSkin();
+
+	void update();
 
 	void load();
 	void loadBeatmapOverride(UString filepath);
@@ -33,14 +41,18 @@ public:
 	void playHitCircleSound(int sampleType);
 	void playSliderTickSound();
 
+	// drawable helpers
+	inline UString getFilePath() {return m_sFilePath;}
+	inline Osu *getOsu() {return m_osu;}
+
 	// raw
 	inline Image *getMissingTexture() {return m_missingTexture;}
 
 	inline Image *getHitCircle() {return m_hitCircle;}
-	inline Image *getHitCircleOverlay() {return m_hitCircleOverlay;}
+	inline OsuSkinImage *getHitCircleOverlay2() {return m_hitCircleOverlay2;}
 	inline Image *getApproachCircle() {return m_approachCircle;}
 	inline Image *getReverseArrow() {return m_reverseArrow;}
-	inline Image *getFollowPoint() {return m_followPoint;}
+	inline OsuSkinImage *getFollowPoint2() {return m_followPoint2;}
 
 	inline Image *getDefault0() {return m_default0;}
 	inline Image *getDefault1() {return m_default1;}
@@ -71,22 +83,26 @@ public:
 	inline Image *getPlayWarningArrow() {return m_playWarningArrow;}
 	inline Image *getCircularmetre() {return m_circularmetre;}
 
-	inline Image *getHit0() {return m_hit0;}
-	inline Image *getHit50() {return m_hit50;}
-	inline Image *getHit100() {return m_hit100;}
-	inline Image *getHit100k() {return m_hit100k;}
-	inline Image *getHit300() {return m_hit300;}
-	inline Image *getHit300g() {return m_hit300g;}
-	inline Image *getHit300k() {return m_hit300k;}
+	inline OsuSkinImage *getHit0() {return m_hit0;}
+	inline OsuSkinImage *getHit50() {return m_hit50;}
+	inline OsuSkinImage *getHit100() {return m_hit100;}
+	inline OsuSkinImage *getHit100k() {return m_hit100k;}
+	inline OsuSkinImage *getHit300() {return m_hit300;}
+	inline OsuSkinImage *getHit300g() {return m_hit300g;}
+	inline OsuSkinImage *getHit300k() {return m_hit300k;}
 
 	inline Image *getSliderGradient() {return m_sliderGradient;}
-	inline Image *getSliderb() {return m_sliderb;}
-	inline Image *getSliderFollowCircle() {return m_sliderFollowCircle;}
+	inline OsuSkinImage *getSliderb() {return m_sliderb;}
+	inline OsuSkinImage *getSliderFollowCircle2() {return m_sliderFollowCircle2;}
 	inline Image *getSliderScorePoint() {return m_sliderScorePoint;}
 	inline Image *getSliderStartCircle() {return m_sliderStartCircle;}
+	inline OsuSkinImage *getSliderStartCircle2() {return m_sliderStartCircle2;}
 	inline Image *getSliderStartCircleOverlay() {return m_sliderStartCircleOverlay;}
+	inline OsuSkinImage *getSliderStartCircleOverlay2() {return m_sliderStartCircleOverlay2;}
 	inline Image *getSliderEndCircle() {return m_sliderEndCircle;}
+	inline OsuSkinImage *getSliderEndCircle2() {return m_sliderEndCircle2;}
 	inline Image *getSliderEndCircleOverlay() {return m_sliderEndCircleOverlay;}
+	inline OsuSkinImage *getSliderEndCircleOverlay2() {return m_sliderEndCircleOverlay2;}
 
 	inline Image *getSpinnerBackground() {return m_spinnerBackground;}
 	inline Image *getSpinnerCircle() {return m_spinnerCircle;}
@@ -103,22 +119,22 @@ public:
 	inline Image *getCursorMiddle() {return m_cursorMiddle;}
 	inline Image *getCursorTrail() {return m_cursorTrail;}
 
-	inline Image *getSelectionModEasy() {return m_selectionModEasy;}
-	inline Image *getSelectionModNoFail() {return m_selectionModNoFail;}
-	inline Image *getSelectionModHalfTime() {return m_selectionModHalfTime;}
-	inline Image *getSelectionModHardRock() {return m_selectionModHardRock;}
-	inline Image *getSelectionModSuddenDeath() {return m_selectionModSuddenDeath;}
-	inline Image *getSelectionModPerfect() {return m_selectionModPerfect;}
-	inline Image *getSelectionModDoubleTime() {return m_selectionModDoubleTime;}
-	inline Image *getSelectionModNightCore() {return m_selectionModNightCore;}
-	inline Image *getSelectionModHidden() {return m_selectionModHidden;}
-	inline Image *getSelectionModFlashlight() {return m_selectionModFlashlight;}
-	inline Image *getSelectionModRelax() {return m_selectionModRelax;}
-	inline Image *getSelectionModAutopilot() {return m_selectionModAutopilot;}
-	inline Image *getSelectionModSpunOut() {return m_selectionModSpunOut;}
-	inline Image *getSelectionModAutoplay() {return m_selectionModAutoplay;}
-	inline Image *getSelectionModNightmare() {return m_selectionModNightmare;}
-	inline Image *getSelectionModTarget() {return m_selectionModTarget;}
+	inline OsuSkinImage *getSelectionModEasy() {return m_selectionModEasy;}
+	inline OsuSkinImage *getSelectionModNoFail() {return m_selectionModNoFail;}
+	inline OsuSkinImage *getSelectionModHalfTime() {return m_selectionModHalfTime;}
+	inline OsuSkinImage *getSelectionModHardRock() {return m_selectionModHardRock;}
+	inline OsuSkinImage *getSelectionModSuddenDeath() {return m_selectionModSuddenDeath;}
+	inline OsuSkinImage *getSelectionModPerfect() {return m_selectionModPerfect;}
+	inline OsuSkinImage *getSelectionModDoubleTime() {return m_selectionModDoubleTime;}
+	inline OsuSkinImage *getSelectionModNightCore() {return m_selectionModNightCore;}
+	inline OsuSkinImage *getSelectionModHidden() {return m_selectionModHidden;}
+	inline OsuSkinImage *getSelectionModFlashlight() {return m_selectionModFlashlight;}
+	inline OsuSkinImage *getSelectionModRelax() {return m_selectionModRelax;}
+	inline OsuSkinImage *getSelectionModAutopilot() {return m_selectionModAutopilot;}
+	inline OsuSkinImage *getSelectionModSpunOut() {return m_selectionModSpunOut;}
+	inline OsuSkinImage *getSelectionModAutoplay() {return m_selectionModAutoplay;}
+	inline OsuSkinImage *getSelectionModNightmare() {return m_selectionModNightmare;}
+	inline OsuSkinImage *getSelectionModTarget() {return m_selectionModTarget;}
 
 	inline Image *getPauseContinue() {return m_pauseContinue;}
 	inline Image *getPauseRetry() {return m_pauseRetry;}
@@ -131,7 +147,7 @@ public:
 	inline Image *getDefaultButtonLeft() {return m_defaultButtonLeft;}
 	inline Image *getDefaultButtonMiddle() {return m_defaultButtonMiddle;}
 	inline Image *getDefaultButtonRight() {return m_defaultButtonRight;}
-	inline Image *getMenuBack() {return m_menuBack;}
+	inline OsuSkinImage *getMenuBack2() {return m_menuBack;}
 	inline Image *getSelectionMode() {return m_selectionMode;}
 	inline Image *getSelectionModeOver() {return m_selectionModeOver;}
 	inline Image *getSelectionMods() {return m_selectionMods;}
@@ -180,31 +196,18 @@ public:
 	inline bool isCursor2x() {return m_bCursor2x;}
 	inline bool isApproachCircle2x() {return m_bApproachCircle2x;}
 	inline bool isReverseArrow2x() {return m_bReverseArrow2x;}
-	inline bool isFollowPoint2x() {return m_bFollowPoint2x;}
 	inline bool isHitCircle2x() {return m_bHitCircle2x;}
-	inline bool isHitCircleOverlay2x() {return m_bHitCircleOverlay2x;}
 	inline bool isDefault02x() {return m_bIsDefault02x;}
 	inline bool isDefault12x() {return m_bIsDefault12x;}
-	inline bool isHit02x() {return m_bHit02x;}
-	inline bool isHit502x() {return m_bHit502x;}
-	inline bool isHit1002x() {return m_bHit1002x;}
-	inline bool isHit100k2x() {return m_bHit100k2x;}
-	inline bool isHit3002x() {return m_bHit3002x;}
-	inline bool isHit300g2x() {return m_bHit300g2x;}
-	inline bool isHit300k2x() {return m_bHit300k2x;}
 	inline bool isSpinnerApproachCircle2x() {return m_bSpinnerApproachCircle2x;}
 	inline bool isSpinnerBottom2x() {return m_bSpinnerBottom2x;}
 	inline bool isSpinnerCircle2x() {return m_bSpinnerCircle2x;}
 	inline bool isSpinnerTop2x() {return m_bSpinnerTop2x;}
 	inline bool isSpinnerMiddle2x() {return m_bSpinnerMiddle2x;}
 	inline bool isSpinnerMiddle22x() {return m_bSpinnerMiddle22x;}
-	inline bool isSliderB2x() {return m_bSliderB2x;}
 	inline bool isSliderScorePoint2x() {return m_bSliderScorePoint2x;}
 	inline bool isSliderStartCircle2x() {return m_bSliderStartCircle2x;}
-	inline bool isSliderStartCircleOverlay2x() {return m_bSliderStartCircleOverlay2x;}
 	inline bool isSliderEndCircle2x() {return m_bSliderEndCircle2x;}
-	inline bool isSliderEndCircleOverlay2x() {return m_bSliderEndCircleOverlay2x;}
-	inline bool isSliderFollowCircle2x() {return m_bSliderFollowCircle2x;}
 
 	inline bool isCircularmetre2x() {return m_bCircularmetre2x;}
 	inline bool isPlaySkip2x() {return m_bPlaySkip2x;}
@@ -227,6 +230,7 @@ public:
 
 	// skin.ini
 	inline float getVersion() {return m_fVersion;}
+	inline float getAnimationFramerate() {return m_fAnimationFramerate;}
 	Color getComboColorForCounter(int i);
 	void setBeatmapComboColors(std::vector<Color> colors);
 	inline Color getSpinnerApproachCircleColor() {return m_spinnerApproachCircleColor;}
@@ -247,17 +251,24 @@ public:
 	inline bool getHitCircleOverlayAboveNumber() {return m_bHitCircleOverlayAboveNumber;}
 	inline bool isSliderTrackOverridden() {return m_bSliderTrackOverride;}
 
+	inline UString getComboPrefix() {return m_sComboPrefix;}
+	inline int getComboOverlap() {return m_iComboOverlap;}
+
+	inline UString getScorePrefix() {return m_sScorePrefix;}
+	inline int getScoreOverlap() {return m_iScoreOverlap;}
+
+	inline UString getHitCirclePrefix() {return m_sHitCirclePrefix;}
 	inline int getHitCircleOverlap() {return m_iHitCircleOverlap;}
 
 private:
 	bool parseSkinINI(UString filepath);
 	bool compareFilenameWithSkinElementName(UString filename, UString skinElementName);
+	OsuSkinImage *createOsuSkinImage(UString skinElementName, Vector2 baseSizeForScaling2x, float osuSize, UString animationSeparator = "-");
 	void checkLoadImage(Image **addressOfPointer, UString skinElementName, UString resourceName, bool ignoreDefaultSkin = false);
 	void checkLoadSound(Sound **addressOfPointer, UString skinElementName, UString resourceName, bool isOverlayable = false, bool isSample = false, bool loop = false);
 
 	void onEffectVolumeChange(UString oldValue, UString newValue);
 
-	static const char *OSUSKIN_DEFAULT_SKIN_PATH;
 	static ConVar *m_osu_skin_ref;
 
 	Osu *m_osu;
@@ -266,13 +277,15 @@ private:
 	std::vector<Sound*> m_sounds;
 	std::vector<Sound*> m_soundSamples;
 
+	std::vector<OsuSkinImage*> m_images;
+
 	static Image *m_missingTexture;
 
 	Image *m_hitCircle;
-	Image *m_hitCircleOverlay;
+	OsuSkinImage *m_hitCircleOverlay2;
 	Image *m_approachCircle;
 	Image *m_reverseArrow;
-	Image *m_followPoint;
+	OsuSkinImage *m_followPoint2;
 
 	Image *m_default0;
 	Image *m_default1;
@@ -303,22 +316,26 @@ private:
 	Image *m_playWarningArrow;
 	Image *m_circularmetre;
 
-	Image *m_hit0;
-	Image *m_hit50;
-	Image *m_hit100;
-	Image *m_hit100k;
-	Image *m_hit300;
-	Image *m_hit300g;
-	Image *m_hit300k;
+	OsuSkinImage *m_hit0;
+	OsuSkinImage *m_hit50;
+	OsuSkinImage *m_hit100;
+	OsuSkinImage *m_hit100k;
+	OsuSkinImage *m_hit300;
+	OsuSkinImage *m_hit300g;
+	OsuSkinImage *m_hit300k;
 
 	Image *m_sliderGradient;
-	Image *m_sliderb;
-	Image *m_sliderFollowCircle;
+	OsuSkinImage *m_sliderb;
+	OsuSkinImage *m_sliderFollowCircle2;
 	Image *m_sliderScorePoint;
 	Image *m_sliderStartCircle;
+	OsuSkinImage *m_sliderStartCircle2;
 	Image *m_sliderStartCircleOverlay;
+	OsuSkinImage *m_sliderStartCircleOverlay2;
 	Image *m_sliderEndCircle;
+	OsuSkinImage *m_sliderEndCircle2;
 	Image *m_sliderEndCircleOverlay;
+	OsuSkinImage *m_sliderEndCircleOverlay2;
 
 	Image *m_spinnerBackground;
 	Image *m_spinnerCircle;
@@ -335,22 +352,22 @@ private:
 	Image *m_cursorMiddle;
 	Image *m_cursorTrail;
 
-	Image *m_selectionModEasy;
-	Image *m_selectionModNoFail;
-	Image *m_selectionModHalfTime;
-	Image *m_selectionModHardRock;
-	Image *m_selectionModSuddenDeath;
-	Image *m_selectionModPerfect;
-	Image *m_selectionModDoubleTime;
-	Image *m_selectionModNightCore;
-	Image *m_selectionModHidden;
-	Image *m_selectionModFlashlight;
-	Image *m_selectionModRelax;
-	Image *m_selectionModAutopilot;
-	Image *m_selectionModSpunOut;
-	Image *m_selectionModAutoplay;
-	Image *m_selectionModNightmare;
-	Image *m_selectionModTarget;
+	OsuSkinImage *m_selectionModEasy;
+	OsuSkinImage *m_selectionModNoFail;
+	OsuSkinImage *m_selectionModHalfTime;
+	OsuSkinImage *m_selectionModHardRock;
+	OsuSkinImage *m_selectionModSuddenDeath;
+	OsuSkinImage *m_selectionModPerfect;
+	OsuSkinImage *m_selectionModDoubleTime;
+	OsuSkinImage *m_selectionModNightCore;
+	OsuSkinImage *m_selectionModHidden;
+	OsuSkinImage *m_selectionModFlashlight;
+	OsuSkinImage *m_selectionModRelax;
+	OsuSkinImage *m_selectionModAutopilot;
+	OsuSkinImage *m_selectionModSpunOut;
+	OsuSkinImage *m_selectionModAutoplay;
+	OsuSkinImage *m_selectionModNightmare;
+	OsuSkinImage *m_selectionModTarget;
 
 	Image *m_pauseContinue;
 	Image *m_pauseRetry;
@@ -363,7 +380,7 @@ private:
 	Image *m_defaultButtonLeft;
 	Image *m_defaultButtonMiddle;
 	Image *m_defaultButtonRight;
-	Image *m_menuBack;
+	OsuSkinImage *m_menuBack;
 	Image *m_selectionMode;
 	Image *m_selectionModeOver;
 	Image *m_selectionMods;
@@ -439,31 +456,18 @@ private:
 	bool m_bCursor2x;
 	bool m_bApproachCircle2x;
 	bool m_bReverseArrow2x;
-	bool m_bFollowPoint2x;
 	bool m_bHitCircle2x;
-	bool m_bHitCircleOverlay2x;
 	bool m_bIsDefault02x;
 	bool m_bIsDefault12x;
-	bool m_bHit02x;
-	bool m_bHit502x;
-	bool m_bHit1002x;
-	bool m_bHit100k2x;
-	bool m_bHit3002x;
-	bool m_bHit300g2x;
-	bool m_bHit300k2x;
 	bool m_bSpinnerApproachCircle2x;
 	bool m_bSpinnerBottom2x;
 	bool m_bSpinnerCircle2x;
 	bool m_bSpinnerTop2x;
 	bool m_bSpinnerMiddle2x;
 	bool m_bSpinnerMiddle22x;
-	bool m_bSliderB2x;
 	bool m_bSliderScorePoint2x;
 	bool m_bSliderStartCircle2x;
-	bool m_bSliderStartCircleOverlay2x;
 	bool m_bSliderEndCircle2x;
-	bool m_bSliderEndCircleOverlay2x;
-	bool m_bSliderFollowCircle2x;
 
 	bool m_bCircularmetre2x;
 	bool m_bPlaySkip2x;
@@ -486,6 +490,7 @@ private:
 
 	// skin.ini
 	float m_fVersion;
+	float m_fAnimationFramerate;
 	bool m_bCursorCenter;
 	bool m_bCursorRotate;
 	bool m_bCursorExpand;
@@ -496,6 +501,13 @@ private:
 	bool m_bHitCircleOverlayAboveNumber;
 	bool m_bSliderTrackOverride;
 
+	UString m_sComboPrefix;
+	int m_iComboOverlap;
+
+	UString m_sScorePrefix;
+	int m_iScoreOverlap;
+
+	UString m_sHitCirclePrefix;
 	int m_iHitCircleOverlap;
 
 	// custom

@@ -17,6 +17,7 @@ class CBaseUIImage;
 
 class OsuBeatmap;
 class OsuBeatmapDifficulty;
+class OsuSkinImage;
 
 class OsuUIRankingScreenInfoLabel;
 class OsuUIRankingScreenRankingPanel;
@@ -38,6 +39,8 @@ private:
 	virtual void updateLayout();
 	virtual void onBack();
 
+	void drawModImage(Graphics *g, OsuSkinImage *image, Vector2 &pos);
+
 	void setGrade(OsuScore::GRADE grade);
 
 	CBaseUIContainer *m_container;
@@ -50,6 +53,8 @@ private:
 
 	OsuScore::GRADE m_grade;
 	float m_fUnstableRate;
+	float m_fHitErrorAvgMin;
+	float m_fHitErrorAvgMax;
 };
 
 #endif
