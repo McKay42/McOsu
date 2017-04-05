@@ -55,12 +55,16 @@ public:
 	void addSliderBreak(); // only OsuBeatmap may call this function!
 	void addPoints(int points);
 
+	inline float getPPv2() {return m_fPPv2;}
+
 	inline GRADE getGrade() {return m_grade;}
 	inline int getScore() {return m_iScore;}
 	inline int getCombo() {return m_iCombo;}
 	inline int getComboMax() {return m_iComboMax;}
 	inline float getAccuracy() {return m_fAccuracy;}
 	inline float getUnstableRate() {return m_fUnstableRate;}
+	inline float getHitErrorAvgMin() {return m_fHitErrorAvgMin;}
+	inline float getHitErrorAvgMax() {return m_fHitErrorAvgMax;}
 	inline int getNumMisses() {return m_iNumMisses;}
 	inline int getNumSliderBreaks() {return m_iNumSliderBreaks;}
 	inline int getNum50s() {return m_iNum50s;}
@@ -77,10 +81,14 @@ private:
 
 	GRADE m_grade;
 
+	float m_fPPv2;
+
 	int m_iScore;
 	int m_iCombo;
 	int m_iComboMax;
 	float m_fAccuracy;
+	float m_fHitErrorAvgMin;
+	float m_fHitErrorAvgMax;
 	float m_fUnstableRate;
 
 	int m_iNumMisses;

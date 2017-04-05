@@ -14,26 +14,43 @@
 
 #include "Osu.h"
 #include "OsuSkin.h"
+#include "OsuSkinImage.h"
 #include "OsuModSelector.h"
 #include "OsuTooltipOverlay.h"
 
-OsuUIModSelectorModButton::OsuUIModSelectorModButton(Osu *osu, OsuModSelector *osuModSelector, float xPos, float yPos, float xSize, float ySize, UString name) : CBaseUIImageButton("MISSING_TEXTURE", xPos, yPos, xSize, ySize, name)
+OsuUIModSelectorModButton::OsuUIModSelectorModButton(Osu *osu, OsuModSelector *osuModSelector, float xPos, float yPos, float xSize, float ySize, UString name) : CBaseUIButton(xPos, yPos, xSize, ySize, name, "")
 {
 	m_osu = osu;
 	m_osuModSelector = osuModSelector;
 	m_iState = 0;
-	m_vBaseScale = Vector2(1, 1);
+	m_vScale = m_vBaseScale = Vector2(1, 1);
+	m_fRot = 0.0f;
 
 	m_fEnabledScaleMultiplier = 1.25f;
 	m_fEnabledRotationDeg = 6.0f;
 	m_bAvailable = true;
 	m_bOn = false;
+
+	m_activeImage = NULL;
 }
 
 void OsuUIModSelectorModButton::draw(Graphics *g)
 {
-	CBaseUIImageButton::draw(g);
 	if (!m_bVisible) return;
+	if (m_activeImage != NULL)
+	{
+		g->pushTransform();
+
+		g->scale(m_vScale.x, m_vScale.y);
+
+		if (m_fRot != 0.0f)
+			g->rotate(m_fRot);
+
+		g->setColor(0xffffffff);
+		m_activeImage->draw(g, m_vPos + m_vSize/2);
+
+		g->popTransform();
+	}
 
 	if (!m_bAvailable)
 	{
@@ -45,7 +62,7 @@ void OsuUIModSelectorModButton::draw(Graphics *g)
 
 void OsuUIModSelectorModButton::update()
 {
-	CBaseUIImageButton::update();
+	CBaseUIButton::update();
 	if (!m_bVisible) return;
 
 	// handle tooltips
@@ -68,7 +85,7 @@ void OsuUIModSelectorModButton::resetState()
 
 void OsuUIModSelectorModButton::onMouseDownInside()
 {
-	CBaseUIImageButton::onMouseDownInside();
+	CBaseUIButton::onMouseDownInside();
 
 	if (!m_bAvailable)
 		return;
@@ -150,15 +167,14 @@ void OsuUIModSelectorModButton::setState(int state)
 	// update image
 	if (m_iState < m_states.size() && m_states.size() > 0 && m_states[m_iState].img != NULL)
 	{
-		// this is a bit hacky: don't trigger a setSize() by avoiding setImageResourceName
-		m_sImageResourceName = m_states[m_iState].img->getName();
+		m_activeImage = m_states[m_iState].img;
 	}
 
 	// update mods
 	m_osuModSelector->updateModConVar();
 }
 
-void OsuUIModSelectorModButton::setState(unsigned int state, UString modName, UString tooltipText, Image *img)
+void OsuUIModSelectorModButton::setState(unsigned int state, UString modName, UString tooltipText, OsuSkinImage *img)
 {
 	// dynamically add new state
 	while (m_states.size() < state+1)
@@ -173,9 +189,9 @@ void OsuUIModSelectorModButton::setState(unsigned int state, UString modName, US
 
 	// set initial state image
 	if (m_states.size() == 1)
-		setImageResourceName(m_states[0].img->getName());
+		m_activeImage = m_states[0].img;
 	else if (m_iState > -1 && m_iState < m_states.size()) // update current state image
-		setImageResourceName(m_states[m_iState].img->getName());
+		m_activeImage = m_states[m_iState].img;
 }
 
 UString OsuUIModSelectorModButton::getActiveModName()

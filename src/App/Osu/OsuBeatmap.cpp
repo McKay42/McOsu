@@ -113,6 +113,7 @@ OsuBeatmap::OsuBeatmap(Osu *osu)
 	m_music = NULL;
 
 	m_iCurMusicPos = 0;
+	m_iCurMusicPosWithOffsets = 0;
 	m_bWasSeekFrame = false;
 	m_fInterpolatedMusicPos = 0.0;
 	m_fLastAudioTimeAccurateSet = 0.0;
@@ -346,6 +347,7 @@ void OsuBeatmap::update()
 		std::lock_guard<std::mutex> lk(m_clicksMutex); // we need to lock this up here, else it would be possible to insert a click just before calling m_clicks.clear(), thus missing it
 
 		long curPos = m_iCurMusicPos + (long)osu_global_offset.getInt() - m_selectedDifficulty->localoffset - m_selectedDifficulty->onlineOffset;
+		m_iCurMusicPosWithOffsets = curPos;
 		bool blockNextNotes = false;
 		for (int i=0; i<m_hitobjects.size(); i++)
 		{
@@ -535,10 +537,9 @@ void OsuBeatmap::keyPressed1()
 
 	//debugLog("async music pos = %lu, curMusicPos = %lu\n", m_music->getPositionMS(), m_iCurMusicPos);
 	//long curMusicPos = getMusicPositionMSInterpolated(); // this would only be useful if we also played hitsounds async! combined with checking which musicPos is bigger
-	const long curPos = m_iCurMusicPos + (long)osu_global_offset.getInt() - m_selectedDifficulty->localoffset - m_selectedDifficulty->onlineOffset;
 
 	CLICK click;
-	click.musicPos = curPos;
+	click.musicPos = m_iCurMusicPosWithOffsets;
 	click.realTime = engine->getTimeReal();
 
 	std::lock_guard<std::mutex> lk(m_clicksMutex);
@@ -551,10 +552,9 @@ void OsuBeatmap::keyPressed2()
 
 	//debugLog("async music pos = %lu, curMusicPos = %lu\n", m_music->getPositionMS(), m_iCurMusicPos);
 	//long curMusicPos = getMusicPositionMSInterpolated(); // this would only be useful if we also played hitsounds async! combined with checking which musicPos is bigger
-	const long curPos = m_iCurMusicPos + (long)osu_global_offset.getInt() - m_selectedDifficulty->localoffset - m_selectedDifficulty->onlineOffset;
 
 	CLICK click;
-	click.musicPos = curPos;
+	click.musicPos = m_iCurMusicPosWithOffsets;
 	click.realTime = engine->getTimeReal();
 
 	std::lock_guard<std::mutex> lk(m_clicksMutex);

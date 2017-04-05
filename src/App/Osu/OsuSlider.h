@@ -53,6 +53,18 @@ public:
 	inline std::vector<Vector2> getRawPoints() const {return m_points;}
 	inline float getPixelLength() const {return m_fPixelLength;}
 
+	// TEMP: auto cursordance
+	struct SLIDERCLICK
+	{
+		long time;
+		bool finished;
+		bool successful;
+		bool sliderend;
+		int type;
+		int tickIndex;
+	};
+	std::vector<SLIDERCLICK> getClicks() {return std::vector<SLIDERCLICK>(m_clicks);}
+
 private:
 	static ConVar *m_osu_playfield_mirror_horizontal_ref;
 	static ConVar *m_osu_playfield_mirror_vertical_ref;
@@ -60,6 +72,7 @@ private:
 	static ConVar *m_osu_mod_fps_ref;
 	static ConVar *m_osu_slider_border_size_multiplier_ref;
 	static ConVar *m_epilepsy;
+	static ConVar *m_osu_auto_cursordance;
 
 	void drawStartCircle(Graphics *g, float alpha);
 	void drawEndCircle(Graphics *g, float alpha, float sliderSnake = 1.0f);
@@ -94,15 +107,7 @@ private:
 	};
 	std::vector<SLIDERTICK> m_ticks; // ticks (drawing)
 
-	struct SLIDERCLICK
-	{
-		long time;
-		bool finished;
-		bool successful;
-		bool sliderend;
-		int type;
-		int tickIndex;
-	};
+	// TEMP: auto cursordance
 	std::vector<SLIDERCLICK> m_clicks; // repeats (type 0) + ticks (type 1)
 
 	float m_fSlidePercent; // 0.0f - 1.0f - 0.0f - 1.0f - etc.

@@ -93,6 +93,7 @@ public:
 	inline Osu *getOsu() const {return m_osu;}
 	OsuSkin *getSkin(); // maybe use this for beatmap skins, maybe
 	inline long getCurMusicPos() const {return m_iCurMusicPos;}
+	inline long getCurMusicPosWithOffsets() const {return m_iCurMusicPosWithOffsets;}
 
 	float getRawAR();
 	float getAR();
@@ -187,6 +188,7 @@ protected:
 
 	// sound
 	long m_iCurMusicPos;
+	long m_iCurMusicPosWithOffsets;
 	bool m_bWasSeekFrame;
 	double m_fInterpolatedMusicPos;
 	double m_fLastAudioTimeAccurateSet;

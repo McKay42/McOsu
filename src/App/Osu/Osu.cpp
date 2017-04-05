@@ -57,7 +57,7 @@ void DUMMY_OSU_MODS(void) {;}
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 28.4f);
+ConVar osu_version("osu_version", 28.6f);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr");
 #else
@@ -473,6 +473,9 @@ void Osu::drawVR(Graphics *g)
 
 void Osu::update()
 {
+	if (m_skin != NULL)
+		m_skin->update();
+
 	m_windowManager->update();
 	if (isInVRMode())
 		m_vr->update();
