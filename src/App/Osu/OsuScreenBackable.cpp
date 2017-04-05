@@ -20,8 +20,7 @@ OsuScreenBackable::OsuScreenBackable(Osu *osu) : OsuScreen()
 {
 	m_osu = osu;
 
-	m_backButton = new OsuUIBackButton("", -1, 0, 0, 0, "");
-	m_backButton->setScaleToFit(true);
+	m_backButton = new OsuUIBackButton(m_osu, -1, 0, 0, 0, "");
 	m_backButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuScreenBackable::onBack) );
 
 	updateLayout();
@@ -72,15 +71,8 @@ void OsuScreenBackable::onChar(KeyboardEvent &e)
 
 void OsuScreenBackable::updateLayout()
 {
-	m_backButton->setImageResourceName(m_osu->getSkin()->getMenuBack()->getName());
-
 	// back button
-	Image *backButton = m_osu->getSkin()->getMenuBack();
-	float backButtonScale = Osu::getImageScale(m_osu, backButton, 86.0f);
-	float maxFactor = 0.169f; // HACKHACK:
-	if (backButton->getWidth()*backButtonScale > m_osu->getScreenWidth()*maxFactor)
-		backButtonScale = (m_osu->getScreenWidth()*maxFactor)/backButton->getWidth();
-	m_backButton->setSize(backButton->getWidth()*backButtonScale, backButton->getHeight()*backButtonScale);
+	m_backButton->updateLayout();
 	m_backButton->setPosY(m_osu->getScreenHeight() - m_backButton->getSize().y);
 }
 

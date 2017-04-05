@@ -19,6 +19,7 @@
 
 #include "Osu.h"
 #include "OsuSkin.h"
+#include "OsuSkinImage.h"
 #include "OsuScore.h"
 #include "OsuBeatmap.h"
 #include "OsuBeatmapDifficulty.h"
@@ -61,6 +62,8 @@ OsuRankingScreen::OsuRankingScreen(Osu *osu) : OsuScreenBackable(osu)
 
 	setGrade(OsuScore::GRADE::GRADE_D);
 	m_fUnstableRate = 0.0f;
+	m_fHitErrorAvgMin = 0.0f;
+	m_fHitErrorAvgMax = 0.0f;
 }
 
 OsuRankingScreen::~OsuRankingScreen()
@@ -77,6 +80,39 @@ void OsuRankingScreen::draw(Graphics *g)
 
 	m_rankings->draw(g);
 
+	// draw active mods
+	Vector2 modPos = m_rankingGrade->getPos() + Vector2(m_rankingGrade->getSize().x*0.925f, m_rankingGrade->getSize().y*0.7f);
+	if (m_osu->getModSS())
+		drawModImage(g, m_osu->getSkin()->getSelectionModPerfect(), modPos);
+	else if (m_osu->getModSD())
+		drawModImage(g, m_osu->getSkin()->getSelectionModSuddenDeath(), modPos);
+	if (m_osu->getModEZ())
+		drawModImage(g, m_osu->getSkin()->getSelectionModEasy(), modPos);
+	if (m_osu->getModHD())
+		drawModImage(g, m_osu->getSkin()->getSelectionModHidden(), modPos);
+	if (m_osu->getModHR())
+		drawModImage(g, m_osu->getSkin()->getSelectionModHardRock(), modPos);
+	if (m_osu->getModNC())
+		drawModImage(g, m_osu->getSkin()->getSelectionModNightCore(), modPos);
+	else if (m_osu->getModDT())
+		drawModImage(g, m_osu->getSkin()->getSelectionModDoubleTime(), modPos);
+	if (m_osu->getModNM())
+		drawModImage(g, m_osu->getSkin()->getSelectionModNightmare(), modPos);
+	if (m_osu->getModTarget())
+		drawModImage(g, m_osu->getSkin()->getSelectionModTarget(), modPos);
+	if (m_osu->getModSpunout())
+		drawModImage(g, m_osu->getSkin()->getSelectionModSpunOut(), modPos);
+	if (m_osu->getModRelax())
+		drawModImage(g, m_osu->getSkin()->getSelectionModRelax(), modPos);
+	if (m_osu->getModNF())
+		drawModImage(g, m_osu->getSkin()->getSelectionModNoFail(), modPos);
+	if (m_osu->getModHT())
+		drawModImage(g, m_osu->getSkin()->getSelectionModHalfTime(), modPos);
+	if (m_osu->getModAutopilot())
+		drawModImage(g, m_osu->getSkin()->getSelectionModAutopilot(), modPos);
+	if (m_osu->getModAuto())
+		drawModImage(g, m_osu->getSkin()->getSelectionModAutoplay(), modPos);
+
 	// draw top black bar
 	g->setColor(0xff000000);
 	g->fillRect(0, 0, m_osu->getScreenWidth(), m_rankingTitle->getSize().y*osu_rankingscreen_topbar_height_percent.getFloat());
@@ -85,6 +121,14 @@ void OsuRankingScreen::draw(Graphics *g)
 	m_songInfo->draw(g);
 
 	OsuScreenBackable::draw(g);
+}
+
+void OsuRankingScreen::drawModImage(Graphics *g, OsuSkinImage *image, Vector2 &pos)
+{
+	g->setColor(0xffffffff);
+	image->draw(g, Vector2(pos.x - image->getSize().x/2.0f, pos.y));
+
+	pos.x -= image->getSize().x/2.0f;
 }
 
 void OsuRankingScreen::update()
@@ -99,7 +143,8 @@ void OsuRankingScreen::update()
 	{
 		m_osu->getTooltipOverlay()->begin();
 		m_osu->getTooltipOverlay()->addLine("Accuracy:");
-		m_osu->getTooltipOverlay()->addLine(UString::format("Unstable Rate: %g", m_fUnstableRate));
+		m_osu->getTooltipOverlay()->addLine(UString::format("Error: %.2fms - %.2fms avg", m_fHitErrorAvgMin, m_fHitErrorAvgMax));
+		m_osu->getTooltipOverlay()->addLine(UString::format("Unstable Rate: %.2f", m_fUnstableRate));
 		m_osu->getTooltipOverlay()->end();
 	}
 }
@@ -120,6 +165,8 @@ void OsuRankingScreen::setScore(OsuScore *score)
 	m_rankingPanel->setScore(score);
 	setGrade(score->getGrade());
 	m_fUnstableRate = score->getUnstableRate();
+	m_fHitErrorAvgMin = score->getHitErrorAvgMin();
+	m_fHitErrorAvgMax = score->getHitErrorAvgMax();
 }
 
 void OsuRankingScreen::setBeatmapInfo(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff)

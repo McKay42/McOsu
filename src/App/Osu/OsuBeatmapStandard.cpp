@@ -24,6 +24,7 @@
 #include "OsuVR.h"
 #include "OsuHUD.h"
 #include "OsuSkin.h"
+#include "OsuSkinImage.h"
 #include "OsuGameRules.h"
 #include "OsuNotificationOverlay.h"
 #include "OsuBeatmapDifficulty.h"
@@ -80,7 +81,6 @@ OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 	m_fHitcircleOverlapScale = 1.0f;
 	m_fRawHitcircleDiameter = 0.0f;
 	m_fHitcircleDiameter = 0.0f;
-	m_fSliderFollowCircleScale = 0.0f;
 	m_fSliderFollowCircleDiameter = 0.0f;
 	m_fRawSliderFollowCircleDiameter = 0.0f;
 
@@ -252,11 +252,11 @@ void OsuBeatmapStandard::drawFollowPoints(Graphics *g)
 {
 	OsuSkin *skin = m_osu->getSkin();
 
-	const long curPos = m_iCurMusicPos + (long)m_osu_global_offset_ref->getInt() - m_selectedDifficulty->localoffset - m_selectedDifficulty->onlineOffset;
+	const long curPos = m_iCurMusicPosWithOffsets;
 	const long approachTime = std::min((long)OsuGameRules::getApproachTime(this), (long)osu_followpoints_approachtime.getFloat());
 
 	// the followpoints are scaled by one eighth of the hitcirclediameter (not the raw diameter, but the scaled diameter)
-	const float followPointImageScale = ((m_fHitcircleDiameter/8.0f) / (16.0f * (skin->isFollowPoint2x() ? 2.0f : 1.0f))) * osu_followpoints_scale_multiplier.getFloat();
+	const float followPointImageScale = ((m_fHitcircleDiameter/8.0f) / skin->getFollowPoint2()->getSizeBaseRaw().x) * osu_followpoints_scale_multiplier.getFloat();
 
 	// include previous object in followpoints
 	int lastObjectIndex = -1;
@@ -338,9 +338,8 @@ void OsuBeatmapStandard::drawFollowPoints(Graphics *g)
 				g->setAlpha(alpha);
 				g->pushTransform();
 					g->rotate(rad2deg(atan2(yDiff, xDiff)));
-					g->scale(followPointImageScale*scale, followPointImageScale*scale);
-					g->translate(followPos.x, followPos.y);
-					g->drawImage(skin->getFollowPoint());
+					skin->getFollowPoint2()->setAnimationTimeOffset(fadeInTime - 150); // HACKHACK: hardcoded 150 is good enough, was approachTime/2.5 (osu! allows followpoints to finish before hitobject fadein (!), fuck that)
+					skin->getFollowPoint2()->drawRaw(g, followPos, followPointImageScale*scale);
 				g->popTransform();
 			}
 		}
@@ -769,7 +768,7 @@ void OsuBeatmapStandard::updateAutoCursorPos()
 	int nextPosIndex = 0;
 	bool haveCurPos = false;
 
-	long curMusicPos = m_iCurMusicPos + (long)m_osu_global_offset_ref->getInt() - m_selectedDifficulty->localoffset - m_selectedDifficulty->onlineOffset;
+	long curMusicPos = m_iCurMusicPosWithOffsets;
 
 	if (m_bIsWaiting)
 		prevTime = -(long)m_osu_early_note_time_ref->getInt();
@@ -783,6 +782,7 @@ void OsuBeatmapStandard::updateAutoCursorPos()
 
 	if (m_osu->getModAuto())
 	{
+		bool autoDanceOverride = false;
 		for (int i=0; i<m_hitobjects.size(); i++)
 		{
 			OsuHitObject *o = m_hitobjects[i];
@@ -794,6 +794,67 @@ void OsuBeatmapStandard::updateAutoCursorPos()
 				prevPos = o->getAutoCursorPos(curMusicPos);
 				if (o->getDuration() > 0 && curMusicPos - o->getTime() <= o->getDuration())
 				{
+					if (osu_auto_cursordance.getBool())
+					{
+						OsuSlider *sliderPointer = dynamic_cast<OsuSlider*>(o);
+						if (sliderPointer != NULL)
+						{
+							std::vector<OsuSlider::SLIDERCLICK> clicks = sliderPointer->getClicks();
+
+							// start
+							prevTime = o->getTime();
+							prevPos = osuCoords2Pixels(o->getRawPosAt(prevTime));
+
+							long biggestPrevious = 0;
+							long smallestNext = std::numeric_limits<long>::max();
+							bool allFinished = true;
+							long endTime = 0;
+
+							// middle clicks
+							for (int c=0; c<clicks.size(); c++)
+							{
+								// get previous click
+								if (clicks[c].time <= curMusicPos && clicks[c].time > biggestPrevious)
+								{
+									biggestPrevious = clicks[c].time;
+									prevTime = clicks[c].time;
+									prevPos = osuCoords2Pixels(o->getRawPosAt(prevTime));
+								}
+
+								// get next click
+								if (clicks[c].time > curMusicPos && clicks[c].time < smallestNext)
+								{
+									smallestNext = clicks[c].time;
+									nextTime = clicks[c].time;
+									nextPos = osuCoords2Pixels(o->getRawPosAt(nextTime));
+								}
+
+								// end hack
+								if (!clicks[c].finished)
+									allFinished = false;
+								else if (clicks[c].time > endTime)
+									endTime = clicks[c].time;
+							}
+
+							// end
+							if (allFinished)
+							{
+								// hack for slider without middle clicks
+								if (endTime == 0)
+									endTime = o->getTime();
+
+								prevTime = endTime;
+								prevPos = osuCoords2Pixels(o->getRawPosAt(prevTime));
+								nextTime = o->getTime() + o->getDuration();
+								nextPos = osuCoords2Pixels(o->getRawPosAt(nextTime));
+							}
+
+							haveCurPos = false;
+							autoDanceOverride = true;
+							break;
+						}
+					}
+
 					haveCurPos = true;
 					curPos = prevPos;
 					break;
@@ -804,8 +865,11 @@ void OsuBeatmapStandard::updateAutoCursorPos()
 			if (o->getTime() > curMusicPos)
 			{
 				nextPosIndex = i;
-				nextPos = o->getAutoCursorPos(curMusicPos);
-				nextTime = o->getTime();
+				if (!autoDanceOverride)
+				{
+					nextPos = o->getAutoCursorPos(curMusicPos);
+					nextTime = o->getTime();
+				}
 				break;
 			}
 		}
@@ -879,7 +943,7 @@ void OsuBeatmapStandard::updateAutoCursorPos()
 
 		m_vAutoCursorPos = prevPos + (nextPos - prevPos)*percent;
 
-		if (osu_auto_cursordance.getBool())
+		if (osu_auto_cursordance.getBool() && !m_osu->getModAutopilot())
 		{
 			Vector3 dir = Vector3(nextPos.x, nextPos.y, 0) - Vector3(prevPos.x, prevPos.y, 0);
 			Vector3 center = dir*0.5f;
@@ -915,7 +979,6 @@ void OsuBeatmapStandard::updateHitobjectMetrics()
 
 	m_fRawSliderFollowCircleDiameter = getRawHitcircleDiameter() * (m_osu->getModNM() || osu_mod_jigsaw2.getBool() ? (1.0f*(1.0f - osu_mod_jigsaw_followcircle_radius_factor.getFloat()) + osu_mod_jigsaw_followcircle_radius_factor.getFloat()*2.4f) : 2.4f);
 	m_fSliderFollowCircleDiameter = getHitcircleDiameter() * (m_osu->getModNM() || osu_mod_jigsaw2.getBool() ? (1.0f*(1.0f - osu_mod_jigsaw_followcircle_radius_factor.getFloat()) + osu_mod_jigsaw_followcircle_radius_factor.getFloat()*2.4f) : 2.4f);
-	m_fSliderFollowCircleScale = (m_fSliderFollowCircleDiameter / (259.0f * (skin->isSliderFollowCircle2x() ? 2.0f : 1.0f)))*0.85f; // this is a bit strange, but seems to work perfectly with 0.85
 }
 
 void OsuBeatmapStandard::updateSliderVertexBuffers()

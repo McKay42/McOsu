@@ -17,8 +17,8 @@ class OsuBeatmapStandard;
 class OsuHitObject
 {
 public:
-	static void drawHitResult(Graphics *g, OsuBeatmapStandard *beatmap, Vector2 rawPos, OsuScore::HIT result, float animPercent);
-	static void drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiameter, float rawHitcircleDiameter, Vector2 rawPos, OsuScore::HIT result, float animPercent);
+	static void drawHitResult(Graphics *g, OsuBeatmapStandard *beatmap, Vector2 rawPos, OsuScore::HIT result, float animPercent, float defaultAnimPercent);
+	static void drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiameter, float rawHitcircleDiameter, Vector2 rawPos, OsuScore::HIT result, float animPercent, float defaultAnimPercent);
 
 public:
 	OsuHitObject(long time, int sampleType, int comboNumber, int colorCounter, OsuBeatmap *beatmap);
@@ -73,6 +73,7 @@ protected:
 	float m_fApproachScale;
 	float m_fFadeInScale;
 	long m_iDelta; // this must be signed
+	long m_iApproachTime;
 	long m_iFadeInTime; // extra time added before the approachTime to let the object smoothly become visible
 	long m_iObjectTime; // the duration an object is visible (excluding the exact moment in time where it has to be clicked and onwards, this also includes the extra fadeInTime)
 	long m_iObjectDuration; // how long this object takes to click (circle = 0, slider = sliderTime, spinner = spinnerTime etc.), the object will stay visible this long extra after m_iTime;
@@ -92,8 +93,12 @@ private:
 	struct HITRESULTANIM
 	{
 		float anim;
+		float duration;
+		float defaultanim;
+		float defaultduration;
 		Vector2 rawPos;
 		OsuScore::HIT result;
+		long delta;
 	};
 
 	std::vector<HITRESULTANIM> m_hitResults;

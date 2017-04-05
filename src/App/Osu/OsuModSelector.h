@@ -11,6 +11,7 @@
 #include "OsuScreen.h"
 
 class Osu;
+class OsuSkinImage;
 class OsuSongBrowser;
 class OsuBeatmapDifficulty;
 
@@ -69,7 +70,7 @@ private:
 	void updateButtons();
 	void updateLayout();
 
-	OsuUIModSelectorModButton *setModButtonOnGrid(int x, int y, int state, UString modName, UString tooltipText, Image *img);
+	OsuUIModSelectorModButton *setModButtonOnGrid(int x, int y, int state, UString modName, UString tooltipText, OsuSkinImage *img);
 	OsuUIModSelectorModButton *getModButtonOnGrid(int x, int y);
 
 	OVERRIDE_SLIDER addOverrideSlider(UString text, UString labelText, ConVar *cvar, float min = 0.0f, float max = 12.5f);

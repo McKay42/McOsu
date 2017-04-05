@@ -18,6 +18,7 @@
 #include "Osu.h"
 #include "OsuVR.h"
 #include "OsuSkin.h"
+#include "OsuSkinImage.h"
 #include "OsuGameRules.h"
 #include "OsuBeatmapStandard.h"
 
@@ -71,9 +72,9 @@ void OsuCircle::drawCircle(Graphics *g, OsuSkin *skin, Vector2 pos, float hitcir
 	drawHitCircle(g, skin->getHitCircle(), pos, comboColor, circleImageScale, alpha);
 
 	// overlay
-	const float circleOverlayImageScale = hitcircleDiameter / (128.0f * (skin->isHitCircleOverlay2x() ? 2.0f : 1.0f));
+	const float circleOverlayImageScale = hitcircleDiameter / skin->getHitCircleOverlay2()->getSizeBaseRaw().x;
 	if (!skin->getHitCircleOverlayAboveNumber())
-		drawHitCircleOverlay(g, skin->getHitCircleOverlay(), pos, circleOverlayImageScale, alpha);
+		drawHitCircleOverlay(g, skin->getHitCircleOverlay2(), pos, circleOverlayImageScale, alpha);
 
 	// number
 	if (drawNumber)
@@ -81,7 +82,7 @@ void OsuCircle::drawCircle(Graphics *g, OsuSkin *skin, Vector2 pos, float hitcir
 
 	// overlay
 	if (skin->getHitCircleOverlayAboveNumber())
-		drawHitCircleOverlay(g, skin->getHitCircleOverlay(), pos, circleOverlayImageScale, alpha);
+		drawHitCircleOverlay(g, skin->getHitCircleOverlay2(), pos, circleOverlayImageScale, alpha);
 }
 
 void OsuCircle::drawCircle(Graphics *g, OsuSkin *skin, Vector2 pos, float hitcircleDiameter, Color color, float alpha)
@@ -93,8 +94,8 @@ void OsuCircle::drawCircle(Graphics *g, OsuSkin *skin, Vector2 pos, float hitcir
 	drawHitCircle(g, skin->getHitCircle(), pos, color, circleImageScale, alpha);
 
 	// overlay
-	const float circleOverlayImageScale = hitcircleDiameter / (128.0f * (skin->isHitCircleOverlay2x() ? 2.0f : 1.0f));
-	drawHitCircleOverlay(g, skin->getHitCircleOverlay(), pos, circleOverlayImageScale, alpha);
+	const float circleOverlayImageScale = hitcircleDiameter / skin->getHitCircleOverlay2()->getSizeBaseRaw().x;
+	drawHitCircleOverlay(g, skin->getHitCircleOverlay2(), pos, circleOverlayImageScale, alpha);
 }
 
 void OsuCircle::drawSliderStartCircle(Graphics *g, OsuBeatmapStandard *beatmap, Vector2 rawPos, int number, int colorCounter, float approachScale, float alpha, float numberAlpha, bool drawNumber, bool overrideHDApproachCircle)
@@ -127,11 +128,11 @@ void OsuCircle::drawSliderStartCircle(Graphics *g, OsuSkin *skin, Vector2 pos, f
 	drawHitCircle(g, skin->getSliderStartCircle(), pos, comboColor, circleImageScale, alpha);
 
 	// overlay
-	const float circleOverlayImageScale = hitcircleDiameter / (128.0f * (skin->isSliderStartCircleOverlay2x() ? 2.0f : 1.0f));
+	const float circleOverlayImageScale = hitcircleDiameter / skin->getSliderStartCircleOverlay2()->getSizeBaseRaw().x;
 	if (skin->getSliderStartCircleOverlay() != skin->getMissingTexture())
 	{
 		if (!skin->getHitCircleOverlayAboveNumber())
-			drawHitCircleOverlay(g, skin->getSliderStartCircleOverlay(), pos, circleOverlayImageScale, alpha);
+			drawHitCircleOverlay(g, skin->getSliderStartCircleOverlay2(), pos, circleOverlayImageScale, alpha);
 	}
 
 	// number
@@ -142,7 +143,7 @@ void OsuCircle::drawSliderStartCircle(Graphics *g, OsuSkin *skin, Vector2 pos, f
 	if (skin->getSliderStartCircleOverlay() != skin->getMissingTexture())
 	{
 		if (skin->getHitCircleOverlayAboveNumber())
-			drawHitCircleOverlay(g, skin->getSliderStartCircleOverlay(), pos, circleOverlayImageScale, alpha);
+			drawHitCircleOverlay(g, skin->getSliderStartCircleOverlay2(), pos, circleOverlayImageScale, alpha);
 	}
 }
 
@@ -175,8 +176,8 @@ void OsuCircle::drawSliderEndCircle(Graphics *g, OsuSkin *skin, Vector2 pos, flo
 	// overlay
 	if (skin->getSliderEndCircleOverlay() != skin->getMissingTexture())
 	{
-		const float circleOverlayImageScale = hitcircleDiameter / (128.0f * (skin->isSliderEndCircleOverlay2x() ? 2.0f : 1.0f));
-		drawHitCircleOverlay(g, skin->getSliderEndCircleOverlay(), pos, circleOverlayImageScale, alpha);
+		const float circleOverlayImageScale = hitcircleDiameter / skin->getSliderEndCircleOverlay2()->getSizeBaseRaw().x;
+		drawHitCircleOverlay(g, skin->getSliderEndCircleOverlay2(), pos, circleOverlayImageScale, alpha);
 	}
 }
 
@@ -212,15 +213,18 @@ void OsuCircle::drawApproachCircle(Graphics *g, OsuSkin *skin, Vector2 pos, Colo
 	}
 }
 
-void OsuCircle::drawHitCircleOverlay(Graphics *g, Image *hitCircleOverlayImage, Vector2 pos, float circleOverlayImageScale, float alpha)
+void OsuCircle::drawHitCircleOverlay(Graphics *g, OsuSkinImage *hitCircleOverlayImage, Vector2 pos, float circleOverlayImageScale, float alpha)
 {
 	g->setColor(0xffffffff);
 	g->setAlpha(alpha);
+	hitCircleOverlayImage->drawRaw(g, pos, circleOverlayImageScale);
+	/*
 	g->pushTransform();
 		g->scale(circleOverlayImageScale, circleOverlayImageScale);
 		g->translate(pos.x, pos.y);
 		g->drawImage(hitCircleOverlayImage);
 	g->popTransform();
+	*/
 }
 
 void OsuCircle::drawHitCircle(Graphics *g, Image *hitCircleImage, Vector2 pos, Color comboColor, float circleImageScale, float alpha)
@@ -364,7 +368,10 @@ void OsuCircle::draw(Graphics *g)
 
 		g->pushTransform();
 			g->scale((1.0f+scale*OsuGameRules::osu_circle_fade_out_scale.getFloat()), (1.0f+scale*OsuGameRules::osu_circle_fade_out_scale.getFloat()));
-			drawCircle(g, m_beatmap, m_vRawPos, m_iComboNumber, m_iColorCounter, 1.0f, alpha, alpha, drawNumber);
+			{
+				m_beatmap->getSkin()->getHitCircleOverlay2()->setAnimationTimeOffset(m_iTime - m_iApproachTime);
+				drawCircle(g, m_beatmap, m_vRawPos, m_iComboNumber, m_iColorCounter, 1.0f, alpha, alpha, drawNumber);
+			}
 		g->popTransform();
 	}
 
@@ -386,6 +393,7 @@ void OsuCircle::draw(Graphics *g)
 		smooth = -smooth*(smooth-2); // quad out twice
 		shakeCorrectedPos.x += std::sin(engine->getTime()*120) * smooth * osu_circle_shake_strength.getFloat();
 	}
+	m_beatmap->getSkin()->getHitCircleOverlay2()->setAnimationTimeOffset(m_iTime - m_iApproachTime);
 	drawCircle(g, m_beatmap, shakeCorrectedPos, m_iComboNumber, m_iColorCounter, m_bWaiting && !hd ? 1.0f : m_fApproachScale, m_bWaiting && !hd ? 1.0f : m_fAlpha, m_bWaiting && !hd ? 1.0f : m_fAlpha, true, m_bOverrideHDApproachCircle);
 }
 

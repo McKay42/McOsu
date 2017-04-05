@@ -256,7 +256,8 @@ void OsuSpinner::update(long curPos)
 {
 	OsuHitObject::update(curPos);
 
-	if (m_beatmap->isPaused())
+	// stop spinner sound and don't update() while paused
+	if (m_beatmap->isPaused() || !m_beatmap->isPlaying())
 	{
 		if (m_beatmap->getSkin()->getSpinnerSpinSound()->isPlaying())
 			engine->getSound()->stop(m_beatmap->getSkin()->getSpinnerSpinSound());

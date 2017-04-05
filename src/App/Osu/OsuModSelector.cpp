@@ -19,6 +19,7 @@
 
 #include "Osu.h"
 #include "OsuSkin.h"
+#include "OsuSkinImage.h"
 #include "OsuBeatmap.h"
 #include "OsuBeatmapDifficulty.h"
 #include "OsuTooltipOverlay.h"
@@ -458,8 +459,7 @@ void OsuModSelector::updateLayout()
 	{
 		// mod grid buttons
 		Vector2 center = m_osu->getScreenSize()/2.0f;
-		float scale = m_osu->getImageScale(m_osu, m_osu->getSkin()->getSelectionModEasy(), 42.0f);
-		Vector2 size = Vector2(m_osu->getSkin()->getSelectionModEasy()->getWidth(), m_osu->getSkin()->getSelectionModEasy()->getHeight())*scale;
+		Vector2 size = m_osu->getSkin()->getSelectionModEasy()->getSizeBase();
 		Vector2 offset = Vector2(size.x*1.0f, size.y*0.25f);
 		Vector2 start = Vector2(center.x - (size.x*m_iGridWidth)/2.0f - (offset.x*(m_iGridWidth-1))/2.0f, center.y - (size.y*m_iGridHeight)/2.0f  - (offset.y*(m_iGridHeight-1))/2.0f);
 
@@ -471,13 +471,8 @@ void OsuModSelector::updateLayout()
 
 				if (button != NULL)
 				{
-					Image *buttonImage = engine->getResourceManager()->getImage(button->getImageResourceName());
-
-					if (buttonImage != NULL)
-						scale = m_osu->getImageScale(m_osu, buttonImage, 42.0f);
-
 					button->setPos(start + Vector2(size.x*x + offset.x*x, size.y*y + offset.y*y));
-					button->setBaseScale(scale, scale);
+					button->setBaseScale(1, 1);
 					button->setSize(size);
 				}
 			}
@@ -519,8 +514,7 @@ void OsuModSelector::updateLayout()
 	{
 		// mod grid buttons
 		Vector2 center = m_osu->getScreenSize()/2.0f;
-		float scale = m_osu->getImageScale(m_osu, m_osu->getSkin()->getSelectionModEasy(), 48.0f)*0.75f;
-		Vector2 blockSize = Vector2(m_osu->getSkin()->getSelectionModEasy()->getWidth(), m_osu->getSkin()->getSelectionModEasy()->getHeight())*scale;
+		Vector2 blockSize = m_osu->getSkin()->getSelectionModEasy()->getSizeBase();
 		Vector2 offset = Vector2(blockSize.x*0.15f, blockSize.y*0.05f);
 		Vector2 size = Vector2((blockSize.x*m_iGridWidth) + (offset.x*(m_iGridWidth-1)), (blockSize.y*m_iGridHeight) + (offset.y*(m_iGridHeight-1)));
 		center.y = m_osu->getScreenHeight() - size.y/2 - offset.y*3.0f;
@@ -534,13 +528,8 @@ void OsuModSelector::updateLayout()
 
 				if (button != NULL)
 				{
-					Image *buttonImage = engine->getResourceManager()->getImage(button->getImageResourceName());
-
 					button->setPos(start + Vector2(blockSize.x*x + offset.x*x, blockSize.y*y + offset.y*y));
-					if (buttonImage != NULL && buttonImage->getWidth()*scale > blockSize.x+5)
-						button->setBaseScale(scale*0.5f, scale*0.5f); // HACKHACK: heuristic @2x hack, wtf
-					else
-						button->setBaseScale(scale, scale);
+					button->setBaseScale(1, 1);
 					button->setSize(blockSize);
 				}
 			}
@@ -619,7 +608,7 @@ void OsuModSelector::updateOverrideSliders()
 	}
 }
 
-OsuUIModSelectorModButton *OsuModSelector::setModButtonOnGrid(int x, int y, int state, UString modName, UString tooltipText, Image *img)
+OsuUIModSelectorModButton *OsuModSelector::setModButtonOnGrid(int x, int y, int state, UString modName, UString tooltipText, OsuSkinImage *img)
 {
 	OsuUIModSelectorModButton *modButton = getModButtonOnGrid(x, y);
 

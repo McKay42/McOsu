@@ -27,3 +27,18 @@ ConVar OsuGameRules::osu_slider_followcircle_tick_pulse_scale("osu_slider_follow
 ConVar OsuGameRules::osu_mod_ming3012("osu_mod_ming3012", false);
 ConVar OsuGameRules::osu_mod_millhioref("osu_mod_millhioref", false);
 ConVar OsuGameRules::osu_mod_millhioref_multiplier("osu_mod_millhioref_multiplier", 2.0f);
+
+// all hitwindow values here are in milliseconds
+ConVar OsuGameRules::osu_hitwindow_300_min("osu_hitwindow_300_min", 80);
+ConVar OsuGameRules::osu_hitwindow_300_mid("osu_hitwindow_300_mid", 50);
+ConVar OsuGameRules::osu_hitwindow_300_max("osu_hitwindow_300_max", 20);
+
+ConVar OsuGameRules::osu_hitwindow_100_min("osu_hitwindow_100_min", 140);
+ConVar OsuGameRules::osu_hitwindow_100_mid("osu_hitwindow_100_mid", 100);
+ConVar OsuGameRules::osu_hitwindow_100_max("osu_hitwindow_100_max", 60);
+
+ConVar OsuGameRules::osu_hitwindow_50_min("osu_hitwindow_50_min", 200);
+ConVar OsuGameRules::osu_hitwindow_50_mid("osu_hitwindow_50_mid", 150);
+ConVar OsuGameRules::osu_hitwindow_50_max("osu_hitwindow_50_max", 100);
+
+ConVar OsuGameRules::osu_hitwindow_miss("osu_hitwindow_miss", 400);
