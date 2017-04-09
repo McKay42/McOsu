@@ -74,6 +74,26 @@ private:
 
 
 
+struct TimingPointSortComparator
+{
+    bool operator() (OsuBeatmapDifficulty::TIMINGPOINT const &a, OsuBeatmapDifficulty::TIMINGPOINT const &b) const
+    {
+    	// first condition: offset
+    	// second condition: if offset is the same, non-inherited timingpoints go before inherited timingpoints
+
+    	// strict weak ordering!
+    	if (a.offset == b.offset && ((a.msPerBeat >= 0 && b.msPerBeat < 0) == (b.msPerBeat >= 0 && a.msPerBeat < 0)))
+    		return a.sortHack < b.sortHack;
+    	else
+    		return (a.offset < b.offset) || (a.offset == b.offset && a.msPerBeat >= 0 && b.msPerBeat < 0);
+    }
+};
+
+
+
+ConVar *OsuBeatmapDifficulty::m_osu_slider_scorev2 = NULL;
+unsigned long long OsuBeatmapDifficulty::sortHackCounter = 0;
+
 OsuBeatmapDifficulty::OsuBeatmapDifficulty(Osu *osu, UString filepath, UString folder)
 {
 	m_osu = osu;
@@ -82,6 +102,10 @@ OsuBeatmapDifficulty::OsuBeatmapDifficulty(Osu *osu, UString filepath, UString f
 	m_sFilePath = filepath;
 	m_sFolder = folder;
 	m_bShouldBackgroundImageBeLoaded = false;
+
+	// convar refs
+	if (m_osu_slider_scorev2 == NULL)
+		m_osu_slider_scorev2 = convar->getConVarByName("osu_slider_scorev2");
 
 	// default values
 	stackLeniency = 0.7f;
@@ -112,6 +136,10 @@ OsuBeatmapDifficulty::OsuBeatmapDifficulty(Osu *osu, UString filepath, UString f
 	setID = 0;
 
 	m_backgroundImagePathLoader = NULL;
+
+	m_iMaxCombo = 0;
+
+	m_iSortHack = sortHackCounter++;
 }
 
 OsuBeatmapDifficulty::~OsuBeatmapDifficulty()
@@ -151,6 +179,7 @@ bool OsuBeatmapDifficulty::loadMetadataRaw()
 	// load metadata only
 	int curBlock = -1;
 	bool foundAR = false;
+	unsigned long long timingPointSortHack = 0;
 	while (file.canRead())
 	{
 		UString uCurLine = file.readLine();
@@ -294,6 +323,7 @@ bool OsuBeatmapDifficulty::loadMetadataRaw()
 					t.sampleType = tpSampleType;
 					t.sampleSet = tpSampleSet;
 					t.volume = tpVolume;
+					t.sortHack = timingPointSortHack++;
 
 					timingpoints.push_back(t);
 				}
@@ -306,6 +336,7 @@ bool OsuBeatmapDifficulty::loadMetadataRaw()
 					t.sampleType = 0;
 					t.sampleSet = 0;
 					t.volume = 100;
+					t.sortHack = timingPointSortHack++;
 
 					timingpoints.push_back(t);
 				}
@@ -329,15 +360,6 @@ bool OsuBeatmapDifficulty::loadMetadataRaw()
 			debugLog("OsuBeatmapDifficulty::loadMetadata() : calculating BPM range ...\n");
 
 		// sort timingpoints by time
-		struct TimingPointSortComparator
-		{
-		    bool operator() (TIMINGPOINT const &a, TIMINGPOINT const &b) const
-		    {
-		    	// first condition: offset
-		    	// second condition: if offset is the same, non-inherited timingpoints go before inherited timingpoints
-		        return (a.offset < b.offset) || (a.offset == b.offset && a.msPerBeat >= 0 && b.msPerBeat < 0);
-		    }
-		};
 		std::sort(timingpoints.begin(), timingpoints.end(), TimingPointSortComparator());
 
 		// calculate bpm range
@@ -400,7 +422,7 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 	int colorCounter = 1;
 	int comboNumber = 1;
 	int curBlock = -1;
-
+	unsigned long long timingPointSortHack = 0;
 	while (file.canRead())
 	{
 		UString uCurLine = file.readLine();
@@ -451,6 +473,7 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 					t.sampleType = tpSampleType;
 					t.sampleSet = tpSampleSet;
 					t.volume = tpVolume;
+					t.sortHack = timingPointSortHack++;
 
 					timingpoints.push_back(t);
 				}
@@ -463,6 +486,7 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 					t.sampleType = 0;
 					t.sampleSet = 0;
 					t.volume = 100;
+					t.sortHack = timingPointSortHack++;
 
 					timingpoints.push_back(t);
 				}
@@ -546,6 +570,8 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 						}
 
 						SLIDER s;
+						s.x = x;
+						s.y = y;
 						s.type = sliderTokens[0][0];
 						s.repeat = (int)tokens[6].toFloat();
 						s.repeat = s.repeat >= 0 ? s.repeat : 0; // sanity check
@@ -605,15 +631,6 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 	}
 
 	// sort timingpoints by time
-	struct TimingPointSortComparator
-	{
-	    bool operator() (TIMINGPOINT const &a, TIMINGPOINT const &b) const
-	    {
-	    	// first condition: offset
-	    	// second condition: if offset is the same, non-inherited timingpoints go before inherited timingpoints
-	        return (a.offset < b.offset) || (a.offset == b.offset && a.msPerBeat >= 0 && b.msPerBeat < 0);
-	    }
-	};
 	std::sort(timingpoints.begin(), timingpoints.end(), TimingPointSortComparator());
 
 	// calculate sliderTimes, and build clicks and ticks
@@ -661,7 +678,11 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 	{
 	    bool operator() (OsuHitObject const *a, OsuHitObject const *b) const
 	    {
-	        return a->getTime() < b->getTime();
+	    	// strict weak ordering!
+	    	if (a->getTime() == b->getTime())
+	    		return a->getSortHack() < b->getSortHack();
+	    	else
+	    		return a->getTime() < b->getTime();
 	    }
 	};
 	std::sort(hitobjects->begin(), hitobjects->end(), HitObjectSortComparator());
@@ -776,6 +797,9 @@ void OsuBeatmapDifficulty::buildStandardHitObjects(OsuBeatmapStandard *beatmap, 
 {
 	if (beatmap == NULL || hitobjects == NULL) return;
 
+	// also calculate max combo
+	m_iMaxCombo = 0;
+
 	for (int i=0; i<hitcircles.size(); i++)
 	{
 		OsuBeatmapDifficulty::HITCIRCLE *c = &hitcircles[i];
@@ -788,10 +812,14 @@ void OsuBeatmapDifficulty::buildStandardHitObjects(OsuBeatmapStandard *beatmap, 
 
 		hitobjects->push_back(new OsuCircle(c->x, c->y, c->time, c->sampleType, c->number, c->colorCounter, beatmap));
 	}
+	m_iMaxCombo += hitcircles.size();
 
 	for (int i=0; i<sliders.size(); i++)
 	{
 		OsuBeatmapDifficulty::SLIDER *s = &sliders[i];
+
+		int repeats = std::max((s->repeat - 1), 0);
+		m_iMaxCombo += 2 + repeats + (repeats+1)*s->ticks.size(); // start/end + repeat arrow + ticks
 
 		if (osu_mod_random.getBool())
 		{
@@ -817,6 +845,18 @@ void OsuBeatmapDifficulty::buildStandardHitObjects(OsuBeatmapStandard *beatmap, 
 
 		hitobjects->push_back(new OsuSpinner(s->x, s->y, s->time, s->sampleType, s->endTime, beatmap));
 	}
+	m_iMaxCombo += spinners.size();
+
+	// debugging
+	/*
+	double aim = 0.0;
+	double speed = 0.0;
+	double rhythm_awkwardness = 0.0;
+	double stars = calculateStarDiff(beatmap, &aim, &speed, &rhythm_awkwardness);
+	double pp = calculatePPv2(beatmap, aim, speed);
+
+	engine->showMessageInfo("PP", UString::format("stars = %f, pp = %f, aim = %f, speed = %f, awk = %f, %i circles, %i sliders, %i spinners", stars, pp, aim, speed, rhythm_awkwardness, hitcircles.size(), sliders.size(), spinners.size()));
+	*/
 }
 
 float OsuBeatmapDifficulty::getSliderTimeForSlider(SLIDER *slider)
@@ -910,4 +950,521 @@ bool OsuBeatmapDifficulty::isInBreak(unsigned long positionMS)
 			return true;
 	}
 	return false;
+}
+
+
+
+//***********************************************************************************//
+//	(c) and thanks to Tom94 & Francesco149 @ https://github.com/Francesco149/oppai/  //
+//***********************************************************************************//
+
+double OsuBeatmapDifficulty::calculateStarDiff(OsuBeatmap *beatmap, double *aim, double *speed, double *rhythm_awkwardness)
+{
+	// TODO: compiling the exact same algorithm with mingw-w64 g++ somehow corrupts it (incorrect values, even with 100% the original code!), still have to find out why. first bumping the linux release to 28.6 though
+	/*
+	// build generalized hit_object structs from the vectors (hitcircles, sliders, spinners)
+	// the hit_object struct is the one getting used in all calculations, it encompasses every object type
+	enum class obj : char
+	{
+		invalid = 0,
+		circle,
+		spinner,
+		slider,
+	};
+
+	struct hit_object
+	{
+		Vector2 pos;
+		long time = 0;
+		obj type = obj::invalid;
+		long end_time = 0; // for spinners and sliders
+		//slider_data slider;
+	};
+
+	std::vector<hit_object> objects;
+
+	for (int i=0; i<hitcircles.size(); i++)
+	{
+		hit_object ho;
+		ho.pos = Vector2(hitcircles[i].x, hitcircles[i].y);
+		ho.time = (long)hitcircles[i].time;
+		ho.type = obj::circle;
+		ho.end_time = (long)ho.time;
+		objects.push_back(ho);
+	}
+
+	for (int i=0; i<sliders.size(); i++)
+	{
+		hit_object ho;
+		ho.pos = Vector2(sliders[i].x, sliders[i].y);
+		ho.time = sliders[i].time;
+		ho.type = obj::slider;
+		ho.end_time = sliders[i].time + sliders[i].sliderTime; // start + duration
+		objects.push_back(ho);
+	}
+
+	for (int i=0; i<spinners.size(); i++)
+	{
+		hit_object ho;
+		ho.pos = Vector2(spinners[i].x, spinners[i].y);
+		ho.time = spinners[i].time;
+		ho.type = obj::spinner;
+		ho.end_time = spinners[i].endTime;
+		objects.push_back(ho);
+	}
+
+	if (objects.size() < 1)
+		return 0.0;
+
+	// ****************************************************************************************************************************************** //
+
+	// based on tom94's osu!tp aimod
+
+	// how much strains decay per interval (if the previous interval's peak
+	// strains after applying decay are still higher than the current one's,
+	// they will be used as the peak strains).
+	static const double decay_base[] = {0.3, 0.15};
+
+	// almost the normalized circle diameter (104px)
+	static const double almost_diameter = 90;
+
+	// arbitrary tresholds to determine when a stream is spaced enough that is
+	// becomes hard to alternate.
+	static const double stream_spacing = 110;
+	static const double single_spacing = 125;
+
+	// used to keep speed and aim balanced between eachother
+	static const double weight_scaling[] = {1400, 26.25};
+
+	// non-normalized diameter where the circlesize buff starts
+	static const float circlesize_buff_treshold = 30;
+
+	class cdiff
+	{
+	public:
+		enum diff
+		{
+			speed = 0,
+			aim = 1
+		};
+	};
+
+	// diffcalc hit object
+	struct d_obj
+	{
+		hit_object *ho;
+
+		// strains start at 1
+		double strains[2] = {1, 1};
+
+		// start/end positions normalized on radius
+		Vector2 norm_start;
+		Vector2 norm_end;
+
+		void init(hit_object *base_object, float radius)
+		{
+			this->ho = base_object;
+
+			// positions are normalized on circle radius so that we can calc as
+			// if everything was the same circlesize
+			float scaling_factor = 52.0f / radius;
+
+			// cs buff (credits to osuElements, I have confirmed that this is
+			// indeed accurate)
+			if (radius < circlesize_buff_treshold)
+				scaling_factor *= 1.f + std::min((circlesize_buff_treshold - radius), 5.f) / 50.f;
+
+			norm_start = ho->pos * scaling_factor;
+
+			norm_end = norm_start;
+			// ignoring slider lengths doesn't seem to affect star rating too much and speeds up the calculation exponentially
+		}
+
+		void calculate_strains(d_obj *prev)
+		{
+			calculate_strain(prev, cdiff::diff::speed);
+			calculate_strain(prev, cdiff::diff::aim);
+		}
+
+		void calculate_strain(d_obj *prev, cdiff::diff dtype)
+		{
+			double res = 0;
+			long time_elapsed = ho->time - prev->ho->time;
+			double decay = std::pow(decay_base[dtype], time_elapsed / 1000.0);
+			double scaling = weight_scaling[dtype];
+
+			switch (ho->type) {
+				case obj::slider: // we don't use sliders in this implementation
+				case obj::circle:
+					res = spacing_weight(distance(prev), dtype) * scaling;
+					break;
+
+				case obj::spinner:
+					break;
+
+				case obj::invalid:
+					// NOTE: silently error out
+					return;
+			}
+
+			res /= (double)std::max(time_elapsed, (long)50);
+			strains[dtype] = prev->strains[dtype] * decay + res;
+		}
+
+		double spacing_weight(double distance, cdiff::diff diff_type)
+		{
+			switch (diff_type)
+			{
+				case cdiff::diff::speed:
+					if (distance > single_spacing)
+					{
+						return 2.5;
+					}
+					else if (distance > stream_spacing)
+					{
+						return 1.6 + 0.9 *
+							(distance - stream_spacing) /
+							(single_spacing - stream_spacing);
+					}
+					else if (distance > almost_diameter)
+					{
+						return 1.2 + 0.4 * (distance - almost_diameter)
+							/ (stream_spacing - almost_diameter);
+					}
+					else if (distance > almost_diameter / 2.0)
+					{
+						return 0.95 + 0.25 *
+							(distance - almost_diameter / 2.0) /
+							(almost_diameter / 2.0);
+					}
+					return 0.95;
+
+				case cdiff::diff::aim:
+					return std::pow(distance, 0.99);
+
+				default:
+					return 0.0;
+			}
+		}
+
+		double distance(d_obj *prev)
+		{
+			return (norm_start - prev->norm_end).length();
+		}
+	};
+
+	// ****************************************************************************************************************************************** //
+
+	static const double star_scaling_factor = 0.0675;
+	static const double extreme_scaling_factor = 0.5;
+
+	// strains are calculated by analyzing the map in chunks and then taking the peak strains in each chunk.
+	// this is the length of a strain interval in milliseconds.
+	static const long strain_step = 400;
+
+	// max strains are weighted from highest to lowest, and this is how much the weight decays.
+	static const double decay_weight = 0.9;
+
+	class DiffCalc
+	{
+	public:
+		static double calculate_difficulty(cdiff::diff type, std::vector<d_obj> *dobjects)
+		{
+			std::vector<double> highest_strains;
+			long interval_end = strain_step;
+			double max_strain = 0.0;
+
+			d_obj *prev = nullptr;
+			for (size_t i=0; i<dobjects->size(); i++)
+			{
+				d_obj *o = &(*dobjects)[i];
+
+				// make previous peak strain decay until the current object
+				while (o->ho->time > interval_end)
+				{
+					highest_strains.push_back(max_strain);
+
+					if (!prev)
+						max_strain = 0.0;
+					else
+					{
+						double decay = std::pow(decay_base[type], (interval_end - prev->ho->time) / 1000.0);
+						max_strain = prev->strains[type] * decay;
+					}
+
+					interval_end += strain_step;
+				}
+
+				// calculate max strain for this interval
+				max_strain = std::max(max_strain, o->strains[type]);
+				prev = o;
+			}
+
+			double difficulty = 0.0;
+			double weight = 1.0;
+
+			// sort strains from greatest to lowest
+			std::sort(highest_strains.begin(), highest_strains.end(), std::greater<double>()); // TODO: get rid of std::greater (y tho)
+
+			// weigh the top strains
+			for (const double strain : highest_strains)
+			{
+				difficulty += weight * strain;
+				weight *= decay_weight;
+			}
+
+			return difficulty;
+		}
+	};
+
+	// ****************************************************************************************************************************************** //
+
+	float circle_radius = OsuGameRules::getRawHitCircleDiameter(beatmap->getCS()) / 2.0f;
+	int numObjects = hitcircles.size() + sliders.size() + spinners.size();
+
+	// initialize dobjects
+	std::vector<d_obj> dobjects;
+	for (size_t i=0; i<numObjects && i<objects.size(); i++)
+	{
+		d_obj dobj;
+		dobj.init(&objects[i], circle_radius);
+		dobjects.push_back(dobj);
+	}
+
+	std::vector<long> intervals;
+
+	d_obj *prev = &dobjects[0];
+	for (size_t i=1; i<dobjects.size(); i++)
+	{
+		d_obj *o = &dobjects[i];
+
+		o->calculate_strains(prev);
+
+		intervals.push_back(o->ho->time - prev->ho->time);
+
+		prev = o;
+	}
+
+	std::vector<long> group;
+
+	unsigned long noffsets = 0;
+	*rhythm_awkwardness = 0;
+	for (size_t i=0; i<intervals.size(); ++i)
+	{
+		// TODO: actually compute break time length for the map's AR
+		bool isbreak = intervals[i] >= 1200;
+
+		if (!isbreak)
+			group.push_back(intervals[i]);
+
+		if (isbreak || group.size() >= 5 || i == intervals.size() - 1)
+		{
+			for (size_t j=0; j<group.size(); ++j)
+			{
+				for (size_t k = 1; k < group.size(); ++k)
+				{
+					if (k == j)
+						continue;
+
+					double ratio = group[j] > group[k] ?
+						(double)group[j] / (double)group[k] :
+						(double)group[k] / (double)group[j];
+
+					double closest_pot = std::pow(2, std::round(std::log(ratio)/std::log(2)));
+
+					double offset = std::abs(closest_pot - ratio);
+					offset /= closest_pot;
+
+					*rhythm_awkwardness += offset * offset;
+
+					++noffsets;
+				}
+			}
+			group.clear();
+		}
+	}
+
+	*rhythm_awkwardness /= noffsets;
+	*rhythm_awkwardness *= 82;
+
+	*aim = DiffCalc::calculate_difficulty(cdiff::diff::aim, &dobjects);
+	*speed = DiffCalc::calculate_difficulty(cdiff::diff::speed, &dobjects);
+	*aim = std::sqrt(*aim) * star_scaling_factor;
+	*speed = std::sqrt(*speed) * star_scaling_factor;
+
+	double stars = *aim + *speed + std::abs(*speed - *aim) * extreme_scaling_factor;
+	return stars;
+	*/
+
+	return 0.0;
+}
+
+double OsuBeatmapDifficulty::calculatePPv2(OsuBeatmap *beatmap, double aim, double speed, int combo, int misses, int c300, int c100, int c50/*, SCORE_VERSION scoreVersion*/)
+{
+	SCORE_VERSION scoreVersion = m_osu_slider_scorev2->getBool() ? SCORE_VERSION::SCORE_V2 : SCORE_VERSION::SCORE_V1;
+
+	double od = beatmap->getOD();
+	double ar = beatmap->getAR();
+
+	int circles = hitcircles.size();
+	int numObjects = hitcircles.size() + sliders.size() + spinners.size();
+
+	if (c300 < 0)
+		c300 = numObjects - c100 - c50 - misses;
+
+	if (combo < 0)
+		combo = getMaxCombo();
+
+	if (combo < 1)
+		return 0.0f;
+
+	int total_hits = c300 + c100 + c50 + misses;
+	///if (total_hits != numObjects)
+	///	debugLog("OsuBeatmapDifficulty::calculatePPv2() WARNING : Total hits %i don't match object count %i!\n", total_hits, numObjects);
+
+	// accuracy (between 0 and 1)
+	double acc = calculateAcc(c300, c100, c50, misses);
+
+	// aim pp ------------------------------------------------------------------
+	double aim_value = calculateBaseStrain(aim);
+
+	// length bonus (reused in speed pp)
+	double total_hits_over_2k = (double)total_hits / 2000.0;
+	double length_bonus = 0.95
+		+ 0.4 * std::min(1.0, total_hits_over_2k)
+		+ (total_hits > 2000 ? std::log10(total_hits_over_2k) * 0.5 : 0.0);
+
+	// miss penalty (reused in speed pp)
+	double miss_penality = std::pow(0.97, misses);
+
+	// combo break penalty (reused in speed pp)
+	double combo_break = std::pow((double)combo, 0.8) / std::pow((double)getMaxCombo(), 0.8);
+
+	aim_value *= length_bonus;
+	aim_value *= miss_penality;
+	aim_value *= combo_break;
+
+	double ar_bonus = 1.0;
+
+	// high AR bonus
+	if (ar > 10.33)
+		ar_bonus += 0.45 * (ar - 10.33);
+	else if (ar < 8.0) // low ar bonus
+	{
+		double low_ar_bonus = 0.01 * (8.0 - ar);
+
+		if (m_osu->getModHD())
+			low_ar_bonus *= 2.0;
+
+		ar_bonus += low_ar_bonus;
+	}
+
+	aim_value *= ar_bonus;
+
+	// hidden
+	if (m_osu->getModHD())
+		aim_value *= 1.18;
+
+	// flashlight
+	// TODO: not yet implemented
+	/*
+	if (used_mods & mods::fl)
+		aim_value *= 1.45 * length_bonus;
+	*/
+
+	// acc bonus (bad aim can lead to bad acc, reused in speed for same reason)
+	double acc_bonus = 0.5 + acc / 2.0;
+
+	// od bonus (low od is easy to acc even with shit aim, reused in speed ...)
+	double od_bonus = 0.98 + std::pow(od, 2) / 2500.0;
+
+	aim_value *= acc_bonus;
+	aim_value *= od_bonus;
+
+	// speed pp ----------------------------------------------------------------
+	double speed_value = calculateBaseStrain(speed);
+
+	speed_value *= length_bonus;
+	speed_value *= miss_penality;
+	speed_value *= combo_break;
+	speed_value *= acc_bonus;
+	speed_value *= od_bonus;
+
+	// acc pp ------------------------------------------------------------------
+	double real_acc = 0.0; // accuracy calculation changes from scorev1 to scorev2
+
+	if (scoreVersion == SCORE_VERSION::SCORE_V2)
+	{
+		circles = total_hits;
+		real_acc = acc;
+	}
+	else
+	{
+		// scorev1 ignores sliders since they are free 300s
+		if (circles)
+		{
+			real_acc = (
+					(c300 - (total_hits - circles)) * 300.0
+					+ c100 * 100.0
+					+ c50 * 50.0
+					)
+					/ (circles * 300);
+		}
+
+		// can go negative if we miss everything
+		real_acc = std::max(0.0, real_acc);
+	}
+
+	// arbitrary values tom crafted out of trial and error
+	double acc_value = std::pow(1.52163, od) * std::pow(real_acc, 24.0) * 2.83;
+
+	// length bonus (not the same as speed/aim length bonus)
+	acc_value *= std::min(1.15, std::pow(circles / 1000.0, 0.3));
+
+	// hidden bonus
+	if (m_osu->getModHD()) {
+		acc_value *= 1.02;
+	}
+
+	// flashlight bonus
+	// TODO: not yet implemented
+	/*
+	if (used_mods & mods::fl) {
+		acc_value *= 1.02;
+	}
+	*/
+
+	// total pp ----------------------------------------------------------------
+	double final_multiplier = 1.12;
+
+	// nofail
+	if (m_osu->getModNF())
+		final_multiplier *= 0.90;
+
+	// spunout
+	if (m_osu->getModSpunout())
+		final_multiplier *= 0.95;
+
+	return	std::pow(
+			std::pow(aim_value, 1.1) +
+			std::pow(speed_value, 1.1) +
+			std::pow(acc_value, 1.1),
+			1.0 / 1.1
+		) * final_multiplier;
+}
+
+double OsuBeatmapDifficulty::calculateAcc(int c300, int c100, int c50, int misses)
+{
+	int total_hits = c300 + c100 + c50 + misses;
+	double acc = 0.0f;
+
+	if (total_hits > 0)
+		acc = ((double)c50 * 50.0 + (double)c100 * 100.0 + (double)c300 * 300.0) / ((double)total_hits * 300.0);
+
+	return acc;
+}
+
+double OsuBeatmapDifficulty::calculateBaseStrain(double strain)
+{
+	return std::pow(5.0 * std::max(1.0, strain / 0.0675) - 4.0, 3.0) / 100000.0;
 }

@@ -32,6 +32,7 @@
 #include "OsuHitObject.h"
 #include "OsuSlider.h"
 
+ConVar osu_pvs("osu_pvs", true, "optimizes all loops over all hitobjects by clamping the range to the Potentially Visible Set");
 ConVar osu_draw_hitobjects("osu_draw_hitobjects", true);
 ConVar osu_vr_draw_desktop_playfield("osu_vr_draw_desktop_playfield", true);
 
@@ -73,6 +74,7 @@ ConVar osu_note_blocking("osu_note_blocking", true, "Whether to use not blocking
 ConVar osu_drain_enabled("osu_drain_enabled", false);
 ConVar osu_debug_draw_timingpoints("osu_debug_draw_timingpoints", false);
 
+ConVar *OsuBeatmap::m_osu_pvs = &osu_pvs;
 ConVar *OsuBeatmap::m_osu_draw_hitobjects_ref = &osu_draw_hitobjects;
 ConVar *OsuBeatmap::m_osu_vr_draw_desktop_playfield_ref = &osu_vr_draw_desktop_playfield;
 ConVar *OsuBeatmap::m_osu_followpoints_prevfadetime_ref = &osu_followpoints_prevfadetime;
@@ -113,10 +115,12 @@ OsuBeatmap::OsuBeatmap(Osu *osu)
 	m_music = NULL;
 
 	m_iCurMusicPos = 0;
+	m_iCurMusicPosWithOffsets = 0;
 	m_bWasSeekFrame = false;
 	m_fInterpolatedMusicPos = 0.0;
 	m_fLastAudioTimeAccurateSet = 0.0;
 	m_fLastRealTimeForInterpolationDelta = 0.0;
+	m_iResourceLoadUpdateDelayHack = 0;
 
 	m_bFailed = false;
 	m_fFailTime = 0.0f;
@@ -300,6 +304,13 @@ void OsuBeatmap::update()
 			else
 				m_iCurMusicPos = (engine->getTimeReal() - m_fWaitTime)*1000.0f*m_osu->getSpeedMultiplier();
 		}
+
+		// HACKHACK: ugh
+		long curPos = m_iCurMusicPos + (long)osu_global_offset.getInt() - m_selectedDifficulty->localoffset - m_selectedDifficulty->onlineOffset;
+		for (int i=0; i<m_hitobjects.size(); i++)
+		{
+			m_hitobjects[i]->update(curPos);
+		}
 	}
 
 	// handle music end
@@ -319,8 +330,12 @@ void OsuBeatmap::update()
 	// handle music loading fail
 	if (!m_music->isReady())
 	{
-		m_osu->getNotificationOverlay()->addNotification("Couldn't load music file :(", 0xffff0000);
-		stop(true);
+		m_iResourceLoadUpdateDelayHack++; // async loading takes 1 additional engine update() until both isAsyncReady() and isReady() return true
+		if (m_iResourceLoadUpdateDelayHack > 3)
+		{
+			m_osu->getNotificationOverlay()->addNotification("Couldn't load music file :(", 0xffff0000);
+			stop(true);
+		}
 	}
 
 	// update timing (points)
@@ -346,15 +361,45 @@ void OsuBeatmap::update()
 		std::lock_guard<std::mutex> lk(m_clicksMutex); // we need to lock this up here, else it would be possible to insert a click just before calling m_clicks.clear(), thus missing it
 
 		long curPos = m_iCurMusicPos + (long)osu_global_offset.getInt() - m_selectedDifficulty->localoffset - m_selectedDifficulty->onlineOffset;
+		m_iCurMusicPosWithOffsets = curPos;
 		bool blockNextNotes = false;
+		const long pvs = getPVS();
+		const bool usePVS = m_osu_pvs->getBool();
 		for (int i=0; i<m_hitobjects.size(); i++)
 		{
 			// the order must be like this:
-			// 1) main hitobject update
-			// 2) note blocking
-			// 3) click events
+			// 0) prev + next time vars
+			// 1) PVS optimization
+			// 2) main hitobject update
+			// 3) note blocking
+			// 4) click events
 			//
 			// (because the hitobjects need to know about note blocking before handling the click events)
+
+			// determine previous & next object time, used for auto + followpoints + warning arrows + empty section skipping
+			if (m_iNextHitObjectTime == 0)
+			{
+				if (m_hitobjects[i]->getTime() > m_iCurMusicPos)
+					m_iNextHitObjectTime = m_hitobjects[i]->getTime();
+				else
+				{
+					m_currentHitObject = m_hitobjects[i];
+					long actualPrevHitObjectTime = m_hitobjects[i]->getTime() + m_hitobjects[i]->getDuration();
+					m_iPreviousHitObjectTime = actualPrevHitObjectTime + 1000; // why is there +1000 here again? wtf
+
+					if (m_iCurMusicPos > actualPrevHitObjectTime + (long)osu_followpoints_prevfadetime.getFloat())
+						m_iPreviousFollowPointObjectIndex = i;
+				}
+			}
+
+			// PVS optimization
+			if (usePVS)
+			{
+				if (m_hitobjects[i]->isFinished() && (curPos - pvs > m_hitobjects[i]->getTime() + m_hitobjects[i]->getDuration())) // past objects
+					continue;
+				if (m_hitobjects[i]->getTime() > curPos + pvs) // future objects
+					break;
+			}
 
 			// main hitobject update
 			m_hitobjects[i]->update(curPos);
@@ -377,22 +422,6 @@ void OsuBeatmap::update()
 			if (m_clicks.size() > 0)
 				m_hitobjects[i]->onClickEvent(m_clicks);
 
-			// used for auto later
-			if (m_iNextHitObjectTime == 0)
-			{
-				if (m_hitobjects[i]->getTime() > m_iCurMusicPos)
-					m_iNextHitObjectTime = (long)m_hitobjects[i]->getTime();
-				else
-				{
-					m_currentHitObject = m_hitobjects[i];
-					long actualPrevHitObjectTime = m_hitobjects[i]->getTime() + m_hitobjects[i]->getDuration();
-					m_iPreviousHitObjectTime = actualPrevHitObjectTime + 1000; // why is there +1000 here again? wtf
-
-					if (m_iCurMusicPos > actualPrevHitObjectTime+(long)osu_followpoints_prevfadetime.getFloat())
-						m_iPreviousFollowPointObjectIndex = i;
-				}
-			}
-
 			// notes per second
 			const long npsHalfGateSizeMS = (long)(500.0f * getSpeedMultiplier());
 			if (m_hitobjects[i]->getTime() > m_iCurMusicPos-npsHalfGateSizeMS && m_hitobjects[i]->getTime() < m_iCurMusicPos+npsHalfGateSizeMS)
@@ -409,21 +438,20 @@ void OsuBeatmap::update()
 		{
 			m_misaimObjects.clear();
 			OsuHitObject *lastUnfinishedHitObject = NULL;
-			for (int i=0; i<m_hitobjects.size(); i++)
+			const long hitWindow50 = (long)OsuGameRules::getHitWindow50(this);
+			for (int i=0; i<m_hitobjects.size(); i++) // this shouldn't hurt performance too much, since no expensive operations are happening within the loop
 			{
 				if (!m_hitobjects[i]->isFinished())
 				{
 					if (m_iCurMusicPos >= m_hitobjects[i]->getTime())
 						lastUnfinishedHitObject = m_hitobjects[i];
-					else if (std::abs(m_hitobjects[i]->getTime()-m_iCurMusicPos)  < (long)OsuGameRules::getHitWindow50(this))
-					{
+					else if (std::abs(m_hitobjects[i]->getTime()-m_iCurMusicPos)  < hitWindow50)
 						m_misaimObjects.push_back(m_hitobjects[i]);
-					}
 					else
 						break;
 				}
 			}
-			if (lastUnfinishedHitObject != NULL && std::abs(lastUnfinishedHitObject->getTime()-m_iCurMusicPos)  < (long)OsuGameRules::getHitWindow50(this))
+			if (lastUnfinishedHitObject != NULL && std::abs(lastUnfinishedHitObject->getTime()-m_iCurMusicPos)  < hitWindow50)
 				m_misaimObjects.insert(m_misaimObjects.begin(), lastUnfinishedHitObject);
 
 			// now, go through the remaining clicks, and go through the unfinished hitobjects.
@@ -535,10 +563,9 @@ void OsuBeatmap::keyPressed1()
 
 	//debugLog("async music pos = %lu, curMusicPos = %lu\n", m_music->getPositionMS(), m_iCurMusicPos);
 	//long curMusicPos = getMusicPositionMSInterpolated(); // this would only be useful if we also played hitsounds async! combined with checking which musicPos is bigger
-	const long curPos = m_iCurMusicPos + (long)osu_global_offset.getInt() - m_selectedDifficulty->localoffset - m_selectedDifficulty->onlineOffset;
 
 	CLICK click;
-	click.musicPos = curPos;
+	click.musicPos = m_iCurMusicPosWithOffsets;
 	click.realTime = engine->getTimeReal();
 
 	std::lock_guard<std::mutex> lk(m_clicksMutex);
@@ -551,10 +578,9 @@ void OsuBeatmap::keyPressed2()
 
 	//debugLog("async music pos = %lu, curMusicPos = %lu\n", m_music->getPositionMS(), m_iCurMusicPos);
 	//long curMusicPos = getMusicPositionMSInterpolated(); // this would only be useful if we also played hitsounds async! combined with checking which musicPos is bigger
-	const long curPos = m_iCurMusicPos + (long)osu_global_offset.getInt() - m_selectedDifficulty->localoffset - m_selectedDifficulty->onlineOffset;
 
 	CLICK click;
-	click.musicPos = curPos;
+	click.musicPos = m_iCurMusicPosWithOffsets;
 	click.realTime = engine->getTimeReal();
 
 	std::lock_guard<std::mutex> lk(m_clicksMutex);
@@ -660,7 +686,11 @@ bool OsuBeatmap::play()
 			{
 			    bool operator() (OsuHitObject const *a, OsuHitObject const *b) const
 			    {
-			        return (a->getTime() + a->getDuration()) < (b->getTime() + b->getDuration());
+			    	// strict weak ordering!
+			    	if ((a->getTime() + a->getDuration()) == (b->getTime() + b->getDuration()))
+			    		return a->getSortHack() < b->getSortHack();
+			    	else
+			    		return (a->getTime() + a->getDuration()) < (b->getTime() + b->getDuration());
 			    }
 			};
 			std::sort(m_hitobjectsSortedByEndTime.begin(), m_hitobjectsSortedByEndTime.end(), HitObjectSortComparator());
@@ -1180,6 +1210,19 @@ bool OsuBeatmap::isLoading()
 	return !m_music->isAsyncReady();
 }
 
+long OsuBeatmap::getPVS()
+{
+	// this is an approximation with generous boundaries, it doesn't need to be exact (just good enough to filter 10000 hitobjects down to a few hundred or so)
+	// it will be used in both positive and negative directions (previous and future hitobjects) to speed up loops which iterate over all hitobjects
+	const long approachTime = OsuGameRules::getApproachTime(this);
+	return approachTime
+			+ OsuGameRules::getFadeInTimeFromApproachTime(approachTime)
+			+ OsuGameRules::getHiddenDecayTimeFromApproachTime(approachTime)
+			+ OsuGameRules::getHiddenTimeDiffFromApproachTime(approachTime)
+			+ (long)OsuGameRules::getHitWindowMiss(this)
+			+ 1500; // sanity
+}
+
 bool OsuBeatmap::canDraw()
 {
 	if (!m_bIsPlaying && !m_bIsPaused && !m_bContinueScheduled && !m_bIsWaiting)
@@ -1221,6 +1264,8 @@ void OsuBeatmap::handlePreviewPlay()
 
 void OsuBeatmap::loadMusic(bool stream)
 {
+	m_iResourceLoadUpdateDelayHack = 0;
+
 	// load the song (again)
 	if (m_selectedDifficulty != NULL && (m_music == NULL || m_selectedDifficulty->fullSoundFilePath != m_music->getFilePath() || !m_music->isReady()))
 	{
@@ -1265,6 +1310,8 @@ void OsuBeatmap::resetHitObjects(long curPos)
 {
 	for (int i=0; i<m_hitobjects.size(); i++)
 	{
+		m_hitobjects[i]->onReset(curPos);
+		m_hitobjects[i]->update(curPos); // fgt
 		m_hitobjects[i]->onReset(curPos);
 	}
 	m_osu->getHUD()->resetHitErrorBar();

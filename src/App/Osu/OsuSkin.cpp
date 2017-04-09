@@ -17,6 +17,8 @@
 #include <string.h>
 
 #include "Osu.h"
+#include "OsuSkinImage.h"
+#include "OsuBeatmap.h"
 #include "OsuNotificationOverlay.h"
 
 #define OSU_BITMASK_HITWHISTLE 0x2
@@ -29,6 +31,7 @@ ConVar osu_volume_effects("osu_volume_effects", 1.0f, DUMMY_OSU_VOLUME_EFFECTS_A
 ConVar osu_skin_hd("osu_skin_hd", true);
 ConVar osu_skin_load_async("osu_skin_load_async", false, "VERY experimental, changing skins too quickly will crash the engine (due to known behaviour)");
 ConVar osu_skin_color_index_add("osu_skin_color_index_add", 0);
+ConVar osu_skin_animation_force("osu_skin_animation_force", false);
 
 ConVar osu_ignore_beatmap_combo_colors("osu_ignore_beatmap_combo_colors", false);
 ConVar osu_ignore_beatmap_sample_volume("osu_ignore_beatmap_sample_volume", false);
@@ -36,6 +39,7 @@ ConVar osu_ignore_beatmap_sample_volume("osu_ignore_beatmap_sample_volume", fals
 const char *OsuSkin::OSUSKIN_DEFAULT_SKIN_PATH = ""; // set dynamically below in the constructor
 Image *OsuSkin::m_missingTexture = NULL;
 ConVar *OsuSkin::m_osu_skin_ref = NULL;
+ConVar *OsuSkin::m_osu_skin_hd = &osu_skin_hd;
 
 OsuSkin::OsuSkin(Osu *osu, UString filepath)
 {
@@ -56,10 +60,8 @@ OsuSkin::OsuSkin(Osu *osu, UString filepath)
 
 	// vars
 	m_hitCircle = m_missingTexture;
-	m_hitCircleOverlay = m_missingTexture;
 	m_approachCircle = m_missingTexture;
 	m_reverseArrow = m_missingTexture;
-	m_followPoint = m_missingTexture;
 
 	m_default0 = m_missingTexture;
 	m_default1 = m_missingTexture;
@@ -90,17 +92,7 @@ OsuSkin::OsuSkin(Osu *osu, UString filepath)
 	m_playWarningArrow = m_missingTexture;
 	m_circularmetre = m_missingTexture;
 
-	m_hit0 = m_missingTexture;
-	m_hit50 = m_missingTexture;
-	m_hit100 = m_missingTexture;
-	m_hit100k = m_missingTexture;
-	m_hit300 = m_missingTexture;
-	m_hit300g = m_missingTexture;
-	m_hit300k = m_missingTexture;
-
 	m_sliderGradient = m_missingTexture;
-	m_sliderb = m_missingTexture;
-	m_sliderFollowCircle = m_missingTexture;
 	m_sliderScorePoint = m_missingTexture;
 	m_sliderStartCircle = m_missingTexture;
 	m_sliderStartCircleOverlay = m_missingTexture;
@@ -122,23 +114,6 @@ OsuSkin::OsuSkin(Osu *osu, UString filepath)
 	m_cursorMiddle = m_missingTexture;
 	m_cursorTrail = m_missingTexture;
 
-	m_selectionModEasy = m_missingTexture;
-	m_selectionModNoFail = m_missingTexture;
-	m_selectionModHalfTime = m_missingTexture;
-	m_selectionModHardRock = m_missingTexture;
-	m_selectionModSuddenDeath = m_missingTexture;
-	m_selectionModPerfect = m_missingTexture;
-	m_selectionModDoubleTime = m_missingTexture;
-	m_selectionModNightCore = m_missingTexture;
-	m_selectionModHidden = m_missingTexture;
-	m_selectionModFlashlight = m_missingTexture;
-	m_selectionModRelax = m_missingTexture;
-	m_selectionModAutopilot = m_missingTexture;
-	m_selectionModSpunOut = m_missingTexture;
-	m_selectionModAutoplay = m_missingTexture;
-	m_selectionModNightmare = m_missingTexture;
-	m_selectionModTarget = m_missingTexture;
-
 	m_pauseContinue = m_missingTexture;
 	m_pauseRetry = m_missingTexture;
 	m_pauseBack = m_missingTexture;
@@ -150,7 +125,6 @@ OsuSkin::OsuSkin(Osu *osu, UString filepath)
 	m_defaultButtonLeft = m_missingTexture;
 	m_defaultButtonMiddle = m_missingTexture;
 	m_defaultButtonRight = m_missingTexture;
-	m_menuBack = m_missingTexture;
 	m_selectionMode = m_missingTexture;
 	m_selectionModeOver = m_missingTexture;
 	m_selectionMods = m_missingTexture;
@@ -222,31 +196,18 @@ OsuSkin::OsuSkin(Osu *osu, UString filepath)
 	m_bCursor2x = false;
 	m_bApproachCircle2x = false;
 	m_bReverseArrow2x = false;
-	m_bFollowPoint2x = false;
 	m_bHitCircle2x = false;
-	m_bHitCircleOverlay2x = false;
 	m_bIsDefault02x = false;
 	m_bIsDefault12x = false;
-	m_bHit02x = false;
-	m_bHit502x = false;
-	m_bHit1002x = false;
-	m_bHit100k2x = false;
-	m_bHit3002x = false;
-	m_bHit300g2x = false;
-	m_bHit300k2x = false;
 	m_bSpinnerApproachCircle2x = false;
 	m_bSpinnerBottom2x= false;
 	m_bSpinnerCircle2x= false;
 	m_bSpinnerTop2x= false;
 	m_bSpinnerMiddle2x= false;
 	m_bSpinnerMiddle22x= false;
-	m_bSliderB2x = false;
 	m_bSliderScorePoint2x = false;
 	m_bSliderStartCircle2x = false;
-	m_bSliderStartCircleOverlay2x = false;
 	m_bSliderEndCircle2x = false;
-	m_bSliderEndCircleOverlay2x = false;
-	m_bSliderFollowCircle2x = false;
 
 	m_bCircularmetre2x = false;
 	m_bPlaySkip2x = false;
@@ -269,6 +230,7 @@ OsuSkin::OsuSkin(Osu *osu, UString filepath)
 
 	// skin.ini
 	m_fVersion = 1;
+	m_fAnimationFramerate = 0.0f;
 	m_bCursorCenter = true;
 	m_bCursorRotate = true;
 	m_bCursorExpand = true;
@@ -280,6 +242,8 @@ OsuSkin::OsuSkin(Osu *osu, UString filepath)
 	m_bSliderTrackOverride = false;
 
 	m_iHitCircleOverlap = 0;
+	m_iScoreOverlap = 0;
+	m_iComboOverlap = 0;
 
 	// custom
 	m_iSampleSet = 1;
@@ -300,8 +264,29 @@ OsuSkin::~OsuSkin()
 		if (m_resources[i] != (Resource*)m_missingTexture)
 			engine->getResourceManager()->destroyResource(m_resources[i]);
 	}
+	m_resources.clear();
+
+	for (int i=0; i<m_images.size(); i++)
+	{
+		delete m_images[i];
+	}
+	m_images.clear();
 
 	m_sounds.clear();
+}
+
+void OsuSkin::update()
+{
+	// TODO: shitty check to not animate while paused with hitobjects in background
+	if (m_osu->isInPlayMode() && m_osu->getSelectedBeatmap() != NULL && !m_osu->getSelectedBeatmap()->isPlaying() && !osu_skin_animation_force.getBool())
+		return;
+
+	const bool useEngineTimeForAnimations = !m_osu->isInPlayMode();
+	const long curMusicPos = m_osu->getSelectedBeatmap() != NULL ? m_osu->getSelectedBeatmap()->getCurMusicPosWithOffsets() : 0;
+	for (int i=0; i<m_images.size(); i++)
+	{
+		m_images[i]->update(useEngineTimeForAnimations, curMusicPos);
+	}
 }
 
 void OsuSkin::load()
@@ -331,23 +316,45 @@ void OsuSkin::load()
 
 	// images
 	checkLoadImage(&m_hitCircle, "hitcircle", "OSU_SKIN_HITCIRCLE");
-	checkLoadImage(&m_hitCircleOverlay, "hitcircleoverlay", "OSU_SKIN_HITCIRCLEOVERLAY");
+	m_hitCircleOverlay2 = createOsuSkinImage("hitcircleoverlay", Vector2(128, 128), 64);
+	m_hitCircleOverlay2->setAnimationFramerate(2);
 
 	checkLoadImage(&m_approachCircle, "approachcircle", "OSU_SKIN_APPROACHCIRCLE");
 	checkLoadImage(&m_reverseArrow, "reversearrow", "OSU_SKIN_REVERSEARROW");
 
-	checkLoadImage(&m_followPoint, "followpoint-3", "OSU_SKIN_FOLLOWPOINT"); checkLoadImage(&m_followPoint, "followpoint", "OSU_SKIN_FOLLOWPOINT");
+	m_followPoint2 = createOsuSkinImage("followpoint", Vector2(16, 22), 64);
 
-	checkLoadImage(&m_default0, "default-0", "OSU_SKIN_DEFAULT0");
-	checkLoadImage(&m_default1, "default-1", "OSU_SKIN_DEFAULT1");
-	checkLoadImage(&m_default2, "default-2", "OSU_SKIN_DEFAULT2");
-	checkLoadImage(&m_default3, "default-3", "OSU_SKIN_DEFAULT3");
-	checkLoadImage(&m_default4, "default-4", "OSU_SKIN_DEFAULT4");
-	checkLoadImage(&m_default5, "default-5", "OSU_SKIN_DEFAULT5");
-	checkLoadImage(&m_default6, "default-6", "OSU_SKIN_DEFAULT6");
-	checkLoadImage(&m_default7, "default-7", "OSU_SKIN_DEFAULT7");
-	checkLoadImage(&m_default8, "default-8", "OSU_SKIN_DEFAULT8");
-	checkLoadImage(&m_default9, "default-9", "OSU_SKIN_DEFAULT9");
+	UString hitCirclePrefix = m_sHitCirclePrefix.length() > 0 ? m_sHitCirclePrefix : "default";
+	UString hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-0");
+	checkLoadImage(&m_default0, hitCircleStringFinal, "OSU_SKIN_DEFAULT0");
+	if (m_default0 == m_missingTexture) checkLoadImage(&m_default0, "default-0", "OSU_SKIN_DEFAULT0"); // special cases: fallback to default skin hitcircle numbers if the defined prefix doesn't point to any valid files
+	hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-1");
+	checkLoadImage(&m_default1, hitCircleStringFinal, "OSU_SKIN_DEFAULT1");
+	if (m_default1 == m_missingTexture) checkLoadImage(&m_default1, "default-1", "OSU_SKIN_DEFAULT1");
+	hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-2");
+	checkLoadImage(&m_default2, hitCircleStringFinal, "OSU_SKIN_DEFAULT2");
+	if (m_default2 == m_missingTexture) checkLoadImage(&m_default2, "default-2", "OSU_SKIN_DEFAULT2");
+	hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-3");
+	checkLoadImage(&m_default3, hitCircleStringFinal, "OSU_SKIN_DEFAULT3");
+	if (m_default3 == m_missingTexture) checkLoadImage(&m_default3, "default-3", "OSU_SKIN_DEFAULT3");
+	hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-4");
+	checkLoadImage(&m_default4, hitCircleStringFinal, "OSU_SKIN_DEFAULT4");
+	if (m_default4 == m_missingTexture) checkLoadImage(&m_default4, "default-4", "OSU_SKIN_DEFAULT4");
+	hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-5");
+	checkLoadImage(&m_default5, hitCircleStringFinal, "OSU_SKIN_DEFAULT5");
+	if (m_default5 == m_missingTexture) checkLoadImage(&m_default5, "default-5", "OSU_SKIN_DEFAULT5");
+	hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-6");
+	checkLoadImage(&m_default6, hitCircleStringFinal, "OSU_SKIN_DEFAULT6");
+	if (m_default6 == m_missingTexture) checkLoadImage(&m_default6, "default-6", "OSU_SKIN_DEFAULT6");
+	hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-7");
+	checkLoadImage(&m_default7, hitCircleStringFinal, "OSU_SKIN_DEFAULT7");
+	if (m_default7 == m_missingTexture) checkLoadImage(&m_default7, "default-7", "OSU_SKIN_DEFAULT7");
+	hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-8");
+	checkLoadImage(&m_default8, hitCircleStringFinal, "OSU_SKIN_DEFAULT8");
+	if (m_default8 == m_missingTexture) checkLoadImage(&m_default8, "default-8", "OSU_SKIN_DEFAULT8");
+	hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-9");
+	checkLoadImage(&m_default9, hitCircleStringFinal, "OSU_SKIN_DEFAULT9");
+	if (m_default9 == m_missingTexture) checkLoadImage(&m_default9, "default-9", "OSU_SKIN_DEFAULT9");
 
 	checkLoadImage(&m_score0, "score-0", "OSU_SKIN_SCORE0");
 	checkLoadImage(&m_score1, "score-1", "OSU_SKIN_SCORE1");
@@ -368,22 +375,36 @@ void OsuSkin::load()
 	checkLoadImage(&m_playWarningArrow, "play-warningarrow", "OSU_SKIN_PLAYWARNINGARROW");
 	checkLoadImage(&m_circularmetre, "circularmetre", "OSU_SKIN_CIRCULARMETRE");
 
-	checkLoadImage(&m_hit0, "hit0", "OSU_SKIN_HIT0");
-	checkLoadImage(&m_hit50, "hit50", "OSU_SKIN_HIT50");
-	checkLoadImage(&m_hit100, "hit100", "OSU_SKIN_HIT100");
-	checkLoadImage(&m_hit100k, "hit100k", "OSU_SKIN_HIT100K");
-	checkLoadImage(&m_hit300, "hit300", "OSU_SKIN_HIT300");
-	checkLoadImage(&m_hit300g, "hit300g", "OSU_SKIN_HIT300G");
-	checkLoadImage(&m_hit300k, "hit300k", "OSU_SKIN_HIT300K");
+	m_hit0 = createOsuSkinImage("hit0", Vector2(128, 128), 42);
+	m_hit0->setAnimationFramerate(60);
+	m_hit50 = createOsuSkinImage("hit50", Vector2(128, 128), 42);
+	m_hit50->setAnimationFramerate(60);
+	m_hit100 = createOsuSkinImage("hit100", Vector2(128, 128), 42);
+	m_hit100->setAnimationFramerate(60);
+	m_hit100k = createOsuSkinImage("hit100k", Vector2(128, 128), 42);
+	m_hit100k->setAnimationFramerate(60);
+	m_hit300 = createOsuSkinImage("hit300", Vector2(128, 128), 42);
+	m_hit300->setAnimationFramerate(60);
+	m_hit300g = createOsuSkinImage("hit300g", Vector2(128, 128), 42);
+	m_hit300g->setAnimationFramerate(60);
+	m_hit300k = createOsuSkinImage("hit300k", Vector2(128, 128), 42);
+	m_hit300k->setAnimationFramerate(60);
 
 	checkLoadImage(&m_sliderGradient, "slidergradient", "OSU_SKIN_SLIDERGRADIENT");
-	checkLoadImage(&m_sliderb, "sliderb", "OSU_SKIN_SLIDERB"); checkLoadImage(&m_sliderb, "sliderb0", "OSU_SKIN_SLIDERB");
+	m_sliderb = createOsuSkinImage("sliderb", Vector2(128, 128), 64, "");
+	m_sliderb->setAnimationFramerate(45.0f);
 	checkLoadImage(&m_sliderScorePoint, "sliderscorepoint", "OSU_SKIN_SLIDERSCOREPOINT");
-	checkLoadImage(&m_sliderFollowCircle, "sliderfollowcircle", "OSU_SKIN_SLIDERFOLLOWCIRCLE");
+	m_sliderFollowCircle2 = createOsuSkinImage("sliderfollowcircle", Vector2(259, 259), 64);
 	checkLoadImage(&m_sliderStartCircle, "sliderstartcircle", "OSU_SKIN_SLIDERSTARTCIRCLE");
+	m_sliderStartCircle2 = createOsuSkinImage("sliderstartcircle", Vector2(128, 128), 64);
 	checkLoadImage(&m_sliderStartCircleOverlay, "sliderstartcircleoverlay", "OSU_SKIN_SLIDERSTARTCIRCLEOVERLAY");
+	m_sliderStartCircleOverlay2 = createOsuSkinImage("sliderstartcircleoverlay", Vector2(128, 128), 64);
+	m_sliderStartCircleOverlay2->setAnimationFramerate(2);
 	checkLoadImage(&m_sliderEndCircle, "sliderendcircle", "OSU_SKIN_SLIDERENDCIRCLE");
+	m_sliderEndCircle2 = createOsuSkinImage("sliderendcircle", Vector2(128, 128), 64);
 	checkLoadImage(&m_sliderEndCircleOverlay, "sliderendcircleoverlay", "OSU_SKIN_SLIDERENDCIRCLEOVERLAY");
+	m_sliderEndCircleOverlay2 = createOsuSkinImage("sliderendcircleoverlay", Vector2(128, 128), 64);
+	m_sliderEndCircleOverlay2->setAnimationFramerate(2);
 
 	checkLoadImage(&m_spinnerBackground, "spinner-background", "OSU_SKIN_SPINNERBACKGROUND");
 	checkLoadImage(&m_spinnerCircle, "spinner-circle", "OSU_SKIN_SPINNERCIRCLE");
@@ -403,22 +424,22 @@ void OsuSkin::load()
 	if (m_cursor == engine->getResourceManager()->getImage("OSU_SKIN_CURSOR_DEFAULT"))
 		checkLoadImage(&m_cursorMiddle, "cursormiddle", "OSU_SKIN_CURSORMIDDLE");
 
-	checkLoadImage(&m_selectionModEasy, "selection-mod-easy", "OSU_SKIN_SELECTION_MOD_EASY");
-	checkLoadImage(&m_selectionModNoFail, "selection-mod-nofail", "OSU_SKIN_SELECTION_MOD_NOFAIL");
-	checkLoadImage(&m_selectionModHalfTime, "selection-mod-halftime", "OSU_SKIN_SELECTION_MOD_HALFTIME");
-	checkLoadImage(&m_selectionModHardRock, "selection-mod-hardrock", "OSU_SKIN_SELECTION_MOD_HARDROCK");
-	checkLoadImage(&m_selectionModSuddenDeath, "selection-mod-suddendeath", "OSU_SKIN_SELECTION_MOD_SUDDENDEATH");
-	checkLoadImage(&m_selectionModPerfect, "selection-mod-perfect", "OSU_SKIN_SELECTION_MOD_PERFECT");
-	checkLoadImage(&m_selectionModDoubleTime, "selection-mod-doubletime", "OSU_SKIN_SELECTION_MOD_DOUBLETIME");
-	checkLoadImage(&m_selectionModNightCore, "selection-mod-nightcore", "OSU_SKIN_SELECTION_MOD_NIGHTCORE");
-	checkLoadImage(&m_selectionModHidden, "selection-mod-hidden", "OSU_SKIN_SELECTION_MOD_HIDDEN");
-	checkLoadImage(&m_selectionModFlashlight, "selection-mod-flashlight", "OSU_SKIN_SELECTION_MOD_FLASHLIGHT");
-	checkLoadImage(&m_selectionModRelax, "selection-mod-relax", "OSU_SKIN_SELECTION_MOD_RELAX");
-	checkLoadImage(&m_selectionModAutopilot, "selection-mod-relax2", "OSU_SKIN_SELECTION_MOD_RELAX2");
-	checkLoadImage(&m_selectionModSpunOut, "selection-mod-spunout", "OSU_SKIN_SELECTION_MOD_SPUNOUT");
-	checkLoadImage(&m_selectionModAutoplay, "selection-mod-autoplay", "OSU_SKIN_SELECTION_MOD_AUTOPLAY");
-	checkLoadImage(&m_selectionModNightmare, "selection-mod-nightmare", "OSU_SKIN_SELECTION_MOD_NIGHTMARE");
-	checkLoadImage(&m_selectionModTarget, "selection-mod-target", "OSU_SKIN_SELECTION_MOD_TARGET");
+	m_selectionModEasy = createOsuSkinImage("selection-mod-easy", Vector2(68, 66), 38);
+	m_selectionModNoFail = createOsuSkinImage("selection-mod-nofail", Vector2(68, 66), 38);
+	m_selectionModHalfTime = createOsuSkinImage("selection-mod-halftime", Vector2(68, 66), 38);
+	m_selectionModHardRock = createOsuSkinImage("selection-mod-hardrock", Vector2(68, 66), 38);
+	m_selectionModSuddenDeath = createOsuSkinImage("selection-mod-suddendeath", Vector2(68, 66), 38);
+	m_selectionModPerfect = createOsuSkinImage("selection-mod-perfect", Vector2(68, 66), 38);
+	m_selectionModDoubleTime = createOsuSkinImage("selection-mod-doubletime", Vector2(68, 66), 38);
+	m_selectionModNightCore = createOsuSkinImage("selection-mod-nightcore", Vector2(68, 66), 38);
+	m_selectionModHidden = createOsuSkinImage("selection-mod-hidden", Vector2(68, 66), 38);
+	m_selectionModFlashlight = createOsuSkinImage("selection-mod-flashlight", Vector2(68, 66), 38);
+	m_selectionModRelax = createOsuSkinImage("selection-mod-relax", Vector2(68, 66), 38);
+	m_selectionModAutopilot = createOsuSkinImage("selection-mod-relax2", Vector2(68, 66), 38);
+	m_selectionModSpunOut = createOsuSkinImage("selection-mod-spunout", Vector2(68, 66), 38);
+	m_selectionModAutoplay = createOsuSkinImage("selection-mod-autoplay", Vector2(68, 66), 38);
+	m_selectionModNightmare = createOsuSkinImage("selection-mod-nightmare", Vector2(68, 66), 38);
+	m_selectionModTarget = createOsuSkinImage("selection-mod-target", Vector2(68, 66), 38);
 
 	checkLoadImage(&m_pauseContinue, "pause-continue", "OSU_SKIN_PAUSE_CONTINUE");
 	checkLoadImage(&m_pauseRetry, "pause-retry", "OSU_SKIN_PAUSE_RETRY");
@@ -428,7 +449,7 @@ void OsuSkin::load()
 	checkLoadImage(&m_buttonLeft, "button-left", "OSU_SKIN_BUTTON_LEFT");
 	checkLoadImage(&m_buttonMiddle, "button-middle", "OSU_SKIN_BUTTON_MIDDLE");
 	checkLoadImage(&m_buttonRight, "button-right", "OSU_SKIN_BUTTON_RIGHT");
-	checkLoadImage(&m_menuBack, "menu-back-0", "OSU_SKIN_MENU_BACK"); checkLoadImage(&m_menuBack, "menu-back", "OSU_SKIN_MENU_BACK");
+	m_menuBack = createOsuSkinImage("menu-back", Vector2(225, 87), 54);
 	checkLoadImage(&m_selectionMode, "selection-mode", "OSU_SKIN_SELECTION_MODE");
 	checkLoadImage(&m_selectionModeOver, "selection-mode-over", "OSU_SKIN_SELECTION_MODE_OVER");
 	checkLoadImage(&m_selectionMods, "selection-mods", "OSU_SKIN_SELECTION_MODS");
@@ -501,30 +522,12 @@ void OsuSkin::load()
 		m_bApproachCircle2x = true;
 	if (m_reverseArrow != NULL && m_reverseArrow->getFilePath().find("@2x") != -1)
 		m_bReverseArrow2x = true;
-	if (m_followPoint != NULL && m_followPoint->getFilePath().find("@2x") != -1)
-		m_bFollowPoint2x = true;
 	if (m_hitCircle != NULL && m_hitCircle->getFilePath().find("@2x") != -1)
 		m_bHitCircle2x = true;
-	if (m_hitCircleOverlay != NULL && m_hitCircleOverlay->getFilePath().find("@2x") != -1)
-		m_bHitCircleOverlay2x = true;
 	if (m_default0 != NULL && m_default0->getFilePath().find("@2x") != -1)
 		m_bIsDefault02x = true;
 	if (m_default1 != NULL && m_default1->getFilePath().find("@2x") != -1)
 		m_bIsDefault12x = true;
-	if (m_hit0 != NULL && m_hit0->getFilePath().find("@2x") != -1)
-		m_bHit02x = true;
-	if (m_hit50 != NULL && m_hit50->getFilePath().find("@2x") != -1)
-		m_bHit502x = true;
-	if (m_hit100 != NULL && m_hit100->getFilePath().find("@2x") != -1)
-		m_bHit1002x = true;
-	if (m_hit100k != NULL && m_hit100k->getFilePath().find("@2x") != -1)
-		m_bHit100k2x = true;
-	if (m_hit300 != NULL && m_hit300->getFilePath().find("@2x") != -1)
-		m_bHit3002x = true;
-	if (m_hit300g != NULL && m_hit300g->getFilePath().find("@2x") != -1)
-		m_bHit300g2x = true;
-	if (m_hit300k != NULL && m_hit300k->getFilePath().find("@2x") != -1)
-		m_bHit300k2x = true;
 	if (m_spinnerApproachCircle != NULL && m_spinnerApproachCircle->getFilePath().find("@2x") != -1)
 		m_bSpinnerApproachCircle2x = true;
 	if (m_spinnerBottom != NULL && m_spinnerBottom->getFilePath().find("@2x") != -1)
@@ -537,20 +540,12 @@ void OsuSkin::load()
 		m_bSpinnerMiddle2x = true;
 	if (m_spinnerMiddle2 != NULL && m_spinnerMiddle2->getFilePath().find("@2x") != -1)
 		m_bSpinnerMiddle22x = true;
-	if (m_sliderb != NULL && m_sliderb->getFilePath().find("@2x") != -1)
-		m_bSliderB2x = true;
 	if (m_sliderScorePoint != NULL && m_sliderScorePoint->getFilePath().find("@2x") != -1)
 		m_bSliderScorePoint2x = true;
 	if (m_sliderStartCircle != NULL && m_sliderStartCircle->getFilePath().find("@2x") != -1)
 		m_bSliderStartCircle2x = true;
-	if (m_sliderStartCircleOverlay != NULL && m_sliderStartCircleOverlay->getFilePath().find("@2x") != -1)
-		m_bSliderStartCircleOverlay2x = true;
 	if (m_sliderEndCircle != NULL && m_sliderEndCircle->getFilePath().find("@2x") != -1)
 		m_bSliderEndCircle2x = true;
-	if (m_sliderEndCircleOverlay != NULL && m_sliderEndCircleOverlay->getFilePath().find("@2x") != -1)
-		m_bSliderEndCircleOverlay2x = true;
-	if (m_sliderFollowCircle != NULL && m_sliderFollowCircle->getFilePath().find("@2x") != -1)
-		m_bSliderFollowCircle2x = true;
 
 	if (m_circularmetre != NULL && m_circularmetre->getFilePath().find("@2x") != -1)
 		m_bCircularmetre2x = true;
@@ -649,7 +644,7 @@ bool OsuSkin::parseSkinINI(UString filepath)
 		const char *curLineChar = uCurLine.toUtf8();
 		std::string curLine(curLineChar);
 
-		if (curLine.find("//") == std::string::npos) // ignore comments
+		if (curLine.find("//") > 2) // ignore comments // TODO: this is incorrect, but it works well enough
 		{
 			if (curLine.find("[General]") != std::string::npos)
 				curBlock = 0;
@@ -663,6 +658,7 @@ bool OsuSkin::parseSkinINI(UString filepath)
 			case 0: // General
 				{
 					int val;
+					float floatVal;
 					char stringBuffer[1024];
 
 					memset(stringBuffer, '\0', 1024);
@@ -695,12 +691,15 @@ bool OsuSkin::parseSkinINI(UString filepath)
 						if (m_iSliderStyle != 1 && m_iSliderStyle != 2)
 							m_iSliderStyle = 2;
 					}
+					if (sscanf(curLineChar, " AnimationFramerate : %f \n", &floatVal) == 1)
+						m_fAnimationFramerate = floatVal < 0 ? 0.0f : floatVal;
 				}
 				break;
 			case 1: // Colors
 				{
 					int comboNum;
 					int r,g,b;
+
 					if (sscanf(curLineChar, " Combo %i : %i , %i , %i \n", &comboNum, &r, &g, &b) == 4)
 						m_comboColors.push_back(COLOR(255, r, g, b));
 					if (sscanf(curLineChar, " SpinnerApproachCircle : %i , %i , %i \n", &r, &g, &b) == 3)
@@ -723,7 +722,21 @@ bool OsuSkin::parseSkinINI(UString filepath)
 			case 2: // Fonts
 				{
 					int val;
+					char stringBuffer[1024];
 
+					memset(stringBuffer, '\0', 1024);
+					if (sscanf(curLineChar, " ComboPrefix : %1023[^\n]", stringBuffer) == 1)
+						m_sComboPrefix = UString(stringBuffer);
+					if (sscanf(curLineChar, " ComboOverlap : %i \n", &val) == 1)
+						m_iComboOverlap = val;
+
+					if (sscanf(curLineChar, " ScorePrefix : %1023[^\n]", stringBuffer) == 1)
+						m_sScorePrefix = UString(stringBuffer);
+					if (sscanf(curLineChar, " ScoreOverlap : %i \n", &val) == 1)
+						m_iScoreOverlap = val;
+
+					if (sscanf(curLineChar, " HitCirclePrefix : %1023[^\n]", stringBuffer) == 1)
+						m_sHitCirclePrefix = UString(stringBuffer);
 					if (sscanf(curLineChar, " HitCircleOverlap : %i \n", &val) == 1)
 						m_iHitCircleOverlap = val;
 				}
@@ -844,6 +857,14 @@ void OsuSkin::playSliderTickSound()
 		engine->getSound()->play(m_normalSliderTick);
 		break;
 	}
+}
+
+OsuSkinImage *OsuSkin::createOsuSkinImage(UString skinElementName, Vector2 baseSizeForScaling2x, float osuSize, UString animationSeparator)
+{
+	OsuSkinImage *skinImage = new OsuSkinImage(this, skinElementName, baseSizeForScaling2x, osuSize, animationSeparator);
+	m_images.push_back(skinImage);
+
+	return skinImage;
 }
 
 void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, UString resourceName, bool ignoreDefaultSkin)

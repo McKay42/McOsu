@@ -13,6 +13,7 @@
 
 #include "Osu.h"
 #include "OsuSkin.h"
+#include "OsuSkinImage.h"
 #include "OsuScore.h"
 #include "OsuHUD.h"
 
@@ -60,23 +61,11 @@ void OsuUIRankingScreenRankingPanel::draw(Graphics *g)
     const Vector2 hitGridOffsetX = Vector2(200, 0);
     const Vector2 hitGridOffsetY = Vector2(0, 60);
 
-    scale = m_osu->getImageScale(m_osu, hardcodedOsuHit300ImageSize * (m_osu->getSkin()->isHit3002x() ? 2.0f : 1.0f), globalHitSize);
     drawHitImage(g, m_osu->getSkin()->getHit300(), scale, hitImageStartPos);
-
-	scale = m_osu->getImageScale(m_osu, hardcodedOsuHit300ImageSize * (m_osu->getSkin()->isHit1002x() ? 2.0f : 1.0f), globalHitSize);
 	drawHitImage(g, m_osu->getSkin()->getHit100(), scale, hitImageStartPos + hitGridOffsetY);
-
-	scale = m_osu->getImageScale(m_osu, hardcodedOsuHit300ImageSize * (m_osu->getSkin()->isHit502x() ? 2.0f : 1.0f), globalHitSize);
 	drawHitImage(g, m_osu->getSkin()->getHit50(), scale, hitImageStartPos + hitGridOffsetY*2);
-
-
-	scale = m_osu->getImageScale(m_osu, hardcodedOsuHit300ImageSize * (m_osu->getSkin()->isHit300g2x() ? 2.0f : 1.0f), globalHitSize);
 	drawHitImage(g, m_osu->getSkin()->getHit300g(), scale, hitImageStartPos + hitGridOffsetX);
-
-	scale = m_osu->getImageScale(m_osu, hardcodedOsuHit300ImageSize * (m_osu->getSkin()->isHit100k2x() ? 2.0f : 1.0f), globalHitSize);
 	drawHitImage(g, m_osu->getSkin()->getHit100k(), scale, hitImageStartPos + hitGridOffsetX + hitGridOffsetY);
-
-	scale = m_osu->getImageScale(m_osu, hardcodedOsuHit300ImageSize * (m_osu->getSkin()->isHit02x() ? 2.0f : 1.0f), globalHitSize);
 	drawHitImage(g, m_osu->getSkin()->getHit0(), scale, hitImageStartPos + hitGridOffsetX + hitGridOffsetY*2);
 
 	// draw numHits
@@ -126,13 +115,10 @@ void OsuUIRankingScreenRankingPanel::draw(Graphics *g)
 	g->popTransform();
 }
 
-void OsuUIRankingScreenRankingPanel::drawHitImage(Graphics *g, Image *img, float scale, Vector2 pos)
+void OsuUIRankingScreenRankingPanel::drawHitImage(Graphics *g, OsuSkinImage *img, float scale, Vector2 pos)
 {
-    g->pushTransform();
-    	g->scale(scale, scale);
-    	g->translate(m_vPos.x + m_osu->getUIScale(m_osu, pos.x), m_vPos.y + m_osu->getUIScale(m_osu, pos.y));
-    	g->drawImage(img);
-	g->popTransform();
+	///img->setAnimationFrameForce(0);
+	img->draw(g, Vector2(m_vPos.x + m_osu->getUIScale(m_osu, pos.x), m_vPos.y + m_osu->getUIScale(m_osu, pos.y)));
 }
 
 void OsuUIRankingScreenRankingPanel::drawNumHits(Graphics *g, int numHits, float scale, Vector2 pos)

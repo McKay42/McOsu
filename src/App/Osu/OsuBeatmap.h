@@ -45,6 +45,8 @@ public:
 	virtual void onModUpdate() {;} // this should make all the necessary internal updates to hitobjects when legacy osu mods or static mods change live (but also on start)
 	virtual bool isLoading(); // allows subclasses to delay the playing start, e.g. to load something
 
+	virtual long getPVS(); // Potentially Visible Set gate time size, for optimizing draw() and update() when iterating over all hitobjects
+
 	// database logic
 	void setDifficulties(std::vector<OsuBeatmapDifficulty*> diffs);
 
@@ -93,6 +95,7 @@ public:
 	inline Osu *getOsu() const {return m_osu;}
 	OsuSkin *getSkin(); // maybe use this for beatmap skins, maybe
 	inline long getCurMusicPos() const {return m_iCurMusicPos;}
+	inline long getCurMusicPosWithOffsets() const {return m_iCurMusicPosWithOffsets;}
 
 	float getRawAR();
 	float getAR();
@@ -131,6 +134,7 @@ public:
 	void playMissSound();
 
 protected:
+	static ConVar *m_osu_pvs;
 	static ConVar *m_osu_draw_hitobjects_ref;
 	static ConVar *m_osu_vr_draw_desktop_playfield_ref;
 	static ConVar *m_osu_followpoints_prevfadetime_ref;
@@ -187,10 +191,12 @@ protected:
 
 	// sound
 	long m_iCurMusicPos;
+	long m_iCurMusicPosWithOffsets;
 	bool m_bWasSeekFrame;
 	double m_fInterpolatedMusicPos;
 	double m_fLastAudioTimeAccurateSet;
 	double m_fLastRealTimeForInterpolationDelta;
+	int m_iResourceLoadUpdateDelayHack;
 
 	// gameplay & state
 	bool m_bFailed;
