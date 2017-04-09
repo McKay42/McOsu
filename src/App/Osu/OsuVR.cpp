@@ -25,9 +25,6 @@
 #include "OsuKeyBindings.h"
 #include "OsuNotificationOverlay.h"
 
-#include <iostream>
-#include <fstream>
-
 ConVar osu_vr_matrix_screen("osu_vr_matrix_screen");
 ConVar osu_vr_matrix_playfield("osu_vr_matrix_playfield");
 ConVar osu_vr_reset_matrices("osu_vr_reset_matrices");

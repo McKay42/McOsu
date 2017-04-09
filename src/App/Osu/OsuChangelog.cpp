@@ -40,7 +40,17 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	*/
 
 	CHANGELOG alpha29Steam;
-	alpha29Steam.title = "28.6 (Steam VR Alpha, ?)";
+	alpha29Steam.title = "28.8 (Steam VR Alpha, ?)";
+	alpha29Steam.changes.push_back("- Fixed performance optimization partially breaking 2B/Aspire beatmaps (invisible sliders)");
+	alpha29Steam.changes.push_back("- Fixed accuracy calculation dividing by zero if beatmap starts with a slider");
+	alpha29Steam.changes.push_back("- Fixed letterboxing and non-native resolutions not being consistent after restarting");
+	alpha29Steam.changes.push_back("");
+	alpha29Steam.changes.push_back("- Major performance optimizations");
+	alpha29Steam.changes.push_back("- Switched score calculation to 64-bit. The maximum score is now 18446744073709551615");
+	alpha29Steam.changes.push_back("- Fixed spinning spinners after dying in VR");
+	alpha29Steam.changes.push_back("- Fixed Auto failing impossible spinners");
+	alpha29Steam.changes.push_back("");
+	alpha29Steam.changes.push_back("- Added \"OS TabletPC Support\" (Options > Input > Tablet)");
 	alpha29Steam.changes.push_back("- Fixed being able to spin spinners with relax while paused");
 	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("- Added support for animated skins");

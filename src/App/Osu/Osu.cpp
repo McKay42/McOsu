@@ -5,7 +5,7 @@
 // $NoKeywords: $osu
 //===============================================================================//
 
-#include <OsuDatabase.h>
+#include "OsuDatabase.h"
 #include "Osu.h"
 
 #include "Engine.h"
@@ -57,7 +57,7 @@ void DUMMY_OSU_MODS(void) {;}
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 28.6f);
+ConVar osu_version("osu_version", 28.8f);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr");
 #else
@@ -1208,21 +1208,20 @@ void Osu::onResolutionChanged(Vector2 newResolution)
 		g_vInternalResolution = newResolution;
 	else if (!engine->isMinimized()) // if we just got minimized, ignore the resolution change (for the internal stuff)
 	{
-		// clamp internal resolution to actual resolution
-
-		// unclamp if new size is bigger again
+		// clamp upwards to internal resolution (osu_resolution)
 		if (g_vInternalResolution.x < m_vInternalResolution.x)
 			g_vInternalResolution.x = m_vInternalResolution.x;
 		if (g_vInternalResolution.y < m_vInternalResolution.y)
 			g_vInternalResolution.y = m_vInternalResolution.y;
 
+		// clamp downwards to engine resolution
 		if (newResolution.x < g_vInternalResolution.x)
 			g_vInternalResolution.x = newResolution.x;
 		if (newResolution.y < g_vInternalResolution.y)
 			g_vInternalResolution.y = newResolution.y;
 
 		// disable internal resolution on specific conditions
-		if (g_vInternalResolution == engine->getScreenSize() || !env->isFullscreen())
+		if (((int)g_vInternalResolution.x == engine->getScreenWidth() && (int)g_vInternalResolution.y == engine->getScreenHeight()) || !env->isFullscreen())
 		{
 			debugLog("Internal resolution == Engine resolution || !Fullscreen, disabling resampler (%i, %i)\n", (int)(g_vInternalResolution == engine->getScreenSize()), (int)(!env->isFullscreen()));
 			osu_resolution_enabled.setValue(0.0f);
@@ -1284,10 +1283,16 @@ void Osu::onInternalResolutionChanged(UString oldValue, UString args)
 		{
 			Vector2 newInternalResolution = Vector2(width, height);
 
-			if (newInternalResolution.x > engine->getGraphics()->getResolution().x)
-				newInternalResolution.x = engine->getGraphics()->getResolution().x;
-			if (newInternalResolution.y > engine->getGraphics()->getResolution().y)
-				newInternalResolution.y = engine->getGraphics()->getResolution().y;
+			// clamp requested internal resolution to current renderer resolution
+			// however, this could happen while we are transitioning into fullscreen. therefore only clamp when not in fullscreen or not in fullscreen transition
+			bool isTransitioningIntoFullscreenHack = engine->getGraphics()->getResolution().x < env->getNativeScreenSize().x || engine->getGraphics()->getResolution().y < env->getNativeScreenSize().y;
+			if (!env->isFullscreen() || !isTransitioningIntoFullscreenHack)
+			{
+				if (newInternalResolution.x > engine->getGraphics()->getResolution().x)
+					newInternalResolution.x = engine->getGraphics()->getResolution().x;
+				if (newInternalResolution.y > engine->getGraphics()->getResolution().y)
+					newInternalResolution.y = engine->getGraphics()->getResolution().y;
+			}
 
 			// enable and store, then force onResolutionChanged()
 			osu_resolution_enabled.setValue(1.0f);
@@ -1341,7 +1346,7 @@ void Osu::onSkinChange(UString oldValue, UString newValue)
 		m_skin = new OsuSkin(this, skinFolder);
 
 		// force
-		onResolutionChanged(engine->getScreenSize());
+		onResolutionChanged(g_vInternalResolution);
 	}
 }
 

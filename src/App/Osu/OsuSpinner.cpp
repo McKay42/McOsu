@@ -257,7 +257,7 @@ void OsuSpinner::update(long curPos)
 	OsuHitObject::update(curPos);
 
 	// stop spinner sound and don't update() while paused
-	if (m_beatmap->isPaused() || !m_beatmap->isPlaying())
+	if (m_beatmap->isPaused() || !m_beatmap->isPlaying() || m_beatmap->hasFailed())
 	{
 		if (m_beatmap->getSkin()->getSpinnerSpinSound()->isPlaying())
 			engine->getSound()->stop(m_beatmap->getSkin()->getSpinnerSpinSound());
@@ -434,7 +434,7 @@ void OsuSpinner::onHit()
 
 	// calculate hit result
 	OsuScore::HIT result = OsuScore::HIT::HIT_NULL;
-	if (m_fRatio >= 1.0f)
+	if (m_fRatio >= 1.0f || m_beatmap->getOsu()->getModAuto())
 		result = OsuScore::HIT::HIT_300;
 	else if (m_fRatio >= 0.9f && !OsuGameRules::osu_mod_ming3012.getBool())
 		result = OsuScore::HIT::HIT_100;

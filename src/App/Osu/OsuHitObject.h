@@ -47,6 +47,7 @@ public:
 	inline int getStack() const {return m_iStack;}
 	inline int getComboNumber() const {return m_iComboNumber;}
 	inline long getAutopilotDelta() const {return m_iAutopilotDelta;}
+	inline unsigned long long getSortHack() const {return m_iSortHack;}
 
 	inline bool isVisible() const {return m_bVisible;}
 	inline bool isFinished() const {return m_bFinished;}
@@ -90,6 +91,8 @@ protected:
 	long m_iAutopilotDelta;
 
 private:
+	static unsigned long long sortHackCounter;
+
 	struct HITRESULTANIM
 	{
 		float anim;
@@ -102,6 +105,8 @@ private:
 	};
 
 	std::vector<HITRESULTANIM> m_hitResults;
+
+	unsigned long long m_iSortHack;
 };
 
 #endif
