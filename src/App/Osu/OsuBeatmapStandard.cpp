@@ -129,10 +129,23 @@ void OsuBeatmapStandard::draw(Graphics *g)
 	// draw all hitobjects in reverse
 	if (m_osu_draw_hitobjects_ref->getBool())
 	{
+		const long curPos = m_iCurMusicPosWithOffsets;
+		const long pvs = getPVS();
+		const bool usePVS = m_osu_pvs->getBool();
+
 		if (!osu_draw_reverse_order.getBool())
 		{
 			for (int i=m_hitobjectsSortedByEndTime.size()-1; i>=0; i--)
 			{
+				// PVS optimization (reversed)
+				if (usePVS)
+				{
+					if (m_hitobjectsSortedByEndTime[i]->isFinished() && (curPos - pvs > m_hitobjectsSortedByEndTime[i]->getTime() + m_hitobjectsSortedByEndTime[i]->getDuration())) // past objects
+						break;
+					if (m_hitobjectsSortedByEndTime[i]->getTime() > curPos + pvs) // future objects
+						continue;
+				}
+
 				m_hitobjectsSortedByEndTime[i]->draw(g);
 			}
 		}
@@ -140,11 +153,29 @@ void OsuBeatmapStandard::draw(Graphics *g)
 		{
 			for (int i=0; i<m_hitobjectsSortedByEndTime.size(); i++)
 			{
+				// PVS optimization
+				if (usePVS)
+				{
+					if (m_hitobjectsSortedByEndTime[i]->isFinished() && (curPos - pvs > m_hitobjectsSortedByEndTime[i]->getTime() + m_hitobjectsSortedByEndTime[i]->getDuration())) // past objects
+						continue;
+					if (m_hitobjectsSortedByEndTime[i]->getTime() > curPos + pvs) // future objects
+						break;
+				}
+
 				m_hitobjectsSortedByEndTime[i]->draw(g);
 			}
 		}
 		for (int i=m_hitobjectsSortedByEndTime.size()-1; i>=0; i--)
 		{
+			// PVS optimization (reversed)
+			if (usePVS)
+			{
+				if (m_hitobjectsSortedByEndTime[i]->isFinished() && (curPos - pvs > m_hitobjectsSortedByEndTime[i]->getTime() + m_hitobjectsSortedByEndTime[i]->getDuration())) // past objects
+					break;
+				if (m_hitobjectsSortedByEndTime[i]->getTime() > curPos + pvs) // future objects
+					continue;
+			}
+
 			m_hitobjectsSortedByEndTime[i]->draw2(g);
 		}
 	}
@@ -202,10 +233,23 @@ void OsuBeatmapStandard::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 				g->setDepthBuffer(false);
 				vr->getShaderTexturedLegacyGeneric()->enable();
 				{
+					const long curPos = m_iCurMusicPosWithOffsets;
+					const long pvs = getPVS();
+					const bool usePVS = m_osu_pvs->getBool();
+
 					if (!osu_draw_reverse_order.getBool())
 					{
 						for (int i=m_hitobjectsSortedByEndTime.size()-1; i>=0; i--)
 						{
+							// PVS optimization (reversed)
+							if (usePVS)
+							{
+								if (m_hitobjectsSortedByEndTime[i]->isFinished() && (curPos - pvs > m_hitobjectsSortedByEndTime[i]->getTime() + m_hitobjectsSortedByEndTime[i]->getDuration())) // past objects
+									break;
+								if (m_hitobjectsSortedByEndTime[i]->getTime() > curPos + pvs) // future objects
+									continue;
+							}
+
 							m_hitobjectsSortedByEndTime[i]->drawVR(g, mvp, vr);
 						}
 					}
@@ -213,6 +257,15 @@ void OsuBeatmapStandard::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 					{
 						for (int i=0; i<m_hitobjectsSortedByEndTime.size(); i++)
 						{
+							// PVS optimization
+							if (usePVS)
+							{
+								if (m_hitobjectsSortedByEndTime[i]->isFinished() && (curPos - pvs > m_hitobjectsSortedByEndTime[i]->getTime() + m_hitobjectsSortedByEndTime[i]->getDuration())) // past objects
+									continue;
+								if (m_hitobjectsSortedByEndTime[i]->getTime() > curPos + pvs) // future objects
+									break;
+							}
+
 							m_hitobjectsSortedByEndTime[i]->drawVR(g, mvp, vr);
 						}
 					}

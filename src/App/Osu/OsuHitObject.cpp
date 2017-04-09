@@ -31,6 +31,7 @@ ConVar osu_mod_target_100_percent("osu_mod_target_100_percent", 0.7f);
 ConVar osu_mod_target_50_percent("osu_mod_target_50_percent", 0.95f);
 
 ConVar *OsuHitObject::m_osu_approach_scale_multiplier_ref = &osu_approach_scale_multiplier;
+unsigned long long OsuHitObject::sortHackCounter = 0;
 
 void OsuHitObject::drawHitResult(Graphics *g, OsuBeatmapStandard *beatmap, Vector2 rawPos, OsuScore::HIT result, float animPercent, float defaultAnimPercent)
 {
@@ -131,6 +132,8 @@ OsuHitObject::OsuHitObject(long time, int sampleType, int comboNumber, int color
 	m_bOverrideHDApproachCircle = false;
 
 	m_iStack = 0;
+
+	m_iSortHack = sortHackCounter++;
 }
 
 void OsuHitObject::draw(Graphics *g)
@@ -168,9 +171,9 @@ void OsuHitObject::draw(Graphics *g)
 void OsuHitObject::update(long curPos)
 {
 	m_iApproachTime = (long)OsuGameRules::getApproachTime(m_beatmap);
-	m_iHiddenDecayTime = (long) ((float)m_iApproachTime / 3.6f);
-	m_iHiddenTimeDiff = (long) ((float)m_iApproachTime / 3.3f);
-	m_iFadeInTime = std::min(400, (int) ((float)m_iApproachTime / 1.75f));
+	m_iHiddenDecayTime = OsuGameRules::getHiddenDecayTimeFromApproachTime(m_iApproachTime);
+	m_iHiddenTimeDiff = OsuGameRules::getHiddenTimeDiffFromApproachTime(m_iApproachTime);
+	m_iFadeInTime = OsuGameRules::getFadeInTimeFromApproachTime(m_iApproachTime);
 
 	m_iObjectTime = m_iApproachTime + m_iFadeInTime + (m_beatmap->getOsu()->getModHD() ? m_iHiddenTimeDiff : 0);
 	m_iDelta = m_iTime - curPos;

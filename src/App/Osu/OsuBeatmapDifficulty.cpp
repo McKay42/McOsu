@@ -74,7 +74,25 @@ private:
 
 
 
+struct TimingPointSortComparator
+{
+    bool operator() (OsuBeatmapDifficulty::TIMINGPOINT const &a, OsuBeatmapDifficulty::TIMINGPOINT const &b) const
+    {
+    	// first condition: offset
+    	// second condition: if offset is the same, non-inherited timingpoints go before inherited timingpoints
+
+    	// strict weak ordering!
+    	if (a.offset == b.offset && ((a.msPerBeat >= 0 && b.msPerBeat < 0) == (b.msPerBeat >= 0 && a.msPerBeat < 0)))
+    		return a.sortHack < b.sortHack;
+    	else
+    		return (a.offset < b.offset) || (a.offset == b.offset && a.msPerBeat >= 0 && b.msPerBeat < 0);
+    }
+};
+
+
+
 ConVar *OsuBeatmapDifficulty::m_osu_slider_scorev2 = NULL;
+unsigned long long OsuBeatmapDifficulty::sortHackCounter = 0;
 
 OsuBeatmapDifficulty::OsuBeatmapDifficulty(Osu *osu, UString filepath, UString folder)
 {
@@ -120,6 +138,8 @@ OsuBeatmapDifficulty::OsuBeatmapDifficulty(Osu *osu, UString filepath, UString f
 	m_backgroundImagePathLoader = NULL;
 
 	m_iMaxCombo = 0;
+
+	m_iSortHack = sortHackCounter++;
 }
 
 OsuBeatmapDifficulty::~OsuBeatmapDifficulty()
@@ -159,6 +179,7 @@ bool OsuBeatmapDifficulty::loadMetadataRaw()
 	// load metadata only
 	int curBlock = -1;
 	bool foundAR = false;
+	unsigned long long timingPointSortHack = 0;
 	while (file.canRead())
 	{
 		UString uCurLine = file.readLine();
@@ -302,6 +323,7 @@ bool OsuBeatmapDifficulty::loadMetadataRaw()
 					t.sampleType = tpSampleType;
 					t.sampleSet = tpSampleSet;
 					t.volume = tpVolume;
+					t.sortHack = timingPointSortHack++;
 
 					timingpoints.push_back(t);
 				}
@@ -314,6 +336,7 @@ bool OsuBeatmapDifficulty::loadMetadataRaw()
 					t.sampleType = 0;
 					t.sampleSet = 0;
 					t.volume = 100;
+					t.sortHack = timingPointSortHack++;
 
 					timingpoints.push_back(t);
 				}
@@ -337,15 +360,6 @@ bool OsuBeatmapDifficulty::loadMetadataRaw()
 			debugLog("OsuBeatmapDifficulty::loadMetadata() : calculating BPM range ...\n");
 
 		// sort timingpoints by time
-		struct TimingPointSortComparator
-		{
-		    bool operator() (TIMINGPOINT const &a, TIMINGPOINT const &b) const
-		    {
-		    	// first condition: offset
-		    	// second condition: if offset is the same, non-inherited timingpoints go before inherited timingpoints
-		        return (a.offset < b.offset) || (a.offset == b.offset && a.msPerBeat >= 0 && b.msPerBeat < 0);
-		    }
-		};
 		std::sort(timingpoints.begin(), timingpoints.end(), TimingPointSortComparator());
 
 		// calculate bpm range
@@ -408,7 +422,7 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 	int colorCounter = 1;
 	int comboNumber = 1;
 	int curBlock = -1;
-
+	unsigned long long timingPointSortHack = 0;
 	while (file.canRead())
 	{
 		UString uCurLine = file.readLine();
@@ -459,6 +473,7 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 					t.sampleType = tpSampleType;
 					t.sampleSet = tpSampleSet;
 					t.volume = tpVolume;
+					t.sortHack = timingPointSortHack++;
 
 					timingpoints.push_back(t);
 				}
@@ -471,6 +486,7 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 					t.sampleType = 0;
 					t.sampleSet = 0;
 					t.volume = 100;
+					t.sortHack = timingPointSortHack++;
 
 					timingpoints.push_back(t);
 				}
@@ -615,15 +631,6 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 	}
 
 	// sort timingpoints by time
-	struct TimingPointSortComparator
-	{
-	    bool operator() (TIMINGPOINT const &a, TIMINGPOINT const &b) const
-	    {
-	    	// first condition: offset
-	    	// second condition: if offset is the same, non-inherited timingpoints go before inherited timingpoints
-	        return (a.offset < b.offset) || (a.offset == b.offset && a.msPerBeat >= 0 && b.msPerBeat < 0);
-	    }
-	};
 	std::sort(timingpoints.begin(), timingpoints.end(), TimingPointSortComparator());
 
 	// calculate sliderTimes, and build clicks and ticks
@@ -671,7 +678,11 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 	{
 	    bool operator() (OsuHitObject const *a, OsuHitObject const *b) const
 	    {
-	        return a->getTime() < b->getTime();
+	    	// strict weak ordering!
+	    	if (a->getTime() == b->getTime())
+	    		return a->getSortHack() < b->getSortHack();
+	    	else
+	    		return a->getTime() < b->getTime();
 	    }
 	};
 	std::sort(hitobjects->begin(), hitobjects->end(), HitObjectSortComparator());

@@ -30,7 +30,7 @@ private:
 
 	Osu *m_osu;
 
-	int m_iScore;
+	unsigned long long m_iScore;
 	int m_iNum300s;
 	int m_iNum300gs;
 	int m_iNum100s;
