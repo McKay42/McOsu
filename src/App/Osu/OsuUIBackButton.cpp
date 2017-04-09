@@ -10,20 +10,29 @@
 #include "Engine.h"
 #include "AnimationHandler.h"
 
-OsuUIBackButton::OsuUIBackButton(UString imageResourceName, float xPos, float yPos, float xSize, float ySize, UString name) : CBaseUIImageButton(imageResourceName, xPos, yPos, xSize, ySize, name)
+#include "Osu.h"
+#include "OsuSkin.h"
+#include "OsuSkinImage.h"
+
+OsuUIBackButton::OsuUIBackButton(Osu *osu, float xPos, float yPos, float xSize, float ySize, UString name) : CBaseUIButton(xPos, yPos, xSize, ySize, name, "")
 {
+	m_osu = osu;
 	m_fAnimation = 0.0f;
+	m_fImageScale = 1.0f;
 }
 
 void OsuUIBackButton::draw(Graphics *g)
 {
+	if (!m_bVisible) return;
+
 	float scaleAnimMultiplier = 0.01f;
 
 	g->pushTransform();
 	g->translate(m_vSize.x/2, -m_vSize.y/2);
 	g->scale((1.0f + m_fAnimation*scaleAnimMultiplier), (1.0f + m_fAnimation*scaleAnimMultiplier));
 	g->translate(-m_vSize.x/2, m_vSize.y/2);
-	CBaseUIImageButton::draw(g);
+	g->setColor(0xffffffff);
+	m_osu->getSkin()->getMenuBack2()->draw(g, m_vPos + (m_osu->getSkin()->getMenuBack2()->getSize()/2)*m_fImageScale, m_fImageScale);
 	g->popTransform();
 
 	if (m_fAnimation > 0.0f)
@@ -40,17 +49,30 @@ void OsuUIBackButton::draw(Graphics *g)
 	}
 }
 
+void OsuUIBackButton::update()
+{
+	CBaseUIButton::update();
+	if (!m_bVisible) return;
+}
+
 void OsuUIBackButton::onMouseInside()
 {
-	CBaseUIImageButton::onMouseInside();
+	CBaseUIButton::onMouseInside();
 
 	anim->moveQuadOut(&m_fAnimation, 1.0f, 0.1f, 0.0f, true);
 }
 
 void OsuUIBackButton::onMouseOutside()
 {
-	CBaseUIImageButton::onMouseOutside();
+	CBaseUIButton::onMouseOutside();
 
 	anim->moveQuadOut(&m_fAnimation, 0.0f, m_fAnimation*0.1f, 0.0f, true);
 }
 
+void OsuUIBackButton::updateLayout()
+{
+	Vector2 newSize = m_osu->getSkin()->getMenuBack2()->getSize();
+	newSize.y = clamp<float>(newSize.y, 0, m_osu->getSkin()->getMenuBack2()->getSizeBase().y*1.5f); // clamp the height down if it exceeds 1.5x the base height
+	m_fImageScale = newSize.y / m_osu->getSkin()->getMenuBack2()->getSize().y;
+	setSize(newSize);
+}

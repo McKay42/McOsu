@@ -65,9 +65,21 @@ OsuUISongBrowserSongButton::OsuUISongBrowserSongButton(Osu *osu, OsuSongBrowser2
 				const float stars2 = b->starsNoMod;
 
 				if (stars1 > 0 && stars2 > 0)
-					return stars1 < stars2;
+				{
+					// strict weak ordering!
+					if (stars1 == stars2)
+						return a->getSortHack() < b->getSortHack();
+					else
+						return stars1 < stars2;
+				}
 				else
-					return diff1 < diff2;
+				{
+					// strict weak ordering!
+					if (diff1 == diff2)
+						return a->getSortHack() < b->getSortHack();
+					else
+						return diff1 < diff2;
+				}
 			}
 		};
 		std::sort(difficulties.begin(), difficulties.end(), SortComparator());

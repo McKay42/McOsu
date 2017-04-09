@@ -9,10 +9,9 @@
 #define OSUSCREENBACKABLE_H
 
 #include "OsuScreen.h"
+#include "OsuUIBackButton.h"
 
 class Osu;
-
-class CBaseUIImageButton;
 
 class OsuScreenBackable : public OsuScreen
 {
@@ -35,7 +34,7 @@ protected:
 	virtual void updateLayout();
 
 	Osu *m_osu;
-	CBaseUIImageButton *m_backButton;
+	OsuUIBackButton *m_backButton;
 };
 
 #endif

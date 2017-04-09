@@ -11,9 +11,10 @@
 #include "CBaseUIImageButton.h"
 
 class Osu;
+class OsuSkinImage;
 class OsuModSelector;
 
-class OsuUIModSelectorModButton : public CBaseUIImageButton
+class OsuUIModSelectorModButton : public CBaseUIButton
 {
 public:
 	OsuUIModSelectorModButton(Osu *osu, OsuModSelector* osuModSelector, float xPos, float yPos, float xSize, float ySize, UString name);
@@ -25,7 +26,7 @@ public:
 
 	void resetState();
 
-	void setState(unsigned int state, UString modName, UString tooltipText, Image *img);
+	void setState(unsigned int state, UString modName, UString tooltipText, OsuSkinImage *img);
 	void setBaseScale(float xScale, float yScale);
 	void setAvailable(bool available) {m_bAvailable = available;}
 
@@ -53,9 +54,13 @@ private:
 	{
 		UString modName;
 		std::vector<UString> tooltipTextLines;
-		Image *img;
+		OsuSkinImage *img;
 	};
 	std::vector<STATE> m_states;
+
+	Vector2 m_vScale;
+	float m_fRot;
+	OsuSkinImage *m_activeImage;
 };
 
 #endif

@@ -652,7 +652,7 @@ void OsuHUD::drawVolumeChange(Graphics *g)
 	g->fillRect(0, m_osu->getScreenHeight()*(1.0f - m_fLastVolume), m_osu->getScreenWidth(), m_osu->getScreenHeight()*m_fLastVolume);
 }
 
-void OsuHUD::drawScoreNumber(Graphics *g, int number, float scale, bool drawLeadingZeroes, int offset)
+void OsuHUD::drawScoreNumber(Graphics *g, unsigned long long number, float scale, bool drawLeadingZeroes, int offset)
 {
 	// get digits
 	std::vector<int> digits;
@@ -783,12 +783,12 @@ void OsuHUD::drawCombo(Graphics *g, int combo)
 	g->popTransform();
 }
 
-void OsuHUD::drawScore(Graphics *g, int score)
+void OsuHUD::drawScore(Graphics *g, unsigned long long score)
 {
 	g->setColor(0xffffffff);
 
 	int numDigits = 1;
-	int scoreCopy = score;
+	unsigned long long scoreCopy = score;
 	while (scoreCopy >= 10)
 	{
 		scoreCopy /= 10;
