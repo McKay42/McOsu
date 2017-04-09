@@ -40,7 +40,6 @@ public:
 	inline float getRawHitcircleDiameter() {return m_fRawHitcircleDiameter;} // in osu!pixels
 	inline float getNumberScale() {return m_fNumberScale;}
 	inline float getHitcircleOverlapScale() {return m_fHitcircleOverlapScale;}
-	inline float getSliderFollowCircleScale() {return m_fSliderFollowCircleScale;}
 	inline float getSliderFollowCircleDiameter() {return m_fSliderFollowCircleDiameter;}
 	inline float getRawSliderFollowCircleDiameter() {return m_fRawSliderFollowCircleDiameter;}
 
@@ -80,7 +79,6 @@ private:
 	float m_fHitcircleDiameter;
 	float m_fNumberScale;
 	float m_fHitcircleOverlapScale;
-	float m_fSliderFollowCircleScale;
 	float m_fSliderFollowCircleDiameter;
 	float m_fRawSliderFollowCircleDiameter;
 

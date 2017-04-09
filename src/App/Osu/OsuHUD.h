@@ -36,7 +36,7 @@ public:
 	void drawLoadingSmall(Graphics *g);
 	void drawBeatmapImportSpinner(Graphics *g);
 	void drawVolumeChange(Graphics *g);
-	void drawScoreNumber(Graphics *g, int number, float scale = 1.0f, bool drawLeadingZeroes = false, int offset = 2);
+	void drawScoreNumber(Graphics *g, unsigned long long number, float scale = 1.0f, bool drawLeadingZeroes = false, int offset = 2);
 	void drawComboSimple(Graphics *g, int combo, float scale = 1.0f); // used by OsuRankingScreen
 	void drawAccuracySimple(Graphics *g, float accuracy, float scale = 1.0f); // used by OsuRankingScreen
 	void drawWarningArrow(Graphics *g, Vector2 pos, bool flipVertically, bool originLeft = true);
@@ -59,7 +59,7 @@ private:
 	void drawFps(Graphics *g, McFont *font, float fps);
 	void drawAccuracy(Graphics *g, float accuracy);
 	void drawCombo(Graphics *g, int combo);
-	void drawScore(Graphics *g, int score);
+	void drawScore(Graphics *g, unsigned long long score);
 	void drawHP(Graphics *g, float health);
 
 	void drawSkip(Graphics *g);

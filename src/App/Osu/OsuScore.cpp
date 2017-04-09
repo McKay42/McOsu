@@ -24,11 +24,14 @@ OsuScore::OsuScore(Osu *osu)
 
 void OsuScore::reset()
 {
+	m_fPPv2 = 0.0f;
 	m_grade = OsuScore::GRADE::GRADE_N;
 	m_iScore = 0;
 	m_iCombo = 0;
 	m_iComboMax = 0;
 	m_fAccuracy = 1.0f;
+	m_fHitErrorAvgMin = 0.0f;
+	m_fHitErrorAvgMax = 0.0f;
 	m_fUnstableRate = 0.0f;
 	m_iNumMisses = 0;
 	m_iNumSliderBreaks = 0;
@@ -69,7 +72,7 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignor
 	}
 
 	// store the result, get hit value
-	int hitValue = 0;
+	unsigned long long hitValue = 0;
 	if (!hitErrorBarOnly)
 	{
 		m_hitresults.push_back(hit);
@@ -106,7 +109,7 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignor
 	if (sumDifficultyPoints > 24.0f)
 		difficultyMultiplier = 6;
 	if (!ignoreScore)
-		m_iScore += hitValue + (int)(hitValue * (scoreComboMultiplier * difficultyMultiplier * m_osu->getScoreMultiplier()) / 25);
+		m_iScore += hitValue + ((hitValue * (unsigned long long)((double)scoreComboMultiplier * (double)difficultyMultiplier * (double)m_osu->getScoreMultiplier())) / (unsigned long long)25);
 
 	const float totalHitPoints = m_iNum50s*(1.0f/6.0f)+ m_iNum100s*(2.0f/6.0f) + m_iNum300s;
 	const float totalNumHits = m_iNumMisses + m_iNum50s + m_iNum100s + m_iNum300s;
@@ -115,7 +118,7 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignor
 	const float percent50s = m_iNum50s / totalNumHits;
 
 	// recalculate accuracy
-	if ((totalHitPoints == 0.0f || totalNumHits == 0.0f) && m_hitresults.size() < 1)
+	if (((totalHitPoints == 0.0f || totalNumHits == 0.0f) && m_hitresults.size() < 1) || totalNumHits <= 0.0f)
 		m_fAccuracy = 1.0f;
 	else
 		m_fAccuracy = totalHitPoints / totalNumHits;
@@ -136,13 +139,33 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignor
 	// recalculate unstable rate
 	float averageDelta = 0.0f;
 	m_fUnstableRate = 0.0f;
+	m_fHitErrorAvgMin = 0.0f;
+	m_fHitErrorAvgMax = 0.0f;
 	if (m_hitdeltas.size() > 0)
 	{
+		int numPositives = 0;
+		int numNegatives = 0;
 		for (int i=0; i<m_hitdeltas.size(); i++)
 		{
 			averageDelta += (float)m_hitdeltas[i];
+
+			if (m_hitdeltas[i] > 0)
+			{
+				// positive
+				m_fHitErrorAvgMax += (float)m_hitdeltas[i];
+				numPositives++;
+			}
+			else
+			{
+				// negative
+				m_fHitErrorAvgMin += (float)m_hitdeltas[i];
+				numNegatives++;
+			}
 		}
 		averageDelta /= (float)m_hitdeltas.size();
+		m_fHitErrorAvgMin = (numNegatives > 0 ? m_fHitErrorAvgMin / (float)numNegatives : 0.0f);
+		m_fHitErrorAvgMax = (numPositives > 0 ? m_fHitErrorAvgMax / (float)numPositives : 0.0f);
+
 		for (int i=0; i<m_hitdeltas.size(); i++)
 		{
 			m_fUnstableRate += ((float)m_hitdeltas[i] - averageDelta)*((float)m_hitdeltas[i] - averageDelta);
@@ -157,6 +180,9 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignor
 	// recalculate max combo
 	if (m_iCombo > m_iComboMax)
 		m_iComboMax = m_iCombo;
+
+	// recalculate pp
+	///m_fPPv2 = beatmap->getSelectedDifficulty()->calculatePPv2()
 }
 
 void OsuScore::addSliderBreak()
@@ -167,5 +193,5 @@ void OsuScore::addSliderBreak()
 
 void OsuScore::addPoints(int points)
 {
-	m_iScore += points;
+	m_iScore += (unsigned long long)points;
 }

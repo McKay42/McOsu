@@ -17,8 +17,8 @@ class OsuBeatmapStandard;
 class OsuHitObject
 {
 public:
-	static void drawHitResult(Graphics *g, OsuBeatmapStandard *beatmap, Vector2 rawPos, OsuScore::HIT result, float animPercent);
-	static void drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiameter, float rawHitcircleDiameter, Vector2 rawPos, OsuScore::HIT result, float animPercent);
+	static void drawHitResult(Graphics *g, OsuBeatmapStandard *beatmap, Vector2 rawPos, OsuScore::HIT result, float animPercent, float defaultAnimPercent);
+	static void drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiameter, float rawHitcircleDiameter, Vector2 rawPos, OsuScore::HIT result, float animPercent, float defaultAnimPercent);
 
 public:
 	OsuHitObject(long time, int sampleType, int comboNumber, int colorCounter, OsuBeatmap *beatmap);
@@ -47,6 +47,7 @@ public:
 	inline int getStack() const {return m_iStack;}
 	inline int getComboNumber() const {return m_iComboNumber;}
 	inline long getAutopilotDelta() const {return m_iAutopilotDelta;}
+	inline unsigned long long getSortHack() const {return m_iSortHack;}
 
 	inline bool isVisible() const {return m_bVisible;}
 	inline bool isFinished() const {return m_bFinished;}
@@ -73,6 +74,7 @@ protected:
 	float m_fApproachScale;
 	float m_fFadeInScale;
 	long m_iDelta; // this must be signed
+	long m_iApproachTime;
 	long m_iFadeInTime; // extra time added before the approachTime to let the object smoothly become visible
 	long m_iObjectTime; // the duration an object is visible (excluding the exact moment in time where it has to be clicked and onwards, this also includes the extra fadeInTime)
 	long m_iObjectDuration; // how long this object takes to click (circle = 0, slider = sliderTime, spinner = spinnerTime etc.), the object will stay visible this long extra after m_iTime;
@@ -89,14 +91,22 @@ protected:
 	long m_iAutopilotDelta;
 
 private:
+	static unsigned long long sortHackCounter;
+
 	struct HITRESULTANIM
 	{
 		float anim;
+		float duration;
+		float defaultanim;
+		float defaultduration;
 		Vector2 rawPos;
 		OsuScore::HIT result;
+		long delta;
 	};
 
 	std::vector<HITRESULTANIM> m_hitResults;
+
+	unsigned long long m_iSortHack;
 };
 
 #endif
