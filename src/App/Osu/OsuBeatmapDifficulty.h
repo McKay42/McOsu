@@ -35,6 +35,8 @@ public:
 	void unloadBackgroundImage();
 	void loadBackgroundImagePath();
 
+	inline unsigned long long getSortHack() const {return m_iSortHack;}
+
 	struct HITCIRCLE
 	{
 		int x,y;
@@ -92,6 +94,7 @@ public:
 		int sampleType;
 		int sampleSet;
 		int volume;
+		unsigned long long sortHack;
 	};
 
 	bool loaded;
@@ -174,6 +177,8 @@ public:
 	static double calculateBaseStrain(double strain);
 
 private:
+	static unsigned long long sortHackCounter;
+
 	friend class BackgroundImagePathLoader;
 
 	// every supported type of beatmap/gamemode gets its own build function here. it should build the hitobject classes from the data loaded from disk.
@@ -194,6 +199,8 @@ private:
 	BackgroundImagePathLoader *m_backgroundImagePathLoader;
 
 	int m_iMaxCombo;
+
+	unsigned long long m_iSortHack;
 };
 
 #endif

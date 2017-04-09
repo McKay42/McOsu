@@ -326,6 +326,10 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Disable Mouse Wheel in Play Mode", convar->getConVarByName("osu_disable_mousewheel"));
 	addCheckbox("Disable Mouse Buttons in Play Mode", convar->getConVarByName("osu_disable_mousebuttons"));
 
+	addSubSection("Tablet");
+	addCheckbox("OS TabletPC Support", convar->getConVarByName("win_realtimestylus"));
+
+	addSpacer();
 	addSubSection("Keyboard");
 	addSubSection("Keys - osu! Standard Mode");
 	addButton("Left Click", &OsuKeyBindings::LEFT_CLICK)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );

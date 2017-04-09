@@ -72,7 +72,7 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignor
 	}
 
 	// store the result, get hit value
-	int hitValue = 0;
+	unsigned long long hitValue = 0;
 	if (!hitErrorBarOnly)
 	{
 		m_hitresults.push_back(hit);
@@ -109,7 +109,7 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignor
 	if (sumDifficultyPoints > 24.0f)
 		difficultyMultiplier = 6;
 	if (!ignoreScore)
-		m_iScore += hitValue + (int)(hitValue * (scoreComboMultiplier * difficultyMultiplier * m_osu->getScoreMultiplier()) / 25);
+		m_iScore += hitValue + ((hitValue * (unsigned long long)((double)scoreComboMultiplier * (double)difficultyMultiplier * (double)m_osu->getScoreMultiplier())) / (unsigned long long)25);
 
 	const float totalHitPoints = m_iNum50s*(1.0f/6.0f)+ m_iNum100s*(2.0f/6.0f) + m_iNum300s;
 	const float totalNumHits = m_iNumMisses + m_iNum50s + m_iNum100s + m_iNum300s;
@@ -118,7 +118,7 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignor
 	const float percent50s = m_iNum50s / totalNumHits;
 
 	// recalculate accuracy
-	if ((totalHitPoints == 0.0f || totalNumHits == 0.0f) && m_hitresults.size() < 1)
+	if (((totalHitPoints == 0.0f || totalNumHits == 0.0f) && m_hitresults.size() < 1) || totalNumHits <= 0.0f)
 		m_fAccuracy = 1.0f;
 	else
 		m_fAccuracy = totalHitPoints / totalNumHits;
@@ -193,5 +193,5 @@ void OsuScore::addSliderBreak()
 
 void OsuScore::addPoints(int points)
 {
-	m_iScore += points;
+	m_iScore += (unsigned long long)points;
 }

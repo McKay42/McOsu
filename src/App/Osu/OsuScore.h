@@ -58,7 +58,7 @@ public:
 	inline float getPPv2() {return m_fPPv2;}
 
 	inline GRADE getGrade() {return m_grade;}
-	inline int getScore() {return m_iScore;}
+	inline unsigned long long getScore() {return m_iScore;}
 	inline int getCombo() {return m_iCombo;}
 	inline int getComboMax() {return m_iComboMax;}
 	inline float getAccuracy() {return m_fAccuracy;}
@@ -83,7 +83,7 @@ private:
 
 	float m_fPPv2;
 
-	int m_iScore;
+	unsigned long long m_iScore;
 	int m_iCombo;
 	int m_iComboMax;
 	float m_fAccuracy;
