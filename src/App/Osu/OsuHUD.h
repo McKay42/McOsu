@@ -65,7 +65,7 @@ private:
 	void drawSkip(Graphics *g);
 	void drawWarningArrows(Graphics *g, float hitcircleDiameter = 0.0f);
 	void drawContinue(Graphics *g, Vector2 cursor, float hitcircleDiameter = 0.0f);
-	void drawHitErrorBar(Graphics *g, float hitWindow300, float hitWindow100, float hitWindow50);
+	void drawHitErrorBar(Graphics *g, float hitWindow300, float hitWindow100, float hitWindow50, float hitWindowMiss);
 	void drawProgressBar(Graphics *g, float percent, bool waiting);
 	void drawProgressBarVR(Graphics *g, Matrix4 &mvp, OsuVR *vr, float percent, bool waiting);
 	void drawStatistics(Graphics *g, int misses, int bpm, float ar, float cs, float od, int nps, int nd, int ur);
