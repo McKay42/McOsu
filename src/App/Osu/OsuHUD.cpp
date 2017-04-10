@@ -36,6 +36,8 @@ ConVar osu_cursor_trail_alpha("osu_cursor_trail_alpha", 1.0f);
 
 ConVar osu_hud_scale("osu_hud_scale", 1.0f);
 ConVar osu_hud_hiterrorbar_scale("osu_hud_hiterrorbar_scale", 1.0f);
+ConVar osu_hud_hiterrorbar_showmisswindow("osu_hud_hiterrorbar_showmisswindow", false);
+ConVar osu_hud_hiterrorbar_width_percent_with_misswindow("osu_hud_hiterrorbar_width_percent_with_misswindow", 0.55f);
 ConVar osu_hud_hiterrorbar_width_percent("osu_hud_hiterrorbar_width_percent", 0.15f);
 ConVar osu_hud_hiterrorbar_height_percent("osu_hud_hiterrorbar_height_percent", 0.007f);
 ConVar osu_hud_hiterrorbar_bar_width_scale("osu_hud_hiterrorbar_bar_width_scale", 0.6f);
@@ -989,14 +991,21 @@ void OsuHUD::drawHitErrorBar(Graphics *g, float hitWindow300, float hitWindow100
 	const Color color50 = COLOR(255, 255-brightnessSub, 165-brightnessSub, 0);
 	const Color colorMiss = COLOR(255, 255-brightnessSub, 0, 0);
 
-	const Vector2 size = Vector2(m_osu->getScreenWidth()*osu_hud_hiterrorbar_width_percent.getFloat(), m_osu->getScreenHeight()*osu_hud_hiterrorbar_height_percent.getFloat())*osu_hud_scale.getFloat()*osu_hud_hiterrorbar_scale.getFloat();
+	Vector2 size = Vector2(m_osu->getScreenWidth()*osu_hud_hiterrorbar_width_percent.getFloat(), m_osu->getScreenHeight()*osu_hud_hiterrorbar_height_percent.getFloat())*osu_hud_scale.getFloat()*osu_hud_hiterrorbar_scale.getFloat();
+	if (osu_hud_hiterrorbar_showmisswindow.getBool())
+	{
+		size = Vector2(m_osu->getScreenWidth()*osu_hud_hiterrorbar_width_percent_with_misswindow.getFloat(), m_osu->getScreenHeight()*osu_hud_hiterrorbar_height_percent.getFloat())*osu_hud_scale.getFloat()*osu_hud_hiterrorbar_scale.getFloat();
+	}
 	const Vector2 center = Vector2(m_osu->getScreenWidth()/2.0f, m_osu->getScreenHeight() - m_osu->getScreenHeight()*2.15f*osu_hud_hiterrorbar_height_percent.getFloat()*osu_hud_scale.getFloat()*osu_hud_hiterrorbar_scale.getFloat());
 
 	const float entryHeight = size.y*osu_hud_hiterrorbar_bar_height_scale.getFloat();
 	const float entryWidth = size.y*osu_hud_hiterrorbar_bar_width_scale.getFloat();
 
-	//const float totalHitWindowLength = hitWindowMiss; //400
-	const float totalHitWindowLength = hitWindow50;
+	float totalHitWindowLength  = hitWindow50;
+	if (osu_hud_hiterrorbar_showmisswindow.getBool())
+	{
+		totalHitWindowLength  = hitWindowMiss; //400
+	}
 	const float percent50 = hitWindow50 / totalHitWindowLength;
 	const float percent100 = hitWindow100 / totalHitWindowLength;
 	const float percent300 = hitWindow300 / totalHitWindowLength;
