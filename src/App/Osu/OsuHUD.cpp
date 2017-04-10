@@ -1011,8 +1011,11 @@ void OsuHUD::drawHitErrorBar(Graphics *g, float hitWindow300, float hitWindow100
 	const float percent300 = hitWindow300 / totalHitWindowLength;
 
 	// draw background bar with color indicators for 300s, 100s and 50s
-	g->setColor(colorMiss);
-	g->fillRect(center.x - size.x/2.0f, center.y - size.y/2.0f, size.x, size.y);
+	if (osu_hud_hiterrorbar_showmisswindow.getBool())
+	{
+		g->setColor(colorMiss);
+		g->fillRect(center.x - size.x/2.0f, center.y - size.y/2.0f, size.x, size.y);
+	}
 	if (!OsuGameRules::osu_mod_no100s.getBool() && !OsuGameRules::osu_mod_no50s.getBool())
 	{
 		g->setColor(color50);
