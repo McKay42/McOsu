@@ -36,6 +36,8 @@ ConVar osu_cursor_trail_alpha("osu_cursor_trail_alpha", 1.0f);
 
 ConVar osu_hud_scale("osu_hud_scale", 1.0f);
 ConVar osu_hud_hiterrorbar_scale("osu_hud_hiterrorbar_scale", 1.0f);
+ConVar osu_hud_hiterrorbar_showmisswindow("osu_hud_hiterrorbar_showmisswindow", false);
+ConVar osu_hud_hiterrorbar_width_percent_with_misswindow("osu_hud_hiterrorbar_width_percent_with_misswindow", 0.4f);
 ConVar osu_hud_hiterrorbar_width_percent("osu_hud_hiterrorbar_width_percent", 0.15f);
 ConVar osu_hud_hiterrorbar_height_percent("osu_hud_hiterrorbar_height_percent", 0.007f);
 ConVar osu_hud_hiterrorbar_bar_width_scale("osu_hud_hiterrorbar_bar_width_scale", 0.6f);
@@ -130,7 +132,7 @@ void OsuHUD::draw(Graphics *g)
 			drawHP(g, beatmap->getHealth());
 
 		if (osu_draw_hiterrorbar.getBool() && (beatmapStd == NULL || !beatmapStd->isSpinnerActive()))
-			drawHitErrorBar(g, OsuGameRules::getHitWindow300(beatmap), OsuGameRules::getHitWindow100(beatmap), OsuGameRules::getHitWindow50(beatmap));
+			drawHitErrorBar(g, OsuGameRules::getHitWindow300(beatmap), OsuGameRules::getHitWindow100(beatmap), OsuGameRules::getHitWindow50(beatmap), OsuGameRules::getHitWindowMiss(beatmap));
 
 		if (osu_draw_score.getBool())
 			drawScore(g, m_osu->getScore()->getScore());
@@ -275,7 +277,7 @@ void OsuHUD::drawDummy(Graphics *g)
 		drawAccuracy(g, 100.0f);
 
 	if (osu_draw_hiterrorbar.getBool())
-		drawHitErrorBar(g, 50, 100, 150);
+		drawHitErrorBar(g, 50, 100, 150, 400);
 }
 
 void OsuHUD::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
@@ -981,27 +983,45 @@ void OsuHUD::drawContinue(Graphics *g, Vector2 cursor, float hitcircleDiameter)
 	g->popTransform();
 }
 
-void OsuHUD::drawHitErrorBar(Graphics *g, float hitWindow300, float hitWindow100, float hitWindow50)
+void OsuHUD::drawHitErrorBar(Graphics *g, float hitWindow300, float hitWindow100, float hitWindow50, float hitWindowMiss)
 {
 	const int brightnessSub = 50;
 	const Color color300 = COLOR(255, 0, 255-brightnessSub, 255-brightnessSub);
 	const Color color100 = COLOR(255, 0, 255-brightnessSub, 0);
 	const Color color50 = COLOR(255, 255-brightnessSub, 165-brightnessSub, 0);
+	const Color colorMiss = COLOR(255, 255-brightnessSub, 0, 0);
 
-	const Vector2 size = Vector2(m_osu->getScreenWidth()*osu_hud_hiterrorbar_width_percent.getFloat(), m_osu->getScreenHeight()*osu_hud_hiterrorbar_height_percent.getFloat())*osu_hud_scale.getFloat()*osu_hud_hiterrorbar_scale.getFloat();
+	Vector2 size = Vector2(m_osu->getScreenWidth()*osu_hud_hiterrorbar_width_percent.getFloat(), m_osu->getScreenHeight()*osu_hud_hiterrorbar_height_percent.getFloat())*osu_hud_scale.getFloat()*osu_hud_hiterrorbar_scale.getFloat();
+	if (osu_hud_hiterrorbar_showmisswindow.getBool())
+	{
+		size = Vector2(m_osu->getScreenWidth()*osu_hud_hiterrorbar_width_percent_with_misswindow.getFloat(), m_osu->getScreenHeight()*osu_hud_hiterrorbar_height_percent.getFloat())*osu_hud_scale.getFloat()*osu_hud_hiterrorbar_scale.getFloat();
+	}
 	const Vector2 center = Vector2(m_osu->getScreenWidth()/2.0f, m_osu->getScreenHeight() - m_osu->getScreenHeight()*2.15f*osu_hud_hiterrorbar_height_percent.getFloat()*osu_hud_scale.getFloat()*osu_hud_hiterrorbar_scale.getFloat());
 
 	const float entryHeight = size.y*osu_hud_hiterrorbar_bar_height_scale.getFloat();
 	const float entryWidth = size.y*osu_hud_hiterrorbar_bar_width_scale.getFloat();
 
-	const float totalHitWindowLength = hitWindow50;
+	float totalHitWindowLength  = hitWindow50;
+	if (osu_hud_hiterrorbar_showmisswindow.getBool())
+	{
+		totalHitWindowLength  = hitWindowMiss; //400
+	}
+	const float percent50 = hitWindow50 / totalHitWindowLength;
 	const float percent100 = hitWindow100 / totalHitWindowLength;
 	const float percent300 = hitWindow300 / totalHitWindowLength;
 
 	// draw background bar with color indicators for 300s, 100s and 50s
-	g->setColor(color50);
-	g->fillRect(center.x - size.x/2.0f, center.y - size.y/2.0f, size.x, size.y);
-	if (!OsuGameRules::osu_mod_ming3012.getBool())
+	if (osu_hud_hiterrorbar_showmisswindow.getBool())
+	{
+		g->setColor(colorMiss);
+		g->fillRect(center.x - size.x/2.0f, center.y - size.y/2.0f, size.x, size.y);
+	}
+	if (!OsuGameRules::osu_mod_no100s.getBool() && !OsuGameRules::osu_mod_no50s.getBool())
+	{
+		g->setColor(color50);
+		g->fillRect(center.x - size.x*percent50/2.0f, center.y - size.y/2.0f, size.x*percent50, size.y);
+	}
+	if (!OsuGameRules::osu_mod_ming3012.getBool() && !OsuGameRules::osu_mod_no100s.getBool())
 	{
 		g->setColor(color100);
 		g->fillRect(center.x - size.x*percent100/2.0f, center.y - size.y/2.0f, size.x*percent100, size.y);
@@ -1017,7 +1037,7 @@ void OsuHUD::drawHitErrorBar(Graphics *g, float hitWindow300, float hitWindow100
 		alpha *= alpha;
 
 		if (m_hiterrors[i].miss || m_hiterrors[i].misaim)
-			g->setColor(0xffff0000);
+			g->setColor(colorMiss);
 		else
 		{
 			Color barColor = std::abs(percent) <= percent300 ? color300 : (std::abs(percent) <= percent100 && !OsuGameRules::osu_mod_ming3012.getBool() ? color100 : color50);

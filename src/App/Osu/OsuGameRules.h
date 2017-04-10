@@ -46,6 +46,8 @@ public:
 	//	Experimental Mods  //
 	//*********************//
 
+	static ConVar osu_mod_no50s;
+	static ConVar osu_mod_no100s;
 	static ConVar osu_mod_ming3012;
 	static ConVar osu_mod_millhioref;
 	static ConVar osu_mod_millhioref_multiplier;
@@ -212,7 +214,7 @@ public:
 
 		OsuScore::HIT result = OsuScore::HIT::HIT_NULL;
 
-		if (!osu_mod_ming3012.getBool())
+		if (!osu_mod_ming3012.getBool() && !osu_mod_no100s.getBool() && !osu_mod_no50s.getBool())
 		{
 			if (delta <= (long)getHitWindow300(beatmap))
 				result = OsuScore::HIT::HIT_300;
@@ -223,12 +225,28 @@ public:
 			else if (delta <= (long)getHitWindowMiss(beatmap))
 				result = OsuScore::HIT::HIT_MISS;
 		}
-		else
+		else if (osu_mod_ming3012.getBool())
 		{
 			if (delta <= (long)getHitWindow300(beatmap))
 				result = OsuScore::HIT::HIT_300;
 			else if (delta <= (long)getHitWindow50(beatmap))
 				result = OsuScore::HIT::HIT_50;
+			else if (delta <= (long)getHitWindowMiss(beatmap))
+				result = OsuScore::HIT::HIT_MISS;
+		}
+		else if (osu_mod_no100s.getBool())
+		{
+			if (delta <= (long)getHitWindow300(beatmap))
+				result = OsuScore::HIT::HIT_300;
+			else if (delta <= (long)getHitWindowMiss(beatmap))
+				result = OsuScore::HIT::HIT_MISS;
+		}
+		else if (osu_mod_no50s.getBool())
+		{
+			if (delta <= (long)getHitWindow300(beatmap))
+				result = OsuScore::HIT::HIT_300;
+			else if (delta <= (long)getHitWindow100(beatmap))
+				result = OsuScore::HIT::HIT_100;
 			else if (delta <= (long)getHitWindowMiss(beatmap))
 				result = OsuScore::HIT::HIT_MISS;
 		}
