@@ -36,7 +36,7 @@ ConVar osu_cursor_trail_alpha("osu_cursor_trail_alpha", 1.0f);
 
 ConVar osu_hud_scale("osu_hud_scale", 1.0f);
 ConVar osu_hud_hiterrorbar_scale("osu_hud_hiterrorbar_scale", 1.0f);
-ConVar osu_hud_hiterrorbar_width_percent("osu_hud_hiterrorbar_width_percent", 0.4f);
+ConVar osu_hud_hiterrorbar_width_percent("osu_hud_hiterrorbar_width_percent", 0.15f);
 ConVar osu_hud_hiterrorbar_height_percent("osu_hud_hiterrorbar_height_percent", 0.007f);
 ConVar osu_hud_hiterrorbar_bar_width_scale("osu_hud_hiterrorbar_bar_width_scale", 0.6f);
 ConVar osu_hud_hiterrorbar_bar_height_scale("osu_hud_hiterrorbar_bar_height_scale", 3.4f);
@@ -995,7 +995,8 @@ void OsuHUD::drawHitErrorBar(Graphics *g, float hitWindow300, float hitWindow100
 	const float entryHeight = size.y*osu_hud_hiterrorbar_bar_height_scale.getFloat();
 	const float entryWidth = size.y*osu_hud_hiterrorbar_bar_width_scale.getFloat();
 
-	const float totalHitWindowLength = hitWindowMiss; //400
+	//const float totalHitWindowLength = hitWindowMiss; //400
+	const float totalHitWindowLength = hitWindow50;
 	const float percent50 = hitWindow50 / totalHitWindowLength;
 	const float percent100 = hitWindow100 / totalHitWindowLength;
 	const float percent300 = hitWindow300 / totalHitWindowLength;
