@@ -436,9 +436,9 @@ void OsuSpinner::onHit()
 	OsuScore::HIT result = OsuScore::HIT::HIT_NULL;
 	if (m_fRatio >= 1.0f || m_beatmap->getOsu()->getModAuto())
 		result = OsuScore::HIT::HIT_300;
-	else if (m_fRatio >= 0.9f && !OsuGameRules::osu_mod_ming3012.getBool())
+	else if (m_fRatio >= 0.9f && !OsuGameRules::osu_mod_ming3012.getBool() && !OsuGameRules::osu_mod_no100s.getBool())
 		result = OsuScore::HIT::HIT_100;
-	else if (m_fRatio >= 0.75f)
+	else if (m_fRatio >= 0.75f && !OsuGameRules::osu_mod_no100s.getBool() && !OsuGameRules::osu_mod_no50s.getBool() )
 		result = OsuScore::HIT::HIT_50;
 	else
 		result = OsuScore::HIT::HIT_MISS;
