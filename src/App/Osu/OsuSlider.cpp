@@ -1064,9 +1064,9 @@ void OsuSlider::update(long curPos)
 
 				if (percent >= 0.999f && allow300)
 					m_endResult = OsuScore::HIT::HIT_300;
-				else if (percent >= 0.5f && allow100 && !OsuGameRules::osu_mod_ming3012.getBool())
+				else if (percent >= 0.5f && allow100 && !OsuGameRules::osu_mod_ming3012.getBool() && !OsuGameRules::osu_mod_no100s.getBool())
 					m_endResult = OsuScore::HIT::HIT_100;
-				else if (percent > 0.0f)
+				else if (percent > 0.0f && !OsuGameRules::osu_mod_no100s.getBool() && !OsuGameRules::osu_mod_no50s.getBool())
 					m_endResult = OsuScore::HIT::HIT_50;
 				else
 					m_endResult = OsuScore::HIT::HIT_MISS;
