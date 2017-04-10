@@ -220,10 +220,8 @@ void OsuSkinImage::update(bool useEngineTimeForAnimations, long curMusicPos)
 		// when playing a beatmap, objects start the animation at frame 0 exactly when they first become visible (this wouldn't work with the engine time method)
 		// therefore we need an offset parameter in the same time-space as the beatmap (m_iBeatmapTimeAnimationStartOffset), and we need the beatmap time (curMusicPos) as a relative base
 		// m_iBeatmapAnimationTimeStartOffset must be set by all hitobjects live while drawing (e.g. to their m_iTime-m_iObjectTime), since we don't have any animation state saved in the hitobjects!
-		m_iFrameCounter = (int)((curMusicPos - m_iBeatmapAnimationTimeStartOffset) / (long)(frameDurationInSeconds*1000.0f));
+		m_iFrameCounter = std::max((int)((curMusicPos - m_iBeatmapAnimationTimeStartOffset) / (long)(frameDurationInSeconds*1000.0f)), 0); // freeze animation on frame 0 on negative offsets
 		m_iFrameCounterUnclamped = m_iFrameCounter;
-		if (m_iFrameCounter < 0) // freeze animation on frame 0 on negative offsets
-			m_iFrameCounter = 0;
 		m_iFrameCounter = m_iFrameCounter % m_images.size(); // clamp and wrap around to the number of frames we have
 	}
 }
