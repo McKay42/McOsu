@@ -31,7 +31,8 @@ void OsuUISelectionButton::draw(Graphics *g)
 			g->pushTransform();
 
 				// scale
-				g->scale(m_vScale.x, m_vScale.y);
+				float scale = (float)m_vSize.y / (float)image->getHeight(); // HACKHACK: force scale
+				g->scale(scale, scale);
 
 				// rotate
 				if (m_fRot != 0.0f)

@@ -40,7 +40,22 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	*/
 
 	CHANGELOG alpha29Steam;
-	alpha29Steam.title = "28.8 (Steam VR Alpha, ?)";
+	alpha29Steam.title = "28.9 (Steam VR Alpha, ?)";
+	alpha29Steam.changes.push_back("- Added option \"Use skin's sound samples\", Options > Skin > Skin");
+	alpha29Steam.changes.push_back("- Added 2 tablet options, \"Ignore Sensitivity\" and \"Windows Ink Workaround\" for problematic tablets/drivers");
+	alpha29Steam.changes.push_back("- Fixed sample set number being used for setting the sample type (hitsounds)");
+	alpha29Steam.changes.push_back("- Fixed invisible selection-*.png skin images with 0 or very small size scaling the *-over.png way too big (Mods + Random)");
+	alpha29Steam.changes.push_back("");
+	alpha29Steam.changes.push_back("- Thanks to Francesco149 for letting me use his implementation of Tom94's pp algorithm! (https://github.com/Francesco149/oppai/)");
+	alpha29Steam.changes.push_back("- Added pp to ranking/results screen");
+	alpha29Steam.changes.push_back("- Added live pp counter to statistics overlay (Options > HUD > \"Draw Stats: pp\")");
+	alpha29Steam.changes.push_back("- Added new experimental mods \"Full Alternate\", \"No 50s\" and \"No 100s no 50s\" (thanks to Jason Foley for the last two, JTF195 on github)");
+	alpha29Steam.changes.push_back("- Clamped Speed/BPM override sliders to the minimum possible 0.05x multiplier (no more negative zero)");
+	alpha29Steam.changes.push_back("- Unclamped visual AR/CS/HP/OD values in mod selection screen (e.g. negative OD due to EZHT)");
+	alpha29Steam.changes.push_back("- Fixed Auto clicking circles too early directly after loading finished (at time 0)");
+	alpha29Steam.changes.push_back("- Fixed ALT+TAB and general focus loss while starting a beatmap causing it to stop with a D rank and 100% acc");
+	alpha29Steam.changes.push_back("- Fixed \"CursorCentre: 0\" skin.ini parameter not working as expected");
+	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("- Fixed performance optimization partially breaking 2B/Aspire beatmaps (invisible sliders)");
 	alpha29Steam.changes.push_back("- Fixed accuracy calculation dividing by zero if beatmap starts with a slider");
 	alpha29Steam.changes.push_back("- Fixed letterboxing and non-native resolutions not being consistent after restarting");

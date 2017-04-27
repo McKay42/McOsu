@@ -7,19 +7,29 @@
 
 #include "OsuScore.h"
 
+#include "Engine.h"
 #include "ConVar.h"
 
 #include "Osu.h"
 #include "OsuBeatmap.h"
+#include "OsuBeatmapStandard.h"
+#include "OsuBeatmapDifficulty.h"
 #include "OsuHUD.h"
 #include "OsuGameRules.h"
 
 ConVar osu_hiterrorbar_misses("osu_hiterrorbar_misses", true);
+ConVar osu_pp_live_type("osu_pp_live_type", 2.0f, "type of algorithm to use for live unfinished beatmap pp calculation: 0 = 'vanilla', 1 = 'fake' total acc interp, 2 = 'real' cut off beatmap at current point (default)");
+ConVar osu_debug_pp("osu_debug_pp", false);
+
+ConVar *OsuScore::m_osu_draw_statistics_pp = NULL;
 
 OsuScore::OsuScore(Osu *osu)
 {
 	m_osu = osu;
 	reset();
+
+	if (m_osu_draw_statistics_pp == NULL)
+		m_osu_draw_statistics_pp = convar->getConVarByName("osu_draw_statistics_pp");
 }
 
 void OsuScore::reset()
@@ -29,6 +39,7 @@ void OsuScore::reset()
 	m_iScore = 0;
 	m_iCombo = 0;
 	m_iComboMax = 0;
+	m_iComboFull = 0;
 	m_fAccuracy = 1.0f;
 	m_fHitErrorAvgMin = 0.0f;
 	m_fHitErrorAvgMax = 0.0f;
@@ -70,6 +81,10 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignor
 
 		m_iCombo = 0;
 	}
+
+	// keep track of the maximum possible combo at this time, for live pp calculation
+	if (!ignoreCombo)
+		m_iComboFull++;
 
 	// store the result, get hit value
 	unsigned long long hitValue = 0;
@@ -182,7 +197,51 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignor
 		m_iComboMax = m_iCombo;
 
 	// recalculate pp
-	///m_fPPv2 = beatmap->getSelectedDifficulty()->calculatePPv2()
+	if (m_osu_draw_statistics_pp->getBool()) // sanity + performance
+	{
+		OsuBeatmapStandard *standardPointer = dynamic_cast<OsuBeatmapStandard*>(beatmap);
+		if (standardPointer != NULL && beatmap->getSelectedDifficulty() != NULL)
+		{
+			double aimStars = standardPointer->getAimStars();
+			double speedStars = standardPointer->getSpeedStars();
+
+			int numHitObjects = standardPointer->getNumHitObjects();
+			int maxPossibleCombo = beatmap->getSelectedDifficulty()->getMaxCombo();
+			int numCircles = beatmap->getSelectedDifficulty()->hitcircles.size();
+
+			// three methods for calculating unfinished pp:
+
+			if (osu_pp_live_type.getInt() == 0)
+			{
+				// vanilla
+				m_fPPv2 = beatmap->getSelectedDifficulty()->calculatePPv2(m_osu, beatmap, aimStars, speedStars, numHitObjects, numCircles, maxPossibleCombo, m_iComboMax, m_iNumMisses, m_iNum300s, m_iNum100s, m_iNum50s);
+			}
+			else if (osu_pp_live_type.getInt() == 1)
+			{
+				// fake acc (acc grows with hits from 0 to max 1, similar to scorev2 score)
+				const double fakeTotalAccuracy = (double)totalHitPoints / (double)numHitObjects;
+				m_fPPv2 = beatmap->getSelectedDifficulty()->calculatePPv2Acc(m_osu, beatmap, aimStars, speedStars, fakeTotalAccuracy, numHitObjects, numCircles, maxPossibleCombo, m_iComboMax, m_iNumMisses);
+			}
+			else if (osu_pp_live_type.getInt() == 2)
+			{
+				// real (simulate beatmap being cut off after current hit, thus changing aimStars and speedStars on every hit)
+				int curHitobjectIndex = beatmap->getHitObjectIndexForCurrentTime(); // current index of last hitobject to just finish at this time (e.g. if the first OsuCircle just finished and called addHitResult(), this would be 0)
+				maxPossibleCombo = m_iComboFull; // current maximum possible combo at this time
+				numCircles = clamp<int>(beatmap->getNumCirclesForCurrentTime() + 1, 0, beatmap->getSelectedDifficulty()->hitcircles.size()); // current maximum number of circles at this time (+1 because of 1 frame delay in update())
+
+				///beatmap->getSelectedDifficulty()->calculateStarDiff(beatmap, &aimStars, &speedStars, curHitobjectIndex); // recalculating this live costs too much time
+				aimStars = beatmap->getSelectedDifficulty()->getAimStarsForUpToHitObjectIndex(curHitobjectIndex);
+				speedStars = beatmap->getSelectedDifficulty()->getSpeedStarsForUpToHitObjectIndex(curHitobjectIndex);
+
+				m_fPPv2 = beatmap->getSelectedDifficulty()->calculatePPv2(m_osu, beatmap, aimStars, speedStars, -1, numCircles, maxPossibleCombo, m_iComboMax, m_iNumMisses, m_iNum300s, m_iNum100s, m_iNum50s);
+
+				if (osu_debug_pp.getBool())
+					debugLog("pp = %f, aimstars = %f, speedstars = %f, curindex = %i, maxpossiblecombo = %i, numcircles = %i\n", m_fPPv2, aimStars, speedStars, curHitobjectIndex, maxPossibleCombo, numCircles);
+			}
+		}
+		else
+			m_fPPv2 = 0.0f;
+	}
 }
 
 void OsuScore::addSliderBreak()

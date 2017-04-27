@@ -22,6 +22,8 @@ class OsuBeatmapDifficulty
 {
 public:
 	static ConVar *m_osu_slider_scorev2;
+	static ConVar *m_osu_draw_statistics_pp;
+	static ConVar *m_osu_debug_pp;
 
 public:
 	OsuBeatmapDifficulty(Osu *osu, UString filepath, UString folder);
@@ -36,6 +38,7 @@ public:
 	void loadBackgroundImagePath();
 
 	inline unsigned long long getSortHack() const {return m_iSortHack;}
+	inline bool shouldBackgroundImageBeLoaded() const {return m_bShouldBackgroundImageBeLoaded;}
 
 	struct HITCIRCLE
 	{
@@ -148,6 +151,7 @@ public:
 	int ID;
 	int setID;
 
+	// timing (points) + breaks
 	struct TIMING_INFO
 	{
 		long offset;
@@ -161,7 +165,6 @@ public:
 	TIMING_INFO getTimingInfoForTime(unsigned long positionMS);
 	unsigned long getBreakDuration(unsigned long positionMS);
 
-	inline bool shouldBackgroundImageBeLoaded() const {return m_bShouldBackgroundImageBeLoaded;}
 	bool isInBreak(unsigned long positionMS);
 
 	// pp & star calculation
@@ -170,11 +173,34 @@ public:
 		SCORE_V1,
 		SCORE_V2
 	};
-	inline int getMaxCombo() {return m_iMaxCombo;}
-	double calculateStarDiff(OsuBeatmap *beatmap, double *aim, double *speed, double *rhythm_awkwardness);
-	double calculatePPv2(OsuBeatmap *beatmap, double aim, double speed, int combo = -1, int misses = 0, int c300 = -1, int c100 = 0, int c50 = 0/*, SCORE_VERSION scoreVersion = SCORE_VERSION::SCORE_V1*/);
+	enum class PP_HITOBJECT_TYPE : char
+	{
+		invalid = 0,
+		circle,
+		spinner,
+		slider,
+	};
+	struct PPHitObject
+	{
+		Vector2 pos;
+		long time = 0;
+		PP_HITOBJECT_TYPE type = PP_HITOBJECT_TYPE::invalid;
+		long end_time = 0; // for spinners and sliders
+		unsigned long long sortHack = 0;
+		//slider_data slider;
+	};
+	void rebuildStarCacheForUpToHitObjectIndex(OsuBeatmap *beatmap, std::atomic<bool> &kys, std::atomic<int> &progress);
+	std::vector<PPHitObject> generatePPHitObjectsForBeatmap(OsuBeatmap *beatmap);
+	static double calculateStarDiffForHitObjects(std::vector<PPHitObject> &hitObjects, float CS, double *aim, double *speed, int upToObjectIndex = -1);
+	double calculateStarDiff(OsuBeatmap *beatmap, double *aim, double *speed, int upToObjectIndex = -1);
+	static double calculatePPv2(Osu *osu, OsuBeatmap *beatmap, double aim, double speed, int numHitObjects, int numCircles, int maxPossibleCombo, int combo = -1, int misses = 0, int c300 = -1, int c100 = 0, int c50 = 0/*, SCORE_VERSION scoreVersion = SCORE_VERSION::SCORE_V1*/);
+	static double calculatePPv2Acc(Osu *osu, OsuBeatmap *beatmap, double aim, double speed, double acc, int numHitObjects, int numCircles, int maxPossibleCombo, int combo = -1, int misses = 0/*, SCORE_VERSION scoreVersion = SCORE_VERSION::SCORE_V1*/);
 	static double calculateAcc(int c300, int c100, int c50, int misses);
 	static double calculateBaseStrain(double strain);
+
+	inline int getMaxCombo() {return m_iMaxCombo;}
+	inline double getAimStarsForUpToHitObjectIndex(int upToHitObjectIndex) {return (m_aimStarsForNumHitObjects.size() > 0 ? m_aimStarsForNumHitObjects[clamp<int>(upToHitObjectIndex, 0, m_aimStarsForNumHitObjects.size()-1)] : 0);}
+	inline double getSpeedStarsForUpToHitObjectIndex(int upToHitObjectIndex) {return (m_speedStarsForNumHitObjects.size() > 0 ? m_speedStarsForNumHitObjects[clamp<int>(upToHitObjectIndex, 0, m_speedStarsForNumHitObjects.size()-1)] : 0);}
 
 private:
 	static unsigned long long sortHackCounter;
@@ -183,7 +209,10 @@ private:
 
 	// every supported type of beatmap/gamemode gets its own build function here. it should build the hitobject classes from the data loaded from disk.
 	void buildStandardHitObjects(OsuBeatmapStandard *beatmap, std::vector<OsuHitObject*> *hitobjects);
+	// void buildManiaHitObjects(OsuBeatmapMania *beatmap, std::vector<OsuHitObject*> *hitobjects);
+	// void buildTaikoHitObjects(OsuBeatmapTaiko *beatmap, std::vector<OsuHitObject*> *hitobjects);
 
+	// generic helper functions
 	float getSliderTimeForSlider(SLIDER *slider);
 	float getTimingPointMultiplierForSlider(SLIDER *slider); // needed for slider ticks
 
@@ -197,10 +226,12 @@ private:
 	// custom
 	bool m_bShouldBackgroundImageBeLoaded;
 	BackgroundImagePathLoader *m_backgroundImagePathLoader;
-
-	int m_iMaxCombo;
-
 	unsigned long long m_iSortHack;
+
+	// for pp & star calculation
+	int m_iMaxCombo;
+	std::vector<double> m_aimStarsForNumHitObjects;
+	std::vector<double> m_speedStarsForNumHitObjects;
 };
 
 #endif

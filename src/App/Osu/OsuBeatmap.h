@@ -29,7 +29,6 @@ public:
 	struct CLICK
 	{
 		long musicPos;
-		double realTime;
 	};
 
 public:
@@ -90,6 +89,8 @@ public:
 	float getSpeedMultiplier();
 	inline int getNPS() {return m_iNPS;}
 	inline int getND() {return m_iND;}
+	inline int getHitObjectIndexForCurrentTime() {return m_iCurrentHitObjectIndex;}
+	inline int getNumCirclesForCurrentTime() {return m_iCurrentNumCircles;}
 
 	// used by OsuHitObject children and OsuModSelector
 	inline Osu *getOsu() const {return m_osu;}
@@ -150,8 +151,8 @@ protected:
 	virtual void onBeforeLoad() {;} // called before hitobjects are loaded
 	virtual void onLoad() {;} // called after hitobjects have been loaded
 	virtual void onPlayStart() {;} // called when the player starts playing (everything has been loaded, including the music)
-	virtual void onBeforeStop() {;} // called before hitobjects are unloaded
-	virtual void onStop() {;} // called after hitobjects have been unloaded, but before Osu::onPlayEnd()
+	virtual void onBeforeStop(bool quit) {;} // called before hitobjects are unloaded (quit = don't display ranking screen)
+	virtual void onStop(bool quit) {;} // called after hitobjects have been unloaded, but before Osu::onPlayEnd() (quit = don't display ranking screen)
 	virtual void onPaused() {;}
 
 	bool canDraw();
@@ -211,6 +212,7 @@ protected:
 
 	bool m_bClick1Held;
 	bool m_bClick2Held;
+	bool m_bPrevKeyWasKey1;
 	std::vector<CLICK> m_clicks;
 	std::mutex m_clicksMutex;
 
@@ -221,6 +223,8 @@ protected:
 	// statistics
 	int m_iNPS;
 	int m_iND;
+	int m_iCurrentHitObjectIndex;
+	int m_iCurrentNumCircles;
 
 	// custom
 	int m_iPreviousFollowPointObjectIndex; // TODO: this shouldn't be in this class

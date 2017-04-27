@@ -57,7 +57,7 @@ void DUMMY_OSU_MODS(void) {;}
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 28.8f);
+ConVar osu_version("osu_version", 28.9f);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr");
 #else
@@ -243,7 +243,7 @@ Osu::Osu()
 	updateMods();
 
 	// load global resources
-	m_titleFont = engine->getResourceManager()->loadFont("SourceSansPro-Semibold.otf", "FONT_OSU_TITLE", 40.0f);
+	m_titleFont = engine->getResourceManager()->loadFont("SourceSansPro-Semibold.otf", "FONT_OSU_TITLE", 60.0f); // was 40
 	m_subTitleFont = engine->getResourceManager()->loadFont("SourceSansPro-Semibold.otf", "FONT_OSU_SUBTITLE", 21.0f);
 	m_songBrowserFont = engine->getResourceManager()->loadFont("SourceSansPro-Regular.otf", "FONT_OSU_SONGBROWSER", 35.0f);
 	m_songBrowserFontBold = engine->getResourceManager()->loadFont("SourceSansPro-Bold.otf", "FONT_OSU_SONGBROWSER_BOLD", 30.0f);
@@ -299,8 +299,8 @@ Osu::Osu()
 
 	/*
 	// DEBUG: immediately start diff of a beatmap
-	UString debugFolder = "c:/Program Files (x86)/osu!/Songs/415039 Arctic Monkeys - From the Ritz to the Rubble/";
-	UString debugDiffFileName = "Arctic Monkeys - From the Ritz to the Rubble (BOUYAAA) [Expert].osu";
+	UString debugFolder = "c:/Program Files (x86)/osu!/Songs/65853 Blue Stahli - Shotgun Senorita (Zardonic Remix)/";
+	UString debugDiffFileName = "Blue Stahli - Shotgun Senorita (Zardonic Remix) (Aleks719) [Insane].osu";
 	OsuBeatmap *debugBeatmap = new OsuBeatmapStandard(this);
 	UString beatmapPath = debugFolder;
 	beatmapPath.append(debugDiffFileName);
@@ -609,7 +609,7 @@ void Osu::update()
 	}
 
 	// handle mousewheel volume change
-	if ((m_songBrowser2 != NULL && (!m_songBrowser2->isVisible() || engine->getKeyboard()->isAltDown())) && !m_optionsMenu->isVisible() && !m_vrTutorial->isVisible() && !m_changelog->isVisible())
+	if ((m_songBrowser2 != NULL && (!m_songBrowser2->isVisible() || engine->getKeyboard()->isAltDown())) && !m_optionsMenu->isVisible() && !m_vrTutorial->isVisible() && !m_changelog->isVisible() && (!m_modSelector->isMouseInScrollView() || engine->getKeyboard()->isAltDown()))
 	{
 		if ((!(isInPlayMode() && !m_pauseMenu->isVisible()) && !m_rankingScreen->isVisible()) || (isInPlayMode() && !osu_disable_mousewheel.getBool()) || engine->getKeyboard()->isAltDown())
 		{
