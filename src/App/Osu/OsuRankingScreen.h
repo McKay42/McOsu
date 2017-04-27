@@ -43,6 +43,10 @@ private:
 
 	void setGrade(OsuScore::GRADE grade);
 
+	UString getPPString();
+	Vector2 getPPPosRaw();
+	Vector2 getPPPosCenterRaw();
+
 	CBaseUIContainer *m_container;
 	CBaseUIScrollView *m_rankings;
 
@@ -55,6 +59,9 @@ private:
 	float m_fUnstableRate;
 	float m_fHitErrorAvgMin;
 	float m_fHitErrorAvgMax;
+	float m_fPPv2;
+
+	Vector2 m_vPPCursorMagnetAnimation;
 };
 
 #endif

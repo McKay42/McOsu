@@ -202,7 +202,7 @@ void OsuDatabase::loadRaw()
 		{
 			if (i < m_rawBeatmapFolders.size())
 			{
-				if (m_rawLoadBeatmapFolders[i] == m_rawBeatmapFolders[i])
+				if (m_rawBeatmapFolders[i] == m_rawLoadBeatmapFolders[i])
 					continue;
 				else
 					toLoad.push_back(m_rawLoadBeatmapFolders[i]);

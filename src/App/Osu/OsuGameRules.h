@@ -123,7 +123,7 @@ public:
 	// 1200 ms -> AR 5
 	static float getApproachRateForSpeedMultiplier(OsuBeatmap *beatmap, float speedMultiplier)
 	{
-		return clamp<float>(mapDifficultyRangeInv((float)getApproachTime(beatmap) * (1.0f / speedMultiplier), getMinApproachTime(), getMidApproachTime(), getMaxApproachTime()), 0.0f, 12.5f);
+		return mapDifficultyRangeInv((float)getApproachTime(beatmap) * (1.0f / speedMultiplier), getMinApproachTime(), getMidApproachTime(), getMaxApproachTime());
 	}
 	static float getApproachRateForSpeedMultiplier(OsuBeatmap *beatmap) // respect all mods and overrides
 	{
@@ -131,17 +131,17 @@ public:
 	}
 	static float getRawApproachRateForSpeedMultiplier(OsuBeatmap *beatmap) // ignore AR override
 	{
-		return clamp<float>(mapDifficultyRangeInv((float)getRawApproachTime(beatmap) * (1.0f / beatmap->getOsu()->getSpeedMultiplier()), getMinApproachTime(), getMidApproachTime(), getMaxApproachTime()), 0.0f, 12.5f);
+		return mapDifficultyRangeInv((float)getRawApproachTime(beatmap) * (1.0f / beatmap->getOsu()->getSpeedMultiplier()), getMinApproachTime(), getMidApproachTime(), getMaxApproachTime());
 	}
 	static float getConstantApproachRateForSpeedMultiplier(OsuBeatmap *beatmap) // ignore AR override, keep AR consistent through speed changes
 	{
-		return clamp<float>(mapDifficultyRangeInv((float)getRawApproachTime(beatmap) * beatmap->getOsu()->getSpeedMultiplier(), getMinApproachTime(), getMidApproachTime(), getMaxApproachTime()), 0.0f, 12.5f);
+		return mapDifficultyRangeInv((float)getRawApproachTime(beatmap) * beatmap->getOsu()->getSpeedMultiplier(), getMinApproachTime(), getMidApproachTime(), getMaxApproachTime());
 	}
 
 	// 50 ms -> OD 5
 	static float getOverallDifficultyForSpeedMultiplier(OsuBeatmap *beatmap, float speedMultiplier) // respect all mods and overrides
 	{
-		return clamp<float>(mapDifficultyRangeInv((float)getHitWindow300(beatmap) * (1.0f / speedMultiplier), getMinHitWindow300(), getMidHitWindow300(), getMaxHitWindow300()), 0.0f, 12.5f);
+		return mapDifficultyRangeInv((float)getHitWindow300(beatmap) * (1.0f / speedMultiplier), getMinHitWindow300(), getMidHitWindow300(), getMaxHitWindow300());
 	}
 	static float getOverallDifficultyForSpeedMultiplier(OsuBeatmap *beatmap) // respect all mods and overrides
 	{
@@ -149,11 +149,11 @@ public:
 	}
 	static float getRawOverallDifficultyForSpeedMultiplier(OsuBeatmap *beatmap) // ignore OD override
 	{
-		return clamp<float>(mapDifficultyRangeInv((float)getRawHitWindow300(beatmap) * (1.0f / beatmap->getOsu()->getSpeedMultiplier()), getMinHitWindow300(), getMidHitWindow300(), getMaxHitWindow300()), 0.0f, 12.5f);
+		return mapDifficultyRangeInv((float)getRawHitWindow300(beatmap) * (1.0f / beatmap->getOsu()->getSpeedMultiplier()), getMinHitWindow300(), getMidHitWindow300(), getMaxHitWindow300());
 	}
 	static float getConstantOverallDifficultyForSpeedMultiplier(OsuBeatmap *beatmap) // ignore OD override, keep OD consistent through speed changes
 	{
-		return clamp<float>(mapDifficultyRangeInv((float)getRawHitWindow300(beatmap) * beatmap->getOsu()->getSpeedMultiplier(), getMinHitWindow300(), getMidHitWindow300(), getMaxHitWindow300()), 0.0f, 12.5f);
+		return mapDifficultyRangeInv((float)getRawHitWindow300(beatmap) * beatmap->getOsu()->getSpeedMultiplier(), getMinHitWindow300(), getMidHitWindow300(), getMaxHitWindow300());
 	}
 
 	static float getApproachTime(OsuBeatmap *beatmap)
