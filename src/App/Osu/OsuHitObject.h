@@ -30,6 +30,8 @@ public:
 	virtual void update(long curPos);
 
 	virtual void updateStackPosition(float stackOffset) = 0;
+	virtual int getCombo() {return 1;} // how much combo this hitobject is "worth"
+	virtual bool isCircle() {return false;} // HACKHACK:
 	void addHitResult(OsuScore::HIT result, long delta, Vector2 posRaw, float targetDelta = 0.0f, float targetAngle = 0.0f, bool ignoreOnHitErrorBar = false, bool ignoreCombo = false);
 	void misAimed() {m_bMisAim = true;}
 
