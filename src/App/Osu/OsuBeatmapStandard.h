@@ -10,10 +10,13 @@
 
 #include "OsuBeatmap.h"
 
+class StarCacheLoader;
+
 class OsuBeatmapStandard : public OsuBeatmap
 {
 public:
 	OsuBeatmapStandard(Osu *osu);
+	virtual ~OsuBeatmapStandard();
 
 	virtual void draw(Graphics *g);
 	virtual void drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr);
@@ -28,14 +31,17 @@ public:
 	Vector2 osuCoords2VRPixels(Vector2 coords); // this gets called by osuCoords2Pixels() during a VR draw(), for easier backwards compatibility
 	Vector2 osuCoords2LegacyPixels(Vector2 coords); // only applies vanilla osu mods and static mods to the coordinates (used for generating the static slider mesh) centered at (0, 0, 0)
 
+	// cursor
 	Vector2 getCursorPos();
 	Vector2 getFirstPersonCursorDelta();
 	inline Vector2 getContinueCursorPoint() {return m_vContinueCursorPoint;}
 
+	// playfield
 	inline Vector2 getPlayfieldSize() {return m_vPlayfieldSize;}
 	inline Vector2 getPlayfieldCenter() {return m_vPlayfieldCenter;}
 	inline float getPlayfieldRotation() const {return m_fPlayfieldRotation;}
 
+	// hitobjects
 	float getHitcircleDiameter(); // in actual scaled pixels to the current resolution
 	inline float getRawHitcircleDiameter() {return m_fRawHitcircleDiameter;} // in osu!pixels
 	inline float getNumberScale() {return m_fNumberScale;}
@@ -43,14 +49,23 @@ public:
 	inline float getSliderFollowCircleDiameter() {return m_fSliderFollowCircleDiameter;}
 	inline float getRawSliderFollowCircleDiameter() {return m_fRawSliderFollowCircleDiameter;}
 
+	// score
+	inline int getNumHitObjects() {return m_hitobjects.size();}
+	inline float getAimStars() {return m_fAimStars;}
+	inline float getSpeedStars() {return m_fSpeedStars;}
+
+	// hud
 	inline bool isSpinnerActive() {return m_bIsSpinnerActive;}
 
 private:
+	static ConVar *m_osu_draw_statistics_pp;
+	static ConVar *m_osu_pp_live_type;
+
 	virtual void onBeforeLoad();
 	virtual void onLoad();
 	virtual void onPlayStart();
-	virtual void onBeforeStop();
-	virtual void onStop();
+	virtual void onBeforeStop(bool quit);
+	virtual void onStop(bool quit);
 	virtual void onPaused();
 
 	void drawFollowPoints(Graphics *g);
@@ -61,6 +76,11 @@ private:
 	void updateSliderVertexBuffers();
 
 	void calculateStacks();
+
+	void updateStars(); // regular total stars (used for live pp type 0 and 1)
+	void updateStarCache(); // incremental stars (used for live pp type 2)
+	void stopStarCacheLoader();
+	bool isLoadingStarCache();
 
 	// beatmap
 	bool m_bIsSpinnerActive;
@@ -86,11 +106,19 @@ private:
 	Vector2 m_vAutoCursorPos;
 	int m_iAutoCursorDanceIndex;
 
-	// dynamic slider vertex buffer recalculation checks
+	// pp calculation buffer (only needs to be recalculated in onModUpdate(), instead of on every hit)
+	float m_fAimStars;
+	float m_fSpeedStars;
+	StarCacheLoader *m_starCacheLoader;
+	float m_fStarCacheTime;
+
+	// dynamic slider vertex buffer and other recalculation checks (for live mod switching)
 	float m_fPrevHitCircleDiameter;
 	bool m_bWasHorizontalMirrorEnabled;
 	bool m_bWasVerticalMirrorEnabled;
 	bool m_bWasEZEnabled;
+	float m_fPrevHitCircleDiameterForStarCache;
+	float m_fPrevSpeedForStarCache;
 
 	// custom
 	bool m_bIsPreLoading;

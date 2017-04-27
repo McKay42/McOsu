@@ -160,6 +160,9 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 {
 	m_osu = osu;
 
+	// convar callbacks
+	convar->getConVarByName("osu_skin_use_skin_hitsounds")->setCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onUseSkinsSoundSamplesChange) );
+
 	if (m_osu->isInVRMode())
 		OSU_CONFIG_FILE_NAME = "osuvr";
 	else
@@ -328,6 +331,8 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 
 	addSubSection("Tablet");
 	addCheckbox("OS TabletPC Support", convar->getConVarByName("win_realtimestylus"));
+	addCheckbox("Windows Ink Workaround", convar->getConVarByName("win_ink_workaround"));
+	addCheckbox("Ignore Sensitivity & Raw Input", convar->getConVarByName("tablet_sensitivity_ignore"));
 
 	addSpacer();
 	addSubSection("Keyboard");
@@ -383,6 +388,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSpacer();
 	addCheckbox("Ignore Beatmap Sample Volume", convar->getConVarByName("osu_ignore_beatmap_sample_volume"));
 	addCheckbox("Ignore Beatmap Combo Colors", convar->getConVarByName("osu_ignore_beatmap_combo_colors"));
+	addCheckbox("Use skin's sound samples", convar->getConVarByName("osu_skin_use_skin_hitsounds"));
 	addCheckbox("Load HD @2x", convar->getConVarByName("osu_skin_hd"));
 	addSpacer();
 	addCheckbox("Draw CursorTrail", convar->getConVarByName("osu_draw_cursor_trail"));
@@ -412,6 +418,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("FadeIn Background during Breaks", convar->getConVarByName("osu_background_fade_during_breaks"));
 	addCheckbox("Show Approach Circle on First \"Hidden\" Object", convar->getConVarByName("osu_show_approach_circle_on_first_hidden_object"));
 	addCheckbox("Note Blocking (Noob Protection)", convar->getConVarByName("osu_note_blocking"));
+	addCheckbox("Show pp on ranking screen", convar->getConVarByName("osu_rankingscreen_pp"));
 
 	addSubSection("HUD");
 	addCheckbox("Draw HUD", convar->getConVarByName("osu_draw_hud"));
@@ -422,14 +429,15 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Draw Miss Window on HitErrorBar", convar->getConVarByName("osu_hud_hiterrorbar_showmisswindow"));
 	addCheckbox("Draw Scrubbing Timeline", convar->getConVarByName("osu_draw_scrubbing_timeline"));
 	addSpacer();
-	addCheckbox("Draw Statistics: Misses", convar->getConVarByName("osu_draw_statistics_misses"));
-	addCheckbox("Draw Statistics: BPM", convar->getConVarByName("osu_draw_statistics_bpm"));
-	addCheckbox("Draw Statistics: AR", convar->getConVarByName("osu_draw_statistics_ar"));
-	addCheckbox("Draw Statistics: CS", convar->getConVarByName("osu_draw_statistics_cs"));
-	addCheckbox("Draw Statistics: OD", convar->getConVarByName("osu_draw_statistics_od"));
-	addCheckbox("Draw Statistics: Notes Per Second", convar->getConVarByName("osu_draw_statistics_nps"));
-	addCheckbox("Draw Statistics: Note Density", convar->getConVarByName("osu_draw_statistics_nd"));
-	addCheckbox("Draw Statistics: Unstable Rate", convar->getConVarByName("osu_draw_statistics_ur"));
+	addCheckbox("Draw Stats: pp (Performance Points)", convar->getConVarByName("osu_draw_statistics_pp"));
+	addCheckbox("Draw Stats: Misses", convar->getConVarByName("osu_draw_statistics_misses"));
+	addCheckbox("Draw Stats: BPM", convar->getConVarByName("osu_draw_statistics_bpm"));
+	addCheckbox("Draw Stats: AR", convar->getConVarByName("osu_draw_statistics_ar"));
+	addCheckbox("Draw Stats: CS", convar->getConVarByName("osu_draw_statistics_cs"));
+	addCheckbox("Draw Stats: OD", convar->getConVarByName("osu_draw_statistics_od"));
+	addCheckbox("Draw Stats: Notes Per Second", convar->getConVarByName("osu_draw_statistics_nps"));
+	addCheckbox("Draw Stats: Note Density", convar->getConVarByName("osu_draw_statistics_nd"));
+	addCheckbox("Draw Stats: Unstable Rate", convar->getConVarByName("osu_draw_statistics_ur"));
 	addSpacer();
 	m_hudSizeSlider = addSlider("HUD Scale:", 0.1f, 3.0f, convar->getConVarByName("osu_hud_scale"), 165.0f);
 	m_hudSizeSlider->setKeyDelta(0.1f);
@@ -1227,6 +1235,11 @@ void OsuOptionsMenu::onSliderChangeVRAntiAliasing(CBaseUISlider *slider)
 			}
 		}
 	}
+}
+
+void OsuOptionsMenu::onUseSkinsSoundSamplesChange(UString oldValue, UString newValue)
+{
+	m_osu->reloadSkin();
 }
 
 void OsuOptionsMenu::addSpacer()

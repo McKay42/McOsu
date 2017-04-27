@@ -17,6 +17,7 @@ class OsuBeatmapDifficulty;
 
 class CBaseUIElement;
 class CBaseUIContainer;
+class CBaseUIScrollView;
 class CBaseUIButton;
 class CBaseUILabel;
 class CBaseUISlider;
@@ -48,6 +49,7 @@ public:
 
 	bool isInCompactMode();
 	bool isCSOverrideSliderActive();
+	bool isMouseInScrollView();
 
 	void updateModConVar();
 	void updateOverrideSliders();
@@ -69,6 +71,8 @@ private:
 
 	void updateButtons();
 	void updateLayout();
+
+	void updateExperimentalLayout();
 
 	OsuUIModSelectorModButton *setModButtonOnGrid(int x, int y, int state, UString modName, UString tooltipText, OsuSkinImage *img);
 	OsuUIModSelectorModButton *getModButtonOnGrid(int x, int y);
@@ -95,11 +99,12 @@ private:
 	bool m_bExperimentalVisible;
 	CBaseUIContainer *m_container;
 	CBaseUIContainer *m_overrideSliderContainer;
-	CBaseUIContainer *m_experimentalContainer;
+	CBaseUIScrollView *m_experimentalContainer;
 
 	bool m_bWaitForF1KeyUp;
 
 	bool m_bWaitForCSChangeFinished;
+	bool m_bWaitForSpeedChangeFinished;
 
 	// override sliders
 	std::vector<OVERRIDE_SLIDER> m_overrideSliders;

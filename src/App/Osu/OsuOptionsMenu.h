@@ -83,6 +83,8 @@ private:
 	void onSliderChangeVRSuperSampling(CBaseUISlider *slider);
 	void onSliderChangeVRAntiAliasing(CBaseUISlider *slider);
 
+	void onUseSkinsSoundSamplesChange(UString oldValue, UString newValue);
+
 	struct OPTIONS_ELEMENT
 	{
 		std::vector<CBaseUIElement*> elements;

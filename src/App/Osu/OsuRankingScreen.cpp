@@ -12,6 +12,8 @@
 #include "SoundEngine.h"
 #include "ConVar.h"
 #include "Keyboard.h"
+#include "AnimationHandler.h"
+#include "Mouse.h"
 
 #include "CBaseUIContainer.h"
 #include "CBaseUIScrollView.h"
@@ -30,6 +32,7 @@
 #include "OsuUIRankingScreenRankingPanel.h"
 
 ConVar osu_rankingscreen_topbar_height_percent("osu_rankingscreen_topbar_height_percent", 0.785f);
+ConVar osu_rankingscreen_pp("osu_rankingscreen_pp", true);
 
 OsuRankingScreen::OsuRankingScreen(Osu *osu) : OsuScreenBackable(osu)
 {
@@ -64,6 +67,7 @@ OsuRankingScreen::OsuRankingScreen(Osu *osu) : OsuScreenBackable(osu)
 	m_fUnstableRate = 0.0f;
 	m_fHitErrorAvgMin = 0.0f;
 	m_fHitErrorAvgMax = 0.0f;
+	m_fPPv2 = 0.0f;
 }
 
 OsuRankingScreen::~OsuRankingScreen()
@@ -113,6 +117,21 @@ void OsuRankingScreen::draw(Graphics *g)
 	if (m_osu->getModAuto())
 		drawModImage(g, m_osu->getSkin()->getSelectionModAutoplay(), modPos);
 
+	// draw pp
+	if (osu_rankingscreen_pp.getBool())
+	{
+		UString ppString = getPPString();
+		Vector2 ppPos = getPPPosRaw() + m_vPPCursorMagnetAnimation;
+		g->pushTransform();
+		g->translate((int)ppPos.x + 2, (int)ppPos.y + 2);
+		g->setColor(0xff000000);
+		g->drawString(m_osu->getTitleFont(), ppString);
+		g->translate(-2, -2);
+		g->setColor(0xffffffff);
+		g->drawString(m_osu->getTitleFont(), ppString);
+		g->popTransform();
+	}
+
 	// draw top black bar
 	g->setColor(0xff000000);
 	g->fillRect(0, 0, m_osu->getScreenWidth(), m_rankingTitle->getSize().y*osu_rankingscreen_topbar_height_percent.getFloat());
@@ -138,15 +157,35 @@ void OsuRankingScreen::update()
 
 	m_container->update();
 
-	// unstable rate tooltip
+	// tooltip (pp + accuracy + unstable rate)
 	if (m_rankingPanel->isMouseInside())
 	{
 		m_osu->getTooltipOverlay()->begin();
+		m_osu->getTooltipOverlay()->addLine(UString::format("%.2fpp", m_fPPv2));
 		m_osu->getTooltipOverlay()->addLine("Accuracy:");
 		m_osu->getTooltipOverlay()->addLine(UString::format("Error: %.2fms - %.2fms avg", m_fHitErrorAvgMin, m_fHitErrorAvgMax));
 		m_osu->getTooltipOverlay()->addLine(UString::format("Unstable Rate: %.2f", m_fUnstableRate));
 		m_osu->getTooltipOverlay()->end();
 	}
+
+	// frustration multiplier
+	Vector2 cursorDelta = getPPPosCenterRaw() - engine->getMouse()->getPos();
+	Vector2 norm;
+	const float dist = 150.0f;
+	if (cursorDelta.length() > dist)
+	{
+		cursorDelta.x = 0;
+		cursorDelta.y = 0;
+	}
+	else
+	{
+		norm = cursorDelta;
+		norm.normalize();
+	}
+	float percent = 1.0f - (cursorDelta.length() / dist);
+	Vector2 target = norm*percent*percent*(dist + 50);
+	anim->moveQuadOut(&m_vPPCursorMagnetAnimation.x, target.x, 0.20f, true);
+	anim->moveQuadOut(&m_vPPCursorMagnetAnimation.y, target.y, 0.20f, true);
 }
 
 void OsuRankingScreen::setVisible(bool visible)
@@ -167,6 +206,7 @@ void OsuRankingScreen::setScore(OsuScore *score)
 	m_fUnstableRate = score->getUnstableRate();
 	m_fHitErrorAvgMin = score->getHitErrorAvgMin();
 	m_fHitErrorAvgMax = score->getHitErrorAvgMax();
+	m_fPPv2 = score->getPPv2();
 }
 
 void OsuRankingScreen::setBeatmapInfo(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff)
@@ -256,4 +296,21 @@ void OsuRankingScreen::setGrade(OsuScore::GRADE grade)
 	m_rankingGrade->setScale(Osu::getImageScale(m_osu, hardcodedOsuRankingGradeImageSize, 230.0f), Osu::getImageScale(m_osu, hardcodedOsuRankingGradeImageSize, 230.0f));
 	m_rankingGrade->setSize(m_rankingGrade->getImage()->getWidth()*m_rankingGrade->getScale().x, m_rankingGrade->getImage()->getHeight()*m_rankingGrade->getScale().y);
 	m_rankingGrade->setRelPos(m_rankings->getSize().x - m_rankingGrade->getSize().x - m_osu->getUIScale(m_osu, 5), m_rankingPanel->getRelPos().y + m_osu->getUIScale(m_osu, 5));
+}
+
+UString OsuRankingScreen::getPPString()
+{
+	return UString::format("%ipp", (int)(m_fPPv2));
+}
+
+Vector2 OsuRankingScreen::getPPPosRaw()
+{
+	UString ppString = getPPString();
+	float ppStringWidth = m_osu->getTitleFont()->getStringWidth(ppString);
+	return m_rankingGrade->getPos() + Vector2(m_rankingGrade->getSize().x/2 - ppStringWidth/2, m_rankingGrade->getSize().y + m_osu->getTitleFont()->getHeight() + 25);
+}
+
+Vector2 OsuRankingScreen::getPPPosCenterRaw()
+{
+	return m_rankingGrade->getPos() + Vector2(m_rankingGrade->getSize().x/2, m_rankingGrade->getSize().y + m_osu->getTitleFont()->getHeight()/2 + 25);
 }
