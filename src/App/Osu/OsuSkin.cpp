@@ -32,6 +32,7 @@ ConVar osu_skin_hd("osu_skin_hd", true);
 ConVar osu_skin_load_async("osu_skin_load_async", false, "VERY experimental, changing skins too quickly will crash the engine (due to known behaviour)");
 ConVar osu_skin_color_index_add("osu_skin_color_index_add", 0);
 ConVar osu_skin_animation_force("osu_skin_animation_force", false);
+ConVar osu_skin_use_skin_hitsounds("osu_skin_use_skin_hitsounds", true, "If enabled: Use skin's sound samples. If disabled: Use default skin's sound samples. For hitsounds only.");
 
 ConVar osu_ignore_beatmap_combo_colors("osu_ignore_beatmap_combo_colors", false);
 ConVar osu_ignore_beatmap_sample_volume("osu_ignore_beatmap_sample_volume", false);
@@ -392,7 +393,7 @@ void OsuSkin::load()
 
 	checkLoadImage(&m_sliderGradient, "slidergradient", "OSU_SKIN_SLIDERGRADIENT");
 	m_sliderb = createOsuSkinImage("sliderb", Vector2(128, 128), 64, "");
-	m_sliderb->setAnimationFramerate(45.0f);
+	m_sliderb->setAnimationFramerate(/*45.0f*/ 50.0f);
 	checkLoadImage(&m_sliderScorePoint, "sliderscorepoint", "OSU_SKIN_SLIDERSCOREPOINT");
 	m_sliderFollowCircle2 = createOsuSkinImage("sliderfollowcircle", Vector2(259, 259), 64);
 	checkLoadImage(&m_sliderStartCircle, "sliderstartcircle", "OSU_SKIN_SLIDERSTARTCIRCLE");
@@ -951,6 +952,7 @@ void OsuSkin::checkLoadSound(Sound **addressOfPointer, UString skinElementName, 
 		return;
 
 	// load default
+
 	UString defaultpath1 = UString("./materials/");
 	defaultpath1.append(OSUSKIN_DEFAULT_SKIN_PATH);
 	defaultpath1.append(skinElementName);
@@ -978,27 +980,30 @@ void OsuSkin::checkLoadSound(Sound **addressOfPointer, UString skinElementName, 
 
 	// and then the actual specified skin
 
-	// check if mp3 or wav exist
-	UString filepath1 = m_sFilePath;
-	filepath1.append(skinElementName);
-	filepath1.append(".wav");
-
-	UString filepath2 = m_sFilePath;
-	filepath2.append(skinElementName);
-	filepath2.append(".mp3");
-
-	// load it
-	if (env->fileExists(filepath1))
+	if (!isSample || osu_skin_use_skin_hitsounds.getBool())
 	{
-		if (osu_skin_load_async.getBool())
-			engine->getResourceManager()->requestNextLoadAsync();
-		*addressOfPointer = engine->getResourceManager()->loadSoundAbs(filepath1, resourceName, false, false, loop);
-	}
-	else if (env->fileExists(filepath2))
-	{
-		if (osu_skin_load_async.getBool())
-			engine->getResourceManager()->requestNextLoadAsync();
-		*addressOfPointer = engine->getResourceManager()->loadSoundAbs(filepath2, resourceName, false, false, loop);
+		// check if mp3 or wav exist
+		UString filepath1 = m_sFilePath;
+		filepath1.append(skinElementName);
+		filepath1.append(".wav");
+
+		UString filepath2 = m_sFilePath;
+		filepath2.append(skinElementName);
+		filepath2.append(".mp3");
+
+		// load it
+		if (env->fileExists(filepath1))
+		{
+			if (osu_skin_load_async.getBool())
+				engine->getResourceManager()->requestNextLoadAsync();
+			*addressOfPointer = engine->getResourceManager()->loadSoundAbs(filepath1, resourceName, false, false, loop);
+		}
+		else if (env->fileExists(filepath2))
+		{
+			if (osu_skin_load_async.getBool())
+				engine->getResourceManager()->requestNextLoadAsync();
+			*addressOfPointer = engine->getResourceManager()->loadSoundAbs(filepath2, resourceName, false, false, loop);
+		}
 	}
 
 	if ((*addressOfPointer) != NULL)

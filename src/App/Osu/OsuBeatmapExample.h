@@ -26,8 +26,8 @@ private:
 	virtual void onBeforeLoad();
 	virtual void onLoad();
 	virtual void onPlayStart();
-	virtual void onBeforeStop();
-	virtual void onStop();
+	virtual void onBeforeStop(bool quit);
+	virtual void onStop(bool quit);
 	virtual void onPaused();
 
 	bool m_bFakeExtraLoading;

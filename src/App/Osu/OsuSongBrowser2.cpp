@@ -26,6 +26,7 @@
 #include "Osu.h"
 #include "OsuHUD.h"
 #include "OsuSkin.h"
+#include "OsuSkinImage.h"
 #include "OsuBeatmap.h"
 #include "OsuBeatmapDifficulty.h"
 #include "OsuNotificationOverlay.h"
@@ -429,8 +430,8 @@ void OsuSongBrowser2::draw(Graphics *g)
 		g->setColor(0xffffffff);
 		UString loadingMessage = UString::format("Loading beatmaps ... (%i %%)", (int)(m_db->getProgress()*100.0f));
 		g->pushTransform();
-		g->translate(m_osu->getScreenWidth()/2 - m_osu->getTitleFont()->getStringWidth(loadingMessage)/2, m_osu->getScreenHeight() - 15);
-		g->drawString(m_osu->getTitleFont(), loadingMessage);
+		g->translate((int)(m_osu->getScreenWidth()/2 - m_osu->getSubTitleFont()->getStringWidth(loadingMessage)/2), m_osu->getScreenHeight() - 15);
+		g->drawString(m_osu->getSubTitleFont(), loadingMessage);
 		g->popTransform();
 
 		m_osu->getHUD()->drawBeatmapImportSpinner(g);

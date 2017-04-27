@@ -100,13 +100,13 @@ void OsuBeatmapExample::onPlayStart()
 	debugLog("OsuBeatmapExample::onPlayStart()\n");
 }
 
-void OsuBeatmapExample::onBeforeStop()
+void OsuBeatmapExample::onBeforeStop(bool quit)
 {
 	// called before unloading all hitobjects, when the player stops playing
 	debugLog("OsuBeatmapExample::onBeforeStop()\n");
 }
 
-void OsuBeatmapExample::onStop()
+void OsuBeatmapExample::onStop(bool quit)
 {
 	// called after unloading all hitobjects, when the player stops playing this beatmap and returns to the songbrowser
 	debugLog("OsuBeatmapExample::onStop()\n");

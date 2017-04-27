@@ -38,7 +38,8 @@ public:
 	virtual void drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr);
 	virtual void update(long curPos);
 
-	void updateStackPosition(float stackOffset);
+	virtual void updateStackPosition(float stackOffset);
+	virtual int getCombo() {return 2 + std::max((m_iRepeat - 1), 0) + (std::max((m_iRepeat - 1), 0)+1)*m_ticks.size();}
 
 	Vector2 getRawPosAt(long pos);
 	Vector2 getOriginalRawPosAt(long pos);

@@ -41,6 +41,8 @@ public:
 	virtual void drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr);
 	virtual void update(long curPos);
 
+	virtual bool isCircle() {return true;}
+
 	void updateStackPosition(float stackOffset);
 
 	Vector2 getRawPosAt(long pos) {return m_vRawPos;}
