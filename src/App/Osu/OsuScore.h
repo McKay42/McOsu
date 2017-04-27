@@ -10,6 +10,8 @@
 
 #include "cbase.h"
 
+class ConVar;
+
 class Osu;
 class OsuBeatmap;
 
@@ -55,25 +57,29 @@ public:
 	void addSliderBreak(); // only OsuBeatmap may call this function!
 	void addPoints(int points);
 
-	inline float getPPv2() {return m_fPPv2;}
+	void setPPv2(float ppv2) {m_fPPv2 = ppv2;}
 
-	inline GRADE getGrade() {return m_grade;}
-	inline unsigned long long getScore() {return m_iScore;}
-	inline int getCombo() {return m_iCombo;}
-	inline int getComboMax() {return m_iComboMax;}
-	inline float getAccuracy() {return m_fAccuracy;}
-	inline float getUnstableRate() {return m_fUnstableRate;}
-	inline float getHitErrorAvgMin() {return m_fHitErrorAvgMin;}
-	inline float getHitErrorAvgMax() {return m_fHitErrorAvgMax;}
-	inline int getNumMisses() {return m_iNumMisses;}
-	inline int getNumSliderBreaks() {return m_iNumSliderBreaks;}
-	inline int getNum50s() {return m_iNum50s;}
-	inline int getNum100s() {return m_iNum100s;}
-	inline int getNum100ks() {return m_iNum100ks;}
-	inline int getNum300s() {return m_iNum300s;}
-	inline int getNum300gs() {return m_iNum300gs;}
+	inline float getPPv2() const {return m_fPPv2;}
+
+	inline GRADE getGrade() const {return m_grade;}
+	inline unsigned long long getScore() const {return m_iScore;}
+	inline int getCombo() const {return m_iCombo;}
+	inline int getComboMax() const {return m_iComboMax;}
+	inline float getAccuracy() const {return m_fAccuracy;}
+	inline float getUnstableRate() const {return m_fUnstableRate;}
+	inline float getHitErrorAvgMin() const {return m_fHitErrorAvgMin;}
+	inline float getHitErrorAvgMax() const {return m_fHitErrorAvgMax;}
+	inline int getNumMisses() const {return m_iNumMisses;}
+	inline int getNumSliderBreaks() const {return m_iNumSliderBreaks;}
+	inline int getNum50s() const {return m_iNum50s;}
+	inline int getNum100s() const {return m_iNum100s;}
+	inline int getNum100ks() const {return m_iNum100ks;}
+	inline int getNum300s() const {return m_iNum300s;}
+	inline int getNum300gs() const {return m_iNum300gs;}
 
 private:
+	static ConVar *m_osu_draw_statistics_pp;
+
 	Osu *m_osu;
 
 	std::vector<HIT> m_hitresults;
@@ -86,6 +92,7 @@ private:
 	unsigned long long m_iScore;
 	int m_iCombo;
 	int m_iComboMax;
+	int m_iComboFull;
 	float m_fAccuracy;
 	float m_fHitErrorAvgMin;
 	float m_fHitErrorAvgMax;

@@ -30,6 +30,7 @@
 #include "OsuBeatmapDifficulty.h"
 
 #include "OsuHitObject.h"
+#include "OsuCircle.h"
 #include "OsuSlider.h"
 
 ConVar osu_pvs("osu_pvs", true, "optimizes all loops over all hitobjects by clamping the range to the Potentially Visible Set");
@@ -38,6 +39,7 @@ ConVar osu_vr_draw_desktop_playfield("osu_vr_draw_desktop_playfield", true);
 
 ConVar osu_global_offset("osu_global_offset", 0.0f);
 ConVar osu_interpolate_music_pos("osu_interpolate_music_pos", true, "Interpolate song position with engine time if the audio library reports the same position more than once");
+ConVar osu_compensate_music_speed("osu_compensate_music_speed", true, "compensates speeds slower than 1x a little bit, by adding an offset depending on the slowness");
 ConVar osu_combobreak_sound_combo("osu_combobreak_sound_combo", 20, "Only play the combobreak sound if the combo is higher than this");
 
 ConVar osu_ar_override("osu_ar_override", -1.0f);
@@ -65,6 +67,7 @@ ConVar osu_mod_artimewarp_multiplier("osu_mod_artimewarp_multiplier", 0.5f);
 ConVar osu_mod_arwobble("osu_mod_arwobble", false);
 ConVar osu_mod_arwobble_strength("osu_mod_arwobble_strength", 1.0f);
 ConVar osu_mod_arwobble_interval("osu_mod_arwobble_interval", 7.0f);
+ConVar osu_mod_fullalternate("osu_mod_fullalternate", false);
 
 ConVar osu_early_note_time("osu_early_note_time", 1000.0f, "Timeframe in ms at the beginning of a beatmap which triggers a starting delay for easier reading");
 ConVar osu_skip_time("osu_skip_time", 5000.0f, "Timeframe in ms within a beatmap which allows skipping if it doesn't contain any hitobjects");
@@ -134,9 +137,12 @@ OsuBeatmap::OsuBeatmap(Osu *osu)
 
 	m_bClick1Held = false;
 	m_bClick2Held = false;
+	m_bPrevKeyWasKey1 = false;
 
 	m_iNPS = 0;
 	m_iND = 0;
+	m_iCurrentHitObjectIndex = 0;
+	m_iCurrentNumCircles = 0;
 
 	m_iPreviousFollowPointObjectIndex = -1;
 }
@@ -229,13 +235,16 @@ void OsuBeatmap::update()
 
 	if (m_bContinueScheduled)
 	{
-		if (m_bClick1Held || m_bClick2Held)
+		bool isEarlyNoteContinue = (!m_bIsPaused && m_bIsWaiting); // if we paused while m_bIsWaiting (green progressbar), then we have to let the 'if (m_bIsWaiting)' block handle the sound play() call
+		if (m_bClick1Held || m_bClick2Held || isEarlyNoteContinue)
 		{
 			m_bContinueScheduled = false;
-
-			engine->getSound()->play(m_music);
-			m_bIsPlaying = true;
 			m_bIsPaused = false;
+
+			if (!isEarlyNoteContinue)
+				engine->getSound()->play(m_music);
+
+			m_bIsPlaying = true; // usually this should be checked with the result of the above play() call, but since we are continuing we can assume that everything works
 
 			// for nightmare mod, to avoid a miss because of the continue click
 			{
@@ -271,7 +280,7 @@ void OsuBeatmap::update()
 
 	// HACKHACK: clean this mess up
 	// waiting to start (file loading, retry)
-	// INFO: this is dependent on being here AFTER m_iCurMusicPos has been set above, because it modifies it to fake a negative start (else everything would just freeze for the waiting period)
+	// NOTE: this is dependent on being here AFTER m_iCurMusicPos has been set above, because it modifies it to fake a negative start (else everything would just freeze for the waiting period)
 	if (m_bIsWaiting)
 	{
 		if (isLoading())
@@ -289,37 +298,38 @@ void OsuBeatmap::update()
 		{
 			if (engine->getTimeReal() > m_fWaitTime)
 			{
-				m_bIsWaiting = false;
-				m_bIsPlaying = engine->getSound()->play(m_music);
-				m_music->setPosition(0.0);
-				m_music->setVolume(m_osu_volume_music_ref->getFloat());
+				if (!m_bIsPaused)
+				{
+					m_bIsWaiting = false;
+					m_bIsPlaying = engine->getSound()->play(m_music);
+					m_music->setPosition(0.0);
+					m_music->setVolume(m_osu_volume_music_ref->getFloat());
 
-				// if we are quick restarting, jump just before the first hitobject (even if there is a long waiting period at the beginning with nothing etc.)
-				if (m_bIsRestartScheduledQuick && m_hitobjects.size() > 0)
-					m_music->setPositionMS(m_hitobjects[0]->getTime() - 1000);
-				m_bIsRestartScheduledQuick = false;
+					// if we are quick restarting, jump just before the first hitobject (even if there is a long waiting period at the beginning with nothing etc.)
+					if (m_bIsRestartScheduledQuick && m_hitobjects.size() > 0)
+						m_music->setPositionMS(m_hitobjects[0]->getTime() - 1000);
+					m_bIsRestartScheduledQuick = false;
 
-				onPlayStart();
+					onPlayStart();
+				}
 			}
 			else
 				m_iCurMusicPos = (engine->getTimeReal() - m_fWaitTime)*1000.0f*m_osu->getSpeedMultiplier();
 		}
 
-		// HACKHACK: ugh
+		// ugh. force update all hitobjects while waiting (necessary because of pvs optimization)
 		long curPos = m_iCurMusicPos + (long)osu_global_offset.getInt() - m_selectedDifficulty->localoffset - m_selectedDifficulty->onlineOffset;
+		if (curPos > -1) // otherwise auto would already click elements that start at exactly 0 (while the map has not even started)
+			curPos = -1;
 		for (int i=0; i<m_hitobjects.size(); i++)
 		{
 			m_hitobjects[i]->update(curPos);
 		}
 	}
 
-	// handle music end
+	// detect and handle music end
 	if (!m_bIsWaiting && !isLoading() && (m_music->isFinished() || (m_hitobjects.size() > 0 && m_hitobjects[m_hitobjects.size()-1]->getTime() + m_hitobjects[m_hitobjects.size()-1]->getDuration() + 1000 < m_iCurMusicPos)))
 	{
-		if (m_hitobjects.size())
-		{
-			debugLog("stopped because of time = %ld, duration = %ld\n", m_hitobjects[m_hitobjects.size()-1]->getTime(), m_hitobjects[m_hitobjects.size()-1]->getDuration());
-		}
 		stop(false);
 		return;
 	}
@@ -330,7 +340,7 @@ void OsuBeatmap::update()
 	// handle music loading fail
 	if (!m_music->isReady())
 	{
-		m_iResourceLoadUpdateDelayHack++; // async loading takes 1 additional engine update() until both isAsyncReady() and isReady() return true
+		m_iResourceLoadUpdateDelayHack++; // HACKHACK: async loading takes 1 additional engine update() until both isAsyncReady() and isReady() return true
 		if (m_iResourceLoadUpdateDelayHack > 3)
 		{
 			m_osu->getNotificationOverlay()->addNotification("Couldn't load music file :(", 0xffff0000);
@@ -340,7 +350,7 @@ void OsuBeatmap::update()
 
 	// update timing (points)
 	OsuBeatmapDifficulty::TIMING_INFO t = m_selectedDifficulty->getTimingInfoForTime(m_iCurMusicPos);
-	m_osu->getSkin()->setSampleSet(t.sampleSet);
+	m_osu->getSkin()->setSampleSet(t.sampleType); // normal/soft/drum is stored in the sample type! the sample set number is for custom sets
 	m_osu->getSkin()->setSampleVolume(clamp<float>(t.volume / 100.0f, 0.0f, 1.0f));
 
 	// for performance reasons, a lot of operations are crammed into 1 loop over all hitobjects:
@@ -357,6 +367,8 @@ void OsuBeatmap::update()
 	m_iPreviousFollowPointObjectIndex = 0;
 	m_iNPS = 0;
 	m_iND = 0;
+	m_iCurrentHitObjectIndex = 0;
+	m_iCurrentNumCircles = 0;
 	{
 		std::lock_guard<std::mutex> lk(m_clicksMutex); // we need to lock this up here, else it would be possible to insert a click just before calling m_clicks.clear(), thus missing it
 
@@ -368,13 +380,18 @@ void OsuBeatmap::update()
 		for (int i=0; i<m_hitobjects.size(); i++)
 		{
 			// the order must be like this:
-			// 0) prev + next time vars
-			// 1) PVS optimization
-			// 2) main hitobject update
-			// 3) note blocking
-			// 4) click events
+			// 0) miscellaneous stuff (minimal performance impact)
+			// 1) prev + next time vars
+			// 2) PVS optimization
+			// 3) main hitobject update
+			// 4) note blocking
+			// 5) click events
 			//
 			// (because the hitobjects need to know about note blocking before handling the click events)
+
+			// ************ live pp block start ************ //
+			bool isCircle = m_hitobjects[i]->isCircle();
+			// ************ live pp block end ************** //
 
 			// determine previous & next object time, used for auto + followpoints + warning arrows + empty section skipping
 			if (m_iNextHitObjectTime == 0)
@@ -396,10 +413,24 @@ void OsuBeatmap::update()
 			if (usePVS)
 			{
 				if (m_hitobjects[i]->isFinished() && (curPos - pvs > m_hitobjects[i]->getTime() + m_hitobjects[i]->getDuration())) // past objects
+				{
+					// ************ live pp block start ************ //
+					if (isCircle)
+						m_iCurrentNumCircles++;
+
+					m_iCurrentHitObjectIndex = i;
+					// ************ live pp block end ************** //
+
 					continue;
+				}
 				if (m_hitobjects[i]->getTime() > curPos + pvs) // future objects
 					break;
 			}
+
+			// ************ live pp block start ************ //
+			if (curPos >= m_hitobjects[i]->getTime() + m_hitobjects[i]->getDuration())
+				m_iCurrentHitObjectIndex = i;
+			// ************ live pp block end ************** //
 
 			// main hitobject update
 			m_hitobjects[i]->update(curPos);
@@ -421,6 +452,14 @@ void OsuBeatmap::update()
 			// click events
 			if (m_clicks.size() > 0)
 				m_hitobjects[i]->onClickEvent(m_clicks);
+
+			// ************ live pp block start ************ //
+			if (isCircle && m_hitobjects[i]->isFinished())
+				m_iCurrentNumCircles++;
+
+			if (m_hitobjects[i]->isFinished())
+				m_iCurrentHitObjectIndex = i;
+			// ************ live pp block end ************** //
 
 			// notes per second
 			const long npsHalfGateSizeMS = (long)(500.0f * getSpeedMultiplier());
@@ -476,7 +515,7 @@ void OsuBeatmap::update()
 		// all remaining clicks which have not been consumed by any hitobjects can safely be deleted
 		if (m_clicks.size() > 0)
 		{
-			// nightmare mod: extra klicks = sliderbreak
+			// nightmare mod: extra clicks = sliderbreak
 			if ((m_osu->getModNM() || osu_mod_jigsaw1.getBool()) && !m_bIsInSkippableSection)
 				addSliderBreak();
 			m_clicks.clear();
@@ -559,6 +598,16 @@ void OsuBeatmap::skipEmptySection()
 
 void OsuBeatmap::keyPressed1()
 {
+	if (osu_mod_fullalternate.getBool() && m_bPrevKeyWasKey1)
+	{
+		engine->getSound()->play(getSkin()->getCombobreak());
+		return;
+	}
+
+	// lock asap
+	std::lock_guard<std::mutex> lk(m_clicksMutex);
+
+	m_bPrevKeyWasKey1 = true;
 	m_bClick1Held = true;
 
 	//debugLog("async music pos = %lu, curMusicPos = %lu\n", m_music->getPositionMS(), m_iCurMusicPos);
@@ -566,14 +615,22 @@ void OsuBeatmap::keyPressed1()
 
 	CLICK click;
 	click.musicPos = m_iCurMusicPosWithOffsets;
-	click.realTime = engine->getTimeReal();
 
-	std::lock_guard<std::mutex> lk(m_clicksMutex);
 	m_clicks.push_back(click);
 }
 
 void OsuBeatmap::keyPressed2()
 {
+	if (osu_mod_fullalternate.getBool() && !m_bPrevKeyWasKey1)
+	{
+		engine->getSound()->play(getSkin()->getCombobreak());
+		return;
+	}
+
+	// lock asap
+	std::lock_guard<std::mutex> lk(m_clicksMutex);
+
+	m_bPrevKeyWasKey1 = false;
 	m_bClick2Held = true;
 
 	//debugLog("async music pos = %lu, curMusicPos = %lu\n", m_music->getPositionMS(), m_iCurMusicPos);
@@ -581,9 +638,7 @@ void OsuBeatmap::keyPressed2()
 
 	CLICK click;
 	click.musicPos = m_iCurMusicPosWithOffsets;
-	click.realTime = engine->getTimeReal();
 
-	std::lock_guard<std::mutex> lk(m_clicksMutex);
 	m_clicks.push_back(click);
 }
 
@@ -733,6 +788,8 @@ void OsuBeatmap::restart(bool quick)
 		m_bIsRestartScheduled = true;
 		m_bIsRestartScheduledQuick = quick;
 	}
+	else if (m_bIsPaused)
+		pause(false);
 }
 
 void OsuBeatmap::actualRestart()
@@ -785,40 +842,42 @@ void OsuBeatmap::pause(bool quitIfWaiting)
 	if (m_selectedDifficulty == NULL)
 		return;
 
-	if (m_bIsPlaying)
+	if (m_bIsPlaying) // if we are playing, aka if this is the first time pausing
 	{
-		// workaround (+ actual osu behaviour): if we are still m_bIsWaiting, pausing the game is the same as stopping playing
-		// TODO: this also happens if we alt-tab or lose focus
-		if (m_bIsWaiting && quitIfWaiting)
+		if (m_bIsWaiting && quitIfWaiting) // if we are still m_bIsWaiting, pausing the game via the escape key is the same as stopping playing
 			stop();
 		else
 		{
+			// first time pause pauses the music
 			engine->getSound()->pause(m_music);
 			m_bIsPlaying = false;
 			m_bIsPaused = true;
-			m_bIsWaiting = false;
 
 			onPaused();
 		}
 	}
-	else if (m_bIsPaused && !m_bContinueScheduled)
+	else if (m_bIsPaused && !m_bContinueScheduled) // if this is the first time unpausing
 	{
-		if (m_osu->getModAuto() || m_osu->getModAutopilot() || m_bIsInSkippableSection)
+		if (m_osu->getModAuto() || m_osu->getModAutopilot() || m_bIsInSkippableSection) // under certain conditions, immediately continue the beatmap without waiting for the user to click
 		{
-			engine->getSound()->play(m_music);
+			if (!m_bIsWaiting) // only force play() if we were not early waiting
+				engine->getSound()->play(m_music);
+
 			m_bIsPlaying = true;
 			m_bIsPaused = false;
-			m_bIsWaiting = false;
 		}
-		else
+		else // otherwise, schedule a continue (wait for user to click, handled in update())
 		{
+			// first time unpause schedules a continue
 			m_bIsPaused = false;
 			m_bContinueScheduled = true;
-			m_bIsWaiting = false;
 		}
 	}
-	else
+	else // if this is not the first time pausing/unpausing, then just toggle the pause state (the visibility of the pause menu is handled in the Osu class, a bit shit)
 		m_bIsPaused = !m_bIsPaused;
+
+	// don't kill VR players while paused
+	anim->deleteExistingAnimation(&m_fHealth);
 }
 
 void OsuBeatmap::pausePreviewMusic()
@@ -845,11 +904,11 @@ void OsuBeatmap::stop(bool quit)
 	m_bIsPaused = false;
 	m_bContinueScheduled = false;
 
-	onBeforeStop();
+	onBeforeStop(quit);
 
 	unloadHitObjects();
 
-	onStop();
+	onStop(quit);
 
 	m_osu->onPlayEnd(quit);
 }
@@ -1335,12 +1394,13 @@ unsigned long OsuBeatmap::getMusicPositionMSInterpolated()
 	{
 		unsigned long returnPos = 0;
 		const double curPos = (double)m_music->getPositionMS();
+		const float speed = m_osu->getSpeedMultiplier();
 
 		// not reinventing the wheel, the interpolation magic numbers here are (c) peppy
 
 		const double realTime = engine->getTimeReal();
-		const double interpolationDelta = (realTime - m_fLastRealTimeForInterpolationDelta) * 1000.0 * m_osu->getSpeedMultiplier();
-		const double interpolationDeltaLimit = ((realTime - m_fLastAudioTimeAccurateSet)*1000.0 < 1500 || m_osu->getSpeedMultiplier() < 1.0f ? 11 : 33);
+		const double interpolationDelta = (realTime - m_fLastRealTimeForInterpolationDelta) * 1000.0 * speed;
+		const double interpolationDeltaLimit = ((realTime - m_fLastAudioTimeAccurateSet)*1000.0 < 1500 || speed < 1.0f ? 11 : 33);
 
 		if (m_music->isPlaying() && !m_bWasSeekFrame)
 		{
@@ -1372,6 +1432,8 @@ unsigned long OsuBeatmap::getMusicPositionMSInterpolated()
 
             // calculate final return value
             returnPos = (unsigned long)std::round(m_fInterpolatedMusicPos);
+            if (speed < 1.0f && osu_compensate_music_speed.getBool())
+            	returnPos += (unsigned long)((1.0f / speed) * 9);
 		}
 		else // no interpolation
 		{

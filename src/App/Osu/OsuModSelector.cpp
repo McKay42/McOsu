@@ -27,6 +27,7 @@
 #include "OsuGameRules.h"
 
 #include "CBaseUIContainer.h"
+#include "CBaseUIScrollView.h"
 #include "CBaseUIImageButton.h"
 #include "CBaseUILabel.h"
 #include "CBaseUISlider.h"
@@ -47,11 +48,17 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen()
 	m_bExperimentalVisible = false;
 	m_container = new CBaseUIContainer(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight(), "");
 	m_overrideSliderContainer = new CBaseUIContainer(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight(), "");
-	m_experimentalContainer = new CBaseUIContainer(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight(), "");
+	///m_experimentalContainer = new CBaseUIContainer(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight(), "");
+	m_experimentalContainer = new CBaseUIScrollView(-1, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight(), "");
+	m_experimentalContainer->setHorizontalScrolling(false);
+	m_experimentalContainer->setVerticalScrolling(true);
+	m_experimentalContainer->setDrawFrame(false);
+	m_experimentalContainer->setDrawBackground(false);
 
 	m_bWaitForF1KeyUp = false;
 
 	m_bWaitForCSChangeFinished = false;
+	m_bWaitForSpeedChangeFinished = false;
 
 	m_previousDifficulty = NULL;
 
@@ -86,8 +93,10 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen()
 	overrideHP.slider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
 	overrideBPM.slider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
 	overrideBPM.slider->setValue(-1.0f, false);
+	overrideBPM.slider->setAnimated(false); // same quick fix as above
 	overrideSpeed.slider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
 	overrideSpeed.slider->setValue(-1.0f, false);
+	overrideSpeed.slider->setAnimated(false); // same quick fix as above
 
 	m_CSSlider = overrideCS.slider;
 	m_ARSlider = overrideAR.slider;
@@ -106,10 +115,11 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen()
 	addExperimentalCheckbox("First Person", "Centered cursor.", convar->getConVarByName("osu_mod_fps"));
 	addExperimentalCheckbox("Jigsaw 1", "Unnecessary clicks count as misses.", convar->getConVarByName("osu_mod_jigsaw1"));
 	addExperimentalCheckbox("Jigsaw 2", "Massively reduced slider follow circle radius.", convar->getConVarByName("osu_mod_jigsaw2"));
+	addExperimentalCheckbox("Full Alternate", "You can never use the same key twice in a row.", convar->getConVarByName("osu_mod_fullalternate"));
 	addExperimentalCheckbox("Random", "Random hitobject positions. (VERY experimental!)", convar->getConVarByName("osu_mod_random"));
 	addExperimentalCheckbox("No 50s", "Only 300s or 100s. Try harder.", convar->getConVarByName("osu_mod_no50s"));
-	addExperimentalCheckbox("No 100s or 50s", "300 or miss. PF \"lite\"", convar->getConVarByName("osu_mod_no100s"));
-	addExperimentalCheckbox("MinG3012", "No 100s, only 300s or 50s. Git gud.", convar->getConVarByName("osu_mod_ming3012"));
+	addExperimentalCheckbox("No 100s no 50s", "300 or miss. PF \"lite\"", convar->getConVarByName("osu_mod_no100s"));
+	addExperimentalCheckbox("MinG3012", "No 100s. Only 300s or 50s. Git gud.", convar->getConVarByName("osu_mod_ming3012"));
 	addExperimentalCheckbox("MillhioreF", "Go below AR 0. Doubled approach time.", convar->getConVarByName("osu_mod_millhioref"));
 	addExperimentalCheckbox("Flip Horizontally", "Playfield is flipped horizontally.", convar->getConVarByName("osu_playfield_mirror_horizontal"));
 	addExperimentalCheckbox("Flip Vertically", "Playfield is flipped vertically.", convar->getConVarByName("osu_playfield_mirror_vertical"));
@@ -335,6 +345,18 @@ void OsuModSelector::update()
 		if (m_osu->isInPlayMode() && m_osu->getSelectedBeatmap() != NULL)
 			m_osu->getSelectedBeatmap()->onModUpdate();
 	}
+
+	// handle dynamic live pp calculation updates (when CS or Speed/BPM changes)
+	if (m_speedSlider->isActive() || m_BPMSlider->isActive())
+	{
+		m_bWaitForSpeedChangeFinished = true;
+	}
+	else if (m_bWaitForSpeedChangeFinished)
+	{
+		m_bWaitForSpeedChangeFinished = false;
+		if (m_osu->isInPlayMode() && m_osu->getSelectedBeatmap() != NULL)
+			m_osu->getSelectedBeatmap()->onModUpdate();
+	}
 }
 
 void OsuModSelector::onKeyDown(KeyboardEvent &key)
@@ -452,6 +474,11 @@ bool OsuModSelector::isCSOverrideSliderActive()
 	return m_CSSlider->isActive();
 }
 
+bool OsuModSelector::isMouseInScrollView()
+{
+	return m_experimentalContainer->isMouseInside() && isVisible();
+}
+
 void OsuModSelector::updateLayout()
 {
 	if (m_modButtons.size() < 1 || m_overrideSliders.size() < 1)
@@ -564,8 +591,13 @@ void OsuModSelector::updateLayout()
 		}
 	}
 
+	updateExperimentalLayout();
+}
+
+void OsuModSelector::updateExperimentalLayout()
+{
 	// experimental mods
-	int yCounter = 0;
+	int yCounter = 5;
 	int experimentalMaxWidth = 0;
 	int experimentalOffsetY = 6;
 	for (int i=0; i<m_experimentalMods.size(); i++)
@@ -581,8 +613,28 @@ void OsuModSelector::updateLayout()
 		if (i == 0)
 			yCounter += 8;
 	}
-	m_experimentalContainer->setSize(experimentalMaxWidth, yCounter);
-	m_experimentalContainer->setPosY(m_osu->getScreenSize().y/2 - m_experimentalContainer->getSize().y/2);
+	// laziness
+	if (m_osu->getScreenHeight() > yCounter)
+		yCounter = 5 + m_osu->getScreenHeight()/2.0f - yCounter/2.0f;
+	else
+		yCounter = 5;
+	for (int i=0; i<m_experimentalMods.size(); i++)
+	{
+		CBaseUIElement *e = m_experimentalMods[i].element;
+		e->setRelPosY(yCounter);
+
+		if (e->getSize().x > experimentalMaxWidth)
+			experimentalMaxWidth = e->getSize().x;
+
+		yCounter += e->getSize().y + experimentalOffsetY;
+
+		if (i == 0)
+			yCounter += 8;
+	}
+	m_experimentalContainer->setSizeX(experimentalMaxWidth + 25/*, yCounter*/);
+	m_experimentalContainer->setPosY(-1);
+	m_experimentalContainer->setScrollSizeToContent(1);
+	m_experimentalContainer->getContainer()->update_pos();
 }
 
 void OsuModSelector::updateModConVar()
@@ -683,7 +735,7 @@ CBaseUILabel *OsuModSelector::addExperimentalLabel(UString text)
 	label->setWidthToContent(0);
 	label->setDrawBackground(false);
 	label->setDrawFrame(false);
-	m_experimentalContainer->addBaseUIElement(label);
+	m_experimentalContainer->getContainer()->addBaseUIElement(label);
 
 	EXPERIMENTAL_MOD em;
 	em.element = label;
@@ -703,7 +755,7 @@ CBaseUICheckbox *OsuModSelector::addExperimentalCheckbox(UString text, UString t
 		checkbox->setChecked(cvar->getBool());
 		checkbox->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onCheckboxChange) );
 	}
-	m_experimentalContainer->addBaseUIElement(checkbox);
+	m_experimentalContainer->getContainer()->addBaseUIElement(checkbox);
 
 	EXPERIMENTAL_MOD em;
 	em.element = checkbox;
@@ -778,6 +830,10 @@ void OsuModSelector::onOverrideSliderChange(CBaseUISlider *slider)
 				{
 					if (m_overrideSliders[i].label->getName().find("BPM") != -1)
 					{
+						// HACKHACK: force BPM slider to have a min value of 0.05 instead of 0 (because that's the minimum for BASS)
+						// note that the BPM slider is just a 'fake' slider, it directly controls the speed slider to do its thing (thus it needs the same limits)
+						sliderValue = std::max(sliderValue, 0.05f);
+
 						// speed slider may not be used in conjunction
 						m_speedSlider->setValue(0.0f, false);
 
@@ -797,6 +853,10 @@ void OsuModSelector::onOverrideSliderChange(CBaseUISlider *slider)
 						m_BPMSlider->setValue(0.0f, false);
 					}
 				}
+
+				// HACKHACK: force speed slider to have a min value of 0.05 instead of 0 (because that's the minimum for BASS)
+				if (m_overrideSliders[i].desc->getText().find("Speed") != -1)
+					sliderValue = std::max(sliderValue, 0.05f);
 			}
 
 			m_overrideSliders[i].cvar->setValue(sliderValue);
@@ -967,7 +1027,7 @@ void OsuModSelector::onResolutionChange(Vector2 newResolution)
 {
 	m_container->setSize(newResolution);
 	m_overrideSliderContainer->setSize(newResolution);
-	m_experimentalContainer->setSize(newResolution);
+	m_experimentalContainer->setSizeY(newResolution.y + 1);
 
 	updateLayout();
 }
