@@ -41,6 +41,10 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 
 	CHANGELOG alpha29Steam;
 	alpha29Steam.title = "28.9 (Steam VR Alpha, ?)";
+	alpha29Steam.changes.push_back("- Switched slider bezier curve generator to official algorithm (fixes Aspire loading \"freezes\", mostly)");
+	alpha29Steam.changes.push_back("- More stuff in ranking screen tooltip (stars, speed, CS/AR/OD/HP)");
+	alpha29Steam.changes.push_back("- Round pp up from 0.5 (727.49 => 727; 727.5 => 728)");
+	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("- Added option \"Use skin's sound samples\", Options > Skin > Skin");
 	alpha29Steam.changes.push_back("- Added 2 tablet options, \"Ignore Sensitivity\" and \"Windows Ink Workaround\" for problematic tablets/drivers");
 	alpha29Steam.changes.push_back("- Fixed sample set number being used for setting the sample type (hitsounds)");
