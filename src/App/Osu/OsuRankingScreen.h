@@ -59,7 +59,17 @@ private:
 	float m_fUnstableRate;
 	float m_fHitErrorAvgMin;
 	float m_fHitErrorAvgMax;
+
+	float m_fStarsTomTotal;
+	float m_fStarsTomAim;
+	float m_fStarsTomSpeed;
 	float m_fPPv2;
+
+	float m_fSpeedMultiplier;
+	float m_fCS;
+	float m_fAR;
+	float m_fOD;
+	float m_fHP;
 
 	Vector2 m_vPPCursorMagnetAnimation;
 };

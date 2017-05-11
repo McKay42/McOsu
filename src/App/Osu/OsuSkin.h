@@ -81,6 +81,7 @@ public:
 
 	inline Image *getPlaySkip() {return m_playSkip;}
 	inline Image *getPlayWarningArrow() {return m_playWarningArrow;}
+	inline OsuSkinImage *getPlayWarningArrow2() {return m_playWarningArrow2;}
 	inline Image *getCircularmetre() {return m_circularmetre;}
 
 	inline OsuSkinImage *getHit0() {return m_hit0;}
@@ -314,6 +315,7 @@ private:
 
 	Image *m_playSkip;
 	Image *m_playWarningArrow;
+	OsuSkinImage *m_playWarningArrow2;
 	Image *m_circularmetre;
 
 	OsuSkinImage *m_hit0;

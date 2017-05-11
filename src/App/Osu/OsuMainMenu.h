@@ -24,6 +24,7 @@ class OsuMainMenu : public OsuScreen, public MouseListener
 {
 public:
 	static UString MCOSU_MAIN_BUTTON_TEXT;
+	static UString MCOSU_MAIN_BUTTON_SUBTEXT;
 
 public:
 	friend class OsuMainMenuMainButton;
@@ -95,6 +96,8 @@ private:
 	OsuUIButton *m_updateAvailableButton;
 	OsuUIButton *m_githubButton;
 	CBaseUIButton *m_versionButton;
+
+	bool m_bDrawVersionNotificationArrow;
 
 	// custom
 	float m_fMainMenuAnimTime;

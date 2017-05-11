@@ -27,6 +27,7 @@
 #include "OsuBeatmapDifficulty.h"
 #include "OsuSongBrowser2.h"
 #include "OsuTooltipOverlay.h"
+#include "OsuGameRules.h"
 
 #include "OsuUIRankingScreenInfoLabel.h"
 #include "OsuUIRankingScreenRankingPanel.h"
@@ -64,10 +65,20 @@ OsuRankingScreen::OsuRankingScreen(Osu *osu) : OsuScreenBackable(osu)
 	m_rankings->getContainer()->addBaseUIElement(m_rankingGrade);
 
 	setGrade(OsuScore::GRADE::GRADE_D);
+
 	m_fUnstableRate = 0.0f;
 	m_fHitErrorAvgMin = 0.0f;
 	m_fHitErrorAvgMax = 0.0f;
+	m_fStarsTomTotal = 0.0f;
+	m_fStarsTomAim = 0.0f;
+	m_fStarsTomSpeed = 0.0f;
 	m_fPPv2 = 0.0f;
+
+	m_fSpeedMultiplier = 0.0f;
+	m_fCS = 0.0f;
+	m_fAR = 0.0f;
+	m_fOD = 0.0f;
+	m_fHP = 0.0f;
 }
 
 OsuRankingScreen::~OsuRankingScreen()
@@ -162,6 +173,10 @@ void OsuRankingScreen::update()
 	{
 		m_osu->getTooltipOverlay()->begin();
 		m_osu->getTooltipOverlay()->addLine(UString::format("%.2fpp", m_fPPv2));
+		m_osu->getTooltipOverlay()->addLine("Difficulty:");
+		m_osu->getTooltipOverlay()->addLine(UString::format("Stars: %.2f (%.2f aim, %.2f speed)", m_fStarsTomTotal, m_fStarsTomAim, m_fStarsTomSpeed));
+		m_osu->getTooltipOverlay()->addLine(UString::format("Speed: %.2fx", m_fSpeedMultiplier));
+		m_osu->getTooltipOverlay()->addLine(UString::format("CS:%.2g AR:%.2g OD:%.2g HP:%.2g", m_fCS, m_fAR, m_fOD, m_fHP));
 		m_osu->getTooltipOverlay()->addLine("Accuracy:");
 		m_osu->getTooltipOverlay()->addLine(UString::format("Error: %.2fms - %.2fms avg", m_fHitErrorAvgMin, m_fHitErrorAvgMax));
 		m_osu->getTooltipOverlay()->addLine(UString::format("Unstable Rate: %.2f", m_fUnstableRate));
@@ -203,9 +218,13 @@ void OsuRankingScreen::setScore(OsuScore *score)
 {
 	m_rankingPanel->setScore(score);
 	setGrade(score->getGrade());
+
 	m_fUnstableRate = score->getUnstableRate();
 	m_fHitErrorAvgMin = score->getHitErrorAvgMin();
 	m_fHitErrorAvgMax = score->getHitErrorAvgMax();
+	m_fStarsTomTotal = score->getStarsTomTotal();
+	m_fStarsTomAim = score->getStarsTomAim();
+	m_fStarsTomSpeed = score->getStarsTomSpeed();
 	m_fPPv2 = score->getPPv2();
 }
 
@@ -213,6 +232,12 @@ void OsuRankingScreen::setBeatmapInfo(OsuBeatmap *beatmap, OsuBeatmapDifficulty 
 {
 	m_songInfo->setFromBeatmap(beatmap, diff);
 	m_songInfo->setPlayer(convar->getConVarByName("name")->getString());
+
+	m_fSpeedMultiplier = m_osu->getSpeedMultiplier();
+	m_fCS = beatmap->getCS();
+	m_fAR = OsuGameRules::getApproachRateForSpeedMultiplier(beatmap);
+	m_fOD = OsuGameRules::getOverallDifficultyForSpeedMultiplier(beatmap);
+	m_fHP = beatmap->getHP();
 }
 
 void OsuRankingScreen::updateLayout()
@@ -300,7 +325,7 @@ void OsuRankingScreen::setGrade(OsuScore::GRADE grade)
 
 UString OsuRankingScreen::getPPString()
 {
-	return UString::format("%ipp", (int)(m_fPPv2));
+	return UString::format("%ipp", (int)(std::round(m_fPPv2)));
 }
 
 Vector2 OsuRankingScreen::getPPPosRaw()

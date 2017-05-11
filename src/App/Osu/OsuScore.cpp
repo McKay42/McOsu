@@ -34,6 +34,9 @@ OsuScore::OsuScore(Osu *osu)
 
 void OsuScore::reset()
 {
+	m_fStarsTomTotal = 0.0f;
+	m_fStarsTomAim = 0.0f;
+	m_fStarsTomSpeed = 0.0f;
 	m_fPPv2 = 0.0f;
 	m_grade = OsuScore::GRADE::GRADE_N;
 	m_iScore = 0;
