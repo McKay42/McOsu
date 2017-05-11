@@ -290,12 +290,14 @@ Osu::Osu()
 	//m_rankingScreen->setVisible(true);
 	//m_changelog->setVisible(true);
 
+
 	if (isInVRMode() && osu_vr_tutorial.getBool())
 		m_vrTutorial->setVisible(true);
 	else
 		m_mainMenu->setVisible(true);
 
 	m_updateHandler->checkForUpdates();
+
 
 	/*
 	// DEBUG: immediately start diff of a beatmap
