@@ -305,7 +305,10 @@ private:
 
 
 
-/*
+// https://github.com/ppy/osu/blob/master/osu.Game/Rulesets/Objects/BezierApproximator.cs
+// Copyright (c) 2007-2017 ppy Pty Ltd <contact@ppy.sh>.
+// <insert MIT license from the link above for the piece of code below>
+
 class BezierApproximator
 {
 public:
@@ -326,6 +329,5 @@ private:
 	std::vector<Vector2> m_subdivisionBuffer1;
 	std::vector<Vector2> m_subdivisionBuffer2;
 };
-*/
 
 #endif

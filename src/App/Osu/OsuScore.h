@@ -57,8 +57,14 @@ public:
 	void addSliderBreak(); // only OsuBeatmap may call this function!
 	void addPoints(int points);
 
+	void setStarsTomTotal(float starsTomTotal) {m_fStarsTomTotal = starsTomTotal;}
+	void setStarsTomAim(float starsTomAim) {m_fStarsTomAim = starsTomAim;}
+	void setStarsTomSpeed(float starsTomSpeed) {m_fStarsTomSpeed = starsTomSpeed;}
 	void setPPv2(float ppv2) {m_fPPv2 = ppv2;}
 
+	inline float getStarsTomTotal() const {return m_fStarsTomTotal;}
+	inline float getStarsTomAim() const {return m_fStarsTomAim;}
+	inline float getStarsTomSpeed() const {return m_fStarsTomSpeed;}
 	inline float getPPv2() const {return m_fPPv2;}
 
 	inline GRADE getGrade() const {return m_grade;}
@@ -87,6 +93,9 @@ private:
 
 	GRADE m_grade;
 
+	float m_fStarsTomTotal;
+	float m_fStarsTomAim;
+	float m_fStarsTomSpeed;
 	float m_fPPv2;
 
 	unsigned long long m_iScore;

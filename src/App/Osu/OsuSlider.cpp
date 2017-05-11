@@ -38,6 +38,7 @@ ConVar osu_mod_hd_slider_fast_fade("osu_mod_hd_slider_fast_fade", false);
 
 ConVar osu_slider_break_epilepsy("osu_slider_break_epilepsy", false);
 ConVar osu_slider_scorev2("osu_slider_scorev2", false);
+ConVar osu_slider_use_tom94_bezier("osu_slider_use_tom94_bezier", true);
 
 ConVar osu_slider_draw_body("osu_slider_draw_body", true);
 ConVar osu_slider_shrink("osu_slider_shrink", false);
@@ -1544,17 +1545,23 @@ OsuSliderCurveTypeBezier2::OsuSliderCurveTypeBezier2(const std::vector<Vector2> 
 
 	// approximate by finding the length of all points
 	// (which should be the max possible length of the curve)
-	float approxlength = 0;
-	for (int i=0; i<points.size()-1; i++)
-	{
-		approxlength += (points[i] - points[i + 1]).length();
-	}
-	init(approxlength);
 
-	/*
-	BezierApproximator b(points);
-	initCustom(b.createBezier());
-	*/
+	if (!osu_slider_use_tom94_bezier.getBool())
+	{
+		// opsu bezier (takes very long for certain aspire sliders)
+		float approxlength = 0;
+		for (int i=0; i<points.size()-1; i++)
+		{
+			approxlength += (points[i] - points[i + 1]).length();
+		}
+		init(approxlength);
+	}
+	else
+	{
+		// tom94 bezier
+		BezierApproximator b(points);
+		initCustom(b.createBezier());
+	}
 }
 
 Vector2 OsuSliderCurveTypeBezier2::pointAt(float t)
@@ -2059,7 +2066,10 @@ Vector2 OsuSliderCurveEqualDistanceMulti::originalPointAt(float t)
 
 
 
-/*
+// https://github.com/ppy/osu/blob/master/osu.Game/Rulesets/Objects/BezierApproximator.cs
+// Copyright (c) 2007-2017 ppy Pty Ltd <contact@ppy.sh>.
+// <insert MIT license from the link above for the piece of code below>
+
 float BezierApproximator::TOLERANCE = 0.25f;
 float BezierApproximator::TOLERANCE_SQ = 0.25f * 0.25f;
 
@@ -2171,4 +2181,3 @@ std::vector<Vector2> BezierApproximator::createBezier()
 	output.push_back(m_controlPoints[m_iCount - 1]);
 	return output;
 }
-*/

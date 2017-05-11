@@ -465,6 +465,11 @@ void OsuBeatmapStandard::drawFollowPoints(Graphics *g)
 				const float scale = 1.5f - 0.5f*followAnimPercent;
 				const Vector2 followPos = animPosStart + (finalPos - animPosStart)*followAnimPercent;
 
+				// bullshit performance optimization: only draw followpoints if within screen bounds (plus a bit of a margin)
+				// there is only one beatmap where this matters currently: https://osu.ppy.sh/b/1145513
+				if (followPos.x < -m_osu->getScreenWidth() || followPos.x > m_osu->getScreenWidth()*2 || followPos.y < -m_osu->getScreenHeight() || followPos.y > m_osu->getScreenHeight()*2)
+					continue;
+
 				// calculate trail alpha
 				if (curPos >= fadeInTime && curPos < fadeOutTime)
 				{
@@ -922,7 +927,7 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 		debugLog("OsuBeatmapStandard::onBeforeStop() calculating pp ...\n");
 		double aim = 0.0;
 		double speed = 0.0;
-		m_selectedDifficulty->calculateStarDiff(this, &aim, &speed);
+		double totalStars = m_selectedDifficulty->calculateStarDiff(this, &aim, &speed);
 		m_fAimStars = (float)aim;
 		m_fSpeedStars = (float)speed;
 
@@ -935,6 +940,9 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 		int num100s = m_osu->getScore()->getNum100s();
 		int num50s = m_osu->getScore()->getNum50s();
 		float pp = m_selectedDifficulty->calculatePPv2(m_osu, this, aim, speed, numHitObjects, numCircles, maxPossibleCombo, highestCombo, numMisses, num300s, num100s, num50s);
+		m_osu->getScore()->setStarsTomTotal(totalStars);
+		m_osu->getScore()->setStarsTomAim(m_fAimStars);
+		m_osu->getScore()->setStarsTomSpeed(m_fSpeedStars);
 		m_osu->getScore()->setPPv2(pp);
 	}
 }
