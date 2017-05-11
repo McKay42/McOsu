@@ -47,7 +47,7 @@ void OsuTooltipOverlay::draw(Graphics *g)
 			if (lineWidth > width)
 				width = lineWidth;
 		}
-		int height = font->getHeight()*m_lines.size()*1.1f + lineSpacing*(m_lines.size()-1);
+		int height = font->getHeight()*m_lines.size() + lineSpacing*(m_lines.size()-1) + 3;
 
 		Vector2 cursorPos = engine->getMouse()->getPos();
 
