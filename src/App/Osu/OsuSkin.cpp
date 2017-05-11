@@ -374,6 +374,7 @@ void OsuSkin::load()
 
 	checkLoadImage(&m_playSkip, "play-skip", "OSU_SKIN_PLAYSKIP");
 	checkLoadImage(&m_playWarningArrow, "play-warningarrow", "OSU_SKIN_PLAYWARNINGARROW");
+	m_playWarningArrow2 = createOsuSkinImage("play-warningarrow", Vector2(167, 129), 128);
 	checkLoadImage(&m_circularmetre, "circularmetre", "OSU_SKIN_CIRCULARMETRE");
 
 	m_hit0 = createOsuSkinImage("hit0", Vector2(128, 128), 42);

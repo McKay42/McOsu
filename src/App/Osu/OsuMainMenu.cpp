@@ -15,12 +15,15 @@
 #include "ResourceManager.h"
 #include "AnimationHandler.h"
 #include "ConVar.h"
+#include "File.h"
 
 #include "Osu.h"
 #include "OsuSkin.h"
+#include "OsuSkinImage.h"
 #include "OsuBeatmap.h"
 #include "OsuBeatmapDifficulty.h"
 #include "OsuMainMenu.h"
+#include "OsuHUD.h"
 
 #include "OsuUIButton.h"
 
@@ -30,7 +33,10 @@
 #define MCOSU_VERSION_TEXT "Alpha"
 #define MCOSU_BANNER_TEXT "-SteamVR Bug! Random freezes on controller vibration-"
 UString OsuMainMenu::MCOSU_MAIN_BUTTON_TEXT = UString("McOsu");
+UString OsuMainMenu::MCOSU_MAIN_BUTTON_SUBTEXT = UString("Practice Client");
 #define MCOSU_MAIN_BUTTON_BACK_TEXT "by McKay"
+
+#define MCOSU_NEWVERSION_NOTIFICATION_TRIGGER_FILE "version.txt"
 
 
 
@@ -97,6 +103,8 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen()
 
 	if (m_osu->isInVRMode())
 		MCOSU_MAIN_BUTTON_TEXT.append(" VR");
+	if (m_osu->isInVRMode())
+		MCOSU_MAIN_BUTTON_SUBTEXT.clear();
 
 	// engine settings
 	engine->getMouse()->addListener(this);
@@ -120,6 +128,23 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen()
 	m_fUpdateButtonAnim = 0.0f;
 	m_fUpdateButtonAnimTime = 0.0f;
 	m_bHasClickedUpdate = false;
+
+	// check if the user has never clicked the changelog for this update
+	m_bDrawVersionNotificationArrow = false;
+	if (env->fileExists(MCOSU_NEWVERSION_NOTIFICATION_TRIGGER_FILE))
+	{
+		File versionFile(MCOSU_NEWVERSION_NOTIFICATION_TRIGGER_FILE);
+		if (versionFile.canRead())
+		{
+			float version = versionFile.readLine().toFloat();
+			if (version < Osu::version->getFloat() - 0.0001f)
+				m_bDrawVersionNotificationArrow = true;
+		}
+		else
+			m_bDrawVersionNotificationArrow = true;
+	}
+	else
+		m_bDrawVersionNotificationArrow = true;
 
 	m_container = new CBaseUIContainer(-1, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight(), "");
 	m_mainButton = new OsuMainMenuMainButton(this, 0, 0, 1, 1, "", "");
@@ -172,7 +197,7 @@ void OsuMainMenu::draw(Graphics *g)
 	if (!m_bVisible)
 		return;
 
-	///McFont *smallFont = engine->getResourceManager()->getFont("FONT_DEFAULT");
+	McFont *smallFont = m_osu->getSubTitleFont() /*engine->getResourceManager()->getFont("FONT_DEFAULT")*/;
 	McFont *titleFont = m_osu->getTitleFont();
 
 	// main button stuff
@@ -224,6 +249,25 @@ void OsuMainMenu::draw(Graphics *g)
 		}
 	}
 
+	// draw notification arrow for changelog (version button)
+	if (m_bDrawVersionNotificationArrow)
+	{
+		float animation = fmod((float)(engine->getTime())*3.2f, 2.0f);
+		if (animation > 1.0f)
+			animation = 2.0f - animation;
+		animation =  -animation*(animation-2); // quad out
+		float offset = m_osu->getUIScale(m_osu, 45.0f*animation);
+
+		const float scale = m_versionButton->getSize().x / m_osu->getSkin()->getPlayWarningArrow2()->getSizeBaseRaw().x;
+
+		g->setColor(0xffffffff);
+		g->pushTransform();
+		g->rotate(90.0f);
+		g->translate(0, -offset*2, 0);
+		m_osu->getSkin()->getPlayWarningArrow2()->drawRaw(g, Vector2(m_versionButton->getSize().x/2, m_osu->getScreenHeight() - m_versionButton->getSize().y*2 - m_versionButton->getSize().y*scale), scale);
+		g->popTransform();
+	}
+
 	// draw container
 	m_container->draw(g);
 
@@ -257,6 +301,24 @@ void OsuMainMenu::draw(Graphics *g)
 	g->translate(m_vCenter.x - m_fCenterOffsetAnim - (titleFont->getStringWidth(MCOSU_MAIN_BUTTON_TEXT)/2.0f)*fontScale, m_vCenter.y + (titleFont->getHeight()*fontScale)/2.25f);
 	g->drawString(titleFont, MCOSU_MAIN_BUTTON_TEXT);
 	g->popTransform();
+
+	if ((m_fMainMenuAnim1*360.0f > 90.0f && m_fMainMenuAnim1*360.0f < 270.0f) || (m_fMainMenuAnim2*360.0f > 90.0f && m_fMainMenuAnim2*360.0f < 270.0f)
+	 || (m_fMainMenuAnim1*360.0f < -90.0f && m_fMainMenuAnim1*360.0f > -270.0f) || (m_fMainMenuAnim2*360.0f < -90.0f && m_fMainMenuAnim2*360.0f > -270.0f))
+	{
+		// huehuehuehuehue
+	}
+	else
+	{
+		if (MCOSU_MAIN_BUTTON_SUBTEXT.length() > 0)
+		{
+			g->setColor(0xff444444);
+			g->pushTransform();
+			g->scale(fontScale, fontScale);
+			g->translate(m_vCenter.x - m_fCenterOffsetAnim - (smallFont->getStringWidth(MCOSU_MAIN_BUTTON_SUBTEXT)/2.0f)*fontScale, m_vCenter.y + (mainButtonRect.getHeight()/2.0f)/2.0f + (smallFont->getHeight()*fontScale)/2.0f);
+			g->drawString(smallFont, MCOSU_MAIN_BUTTON_SUBTEXT);
+			g->popTransform();
+		}
+	}
 
 	if (m_fMainMenuAnim > 0.0f && m_fMainMenuAnim != 1.0f)
 	{
@@ -600,6 +662,16 @@ void OsuMainMenu::onGithubPressed()
 
 void OsuMainMenu::onVersionPressed()
 {
+	m_bDrawVersionNotificationArrow = false;
+
+	// remember, don't show the notification arrow until the version changes again
+	std::ofstream versionFile(MCOSU_NEWVERSION_NOTIFICATION_TRIGGER_FILE);
+	if (versionFile.good())
+	{
+		versionFile << Osu::version->getFloat();
+		versionFile.close();
+	}
+
 	m_osu->toggleChangelog();
 }
 
