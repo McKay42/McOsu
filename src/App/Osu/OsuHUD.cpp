@@ -18,6 +18,7 @@
 #include "Osu.h"
 #include "OsuVR.h"
 #include "OsuSkin.h"
+#include "OsuSkinImage.h"
 #include "OsuBeatmap.h"
 #include "OsuBeatmapStandard.h"
 #include "OsuGameRules.h"
@@ -914,14 +915,10 @@ void OsuHUD::drawAccuracy(Graphics *g, float accuracy)
 
 void OsuHUD::drawSkip(Graphics *g)
 {
-	const float scale = osu_hud_scale.getFloat() * m_osu->getImageScale(m_osu, m_osu->getSkin()->getPlaySkip(), 96);
+	const float scale = osu_hud_scale.getFloat();
 
 	g->setColor(0xffffffff);
-	g->pushTransform();
-		g->scale(scale, scale);
-		g->translate(m_osu->getScreenWidth() - m_osu->getSkin()->getPlaySkip()->getWidth()*scale/2.0f, m_osu->getScreenHeight() - m_osu->getSkin()->getPlaySkip()->getHeight()*scale/2.0f, m_osu->isInVRMode() ? 0.5f : 0.0f);
-		g->drawImage(m_osu->getSkin()->getPlaySkip());
-	g->popTransform();
+	m_osu->getSkin()->getPlaySkip()->draw(g, m_osu->getScreenSize() - (m_osu->getSkin()->getPlaySkip()->getSize()/2)*scale, osu_hud_scale.getFloat());
 }
 
 void OsuHUD::drawWarningArrow(Graphics *g, Vector2 pos, bool flipVertically, bool originLeft)
@@ -1435,6 +1432,6 @@ void OsuHUD::resetHitErrorBar()
 
 Rect OsuHUD::getSkipClickRect()
 {
-	float skipScale = osu_hud_scale.getFloat() * Osu::getImageScale(m_osu, m_osu->getSkin()->getPlaySkip(), 120);
-	return Rect(m_osu->getScreenWidth() - m_osu->getSkin()->getPlaySkip()->getWidth()*skipScale, m_osu->getScreenHeight() - m_osu->getSkin()->getPlaySkip()->getHeight()*skipScale, m_osu->getSkin()->getPlaySkip()->getWidth()*skipScale, m_osu->getSkin()->getPlaySkip()->getHeight()*skipScale);
+	float skipScale = osu_hud_scale.getFloat();
+	return Rect(m_osu->getScreenWidth() - m_osu->getSkin()->getPlaySkip()->getSize().x*skipScale, m_osu->getScreenHeight() - m_osu->getSkin()->getPlaySkip()->getSize().y*skipScale, m_osu->getSkin()->getPlaySkip()->getSize().x*skipScale, m_osu->getSkin()->getPlaySkip()->getSize().y*skipScale);
 }
