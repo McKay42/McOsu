@@ -89,7 +89,6 @@ OsuSkin::OsuSkin(Osu *osu, UString filepath)
 	m_scorePercent = m_missingTexture;
 	m_scoreDot = m_missingTexture;
 
-	m_playSkip = m_missingTexture;
 	m_playWarningArrow = m_missingTexture;
 	m_circularmetre = m_missingTexture;
 
@@ -211,7 +210,6 @@ OsuSkin::OsuSkin(Osu *osu, UString filepath)
 	m_bSliderEndCircle2x = false;
 
 	m_bCircularmetre2x = false;
-	m_bPlaySkip2x = false;
 
 	m_bPauseContinue2x = false;
 
@@ -372,7 +370,7 @@ void OsuSkin::load()
 	checkLoadImage(&m_scorePercent, "score-percent", "OSU_SKIN_SCOREPERCENT");
 	checkLoadImage(&m_scoreDot, "score-dot", "OSU_SKIN_SCOREDOT");
 
-	checkLoadImage(&m_playSkip, "play-skip", "OSU_SKIN_PLAYSKIP");
+	m_playSkip = createOsuSkinImage("play-skip", Vector2(193, 147), 94);
 	checkLoadImage(&m_playWarningArrow, "play-warningarrow", "OSU_SKIN_PLAYWARNINGARROW");
 	m_playWarningArrow2 = createOsuSkinImage("play-warningarrow", Vector2(167, 129), 128);
 	checkLoadImage(&m_circularmetre, "circularmetre", "OSU_SKIN_CIRCULARMETRE");
@@ -551,8 +549,6 @@ void OsuSkin::load()
 
 	if (m_circularmetre != NULL && m_circularmetre->getFilePath().find("@2x") != -1)
 		m_bCircularmetre2x = true;
-	if (m_playSkip != NULL && m_playSkip->getFilePath().find("@2x") != -1)
-		m_bPlaySkip2x = true;
 
 	if (m_pauseContinue != NULL && m_pauseContinue->getFilePath().find("@2x") != -1)
 		m_bPauseContinue2x = true;

@@ -79,7 +79,7 @@ public:
 	inline Image *getScorePercent() {return m_scorePercent;}
 	inline Image *getScoreDot() {return m_scoreDot;}
 
-	inline Image *getPlaySkip() {return m_playSkip;}
+	inline OsuSkinImage *getPlaySkip() {return m_playSkip;}
 	inline Image *getPlayWarningArrow() {return m_playWarningArrow;}
 	inline OsuSkinImage *getPlayWarningArrow2() {return m_playWarningArrow2;}
 	inline Image *getCircularmetre() {return m_circularmetre;}
@@ -211,7 +211,6 @@ public:
 	inline bool isSliderEndCircle2x() {return m_bSliderEndCircle2x;}
 
 	inline bool isCircularmetre2x() {return m_bCircularmetre2x;}
-	inline bool isPlaySkip2x() {return m_bPlaySkip2x;}
 
 	inline bool isPauseContinue2x() {return m_bPauseContinue2x;}
 
@@ -313,7 +312,7 @@ private:
 	Image *m_scorePercent;
 	Image *m_scoreDot;
 
-	Image *m_playSkip;
+	OsuSkinImage *m_playSkip;
 	Image *m_playWarningArrow;
 	OsuSkinImage *m_playWarningArrow2;
 	Image *m_circularmetre;
@@ -472,7 +471,6 @@ private:
 	bool m_bSliderEndCircle2x;
 
 	bool m_bCircularmetre2x;
-	bool m_bPlaySkip2x;
 
 	bool m_bPauseContinue2x;
 
