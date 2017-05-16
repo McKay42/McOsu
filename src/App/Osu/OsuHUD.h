@@ -53,6 +53,8 @@ public:
 
 	Rect getSkipClickRect();
 
+	void drawSkip(Graphics *g);
+
 private:
 	void drawCursorRaw(Graphics *g, Vector2 pos, float alphaMultiplier = 1.0f);
 	void drawCursorTrailRaw(Graphics *g, float alpha, Vector2 pos);
@@ -62,7 +64,7 @@ private:
 	void drawScore(Graphics *g, unsigned long long score);
 	void drawHP(Graphics *g, float health);
 
-	void drawSkip(Graphics *g);
+
 	void drawWarningArrows(Graphics *g, float hitcircleDiameter = 0.0f);
 	void drawContinue(Graphics *g, Vector2 cursor, float hitcircleDiameter = 0.0f);
 	void drawHitErrorBar(Graphics *g, float hitWindow300, float hitWindow100, float hitWindow50, float hitWindowMiss);
