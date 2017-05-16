@@ -40,7 +40,13 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	*/
 
 	CHANGELOG alpha29Steam;
-	alpha29Steam.title = "28.9 (Steam VR Alpha, ?)";
+	alpha29Steam.title = "28.92 (Steam VR Alpha, ?)";
+	alpha29Steam.changes.push_back("- Lowered minimum Mouse Sensitivity slider value from 0.4 to 0.1 (Options > Input > Mouse)");
+	alpha29Steam.changes.push_back("- Made \"play-skip\" skin element animatable");
+	alpha29Steam.changes.push_back("- Fixed ranking screen tooltip rounding CS/AR/OD/HP >= 10 incorrectly");
+	alpha29Steam.changes.push_back("");
+	alpha29Steam.changes.push_back("");
+	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("- Switched slider bezier curve generator to official algorithm (fixes Aspire loading \"freezes\", mostly)");
 	alpha29Steam.changes.push_back("- More stuff in ranking screen tooltip (stars, speed, CS/AR/OD/HP)");
 	alpha29Steam.changes.push_back("- Round pp up from 0.5 (727.49 => 727; 727.5 => 728)");

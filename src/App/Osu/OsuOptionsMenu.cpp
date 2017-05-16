@@ -321,7 +321,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSection("Input");
 
 	addSubSection("Mouse");
-	addSlider("Sensitivity:", 0.4f, 6.0f, convar->getConVarByName("mouse_sensitivity"))->setKeyDelta(0.1f);
+	addSlider("Sensitivity:", 0.1f, 6.0f, convar->getConVarByName("mouse_sensitivity"))->setKeyDelta(0.01f);
 	addCheckbox("Raw Input", convar->getConVarByName("mouse_raw_input"));
 	addCheckbox("Map Absolute Raw Input to Window", convar->getConVarByName("mouse_raw_input_absolute_to_window"));
 	addCheckbox("Confine Cursor (Windowed)", convar->getConVarByName("osu_confine_cursor_windowed"));
