@@ -57,7 +57,7 @@ void DUMMY_OSU_MODS(void) {;}
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 28.92f);
+ConVar osu_version("osu_version", 28.93f);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr");
 #else
@@ -113,6 +113,9 @@ Osu::Osu()
 	m_osu_mod_fps_ref = convar->getConVarByName("osu_mod_fps");
 	m_osu_mod_minimize_ref = convar->getConVarByName("osu_mod_minimize");
 	m_osu_mod_wobble_ref = convar->getConVarByName("osu_mod_wobble");
+	m_osu_playfield_rotation = convar->getConVarByName("osu_playfield_rotation");
+	m_osu_playfield_stretch_x = convar->getConVarByName("osu_playfield_stretch_x");
+	m_osu_playfield_stretch_y = convar->getConVarByName("osu_playfield_stretch_y");
 
 	// engine settings/overrides
 	openvr->setDrawCallback( fastdelegate::MakeDelegate(this, &Osu::drawVR) );
@@ -160,6 +163,10 @@ Osu::Osu()
 	osu_volume_music.setCallback( fastdelegate::MakeDelegate(this, &Osu::onMusicVolumeChange) );
 	osu_speed_override.setCallback( fastdelegate::MakeDelegate(this, &Osu::onSpeedChange) );
 	osu_pitch_override.setCallback( fastdelegate::MakeDelegate(this, &Osu::onPitchChange) );
+
+	m_osu_playfield_rotation->setCallback( fastdelegate::MakeDelegate(this, &Osu::onPlayfieldChange) );
+	m_osu_playfield_stretch_x->setCallback( fastdelegate::MakeDelegate(this, &Osu::onPlayfieldChange) );
+	m_osu_playfield_stretch_y->setCallback( fastdelegate::MakeDelegate(this, &Osu::onPlayfieldChange) );
 
 	osu_mods.setCallback( fastdelegate::MakeDelegate(this, &Osu::updateModsForConVarTemplate) );
 
@@ -217,6 +224,8 @@ Osu::Osu()
 	m_bModNM = false;
 
 	m_bShouldCursorBeVisible = false;
+
+	m_bScheduleEndlessModNextBeatmap = false;
 
 	// debug
 	m_windowManager = new CWindowManager();
@@ -630,6 +639,13 @@ void Osu::update()
 	// it's a bit of a hack, because using cursor visibility to work around SetCursorPos() affecting the windows cursor in the Mouse class
 	if (isInVRMode() && !env->isCursorVisible())
 		env->setCursorVisible(true);
+
+	// endless mod
+	if (m_bScheduleEndlessModNextBeatmap)
+	{
+		m_bScheduleEndlessModNextBeatmap = false;
+		m_songBrowser2->playNextRandomBeatmap();
+	}
 }
 
 void Osu::updateMods()
@@ -1066,7 +1082,7 @@ void Osu::onPlayEnd(bool quit)
 		}
 		else
 		{
-			m_songBrowser2->playNextRandomBeatmap();
+			m_bScheduleEndlessModNextBeatmap = true;
 			return; // nothing more to do here
 		}
 	}
@@ -1196,7 +1212,7 @@ bool Osu::isInVRMode()
 
 bool Osu::shouldFallBackToLegacySliderRenderer()
 {
-	return m_osu_mod_wobble_ref->getBool() || m_osu_mod_minimize_ref->getBool() || m_modSelector->isCSOverrideSliderActive();
+	return m_osu_mod_wobble_ref->getBool() || m_osu_mod_minimize_ref->getBool() || m_modSelector->isCSOverrideSliderActive()/* || (m_osu_playfield_rotation->getFloat() < -0.01f || m_osu_playfield_rotation->getFloat() > 0.01f)*/;
 }
 
 
@@ -1380,6 +1396,12 @@ void Osu::onPitchChange(UString oldValue, UString newValue)
 		float pitch = newValue.toFloat();
 		getSelectedBeatmap()->setPitch(pitch > 0.0f ? pitch : getPitchMultiplier());
 	}
+}
+
+void Osu::onPlayfieldChange(UString oldValue, UString newValue)
+{
+	if (getSelectedBeatmap() != NULL)
+		getSelectedBeatmap()->onModUpdate();
 }
 
 void Osu::onLetterboxingChange(UString oldValue, UString newValue)
