@@ -171,6 +171,8 @@ private:
 	void onSpeedChange(UString oldValue, UString newValue);
 	void onPitchChange(UString oldValue, UString newValue);
 
+	void onPlayfieldChange(UString oldValue, UString newValue);
+
 	void onLetterboxingChange(UString oldValue, UString newValue);
 
 	void onConfineCursorWindowedChange(UString oldValue, UString newValue);
@@ -185,6 +187,9 @@ private:
 	ConVar *m_osu_mod_fps_ref;
 	ConVar *m_osu_mod_wobble_ref;
 	ConVar *m_osu_mod_minimize_ref;
+	ConVar *m_osu_playfield_rotation;
+	ConVar *m_osu_playfield_stretch_x;
+	ConVar *m_osu_playfield_stretch_y;
 
 	// interfaces
 	OsuVR *m_vr;
@@ -262,6 +267,9 @@ private:
 
 	// debugging
 	CWindowManager *m_windowManager;
+
+	// custom
+	bool m_bScheduleEndlessModNextBeatmap;
 };
 
 #endif

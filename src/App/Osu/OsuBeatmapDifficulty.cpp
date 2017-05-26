@@ -416,7 +416,7 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 	File file(m_sFilePath);
 	if (!file.canRead())
 	{
-		UString errorMessage = "Error: Couldn't load beatmap file";
+		UString errorMessage = "Error: Couldn't load beatmap file :(";
 		debugLog("Osu Error: Couldn't load beatmap file (%s)!\n", m_sFilePath.toUtf8());
 		if (m_osu != NULL)
 			m_osu->getNotificationOverlay()->addNotification(errorMessage, 0xffff0000);
