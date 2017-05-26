@@ -13,6 +13,7 @@
 
 class Osu;
 
+class OsuMainMenuPauseButton;
 class OsuMainMenuMainButton;
 class OsuMainMenuButton;
 class OsuUIButton;
@@ -92,7 +93,7 @@ private:
 	OsuMainMenuMainButton *m_mainButton;
 	std::vector<OsuMainMenuButton*> m_menuElements;
 
-	CBaseUIButton *m_pauseButton;
+	OsuMainMenuPauseButton *m_pauseButton;
 	OsuUIButton *m_updateAvailableButton;
 	OsuUIButton *m_githubButton;
 	CBaseUIButton *m_versionButton;
