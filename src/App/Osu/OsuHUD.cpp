@@ -88,6 +88,8 @@ OsuHUD::OsuHUD(Osu *osu)
 	m_osu_mod_target_300_percent_ref = convar->getConVarByName("osu_mod_target_300_percent");
 	m_osu_mod_target_100_percent_ref = convar->getConVarByName("osu_mod_target_100_percent");
 	m_osu_mod_target_50_percent_ref = convar->getConVarByName("osu_mod_target_50_percent");
+	m_osu_playfield_stretch_x_ref = convar->getConVarByName("osu_playfield_stretch_x");
+	m_osu_playfield_stretch_y_ref = convar->getConVarByName("osu_playfield_stretch_y");
 
 	m_tempFont = engine->getResourceManager()->getFont("FONT_DEFAULT");
 
@@ -514,6 +516,10 @@ void OsuHUD::drawPlayfieldBorder(Graphics *g, Vector2 playfieldCenter, Vector2 p
 {
 	if (borderSize == 0.0f)
 		return;
+
+	// respect playfield stretching
+	playfieldSize.x += playfieldSize.x*m_osu_playfield_stretch_x_ref->getFloat();
+	playfieldSize.y += playfieldSize.y*m_osu_playfield_stretch_y_ref->getFloat();
 
 	Vector2 playfieldBorderTopLeft = Vector2((int)(playfieldCenter.x - playfieldSize.x/2 - hitcircleDiameter/2 - borderSize), (int)(playfieldCenter.y - playfieldSize.y/2 - hitcircleDiameter/2 - borderSize));
 	Vector2 playfieldBorderSize = Vector2((int)(playfieldSize.x + hitcircleDiameter), (int)(playfieldSize.y + hitcircleDiameter));
