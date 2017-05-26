@@ -52,9 +52,9 @@ ConVar osu_number_scale_multiplier("osu_number_scale_multiplier", 1.0f);
 
 ConVar osu_playfield_mirror_horizontal("osu_playfield_mirror_horizontal", false);
 ConVar osu_playfield_mirror_vertical("osu_playfield_mirror_vertical", false);
-ConVar osu_playfield_rotation("osu_playfield_rotation", 0.0f);
-ConVar osu_playfield_stretch_x("osu_playfield_stretch_x", 0.0f);
-ConVar osu_playfield_stretch_y("osu_playfield_stretch_y", 0.0f);
+ConVar osu_playfield_rotation("osu_playfield_rotation", 0.0f, "rotates the entire playfield by this many degrees");
+ConVar osu_playfield_stretch_x("osu_playfield_stretch_x", 0.0f, "offsets/multiplies all hitobject coordinates by it (0 = default 1x playfield size, -1 = on a line, -0.5 = 0.5x playfield size, 0.5 = 1.5x playfield size)");
+ConVar osu_playfield_stretch_y("osu_playfield_stretch_y", 0.0f, "offsets/multiplies all hitobject coordinates by it (0 = default 1x playfield size, -1 = on a line, -0.5 = 0.5x playfield size, 0.5 = 1.5x playfield size)");
 
 ConVar osu_mod_wobble("osu_mod_wobble", false);
 ConVar osu_mod_wobble2("osu_mod_wobble2", false);
@@ -152,6 +152,9 @@ OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 	m_bWasHorizontalMirrorEnabled = false;
 	m_bWasVerticalMirrorEnabled = false;
 	m_bWasEZEnabled = false;
+	m_fPrevPlayfieldRotationFromConVar = 0.0f;
+	m_fPrevPlayfieldStretchX = 0.0f;
+	m_fPrevPlayfieldStretchY = 0.0f;
 	m_fPrevHitCircleDiameterForStarCache = 1.0f;
 	m_fPrevSpeedForStarCache = 1.0f;
 
@@ -614,6 +617,24 @@ void OsuBeatmapStandard::onModUpdate(bool rebuildSliderVertexBuffers)
 		if (rebuildSliderVertexBuffers)
 			updateSliderVertexBuffers();
 	}
+	if (osu_playfield_rotation.getFloat() != m_fPrevPlayfieldRotationFromConVar)
+	{
+		m_fPrevPlayfieldRotationFromConVar = osu_playfield_rotation.getFloat();
+		if (rebuildSliderVertexBuffers)
+			updateSliderVertexBuffers();
+	}
+	if (osu_playfield_stretch_x.getFloat() != m_fPrevPlayfieldStretchX)
+	{
+		m_fPrevPlayfieldStretchX = osu_playfield_stretch_x.getFloat();
+		if (rebuildSliderVertexBuffers)
+			updateSliderVertexBuffers();
+	}
+	if (osu_playfield_stretch_y.getFloat() != m_fPrevPlayfieldStretchY)
+	{
+		m_fPrevPlayfieldStretchY = osu_playfield_stretch_y.getFloat();
+		if (rebuildSliderVertexBuffers)
+			updateSliderVertexBuffers();
+	}
 
 	// recalculate star cache for live pp
 	if (m_osu_draw_statistics_pp->getBool()) // sanity + performance/usability
@@ -719,15 +740,17 @@ Vector2 OsuBeatmapStandard::osuCoords2Pixels(Vector2 coords)
 		coords.y = coords3.y + failTimePercentInv*OsuGameRules::OSU_COORD_HEIGHT*1.25f;
 	}
 
-	// scale
-	const float targetScreenWidthFull = m_osu->getScreenWidth() - m_fHitcircleDiameter;
-	const float targetScreenHeightFull = m_osu->getScreenHeight() - m_fHitcircleDiameter;
-	coords.x *= (1.0f - osu_playfield_stretch_x.getFloat())*m_fScaleFactor + osu_playfield_stretch_x.getFloat()*(targetScreenWidthFull / (float)OsuGameRules::OSU_COORD_WIDTH);
-	coords.y *= (1.0f - osu_playfield_stretch_y.getFloat())*m_fScaleFactor + osu_playfield_stretch_y.getFloat()*(targetScreenHeightFull / (float)OsuGameRules::OSU_COORD_HEIGHT);
+	// playfield stretching
+	coords.x -= OsuGameRules::OSU_COORD_WIDTH/2; // center
+	coords.y -= OsuGameRules::OSU_COORD_HEIGHT/2;
+	coords.x *= 1.0f + osu_playfield_stretch_x.getFloat(); // stretch
+	coords.y *= 1.0f + osu_playfield_stretch_y.getFloat();
+	coords.x += OsuGameRules::OSU_COORD_WIDTH/2; // undo center
+	coords.y += OsuGameRules::OSU_COORD_HEIGHT/2;
 
-	// offset
-	coords.x += (1.0f - osu_playfield_stretch_x.getFloat())*m_vPlayfieldOffset.x + osu_playfield_stretch_x.getFloat()*(m_fHitcircleDiameter/2.0f);
-	coords.y += (1.0f - osu_playfield_stretch_y.getFloat())*m_vPlayfieldOffset.y + osu_playfield_stretch_y.getFloat()*(m_fHitcircleDiameter/2.0f);
+	// scale and offset
+	coords *= m_fScaleFactor;
+	coords += m_vPlayfieldOffset; // the offset is already scaled, just add it
 
 	// first person mod, centered cursor
 	if (osu_mod_fps.getBool())
@@ -823,8 +846,8 @@ Vector2 OsuBeatmapStandard::osuCoords2VRPixels(Vector2 coords)
 	coords.y -= OsuGameRules::OSU_COORD_HEIGHT/2;
 
 	// VR scale
-	coords.x *= (1.0f - osu_playfield_stretch_x.getFloat()) + osu_playfield_stretch_x.getFloat();
-	coords.y *= (1.0f - osu_playfield_stretch_y.getFloat()) + osu_playfield_stretch_y.getFloat();
+	coords.x *= 1.0f + osu_playfield_stretch_x.getFloat();
+	coords.y *= 1.0f + osu_playfield_stretch_y.getFloat();
 
 	return coords;
 }
@@ -836,13 +859,31 @@ Vector2 OsuBeatmapStandard::osuCoords2LegacyPixels(Vector2 coords)
 	if (osu_playfield_mirror_vertical.getBool())
 		coords.x = OsuGameRules::OSU_COORD_WIDTH - coords.x;
 
+	// rotation
+	if (m_fPlayfieldRotation + osu_playfield_rotation.getFloat() != 0.0f)
+	{
+		coords.x -= OsuGameRules::OSU_COORD_WIDTH/2;
+		coords.y -= OsuGameRules::OSU_COORD_HEIGHT/2;
+
+		Vector3 coords3 = Vector3(coords.x, coords.y, 0);
+		Matrix4 rot;
+		rot.rotateZ(m_fPlayfieldRotation + osu_playfield_rotation.getFloat());
+
+		coords3 = coords3 * rot;
+		coords3.x += OsuGameRules::OSU_COORD_WIDTH/2;
+		coords3.y += OsuGameRules::OSU_COORD_HEIGHT/2;
+
+		coords.x = coords3.x;
+		coords.y = coords3.y;
+	}
+
 	// VR center
 	coords.x -= OsuGameRules::OSU_COORD_WIDTH/2;
 	coords.y -= OsuGameRules::OSU_COORD_HEIGHT/2;
 
 	// VR scale
-	coords.x *= (1.0f - osu_playfield_stretch_x.getFloat()) + osu_playfield_stretch_x.getFloat();
-	coords.y *= (1.0f - osu_playfield_stretch_y.getFloat()) + osu_playfield_stretch_y.getFloat();
+	coords.x *= 1.0f + osu_playfield_stretch_x.getFloat();
+	coords.y *= 1.0f + osu_playfield_stretch_y.getFloat();
 
 	return coords;
 }
@@ -1197,7 +1238,11 @@ void OsuBeatmapStandard::updateSliderVertexBuffers()
 	updatePlayfieldMetrics();
 	updateHitobjectMetrics();
 
-	m_fPrevHitCircleDiameter = getHitcircleDiameter(); // to avoid useless double updates in onModUpdate()
+	m_bWasEZEnabled = m_osu->getModEZ(); // to avoid useless double updates in onModUpdate()
+	m_fPrevHitCircleDiameter = getHitcircleDiameter(); // same here
+	m_fPrevPlayfieldRotationFromConVar = osu_playfield_rotation.getFloat(); // same here
+	m_fPrevPlayfieldStretchX = osu_playfield_stretch_x.getFloat(); // same here
+	m_fPrevPlayfieldStretchY = osu_playfield_stretch_y.getFloat(); // same here
 
 	debugLog("OsuBeatmapStandard::updateSliderVertexBuffers() for %i hitobjects ...\n", m_hitobjects.size());
 

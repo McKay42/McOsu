@@ -117,6 +117,9 @@ private:
 	bool m_bWasHorizontalMirrorEnabled;
 	bool m_bWasVerticalMirrorEnabled;
 	bool m_bWasEZEnabled;
+	float m_fPrevPlayfieldRotationFromConVar;
+	float m_fPrevPlayfieldStretchX;
+	float m_fPrevPlayfieldStretchY;
 	float m_fPrevHitCircleDiameterForStarCache;
 	float m_fPrevSpeedForStarCache;
 

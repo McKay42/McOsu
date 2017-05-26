@@ -14,6 +14,7 @@
 #include "SoundEngine.h"
 #include "ResourceManager.h"
 #include "AnimationHandler.h"
+#include "VertexArrayObject.h"
 #include "ConVar.h"
 #include "File.h"
 
@@ -71,15 +72,74 @@ private:
 class OsuMainMenuPauseButton : public CBaseUIButton
 {
 public:
-	OsuMainMenuPauseButton(float xPos, float yPos, float xSize, float ySize, UString name, UString text) : CBaseUIButton(xPos, yPos, xSize, ySize, name, text) {;}
+	OsuMainMenuPauseButton(float xPos, float yPos, float xSize, float ySize, UString name, UString text) : CBaseUIButton(xPos, yPos, xSize, ySize, name, text)
+	{
+		m_bIsPaused = true;
+	}
 
 	virtual void draw(Graphics *g)
 	{
 		int third = m_vSize.x/3;
 
 		g->setColor(0xffffffff);
-		g->fillRect(m_vPos.x, m_vPos.y, third, m_vSize.y);
-		g->fillRect(m_vPos.x + 2*third, m_vPos.y, third, m_vSize.y);
+
+		if (!m_bIsPaused)
+		{
+			g->fillRect(m_vPos.x, m_vPos.y, third, m_vSize.y + 1);
+			g->fillRect(m_vPos.x + 2*third, m_vPos.y, third, m_vSize.y + 1);
+		}
+		else
+		{
+			// HACKHACK: disable GL_TEXTURE_2D
+			// DEPRECATED LEGACY
+			g->setColor(0x00000000);
+			g->drawPixel(m_vPos.x, m_vPos.y);
+
+			g->setColor(0xffffffff);
+			VertexArrayObject vao;
+
+			const int smoothPixels = 2;
+
+			// center triangle
+			vao.addVertex(m_vPos.x, m_vPos.y + smoothPixels);
+			vao.addColor(0xffffffff);
+			vao.addVertex(m_vPos.x + m_vSize.x, m_vPos.y + m_vSize.y/2);
+			vao.addColor(0xffffffff);
+			vao.addVertex(m_vPos.x, m_vPos.y + m_vSize.y - smoothPixels);
+			vao.addColor(0xffffffff);
+
+			// top smooth
+			vao.addVertex(m_vPos.x, m_vPos.y + smoothPixels);
+			vao.addColor(0xffffffff);
+			vao.addVertex(m_vPos.x, m_vPos.y);
+			vao.addColor(0x00000000);
+			vao.addVertex(m_vPos.x + m_vSize.x, m_vPos.y + m_vSize.y/2);
+			vao.addColor(0xffffffff);
+
+			vao.addVertex(m_vPos.x, m_vPos.y);
+			vao.addColor(0x00000000);
+			vao.addVertex(m_vPos.x + m_vSize.x, m_vPos.y + m_vSize.y/2);
+			vao.addColor(0xffffffff);
+			vao.addVertex(m_vPos.x + m_vSize.x, m_vPos.y + m_vSize.y/2 - smoothPixels);
+			vao.addColor(0x00000000);
+
+			// bottom smooth
+			vao.addVertex(m_vPos.x, m_vPos.y + m_vSize.y - smoothPixels);
+			vao.addColor(0xffffffff);
+			vao.addVertex(m_vPos.x, m_vPos.y + m_vSize.y);
+			vao.addColor(0x00000000);
+			vao.addVertex(m_vPos.x + m_vSize.x, m_vPos.y + m_vSize.y/2);
+			vao.addColor(0xffffffff);
+
+			vao.addVertex(m_vPos.x, m_vPos.y + m_vSize.y);
+			vao.addColor(0x00000000);
+			vao.addVertex(m_vPos.x + m_vSize.x, m_vPos.y + m_vSize.y/2);
+			vao.addColor(0xffffffff);
+			vao.addVertex(m_vPos.x + m_vSize.x, m_vPos.y + m_vSize.y/2 + smoothPixels);
+			vao.addColor(0x00000000);
+
+			g->drawVAO(&vao);
+		}
 
 		// draw hover rects
 		g->setColor(m_frameColor);
@@ -93,6 +153,11 @@ public:
 		if (m_bActive && m_bEnabled)
 			drawHoverRect(g, 6);
 	}
+
+	void setPaused(bool paused) {m_bIsPaused = paused;}
+
+private:
+	bool m_bIsPaused;
 };
 
 
@@ -201,10 +266,12 @@ void OsuMainMenu::draw(Graphics *g)
 	McFont *titleFont = m_osu->getTitleFont();
 
 	// main button stuff
+	bool haveTimingpoints = false;
 	const float div = 1.25f;
 	float pulse = 0.0f;
 	if (m_osu->getSelectedBeatmap() != NULL && m_osu->getSelectedBeatmap()->getSelectedDifficulty() != NULL && m_osu->getSelectedBeatmap()->getMusic() != NULL && m_osu->getSelectedBeatmap()->getMusic()->isPlaying())
 	{
+		haveTimingpoints = true;
 		long curMusicPos = m_osu->getSelectedBeatmap()->getMusic()->getPositionMS();
 		OsuBeatmapDifficulty::TIMING_INFO t = m_osu->getSelectedBeatmap()->getSelectedDifficulty()->getTimingInfoForTime(curMusicPos);
 		pulse = (float)((curMusicPos - t.offset) % (long)t.beatLengthBase)/t.beatLengthBase;
@@ -286,6 +353,11 @@ void OsuMainMenu::draw(Graphics *g)
 	{
 		g->push3DScene(mainButtonRect);
 		g->rotate3DScene(m_fMainMenuAnim1*360.0f, m_fMainMenuAnim2*360.0f, m_fMainMenuAnim3*360.0f);
+
+		/*
+		g->offset3DScene(0, 0, 300.0f);
+		g->rotate3DScene(0, m_fCenterOffsetAnim*0.13f, 0);
+		*/
 	}
 
 	g->setColor(0xff000000);
@@ -311,7 +383,13 @@ void OsuMainMenu::draw(Graphics *g)
 	{
 		if (MCOSU_MAIN_BUTTON_SUBTEXT.length() > 0)
 		{
-			g->setColor(0xff444444);
+			float invertedPulse = 1.0f - pulse;
+
+			if (haveTimingpoints)
+				g->setColor(COLORf(1.0f, 0.10f + 0.15f*invertedPulse, 0.10f + 0.15f*invertedPulse, 0.10f + 0.15f*invertedPulse));
+			else
+				g->setColor(0xff444444);
+
 			g->pushTransform();
 			g->scale(fontScale, fontScale);
 			g->translate(m_vCenter.x - m_fCenterOffsetAnim - (smallFont->getStringWidth(MCOSU_MAIN_BUTTON_SUBTEXT)/2.0f)*fontScale, m_vCenter.y + (mainButtonRect.getHeight()/2.0f)/2.0f + (smallFont->getHeight()*fontScale)/2.0f);
@@ -426,6 +504,12 @@ void OsuMainMenu::update()
 		m_fUpdateButtonAnim = 0.0f;
 		anim->moveQuadInOut(&m_fUpdateButtonAnim, 1.0f, 0.5f, true);
 	}
+
+	// handle pause button pause detection
+	if (m_osu->getSelectedBeatmap() != NULL)
+		m_pauseButton->setPaused(!m_osu->getSelectedBeatmap()->isPreviewMusicPlaying());
+	else
+		m_pauseButton->setPaused(true);
 }
 
 void OsuMainMenu::onKeyDown(KeyboardEvent &e)
