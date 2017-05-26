@@ -65,6 +65,7 @@ public:
 	void restart(bool quick = false);
 	void pause(bool quitIfWaiting = true);
 	void pausePreviewMusic();
+	bool isPreviewMusicPlaying();
 	void stop(bool quit = true);
 	void fail();
 
@@ -198,6 +199,7 @@ protected:
 	double m_fLastAudioTimeAccurateSet;
 	double m_fLastRealTimeForInterpolationDelta;
 	int m_iResourceLoadUpdateDelayHack;
+	bool m_bForceStreamPlayback;
 
 	// gameplay & state
 	bool m_bFailed;

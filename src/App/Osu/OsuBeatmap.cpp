@@ -124,6 +124,7 @@ OsuBeatmap::OsuBeatmap(Osu *osu)
 	m_fLastAudioTimeAccurateSet = 0.0;
 	m_fLastRealTimeForInterpolationDelta = 0.0;
 	m_iResourceLoadUpdateDelayHack = 0;
+	m_bForceStreamPlayback = false;
 
 	m_bFailed = false;
 	m_fFailTime = 0.0f;
@@ -227,6 +228,34 @@ void OsuBeatmap::drawBackground(Graphics *g)
 		g->drawImage(m_selectedDifficulty->backgroundImage);
 		g->popTransform();
 	}
+
+	if (Osu::debug->getBool())
+	{
+		int y = 50;
+
+		if (m_bIsPaused)
+		{
+			g->setColor(0xffffffff);
+			g->fillRect(50, y, 15, 50);
+			g->fillRect(50 + 50 - 15, y, 15, 50);
+		}
+
+		y += 100;
+
+		if (m_bIsWaiting)
+		{
+			g->setColor(0xff00ff00);
+			g->fillRect(50, y, 50, 50);
+		}
+
+		y += 100;
+
+		if (m_bForceStreamPlayback)
+		{
+			g->setColor(0xffff0000);
+			g->fillRect(50, y, 50, 50);
+		}
+	}
 }
 
 void OsuBeatmap::update()
@@ -301,7 +330,8 @@ void OsuBeatmap::update()
 				if (!m_bIsPaused)
 				{
 					m_bIsWaiting = false;
-					m_bIsPlaying = engine->getSound()->play(m_music);
+					m_bIsPlaying = true;
+					engine->getSound()->play(m_music);
 					m_music->setPosition(0.0);
 					m_music->setVolume(m_osu_volume_music_ref->getFloat());
 
@@ -327,13 +357,6 @@ void OsuBeatmap::update()
 		}
 	}
 
-	// detect and handle music end
-	if (!m_bIsWaiting && !isLoading() && (m_music->isFinished() || (m_hitobjects.size() > 0 && m_hitobjects[m_hitobjects.size()-1]->getTime() + m_hitobjects[m_hitobjects.size()-1]->getDuration() + 1000 < m_iCurMusicPos)))
-	{
-		stop(false);
-		return;
-	}
-
 	// only continue updating hitobjects etc. if we have loaded everything
 	if (isLoading()) return;
 
@@ -341,11 +364,28 @@ void OsuBeatmap::update()
 	if (!m_music->isReady())
 	{
 		m_iResourceLoadUpdateDelayHack++; // HACKHACK: async loading takes 1 additional engine update() until both isAsyncReady() and isReady() return true
-		if (m_iResourceLoadUpdateDelayHack > 3)
+		if (m_iResourceLoadUpdateDelayHack > 1 && !m_bForceStreamPlayback) // first: try loading a stream version of the music file
+		{
+			m_bForceStreamPlayback = true;
+			unloadMusic();
+			loadMusic(true);
+
+			// we are waiting for an asynchronous start of the beatmap in the next update()
+			m_bIsWaiting = true;
+			m_fWaitTime = engine->getTimeReal();
+		}
+		else if (m_iResourceLoadUpdateDelayHack > 3) // second: if that still doesn't work, stop and display an error message
 		{
 			m_osu->getNotificationOverlay()->addNotification("Couldn't load music file :(", 0xffff0000);
 			stop(true);
 		}
+	}
+
+	// detect and handle music end
+	if (!m_bIsWaiting && m_music->isReady() && (m_music->isFinished() || (m_hitobjects.size() > 0 && m_hitobjects[m_hitobjects.size()-1]->getTime() + m_hitobjects[m_hitobjects.size()-1]->getDuration() + 1000 < m_iCurMusicPos)))
+	{
+		stop(false);
+		return;
 	}
 
 	// update timing (points)
@@ -754,19 +794,18 @@ bool OsuBeatmap::play()
 
 	onLoad();
 
-	// try to start the music so we can check if everything works (it is actually properly started again in the next update() by m_bIsWaiting)
+	// load music
 	unloadMusic(); // need to reload in case of speed/pitch changes (just to be sure)
 	loadMusic(false);
 
-	m_music->setEnablePitchAndSpeedShiftingHack(true);
-	m_bIsPlaying = engine->getSound()->play(m_music);
+	m_music->setEnablePitchAndSpeedShiftingHack(true && !m_bForceStreamPlayback);
 	m_bIsPaused = false;
 	m_bContinueScheduled = false;
+
 	m_bInBreak = false;
 	anim->deleteExistingAnimation(&m_fBreakBackgroundFade);
 	m_fBreakBackgroundFade = 0.0f;
 
-	engine->getSound()->stop(m_music);
 	m_music->setPosition(0.0);
 	m_iCurMusicPos = 0;
 
@@ -812,29 +851,28 @@ void OsuBeatmap::actualRestart()
 		}
 	}
 
-	// try to start the music so we can check if everything works (it is actually properly started again in the next update() by m_bIsWaiting)
+	// pause temporarily if playing
 	if (m_music->isPlaying())
-		engine->getSound()->stop(m_music);
-	m_music->setEnablePitchAndSpeedShiftingHack(true);
-	m_bIsPlaying = engine->getSound()->play(m_music);
+		engine->getSound()->pause(m_music);
+
+	// reset/restore frequency (from potential fail before)
+	m_music->setFrequency(0);
+
+	m_music->setEnablePitchAndSpeedShiftingHack(true && !m_bForceStreamPlayback);
 	m_bIsPaused = false;
 	m_bContinueScheduled = false;
+
 	m_bInBreak = false;
 	anim->deleteExistingAnimation(&m_fBreakBackgroundFade);
 	m_fBreakBackgroundFade = 0.0f;
 
 	onModUpdate(); // sanity
 
+	// reset position
 	m_music->setPosition(0.0);
 	m_iCurMusicPos = 0;
-	engine->getSound()->stop(m_music);
 
-	// if for some reason we can't restart, stop everything
-	if (!m_bIsPlaying)
-	{
-		debugLog("Osu Error: Couldn't restart music ...\n");
-		stop();
-	}
+	m_bIsPlaying = true;
 }
 
 void OsuBeatmap::pause(bool quitIfWaiting)
@@ -889,6 +927,14 @@ void OsuBeatmap::pausePreviewMusic()
 		else
 			engine->getSound()->play(m_music);
 	}
+}
+
+bool OsuBeatmap::isPreviewMusicPlaying()
+{
+	if (m_music != NULL)
+		return m_music->isPlaying();
+
+	return false;
 }
 
 void OsuBeatmap::stop(bool quit)
@@ -1323,6 +1369,7 @@ void OsuBeatmap::handlePreviewPlay()
 
 void OsuBeatmap::loadMusic(bool stream)
 {
+	stream = stream || m_bForceStreamPlayback;
 	m_iResourceLoadUpdateDelayHack = 0;
 
 	// load the song (again)
@@ -1334,7 +1381,7 @@ void OsuBeatmap::loadMusic(bool stream)
 		if (!stream)
 			engine->getResourceManager()->requestNextLoadAsync();
 
-		m_music = engine->getResourceManager()->loadSoundAbs(m_selectedDifficulty->fullSoundFilePath, "OSU_BEATMAP_MUSIC", stream);
+		m_music = engine->getResourceManager()->loadSoundAbs(m_selectedDifficulty->fullSoundFilePath, "OSU_BEATMAP_MUSIC", stream, false, false, m_bForceStreamPlayback); // m_bForceStreamPlayback = prescan necessary! otherwise big mp3s will go out of sync
 		m_music->setVolume(m_osu_volume_music_ref->getFloat());
 	}
 }

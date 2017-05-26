@@ -85,6 +85,8 @@ private:
 	ConVar *m_osu_mod_target_300_percent_ref;
 	ConVar *m_osu_mod_target_100_percent_ref;
 	ConVar *m_osu_mod_target_50_percent_ref;
+	ConVar *m_osu_playfield_stretch_x_ref;
+	ConVar *m_osu_playfield_stretch_y_ref;
 
 	// shit code
 	float m_fAccuracyXOffset;
