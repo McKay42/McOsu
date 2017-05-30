@@ -45,7 +45,7 @@ OsuUISongBrowserSongDifficultyButton::OsuUISongBrowserSongDifficultyButton(Osu *
 	setOffsetPercent(0.075f);
 	setInactiveBackgroundColor(COLOR(255, 0, 150, 236));
 
-	updateLayout();
+	updateLayoutEx();
 }
 
 void OsuUISongBrowserSongDifficultyButton::draw(Graphics *g)
