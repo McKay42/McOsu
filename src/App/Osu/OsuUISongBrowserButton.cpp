@@ -128,10 +128,10 @@ void OsuUISongBrowserButton::update()
 	if (!m_bVisible) return;
 
 	// animations need constant layout updates anyway
-	updateLayout();
+	updateLayoutEx();
 }
 
-void OsuUISongBrowserButton::updateLayout()
+void OsuUISongBrowserButton::updateLayoutEx()
 {
 	Image *menuButtonBackground = m_osu->getSkin()->getMenuButtonBackground();
 	Vector2 minimumSize = Vector2(699.0f, 103.0f)*(m_osu->getSkin()->isMenuButtonBackground2x() ? 2.0f : 1.0f);

@@ -71,6 +71,8 @@ void OsuUIBackButton::onMouseOutside()
 
 void OsuUIBackButton::updateLayout()
 {
+	CBaseUIButton::updateLayout();
+
 	Vector2 newSize = m_osu->getSkin()->getMenuBack2()->getSize();
 	newSize.y = clamp<float>(newSize.y, 0, m_osu->getSkin()->getMenuBack2()->getSizeBase().y*1.5f); // clamp the height down if it exceeds 1.5x the base height
 	m_fImageScale = newSize.y / m_osu->getSkin()->getMenuBack2()->getSize().y;

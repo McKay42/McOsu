@@ -23,7 +23,7 @@ public:
 	virtual void draw(Graphics *g);
 	virtual void update();
 
-	virtual void updateLayout();
+	virtual void updateLayoutEx();
 
 	void setVisible(bool visible);
 	void setParent(OsuUISongBrowserSongButton *parent) {m_parent = parent;}

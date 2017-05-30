@@ -1148,7 +1148,7 @@ void OsuSongBrowser2::updateSongButtonLayout()
 			wasCollectionButton = isCollectionButton;
 
 			songButton->setTargetRelPosY(yCounter);
-			songButton->updateLayout();
+			songButton->updateLayoutEx();
 
 			yCounter += songButton->getActualSize().y;
 		}
