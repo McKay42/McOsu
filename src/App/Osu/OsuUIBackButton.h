@@ -23,7 +23,7 @@ public:
 	virtual void onMouseInside();
 	virtual void onMouseOutside();
 
-	void updateLayout();
+	virtual void updateLayout();
 
 private:
 	Osu *m_osu;

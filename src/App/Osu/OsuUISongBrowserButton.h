@@ -26,7 +26,7 @@ public:
 	virtual void draw(Graphics *g);
 	virtual void update();
 
-	virtual void updateLayout();
+	virtual void updateLayoutEx();
 
 	void select();
 	void deselect();
