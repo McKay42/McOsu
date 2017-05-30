@@ -30,6 +30,7 @@ class OsuSkin;
 class OsuHUD;
 class OsuVRTutorial;
 class OsuChangelog;
+class OsuEditor;
 
 class ConVar;
 class Image;
@@ -89,6 +90,7 @@ public:
 	void toggleRankingScreen();
 	void toggleVRTutorial();
 	void toggleChangelog();
+	void toggleEditor();
 
 	void volumeDown();
 	void volumeUp();
@@ -206,6 +208,7 @@ private:
 	OsuScore *m_score;
 	OsuVRTutorial *m_vrTutorial;
 	OsuChangelog *m_changelog;
+	OsuEditor *m_editor;
 	OsuUpdateHandler *m_updateHandler;
 
 	std::vector<OsuScreen*> m_screens;
@@ -249,12 +252,14 @@ private:
 	float m_fQuickSaveTime;
 
 	// async toggles
+	// TODO: this way of doing things is bullshit
 	bool m_bToggleModSelectionScheduled;
 	bool m_bToggleSongBrowserScheduled;
 	bool m_bToggleOptionsMenuScheduled;
 	bool m_bToggleRankingScreenScheduled;
 	bool m_bToggleVRTutorialScheduled;
 	bool m_bToggleChangelogScheduled;
+	bool m_bToggleEditorScheduled;
 
 	// cursor
 	bool m_bShouldCursorBeVisible;

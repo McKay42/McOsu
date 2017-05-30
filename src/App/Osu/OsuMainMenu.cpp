@@ -217,7 +217,7 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen()
 	m_container->addBaseUIElement(m_mainButton);
 
 	addMainMenuButton("Play")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuMainMenu::onPlayButtonPressed) );
-	///addMainMenuButton("Edit");
+	//addMainMenuButton("Edit")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuMainMenu::onEditButtonPressed) );
 	addMainMenuButton("Options")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuMainMenu::onOptionsButtonPressed) );
 	addMainMenuButton("Exit")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuMainMenu::onExitButtonPressed) );
 
@@ -595,7 +595,7 @@ void OsuMainMenu::updateLayout()
 
 	int numButtons = m_menuElements.size();
 	int menuElementHeight = m_vSize.y / numButtons;
-	int menuElementPadding = m_vSize.y*0.075f;
+	int menuElementPadding = numButtons > 3 ? m_vSize.y*0.04f : m_vSize.y*0.075f;
 	menuElementHeight -= (numButtons-1)*menuElementPadding;
 	int menuElementExtraWidth = m_vSize.x*0.06f;
 
@@ -712,6 +712,11 @@ void OsuMainMenu::onMainMenuButtonPressed()
 void OsuMainMenu::onPlayButtonPressed()
 {
 	m_osu->toggleSongBrowser();
+}
+
+void OsuMainMenu::onEditButtonPressed()
+{
+	m_osu->toggleEditor();
 }
 
 void OsuMainMenu::onOptionsButtonPressed()
