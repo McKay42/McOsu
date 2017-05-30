@@ -105,7 +105,7 @@ OsuUISongBrowserSongButton::OsuUISongBrowserSongButton(Osu *osu, OsuSongBrowser2
 		m_sMapper = defaultDiff->creator;
 	}
 
-	updateLayout();
+	updateLayoutEx();
 }
 
 OsuUISongBrowserSongButton::~OsuUISongBrowserSongButton()
@@ -229,9 +229,9 @@ void OsuUISongBrowserSongButton::update()
 	}
 }
 
-void OsuUISongBrowserSongButton::updateLayout()
+void OsuUISongBrowserSongButton::updateLayoutEx()
 {
-	OsuUISongBrowserButton::updateLayout();
+	OsuUISongBrowserButton::updateLayoutEx();
 
 	// scaling
 	const Vector2 size = getActualSize();
