@@ -65,6 +65,7 @@ private:
 
 	void onMainMenuButtonPressed();
 	void onPlayButtonPressed();
+	void onEditButtonPressed();
 	void onOptionsButtonPressed();
 	void onExitButtonPressed();
 
