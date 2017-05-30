@@ -44,6 +44,7 @@
 #include "OsuHUD.h"
 #include "OsuVRTutorial.h"
 #include "OsuChangelog.h"
+#include "OsuEditor.h"
 
 #include "OsuBeatmap.h"
 #include "OsuBeatmapDifficulty.h"
@@ -206,6 +207,7 @@ Osu::Osu()
 	m_bToggleRankingScreenScheduled = false;
 	m_bToggleVRTutorialScheduled = false;
 	m_bToggleChangelogScheduled = false;
+	m_bToggleEditorScheduled = false;
 
 	m_bModAuto = false;
 	m_bModAutopilot = false;
@@ -277,6 +279,7 @@ Osu::Osu()
 	m_hud = new OsuHUD(this);
 	m_vrTutorial = new OsuVRTutorial(this);
 	m_changelog = new OsuChangelog(this);
+	m_editor = new OsuEditor(this);
 
 	// the order in this vector will define in which order events are handled/consumed
 	m_screens.push_back(m_notificationOverlay);
@@ -288,6 +291,7 @@ Osu::Osu()
 	m_screens.push_back(m_optionsMenu);
 	m_screens.push_back(m_vrTutorial);
 	m_screens.push_back(m_changelog);
+	m_screens.push_back(m_editor);
 	m_screens.push_back(m_mainMenu);
 	m_screens.push_back(m_tooltipOverlay);
 
@@ -298,6 +302,7 @@ Osu::Osu()
 	//m_pauseMenu->setVisible(true);
 	//m_rankingScreen->setVisible(true);
 	//m_changelog->setVisible(true);
+	//m_editor->setVisible(true);
 
 
 	if (isInVRMode() && osu_vr_tutorial.getBool())
@@ -417,10 +422,12 @@ void Osu::draw(Graphics *g)
 	{
 		if (m_songBrowser2 != NULL)
 			m_songBrowser2->draw(g);
+
 		m_modSelector->draw(g);
 		m_mainMenu->draw(g);
 		m_vrTutorial->draw(g);
 		m_changelog->draw(g);
+		m_editor->draw(g);
 		m_optionsMenu->draw(g);
 		m_rankingScreen->draw(g);
 
@@ -599,6 +606,13 @@ void Osu::update()
 
 		m_mainMenu->setVisible(!m_mainMenu->isVisible());
 		m_changelog->setVisible(!m_mainMenu->isVisible());
+	}
+	if (m_bToggleEditorScheduled)
+	{
+		m_bToggleEditorScheduled = false;
+
+		m_mainMenu->setVisible(!m_mainMenu->isVisible());
+		m_editor->setVisible(!m_mainMenu->isVisible());
 	}
 
 	// handle cursor visibility if outside of internal resolution
@@ -1011,6 +1025,11 @@ void Osu::toggleVRTutorial()
 void Osu::toggleChangelog()
 {
 	m_bToggleChangelogScheduled = true;
+}
+
+void Osu::toggleEditor()
+{
+	m_bToggleEditorScheduled = true;
 }
 
 void Osu::volumeDown()
