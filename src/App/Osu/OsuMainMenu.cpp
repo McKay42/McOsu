@@ -274,7 +274,9 @@ void OsuMainMenu::draw(Graphics *g)
 		haveTimingpoints = true;
 		long curMusicPos = m_osu->getSelectedBeatmap()->getMusic()->getPositionMS();
 		OsuBeatmapDifficulty::TIMING_INFO t = m_osu->getSelectedBeatmap()->getSelectedDifficulty()->getTimingInfoForTime(curMusicPos);
-		pulse = (float)((curMusicPos - t.offset) % (long)t.beatLengthBase)/t.beatLengthBase;
+		if (t.beatLengthBase == 0.0f) // bah
+			t.beatLengthBase = 1.0f;
+		pulse = (float)((curMusicPos - t.offset) % (long)t.beatLengthBase) / t.beatLengthBase;
 	}
 	else
 		pulse = (div - fmod(engine->getTime(), div))/div;

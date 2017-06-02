@@ -37,7 +37,7 @@ ConVar osu_pvs("osu_pvs", true, "optimizes all loops over all hitobjects by clam
 ConVar osu_draw_hitobjects("osu_draw_hitobjects", true);
 ConVar osu_vr_draw_desktop_playfield("osu_vr_draw_desktop_playfield", true);
 
-ConVar osu_global_offset("osu_global_offset", 0.0f);
+ConVar osu_universal_offset("osu_universal_offset", 0.0f);
 ConVar osu_interpolate_music_pos("osu_interpolate_music_pos", true, "Interpolate song position with engine time if the audio library reports the same position more than once");
 ConVar osu_compensate_music_speed("osu_compensate_music_speed", true, "compensates speeds slower than 1x a little bit, by adding an offset depending on the slowness");
 ConVar osu_combobreak_sound_combo("osu_combobreak_sound_combo", 20, "Only play the combobreak sound if the combo is higher than this");
@@ -81,7 +81,7 @@ ConVar *OsuBeatmap::m_osu_pvs = &osu_pvs;
 ConVar *OsuBeatmap::m_osu_draw_hitobjects_ref = &osu_draw_hitobjects;
 ConVar *OsuBeatmap::m_osu_vr_draw_desktop_playfield_ref = &osu_vr_draw_desktop_playfield;
 ConVar *OsuBeatmap::m_osu_followpoints_prevfadetime_ref = &osu_followpoints_prevfadetime;
-ConVar *OsuBeatmap::m_osu_global_offset_ref = &osu_global_offset;
+ConVar *OsuBeatmap::m_osu_universal_offset_ref = &osu_universal_offset;
 ConVar *OsuBeatmap::m_osu_early_note_time_ref = &osu_early_note_time;
 ConVar *OsuBeatmap::m_osu_fail_time_ref = &osu_fail_time;
 
@@ -348,7 +348,7 @@ void OsuBeatmap::update()
 		}
 
 		// ugh. force update all hitobjects while waiting (necessary because of pvs optimization)
-		long curPos = m_iCurMusicPos + (long)osu_global_offset.getInt() - m_selectedDifficulty->localoffset - m_selectedDifficulty->onlineOffset;
+		long curPos = m_iCurMusicPos + (long)osu_universal_offset.getInt() - m_selectedDifficulty->localoffset - m_selectedDifficulty->onlineOffset;
 		if (curPos > -1) // otherwise auto would already click elements that start at exactly 0 (while the map has not even started)
 			curPos = -1;
 		for (int i=0; i<m_hitobjects.size(); i++)
@@ -412,7 +412,7 @@ void OsuBeatmap::update()
 	{
 		std::lock_guard<std::mutex> lk(m_clicksMutex); // we need to lock this up here, else it would be possible to insert a click just before calling m_clicks.clear(), thus missing it
 
-		long curPos = m_iCurMusicPos + (long)osu_global_offset.getInt() - m_selectedDifficulty->localoffset - m_selectedDifficulty->onlineOffset;
+		long curPos = m_iCurMusicPos + (long)osu_universal_offset.getInt() - m_selectedDifficulty->localoffset - m_selectedDifficulty->onlineOffset;
 		m_iCurMusicPosWithOffsets = curPos;
 		bool blockNextNotes = false;
 		const long pvs = getPVS();
