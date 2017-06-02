@@ -86,10 +86,12 @@ void OsuNotificationOverlay::onKeyDown(KeyboardEvent &e)
 	// key binding logic
 	if (m_bWaitForKey)
 	{
+		/*
 		float prevDuration = osu_notification_duration.getFloat(); // this is a bit shitty
 		osu_notification_duration.setValue(0.85f);
 		addNotification(UString::format("The new key is (ASCII Keycode): %lu", e.getKeyCode()));
 		osu_notification_duration.setValue(prevDuration); // restore convar
+		*/
 
 		if (m_keyListener != NULL)
 			m_keyListener->onKey(e);
