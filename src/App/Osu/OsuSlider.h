@@ -14,7 +14,6 @@ class OsuSliderCurve;
 class OsuSliderCurveEqualDistanceMulti;
 
 class Shader;
-class VertexBuffer;
 class VertexArrayObject;
 
 class OsuSlider : public OsuHitObject
@@ -145,8 +144,8 @@ private:
 
 	bool m_bOnHitVRLeftControllerHapticFeedback;
 
-	VertexBuffer *m_vb;
-	VertexBuffer *m_vbVR2;
+	VertexArrayObject *m_vao;
+	VertexArrayObject *m_vaoVR2;
 };
 
 
@@ -173,8 +172,6 @@ public:
 	inline std::vector<std::vector<Vector2>> getPointSegments() {return m_curvePointSegments;}
 
 protected:
-	static float CURVE_POINTS_SEPERATION;
-
 	OsuBeatmap *m_beatmap;
 	OsuSlider *m_slider;
 	std::vector<Vector2> m_points;

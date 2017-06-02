@@ -589,6 +589,8 @@ void OsuSkin::load()
 		m_defaultCursor = defaultCursor;
 	else if (defaultCursor2 != NULL)
 		m_defaultCursor = defaultCursor2;
+	else
+		m_defaultCursor = m_cursor;
 
 	Image *defaultButtonLeft = engine->getResourceManager()->getImage("OSU_SKIN_BUTTON_LEFT_DEFAULT");
 	Image *defaultButtonLeft2 = engine->getResourceManager()->getImage("OSU_SKIN_BUTTON_LEFT");

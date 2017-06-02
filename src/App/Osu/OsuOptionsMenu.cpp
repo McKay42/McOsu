@@ -42,6 +42,14 @@
 #include <fstream>
 
 ConVar osu_options_save_on_back("osu_options_save_on_back", true);
+ConVar osu_options_high_quality_sliders("osu_options_high_quality_sliders", false);
+
+void _osuOptionsSliderQualityWrapper(UString oldValue, UString newValue)
+{
+	float value = lerp<float>(1.0f, 2.5f, 1.0f - newValue.toFloat());
+	convar->getConVarByName("osu_slider_curve_points_separation")->setValue(value);
+};
+ConVar osu_options_slider_quality("osu_options_slider_quality", 0.0f, _osuOptionsSliderQualityWrapper);
 
 const char *OsuOptionsMenu::OSU_CONFIG_FILE_NAME = ""; // set dynamically below in the constructor
 
@@ -154,14 +162,43 @@ private:
 	Osu *m_osu;
 };
 
+class OsuOptionsMenuKeyBindLabel : public CBaseUILabel
+{
+public:
+	OsuOptionsMenuKeyBindLabel(float xPos, float yPos, float xSize, float ySize, UString name, UString text, ConVar *cvar) : CBaseUILabel(xPos, yPos, xSize, ySize, name, text)
+	{
+		m_key = cvar;
+	}
+
+	virtual void update()
+	{
+		CBaseUILabel::update();
+		if (!m_bVisible) return;
+
+		// succ
+		UString labelText = env->keyCodeToString((KEYCODE)m_key->getInt());
+		if (labelText.find("?") != -1)
+			labelText.append(UString::format("  (%i)", m_key->getInt()));
+
+		setText(labelText);
+	}
+
+private:
+	ConVar *m_key;
+};
+
 
 
 OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 {
 	m_osu = osu;
 
+	// convar refs
+	m_osu_slider_curve_points_separation = convar->getConVarByName("osu_slider_curve_points_separation");
+
 	// convar callbacks
 	convar->getConVarByName("osu_skin_use_skin_hitsounds")->setCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onUseSkinsSoundSamplesChange) );
+	osu_options_high_quality_sliders.setCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onHighQualitySlidersConVarChange) );
 
 	if (m_osu->isInVRMode())
 		OSU_CONFIG_FILE_NAME = "osuvr";
@@ -235,7 +272,11 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Letterboxing", convar->getConVarByName("osu_letterboxing"));
 
 	addSubSection("Detail Settings");
-	addCheckbox("Snaking Sliders", convar->getConVarByName("osu_snaking_sliders"));
+	addCheckbox("Snaking in sliders", convar->getConVarByName("osu_snaking_sliders"));
+	addCheckbox("Snaking out sliders", convar->getConVarByName("osu_slider_shrink"));
+	addCheckbox("Higher Quality Sliders (!)", convar->getConVarByName("osu_options_high_quality_sliders"))->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onHighQualitySlidersCheckboxChange) );
+	m_sliderQualitySlider = addSlider("Slider Quality", 0.0f, 1.0f, convar->getConVarByName("osu_options_slider_quality"));
+	m_sliderQualitySlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeSliderQuality) );
 
 	//**************************************************************************************************************************//
 
@@ -312,8 +353,8 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSlider("Effects:", 0.0f, 1.0f, convar->getConVarByName("osu_volume_effects"), 70.0f);
 
 	addSubSection("Offset Adjustment");
-	CBaseUISlider *offsetSlider = addSlider("Global Offset:", -300.0f, 300.0f, convar->getConVarByName("osu_global_offset"));
-	offsetSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeInt) );
+	CBaseUISlider *offsetSlider = addSlider("Universal Offset:", -300.0f, 300.0f, convar->getConVarByName("osu_universal_offset"));
+	offsetSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeIntMS) );
 	offsetSlider->setKeyDelta(1);
 
 	//**************************************************************************************************************************//
@@ -337,36 +378,36 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSpacer();
 	addSubSection("Keyboard");
 	addSubSection("Keys - osu! Standard Mode");
-	addButton("Left Click", &OsuKeyBindings::LEFT_CLICK)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addButton("Right Click", &OsuKeyBindings::RIGHT_CLICK)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addKeyBindButton("Left Click", &OsuKeyBindings::LEFT_CLICK)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addKeyBindButton("Right Click", &OsuKeyBindings::RIGHT_CLICK)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
 	addSubSection("Keys - In-Game");
-	addButton("Game Pause", &OsuKeyBindings::GAME_PAUSE)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addButton("Skip Cutscene", &OsuKeyBindings::SKIP_CUTSCENE)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addButton("Scrubbing (+ Click Drag!)", &OsuKeyBindings::SEEK_TIME)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addButton("Increase Local Song Offset", &OsuKeyBindings::INCREASE_LOCAL_OFFSET)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addButton("Decrease Local Song Offset", &OsuKeyBindings::DECREASE_LOCAL_OFFSET)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addButton("Quick Retry (hold briefly)", &OsuKeyBindings::QUICK_RETRY)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addButton("Quick Save", &OsuKeyBindings::QUICK_SAVE)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addButton("Quick Load", &OsuKeyBindings::QUICK_LOAD)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addKeyBindButton("Game Pause", &OsuKeyBindings::GAME_PAUSE)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addKeyBindButton("Skip Cutscene", &OsuKeyBindings::SKIP_CUTSCENE)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addKeyBindButton("Scrubbing (+ Click Drag!)", &OsuKeyBindings::SEEK_TIME)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addKeyBindButton("Increase Local Song Offset", &OsuKeyBindings::INCREASE_LOCAL_OFFSET)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addKeyBindButton("Decrease Local Song Offset", &OsuKeyBindings::DECREASE_LOCAL_OFFSET)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addKeyBindButton("Quick Retry (hold briefly)", &OsuKeyBindings::QUICK_RETRY)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addKeyBindButton("Quick Save", &OsuKeyBindings::QUICK_SAVE)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addKeyBindButton("Quick Load", &OsuKeyBindings::QUICK_LOAD)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
 	addSubSection("Keys - Universal");
-	addButton("Save Screenshot", &OsuKeyBindings::SAVE_SCREENSHOT)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addButton("Increase Volume", &OsuKeyBindings::INCREASE_VOLUME)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addButton("Decrease Volume", &OsuKeyBindings::DECREASE_VOLUME)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addButton("Disable Mouse Buttons", &OsuKeyBindings::DISABLE_MOUSE_BUTTONS)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addButton("Boss Key (Minimize)", &OsuKeyBindings::BOSS_KEY)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addKeyBindButton("Save Screenshot", &OsuKeyBindings::SAVE_SCREENSHOT)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addKeyBindButton("Increase Volume", &OsuKeyBindings::INCREASE_VOLUME)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addKeyBindButton("Decrease Volume", &OsuKeyBindings::DECREASE_VOLUME)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addKeyBindButton("Disable Mouse Buttons", &OsuKeyBindings::DISABLE_MOUSE_BUTTONS)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addKeyBindButton("Boss Key (Minimize)", &OsuKeyBindings::BOSS_KEY)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
 	addSubSection("Keys - Mod Select");
-	addButton("Easy", &OsuKeyBindings::MOD_EASY)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addButton("No Fail", &OsuKeyBindings::MOD_NOFAIL)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addButton("Half Time", &OsuKeyBindings::MOD_HALFTIME)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addButton("Hard Rock", &OsuKeyBindings::MOD_HARDROCK)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addButton("Sudden Death", &OsuKeyBindings::MOD_SUDDENDEATH)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addButton("Double Time", &OsuKeyBindings::MOD_DOUBLETIME)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addButton("Hidden", &OsuKeyBindings::MOD_HIDDEN)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addButton("Flashlight", &OsuKeyBindings::MOD_FLASHLIGHT)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addButton("Relax", &OsuKeyBindings::MOD_RELAX)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addButton("Autopilot", &OsuKeyBindings::MOD_AUTOPILOT)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addButton("Spunout", &OsuKeyBindings::MOD_SPUNOUT)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addButton("Auto", &OsuKeyBindings::MOD_AUTO)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addKeyBindButton("Easy", &OsuKeyBindings::MOD_EASY)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addKeyBindButton("No Fail", &OsuKeyBindings::MOD_NOFAIL)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addKeyBindButton("Half Time", &OsuKeyBindings::MOD_HALFTIME)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addKeyBindButton("Hard Rock", &OsuKeyBindings::MOD_HARDROCK)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addKeyBindButton("Sudden Death", &OsuKeyBindings::MOD_SUDDENDEATH)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addKeyBindButton("Double Time", &OsuKeyBindings::MOD_DOUBLETIME)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addKeyBindButton("Hidden", &OsuKeyBindings::MOD_HIDDEN)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addKeyBindButton("Flashlight", &OsuKeyBindings::MOD_FLASHLIGHT)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addKeyBindButton("Relax", &OsuKeyBindings::MOD_RELAX)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addKeyBindButton("Autopilot", &OsuKeyBindings::MOD_AUTOPILOT)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addKeyBindButton("Spunout", &OsuKeyBindings::MOD_SPUNOUT)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addKeyBindButton("Auto", &OsuKeyBindings::MOD_AUTO)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
 	addSpacer();
 
 	//**************************************************************************************************************************//
@@ -381,8 +422,12 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_skinSelectButton = skinSelect.elements[0];
 	addButton("Reload Skin (CTRL+ALT+SHIFT+S)")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSkinReload) );
 	addSpacer();
-	addSlider("Number Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_number_scale_multiplier"), 135.0f)->setKeyDelta(0.1f);
-	addSlider("HitResult Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_hitresult_scale"), 135.0f)->setKeyDelta(0.1f);
+	CBaseUISlider *numberScaleSlider = addSlider("Number Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_number_scale_multiplier"), 135.0f);
+	numberScaleSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
+	numberScaleSlider->setKeyDelta(0.01f);
+	CBaseUISlider *hitResultScaleSlider = addSlider("HitResult Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_hitresult_scale"), 135.0f);
+	hitResultScaleSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
+	hitResultScaleSlider->setKeyDelta(0.01f);
 	addCheckbox("Draw Numbers", convar->getConVarByName("osu_draw_numbers"));
 	addCheckbox("Draw ApproachCircles", convar->getConVarByName("osu_draw_approach_circles"));
 	addSpacer();
@@ -394,7 +439,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Draw CursorTrail", convar->getConVarByName("osu_draw_cursor_trail"));
 	m_cursorSizeSlider = addSlider("Cursor Size:", 0.01f, 5.0f, convar->getConVarByName("osu_cursor_scale"));
 	m_cursorSizeSlider->setAnimated(false);
-	m_cursorSizeSlider->setKeyDelta(0.1f);
+	m_cursorSizeSlider->setKeyDelta(0.01f);
 	addSpacer();
 	addSliderPreview();
 	addCheckbox("Use slidergradient.png", convar->getConVarByName("osu_slider_use_gradient_image"));
@@ -405,7 +450,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSlider("Slider Opacity", 0.0f, 1.0f, convar->getConVarByName("osu_slider_alpha_multiplier"));
 	addSlider("SliderBody Opacity", 0.0f, 1.0f, convar->getConVarByName("osu_slider_body_alpha_multiplier"));
 	addSlider("SliderBody Color Saturation", 0.0f, 1.0f, convar->getConVarByName("osu_slider_body_color_saturation"));
-	addSlider("SliderBorder Size", 0.0f, 9.0f, convar->getConVarByName("osu_slider_border_size_multiplier"))->setKeyDelta(0.1f);
+	addSlider("SliderBorder Size", 0.0f, 9.0f, convar->getConVarByName("osu_slider_border_size_multiplier"))->setKeyDelta(0.01f);
 
 	//**************************************************************************************************************************//
 
@@ -439,21 +484,28 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Draw Stats: Note Density", convar->getConVarByName("osu_draw_statistics_nd"));
 	addCheckbox("Draw Stats: Unstable Rate", convar->getConVarByName("osu_draw_statistics_ur"));
 	addSpacer();
-	m_hudSizeSlider = addSlider("HUD Scale:", 0.1f, 3.0f, convar->getConVarByName("osu_hud_scale"), 165.0f);
-	m_hudSizeSlider->setKeyDelta(0.1f);
+	m_hudSizeSlider = addSlider("HUD Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_hud_scale"), 165.0f);
+	m_hudSizeSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
+	m_hudSizeSlider->setKeyDelta(0.01f);
 	addSpacer();
 	m_hudComboScaleSlider = addSlider("Combo Scale:", 0.1f, 3.0f, convar->getConVarByName("osu_hud_combo_scale"), 165.0f);
-	m_hudComboScaleSlider->setKeyDelta(0.1f);
+	m_hudComboScaleSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
+	m_hudComboScaleSlider->setKeyDelta(0.01f);
 	m_hudScoreScaleSlider = addSlider("Score Scale:", 0.1f, 3.0f, convar->getConVarByName("osu_hud_score_scale"), 165.0f);
-	m_hudScoreScaleSlider->setKeyDelta(0.1f);
+	m_hudScoreScaleSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
+	m_hudScoreScaleSlider->setKeyDelta(0.01f);
 	m_hudAccuracyScaleSlider = addSlider("Accuracy Scale:", 0.1f, 3.0f, convar->getConVarByName("osu_hud_accuracy_scale"), 165.0f);
-	m_hudAccuracyScaleSlider->setKeyDelta(0.1f);
+	m_hudAccuracyScaleSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
+	m_hudAccuracyScaleSlider->setKeyDelta(0.01f);
 	m_hudHiterrorbarScaleSlider = addSlider("HitErrorBar Scale:", 0.1f, 3.0f, convar->getConVarByName("osu_hud_hiterrorbar_scale"), 165.0f);
-	m_hudHiterrorbarScaleSlider->setKeyDelta(0.1f);
+	m_hudHiterrorbarScaleSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
+	m_hudHiterrorbarScaleSlider->setKeyDelta(0.01f);
 	m_hudProgressbarScaleSlider = addSlider("ProgressBar Scale:", 0.1f, 3.0f, convar->getConVarByName("osu_hud_progressbar_scale"), 165.0f);
-	m_hudProgressbarScaleSlider->setKeyDelta(0.1f);
+	m_hudProgressbarScaleSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
+	m_hudProgressbarScaleSlider->setKeyDelta(0.01f);
 	m_statisticsOverlayScaleSlider = addSlider("Statistics Scale:", 0.1f, 3.0f, convar->getConVarByName("osu_hud_statistics_scale"), 165.0f);
-	m_statisticsOverlayScaleSlider->setKeyDelta(0.1f);
+	m_statisticsOverlayScaleSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
+	m_statisticsOverlayScaleSlider->setKeyDelta(0.01f);
 
 	addSubSection("Playfield");
 	addCheckbox("Draw FollowPoints", convar->getConVarByName("osu_draw_followpoints"));
@@ -464,7 +516,6 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_playfieldBorderSizeSlider->setKeyDelta(1.0f);
 
 	addSubSection("Hitobjects");
-	addCheckbox("Shrinking Sliders", convar->getConVarByName("osu_slider_shrink"));
 	addCheckbox("Use New Hidden Fading Sliders", convar->getConVarByName("osu_mod_hd_slider_fade"));
 	addCheckbox("Use Fast Hidden Fading Sliders (!)", convar->getConVarByName("osu_mod_hd_slider_fast_fade"));
 	addCheckbox("Use Score V2 slider accuracy", convar->getConVarByName("osu_slider_scorev2"));
@@ -485,6 +536,9 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 
 	// the context menu gets added last (drawn on top of everything)
 	m_options->getContainer()->addBaseUIElement(m_contextMenu);
+
+	// HACKHACK: force current value update
+	onHighQualitySlidersConVarChange("", osu_options_high_quality_sliders.getString());
 }
 
 OsuOptionsMenu::~OsuOptionsMenu()
@@ -516,6 +570,50 @@ void OsuOptionsMenu::draw(Graphics *g)
 
 	if (m_cursorSizeSlider->getFloat() < 0.15f)
 		engine->getMouse()->drawDebug(g);
+
+	/*
+	if (m_sliderQualitySlider->isActive())
+	{
+		Vector2 startPos = Vector2(50, 50);
+		Vector2 size = Vector2((int)(m_osu->getUIScale(m_osu, 250.0f)), (int)(m_osu->getUIScale(m_osu, 250.0f)));
+		const float hitcircleDiameter = m_osu->getUIScale(m_osu, 75.0f);
+		const float length = size.x - hitcircleDiameter;
+		const float pointDist = m_osu_slider_curve_points_separation->getFloat()*2;
+		const int numPoints = length / pointDist;
+		std::vector<Vector2> pointsMouth;
+		std::vector<Vector2> pointsEyeLeft;
+		std::vector<Vector2> pointsEyeRight;
+		for (int i=0; i<numPoints+1; i++)
+		{
+			int heightAdd = i;
+			if (i > numPoints/2)
+				heightAdd = numPoints-i;
+			float heightAddPercent = (float)heightAdd / (float)(numPoints/2.0f);
+			float temp = 1.0f - heightAddPercent;
+			temp *= temp;
+			heightAddPercent = 1.0f - temp;
+
+			if (i*pointDist < length/3 - hitcircleDiameter/6)
+				pointsEyeLeft.push_back(Vector2(startPos.x + hitcircleDiameter/2 + i*pointDist, startPos.y + hitcircleDiameter/2 - (i*pointDist - (length/3 - hitcircleDiameter/6))));
+			else if (i*pointDist > 2*(length/3) + hitcircleDiameter/6)
+				pointsEyeRight.push_back(Vector2(startPos.x + hitcircleDiameter/2 + i*pointDist, startPos.y + hitcircleDiameter/2));
+
+			Vector2 mouthOffset = Vector2(0, size.y/2);
+			pointsMouth.push_back(Vector2(startPos.x + hitcircleDiameter/2 + i*pointDist, startPos.y + hitcircleDiameter/2 + heightAddPercent*(size.y/2 - hitcircleDiameter)) + mouthOffset);
+		}
+
+		g->setColor(0xff999999);
+		g->fillRect(startPos.x - 5, startPos.y - 5, size.x + 8, size.y + 10);
+		g->setColor(0xffffffff);
+		g->fillRect(startPos.x, startPos.y, size.x/2, size.y);
+		g->setColor(0xff000000);
+		g->fillRect(startPos.x + size.x/2 - 1, startPos.y, size.x/2, size.y);
+
+		OsuSliderRenderer::draw(g, m_osu, pointsEyeLeft, hitcircleDiameter);
+		OsuSliderRenderer::draw(g, m_osu, pointsEyeRight, hitcircleDiameter);
+		OsuSliderRenderer::draw(g, m_osu, pointsMouth, hitcircleDiameter);
+	}
+	*/
 }
 
 void OsuOptionsMenu::update()
@@ -638,7 +736,7 @@ void OsuOptionsMenu::updateLayout()
 	{
 		switch (m_elements[i].type)
 		{
-		case 5: // checkbox
+		case 6: // checkbox
 			if (m_elements[i].cvar != NULL)
 			{
 				for (int e=0; e<m_elements[i].elements.size(); e++)
@@ -649,7 +747,7 @@ void OsuOptionsMenu::updateLayout()
 				}
 			}
 			break;
-		case 6: // slider
+		case 7: // slider
 			if (m_elements[i].cvar != NULL)
 			{
 				if (m_elements[i].elements.size() == 3)
@@ -663,7 +761,7 @@ void OsuOptionsMenu::updateLayout()
 				}
 			}
 			break;
-		case 7: // textbox
+		case 8: // textbox
 			if (m_elements[i].cvar != NULL)
 			{
 				if (m_elements[i].elements.size() == 1)
@@ -743,11 +841,14 @@ void OsuOptionsMenu::updateLayout()
 
 			int spacing = 15;
 
+			float dividerEnd = 1.0f / (m_elements[i].type == 5 ? 3 : 2); // 1/3rd division for key bind buttons
+			float dividerBegin = 1.0f - dividerEnd;
+
 			e1->setRelPos(sideMargin, yCounter);
-			e1->setSizeX(elementWidth/2 - spacing);
+			e1->setSizeX(elementWidth*dividerBegin - spacing);
 
 			e2->setRelPos(sideMargin + e1->getSize().x + 2*spacing, yCounter);
-			e2->setSizeX(elementWidth/2 - spacing);
+			e2->setSizeX(elementWidth*dividerEnd - spacing);
 
 			yCounter += e1->getSize().y;
 		}
@@ -1131,6 +1232,30 @@ void OsuOptionsMenu::onSliderChangeInt(CBaseUISlider *slider)
 	}
 }
 
+void OsuOptionsMenu::onSliderChangeIntMS(CBaseUISlider *slider)
+{
+	for (int i=0; i<m_elements.size(); i++)
+	{
+		for (int e=0; e<m_elements[i].elements.size(); e++)
+		{
+			if (m_elements[i].elements[e] == slider)
+			{
+				if (m_elements[i].cvar != NULL)
+					m_elements[i].cvar->setValue(std::round(slider->getFloat())); // round to int
+
+				if (m_elements[i].elements.size() == 3)
+				{
+					CBaseUILabel *labelPointer = dynamic_cast<CBaseUILabel*>(m_elements[i].elements[2]);
+					UString text = m_elements[i].cvar->getString();
+					text.append(" ms");
+					labelPointer->setText(text);
+				}
+				break;
+			}
+		}
+	}
+}
+
 void OsuOptionsMenu::onSliderChangePercent(CBaseUISlider *slider)
 {
 	for (int i=0; i<m_elements.size(); i++)
@@ -1237,9 +1362,87 @@ void OsuOptionsMenu::onSliderChangeVRAntiAliasing(CBaseUISlider *slider)
 	}
 }
 
+void OsuOptionsMenu::onSliderChangeSliderQuality(CBaseUISlider *slider)
+{
+	for (int i=0; i<m_elements.size(); i++)
+	{
+		for (int e=0; e<m_elements[i].elements.size(); e++)
+		{
+			if (m_elements[i].elements[e] == slider)
+			{
+				if (m_elements[i].cvar != NULL)
+				{
+					m_elements[i].cvar->setValue(std::round(slider->getFloat()*100.0f)/100.0f); // round to 2 decimal places
+				}
+
+				if (m_elements[i].elements.size() == 3)
+				{
+					CBaseUILabel *labelPointer = dynamic_cast<CBaseUILabel*>(m_elements[i].elements[2]);
+
+					int percent = std::round((slider->getPercent()) * 100.0f);
+					UString text = UString::format(percent > 49 ? "%i !" : "%i", percent);
+					labelPointer->setText(text);
+				}
+				break;
+			}
+		}
+	}
+}
+
 void OsuOptionsMenu::onUseSkinsSoundSamplesChange(UString oldValue, UString newValue)
 {
 	m_osu->reloadSkin();
+}
+
+void OsuOptionsMenu::onHighQualitySlidersCheckboxChange(CBaseUICheckbox *checkbox)
+{
+	onCheckboxChange(checkbox);
+
+	// special case: if the checkbox is clicked and enabled via the UI, force set the quality to 100
+	if (checkbox->isChecked())
+		m_sliderQualitySlider->setValue(1.0f, false);
+}
+
+void OsuOptionsMenu::onHighQualitySlidersConVarChange(UString oldValue, UString newValue)
+{
+	bool enabled = newValue.toFloat() > 0;
+	for (int i=0; i<m_elements.size(); i++)
+	{
+		bool contains = false;
+		for (int e=0; e<m_elements[i].elements.size(); e++)
+		{
+			if (m_elements[i].elements[e] == m_sliderQualitySlider)
+			{
+				contains = true;
+				break;
+			}
+		}
+
+		if (contains)
+		{
+			// show/hide quality slider
+			for (int e=0; e<m_elements[i].elements.size(); e++)
+			{
+				// this is ugly as fuck
+				m_elements[i].elements[e]->setEnabled(enabled);
+				OsuUISlider *sliderPointer = dynamic_cast<OsuUISlider*>(m_elements[i].elements[e]);
+				CBaseUILabel *labelPointer = dynamic_cast<CBaseUILabel*>(m_elements[i].elements[e]);
+				if (sliderPointer != NULL)
+					sliderPointer->setFrameColor(enabled ? 0xffffffff : 0xff000000);
+				if (labelPointer != NULL)
+					labelPointer->setTextColor(enabled ? 0xffffffff : 0xff000000);
+			}
+
+			// reset value if disabled
+			if (!enabled)
+			{
+				m_sliderQualitySlider->setValue(m_elements[i].cvar->getDefaultFloat(), false);
+				m_elements[i].cvar->setValue(m_elements[i].cvar->getDefaultFloat());
+			}
+
+			break;
+		}
+	}
 }
 
 void OsuOptionsMenu::addSpacer()
@@ -1342,6 +1545,29 @@ OsuOptionsMenu::OPTIONS_ELEMENT OsuOptionsMenu::addButton(UString text, UString 
 	return e;
 }
 
+OsuUIButton *OsuOptionsMenu::addKeyBindButton(UString text, ConVar *cvar)
+{
+	OsuUIButton *button = new OsuUIButton(m_osu, 0, 0, m_options->getSize().x, 50, text, text);
+	button->setColor(0xff0e94b5);
+	button->setUseDefaultSkin();
+	m_options->getContainer()->addBaseUIElement(button);
+
+	OsuOptionsMenuKeyBindLabel *label = new OsuOptionsMenuKeyBindLabel(0, 0, m_options->getSize().x, 50, "", "", cvar);
+	label->setDrawFrame(false);
+	label->setTextColor(0xffffd700);
+	label->setDrawBackground(false);
+	m_options->getContainer()->addBaseUIElement(label);
+
+	OPTIONS_ELEMENT e;
+	e.elements.push_back(button);
+	e.elements.push_back(label);
+	e.type = 5;
+	e.cvar = cvar;
+	m_elements.push_back(e);
+
+	return button;
+}
+
 CBaseUICheckbox *OsuOptionsMenu::addCheckbox(UString text, ConVar *cvar)
 {
 	CBaseUICheckbox *checkbox = new CBaseUICheckbox(0, 0, m_options->getSize().x, 50, text, text);
@@ -1356,7 +1582,7 @@ CBaseUICheckbox *OsuOptionsMenu::addCheckbox(UString text, ConVar *cvar)
 
 	OPTIONS_ELEMENT e;
 	e.elements.push_back(checkbox);
-	e.type = 5;
+	e.type = 6;
 	e.cvar = cvar;
 	m_elements.push_back(e);
 
@@ -1394,7 +1620,7 @@ OsuUISlider *OsuOptionsMenu::addSlider(UString text, float min, float max, ConVa
 	e.elements.push_back(label1);
 	e.elements.push_back(slider);
 	e.elements.push_back(label2);
-	e.type = 6;
+	e.type = 7;
 	e.cvar = cvar;
 	m_elements.push_back(e);
 
@@ -1409,7 +1635,7 @@ CBaseUITextbox *OsuOptionsMenu::addTextbox(UString text, ConVar *cvar)
 
 	OPTIONS_ELEMENT e;
 	e.elements.push_back(textbox);
-	e.type = 7;
+	e.type = 8;
 	e.cvar = cvar;
 	m_elements.push_back(e);
 
@@ -1423,7 +1649,7 @@ CBaseUIElement *OsuOptionsMenu::addSkinPreview()
 
 	OPTIONS_ELEMENT e;
 	e.elements.push_back(skinPreview);
-	e.type = 8;
+	e.type = 9;
 	e.cvar = NULL;
 	m_elements.push_back(e);
 
@@ -1437,7 +1663,7 @@ CBaseUIElement *OsuOptionsMenu::addSliderPreview()
 
 	OPTIONS_ELEMENT e;
 	e.elements.push_back(sliderPreview);
-	e.type = 8;
+	e.type = 9;
 	e.cvar = NULL;
 	m_elements.push_back(e);
 
