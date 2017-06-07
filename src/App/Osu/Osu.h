@@ -138,6 +138,7 @@ public:
 	inline bool getModNC() {return m_bModNC;}
 	inline bool getModNF() {return m_bModNF;}
 	inline bool getModHT() {return m_bModHT;}
+	inline bool getModDC() {return m_bModDC;}
 	inline bool getModHD() {return m_bModHD;}
 	inline bool getModHR() {return m_bModHR;}
 	inline bool getModEZ() {return m_bModEZ;}
@@ -228,6 +229,7 @@ private:
 	bool m_bModNC;
 	bool m_bModNF;
 	bool m_bModHT;
+	bool m_bModDC;
 	bool m_bModHD;
 	bool m_bModHR;
 	bool m_bModEZ;

@@ -41,8 +41,11 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 
 	CHANGELOG alpha29Steam;
 	alpha29Steam.title = "28.94 (Steam VR Alpha, ?)";
+	alpha29Steam.changes.push_back("- Added Daycore mod");
 	alpha29Steam.changes.push_back("- Added option \"Higher Quality Sliders\", Options > Graphics > Detail Settings");
 	alpha29Steam.changes.push_back("- Added current key labels to key bindings (Options > Input > Keyboard)");
+	alpha29Steam.changes.push_back("- Added skin support for pause-overlay");
+	alpha29Steam.changes.push_back("- Renamed and moved \"Shrinking Sliders\" to \"Snaking out sliders\" (Options > Graphics > Detail Settings)");
 	alpha29Steam.changes.push_back("- Fixed main menu crashing on some aspire timingpoints due to division by zero");
 	alpha29Steam.changes.push_back("- Fixed missing cursor texture on \"Click on the orange cursor to continue play!\"");
 	alpha29Steam.changes.push_back("");
