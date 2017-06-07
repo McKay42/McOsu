@@ -443,7 +443,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSpacer();
 	addSliderPreview();
 	addCheckbox("Use slidergradient.png", convar->getConVarByName("osu_slider_use_gradient_image"));
-	addCheckbox("Use osu!next Slider Style", convar->getConVarByName("osu_slider_osu_next_style"));
+	addCheckbox("Use osu!lazer Slider Style", convar->getConVarByName("osu_slider_osu_next_style"));
 	addCheckbox("Use combo color as tint for slider ball", convar->getConVarByName("osu_slider_ball_tint_combo_color"));
 	addCheckbox("Use combo color as tint for slider border", convar->getConVarByName("osu_slider_border_tint_combo_color"));
 	addCheckbox("Draw SliderEndCircle", convar->getConVarByName("osu_slider_draw_endcircle"));

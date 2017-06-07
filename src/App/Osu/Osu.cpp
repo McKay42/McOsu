@@ -218,6 +218,7 @@ Osu::Osu()
 	m_bModNC = false;
 	m_bModNF = false;
 	m_bModHT = false;
+	m_bModDC = false;
 	m_bModHD = false;
 	m_bModHR = false;
 	m_bModEZ = false;
@@ -673,6 +674,7 @@ void Osu::updateMods()
 	m_bModNC = osu_mods.getString().find("nc") != -1;
 	m_bModNF = osu_mods.getString().find("nf") != -1;
 	m_bModHT = osu_mods.getString().find("ht") != -1;
+	m_bModDC = osu_mods.getString().find("dc") != -1;
 	m_bModHD = osu_mods.getString().find("hd") != -1;
 	m_bModHR = osu_mods.getString().find("hr") != -1;
 	m_bModEZ = osu_mods.getString().find("ez") != -1;
@@ -1162,7 +1164,7 @@ float Osu::getScoreMultiplier()
 
 	if (m_bModEZ/* || m_bModNF*/) // TODO: commented until proper drain is implemented
 		multiplier *= 0.5f;
-	if (m_bModHT)
+	if (m_bModHT || m_bModDC)
 		multiplier *= 0.3f;
 	if (m_bModHR)
 		multiplier *= 1.06f;
@@ -1180,7 +1182,7 @@ float Osu::getRawSpeedMultiplier()
 {
 	float speedMultiplier = 1.0f;
 
-	if (m_bModDT || m_bModNC || m_bModHT)
+	if (m_bModDT || m_bModNC || m_bModHT || m_bModDC)
 	{
 		if (m_bModDT || m_bModNC)
 			speedMultiplier = 1.5f;
@@ -1204,6 +1206,9 @@ float Osu::getSpeedMultiplier()
 float Osu::getPitchMultiplier()
 {
 	float pitchMultiplier = 1.0f;
+
+	if (m_bModDC)
+		pitchMultiplier = 0.92f;
 
 	if (m_bModNC)
 		pitchMultiplier = 1.1166f;
