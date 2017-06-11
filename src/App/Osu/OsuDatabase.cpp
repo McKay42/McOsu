@@ -5,7 +5,8 @@
 // $NoKeywords: $osubdb
 //===============================================================================//
 
-#include <OsuDatabase.h>
+#include "OsuDatabase.h"
+
 #include "Engine.h"
 #include "ConVar.h"
 #include "Timer.h"

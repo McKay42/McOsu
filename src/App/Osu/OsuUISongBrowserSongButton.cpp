@@ -139,7 +139,7 @@ void OsuUISongBrowserSongButton::drawBeatmapBackgroundThumbnail(Graphics *g, Ima
 	const float beatmapBackgroundScale = Osu::getImageScaleToFillResolution(image, Vector2(size.y*thumbnailYRatio, size.y))*1.05f;
 
 	Vector2 centerOffset = Vector2(std::round((size.y*thumbnailYRatio)/2.0f), std::round(size.y/2.0f));
-	Rect clipRect = Rect(pos.x-2, pos.y+1, (int)(size.y*thumbnailYRatio)+5, size.y+2);
+	McRect clipRect = McRect(pos.x-2, pos.y+1, (int)(size.y*thumbnailYRatio)+5, size.y+2);
 
 	g->setColor(0xffffffff);
 	g->pushTransform();

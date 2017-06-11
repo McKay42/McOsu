@@ -320,7 +320,7 @@ void OsuModSelector::update()
 			break;
 		}
 	}
-	Rect experimentalTrigger = Rect(0, 0, m_bExperimentalVisible ? m_experimentalContainer->getSize().x : m_osu->getScreenWidth()*0.05f, m_osu->getScreenHeight());
+	McRect experimentalTrigger = McRect(0, 0, m_bExperimentalVisible ? m_experimentalContainer->getSize().x : m_osu->getScreenWidth()*0.05f, m_osu->getScreenHeight());
 	if (experimentalTrigger.contains(engine->getMouse()->getPos()))
 	{
 		if (!m_bExperimentalVisible)
