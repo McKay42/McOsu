@@ -51,7 +51,7 @@ public:
 
 	void resetHitErrorBar();
 
-	Rect getSkipClickRect();
+	McRect getSkipClickRect();
 
 	void drawSkip(Graphics *g);
 

@@ -620,7 +620,7 @@ void Osu::update()
 	// TODO: not a critical bug, but the real cursor gets visible way too early if sensitivity is > 1.0f, due to this using scaled/offset getMouse()->getPos()
 	if (osu_resolution_enabled.getBool())
 	{
-		Rect internalWindow = Rect(0, 0, g_vInternalResolution.x, g_vInternalResolution.y);
+		McRect internalWindow = McRect(0, 0, g_vInternalResolution.x, g_vInternalResolution.y);
 		bool cursorVisible = env->isCursorVisible();
 		if (!internalWindow.contains(engine->getMouse()->getPos()))
 		{
@@ -1361,7 +1361,7 @@ void Osu::onFocusLost()
 	}
 
 	// release cursor clip
-	env->setCursorClip(false, Rect());
+	env->setCursorClip(false, McRect());
 }
 
 bool Osu::onShutdown()
@@ -1446,9 +1446,9 @@ void Osu::updateConfineCursor()
 		return;
 
 	if ((osu_confine_cursor_fullscreen.getBool() && env->isFullscreen()) || (osu_confine_cursor_windowed.getBool() && !env->isFullscreen()) || (isInPlayMode() && !getSelectedBeatmap()->isPaused() && !getModAuto() && !getModAutopilot()))
-		env->setCursorClip(true, Rect());
+		env->setCursorClip(true, McRect());
 	else
-		env->setCursorClip(false, Rect());
+		env->setCursorClip(false, McRect());
 }
 
 void Osu::onConfineCursorWindowedChange(UString oldValue, UString newValue)
