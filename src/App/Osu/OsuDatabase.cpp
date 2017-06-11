@@ -28,6 +28,10 @@ ConVar osu_folder("osu_folder", "C:/Program Files (x86)/osu!/");
 
 ConVar osu_folder("osu_folder", "/media/pg/Win7/Program Files (x86)/osu!/");
 
+#elif defined __APPLE__
+
+ConVar osu_folder("osu_folder", "/osu!/");
+
 #else
 
 #error "put correct default folder convar here"
