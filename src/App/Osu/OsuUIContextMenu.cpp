@@ -41,7 +41,7 @@ void OsuUIContextMenu::draw(Graphics *g)
 
 	if (m_fAnimation > 0.0f && m_fAnimation < 1.0f)
 	{
-		g->push3DScene(Rect(m_vPos.x, m_vPos.y - m_vSize.y/2.0f, m_vSize.x, m_vSize.y));
+		g->push3DScene(McRect(m_vPos.x, m_vPos.y - m_vSize.y/2.0f, m_vSize.x, m_vSize.y));
 		g->rotate3DScene(-(1.0f - m_fAnimation)*90.0f, 0, 0);
 	}
 
