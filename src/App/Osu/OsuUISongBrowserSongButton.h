@@ -25,8 +25,8 @@ public:
 
 	virtual void updateLayoutEx();
 
-	void setVisible(bool visible);
-	void setParent(OsuUISongBrowserSongButton *parent) {m_parent = parent;}
+	OsuUISongBrowserSongButton *setVisible(bool visible);
+	OsuUISongBrowserSongButton *setParent(OsuUISongBrowserSongButton *parent) {m_parent = parent; return this;}
 
 	virtual OsuBeatmap *getBeatmap() const {return m_beatmap;}
 	virtual std::vector<OsuUISongBrowserButton*> getChildren();
