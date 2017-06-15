@@ -922,10 +922,11 @@ OsuBeatmapDifficulty::TIMING_INFO OsuBeatmapDifficulty::getTimingInfoForTime(uns
 		if (t->offset > (long)positionMS)
 			break;
 
+		ti.offset = t->offset;
+
 		if (t->msPerBeat >= 0) // NOT inherited
 		{
 			ti.beatLengthBase = ti.beatLength = t->msPerBeat;
-			ti.offset = t->offset;
 		}
 		else // inherited
 		{
