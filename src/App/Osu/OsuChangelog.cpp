@@ -48,6 +48,7 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha29Steam.changes.push_back("- Renamed and moved \"Shrinking Sliders\" to \"Snaking out sliders\" (Options > Graphics > Detail Settings)");
 	alpha29Steam.changes.push_back("- Fixed main menu crashing on some aspire timingpoints due to division by zero");
 	alpha29Steam.changes.push_back("- Fixed missing cursor texture on \"Click on the orange cursor to continue play!\"");
+	alpha29Steam.changes.push_back("- Fixed incorrect hitcircle number skin overlaps");
 	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("");
