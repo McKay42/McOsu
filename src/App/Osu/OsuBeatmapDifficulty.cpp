@@ -922,10 +922,11 @@ OsuBeatmapDifficulty::TIMING_INFO OsuBeatmapDifficulty::getTimingInfoForTime(uns
 		if (t->offset > (long)positionMS)
 			break;
 
+		ti.offset = t->offset;
+
 		if (t->msPerBeat >= 0) // NOT inherited
 		{
 			ti.beatLengthBase = ti.beatLength = t->msPerBeat;
-			ti.offset = t->offset;
 		}
 		else // inherited
 		{
@@ -1351,7 +1352,7 @@ double OsuBeatmapDifficulty::calculatePPv2(Osu *osu, OsuBeatmap *beatmap, double
 	// thankfully this was already included in the oppai code. note that these incorrect values are only used while map-changing mods are active!
 	double od = beatmap->getOD();
 	double ar = beatmap->getAR();
-	if (osu->getSpeedMultiplier() != 1.0f || osu->getModEZ() || osu->getModHR() || osu->getModDT() || osu->getModNC() || osu->getModHT()) // if map-changing mods are active, use incorrect calculations
+	if (osu->getSpeedMultiplier() != 1.0f || osu->getModEZ() || osu->getModHR() || osu->getModDT() || osu->getModNC() || osu->getModHT() || osu->getModDC()) // if map-changing mods are active, use incorrect calculations
 	{
 		const float	od0_ms = OsuGameRules::getMinHitWindow300() - 0.5f,
 					od10_ms = OsuGameRules::getMaxHitWindow300() - 0.5f,

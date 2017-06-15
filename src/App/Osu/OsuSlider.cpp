@@ -16,7 +16,6 @@
 #include "SoundEngine.h"
 
 #include "Shader.h"
-#include "VertexBuffer.h"
 #include "VertexArrayObject.h"
 #include "RenderTarget.h"
 
@@ -43,6 +42,8 @@ ConVar osu_slider_use_tom94_bezier("osu_slider_use_tom94_bezier", true);
 ConVar osu_slider_draw_body("osu_slider_draw_body", true);
 ConVar osu_slider_shrink("osu_slider_shrink", false);
 ConVar osu_slider_reverse_arrow_black_threshold("osu_slider_reverse_arrow_black_threshold", 1.0f, "Blacken reverse arrows if the average color brightness percentage is above this value"); // looks too shitty atm
+ConVar osu_slider_curve_points_separation("osu_slider_curve_points_separation", 2.5f, "slider body curve approximation step width in osu!pixels, don't set this lower than around 1.5");
+ConVar osu_slider_curve_max_points("osu_slider_curve_max_points", 9999.0f, "maximum number of allowed interpolated curve points. quality will be forced to go down if a slider has more steps than this");
 
 ConVar *OsuSlider::m_osu_playfield_mirror_horizontal_ref = NULL;
 ConVar *OsuSlider::m_osu_playfield_mirror_vertical_ref = NULL;
@@ -51,8 +52,6 @@ ConVar *OsuSlider::m_osu_mod_fps_ref = NULL;
 ConVar *OsuSlider::m_osu_slider_border_size_multiplier_ref = NULL;
 ConVar *OsuSlider::m_epilepsy = NULL;
 ConVar *OsuSlider::m_osu_auto_cursordance = NULL;
-
-float OsuSliderCurve::CURVE_POINTS_SEPERATION = 2.5f; // bigger value = less steps, more blocky sliders
 
 OsuSlider::OsuSlider(char type, int repeat, float pixelLength, std::vector<Vector2> points, std::vector<int> hitSounds, std::vector<float> ticks, float sliderTime, float sliderTimeWithoutRepeats, long time, int sampleType, int comboNumber, int colorCounter, OsuBeatmapStandard *beatmap) : OsuHitObject(time, sampleType, comboNumber, colorCounter, beatmap)
 {
@@ -173,8 +172,8 @@ OsuSlider::OsuSlider(char type, int repeat, float pixelLength, std::vector<Vecto
 
 	m_bOnHitVRLeftControllerHapticFeedback = false;
 
-	m_vb = NULL;
-	m_vbVR2 = NULL;
+	m_vao = NULL;
+	m_vaoVR2 = NULL;
 }
 
 OsuSlider::~OsuSlider()
@@ -182,8 +181,8 @@ OsuSlider::~OsuSlider()
 	onReset(0);
 
 	SAFE_DELETE(m_curve);
-	SAFE_DELETE(m_vb);
-	SAFE_DELETE(m_vbVR2);
+	SAFE_DELETE(m_vao);
+	SAFE_DELETE(m_vaoVR2);
 }
 
 void OsuSlider::draw(Graphics *g)
@@ -750,7 +749,7 @@ void OsuSlider::drawBody(Graphics *g, float alpha, float from, float to)
 		Vector2 translation = OsuGameRules::getPlayfieldCenter(m_beatmap->getOsu());
 		if (m_osu_mod_fps_ref->getBool())
 			translation += m_beatmap->getFirstPersonCursorDelta();
-		OsuSliderRenderer::draw(g, m_beatmap->getOsu(), m_vb, translation, scale, m_beatmap->getHitcircleDiameter(), from, to, m_beatmap->getSkin()->getComboColorForCounter(m_iColorCounter), alpha, getTime());
+		OsuSliderRenderer::draw(g, m_beatmap->getOsu(), m_vao, translation, scale, m_beatmap->getHitcircleDiameter(), from, to, m_beatmap->getSkin()->getComboColorForCounter(m_iColorCounter), alpha, getTime());
 	}
 }
 
@@ -769,7 +768,7 @@ void OsuSlider::drawBodyVR(Graphics *g, OsuVR *vr, Matrix4 &mvp, float alpha, fl
 	else
 	{
 		// vertex buffered sliders
-		OsuSliderRenderer::drawVR(g, m_beatmap->getOsu(), vr, mvp, m_fApproachScale, m_vb, m_vbVR2, m_beatmap->getHitcircleDiameter(), from, to, m_beatmap->getSkin()->getComboColorForCounter(m_iColorCounter), alpha, getTime());
+		OsuSliderRenderer::drawVR(g, m_beatmap->getOsu(), vr, mvp, m_fApproachScale, m_vao, m_vaoVR2, m_beatmap->getHitcircleDiameter(), from, to, m_beatmap->getSkin()->getComboColorForCounter(m_iColorCounter), alpha, getTime());
 	}
 }
 
@@ -1444,8 +1443,8 @@ void OsuSlider::rebuildVertexBuffer()
 	{
 		osuCoordPoints[p] = m_beatmap->osuCoords2LegacyPixels(osuCoordPoints[p]);
 	}
-	SAFE_DELETE(m_vb);
-	m_vb = OsuSliderRenderer::generateSliderVertexBuffer(m_beatmap->getOsu(), osuCoordPoints, m_beatmap->getRawHitcircleDiameter());
+	SAFE_DELETE(m_vao);
+	m_vao = OsuSliderRenderer::generateVAO(m_beatmap->getOsu(), osuCoordPoints, m_beatmap->getRawHitcircleDiameter());
 
 	if (m_beatmap->getOsu()->isInVRMode())
 	{
@@ -1455,8 +1454,8 @@ void OsuSlider::rebuildVertexBuffer()
 		const float defaultTransitionSize = 0.011f;
 		const float defaultOuterShadowSize = 0.08f;
 		const float scale = 1.0f - m_osu_slider_border_size_multiplier_ref->getFloat()*defaultBorderSize - defaultTransitionSize - defaultOuterShadowSize;
-		SAFE_DELETE(m_vbVR2);
-		m_vbVR2 = OsuSliderRenderer::generateSliderVertexBuffer(m_beatmap->getOsu(), osuCoordPoints, m_beatmap->getRawHitcircleDiameter()*scale, Vector3(0, 0, 0.25f)); // push 0.25f outwards
+		SAFE_DELETE(m_vaoVR2);
+		m_vaoVR2 = OsuSliderRenderer::generateVAO(m_beatmap->getOsu(), osuCoordPoints, m_beatmap->getRawHitcircleDiameter()*scale, Vector3(0, 0, 0.25f)); // push 0.25f outwards
 	}
 }
 
@@ -1792,8 +1791,7 @@ OsuSliderCurveCircumscribedCircle::OsuSliderCurveCircumscribedCircle(OsuSlider *
 
 	// find an angle with an arc length of pixelLength along this circle
 	m_fRadius = startAngPoint.length();
-	float pixelLength = m_slider->getPixelLength();
-	float arcAng = pixelLength / m_fRadius;  // len = theta * r / theta = len / r
+	float arcAng = m_slider->getPixelLength() / m_fRadius;  // len = theta * r / theta = len / r
 
 	// now use it for our new end angle
 	m_fCalculationEndAngle = (m_fCalculationEndAngle > m_fCalculationStartAngle) ? m_fCalculationStartAngle + arcAng : m_fCalculationStartAngle - arcAng;
@@ -1803,11 +1801,14 @@ OsuSliderCurveCircumscribedCircle::OsuSliderCurveCircumscribedCircle(OsuSlider *
 	m_fStartAngle = (float) ((m_fCalculationStartAngle + (m_fCalculationStartAngle > m_fCalculationEndAngle ? -PI/2.0f : PI/2.0f)) * 180 / PI);
 
 	// calculate points
-	float step = m_slider->getPixelLength() / CURVE_POINTS_SEPERATION;
-	int intStep = (int)std::round(step)+1; // must guarantee an int range of 0 to step
-	for (int i=0; i<(int)intStep+1; i++)
+	float steps = m_slider->getPixelLength() / (clamp<float>(osu_slider_curve_points_separation.getFloat(), 1.0f, 100.0f));
+	if (steps > osu_slider_curve_max_points.getFloat())
+		steps = osu_slider_curve_max_points.getFloat();
+
+	int intSteps = (int)std::round(steps)+1; // must guarantee an int range of 0 to steps
+	for (int i=0; i<(int)intSteps+1; i++)
 	{
-		float t = clamp<float>(i/step, 0.0f, 1.0f);
+		float t = clamp<float>((float)i/steps, 0.0f, 1.0f);
 		m_curvePoints.push_back(pointAt(t));
 
 		if (t >= 1.0f)
@@ -1867,7 +1868,9 @@ bool OsuSliderCurveCircumscribedCircle::isIn(float a, float b, float c)
 
 OsuSliderCurveEqualDistanceMulti::OsuSliderCurveEqualDistanceMulti(OsuSlider *parent, OsuBeatmap *beatmap) : OsuSliderCurve(parent, beatmap)
 {
-	m_iNCurve = (int) (m_slider->getPixelLength() / CURVE_POINTS_SEPERATION);
+	m_iNCurve = (int)((m_slider->getPixelLength() / (clamp<float>(osu_slider_curve_points_separation.getFloat(), 1.0f, 100.0f))));
+	if (m_iNCurve > osu_slider_curve_max_points.getInt())
+		m_iNCurve = osu_slider_curve_max_points.getInt();
 }
 
 void OsuSliderCurveEqualDistanceMulti::init(std::vector<OsuSliderCurveType*> curvesList)

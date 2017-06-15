@@ -123,6 +123,7 @@ public:
 	inline OsuSkinImage *getSelectionModEasy() {return m_selectionModEasy;}
 	inline OsuSkinImage *getSelectionModNoFail() {return m_selectionModNoFail;}
 	inline OsuSkinImage *getSelectionModHalfTime() {return m_selectionModHalfTime;}
+	inline OsuSkinImage *getSelectionModDayCore() {return m_selectionModDayCore;}
 	inline OsuSkinImage *getSelectionModHardRock() {return m_selectionModHardRock;}
 	inline OsuSkinImage *getSelectionModSuddenDeath() {return m_selectionModSuddenDeath;}
 	inline OsuSkinImage *getSelectionModPerfect() {return m_selectionModPerfect;}
@@ -140,6 +141,7 @@ public:
 	inline Image *getPauseContinue() {return m_pauseContinue;}
 	inline Image *getPauseRetry() {return m_pauseRetry;}
 	inline Image *getPauseBack() {return m_pauseBack;}
+	inline Image *getPauseOverlay() {return m_pauseOverlay;}
 	inline Image *getUnpause() {return m_unpause;}
 
 	inline Image *getButtonLeft() {return m_buttonLeft;}
@@ -264,7 +266,7 @@ private:
 	bool parseSkinINI(UString filepath);
 	bool compareFilenameWithSkinElementName(UString filename, UString skinElementName);
 	OsuSkinImage *createOsuSkinImage(UString skinElementName, Vector2 baseSizeForScaling2x, float osuSize, UString animationSeparator = "-");
-	void checkLoadImage(Image **addressOfPointer, UString skinElementName, UString resourceName, bool ignoreDefaultSkin = false);
+	void checkLoadImage(Image **addressOfPointer, UString skinElementName, UString resourceName, bool ignoreDefaultSkin = false, UString fileExtension = "png");
 	void checkLoadSound(Sound **addressOfPointer, UString skinElementName, UString resourceName, bool isOverlayable = false, bool isSample = false, bool loop = false);
 
 	void onEffectVolumeChange(UString oldValue, UString newValue);
@@ -356,6 +358,7 @@ private:
 	OsuSkinImage *m_selectionModEasy;
 	OsuSkinImage *m_selectionModNoFail;
 	OsuSkinImage *m_selectionModHalfTime;
+	OsuSkinImage *m_selectionModDayCore;
 	OsuSkinImage *m_selectionModHardRock;
 	OsuSkinImage *m_selectionModSuddenDeath;
 	OsuSkinImage *m_selectionModPerfect;
@@ -373,6 +376,7 @@ private:
 	Image *m_pauseContinue;
 	Image *m_pauseRetry;
 	Image *m_pauseBack;
+	Image *m_pauseOverlay;
 	Image *m_unpause;
 
 	Image *m_buttonLeft;

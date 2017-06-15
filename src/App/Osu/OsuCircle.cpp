@@ -261,6 +261,40 @@ void OsuCircle::drawHitCircleNumber(Graphics *g, OsuSkin *skin, float numberScal
 	if (!osu_draw_numbers.getBool())
 		return;
 
+	class DigitWidth
+	{
+	public:
+		static float getWidth(OsuSkin *skin, int digit)
+		{
+			switch (digit)
+			{
+			case 0:
+				return skin->getDefault0()->getWidth();
+			case 1:
+				return skin->getDefault1()->getWidth();
+			case 2:
+				return skin->getDefault2()->getWidth();
+			case 3:
+				return skin->getDefault3()->getWidth();
+			case 4:
+				return skin->getDefault4()->getWidth();
+			case 5:
+				return skin->getDefault5()->getWidth();
+			case 6:
+				return skin->getDefault6()->getWidth();
+			case 7:
+				return skin->getDefault7()->getWidth();
+			case 8:
+				return skin->getDefault8()->getWidth();
+			case 9:
+				return skin->getDefault9()->getWidth();
+			}
+
+			return skin->getDefault0()->getWidth();
+		}
+	};
+
+	// generate digits
 	std::vector<int> digits;
 	while (number >= 10)
 	{
@@ -271,6 +305,7 @@ void OsuCircle::drawHitCircleNumber(Graphics *g, OsuSkin *skin, float numberScal
 
 	int digitOffsetMultiplier = digits.size()-1;
 
+	// set color
 	g->setColor(0xffffffff);
 	if (osu_circle_number_rainbow.getBool())
 	{
@@ -285,10 +320,12 @@ void OsuCircle::drawHitCircleNumber(Graphics *g, OsuSkin *skin, float numberScal
 	}
 	g->setAlpha(numberAlpha);
 
+	// draw digits, start at correct offset
 	g->pushTransform();
 	g->scale(numberScale, numberScale);
 	g->translate(pos.x, pos.y);
-	g->translate(-skin->getDefault0()->getWidth()*digitOffsetMultiplier*numberScale*0.5f + skin->getHitCircleOverlap()*digitOffsetMultiplier*overlapScale*0.5f, 0);
+	g->translate(-DigitWidth::getWidth(skin, (digits.size() > 0 ? digits[digits.size()-1] : 0))*digitOffsetMultiplier*numberScale*0.5f + skin->getHitCircleOverlap()*digitOffsetMultiplier*overlapScale*0.5f, 0);
+
 	for (int i=digits.size()-1; i>=0; i--)
 	{
 		switch (digits[i])
@@ -325,7 +362,7 @@ void OsuCircle::drawHitCircleNumber(Graphics *g, OsuSkin *skin, float numberScal
 			break;
 		}
 
-		g->translate(skin->getDefault0()->getWidth()*numberScale - skin->getHitCircleOverlap()*overlapScale, 0);
+		g->translate(DigitWidth::getWidth(skin, digits[i])*numberScale - skin->getHitCircleOverlap()*overlapScale, 0);
 	}
 	g->popTransform();
 }

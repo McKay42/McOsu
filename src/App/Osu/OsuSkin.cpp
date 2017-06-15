@@ -117,6 +117,7 @@ OsuSkin::OsuSkin(Osu *osu, UString filepath)
 	m_pauseContinue = m_missingTexture;
 	m_pauseRetry = m_missingTexture;
 	m_pauseBack = m_missingTexture;
+	m_pauseOverlay = m_missingTexture;
 	m_unpause = m_missingTexture;
 
 	m_buttonLeft = m_missingTexture;
@@ -432,6 +433,7 @@ void OsuSkin::load()
 	m_selectionModPerfect = createOsuSkinImage("selection-mod-perfect", Vector2(68, 66), 38);
 	m_selectionModDoubleTime = createOsuSkinImage("selection-mod-doubletime", Vector2(68, 66), 38);
 	m_selectionModNightCore = createOsuSkinImage("selection-mod-nightcore", Vector2(68, 66), 38);
+	m_selectionModDayCore = createOsuSkinImage("selection-mod-daycore", Vector2(68, 66), 38);
 	m_selectionModHidden = createOsuSkinImage("selection-mod-hidden", Vector2(68, 66), 38);
 	m_selectionModFlashlight = createOsuSkinImage("selection-mod-flashlight", Vector2(68, 66), 38);
 	m_selectionModRelax = createOsuSkinImage("selection-mod-relax", Vector2(68, 66), 38);
@@ -444,6 +446,7 @@ void OsuSkin::load()
 	checkLoadImage(&m_pauseContinue, "pause-continue", "OSU_SKIN_PAUSE_CONTINUE");
 	checkLoadImage(&m_pauseRetry, "pause-retry", "OSU_SKIN_PAUSE_RETRY");
 	checkLoadImage(&m_pauseBack, "pause-back", "OSU_SKIN_PAUSE_BACK");
+	checkLoadImage(&m_pauseOverlay, "pause-overlay", "OSU_SKIN_PAUSE_OVERLAY"); if (m_pauseOverlay == m_missingTexture) checkLoadImage(&m_pauseOverlay, "pause-overlay", "OSU_SKIN_PAUSE_OVERLAY", true, "jpg");
 	checkLoadImage(&m_unpause, "unpause", "OSU_SKIN_UNPAUSE");
 
 	checkLoadImage(&m_buttonLeft, "button-left", "OSU_SKIN_BUTTON_LEFT");
@@ -589,6 +592,8 @@ void OsuSkin::load()
 		m_defaultCursor = defaultCursor;
 	else if (defaultCursor2 != NULL)
 		m_defaultCursor = defaultCursor2;
+	else
+		m_defaultCursor = m_cursor;
 
 	Image *defaultButtonLeft = engine->getResourceManager()->getImage("OSU_SKIN_BUTTON_LEFT_DEFAULT");
 	Image *defaultButtonLeft2 = engine->getResourceManager()->getImage("OSU_SKIN_BUTTON_LEFT");
@@ -865,7 +870,7 @@ OsuSkinImage *OsuSkin::createOsuSkinImage(UString skinElementName, Vector2 baseS
 	return skinImage;
 }
 
-void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, UString resourceName, bool ignoreDefaultSkin)
+void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, UString resourceName, bool ignoreDefaultSkin, UString fileExtension)
 {
 	// we are already loaded
 	if (*addressOfPointer != m_missingTexture)
@@ -880,7 +885,8 @@ void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, 
 			UString defaultFilePath = UString("./materials/");
 			defaultFilePath.append(OSUSKIN_DEFAULT_SKIN_PATH);
 			defaultFilePath.append(skinElementName);
-			defaultFilePath.append("@2x.png");
+			defaultFilePath.append("@2x.");
+			defaultFilePath.append(fileExtension);
 			if (env->fileExists(defaultFilePath))
 			{
 				UString defaultResourceName = resourceName;
@@ -895,7 +901,8 @@ void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, 
 		// and now try to load the actual specified skin
 		UString filepath1 = m_sFilePath;
 		filepath1.append(skinElementName);
-		filepath1.append("@2x.png");
+		filepath1.append("@2x.");
+		filepath1.append(fileExtension);
 
 		if (env->fileExists(filepath1))
 		{
@@ -916,7 +923,8 @@ void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, 
 		UString defaultFilePath = UString("./materials/");
 		defaultFilePath.append(OSUSKIN_DEFAULT_SKIN_PATH);
 		defaultFilePath.append(skinElementName);
-		defaultFilePath.append(".png");
+		defaultFilePath.append(".");
+		defaultFilePath.append(fileExtension);
 		if (env->fileExists(defaultFilePath))
 		{
 			UString defaultResourceName = resourceName;
@@ -931,7 +939,8 @@ void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, 
 	// and then the actual specified skin
 	UString filepath2 = m_sFilePath;
 	filepath2.append(skinElementName);
-	filepath2.append(".png");
+	filepath2.append(".");
+	filepath2.append(fileExtension);
 
 	if (env->fileExists(filepath2))
 	{

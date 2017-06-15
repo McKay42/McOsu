@@ -5,7 +5,8 @@
 // $NoKeywords: $osubdb
 //===============================================================================//
 
-#include <OsuDatabase.h>
+#include "OsuDatabase.h"
+
 #include "Engine.h"
 #include "ConVar.h"
 #include "Timer.h"
@@ -26,6 +27,10 @@ ConVar osu_folder("osu_folder", "C:/Program Files (x86)/osu!/");
 #elif defined __linux__
 
 ConVar osu_folder("osu_folder", "/media/pg/Win7/Program Files (x86)/osu!/");
+
+#elif defined __APPLE__
+
+ConVar osu_folder("osu_folder", "/osu!/");
 
 #else
 
