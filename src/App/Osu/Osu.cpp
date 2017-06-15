@@ -58,7 +58,7 @@ void DUMMY_OSU_MODS(void) {;}
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 28.93f);
+ConVar osu_version("osu_version", 28.94f);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr");
 #else
@@ -218,6 +218,7 @@ Osu::Osu()
 	m_bModNC = false;
 	m_bModNF = false;
 	m_bModHT = false;
+	m_bModDC = false;
 	m_bModHD = false;
 	m_bModHR = false;
 	m_bModEZ = false;
@@ -619,7 +620,7 @@ void Osu::update()
 	// TODO: not a critical bug, but the real cursor gets visible way too early if sensitivity is > 1.0f, due to this using scaled/offset getMouse()->getPos()
 	if (osu_resolution_enabled.getBool())
 	{
-		Rect internalWindow = Rect(0, 0, g_vInternalResolution.x, g_vInternalResolution.y);
+		McRect internalWindow = McRect(0, 0, g_vInternalResolution.x, g_vInternalResolution.y);
 		bool cursorVisible = env->isCursorVisible();
 		if (!internalWindow.contains(engine->getMouse()->getPos()))
 		{
@@ -673,6 +674,7 @@ void Osu::updateMods()
 	m_bModNC = osu_mods.getString().find("nc") != -1;
 	m_bModNF = osu_mods.getString().find("nf") != -1;
 	m_bModHT = osu_mods.getString().find("ht") != -1;
+	m_bModDC = osu_mods.getString().find("dc") != -1;
 	m_bModHD = osu_mods.getString().find("hd") != -1;
 	m_bModHR = osu_mods.getString().find("hr") != -1;
 	m_bModEZ = osu_mods.getString().find("ez") != -1;
@@ -1162,7 +1164,7 @@ float Osu::getScoreMultiplier()
 
 	if (m_bModEZ/* || m_bModNF*/) // TODO: commented until proper drain is implemented
 		multiplier *= 0.5f;
-	if (m_bModHT)
+	if (m_bModHT || m_bModDC)
 		multiplier *= 0.3f;
 	if (m_bModHR)
 		multiplier *= 1.06f;
@@ -1180,7 +1182,7 @@ float Osu::getRawSpeedMultiplier()
 {
 	float speedMultiplier = 1.0f;
 
-	if (m_bModDT || m_bModNC || m_bModHT)
+	if (m_bModDT || m_bModNC || m_bModHT || m_bModDC)
 	{
 		if (m_bModDT || m_bModNC)
 			speedMultiplier = 1.5f;
@@ -1204,6 +1206,9 @@ float Osu::getSpeedMultiplier()
 float Osu::getPitchMultiplier()
 {
 	float pitchMultiplier = 1.0f;
+
+	if (m_bModDC)
+		pitchMultiplier = 0.92f;
 
 	if (m_bModNC)
 		pitchMultiplier = 1.1166f;
@@ -1356,7 +1361,7 @@ void Osu::onFocusLost()
 	}
 
 	// release cursor clip
-	env->setCursorClip(false, Rect());
+	env->setCursorClip(false, McRect());
 }
 
 bool Osu::onShutdown()
@@ -1441,9 +1446,9 @@ void Osu::updateConfineCursor()
 		return;
 
 	if ((osu_confine_cursor_fullscreen.getBool() && env->isFullscreen()) || (osu_confine_cursor_windowed.getBool() && !env->isFullscreen()) || (isInPlayMode() && !getSelectedBeatmap()->isPaused() && !getModAuto() && !getModAutopilot()))
-		env->setCursorClip(true, Rect());
+		env->setCursorClip(true, McRect());
 	else
-		env->setCursorClip(false, Rect());
+		env->setCursorClip(false, McRect());
 }
 
 void Osu::onConfineCursorWindowedChange(UString oldValue, UString newValue)

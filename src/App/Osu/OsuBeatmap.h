@@ -140,7 +140,7 @@ protected:
 	static ConVar *m_osu_draw_hitobjects_ref;
 	static ConVar *m_osu_vr_draw_desktop_playfield_ref;
 	static ConVar *m_osu_followpoints_prevfadetime_ref;
-	static ConVar *m_osu_global_offset_ref;
+	static ConVar *m_osu_universal_offset_ref;
 	static ConVar *m_osu_early_note_time_ref;
 	static ConVar *m_osu_fail_time_ref;
 

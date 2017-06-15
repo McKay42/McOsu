@@ -74,7 +74,7 @@ public:
 	virtual void drawVR(Graphics *g, Matrix4 &mvp) {;}
 	virtual void update(Vector2 cursorPos)
 	{
-		Rect bounds(m_vPos.x, -m_vPos.y, m_vSize.x, m_vSize.y);
+		McRect bounds(m_vPos.x, -m_vPos.y, m_vSize.x, m_vSize.y);
 		if (bounds.contains(Vector2(cursorPos.x, -cursorPos.y)))
 			m_bIsCursorInside = true;
 		else

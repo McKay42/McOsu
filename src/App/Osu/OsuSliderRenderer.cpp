@@ -9,7 +9,6 @@
 
 #include "Engine.h"
 #include "Shader.h"
-#include "VertexBuffer.h"
 #include "VertexArrayObject.h"
 #include "RenderTarget.h"
 #include "ResourceManager.h"
@@ -50,14 +49,14 @@ ConVar osu_slider_border_size_multiplier("osu_slider_border_size_multiplier", 1.
 ConVar osu_slider_border_tint_combo_color("osu_slider_border_tint_combo_color", false);
 ConVar osu_slider_osu_next_style("osu_slider_osu_next_style", false);
 
-VertexBuffer *OsuSliderRenderer::generateSliderVertexBuffer(Osu *osu, const std::vector<Vector2> &points, float hitcircleDiameter, Vector3 translation)
+VertexArrayObject *OsuSliderRenderer::generateVAO(Osu *osu, const std::vector<Vector2> &points, float hitcircleDiameter, Vector3 translation)
 {
-	VertexBuffer *vb = new VertexBuffer(Graphics::PRIMITIVE::PRIMITIVE_TRIANGLES);
+	engine->getResourceManager()->requestNextLoadUnmanaged();
+	VertexArrayObject *vao = engine->getResourceManager()->createVertexArrayObject();
 
 	checkUpdateVars(osu, hitcircleDiameter);
 
-	std::vector<Vector3> triangles;
-	std::vector<Vector2> uvs;
+	bool isValidMesh = false;
 	for (int i=0; i<points.size(); ++i)
 	{
 		// fuck oob sliders
@@ -68,17 +67,19 @@ VertexBuffer *OsuSliderRenderer::generateSliderVertexBuffer(Osu *osu, const std:
 		std::vector<std::vector<Vector2>> meshTexCoords = UNIT_CIRCLE_VAO_TRIANGLES->getTexcoords();
 		for (int v=0; v<meshVertices.size(); v++)
 		{
-			triangles.push_back(meshVertices[v] + Vector3(points[i].x, points[i].y, 0) + translation);
-			uvs.push_back(meshTexCoords[0][v]);
+			vao->addVertex(meshVertices[v] + Vector3(points[i].x, points[i].y, 0) + translation);
+			vao->addTexcoord(meshTexCoords[0][v]);
+
+			isValidMesh = true;
 		}
 	}
 
-	if (triangles.size() > 0 && uvs.size() > 0)
-		vb->set(&triangles, &uvs);
+	if (isValidMesh)
+		engine->getResourceManager()->loadResource(vao);
 	else
-		debugLog("OsuSliderRenderer::generateSliderVertexBuffer() error: zero triangles!\n");
+		debugLog("OsuSliderRenderer::generateSliderVAO() ERROR: Zero triangles!\n");
 
-	return vb;
+	return vao;
 }
 
 void OsuSliderRenderer::draw(Graphics *g, Osu *osu, const std::vector<Vector2> &points, float hitcircleDiameter, float from, float to, Color color, float alpha, long sliderTimeForRainbow)
@@ -200,9 +201,9 @@ void OsuSliderRenderer::draw(Graphics *g, Osu *osu, const std::vector<Vector2> &
 	osu->getFrameBuffer()->drawRect(g, m_fBoundingBoxMinX, m_fBoundingBoxMinY, m_fBoundingBoxMaxX - m_fBoundingBoxMinX, m_fBoundingBoxMaxY - m_fBoundingBoxMinY);
 }
 
-void OsuSliderRenderer::draw(Graphics *g, Osu *osu, VertexBuffer *vb, Vector2 translation, float scale, float hitcircleDiameter, float from, float to, Color color, float alpha, long sliderTimeForRainbow)
+void OsuSliderRenderer::draw(Graphics *g, Osu *osu, VertexArrayObject *vao, Vector2 translation, float scale, float hitcircleDiameter, float from, float to, Color color, float alpha, long sliderTimeForRainbow)
 {
-	if (osu_slider_alpha_multiplier.getFloat() <= 0.0f || alpha <= 0.0f || vb == NULL)
+	if (osu_slider_alpha_multiplier.getFloat() <= 0.0f || alpha <= 0.0f || vao == NULL)
 		return;
 
 	checkUpdateVars(osu, hitcircleDiameter);
@@ -249,11 +250,11 @@ void OsuSliderRenderer::draw(Graphics *g, Osu *osu, VertexBuffer *vb, Vector2 tr
 
 		// draw curve mesh
 		{
-			vb->setDrawPercent(from, to, UNIT_CIRCLE_VAO_TRIANGLES->getVertices().size());
+			vao->setDrawPercent(from, to, UNIT_CIRCLE_VAO_TRIANGLES->getVertices().size());
 			g->pushTransform();
 				g->scale(scale, scale);
 				g->translate(translation.x, translation.y);
-				g->drawVB(vb);
+				g->drawVAO(vao);
 			g->popTransform();
 		}
 
@@ -339,9 +340,9 @@ void OsuSliderRenderer::drawVR(Graphics *g, Osu *osu, OsuVR *vr, Matrix4 &mvp, f
 	vr->getShaderTexturedLegacyGeneric()->enable();
 }
 
-void OsuSliderRenderer::drawVR(Graphics *g, Osu *osu, OsuVR *vr, Matrix4 &mvp, float approachScale, VertexBuffer *vb1, VertexBuffer *vb2, float hitcircleDiameter, float from, float to, Color color, float alpha, long sliderTimeForRainbow)
+void OsuSliderRenderer::drawVR(Graphics *g, Osu *osu, OsuVR *vr, Matrix4 &mvp, float approachScale, VertexArrayObject *vao1, VertexArrayObject *vao2, float hitcircleDiameter, float from, float to, Color color, float alpha, long sliderTimeForRainbow)
 {
-	if (osu_slider_alpha_multiplier.getFloat() <= 0.0f || alpha <= 0.0f || vb1 == NULL || vb2 == NULL)
+	if (osu_slider_alpha_multiplier.getFloat() <= 0.0f || alpha <= 0.0f || vao1 == NULL || vao2 == NULL)
 		return;
 
 	checkUpdateVars(osu, hitcircleDiameter);
@@ -390,11 +391,11 @@ void OsuSliderRenderer::drawVR(Graphics *g, Osu *osu, OsuVR *vr, Matrix4 &mvp, f
 		// draw curve mesh
 		{
 			BLEND_SHADER_VR->setUniform1i("part", 1);
-			vb2->setDrawPercent(from, to, UNIT_CIRCLE_VAO_TRIANGLES->getVertices().size());
-			g->drawVB(vb2);
+			vao2->setDrawPercent(from, to, UNIT_CIRCLE_VAO_TRIANGLES->getVertices().size());
+			g->drawVAO(vao2);
 			BLEND_SHADER_VR->setUniform1i("part", 0);
-			vb1->setDrawPercent(from, to, UNIT_CIRCLE_VAO_TRIANGLES->getVertices().size());
-			g->drawVB(vb1);
+			vao1->setDrawPercent(from, to, UNIT_CIRCLE_VAO_TRIANGLES->getVertices().size());
+			g->drawVAO(vao1);
 		}
 
 		glBlendEquation(GL_FUNC_ADD);
@@ -811,7 +812,7 @@ void OsuSliderRenderer::checkUpdateVars(Osu *osu, float hitcircleDiameter)
 			UNIT_CIRCLE_VAO->addTexcoord(Vector2(UNIT_CIRCLE[i * 5 + 0], UNIT_CIRCLE[i * 5 + 1]));
 		}
 
-		// pure triangles (needed for VertexBuffer, because we can't merge multiple triangle fan meshes into one VertexBuffer)
+		// pure triangles (needed for VertexArrayObject, because we can't merge multiple triangle fan meshes into one VertexArrayObject)
 		UNIT_CIRCLE_VAO_TRIANGLES->clear();
 		Vector3 startVertex = Vector3((radius * UNIT_CIRCLE[0 * 5 + 2]), (radius * UNIT_CIRCLE[0 * 5 + 3]), UNIT_CIRCLE[0 * 5 + 4]);
 		Vector2 startUV = Vector2(UNIT_CIRCLE[0 * 5 + 0], UNIT_CIRCLE[0 * 5 + 1]);

@@ -258,9 +258,9 @@ void OsuUISongBrowserButton::onMouseOutside()
 	}
 }
 
-void OsuUISongBrowserButton::setVisible(bool visible)
+OsuUISongBrowserButton *OsuUISongBrowserButton::setVisible(bool visible)
 {
-	m_bVisible = visible;
+	CBaseUIButton::setVisible(visible);
 
 	// scrolling pinch effect
 	m_fCenterOffsetAnimation = 1.0f;
@@ -271,6 +271,8 @@ void OsuUISongBrowserButton::setVisible(bool visible)
 
 	// force early layout update
 	updateLayout();
+
+	return this;
 }
 
 void OsuUISongBrowserButton::setTargetRelPosY(float targetRelPosY)
