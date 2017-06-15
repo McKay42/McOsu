@@ -239,13 +239,15 @@ void OsuUISongBrowserSongButton::updateLayoutEx()
 	m_fTextOffset = size.y*thumbnailYRatio + size.x*0.02f;
 }
 
-void OsuUISongBrowserSongButton::setVisible(bool visible)
+OsuUISongBrowserSongButton *OsuUISongBrowserSongButton::setVisible(bool visible)
 {
 	OsuUISongBrowserButton::setVisible(visible);
 
 	// this is called in all cases (outside viewing volume of scrollView, and if not visible because replaced by children)
 	// and also if the selection changes (due to previousParent and previousChild)
 	checkLoadUnloadImage();
+
+	return this;
 }
 
 std::vector<OsuUISongBrowserButton*> OsuUISongBrowserSongButton::getChildren()

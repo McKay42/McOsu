@@ -33,7 +33,7 @@ public:
 
 	void resetAnimations();
 
-	void setVisible(bool visible);
+	OsuUISongBrowserButton *setVisible(bool visible);
 	void setTargetRelPosY(float targetRelPosY);
 	void setChildren(std::vector<OsuUISongBrowserButton*> children) {m_children = children;}
 	void setActiveBackgroundColor(Color activeBackgroundColor) {m_activeBackgroundColor = activeBackgroundColor;}
