@@ -1436,8 +1436,8 @@ void OsuHUD::resetHitErrorBar()
 	m_hiterrors.clear();
 }
 
-Rect OsuHUD::getSkipClickRect()
+McRect OsuHUD::getSkipClickRect()
 {
 	float skipScale = osu_hud_scale.getFloat();
-	return Rect(m_osu->getScreenWidth() - m_osu->getSkin()->getPlaySkip()->getSize().x*skipScale, m_osu->getScreenHeight() - m_osu->getSkin()->getPlaySkip()->getSize().y*skipScale, m_osu->getSkin()->getPlaySkip()->getSize().x*skipScale, m_osu->getSkin()->getPlaySkip()->getSize().y*skipScale);
+	return McRect(m_osu->getScreenWidth() - m_osu->getSkin()->getPlaySkip()->getSize().x*skipScale, m_osu->getScreenHeight() - m_osu->getSkin()->getPlaySkip()->getSize().y*skipScale, m_osu->getSkin()->getPlaySkip()->getSize().x*skipScale, m_osu->getSkin()->getPlaySkip()->getSize().y*skipScale);
 }

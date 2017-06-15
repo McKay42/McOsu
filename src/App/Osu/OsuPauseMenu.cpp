@@ -93,6 +93,20 @@ void OsuPauseMenu::draw(Graphics *g)
 		g->fillRect(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight());
 	}
 
+	// draw overlay
+	if (m_osu->getSkin()->getPauseOverlay() != m_osu->getSkin()->getMissingTexture())
+	{
+		const float scale = Osu::getImageScaleToFillResolution(m_osu->getSkin()->getPauseOverlay(), m_osu->getScreenSize());
+		const Vector2 centerTrans = (m_osu->getScreenSize()/2);
+
+		g->setColor(COLOR(255, 255, 255, 255));
+		g->pushTransform();
+		g->scale(scale, scale);
+		g->translate((int)centerTrans.x, (int)centerTrans.y);
+		g->drawImage(m_osu->getSkin()->getPauseOverlay());
+		g->popTransform();
+	}
+
 	/*
 	g->setColor(0xffff0000);
 	g->drawLine(0, m_osu->getScreenHeight()/3.0f, m_osu->getScreenWidth(), m_osu->getScreenHeight()/3.0f);

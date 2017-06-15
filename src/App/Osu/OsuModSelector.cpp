@@ -142,6 +142,7 @@ void OsuModSelector::updateButtons()
 	m_modButtonNofail = setModButtonOnGrid(1, 0, 0, "nf", "You can't fail. No matter what.", m_osu->getSkin()->getSelectionModNoFail());
 	m_modButtonNofail->setAvailable(convar->getConVarByName("osu_drain_enabled")->getBool());
 	m_modButtonHalftime = setModButtonOnGrid(2, 0, 0, "ht", "Less zoom.", m_osu->getSkin()->getSelectionModHalfTime());
+	setModButtonOnGrid(2, 0, 1, "dc", "A E S T H E T I C", m_osu->getSkin()->getSelectionModDayCore());
 	setModButtonOnGrid(4, 0, 0, "nm", "Massively reduced slider follow circle radius. Unnecessary clicks count as misses.", m_osu->getSkin()->getSelectionModNightmare());
 
 	m_modButtonHardrock = setModButtonOnGrid(0, 1, 0, "hr", "Everything just got a bit harder...", m_osu->getSkin()->getSelectionModHardRock());
@@ -319,7 +320,7 @@ void OsuModSelector::update()
 			break;
 		}
 	}
-	Rect experimentalTrigger = Rect(0, 0, m_bExperimentalVisible ? m_experimentalContainer->getSize().x : m_osu->getScreenWidth()*0.05f, m_osu->getScreenHeight());
+	McRect experimentalTrigger = McRect(0, 0, m_bExperimentalVisible ? m_experimentalContainer->getSize().x : m_osu->getScreenWidth()*0.05f, m_osu->getScreenHeight());
 	if (experimentalTrigger.contains(engine->getMouse()->getPos()))
 	{
 		if (!m_bExperimentalVisible)

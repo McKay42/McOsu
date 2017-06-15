@@ -10,7 +10,6 @@
 
 #include "OsuScreenBackable.h"
 #include "OsuNotificationOverlay.h"
-#include "CBaseUIElement.h"
 
 class Osu;
 
@@ -51,10 +50,10 @@ public:
 	bool shouldDrawVRDummyHUD();
 
 private:
+	static const char *OSU_CONFIG_FILE_NAME;
+
 	virtual void updateLayout();
 	virtual void onBack();
-
-	static const char *OSU_CONFIG_FILE_NAME;
 
 	void updateOsuFolder();
 	void updateName();
@@ -77,13 +76,17 @@ private:
 	void onSliderChangeOneDecimalPlace(CBaseUISlider *slider);
 	void onSliderChangeOneDecimalPlaceMeters(CBaseUISlider *slider);
 	void onSliderChangeInt(CBaseUISlider *slider);
+	void onSliderChangeIntMS(CBaseUISlider *slider);
 	void onSliderChangePercent(CBaseUISlider *slider);
-	void onKeyBindingButtonPressed(CBaseUIButton *button);
 
+	void onKeyBindingButtonPressed(CBaseUIButton *button);
 	void onSliderChangeVRSuperSampling(CBaseUISlider *slider);
 	void onSliderChangeVRAntiAliasing(CBaseUISlider *slider);
+	void onSliderChangeSliderQuality(CBaseUISlider *slider);
 
 	void onUseSkinsSoundSamplesChange(UString oldValue, UString newValue);
+	void onHighQualitySlidersCheckboxChange(CBaseUICheckbox *checkbox);
+	void onHighQualitySlidersConVarChange(UString oldValue, UString newValue);
 
 	struct OPTIONS_ELEMENT
 	{
@@ -99,6 +102,7 @@ private:
 	CBaseUILabel *addLabel(UString text);
 	OsuUIButton *addButton(UString text, ConVar *cvar = NULL);
 	OPTIONS_ELEMENT addButton(UString text, UString labelText);
+	OsuUIButton *addKeyBindButton(UString text, ConVar *cvar);
 	CBaseUICheckbox *addCheckbox(UString text, ConVar *cvar = NULL);
 	OsuUISlider *addSlider(UString text, float min = 0.0f, float max = 1.0f, ConVar *cvar = NULL, float label1Width = 0.0f);
 	CBaseUITextbox *addTextbox(UString text, ConVar *cvar = NULL);
@@ -135,8 +139,10 @@ private:
 	CBaseUISlider *m_vrSliderVibrationStrengthSlider;
 	CBaseUISlider *m_vrHudDistanceSlider;
 	CBaseUISlider *m_vrHudScaleSlider;
+	CBaseUISlider *m_sliderQualitySlider;
 
 	ConVar *m_waitingKey;
+	ConVar *m_osu_slider_curve_points_separation;
 
 	OsuUIContextMenu *m_contextMenu;
 

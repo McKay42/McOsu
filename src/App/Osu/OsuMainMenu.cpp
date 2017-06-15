@@ -274,7 +274,10 @@ void OsuMainMenu::draw(Graphics *g)
 		haveTimingpoints = true;
 		long curMusicPos = m_osu->getSelectedBeatmap()->getMusic()->getPositionMS();
 		OsuBeatmapDifficulty::TIMING_INFO t = m_osu->getSelectedBeatmap()->getSelectedDifficulty()->getTimingInfoForTime(curMusicPos);
-		pulse = (float)((curMusicPos - t.offset) % (long)t.beatLengthBase)/t.beatLengthBase;
+		if (t.beatLengthBase == 0.0f) // bah
+			t.beatLengthBase = 1.0f;
+
+		pulse = (float)((curMusicPos - t.offset) % (long)t.beatLengthBase) / t.beatLengthBase;
 	}
 	else
 		pulse = (div - fmod(engine->getTime(), div))/div;
@@ -284,7 +287,7 @@ void OsuMainMenu::draw(Graphics *g)
 	const float pulseSub = 0.05f*pulse;
 	size -= size*pulseSub;
 	size += size*m_fSizeAddAnim;
-	Rect mainButtonRect = Rect(m_vCenter.x - size.x/2.0f - m_fCenterOffsetAnim, m_vCenter.y - size.y/2.0f, size.x, size.y);
+	McRect mainButtonRect = McRect(m_vCenter.x - size.x/2.0f - m_fCenterOffsetAnim, m_vCenter.y - size.y/2.0f, size.x, size.y);
 
 	// draw banner
 	if (m_osu->isInVRMode())
@@ -341,7 +344,7 @@ void OsuMainMenu::draw(Graphics *g)
 	// draw update check button
 	if (m_osu->getUpdateHandler()->getStatus() == OsuUpdateHandler::STATUS::STATUS_SUCCESS_INSTALLATION)
 	{
-		g->push3DScene(Rect(m_updateAvailableButton->getPos().x, m_updateAvailableButton->getPos().y, m_updateAvailableButton->getSize().x, m_updateAvailableButton->getSize().y));
+		g->push3DScene(McRect(m_updateAvailableButton->getPos().x, m_updateAvailableButton->getPos().y, m_updateAvailableButton->getSize().x, m_updateAvailableButton->getSize().y));
 		g->rotate3DScene(m_fUpdateButtonAnim*360.0f, 0, 0);
 	}
 	m_updateAvailableButton->draw(g);
@@ -360,10 +363,82 @@ void OsuMainMenu::draw(Graphics *g)
 		*/
 	}
 
+	/*
+	g->setDepthBuffer(true);
+	g->clearDepthBuffer();
+	g->setCulling(true);
+	*/
+
+	// front side
 	g->setColor(0xff000000);
+	g->pushTransform();
+	g->translate(0, 0, -0.1f);
 	g->fillRect(mainButtonRect.getX(), mainButtonRect.getY(), mainButtonRect.getWidth(), mainButtonRect.getHeight());
+	g->popTransform();
 	g->setColor(0xffffffff);
 	g->drawRect(mainButtonRect.getX(), mainButtonRect.getY(), mainButtonRect.getWidth(), mainButtonRect.getHeight());
+
+	/*
+	// right side
+	g->offset3DScene(0, 0, mainButtonRect.getWidth()/2);
+	g->rotate3DScene(0, 90, 0);
+	{
+		g->setColor(0xff00ff00);
+		g->pushTransform();
+		g->translate(0, 0, -0.1f);
+		g->fillRect(mainButtonRect.getX(), mainButtonRect.getY(), mainButtonRect.getWidth(), mainButtonRect.getHeight());
+		g->popTransform();
+		//g->setColor(0xffffffff);
+		//g->drawRect(mainButtonRect.getX(), mainButtonRect.getY(), mainButtonRect.getWidth(), mainButtonRect.getHeight());
+	}
+	g->rotate3DScene(0, -90, 0);
+	g->offset3DScene(0, 0, 0);
+
+	// left side
+	g->offset3DScene(0, 0, mainButtonRect.getWidth()/2);
+	g->rotate3DScene(0, -90, 0);
+	{
+		g->setColor(0xffffff00);
+		g->pushTransform();
+		g->translate(0, 0, -0.1f);
+		g->fillRect(mainButtonRect.getX(), mainButtonRect.getY(), mainButtonRect.getWidth(), mainButtonRect.getHeight());
+		g->popTransform();
+		//g->setColor(0xffffffff);
+		//g->drawRect(mainButtonRect.getX(), mainButtonRect.getY(), mainButtonRect.getWidth(), mainButtonRect.getHeight());
+	}
+	g->rotate3DScene(0, 90, 0);
+	g->offset3DScene(0, 0, 0);
+
+	// top side
+	g->offset3DScene(0, 0, mainButtonRect.getHeight()/2);
+	g->rotate3DScene(90, 0, 0);
+	{
+		g->setColor(0xff00ffff);
+		g->pushTransform();
+		g->translate(0, 0, -0.1f);
+		g->fillRect(mainButtonRect.getX(), mainButtonRect.getY(), mainButtonRect.getWidth(), mainButtonRect.getHeight());
+		g->popTransform();
+		//g->setColor(0xffffffff);
+		//g->drawRect(mainButtonRect.getX(), mainButtonRect.getY(), mainButtonRect.getWidth(), mainButtonRect.getHeight());
+	}
+	g->rotate3DScene(-90, 0, 0);
+	g->offset3DScene(0, 0, 0);
+
+	// bottom side
+	g->offset3DScene(0, 0, mainButtonRect.getHeight()/2);
+	g->rotate3DScene(-90, 0, 0);
+	{
+		g->setColor(0xffff0000);
+		g->pushTransform();
+		g->translate(0, 0, -0.1f);
+		g->fillRect(mainButtonRect.getX(), mainButtonRect.getY(), mainButtonRect.getWidth(), mainButtonRect.getHeight());
+		g->popTransform();
+		//g->setColor(0xffffffff);
+		//g->drawRect(mainButtonRect.getX(), mainButtonRect.getY(), mainButtonRect.getWidth(), mainButtonRect.getHeight());
+	}
+	g->rotate3DScene(90, 0, 0);
+	g->offset3DScene(0, 0, 0);
+	*/
 
 	float fontScale = 1.0f - pulseSub + m_fSizeAddAnim;
 
@@ -412,6 +487,11 @@ void OsuMainMenu::draw(Graphics *g)
 		}
 		g->pop3DScene();
 	}
+
+	/*
+	g->setCulling(false);
+	g->setDepthBuffer(false);
+	*/
 }
 
 void OsuMainMenu::update()
