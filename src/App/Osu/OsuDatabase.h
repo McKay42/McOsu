@@ -13,9 +13,9 @@
 class Timer;
 
 class Osu;
+class OsuFile;
 class OsuBeatmap;
 class OsuBeatmapDifficulty;
-class OsuFile;
 
 class OsuDatabaseLoader;
 
@@ -38,14 +38,14 @@ public:
 	void load();
 	void cancel();
 
-	inline float getProgress() {return m_fLoadingProgress;}
+	inline float getProgress() {return m_fLoadingProgress.load();}
+	bool isFinished() {return getProgress() >= 1.0f;}
+	inline bool foundChanges() {return m_bFoundChanges;}
+
 	inline int getNumBeatmaps() {return m_beatmaps.size();} // valid beatmaps
 	inline std::vector<OsuBeatmap*> getBeatmaps() {return m_beatmaps;}
 	inline int getNumCollections() {return m_collections.size();}
 	inline std::vector<Collection> getCollections() {return m_collections;}
-
-	bool isFinished() {return getProgress() >= 1.0f;}
-	inline bool foundChanges() {return m_bFoundChanges;}
 
 private:
 	friend class OsuDatabaseLoader;
@@ -62,7 +62,8 @@ private:
 
 	// global
 	int m_iNumBeatmapsToLoad;
-	float m_fLoadingProgress;
+	std::atomic<float> m_fLoadingProgress;
+	std::atomic<bool> m_bKYS;
 	std::vector<OsuBeatmap*> m_beatmaps;
 
 	// osu!.db

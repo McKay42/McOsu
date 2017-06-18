@@ -13,8 +13,8 @@
 #include "ResourceManager.h"
 
 #include "Osu.h"
-#include "OsuNotificationOverlay.h"
 #include "OsuFile.h"
+#include "OsuNotificationOverlay.h"
 #include "OsuBeatmap.h"
 #include "OsuBeatmapDifficulty.h"
 #include "OsuBeatmapStandard.h"
@@ -62,6 +62,7 @@ protected:
 		m_bReady = true;
 		delete this; // commit sudoku
 	}
+
 	virtual void initAsync()
 	{
 		// check if osu database exists, load file completely
@@ -83,6 +84,7 @@ protected:
 
 		m_bAsyncReady = true;
 	}
+
 	virtual void destroy() {;}
 
 private:
@@ -98,6 +100,7 @@ OsuDatabase::OsuDatabase(Osu *osu)
 
 	m_iNumBeatmapsToLoad = 0;
 	m_fLoadingProgress = 0.0f;
+	m_bKYS = false;
 
 	m_osu = osu;
 	m_iVersion = 0;
@@ -141,6 +144,8 @@ void OsuDatabase::update()
 
 		while (t.getElapsedTime() < 0.033f)
 		{
+			if (m_bKYS.load()) break; // cancellation point
+
 			if (m_rawLoadBeatmapFolders.size() > 0)
 			{
 				UString curBeatmap = m_rawLoadBeatmapFolders[m_iCurRawBeatmapLoadIndex++];
@@ -178,6 +183,7 @@ void OsuDatabase::update()
 
 void OsuDatabase::load()
 {
+	m_bKYS = false;
 	m_fLoadingProgress = 0.0f;
 	OsuDatabaseLoader *loader = new OsuDatabaseLoader(this);
 	engine->getResourceManager()->requestNextLoadAsync();
@@ -186,6 +192,7 @@ void OsuDatabase::load()
 
 void OsuDatabase::cancel()
 {
+	m_bKYS = true;
 	m_bRawBeatmapLoadScheduled = false;
 	m_fLoadingProgress = 1.0f; // force finished
 	m_bFoundChanges = true;
@@ -298,6 +305,8 @@ void OsuDatabase::loadDB(OsuFile *db)
 	std::vector<BeatmapSet> beatmapSets;
 	for (int i=0; i<m_iNumBeatmapsToLoad; i++)
 	{
+		if (m_bKYS.load()) break; // cancellation point
+
 		if (Osu::debug->getBool())
 			debugLog("Database: Reading beatmap %i/%i ...\n", (i+1), m_iNumBeatmapsToLoad);
 
@@ -531,6 +540,8 @@ void OsuDatabase::loadDB(OsuFile *db)
 	// first, build all beatmaps which have a valid setID (trusting the values from the osu database)
 	for (int i=0; i<beatmapSets.size(); i++)
 	{
+		if (m_bKYS.load()) break; // cancellation point
+
 		if (beatmapSets[i].diffs.size() > 0) // sanity check
 		{
 			if (beatmapSets[i].setID > 0)
@@ -545,18 +556,24 @@ void OsuDatabase::loadDB(OsuFile *db)
 	// this goes through every individual diff in a "set" (not really a set because its ID is either 0 or -1) instead of trusting the ID values from the osu database
 	for (int i=0; i<beatmapSets.size(); i++)
 	{
+		if (m_bKYS.load()) break; // cancellation point
+
 		if (beatmapSets[i].diffs.size() > 0) // sanity check
 		{
 			if (beatmapSets[i].setID < 1)
 			{
 				for (int b=0; b<beatmapSets[i].diffs.size(); b++)
 				{
+					if (m_bKYS.load()) break; // cancellation point
+
 					OsuBeatmapDifficulty *diff = beatmapSets[i].diffs[b];
 
 					// try finding an already existing beatmap with matching artist and title
 					bool existsAlready = false;
 					for (int e=0; e<m_beatmaps.size(); e++)
 					{
+						if (m_bKYS.load()) break; // cancellation point
+
 						if (m_beatmaps[e]->getTitle() == diff->title && m_beatmaps[e]->getArtist() == diff->artist)
 						{
 							existsAlready = true;
@@ -606,6 +623,8 @@ void OsuDatabase::loadDB(OsuFile *db)
 		debugLog("Collection: version = %i, numCollections = %i\n", version, numCollections);
 		for (int i=0; i<numCollections; i++)
 		{
+			if (m_bKYS.load()) break; // cancellation point
+
 			m_fLoadingProgress = 0.75f + 0.24f*((float)(i+1)/(float)numCollections);
 
 			UString name = collectionFile.readString();
@@ -619,6 +638,8 @@ void OsuDatabase::loadDB(OsuFile *db)
 
 			for (int b=0; b<numBeatmaps; b++)
 			{
+				if (m_bKYS.load()) break; // cancellation point
+
 				UString md5hash = collectionFile.readString();
 				rc.hashes.push_back(md5hash);
 			}
@@ -633,13 +654,19 @@ void OsuDatabase::loadDB(OsuFile *db)
 				std::vector<OsuBeatmapDifficulty*> matchingDiffs;
 				for (int h=0; h<rc.hashes.size(); h++)
 				{
+					if (m_bKYS.load()) break; // cancellation point
+
 					// for every hash, go through every beatmap
 					for (int b=0; b<m_beatmaps.size(); b++)
 					{
+						if (m_bKYS.load()) break; // cancellation point
+
 						// for every beatmap, go through every diff and check if a diff hash matches, store those matching diffs
 						std::vector<OsuBeatmapDifficulty*> diffs = m_beatmaps[b]->getDifficulties();
 						for (int d=0; d<diffs.size(); d++)
 						{
+							if (m_bKYS.load()) break; // cancellation point
+
 							if (diffs[d]->md5hash == rc.hashes[h])
 								matchingDiffs.push_back(diffs[d]);
 						}
@@ -653,15 +680,21 @@ void OsuDatabase::loadDB(OsuFile *db)
 				{
 					for (int md=0; md<matchingDiffs.size(); md++)
 					{
+						if (m_bKYS.load()) break; // cancellation point
+
 						OsuBeatmapDifficulty *diff = matchingDiffs[md];
 
 						// find the OsuBeatmap object corresponding to this diff
 						OsuBeatmap *beatmap = NULL;
 						for (int b=0; b<m_beatmaps.size(); b++)
 						{
+							if (m_bKYS.load()) break; // cancellation point
+
 							std::vector<OsuBeatmapDifficulty*> diffs = m_beatmaps[b]->getDifficulties();
 							for (int d=0; d<diffs.size(); d++)
 							{
+								if (m_bKYS.load()) break; // cancellation point
+
 								if (diffs[d] == diff)
 								{
 									beatmap = m_beatmaps[b];
@@ -674,6 +707,8 @@ void OsuDatabase::loadDB(OsuFile *db)
 						bool beatmapIsAlreadyInCollection = false;
 						for (int m=0; m<c.beatmaps.size(); m++)
 						{
+							if (m_bKYS.load()) break; // cancellation point
+
 							if (c.beatmaps[m].first == beatmap)
 							{
 								beatmapIsAlreadyInCollection = true;
@@ -682,6 +717,8 @@ void OsuDatabase::loadDB(OsuFile *db)
 								bool diffIsAlreadyInCollection = false;
 								for (int d=0; d<c.beatmaps[m].second.size(); d++)
 								{
+									if (m_bKYS.load()) break; // cancellation point
+
 									if (c.beatmaps[m].second[d] == diff)
 									{
 										diffIsAlreadyInCollection = true;
