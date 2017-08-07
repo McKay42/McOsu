@@ -38,6 +38,7 @@ ConVar osu_draw_hitobjects("osu_draw_hitobjects", true);
 ConVar osu_vr_draw_desktop_playfield("osu_vr_draw_desktop_playfield", true);
 
 ConVar osu_universal_offset("osu_universal_offset", 0.0f);
+ConVar osu_timingpoints_offset("osu_timingpoints_offset", 50.0f, "Offset in ms which is added before determining the active timingpoint for the sample type and sample volume (hitsounds) of the current frame");
 ConVar osu_interpolate_music_pos("osu_interpolate_music_pos", true, "Interpolate song position with engine time if the audio library reports the same position more than once");
 ConVar osu_compensate_music_speed("osu_compensate_music_speed", true, "compensates speeds slower than 1x a little bit, by adding an offset depending on the slowness");
 ConVar osu_combobreak_sound_combo("osu_combobreak_sound_combo", 20, "Only play the combobreak sound if the combo is higher than this");
@@ -389,9 +390,8 @@ void OsuBeatmap::update()
 	}
 
 	// update timing (points)
-	OsuBeatmapDifficulty::TIMING_INFO t = m_selectedDifficulty->getTimingInfoForTime(m_iCurMusicPos);
-	m_osu->getSkin()->setSampleSet(t.sampleType); // normal/soft/drum is stored in the sample type! the sample set number is for custom sets
-	m_osu->getSkin()->setSampleVolume(clamp<float>(t.volume / 100.0f, 0.0f, 1.0f));
+	m_iCurMusicPosWithOffsets = m_iCurMusicPos + (long)osu_universal_offset.getInt() - m_selectedDifficulty->localoffset - m_selectedDifficulty->onlineOffset;
+	updateTimingPoints(m_iCurMusicPosWithOffsets);
 
 	// for performance reasons, a lot of operations are crammed into 1 loop over all hitobjects:
 	// update all hitobjects,
@@ -412,8 +412,6 @@ void OsuBeatmap::update()
 	{
 		std::lock_guard<std::mutex> lk(m_clicksMutex); // we need to lock this up here, else it would be possible to insert a click just before calling m_clicks.clear(), thus missing it
 
-		long curPos = m_iCurMusicPos + (long)osu_universal_offset.getInt() - m_selectedDifficulty->localoffset - m_selectedDifficulty->onlineOffset;
-		m_iCurMusicPosWithOffsets = curPos;
 		bool blockNextNotes = false;
 		const long pvs = getPVS();
 		const bool usePVS = m_osu_pvs->getBool();
@@ -452,7 +450,7 @@ void OsuBeatmap::update()
 			// PVS optimization
 			if (usePVS)
 			{
-				if (m_hitobjects[i]->isFinished() && (curPos - pvs > m_hitobjects[i]->getTime() + m_hitobjects[i]->getDuration())) // past objects
+				if (m_hitobjects[i]->isFinished() && (m_iCurMusicPosWithOffsets - pvs > m_hitobjects[i]->getTime() + m_hitobjects[i]->getDuration())) // past objects
 				{
 					// ************ live pp block start ************ //
 					if (isCircle)
@@ -463,17 +461,17 @@ void OsuBeatmap::update()
 
 					continue;
 				}
-				if (m_hitobjects[i]->getTime() > curPos + pvs) // future objects
+				if (m_hitobjects[i]->getTime() > m_iCurMusicPosWithOffsets + pvs) // future objects
 					break;
 			}
 
 			// ************ live pp block start ************ //
-			if (curPos >= m_hitobjects[i]->getTime() + m_hitobjects[i]->getDuration())
+			if (m_iCurMusicPosWithOffsets >= m_hitobjects[i]->getTime() + m_hitobjects[i]->getDuration())
 				m_iCurrentHitObjectIndex = i;
 			// ************ live pp block end ************** //
 
 			// main hitobject update
-			m_hitobjects[i]->update(curPos);
+			m_hitobjects[i]->update(m_iCurMusicPosWithOffsets);
 
 			// note blocking
 			if (osu_note_blocking.getBool())
@@ -489,7 +487,7 @@ void OsuBeatmap::update()
 				}
 			}
 
-			// click events
+			// click events (this also handles hitsounds!)
 			if (m_clicks.size() > 0)
 				m_hitobjects[i]->onClickEvent(m_clicks);
 
@@ -1308,6 +1306,17 @@ void OsuBeatmap::playMissSound()
 {
 	if (m_osu->getScore()->getCombo() > osu_combobreak_sound_combo.getInt())
 		engine->getSound()->play(getSkin()->getCombobreak());
+}
+
+void OsuBeatmap::updateTimingPoints(long curPos)
+{
+	if (curPos < 0) return; // aspire pls >:(
+
+	///debugLog("updateTimingPoints( %ld )\n", curPos);
+
+	OsuBeatmapDifficulty::TIMING_INFO t = m_selectedDifficulty->getTimingInfoForTime(curPos + (long)osu_timingpoints_offset.getInt());
+	m_osu->getSkin()->setSampleSet(t.sampleType); // normal/soft/drum is stored in the sample type! the sample set number is for custom sets
+	m_osu->getSkin()->setSampleVolume(clamp<float>(t.volume / 100.0f, 0.0f, 1.0f));
 }
 
 bool OsuBeatmap::isLoading()
