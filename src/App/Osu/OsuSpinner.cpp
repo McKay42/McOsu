@@ -445,7 +445,12 @@ void OsuSpinner::onHit()
 
 	// sound
 	if (result != OsuScore::HIT::HIT_MISS)
+	{
+		if (m_osu_timingpoints_force->getBool())
+			m_beatmap->updateTimingPoints(m_iTime + m_iObjectDuration);
+
 		m_beatmap->getSkin()->playHitCircleSound(m_iSampleType);
+	}
 
 	// add it, and we are finished
 	addHitResult(result, 0, m_vRawPos, -1.0f);
@@ -478,7 +483,7 @@ void OsuSpinner::rotate(float rad)
 	// spinner sound
 	if (!m_beatmap->getSkin()->getSpinnerSpinSound()->isPlaying())
 		engine->getSound()->play(m_beatmap->getSkin()->getSpinnerSpinSound());
-	float frequency = 20000.0f + (int)(clamp<float>(m_fRatio, 0.0f, 1.0f)*40000.0f);
+	float frequency = 20000.0f + (int)(clamp<float>(m_fRatio, 0.0f, 2.5f)*40000.0f);
 	m_beatmap->getSkin()->getSpinnerSpinSound()->setFrequency(frequency);
 
 	m_fRotations = newRotations;

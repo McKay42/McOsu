@@ -134,6 +134,7 @@ public:
 	void addScorePoints(int points);
 	void addHealth(float percent);
 	void playMissSound();
+	void updateTimingPoints(long curPos);
 
 protected:
 	static ConVar *m_osu_pvs;
