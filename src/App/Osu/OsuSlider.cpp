@@ -1037,8 +1037,13 @@ void OsuSlider::update(long curPos)
 
 				if (m_endResult == OsuScore::HIT::HIT_NULL) // this may happen
 					m_endResult = OsuScore::HIT::HIT_MISS;
-				if (m_startResult == OsuScore::HIT::HIT_NULL) // this may also happen
+
+				if (m_startResult == OsuScore::HIT::HIT_NULL) // this may also happen (if the slider time is shorter than the miss window of the startcircle)
+				{
+					// we still want to cause a sliderbreak in this case!
+					onSliderBreak();
 					m_startResult = OsuScore::HIT::HIT_MISS;
+				}
 
 
 				// handle total slider result (currently startcircle + repeats + ticks + endcircle)
@@ -1214,6 +1219,9 @@ void OsuSlider::onHit(OsuScore::HIT result, long delta, bool startOrEnd, float t
 		onSliderBreak();
 	else
 	{
+		if (m_osu_timingpoints_force->getBool())
+			m_beatmap->updateTimingPoints(m_iTime + (long)((float)m_iObjectDuration*m_fActualSlidePercent));
+
 		m_beatmap->getSkin()->playHitCircleSound(m_iCurRepeatCounterForHitSounds < m_hitSounds.size() ? m_hitSounds[m_iCurRepeatCounterForHitSounds] : m_iSampleType);
 
 		if (!startOrEnd)
@@ -1283,10 +1291,14 @@ void OsuSlider::onRepeatHit(bool successful, bool sliderend)
 		onSliderBreak();
 	else
 	{
+		if (m_osu_timingpoints_force->getBool())
+			m_beatmap->updateTimingPoints(m_iTime + (long)((float)m_iObjectDuration*m_fActualSlidePercent));
+
+		m_beatmap->getSkin()->playHitCircleSound(m_iCurRepeatCounterForHitSounds < m_hitSounds.size() ? m_hitSounds[m_iCurRepeatCounterForHitSounds] : m_iSampleType);
+
 		m_fFollowCircleTickAnimationScale = 0.0f;
 		anim->moveLinear(&m_fFollowCircleTickAnimationScale, 1.0f, OsuGameRules::osu_slider_followcircle_tick_pulse_time.getFloat(), true);
 
-		m_beatmap->getSkin()->playHitCircleSound(m_iCurRepeatCounterForHitSounds < m_hitSounds.size() ? m_hitSounds[m_iCurRepeatCounterForHitSounds] : m_iSampleType);
 		m_beatmap->addHitResult(OsuScore::HIT::HIT_300, 0, true, true, false, true); // ignore in hiterrorbar, ignore for accuracy, increase combo, but don't count towards score!
 
 		if (sliderend)
@@ -1337,9 +1349,14 @@ void OsuSlider::onTickHit(bool successful, int tickIndex)
 		onSliderBreak();
 	else
 	{
+		if (m_osu_timingpoints_force->getBool())
+			m_beatmap->updateTimingPoints(m_iTime + (long)((float)m_iObjectDuration*m_fActualSlidePercent));
+
+		m_beatmap->getSkin()->playSliderTickSound();
+
 		m_fFollowCircleTickAnimationScale = 0.0f;
 		anim->moveLinear(&m_fFollowCircleTickAnimationScale, 1.0f, OsuGameRules::osu_slider_followcircle_tick_pulse_time.getFloat(), true);
-		m_beatmap->getSkin()->playSliderTickSound();
+
 		m_beatmap->addHitResult(OsuScore::HIT::HIT_SLIDER30, 0, true);
 
 		// add score

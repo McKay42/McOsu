@@ -34,7 +34,7 @@ OsuFile::~OsuFile()
 
 unsigned char OsuFile::readByte()
 {
-	if (!m_bReady || m_readPointer > m_buffer+m_iFileSize-1) return 0;
+	if (!m_bReady || m_readPointer > (m_buffer + m_iFileSize - 1)) return 0;
 
 	const unsigned char value = (unsigned char)*m_readPointer;
 	m_readPointer += 1;
@@ -43,7 +43,7 @@ unsigned char OsuFile::readByte()
 
 short OsuFile::readShort()
 {
-	if (!m_bReady || m_readPointer > m_buffer+m_iFileSize-1) return 0;
+	if (!m_bReady || m_readPointer > (m_buffer + m_iFileSize - 2)) return 0;
 
 	const short value = (short)*(short*)m_readPointer;
 	m_readPointer += 2;
@@ -52,7 +52,7 @@ short OsuFile::readShort()
 
 int OsuFile::readInt()
 {
-	if (!m_bReady || m_readPointer > m_buffer+m_iFileSize-1) return 0;
+	if (!m_bReady || m_readPointer > (m_buffer + m_iFileSize - 4)) return 0;
 
 	const int value = (int)*(int*)m_readPointer;
 	m_readPointer += 4;
@@ -61,7 +61,7 @@ int OsuFile::readInt()
 
 long OsuFile::readLong()
 {
-	if (!m_bReady || m_readPointer > m_buffer+m_iFileSize-1) return 0;
+	if (!m_bReady || m_readPointer > (m_buffer + m_iFileSize - 8)) return 0;
 
 	const long value = (long)*(long*)m_readPointer;
 	m_readPointer += 8;
@@ -70,7 +70,7 @@ long OsuFile::readLong()
 
 long long OsuFile::readLongLong()
 {
-	if (!m_bReady || m_readPointer > m_buffer+m_iFileSize-1) return 0;
+	if (!m_bReady || m_readPointer > (m_buffer + m_iFileSize - 8)) return 0;
 
 	const long long value = (long long)*(long long*)m_readPointer;
 	m_readPointer += 8;
@@ -79,7 +79,7 @@ long long OsuFile::readLongLong()
 
 uint64_t OsuFile::readULEB128()
 {
-	if (!m_bReady || m_readPointer > m_buffer+m_iFileSize-1) return 0;
+	if (!m_bReady || m_readPointer > (m_buffer + m_iFileSize - 1)) return 0;
 
 	unsigned int numBytes = 0;
 	uint64_t value = decodeULEB128((const unsigned char*)m_readPointer, &numBytes);
@@ -89,7 +89,7 @@ uint64_t OsuFile::readULEB128()
 
 float OsuFile::readFloat()
 {
-	if (!m_bReady || m_readPointer > m_buffer+m_iFileSize-1) return 0;
+	if (!m_bReady || m_readPointer > (m_buffer + m_iFileSize - 4)) return 0;
 
 	const float value = (float)*(float*)m_readPointer;
 	m_readPointer += 4;
@@ -98,7 +98,7 @@ float OsuFile::readFloat()
 
 double OsuFile::readDouble()
 {
-	if (!m_bReady || m_readPointer > m_buffer+m_iFileSize-1) return 0;
+	if (!m_bReady || m_readPointer > (m_buffer + m_iFileSize - 8)) return 0;
 
 	const double value = (double)*(double*)m_readPointer;
 	m_readPointer += 8;
@@ -112,8 +112,6 @@ bool OsuFile::readBool()
 
 UString OsuFile::readString()
 {
-	if (!m_bReady || m_readPointer > m_buffer+m_iFileSize-1) return "";
-
 	UString value = "";
 	const unsigned char flag = readByte();
 	if (flag > 0)
@@ -138,7 +136,7 @@ UString OsuFile::readString()
 
 void OsuFile::readDateTime()
 {
-	if (!m_bReady || m_readPointer > m_buffer+m_iFileSize-1) return;
+	if (!m_bReady || m_readPointer > (m_buffer + m_iFileSize - 8)) return;
 
 	m_readPointer += 8;
 }
@@ -159,7 +157,7 @@ uint64_t OsuFile::decodeULEB128(const uint8_t *p, unsigned *n)
 
 	do
 	{
-		if (p > (const unsigned char*)(m_buffer+m_iFileSize-1))
+		if (p > (const unsigned char*)(m_buffer + m_iFileSize - 1))
 			break;
 
 		value += uint64_t(*p & 0x7f) << shift;

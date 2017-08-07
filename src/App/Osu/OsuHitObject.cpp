@@ -26,11 +26,14 @@ ConVar osu_hitresult_duration("osu_hitresult_duration", 1.25f);
 
 ConVar osu_approach_scale_multiplier("osu_approach_scale_multiplier", 3.0f);
 
+ConVar osu_timingpoints_force("osu_timingpoints_force", true, "Forces the correct sample type and volume to be used, by getting the active timingpoint through iteration EVERY TIME a hitsound is played (performance!)");
+
 ConVar osu_mod_target_300_percent("osu_mod_target_300_percent", 0.5f);
 ConVar osu_mod_target_100_percent("osu_mod_target_100_percent", 0.7f);
 ConVar osu_mod_target_50_percent("osu_mod_target_50_percent", 0.95f);
 
 ConVar *OsuHitObject::m_osu_approach_scale_multiplier_ref = &osu_approach_scale_multiplier;
+ConVar *OsuHitObject::m_osu_timingpoints_force = &osu_timingpoints_force;
 unsigned long long OsuHitObject::sortHackCounter = 0;
 
 void OsuHitObject::drawHitResult(Graphics *g, OsuBeatmapStandard *beatmap, Vector2 rawPos, OsuScore::HIT result, float animPercent, float defaultAnimPercent)

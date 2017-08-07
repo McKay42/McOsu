@@ -61,6 +61,7 @@ public:
 
 protected:
 	static ConVar *m_osu_approach_scale_multiplier_ref;
+	static ConVar *m_osu_timingpoints_force;
 
 	OsuBeatmap *m_beatmap;
 

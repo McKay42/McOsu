@@ -97,6 +97,7 @@ public:
 		int sampleType;
 		int sampleSet;
 		int volume;
+		bool kiai;
 		unsigned long long sortHack;
 	};
 
