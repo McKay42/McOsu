@@ -599,6 +599,9 @@ void OsuCircle::onHit(OsuScore::HIT result, long delta, float targetDelta, float
 	// sound and hit animation
 	if (result != OsuScore::HIT::HIT_MISS)
 	{
+		if (m_osu_timingpoints_force->getBool())
+			m_beatmap->updateTimingPoints(m_iTime);
+
 		m_beatmap->getSkin()->playHitCircleSound(m_iSampleType);
 
 		m_fHitAnimation = 0.001f; // quickfix for 1 frame missing images

@@ -406,9 +406,6 @@ void OsuBeatmapStandard::drawFollowPoints(Graphics *g)
 	const long curPos = m_iCurMusicPosWithOffsets;
 	const long approachTime = std::min((long)OsuGameRules::getApproachTime(this), (long)osu_followpoints_approachtime.getFloat());
 
-	// the followpoints are scaled by one eighth of the hitcirclediameter (not the raw diameter, but the scaled diameter)
-	const float followPointImageScale = ((m_fHitcircleDiameter/8.0f) / skin->getFollowPoint2()->getSizeBaseRaw().x) * osu_followpoints_scale_multiplier.getFloat();
-
 	// include previous object in followpoints
 	int lastObjectIndex = -1;
 
@@ -495,6 +492,11 @@ void OsuBeatmapStandard::drawFollowPoints(Graphics *g)
 				g->pushTransform();
 					g->rotate(rad2deg(atan2(yDiff, xDiff)));
 					skin->getFollowPoint2()->setAnimationTimeOffset(fadeInTime - 150); // HACKHACK: hardcoded 150 is good enough, was approachTime/2.5 (osu! allows followpoints to finish before hitobject fadein (!), fuck that)
+
+					// NOTE: getSizeBaseRaw() depends on the current animation time being set correctly beforehand! (otherwise you get incorrect scales, e.g. for animated elements with inconsistent @2x mixed in)
+					// the followpoints are scaled by one eighth of the hitcirclediameter (not the raw diameter, but the scaled diameter)
+					const float followPointImageScale = ((m_fHitcircleDiameter/8.0f) / skin->getFollowPoint2()->getSizeBaseRaw().x) * osu_followpoints_scale_multiplier.getFloat();
+
 					skin->getFollowPoint2()->drawRaw(g, followPos, followPointImageScale*scale);
 				g->popTransform();
 			}
