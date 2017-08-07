@@ -324,7 +324,8 @@ bool OsuBeatmapDifficulty::loadMetadataRaw()
 				int tpMeter;
 				int tpSampleType,tpSampleSet;
 				int tpVolume;
-				if (sscanf(curLineChar, " %lf , %f , %i , %i , %i , %i", &tpOffset, &tpMSPerBeat, &tpMeter, &tpSampleType, &tpSampleSet, &tpVolume) == 6)
+				int tpKiai;
+				if (sscanf(curLineChar, " %lf , %f , %i , %i , %i , %i , %i", &tpOffset, &tpMSPerBeat, &tpMeter, &tpSampleType, &tpSampleSet, &tpVolume, &tpKiai) == 7)
 				{
 					TIMINGPOINT t;
 					t.offset = (long)std::round(tpOffset);
@@ -332,6 +333,7 @@ bool OsuBeatmapDifficulty::loadMetadataRaw()
 					t.sampleType = tpSampleType;
 					t.sampleSet = tpSampleSet;
 					t.volume = tpVolume;
+					t.kiai = tpKiai > 0;
 					t.sortHack = timingPointSortHack++;
 
 					timingpoints.push_back(t);
@@ -474,7 +476,8 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 				int tpMeter;
 				int tpSampleType,tpSampleSet;
 				int tpVolume;
-				if (sscanf(curLineChar, " %lf , %f , %i , %i , %i , %i", &tpOffset, &tpMSPerBeat, &tpMeter, &tpSampleType, &tpSampleSet, &tpVolume) == 6)
+				int tpKiai;
+				if (sscanf(curLineChar, " %lf , %f , %i , %i , %i , %i , %i", &tpOffset, &tpMSPerBeat, &tpMeter, &tpSampleType, &tpSampleSet, &tpVolume, &tpKiai) == 7)
 				{
 					TIMINGPOINT t;
 					t.offset = (long)std::round(tpOffset);
@@ -482,6 +485,7 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 					t.sampleType = tpSampleType;
 					t.sampleSet = tpSampleSet;
 					t.volume = tpVolume;
+					t.kiai = tpKiai > 0;
 					t.sortHack = timingPointSortHack++;
 
 					timingpoints.push_back(t);
@@ -495,6 +499,7 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 					t.sampleType = 0;
 					t.sampleSet = 0;
 					t.volume = 100;
+					t.kiai = false;
 					t.sortHack = timingPointSortHack++;
 
 					timingpoints.push_back(t);
@@ -898,6 +903,7 @@ OsuBeatmapDifficulty::TIMING_INFO OsuBeatmapDifficulty::getTimingInfoForTime(uns
 		return ti;
 
 	// initial values
+	ti.offset = timingpoints[0].offset;
 	ti.volume = timingpoints[0].volume;
 	ti.sampleSet = timingpoints[0].sampleSet;
 	ti.sampleType = timingpoints[0].sampleType;
@@ -908,7 +914,7 @@ OsuBeatmapDifficulty::TIMING_INFO OsuBeatmapDifficulty::getTimingInfoForTime(uns
 		TIMINGPOINT *t = &timingpoints[i];
 		if (t->msPerBeat >= 0)
 		{
-			ti.beatLength = std::abs(t->msPerBeat);
+			ti.beatLength = t->msPerBeat;
 			ti.beatLengthBase = ti.beatLength;
 			ti.offset = t->offset;
 			break;
@@ -922,11 +928,13 @@ OsuBeatmapDifficulty::TIMING_INFO OsuBeatmapDifficulty::getTimingInfoForTime(uns
 		if (t->offset > (long)positionMS)
 			break;
 
-		ti.offset = t->offset;
+		//debugLog("timingpoint %i msperbeat = %f\n", i, t->msPerBeat);
 
 		if (t->msPerBeat >= 0) // NOT inherited
 		{
-			ti.beatLengthBase = ti.beatLength = t->msPerBeat;
+			ti.beatLengthBase = t->msPerBeat;
+			ti.beatLength = ti.beatLengthBase;
+			ti.offset = t->offset;
 		}
 		else // inherited
 		{
