@@ -41,6 +41,11 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 
 	CHANGELOG alpha29Steam;
 	alpha29Steam.title = "28.94 (Steam VR Alpha, ?)";
+	alpha29Steam.changes.push_back("- Fixed timingpoint sample type and sample volume inaccuracies per-hitobject (osu_timingpoints_force, osu_timingpoints_offset)");
+	alpha29Steam.changes.push_back("- Fixed missing sliderbreaks when the slider duration is shorter than the miss timing window of the sliderstartcircle");
+	alpha29Steam.changes.push_back("");
+	alpha29Steam.changes.push_back("");
+	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("- Added Daycore mod");
 	alpha29Steam.changes.push_back("- Added option \"Higher Quality Sliders\", Options > Graphics > Detail Settings");
 	alpha29Steam.changes.push_back("- Added current key labels to key bindings (Options > Input > Keyboard)");
@@ -49,8 +54,6 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha29Steam.changes.push_back("- Fixed main menu crashing on some aspire timingpoints due to division by zero");
 	alpha29Steam.changes.push_back("- Fixed missing cursor texture on \"Click on the orange cursor to continue play!\"");
 	alpha29Steam.changes.push_back("- Fixed incorrect hitcircle number skin overlaps");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("- Added preliminary Touchscreen support for Windows 8 and higher (Windows 8.1, Windows 10, etc.)");
 	alpha29Steam.changes.push_back("- Fixed very long beatmaps not working (mostly random marathons with big MP3s, more than ~15 minutes)");
@@ -232,26 +235,31 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 		if (i == 0)
 			title->setTextColor(0xff00ff00);
 		else
-			title->setTextColor(0xffaaaaaa);
+			title->setTextColor(0xff888888);
+
 		title->setSizeToContent();
 		title->setDrawBackground(false);
 		title->setDrawFrame(false);
 		lastYPos += title->getSize().y;
 		title->setPos(15, lastYPos);
 		lastYPos += 10;
+
 		m_scrollView->getContainer()->addBaseUIElement(title);
 
 		// changes
 		for (int c=0; c<changelogs[i].changes.size(); c++)
 		{
 			CBaseUILabel *change = new CBaseUILabel(0, 0, 0, 0, "", changelogs[i].changes[c]);
+
 			if (i > 0)
-				change->setTextColor(0xffaaaaaa);
+				change->setTextColor(0xff888888);
+
 			change->setSizeToContent();
 			change->setDrawBackground(false);
 			change->setDrawFrame(false);
 			lastYPos += change->getSize().y + 7;
 			change->setPos(35, lastYPos);
+
 			m_scrollView->getContainer()->addBaseUIElement(change);
 		}
 
