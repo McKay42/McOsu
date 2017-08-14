@@ -16,15 +16,37 @@
 #include "OsuSkin.h"
 #include "OsuGameRules.h"
 #include "OsuBeatmapStandard.h"
+#include "OsuBeatmapMania.h"
 #include "OsuNotificationOverlay.h"
 
 #include "OsuHitObject.h"
 #include "OsuCircle.h"
 #include "OsuSlider.h"
 #include "OsuSpinner.h"
+#include "OsuManiaNote.h"
 
 ConVar osu_mod_random("osu_mod_random", false);
 ConVar osu_show_approach_circle_on_first_hidden_object("osu_show_approach_circle_on_first_hidden_object", true);
+
+
+
+class OsuManiaHelper
+{
+public:
+	static int getColumn(int availableColumns, float position, bool allowSpecial = false)
+	{
+		if (allowSpecial && availableColumns == 8)
+		{
+			const float local_x_divisor = 512.0f / 7;
+			return clamp<int>((int)std::floor(position / local_x_divisor), 0, 6) + 1;
+		}
+
+		float localXDivisor = 512.0f / availableColumns;
+		return clamp<int>((int)std::floor(position / localXDivisor), 0, availableColumns - 1);
+	}
+
+private:
+};
 
 
 
@@ -356,8 +378,8 @@ bool OsuBeatmapDifficulty::loadMetadataRaw()
 		}
 	}
 
-	// only allow osu!standard diffs for now
-	if (mode != 0)
+	// gamemode filter
+	if ((mode != 0 && m_osu->getGamemode() == Osu::GAMEMODE::STD) || (mode != 0x03 && m_osu->getGamemode() == Osu::GAMEMODE::MANIA))
 		return false;
 
 	// build sound file path
@@ -539,6 +561,7 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 						c.number = comboNumber++;
 						c.colorCounter = colorCounter;
 						c.clicked = false;
+						c.maniaEndTime = 0;
 
 						hitcircles.push_back(c);
 					}
@@ -628,6 +651,37 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 
 						spinners.push_back(s);
 					}
+					else if (m_osu->getGamemode() == Osu::GAMEMODE::MANIA && (type & 0x80)) // osu!mania hold note, gamemode check for sanity
+					{
+						UString curLineString = UString(curLineChar);
+						std::vector<UString> tokens = curLineString.split(",");
+
+						if (tokens.size() < 6)
+						{
+							debugLog("Invalid hold note in beatmap: %s\n\ncurLine = %s\n", m_sFilePath.toUtf8(), curLineChar);
+							continue;
+						}
+
+						std::vector<UString> holdNoteTokens = tokens[5].split(":");
+						if (holdNoteTokens.size() < 1)
+						{
+							debugLog("Invalid hold note in beatmap: %s\n\ncurLine = %s\n", m_sFilePath.toUtf8(), curLineChar);
+							continue;
+						}
+
+						HITCIRCLE c;
+
+						c.x = x;
+						c.y = y;
+						c.time = time;
+						c.sampleType = hitSound;
+						c.number = comboNumber++;
+						c.colorCounter = colorCounter;
+						c.clicked = false;
+						c.maniaEndTime = holdNoteTokens[0].toLong();
+
+						hitcircles.push_back(c);
+					}
 				}
 				break;
 			}
@@ -684,8 +738,11 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 
 	// build hitobjects from the data we loaded from the beatmap file
 	OsuBeatmapStandard *beatmapStandard = dynamic_cast<OsuBeatmapStandard*>(beatmap);
+	OsuBeatmapMania *beatmapMania = dynamic_cast<OsuBeatmapMania*>(beatmap);
 	if (beatmapStandard != NULL)
 		buildStandardHitObjects(beatmapStandard, hitobjects);
+	if (beatmapMania != NULL)
+		buildManiaHitObjects(beatmapMania, hitobjects);
 
 	// sort hitobjects by starttime
 	struct HitObjectSortComparator
@@ -870,6 +927,25 @@ void OsuBeatmapDifficulty::buildStandardHitObjects(OsuBeatmapStandard *beatmap, 
 		double pp = calculatePPv2(beatmap->getOsu(), beatmap, aim, speed, hitobjects->size(), hitcircles.size(), m_iMaxCombo);
 
 		engine->showMessageInfo("PP", UString::format("pp = %f, stars = %f, aimstars = %f, speedstars = %f, %i circles, %i sliders, %i spinners, %i hitobjects, maxcombo = %i", pp, stars, aim, speed, hitcircles.size(), sliders.size(), spinners.size(), (hitcircles.size() + sliders.size() + spinners.size()), m_iMaxCombo));
+	}
+}
+
+void OsuBeatmapDifficulty::buildManiaHitObjects(OsuBeatmapMania *beatmap, std::vector<OsuHitObject*> *hitobjects)
+{
+	if (beatmap == NULL || hitobjects == NULL) return;
+
+	int availableColumns = beatmap->getNumColumns();
+
+	for (int i=0; i<hitcircles.size(); i++)
+	{
+		OsuBeatmapDifficulty::HITCIRCLE *c = &hitcircles[i];
+		hitobjects->push_back(new OsuManiaNote(OsuManiaHelper::getColumn(availableColumns, c->x), c->maniaEndTime > 0 ? (c->maniaEndTime - c->time) : 0, c->time, c->sampleType, c->number, c->colorCounter, beatmap));
+	}
+
+	for (int i=0; i<sliders.size(); i++)
+	{
+		OsuBeatmapDifficulty::SLIDER *s = &sliders[i];
+		hitobjects->push_back(new OsuManiaNote(OsuManiaHelper::getColumn(availableColumns, s->x), s->sliderTime, s->time, s->sampleType, s->number, s->colorCounter, beatmap));
 	}
 }
 

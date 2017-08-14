@@ -15,6 +15,7 @@ class BackgroundImagePathLoader;
 class Osu;
 class OsuBeatmap;
 class OsuBeatmapStandard;
+class OsuBeatmapMania;
 
 class OsuHitObject;
 
@@ -48,6 +49,7 @@ public:
 		int number;
 		int colorCounter;
 		bool clicked;
+		long maniaEndTime;
 	};
 
 	struct SLIDER_CLICK
@@ -210,7 +212,7 @@ private:
 
 	// every supported type of beatmap/gamemode gets its own build function here. it should build the hitobject classes from the data loaded from disk.
 	void buildStandardHitObjects(OsuBeatmapStandard *beatmap, std::vector<OsuHitObject*> *hitobjects);
-	// void buildManiaHitObjects(OsuBeatmapMania *beatmap, std::vector<OsuHitObject*> *hitobjects);
+	void buildManiaHitObjects(OsuBeatmapMania *beatmap, std::vector<OsuHitObject*> *hitobjects);
 	// void buildTaikoHitObjects(OsuBeatmapTaiko *beatmap, std::vector<OsuHitObject*> *hitobjects);
 
 	// generic helper functions
