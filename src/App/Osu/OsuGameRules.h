@@ -165,9 +165,7 @@ public:
 		return mapDifficultyRange(beatmap->getRawAR(), getMinApproachTime(), getMidApproachTime(), getMaxApproachTime());
 	}
 
-	static inline long getFadeInTimeFromApproachTime(long approachTime) {return std::min((long)400, (long) ((float)approachTime / 1.75f));}
-	static inline long getHiddenDecayTimeFromApproachTime(long approachTime) {return (long) ((float)approachTime / 3.6f);}
-	static inline long getHiddenTimeDiffFromApproachTime(long approachTime) {return (long) ((float)approachTime / 3.3f);}
+	static inline long getFadeInTime() {return 400;}
 
 	static float getHitWindow300(OsuBeatmap *beatmap)
 	{

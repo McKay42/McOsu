@@ -80,6 +80,7 @@ private:
 	void onSliderChangePercent(CBaseUISlider *slider);
 
 	void onKeyBindingButtonPressed(CBaseUIButton *button);
+	void onKeyBindingManiaPressed(CBaseUIButton *button);
 	void onSliderChangeVRSuperSampling(CBaseUISlider *slider);
 	void onSliderChangeVRAntiAliasing(CBaseUISlider *slider);
 	void onSliderChangeSliderQuality(CBaseUISlider *slider);
@@ -148,6 +149,10 @@ private:
 
 	float m_fOsuFolderTextboxInvalidAnim;
 	float m_fVibrationStrengthExampleTimer;
+
+	// mania layout
+	int m_iManiaK;
+	int m_iManiaKey;
 };
 
 #endif

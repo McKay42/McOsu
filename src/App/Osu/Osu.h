@@ -56,6 +56,12 @@ public:
 
 	static bool findIgnoreCase(const std::string &haystack, const std::string &needle);
 
+	enum class GAMEMODE
+	{
+		STD,
+		MANIA
+	};
+
 public:
 	Osu();
 	virtual ~Osu();
@@ -99,9 +105,13 @@ public:
 
 	void reloadSkin() {onSkinReload();}
 
-	inline Vector2 getScreenSize() {return g_vInternalResolution;}
-	inline int getScreenWidth() {return (int)g_vInternalResolution.x;}
-	inline int getScreenHeight() {return (int)g_vInternalResolution.y;}
+	void setGamemode(GAMEMODE gamemode) {m_gamemode = gamemode;}
+
+	inline GAMEMODE getGamemode() const {return m_gamemode;}
+
+	inline Vector2 getScreenSize() const {return g_vInternalResolution;}
+	inline int getScreenWidth() const {return (int)g_vInternalResolution.x;}
+	inline int getScreenHeight() const {return (int)g_vInternalResolution.y;}
 
 	OsuBeatmap *getSelectedBeatmap();
 
@@ -129,29 +139,29 @@ public:
 	float getSpeedMultiplier();		// with override
 	float getPitchMultiplier();
 
-	inline bool getModAuto() {return m_bModAuto;}
-	inline bool getModAutopilot() {return m_bModAutopilot;}
-	inline bool getModRelax() {return m_bModRelax;}
-	inline bool getModSpunout() {return m_bModSpunout;}
-	inline bool getModTarget() {return m_bModTarget;}
-	inline bool getModDT() {return m_bModDT;}
-	inline bool getModNC() {return m_bModNC;}
-	inline bool getModNF() {return m_bModNF;}
-	inline bool getModHT() {return m_bModHT;}
-	inline bool getModDC() {return m_bModDC;}
-	inline bool getModHD() {return m_bModHD;}
-	inline bool getModHR() {return m_bModHR;}
-	inline bool getModEZ() {return m_bModEZ;}
-	inline bool getModSD() {return m_bModSD;}
-	inline bool getModSS() {return m_bModSS;}
-	inline bool getModNM() {return m_bModNM;}
+	inline bool getModAuto() const {return m_bModAuto;}
+	inline bool getModAutopilot() const {return m_bModAutopilot;}
+	inline bool getModRelax() const {return m_bModRelax;}
+	inline bool getModSpunout() const {return m_bModSpunout;}
+	inline bool getModTarget() const {return m_bModTarget;}
+	inline bool getModDT() const {return m_bModDT;}
+	inline bool getModNC() const {return m_bModNC;}
+	inline bool getModNF() const {return m_bModNF;}
+	inline bool getModHT() const {return m_bModHT;}
+	inline bool getModDC() const {return m_bModDC;}
+	inline bool getModHD() const {return m_bModHD;}
+	inline bool getModHR() const {return m_bModHR;}
+	inline bool getModEZ() const {return m_bModEZ;}
+	inline bool getModSD() const {return m_bModSD;}
+	inline bool getModSS() const {return m_bModSS;}
+	inline bool getModNM() const {return m_bModNM;}
 
 	bool isInPlayMode();
 	bool isNotInPlayModeOrPaused();
 	bool isInVRMode();
 
-	inline bool isSeeking() {return m_bSeeking;}
-	inline float getQuickSaveTime() {return m_fQuickSaveTime;}
+	inline bool isSeeking() const {return m_bSeeking;}
+	inline float getQuickSaveTime() const {return m_fQuickSaveTime;}
 
 	bool shouldFallBackToLegacySliderRenderer(); // certain mods or actions require OsuSliders to render dynamically (e.g. wobble or the CS override slider)
 
@@ -276,6 +286,7 @@ private:
 	CWindowManager *m_windowManager;
 
 	// custom
+	GAMEMODE m_gamemode;
 	bool m_bScheduleEndlessModNextBeatmap;
 };
 

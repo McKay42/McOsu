@@ -41,6 +41,7 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 
 	CHANGELOG alpha29Steam;
 	alpha29Steam.title = "28.94 (Steam VR Alpha, ?)";
+	alpha29Steam.changes.push_back("- Fixed minor visual inaccuracies (approach circle fade-in duration, hidden slider body fading behaviour)");
 	alpha29Steam.changes.push_back("- Fixed timingpoint sample type and sample volume inaccuracies per-hitobject (osu_timingpoints_force, osu_timingpoints_offset)");
 	alpha29Steam.changes.push_back("- Fixed missing sliderbreaks when the slider duration is shorter than the miss timing window of the sliderstartcircle");
 	alpha29Steam.changes.push_back("");

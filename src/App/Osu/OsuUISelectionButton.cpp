@@ -45,6 +45,8 @@ void OsuUISelectionButton::draw(Graphics *g)
 			g->popTransform();
 		}
 	}
+
+	CBaseUIButton::drawText(g);
 }
 
 void OsuUISelectionButton::onMouseInside()

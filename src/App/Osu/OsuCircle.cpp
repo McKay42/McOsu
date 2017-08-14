@@ -22,11 +22,12 @@
 #include "OsuGameRules.h"
 #include "OsuBeatmapStandard.h"
 
-ConVar osu_circle_color_saturation("osu_circle_color_saturation", 0.75f);
+ConVar osu_circle_color_saturation("osu_circle_color_saturation", 1.0f);
 ConVar osu_circle_rainbow("osu_circle_rainbow", false);
 ConVar osu_circle_number_rainbow("osu_circle_number_rainbow", false);
 ConVar osu_circle_shake_duration("osu_circle_shake_duration", 0.120f);
 ConVar osu_circle_shake_strength("osu_circle_shake_strength", 8.0f);
+ConVar osu_approach_circle_alpha_multiplier("osu_approach_circle_alpha_multiplier", 0.9f);
 
 ConVar osu_draw_numbers("osu_draw_numbers", true);
 ConVar osu_draw_approach_circles("osu_draw_approach_circles", true);
@@ -199,7 +200,7 @@ void OsuCircle::drawApproachCircle(Graphics *g, OsuSkin *skin, Vector2 pos, Colo
 			g->setColor(COLOR(255, red1, green1, blue1));
 		}
 
-		g->setAlpha(alpha);
+		g->setAlpha(alpha*osu_approach_circle_alpha_multiplier.getFloat());
 		if (approachScale > 1.0f)
 		{
 			float approachCircleImageScale = hitcircleDiameter / (128.0f * (skin->isApproachCircle2x() ? 2.0f : 1.0f));
@@ -396,7 +397,6 @@ void OsuCircle::draw(Graphics *g)
 	if (m_fHitAnimation > 0.0f && m_fHitAnimation != 1.0f && !m_beatmap->getOsu()->getModHD())
 	{
 		float alpha = 1.0f - m_fHitAnimation;
-		//alpha = -alpha*(alpha-2.0f); // quad out alpha
 
 		float scale = m_fHitAnimation;
 		scale = -scale*(scale-2.0f); // quad out scale
@@ -441,7 +441,7 @@ void OsuCircle::draw2(Graphics *g)
 
 	// draw approach circle
 	const bool hd = m_beatmap->getOsu()->getModHD();
-	drawApproachCircle(g, m_beatmap, m_vRawPos, m_iComboNumber, m_iColorCounter, m_bWaiting && !hd ? 1.0f : m_fApproachScale, m_bWaiting && !hd ? 1.0f : m_fAlpha, m_bOverrideHDApproachCircle);
+	drawApproachCircle(g, m_beatmap, m_vRawPos, m_iComboNumber, m_iColorCounter, m_bWaiting && !hd ? 1.0f : m_fApproachScale, m_bWaiting && !hd ? 1.0f : m_fAlphaForApproachCircle, m_bOverrideHDApproachCircle);
 }
 
 void OsuCircle::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
@@ -464,19 +464,6 @@ void OsuCircle::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 void OsuCircle::update(long curPos)
 {
 	OsuHitObject::update(curPos);
-
-	// hidden modifies the alpha
-	if (m_beatmap->getOsu()->getModHD())
-	{
-		const float fadeInTimeMultiplier = 0.8f;
-
-		if (m_iDelta < m_iHiddenTimeDiff + m_iHiddenDecayTime) // fadeout
-			m_fAlpha = clamp<float>((m_iDelta < m_iHiddenTimeDiff) ? 0.0f : (float)(m_iDelta - m_iHiddenTimeDiff) / (float)m_iHiddenDecayTime, 0.0f, 1.0f);
-		else if (m_iDelta < m_iHiddenTimeDiff + m_iHiddenDecayTime + m_iFadeInTime*fadeInTimeMultiplier) // fadein
-			m_fAlpha = clamp<float>(1.0f - (float)(m_iDelta - m_iHiddenTimeDiff - m_iHiddenDecayTime)/(float)(m_iFadeInTime*fadeInTimeMultiplier), 0.0f, 1.0f);
-		else
-			m_fAlpha = 0.0f;
-	}
 
 	// if we have not been clicked yet, check if we are in the timeframe of a miss, also handle auto and relax
 	if (!m_bFinished)

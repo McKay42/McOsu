@@ -16,6 +16,9 @@ public:
 	static ConVar LEFT_CLICK;
 	static ConVar RIGHT_CLICK;
 
+	static ConVar INCREASE_SPEED;
+	static ConVar DECREASE_SPEED;
+
 	static ConVar INCREASE_VOLUME;
 	static ConVar DECREASE_VOLUME;
 
@@ -44,6 +47,13 @@ public:
 	static ConVar MOD_AUTOPILOT;
 	static ConVar MOD_SPUNOUT;
 	static ConVar MOD_AUTO;
+
+	static std::vector<std::vector<ConVar*>> MANIA;
+
+private:
+	static std::vector<ConVar*> createManiaConVarSet(int k);
+	static std::vector<std::vector<ConVar*>> createManiaConVarSets();
+	static void setDefaultManiaKeys(std::vector<std::vector<ConVar*>> mania);
 };
 
 #endif

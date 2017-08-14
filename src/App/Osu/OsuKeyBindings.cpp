@@ -12,6 +12,9 @@
 ConVar OsuKeyBindings::LEFT_CLICK("osu_key_left_click", (int)KEY_R);
 ConVar OsuKeyBindings::RIGHT_CLICK("osu_key_right_click", (int)KEY_T);
 
+ConVar OsuKeyBindings::INCREASE_SPEED("osu_key_mania_increase_speed", (int)KEY_RIGHT);
+ConVar OsuKeyBindings::DECREASE_SPEED("osu_key_mania_decrease_speed", (int)KEY_LEFT);
+
 ConVar OsuKeyBindings::INCREASE_VOLUME("osu_key_increase_volume", (int)KEY_UP);
 ConVar OsuKeyBindings::DECREASE_VOLUME("osu_key_decrease_volume", (int)KEY_DOWN);
 
@@ -40,3 +43,94 @@ ConVar OsuKeyBindings::MOD_RELAX("osu_key_mod_relax", (int)KEY_Z);
 ConVar OsuKeyBindings::MOD_AUTOPILOT("osu_key_mod_autopilot", (int)KEY_X);
 ConVar OsuKeyBindings::MOD_SPUNOUT("osu_key_mod_spunout", (int)KEY_C);
 ConVar OsuKeyBindings::MOD_AUTO("osu_key_mod_auto", (int)KEY_V);
+
+std::vector<std::vector<ConVar*>> OsuKeyBindings::MANIA = OsuKeyBindings::createManiaConVarSets();
+
+std::vector<ConVar*> OsuKeyBindings::createManiaConVarSet(int k)
+{
+	std::vector<ConVar*> convars;
+	for (int i=1; i<=k; i++)
+	{
+		convars.push_back(new ConVar(UString::format("osu_key_mania_%ik_%i", k, i), 0));
+	}
+	return convars;
+}
+
+std::vector<std::vector<ConVar*>> OsuKeyBindings::createManiaConVarSets()
+{
+	std::vector<std::vector<ConVar*>> sets;
+	for (int i=1; i<=10; i++)
+	{
+		sets.push_back(createManiaConVarSet(i));
+	}
+	setDefaultManiaKeys(sets);
+	return sets;
+}
+
+void OsuKeyBindings::setDefaultManiaKeys(std::vector<std::vector<ConVar*>> mania)
+{
+	mania[0][0]->setValue((int)KEY_F);
+
+	mania[1][0]->setValue((int)KEY_F);
+	mania[1][1]->setValue((int)KEY_J);
+
+	mania[2][0]->setValue((int)KEY_F);
+	mania[2][1]->setValue((int)KEY_SPACE);
+	mania[2][2]->setValue((int)KEY_J);
+
+	mania[3][0]->setValue((int)KEY_D);
+	mania[3][1]->setValue((int)KEY_F);
+	mania[3][2]->setValue((int)KEY_J);
+	mania[3][3]->setValue((int)KEY_K);
+
+	mania[4][0]->setValue((int)KEY_D);
+	mania[4][1]->setValue((int)KEY_F);
+	mania[4][2]->setValue((int)KEY_SPACE);
+	mania[4][3]->setValue((int)KEY_J);
+	mania[4][4]->setValue((int)KEY_K);
+
+	mania[5][0]->setValue((int)KEY_S);
+	mania[5][1]->setValue((int)KEY_D);
+	mania[5][2]->setValue((int)KEY_F);
+	mania[5][3]->setValue((int)KEY_J);
+	mania[5][4]->setValue((int)KEY_K);
+	mania[5][5]->setValue((int)KEY_L);
+
+	mania[6][0]->setValue((int)KEY_S);
+	mania[6][1]->setValue((int)KEY_D);
+	mania[6][2]->setValue((int)KEY_F);
+	mania[6][3]->setValue((int)KEY_SPACE);
+	mania[6][4]->setValue((int)KEY_J);
+	mania[6][5]->setValue((int)KEY_K);
+	mania[6][6]->setValue((int)KEY_L);
+
+	mania[7][0]->setValue((int)KEY_A);
+	mania[7][1]->setValue((int)KEY_S);
+	mania[7][2]->setValue((int)KEY_D);
+	mania[7][3]->setValue((int)KEY_F);
+	mania[7][4]->setValue((int)KEY_J);
+	mania[7][5]->setValue((int)KEY_K);
+	mania[7][6]->setValue((int)KEY_L);
+	mania[7][7]->setValue((int)KEY_N); // TODO
+
+	mania[8][0]->setValue((int)KEY_A);
+	mania[8][1]->setValue((int)KEY_S);
+	mania[8][2]->setValue((int)KEY_D);
+	mania[8][3]->setValue((int)KEY_F);
+	mania[8][4]->setValue((int)KEY_SPACE);
+	mania[8][5]->setValue((int)KEY_J);
+	mania[8][6]->setValue((int)KEY_K);
+	mania[8][7]->setValue((int)KEY_L);
+	mania[8][8]->setValue((int)KEY_N); // TODO
+
+	mania[9][0]->setValue((int)KEY_A);
+	mania[9][1]->setValue((int)KEY_S);
+	mania[9][2]->setValue((int)KEY_D);
+	mania[9][3]->setValue((int)KEY_F);
+	mania[9][4]->setValue((int)KEY_SPACE);
+	mania[9][5]->setValue((int)KEY_N); // TODO
+	mania[9][6]->setValue((int)KEY_O);
+	mania[9][7]->setValue((int)KEY_P);
+	mania[9][8]->setValue((int)KEY_N); // TODO
+	mania[9][9]->setValue((int)KEY_N); // TODO
+}

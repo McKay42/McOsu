@@ -55,6 +55,8 @@ private:
 
 	OsuBeatmap *loadRawBeatmap(UString beatmapPath);
 
+	OsuBeatmap *createBeatmapForActiveGamemode(); // TEMP: workaround
+
 	Osu *m_osu;
 	Timer *m_importTimer;
 	bool m_bIsFirstLoad;
