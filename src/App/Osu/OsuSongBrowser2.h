@@ -132,9 +132,12 @@ private:
 
 	void onAfterSortingOrGroupChange(CBaseUIButton *b);
 
+	void onSelectionMode();
 	void onSelectionMods();
 	void onSelectionRandom();
 	void onSelectionOptions();
+
+	void onModeChange(UString text);
 
 	void selectSongButton(OsuUISongBrowserButton *songButton);
 	void selectRandomBeatmap();

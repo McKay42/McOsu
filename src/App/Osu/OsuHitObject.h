@@ -57,6 +57,7 @@ public:
 	inline bool hasMisAimed() const {return m_bMisAim;}
 
 	virtual void onClickEvent(std::vector<OsuBeatmap::CLICK> &clicks) {;}
+	virtual void onKeyUpEvent(std::vector<OsuBeatmap::CLICK> &keyUps) {;}
 	virtual void onReset(long curPos);
 
 protected:
@@ -74,17 +75,14 @@ protected:
 	int m_iColorCounter;
 
 	float m_fAlpha;
+	float m_fAlphaWithoutHidden;
+	float m_fAlphaForApproachCircle;
 	float m_fApproachScale;
-	float m_fFadeInScale;
 	long m_iDelta; // this must be signed
 	long m_iApproachTime;
-	long m_iFadeInTime; // extra time added before the approachTime to let the object smoothly become visible
-	long m_iObjectTime; // the duration an object is visible (excluding the exact moment in time where it has to be clicked and onwards, this also includes the extra fadeInTime)
+	long m_iFadeInTime;		// extra time added before the approachTime to let the object smoothly become visible
 	long m_iObjectDuration; // how long this object takes to click (circle = 0, slider = sliderTime, spinner = spinnerTime etc.), the object will stay visible this long extra after m_iTime;
 							// it should be set by the actual object inheriting from this class
-
-	long m_iHiddenDecayTime;
-	long m_iHiddenTimeDiff;
 
 	int m_iStack;
 

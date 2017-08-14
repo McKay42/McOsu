@@ -15,10 +15,12 @@
 #include "Osu.h"
 #include "OsuFile.h"
 #include "OsuNotificationOverlay.h"
+
 #include "OsuBeatmap.h"
 #include "OsuBeatmapDifficulty.h"
-#include "OsuBeatmapStandard.h"
 #include "OsuBeatmapExample.h"
+#include "OsuBeatmapStandard.h"
+#include "OsuBeatmapMania.h"
 
 #if defined(_WIN32) || defined(_WIN64) || defined(__WIN32__) || defined(__CYGWIN__) || defined(__CYGWIN32__) || defined(__TOS_WIN__) || defined(__WINDOWS__)
 
@@ -443,7 +445,7 @@ void OsuDatabase::loadDB(OsuFile *db)
 		fullFilePath.append(osuFileName);
 
 		// fill diff with data
-		if (mode == 0) // only use osu!standard diffs
+		if ((mode == 0 && m_osu->getGamemode() == Osu::GAMEMODE::STD) || (mode == 0x03 && m_osu->getGamemode() == Osu::GAMEMODE::MANIA)) // gamemode filter
 		{
 			OsuBeatmapDifficulty *diff = new OsuBeatmapDifficulty(m_osu, fullFilePath, beatmapPath);
 
@@ -547,7 +549,7 @@ void OsuDatabase::loadDB(OsuFile *db)
 		{
 			if (beatmapSets[i].setID > 0)
 			{
-				OsuBeatmap *bm = new OsuBeatmapStandard(m_osu);
+				OsuBeatmap *bm = createBeatmapForActiveGamemode();
 				bm->setDifficulties(beatmapSets[i].diffs);
 				m_beatmaps.push_back(bm);
 			}
@@ -589,7 +591,7 @@ void OsuDatabase::loadDB(OsuFile *db)
 					// if we couldn't find any beatmap with our title and artist, create a new one
 					if (!existsAlready)
 					{
-						OsuBeatmap *bm = new OsuBeatmapStandard(m_osu);
+						OsuBeatmap *bm = createBeatmapForActiveGamemode();
 						std::vector<OsuBeatmapDifficulty*> diffs;
 						diffs.push_back(beatmapSets[i].diffs[b]);
 						bm->setDifficulties(diffs);
@@ -808,9 +810,19 @@ OsuBeatmap *OsuDatabase::loadRawBeatmap(UString beatmapPath)
 	// if we found any valid diffs, create beatmap
 	if (diffs.size() > 0)
 	{
-		result = new OsuBeatmapStandard(m_osu);
+		result = createBeatmapForActiveGamemode();
 		result->setDifficulties(diffs);
 	}
 
 	return result;
+}
+
+OsuBeatmap *OsuDatabase::createBeatmapForActiveGamemode()
+{
+	if (m_osu->getGamemode() == Osu::GAMEMODE::STD)
+		return new OsuBeatmapStandard(m_osu);
+	else if (m_osu->getGamemode() == Osu::GAMEMODE::MANIA)
+		return new OsuBeatmapMania(m_osu);
+
+	return NULL;
 }

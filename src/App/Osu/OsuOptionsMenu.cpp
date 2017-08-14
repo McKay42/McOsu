@@ -218,6 +218,9 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_fOsuFolderTextboxInvalidAnim = 0.0f;
 	m_fVibrationStrengthExampleTimer = 0.0f;
 
+	m_iManiaK = 0;
+	m_iManiaKey = 0;
+
 	m_container = new CBaseUIContainer(0, 0, 0, 0, "");
 
 	m_options = new CBaseUIScrollView(0, -1, 0, 0, "");
@@ -409,6 +412,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addKeyBindButton("Spunout", &OsuKeyBindings::MOD_SPUNOUT)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
 	addKeyBindButton("Auto", &OsuKeyBindings::MOD_AUTO)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
 	addSpacer();
+	///addButton("osu!mania layout")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingManiaPressed) );
 
 	//**************************************************************************************************************************//
 
@@ -516,7 +520,6 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_playfieldBorderSizeSlider->setKeyDelta(1.0f);
 
 	addSubSection("Hitobjects");
-	addCheckbox("Use New Hidden Fading Sliders", convar->getConVarByName("osu_mod_hd_slider_fade"));
 	addCheckbox("Use Fast Hidden Fading Sliders (!)", convar->getConVarByName("osu_mod_hd_slider_fast_fade"));
 	addCheckbox("Use Score V2 slider accuracy", convar->getConVarByName("osu_slider_scorev2"));
 
@@ -710,6 +713,43 @@ void OsuOptionsMenu::onKey(KeyboardEvent &e)
 	{
 		m_waitingKey->setValue((float)e.getKeyCode());
 		m_waitingKey = NULL;
+	}
+	else // mania layout logic
+	{
+		if (e.getKeyCode() != (KEYCODE)0) // if not the first call
+		{
+			if (m_iManiaK > -1 && m_iManiaK < 10 && m_iManiaKey > -1 && m_iManiaKey <= m_iManiaK)
+				OsuKeyBindings::MANIA[m_iManiaK][m_iManiaKey]->setValue(e.getKeyCode());
+
+			// go to next key
+			m_iManiaKey++;
+			if (m_iManiaKey > m_iManiaK)
+			{
+				m_iManiaKey = 0;
+				m_iManiaK++;
+			}
+		}
+
+		if (m_iManiaK > -1 && m_iManiaK < 10)
+		{
+			UString notificationText = UString::format("%ik:", (m_iManiaK+1));
+			int curKey = 0;
+			for (int i=m_iManiaK-m_iManiaKey; i<m_iManiaK; i++)
+			{
+				notificationText.append(" [x]");
+				curKey++;
+			}
+			for (int i=0; i<=m_iManiaK-m_iManiaKey; i++)
+			{
+				if (curKey == m_iManiaKey)
+					notificationText.append(" ([?])");
+				else
+					notificationText.append(" []");
+
+				curKey++;
+			}
+			m_osu->getNotificationOverlay()->addNotification(notificationText, 0xffffffff, true);
+		}
 	}
 }
 
@@ -1301,6 +1341,16 @@ void OsuOptionsMenu::onKeyBindingButtonPressed(CBaseUIButton *button)
 			}
 		}
 	}
+}
+
+void OsuOptionsMenu::onKeyBindingManiaPressed(CBaseUIButton *button)
+{
+	m_waitingKey = NULL;
+	m_iManiaK = 0;
+	m_iManiaKey = 0;
+
+	KeyboardEvent e(0);
+	onKey(e);
 }
 
 void OsuOptionsMenu::onSliderChangeVRSuperSampling(CBaseUISlider *slider)

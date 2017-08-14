@@ -281,6 +281,7 @@ void OsuBeatmap::update()
 				std::lock_guard<std::mutex> lk(m_clicksMutex);
 
 				m_clicks.clear();
+				m_keyUps.clear();
 			}
 		}
 	}
@@ -383,7 +384,7 @@ void OsuBeatmap::update()
 	}
 
 	// detect and handle music end
-	if (!m_bIsWaiting && m_music->isReady() && (m_music->isFinished() || (m_hitobjects.size() > 0 && m_hitobjects[m_hitobjects.size()-1]->getTime() + m_hitobjects[m_hitobjects.size()-1]->getDuration() + 1000 < m_iCurMusicPos)))
+	if (!m_bIsWaiting && m_music->isReady() && (m_music->isFinished() || (m_hitobjects.size() > 0 && m_iCurMusicPos > (m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size()-1]->getTime() + m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size()-1]->getDuration() + 1500))))
 	{
 		stop(false);
 		return;
@@ -491,6 +492,9 @@ void OsuBeatmap::update()
 			if (m_clicks.size() > 0)
 				m_hitobjects[i]->onClickEvent(m_clicks);
 
+			if (m_keyUps.size() > 0)
+				m_hitobjects[i]->onKeyUpEvent(m_keyUps);
+
 			// ************ live pp block start ************ //
 			if (isCircle && m_hitobjects[i]->isFinished())
 				m_iCurrentNumCircles++;
@@ -558,6 +562,7 @@ void OsuBeatmap::update()
 				addSliderBreak();
 			m_clicks.clear();
 		}
+		m_keyUps.clear();
 	}
 
 	// empty section detection & skipping
@@ -653,6 +658,7 @@ void OsuBeatmap::keyPressed1()
 
 	CLICK click;
 	click.musicPos = m_iCurMusicPosWithOffsets;
+	click.maniaColumn = -1;
 
 	m_clicks.push_back(click);
 }
@@ -676,6 +682,7 @@ void OsuBeatmap::keyPressed2()
 
 	CLICK click;
 	click.musicPos = m_iCurMusicPosWithOffsets;
+	click.maniaColumn = -1;
 
 	m_clicks.push_back(click);
 }
@@ -1217,6 +1224,12 @@ void OsuBeatmap::consumeClickEvent()
 	m_clicks.erase(m_clicks.begin());
 }
 
+void OsuBeatmap::consumeKeyUpEvent()
+{
+	// NOTE: don't need a lock_guard in here because this is only called during the hitobject update(), and there is already a lock there!
+	m_keyUps.erase(m_keyUps.begin());
+}
+
 void OsuBeatmap::addHitResult(OsuScore::HIT hit, long delta, bool ignoreOnHitErrorBar, bool hitErrorBarOnly, bool ignoreCombo, bool ignoreScore)
 {
 	// handle perfect & sudden death
@@ -1328,11 +1341,8 @@ long OsuBeatmap::getPVS()
 {
 	// this is an approximation with generous boundaries, it doesn't need to be exact (just good enough to filter 10000 hitobjects down to a few hundred or so)
 	// it will be used in both positive and negative directions (previous and future hitobjects) to speed up loops which iterate over all hitobjects
-	const long approachTime = OsuGameRules::getApproachTime(this);
-	return approachTime
-			+ OsuGameRules::getFadeInTimeFromApproachTime(approachTime)
-			+ OsuGameRules::getHiddenDecayTimeFromApproachTime(approachTime)
-			+ OsuGameRules::getHiddenTimeDiffFromApproachTime(approachTime)
+	return OsuGameRules::getApproachTime(this)
+			+ OsuGameRules::getFadeInTime()
 			+ (long)OsuGameRules::getHitWindowMiss(this)
 			+ 1500; // sanity
 }

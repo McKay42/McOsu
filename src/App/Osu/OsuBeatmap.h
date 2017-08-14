@@ -29,6 +29,7 @@ public:
 	struct CLICK
 	{
 		long musicPos;
+		int maniaColumn;
 	};
 
 public:
@@ -40,6 +41,9 @@ public:
 	void drawDebug(Graphics *g);
 	void drawBackground(Graphics *g);
 	virtual void update();
+
+	virtual void onKeyDown(KeyboardEvent &e) {;}
+	virtual void onKeyUp(KeyboardEvent &e) {;}
 
 	virtual void onModUpdate() {;} // this should make all the necessary internal updates to hitobjects when legacy osu mods or static mods change live (but also on start)
 	virtual bool isLoading(); // allows subclasses to delay the playing start, e.g. to load something
@@ -129,6 +133,7 @@ public:
 
 	// OsuHitObject and other helper functions
 	void consumeClickEvent();
+	void consumeKeyUpEvent();
 	void addHitResult(OsuScore::HIT hit, long delta, bool ignoreOnHitErrorBar = false, bool hitErrorBarOnly = false, bool ignoreCombo = false, bool ignoreScore = false);
 	void addSliderBreak();
 	void addScorePoints(int points);
@@ -217,6 +222,7 @@ protected:
 	bool m_bClick2Held;
 	bool m_bPrevKeyWasKey1;
 	std::vector<CLICK> m_clicks;
+	std::vector<CLICK> m_keyUps;
 	std::mutex m_clicksMutex;
 
 	std::vector<OsuHitObject*> m_hitobjects;

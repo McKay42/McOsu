@@ -49,6 +49,7 @@
 #include "OsuBeatmap.h"
 #include "OsuBeatmapDifficulty.h"
 #include "OsuBeatmapStandard.h"
+#include "OsuBeatmapMania.h"
 
 #include "OsuHitObject.h"
 
@@ -228,6 +229,7 @@ Osu::Osu()
 
 	m_bShouldCursorBeVisible = false;
 
+	m_gamemode = GAMEMODE::STD;
 	m_bScheduleEndlessModNextBeatmap = false;
 
 	// debug
@@ -319,6 +321,30 @@ Osu::Osu()
 	UString debugFolder = "c:/Program Files (x86)/osu!/Songs/65853 Blue Stahli - Shotgun Senorita (Zardonic Remix)/";
 	UString debugDiffFileName = "Blue Stahli - Shotgun Senorita (Zardonic Remix) (Aleks719) [Insane].osu";
 	OsuBeatmap *debugBeatmap = new OsuBeatmapStandard(this);
+	UString beatmapPath = debugFolder;
+	beatmapPath.append(debugDiffFileName);
+	OsuBeatmapDifficulty *debugDiff = new OsuBeatmapDifficulty(this, beatmapPath, debugFolder);
+	if (!debugDiff->loadMetadataRaw())
+		engine->showMessageError("OsuBeatmapDifficulty", "Couldn't debugDiff->loadMetadataRaw()!");
+	else
+	{
+		std::vector<OsuBeatmapDifficulty*> diffs;
+		diffs.push_back(debugDiff);
+		debugBeatmap->setDifficulties(diffs);
+
+		debugBeatmap->selectDifficulty(debugDiff);
+		m_songBrowser2->onDifficultySelected(debugBeatmap, debugDiff, true);
+		//convar->getConVarByName("osu_volume_master")->setValue(1.0f);
+
+		// this will leak memory (one OsuBeatmap object and one OsuBeatmapDifficulty object), but who cares (since debug only)
+	}
+	*/
+
+	// DEBUG: immediately start diff of a beatmap
+	/*
+	UString debugFolder = "c:/Program Files (x86)/osu!/Songs/407186 S3RL feat Krystal - R4V3 B0Y/";
+	UString debugDiffFileName = "S3RL feat Krystal - R4V3 B0Y (Draftnell) [BANGKE's 4K Normal].osu";
+	OsuBeatmap *debugBeatmap = new OsuBeatmapMania(this);
 	UString beatmapPath = debugFolder;
 	beatmapPath.append(debugDiffFileName);
 	OsuBeatmapDifficulty *debugDiff = new OsuBeatmapDifficulty(this, beatmapPath, debugFolder);
@@ -784,6 +810,8 @@ void Osu::onKeyDown(KeyboardEvent &key)
 		// while playing and not paused
 		if (!getSelectedBeatmap()->isPaused())
 		{
+			getSelectedBeatmap()->onKeyDown(key);
+
 			if (!m_bKeyboardKey1Down && key == (KEYCODE)OsuKeyBindings::LEFT_CLICK.getInt())
 			{
 				m_bKeyboardKey1Down = true;
@@ -898,6 +926,20 @@ void Osu::onKeyDown(KeyboardEvent &key)
 				getSelectedBeatmap()->getSelectedDifficulty()->localoffset += offsetAdd;
 				m_notificationOverlay->addNotification(UString::format("Local beatmap offset set to %ld ms", getSelectedBeatmap()->getSelectedDifficulty()->localoffset));
 			}
+
+			// mania scroll speed
+			if (key == (KEYCODE)OsuKeyBindings::INCREASE_SPEED.getInt())
+			{
+				ConVar *maniaSpeed = convar->getConVarByName("osu_mania_speed");
+				maniaSpeed->setValue(clamp<float>(std::round((maniaSpeed->getFloat() + 0.05f) * 100.0f) / 100.0f, 0.05f, 10.0f));
+				m_notificationOverlay->addNotification(UString::format("osu!mania speed set to %gx (fixed)", maniaSpeed->getFloat()));
+			}
+			if (key == (KEYCODE)OsuKeyBindings::DECREASE_SPEED.getInt())
+			{
+				ConVar *maniaSpeed = convar->getConVarByName("osu_mania_speed");
+				maniaSpeed->setValue(clamp<float>(std::round((maniaSpeed->getFloat() - 0.05f) * 100.0f) / 100.0f, 0.05f, 10.0f));
+				m_notificationOverlay->addNotification(UString::format("osu!mania speed set to %gx (fixed)", maniaSpeed->getFloat()));
+			}
 		}
 
 		// if playing or not playing
@@ -912,6 +954,14 @@ void Osu::onKeyDown(KeyboardEvent &key)
 
 void Osu::onKeyUp(KeyboardEvent &key)
 {
+	if (isInPlayMode())
+	{
+		if (!getSelectedBeatmap()->isPaused())
+		{
+			getSelectedBeatmap()->onKeyUp(key);
+		}
+	}
+
 	// clicks
 	if (key == (KEYCODE)OsuKeyBindings::LEFT_CLICK.getInt() && m_bKeyboardKey1Down)
 	{
