@@ -35,6 +35,7 @@
 
 ConVar osu_pvs("osu_pvs", true, "optimizes all loops over all hitobjects by clamping the range to the Potentially Visible Set");
 ConVar osu_draw_hitobjects("osu_draw_hitobjects", true);
+ConVar osu_draw_beatmap_background_image("osu_draw_beatmap_background_image", true);
 ConVar osu_vr_draw_desktop_playfield("osu_vr_draw_desktop_playfield", true);
 
 ConVar osu_universal_offset("osu_universal_offset", 0.0f);
@@ -125,7 +126,7 @@ OsuBeatmap::OsuBeatmap(Osu *osu)
 	m_fLastAudioTimeAccurateSet = 0.0;
 	m_fLastRealTimeForInterpolationDelta = 0.0;
 	m_iResourceLoadUpdateDelayHack = 0;
-	m_bForceStreamPlayback = false;
+	m_bForceStreamPlayback = true; // if this is set to true here, then the music will always be loaded as a stream (meaning slow disk access could cause audio stalling/stuttering)
 
 	m_bFailed = false;
 	m_fFailTime = 0.0f;
@@ -206,21 +207,14 @@ void OsuBeatmap::drawBackground(Graphics *g)
 {
 	if (!canDraw()) return;
 
-	// draw background
-	if (osu_background_brightness.getFloat() > 0.0f)
-	{
-		const short brightness = clamp<float>(osu_background_brightness.getFloat(), 0.0f, 1.0f)*255.0f;
-		g->setColor(COLOR(255, brightness, brightness, brightness));
-		g->fillRect(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight());
-	}
-
 	// draw beatmap background image
-	if (m_selectedDifficulty->backgroundImage != NULL && (osu_background_dim.getFloat() < 1.0f || m_fBreakBackgroundFade > 0.0f))
+	if (osu_draw_beatmap_background_image.getBool() && m_selectedDifficulty->backgroundImage != NULL && (osu_background_dim.getFloat() < 1.0f || m_fBreakBackgroundFade > 0.0f))
 	{
 		const float scale = Osu::getImageScaleToFillResolution(m_selectedDifficulty->backgroundImage, m_osu->getScreenSize());
 		const Vector2 centerTrans = (m_osu->getScreenSize()/2);
 
-		const short dim = clamp<float>((1.0f - osu_background_dim.getFloat()) + m_fBreakBackgroundFade, 0.0f, 1.0f)*255.0f;
+		const float backgroundFadeDimMultiplier = clamp<float>(1.0f - (osu_background_dim.getFloat() - 0.3f), 0.0f, 1.0f);
+		const short dim = clamp<float>((1.0f - osu_background_dim.getFloat()) + m_fBreakBackgroundFade*backgroundFadeDimMultiplier, 0.0f, 1.0f)*255.0f;
 
 		g->setColor(COLOR(255, dim, dim, dim));
 		g->pushTransform();
@@ -228,6 +222,15 @@ void OsuBeatmap::drawBackground(Graphics *g)
 		g->translate((int)centerTrans.x, (int)centerTrans.y);
 		g->drawImage(m_selectedDifficulty->backgroundImage);
 		g->popTransform();
+	}
+
+	// draw background
+	if (osu_background_brightness.getFloat() > 0.0f)
+	{
+		const short brightness = clamp<float>(osu_background_brightness.getFloat(), 0.0f, 1.0f)*255.0f;
+		const short alpha = clamp<float>(1.0f - m_fBreakBackgroundFade, 0.0f, 1.0f)*255.0f;
+		g->setColor(COLOR(alpha, brightness, brightness, brightness));
+		g->fillRect(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight());
 	}
 
 	if (Osu::debug->getBool())
@@ -370,7 +373,7 @@ void OsuBeatmap::update()
 		{
 			m_bForceStreamPlayback = true;
 			unloadMusic();
-			loadMusic(true);
+			loadMusic(true, m_bForceStreamPlayback);
 
 			// we are waiting for an asynchronous start of the beatmap in the next update()
 			m_bIsWaiting = true;
@@ -384,7 +387,7 @@ void OsuBeatmap::update()
 	}
 
 	// detect and handle music end
-	if (!m_bIsWaiting && m_music->isReady() && (m_music->isFinished() || (m_hitobjects.size() > 0 && m_iCurMusicPos > (m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size()-1]->getTime() + m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size()-1]->getDuration() + 1500))))
+	if (!m_bIsWaiting && m_music->isReady() && (m_music->isFinished() || (m_hitobjects.size() > 0 && m_iCurMusicPos > (m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size()-1]->getTime() + m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size()-1]->getDuration() + 1250))))
 	{
 		stop(false);
 		return;
@@ -600,7 +603,7 @@ void OsuBeatmap::update()
 			if (m_bInBreak)
 			{
 				if (m_selectedDifficulty->getBreakDuration(m_iCurMusicPos) > (unsigned long)(osu_background_fade_min_duration.getFloat()*1000.0f))
-					anim->moveLinear(&m_fBreakBackgroundFade, clamp<float>(1.0f - (osu_background_dim.getFloat() - 0.3f), 0.0f, 1.0f), osu_background_fadein_duration.getFloat(), true);
+					anim->moveLinear(&m_fBreakBackgroundFade, 1.0f, osu_background_fadein_duration.getFloat(), true);
 			}
 			else
 				anim->moveLinear(&m_fBreakBackgroundFade, 0.0f, osu_background_fadeout_duration.getFloat(), true);
@@ -801,7 +804,7 @@ bool OsuBeatmap::play()
 
 	// load music
 	unloadMusic(); // need to reload in case of speed/pitch changes (just to be sure)
-	loadMusic(false);
+	loadMusic(false, m_bForceStreamPlayback);
 
 	m_music->setEnablePitchAndSpeedShiftingHack(true && !m_bForceStreamPlayback);
 	m_bIsPaused = false;
@@ -1386,7 +1389,7 @@ void OsuBeatmap::handlePreviewPlay()
 	}
 }
 
-void OsuBeatmap::loadMusic(bool stream)
+void OsuBeatmap::loadMusic(bool stream, bool prescan)
 {
 	stream = stream || m_bForceStreamPlayback;
 	m_iResourceLoadUpdateDelayHack = 0;
@@ -1400,7 +1403,7 @@ void OsuBeatmap::loadMusic(bool stream)
 		if (!stream)
 			engine->getResourceManager()->requestNextLoadAsync();
 
-		m_music = engine->getResourceManager()->loadSoundAbs(m_selectedDifficulty->fullSoundFilePath, "OSU_BEATMAP_MUSIC", stream, false, false, m_bForceStreamPlayback); // m_bForceStreamPlayback = prescan necessary! otherwise big mp3s will go out of sync
+		m_music = engine->getResourceManager()->loadSoundAbs(m_selectedDifficulty->fullSoundFilePath, "OSU_BEATMAP_MUSIC", stream, false, false, m_bForceStreamPlayback && prescan); // m_bForceStreamPlayback = prescan necessary! otherwise big mp3s will go out of sync
 		m_music->setVolume(m_osu_volume_music_ref->getFloat());
 	}
 }

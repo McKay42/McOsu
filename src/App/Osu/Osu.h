@@ -199,6 +199,7 @@ private:
 	ConVar *m_osu_draw_hud_ref;
 	ConVar *m_osu_mod_fps_ref;
 	ConVar *m_osu_mod_wobble_ref;
+	ConVar *m_osu_mod_wobble2_ref;
 	ConVar *m_osu_mod_minimize_ref;
 	ConVar *m_osu_playfield_rotation;
 	ConVar *m_osu_playfield_stretch_x;

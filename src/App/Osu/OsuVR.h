@@ -102,6 +102,7 @@ private:
 
 	bool m_bDrawLaser;
 	bool m_bScreenIntersection;
+	bool m_bClickHeldStartedInScreen;
 	bool m_bPlayfieldIntersection1;
 	bool m_bPlayfieldIntersection2;
 	Vector3 m_vScreenIntersectionPoint;

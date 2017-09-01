@@ -27,6 +27,7 @@
 
 ConVar osu_mod_random("osu_mod_random", false);
 ConVar osu_show_approach_circle_on_first_hidden_object("osu_show_approach_circle_on_first_hidden_object", true);
+ConVar osu_load_beatmap_background_images("osu_load_beatmap_background_images", true);
 
 
 
@@ -211,6 +212,7 @@ bool OsuBeatmapDifficulty::loadMetadataRaw()
 	int curBlock = -1;
 	bool foundAR = false;
 	unsigned long long timingPointSortHack = 0;
+	char stringBuffer[1024];
 	while (file.canRead())
 	{
 		UString uCurLine = file.readLine();
@@ -238,7 +240,6 @@ bool OsuBeatmapDifficulty::loadMetadataRaw()
 			{
 			case 0: // General
 				{
-					char stringBuffer[1024];
 					memset(stringBuffer, '\0', 1024);
 					if (sscanf(curLineChar, " AudioFilename : %1023[^\n]", stringBuffer) == 1)
 					{
@@ -254,7 +255,6 @@ bool OsuBeatmapDifficulty::loadMetadataRaw()
 
 			case 1: // Metadata
 				{
-					char stringBuffer[1024];
 					memset(stringBuffer, '\0', 1024);
 					if (sscanf(curLineChar, " Title :%1023[^\n]", stringBuffer) == 1)
 					{
@@ -318,7 +318,6 @@ bool OsuBeatmapDifficulty::loadMetadataRaw()
 				break;
 			case 3: // Events
 				{
-					char stringBuffer[1024];
 					memset(stringBuffer, '\0', 1024);
 					int type, startTime;
 					if (sscanf(curLineChar, " %i , %i , \"%1023[^\"]\"", &type, &startTime, stringBuffer) == 3)
@@ -778,6 +777,8 @@ void OsuBeatmapDifficulty::deleteBackgroundImagePathLoader()
 
 void OsuBeatmapDifficulty::loadBackgroundImage()
 {
+	if (!osu_load_beatmap_background_images.getBool()) return;
+
 	m_bShouldBackgroundImageBeLoaded = true;
 
 	if (m_backgroundImagePathLoader != NULL) // handle loader cleanup
@@ -833,6 +834,7 @@ void OsuBeatmapDifficulty::loadBackgroundImagePath()
 	}
 
 	int curBlock = -1;
+	char stringBuffer[1024];
 	while (file.canRead())
 	{
 		UString uCurLine = file.readLine();
@@ -850,7 +852,6 @@ void OsuBeatmapDifficulty::loadBackgroundImagePath()
 			{
 			case 0: // Events
 				{
-					char stringBuffer[1024];
 					memset(stringBuffer, '\0', 1024);
 					float temp;
 					if (sscanf(curLineChar, " %f , %f , \"%1023[^\"]\"", &temp, &temp, stringBuffer) == 3)

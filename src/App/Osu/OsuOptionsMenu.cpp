@@ -464,9 +464,13 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSlider("Background Dim:", 0.0f, 1.0f, convar->getConVarByName("osu_background_dim"))->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
 	m_backgroundBrightnessSlider = addSlider("Background Brightness:", 0.0f, 1.0f, convar->getConVarByName("osu_background_brightness"));
 	m_backgroundBrightnessSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
-	addCheckbox("FadeIn Background during Breaks", convar->getConVarByName("osu_background_fade_during_breaks"));
+	addCheckbox("Load Background Images (!)", convar->getConVarByName("osu_load_beatmap_background_images"));
+	addCheckbox("Draw Background in Beatmap", convar->getConVarByName("osu_draw_beatmap_background_image"));
+	addCheckbox("Draw Background in SongBrowser", convar->getConVarByName("osu_draw_songbrowser_background_image"));
+	addCheckbox("Draw Background Thumbnails in SongBrowser", convar->getConVarByName("osu_draw_songbrowser_thumbnails"));
+	addCheckbox("Fade In Background during Breaks", convar->getConVarByName("osu_background_fade_during_breaks"));
 	addCheckbox("Show Approach Circle on First \"Hidden\" Object", convar->getConVarByName("osu_show_approach_circle_on_first_hidden_object"));
-	addCheckbox("Note Blocking (Noob Protection)", convar->getConVarByName("osu_note_blocking"));
+	addCheckbox("Note Blocking/Locking", convar->getConVarByName("osu_note_blocking"));
 	addCheckbox("Show pp on ranking screen", convar->getConVarByName("osu_rankingscreen_pp"));
 
 	addSubSection("HUD");
