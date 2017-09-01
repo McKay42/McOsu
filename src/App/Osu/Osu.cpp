@@ -115,6 +115,7 @@ Osu::Osu()
 	m_osu_mod_fps_ref = convar->getConVarByName("osu_mod_fps");
 	m_osu_mod_minimize_ref = convar->getConVarByName("osu_mod_minimize");
 	m_osu_mod_wobble_ref = convar->getConVarByName("osu_mod_wobble");
+	m_osu_mod_wobble2_ref = convar->getConVarByName("osu_mod_wobble2");
 	m_osu_playfield_rotation = convar->getConVarByName("osu_playfield_rotation");
 	m_osu_playfield_stretch_x = convar->getConVarByName("osu_playfield_stretch_x");
 	m_osu_playfield_stretch_y = convar->getConVarByName("osu_playfield_stretch_y");
@@ -928,6 +929,7 @@ void Osu::onKeyDown(KeyboardEvent &key)
 			}
 
 			// mania scroll speed
+			/*
 			if (key == (KEYCODE)OsuKeyBindings::INCREASE_SPEED.getInt())
 			{
 				ConVar *maniaSpeed = convar->getConVarByName("osu_mania_speed");
@@ -940,6 +942,7 @@ void Osu::onKeyDown(KeyboardEvent &key)
 				maniaSpeed->setValue(clamp<float>(std::round((maniaSpeed->getFloat() - 0.05f) * 100.0f) / 100.0f, 0.05f, 10.0f));
 				m_notificationOverlay->addNotification(UString::format("osu!mania speed set to %gx (fixed)", maniaSpeed->getFloat()));
 			}
+			*/
 		}
 
 		// if playing or not playing
@@ -1286,7 +1289,7 @@ bool Osu::isInVRMode()
 
 bool Osu::shouldFallBackToLegacySliderRenderer()
 {
-	return m_osu_mod_wobble_ref->getBool() || m_osu_mod_minimize_ref->getBool() || m_modSelector->isCSOverrideSliderActive()/* || (m_osu_playfield_rotation->getFloat() < -0.01f || m_osu_playfield_rotation->getFloat() > 0.01f)*/;
+	return m_osu_mod_wobble_ref->getBool() || m_osu_mod_wobble2_ref->getBool() || m_osu_mod_minimize_ref->getBool() || m_modSelector->isCSOverrideSliderActive()/* || (m_osu_playfield_rotation->getFloat() < -0.01f || m_osu_playfield_rotation->getFloat() > 0.01f)*/;
 }
 
 

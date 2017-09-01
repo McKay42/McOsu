@@ -90,7 +90,7 @@ void OsuSpinner::draw(Graphics *g)
 	finishScaleRatio =  -finishScaleRatio*(finishScaleRatio-2);
 	const float finishScale = 0.80f + finishScaleRatio*0.20f; // the spinner grows until reaching 100% during spinning, depending on how many spins are left
 
-	if (skin->getSpinnerBackground() != skin->getMissingTexture() || skin->getVersion() < 2) // old style
+	if (skin->getSpinnerBackground() != skin->getMissingTexture() || skin->getVersion() < 2.0f) // old style
 	{
 		// draw spinner circle
 		if (skin->getSpinnerCircle() != skin->getMissingTexture())

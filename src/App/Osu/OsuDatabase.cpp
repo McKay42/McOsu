@@ -10,6 +10,7 @@
 #include "Engine.h"
 #include "ConVar.h"
 #include "Timer.h"
+#include "File.h"
 #include "ResourceManager.h"
 
 #include "Osu.h"
@@ -272,6 +273,65 @@ void OsuDatabase::loadDB(OsuFile *db)
 		return;
 	}
 
+	// get BeatmapDirectory parameter from osu!.<OS_USERNAME>.cfg
+	// fallback to /Songs/ if it doesn't exist
+	UString songFolder = osu_folder.getString();
+	bool haveCustomBeatmapDirectory = false;
+	if (env->getUsername().length() > 0)
+	{
+		UString osuUserConfigFilePath = osu_folder.getString();
+		osuUserConfigFilePath.append("osu!.");
+		osuUserConfigFilePath.append(env->getUsername());
+		osuUserConfigFilePath.append(".cfg");
+
+		File file(osuUserConfigFilePath);
+		char stringBuffer[1024];
+		while (file.canRead())
+		{
+			UString uCurLine = file.readLine();
+			const char *curLineChar = uCurLine.toUtf8();
+			std::string curLine(curLineChar);
+
+			memset(stringBuffer, '\0', 1024);
+			if (sscanf(curLineChar, " BeatmapDirectory = %1023[^\n]", stringBuffer) == 1)
+			{
+				UString beatmapDirectory = UString(stringBuffer);
+				beatmapDirectory = beatmapDirectory.trim();
+				if (beatmapDirectory.length() > 2)
+				{
+					haveCustomBeatmapDirectory = true;
+
+					// if we have an absolute path, use it in its entirety.
+					// otherwise, append the beatmapDirectory to the songFolder (which uses the osu_folder as the starting point)
+					if (beatmapDirectory.find(":") != -1)
+						songFolder = beatmapDirectory;
+					else
+					{
+						// ensure that beatmapDirectory doesn't start with a slash
+						const wchar_t *uDir = beatmapDirectory.wc_str();
+						if (uDir[0] == L'/' || uDir[0] == L'\\')
+							beatmapDirectory.erase(0, 1);
+
+						songFolder.append(beatmapDirectory);
+					}
+
+					// ensure that the songFolder ends with a slash
+					if (songFolder.length() > 0)
+					{
+						const wchar_t *uFolder = songFolder.wc_str();
+						if (uFolder[songFolder.length()-1] != L'/' && uFolder[songFolder.length()-1] != L'\\')
+							songFolder.append("/");
+					}
+				}
+				break;
+			}
+		}
+	}
+	if (!haveCustomBeatmapDirectory)
+		songFolder.append("Songs/");
+
+	debugLog("Database: songFolder = %s\n", songFolder.toUtf8());
+
 	m_importTimer->start();
 
 	// read header
@@ -302,8 +362,6 @@ void OsuDatabase::loadDB(OsuFile *db)
 		UString path;
 		std::vector<OsuBeatmapDifficulty*> diffs;
 	};
-	UString songFolder = osu_folder.getString();
-	songFolder.append("Songs/");
 	std::vector<BeatmapSet> beatmapSets;
 	for (int i=0; i<m_iNumBeatmapsToLoad; i++)
 	{

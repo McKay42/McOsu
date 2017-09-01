@@ -47,6 +47,7 @@ ConVar osu_songbrowser_topbar_middle_width_percent("osu_songbrowser_topbar_middl
 ConVar osu_songbrowser_topbar_right_height_percent("osu_songbrowser_topbar_right_height_percent", 0.5f);
 ConVar osu_songbrowser_topbar_right_percent("osu_songbrowser_topbar_right_percent", 0.378f);
 ConVar osu_songbrowser_bottombar_percent("osu_songbrowser_bottombar_percent", 0.116f);
+ConVar osu_draw_songbrowser_background_image("osu_draw_songbrowser_background_image", true);
 
 
 
@@ -448,7 +449,8 @@ void OsuSongBrowser2::draw(Graphics *g)
 	g->fillRect(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight());
 
 	// draw background image
-	drawSelectedBeatmapBackgroundImage(g, m_osu);
+	if (osu_draw_songbrowser_background_image.getBool())
+		drawSelectedBeatmapBackgroundImage(g, m_osu);
 
 	// draw song browser
 	m_songBrowser->draw(g);
