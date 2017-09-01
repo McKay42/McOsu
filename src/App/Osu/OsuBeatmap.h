@@ -168,7 +168,7 @@ protected:
 	void actualRestart();
 
 	void handlePreviewPlay();
-	void loadMusic(bool stream = true);
+	void loadMusic(bool stream = true, bool prescan = false);
 	void unloadMusic();
 	void unloadDiffs();
 	void unloadHitObjects();

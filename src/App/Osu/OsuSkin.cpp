@@ -669,7 +669,7 @@ bool OsuSkin::parseSkinINI(UString filepath)
 					{
 						UString versionString = UString(stringBuffer);
 						if (versionString.find("latest") != -1 || versionString.find("User") != -1)
-							m_fVersion = 2.0f;
+							m_fVersion = 2.5f; // default to latest version available
 						else
 							m_fVersion = versionString.toFloat();
 					}
