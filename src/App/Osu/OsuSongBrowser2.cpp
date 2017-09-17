@@ -41,6 +41,8 @@
 #include "OsuUISongBrowserSongDifficultyButton.h"
 #include "OsuUISongBrowserCollectionButton.h"
 
+ConVar osu_gamemode("osu_gamemode", "std");
+
 ConVar osu_songbrowser_topbar_left_percent("osu_songbrowser_topbar_left_percent", 0.93f);
 ConVar osu_songbrowser_topbar_left_width_percent("osu_songbrowser_topbar_left_width_percent", 0.265f);
 ConVar osu_songbrowser_topbar_middle_width_percent("osu_songbrowser_topbar_middle_width_percent", 0.15f);
@@ -299,7 +301,10 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 {
 	m_osu = osu;
 
+	// random selection algorithm init
 	m_rngalg = std::mt19937(time(0));
+
+	// sorting/grouping + methods
 	m_group = GROUP::GROUP_NO_GROUPING;
 	m_sortingMethod = SORT::SORT_ARTIST;
 
@@ -314,6 +319,9 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 
 	// convar refs
 	m_fps_max_ref = convar->getConVarByName("fps_max");
+
+	// convar callbacks
+	osu_gamemode.setCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onModeChange) );
 
 	// engine settings
 	engine->getMouse()->addListener(this);
@@ -1831,7 +1839,9 @@ void OsuSongBrowser2::onSelectionOptions()
 
 void OsuSongBrowser2::onModeChange(UString text)
 {
-	m_bottombarNavButtons[0]->setText(text);
+	if (m_bottombarNavButtons.size() > 2)
+		m_bottombarNavButtons[0]->setText(text);
+
 	if (text == "std")
 	{
 		if (m_osu->getGamemode() != Osu::GAMEMODE::STD)

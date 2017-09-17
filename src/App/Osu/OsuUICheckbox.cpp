@@ -26,7 +26,7 @@ void OsuUICheckbox::update()
 	CBaseUICheckbox::update();
 	if (!m_bVisible) return;
 
-	if (isMouseInside())
+	if (isMouseInside() && m_tooltipTextLines.size() > 0)
 	{
 		m_osu->getTooltipOverlay()->begin();
 		for (int i=0; i<m_tooltipTextLines.size(); i++)

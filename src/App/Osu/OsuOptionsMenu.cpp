@@ -35,6 +35,7 @@
 
 #include "OsuUIButton.h"
 #include "OsuUISlider.h"
+#include "OsuUICheckbox.h"
 #include "OsuUIBackButton.h"
 #include "OsuUIContextMenu.h"
 
@@ -43,6 +44,7 @@
 
 ConVar osu_options_save_on_back("osu_options_save_on_back", true);
 ConVar osu_options_high_quality_sliders("osu_options_high_quality_sliders", false);
+ConVar osu_mania_keylayout_wizard("osu_mania_keylayout_wizard");
 
 void _osuOptionsSliderQualityWrapper(UString oldValue, UString newValue)
 {
@@ -138,6 +140,7 @@ public:
 		const float length = (m_vSize.x-hitcircleDiameter);
 		const int numPoints = length;
 		const float pointDist = length / numPoints;
+		std::vector<Vector2> emptyVector;
 		std::vector<Vector2> points;
 		for (int i=0; i<numPoints; i++)
 		{
@@ -153,7 +156,7 @@ public:
 		}
 		OsuCircle::drawCircle(g, m_osu->getSkin(), points[numPoints/2], hitcircleDiameter, numberScale, overlapScale, 2, 420, approachScale, approachAlpha, approachAlpha, true, false);
 		OsuCircle::drawApproachCircle(g, m_osu->getSkin(), points[numPoints/2], m_osu->getSkin()->getComboColorForCounter(420), hitcircleDiameter, approachScale, approachAlpha, false, false);
-		OsuSliderRenderer::draw(g, m_osu, points, hitcircleDiameter, 0, 1, m_osu->getSkin()->getComboColorForCounter(420));
+		OsuSliderRenderer::draw(g, m_osu, points, emptyVector, hitcircleDiameter, 0, 1, m_osu->getSkin()->getComboColorForCounter(420));
 		OsuCircle::drawSliderStartCircle(g, m_osu->getSkin(), points[0], hitcircleDiameter, numberScale, overlapScale, 1, 420);
 		OsuCircle::drawSliderEndCircle(g, m_osu->getSkin(), points[points.size()-1], hitcircleDiameter, numberScale, overlapScale, 0, 0, 1.0f, 1.0f, 0.0f, false, false);
 	}
@@ -199,6 +202,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	// convar callbacks
 	convar->getConVarByName("osu_skin_use_skin_hitsounds")->setCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onUseSkinsSoundSamplesChange) );
 	osu_options_high_quality_sliders.setCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onHighQualitySlidersConVarChange) );
+	osu_mania_keylayout_wizard.setCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingManiaPressedInt) );
 
 	if (m_osu->isInVRMode())
 		OSU_CONFIG_FILE_NAME = "osuvr";
@@ -249,14 +253,14 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_nameTextbox = addTextbox(convar->getConVarByName("name")->getString(), convar->getConVarByName("name"));
 
 	addSubSection("Window");
-	addCheckbox("Pause on Focus Loss", convar->getConVarByName("osu_pause_on_focus_loss"));
+	addCheckbox("Pause on Focus Loss", "Should the game pause when you switch to another application?", convar->getConVarByName("osu_pause_on_focus_loss"));
 
 	//**************************************************************************************************************************//
 
 	addSection("Graphics");
 
 	addSubSection("Renderer");
-	addCheckbox("VSync", convar->getConVarByName("vsync"));
+	addCheckbox("VSync", "If enabled: plz enjoy input lag.", convar->getConVarByName("vsync"));
 	addCheckbox("Show FPS Counter", convar->getConVarByName("osu_draw_fps"));
 	addSpacer();
 	if (!m_osu->isInVRMode())
@@ -272,12 +276,13 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_resolutionSelectButton = resolutionSelect.elements[0];
 	m_fullscreenCheckbox = addCheckbox("Fullscreen");
 	m_fullscreenCheckbox->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onFullscreenChange) );
+	addCheckbox("Borderless Windowed Fullscreen", "If enabled: plz enjoy input lag.", convar->getConVarByName("fullscreen_windowed_borderless"))->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onBorderlessWindowedChange) );
 	addCheckbox("Letterboxing", convar->getConVarByName("osu_letterboxing"));
 
 	addSubSection("Detail Settings");
-	addCheckbox("Snaking in sliders", convar->getConVarByName("osu_snaking_sliders"));
-	addCheckbox("Snaking out sliders", convar->getConVarByName("osu_slider_shrink"));
-	addCheckbox("Higher Quality Sliders (!)", convar->getConVarByName("osu_options_high_quality_sliders"))->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onHighQualitySlidersCheckboxChange) );
+	addCheckbox("Snaking in sliders", "\"Growing\" sliders.\nSliders gradually snake out from their starting point while fading in.\nHas no impact on performance whatsoever.", convar->getConVarByName("osu_snaking_sliders"));
+	addCheckbox("Snaking out sliders", "\"Shrinking\" sliders.\nSliders will shrink with the sliderball while sliding.\nCan improve performance a tiny bit, since there will be less to draw overall.", convar->getConVarByName("osu_slider_shrink"));
+	addCheckbox("Higher Quality Sliders (!)", "Disable this if your fps drop too low while sliders are visible.", convar->getConVarByName("osu_options_high_quality_sliders"))->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onHighQualitySlidersCheckboxChange) );
 	m_sliderQualitySlider = addSlider("Slider Quality", 0.0f, 1.0f, convar->getConVarByName("osu_options_slider_quality"));
 	m_sliderQualitySlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeSliderQuality) );
 
@@ -287,11 +292,12 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	{
 		addSection("Virtual Reality");
 
-		addSubSection("Mixed Settings");
 		addSpacer();
-		m_vrRenderTargetResolutionLabel = addLabel("Final RenderTarget Resolution: %ix%i");
+		addSubSection("VR Renderer");
 		addSpacer();
-		CBaseUISlider *ssSlider = addSlider("SuperSampling Multiplier", 0.5f, 3.0f, convar->getConVarByName("vr_ss"), 230.0f);
+		m_vrRenderTargetResolutionLabel = addLabel("Final Resolution: %ix%i");
+		addSpacer();
+		CBaseUISlider *ssSlider = addSlider("SuperSampling Multiplier", 0.5f, 2.5f, convar->getConVarByName("vr_ss"), 230.0f);
 		ssSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeVRSuperSampling) );
 		ssSlider->setKeyDelta(0.1f);
 		ssSlider->setAnimated(false);
@@ -299,6 +305,9 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 		aaSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeVRAntiAliasing) );
 		aaSlider->setKeyDelta(2.0f);
 		aaSlider->setAnimated(false);
+
+		addSpacer();
+		addSubSection("Play Area / Playfield");
 		addSpacer();
 		addSlider("RenderModel Brightness", 0.1f, 10.0f, convar->getConVarByName("vr_controller_model_brightness_multiplier"))->setKeyDelta(0.1f);
 		addSlider("Background Brightness", 0.0f, 1.0f, convar->getConVarByName("vr_background_brightness"))->setKeyDelta(0.05f);
@@ -312,18 +321,21 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 		m_vrHudDistanceSlider->setKeyDelta(1.0f);
 		m_vrHudScaleSlider = addSlider("HUD Scale", 0.1f, 10.0f, convar->getConVarByName("osu_vr_hud_scale"));
 		m_vrHudScaleSlider->setKeyDelta(0.1f);
+
 		addSpacer();
-		m_vrVibrationStrengthSlider = addSlider("Vibration Strength", 0.0f, 1.0f, convar->getConVarByName("osu_vr_controller_vibration_strength"));
+		addSubSection("Haptic Feedback");
+		addSpacer();
+		m_vrVibrationStrengthSlider = addSlider("Circle Vibration Strength", 0.0f, 1.0f, convar->getConVarByName("osu_vr_controller_vibration_strength"));
 		m_vrVibrationStrengthSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
 		m_vrVibrationStrengthSlider->setKeyDelta(0.01f);
-		// TODO: enable this after SteamVR is fixed
-		/*
 		m_vrSliderVibrationStrengthSlider = addSlider("Slider Vibration Strength", 0.0f, 1.0f, convar->getConVarByName("osu_vr_slider_controller_vibration_strength"));
 		m_vrSliderVibrationStrengthSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
 		m_vrSliderVibrationStrengthSlider->setKeyDelta(0.01f);
-		*/
+
 		addSpacer();
-		addCheckbox("Spectator Camera (ALT + C)", convar->getConVarByName("vr_spectator_mode"));
+		addSubSection("Miscellaneous");
+		addSpacer();
+		addCheckbox("Spectator Camera (ALT + C)", "Needs \"Draw HMD to Window\" to be enabled to work.\nToggle camera-control-mode with ALT + C.\nUse mouse + keyboard (WASD) to rotate/position the camera.", convar->getConVarByName("vr_spectator_mode"));
 		addCheckbox("Auto Switch Primary Controller", convar->getConVarByName("vr_auto_switch_primary_controller"));
 		addSpacer();
 		addCheckbox("Draw HMD to Window", convar->getConVarByName("vr_draw_hmd_to_window"));
@@ -374,9 +386,9 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Disable Mouse Buttons in Play Mode", convar->getConVarByName("osu_disable_mousebuttons"));
 
 	addSubSection("Tablet");
-	addCheckbox("OS TabletPC Support", convar->getConVarByName("win_realtimestylus"));
-	addCheckbox("Windows Ink Workaround", convar->getConVarByName("win_ink_workaround"));
-	addCheckbox("Ignore Sensitivity & Raw Input", convar->getConVarByName("tablet_sensitivity_ignore"));
+	addCheckbox("OS TabletPC Support", "Enable this if your tablet clicks aren't handled correctly.", convar->getConVarByName("win_realtimestylus"));
+	addCheckbox("Windows Ink Workaround", "Enable this if your tablet cursor is stuck in a tiny area on the top left of the screen.\nIf this doesn't fix it, use \"Ignore Sensitivity & Raw Input\" below.", convar->getConVarByName("win_ink_workaround"));
+	addCheckbox("Ignore Sensitivity & Raw Input", "Only use this if nothing else works.\nIf this is enabled, then the in-game sensitivity slider will no longer work for tablets!\n(You can then instead use your tablet configuration software to change the tablet area.)", convar->getConVarByName("tablet_sensitivity_ignore"));
 
 	addSpacer();
 	addSubSection("Keyboard");
@@ -435,10 +447,10 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Draw Numbers", convar->getConVarByName("osu_draw_numbers"));
 	addCheckbox("Draw ApproachCircles", convar->getConVarByName("osu_draw_approach_circles"));
 	addSpacer();
-	addCheckbox("Ignore Beatmap Sample Volume", convar->getConVarByName("osu_ignore_beatmap_sample_volume"));
+	addCheckbox("Ignore Beatmap Sample Volume", "Ignore the effect volume values from beatmap timingpoints.\nToo quiet hitsounds can destroy your accuracy and concentration, enabling this will fix that.", convar->getConVarByName("osu_ignore_beatmap_sample_volume"));
 	addCheckbox("Ignore Beatmap Combo Colors", convar->getConVarByName("osu_ignore_beatmap_combo_colors"));
 	addCheckbox("Use skin's sound samples", convar->getConVarByName("osu_skin_use_skin_hitsounds"));
-	addCheckbox("Load HD @2x", convar->getConVarByName("osu_skin_hd"));
+	addCheckbox("Load HD @2x", "On very low resolutions (below 1600x900) you can disable this to get smoother visuals.", convar->getConVarByName("osu_skin_hd"));
 	addSpacer();
 	addCheckbox("Draw CursorTrail", convar->getConVarByName("osu_draw_cursor_trail"));
 	m_cursorSizeSlider = addSlider("Cursor Size:", 0.01f, 5.0f, convar->getConVarByName("osu_cursor_scale"));
@@ -447,7 +459,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSpacer();
 	addSliderPreview();
 	addCheckbox("Use slidergradient.png", convar->getConVarByName("osu_slider_use_gradient_image"));
-	addCheckbox("Use osu!lazer Slider Style", convar->getConVarByName("osu_slider_osu_next_style"));
+	addCheckbox("Use osu!lazer Slider Style", "Only really looks good if your skin doesn't \"SliderTrackOverride\" too dark.", convar->getConVarByName("osu_slider_osu_next_style"));
 	addCheckbox("Use combo color as tint for slider ball", convar->getConVarByName("osu_slider_ball_tint_combo_color"));
 	addCheckbox("Use combo color as tint for slider border", convar->getConVarByName("osu_slider_border_tint_combo_color"));
 	addCheckbox("Draw SliderEndCircle", convar->getConVarByName("osu_slider_draw_endcircle"));
@@ -468,6 +480,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Draw Background in Beatmap", convar->getConVarByName("osu_draw_beatmap_background_image"));
 	addCheckbox("Draw Background in SongBrowser", convar->getConVarByName("osu_draw_songbrowser_background_image"));
 	addCheckbox("Draw Background Thumbnails in SongBrowser", convar->getConVarByName("osu_draw_songbrowser_thumbnails"));
+	addCheckbox("Draw Background in Ranking/Results Screen", convar->getConVarByName("osu_draw_rankingscreen_background_image"));
 	addCheckbox("Fade In Background during Breaks", convar->getConVarByName("osu_background_fade_during_breaks"));
 	addCheckbox("Show Approach Circle on First \"Hidden\" Object", convar->getConVarByName("osu_show_approach_circle_on_first_hidden_object"));
 	addCheckbox("Note Blocking/Locking", convar->getConVarByName("osu_note_blocking"));
@@ -524,7 +537,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_playfieldBorderSizeSlider->setKeyDelta(1.0f);
 
 	addSubSection("Hitobjects");
-	addCheckbox("Use Fast Hidden Fading Sliders (!)", convar->getConVarByName("osu_mod_hd_slider_fast_fade"));
+	addCheckbox("Use Fast Hidden Fading Sliders (!)", "If enabled: Fade out sliders with the same speed as circles.\nosu! doesn't do this, so don't enable it for serious practicing.", convar->getConVarByName("osu_mod_hd_slider_fast_fade"));
 	addCheckbox("Use Score V2 slider accuracy", convar->getConVarByName("osu_slider_scorev2"));
 
 	//**************************************************************************************************************************//
@@ -664,9 +677,7 @@ void OsuOptionsMenu::update()
 		}
 	}
 	if (m_vrSliderVibrationStrengthSlider != NULL && m_vrSliderVibrationStrengthSlider->isActive())
-	{
 		openvr->getController()->triggerHapticPulse(m_osu->getVR()->getSliderHapticPulseStrength());
-	}
 }
 
 void OsuOptionsMenu::onKeyDown(KeyboardEvent &e)
@@ -706,6 +717,10 @@ void OsuOptionsMenu::onChar(KeyboardEvent &e)
 void OsuOptionsMenu::onResolutionChange(Vector2 newResolution)
 {
 	OsuScreenBackable::onResolutionChange(newResolution);
+
+	// HACKHACK:
+	if ((env->getOS() == Environment::OS::OS_WINDOWS && env->isFullscreen() && env->isFullscreenWindowedBorderless() && (int)newResolution.y == (int)env->getNativeScreenSize().y+1))
+		newResolution.y--;
 
 	m_resolutionLabel->setText(UString::format("%ix%i", (int)newResolution.x, (int)newResolution.y));
 }
@@ -1002,6 +1017,14 @@ void OsuOptionsMenu::onFullscreenChange(CBaseUICheckbox *checkbox)
 		env->enableFullscreen();
 	else
 		env->disableFullscreen();
+}
+
+void OsuOptionsMenu::onBorderlessWindowedChange(CBaseUICheckbox *checkbox)
+{
+	onCheckboxChange(checkbox);
+
+	if (checkbox->isChecked() && !env->isFullscreen())
+		env->enableFullscreen();
 }
 
 void OsuOptionsMenu::onSkinSelect()
@@ -1347,6 +1370,11 @@ void OsuOptionsMenu::onKeyBindingButtonPressed(CBaseUIButton *button)
 	}
 }
 
+void OsuOptionsMenu::onKeyBindingManiaPressedInt()
+{
+	onKeyBindingManiaPressed(NULL);
+}
+
 void OsuOptionsMenu::onKeyBindingManiaPressed(CBaseUIButton *button)
 {
 	m_waitingKey = NULL;
@@ -1624,14 +1652,24 @@ OsuUIButton *OsuOptionsMenu::addKeyBindButton(UString text, ConVar *cvar)
 
 CBaseUICheckbox *OsuOptionsMenu::addCheckbox(UString text, ConVar *cvar)
 {
-	CBaseUICheckbox *checkbox = new CBaseUICheckbox(0, 0, m_options->getSize().x, 50, text, text);
+	return addCheckbox(text, "", cvar);
+}
+
+CBaseUICheckbox *OsuOptionsMenu::addCheckbox(UString text, UString tooltipText, ConVar *cvar)
+{
+	OsuUICheckbox *checkbox = new OsuUICheckbox(m_osu, 0, 0, m_options->getSize().x, 50, text, text);
 	checkbox->setDrawFrame(false);
 	checkbox->setDrawBackground(false);
+
+	if (tooltipText.length() > 0)
+		checkbox->setTooltipText(tooltipText);
+
 	if (cvar != NULL)
 	{
 		checkbox->setChecked(cvar->getBool());
 		checkbox->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onCheckboxChange) );
 	}
+
 	m_options->getContainer()->addBaseUIElement(checkbox);
 
 	OPTIONS_ELEMENT e;

@@ -61,6 +61,8 @@ private:
 
 	void setMenuElementsVisible(bool visible, bool animate = true);
 
+	void writeVersionFile();
+
 	OsuMainMenuButton *addMainMenuButton(UString text);
 
 	void onMainMenuButtonPressed();
@@ -112,6 +114,7 @@ private:
 	float m_fMainMenuAnim3Target;
 
 	float m_fShutdownScheduledTime;
+	bool m_bWasCleanShutdown;
 };
 
 #endif

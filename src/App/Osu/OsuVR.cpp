@@ -52,7 +52,7 @@ ConVar osu_vr_circle_hitbox_scale("osu_vr_circle_hitbox_scale", 1.5f, "scales th
 ConVar osu_vr_cursor_alpha("osu_vr_cursor_alpha", 0.15f);
 
 ConVar osu_vr_controller_vibration_strength("osu_vr_controller_vibration_strength", 0.45f);
-ConVar osu_vr_slider_controller_vibration_strength("osu_vr_slider_controller_vibration_strength", /*0.05f*/ 0.0f);
+ConVar osu_vr_slider_controller_vibration_strength("osu_vr_slider_controller_vibration_strength", 0.05f /*0.0f*/);
 
 ConVar osu_vr_draw_playfield("osu_vr_draw_playfield", true);
 ConVar osu_vr_draw_floor("osu_vr_draw_floor", true);
