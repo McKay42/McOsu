@@ -953,7 +953,7 @@ void OsuBeatmapDifficulty::buildManiaHitObjects(OsuBeatmapMania *beatmap, std::v
 float OsuBeatmapDifficulty::getSliderTimeForSlider(SLIDER *slider)
 {
 	const float duration = getTimingInfoForTime(slider->time).beatLength * (slider->pixelLength / sliderMultiplier) / 100.0f;
-	return duration >= 0.0f ? duration : 0.001f; // sanity check
+	return duration >= 1.0f ? duration : 1.0f; // sanity check
 }
 
 float OsuBeatmapDifficulty::getTimingPointMultiplierForSlider(SLIDER *slider)
