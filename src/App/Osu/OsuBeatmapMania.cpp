@@ -14,6 +14,7 @@
 #include "AnimationHandler.h"
 
 #include "Osu.h"
+#include "OsuScore.h"
 #include "OsuKeyBindings.h"
 #include "OsuBeatmapDifficulty.h"
 #include "OsuHitObject.h"
@@ -94,6 +95,18 @@ void OsuBeatmapMania::draw(Graphics *g)
 		for (int i=m_hitobjects.size()-1; i>=0; i--)
 		{
 			m_hitobjects[i]->draw(g);
+		}
+
+		// draw hidden stage overlay
+		if (m_osu->getModHD())
+		{
+			const Color topColor = 0xff000000;
+			const Color bottomColor = 0x00000000;
+			float heightAnimPercent = (float)std::min(/*400*/2*160, 160 + m_osu->getScore()->getCombo() / 2) / (float)(3*160);
+			int heightStartOffset = m_vPlayfieldSize.y*heightAnimPercent;
+			g->setColor(0xff000000);
+			g->fillRect(m_vPlayfieldCenter.x - m_vPlayfieldSize.x/2 - 1, m_vPlayfieldCenter.y - m_vPlayfieldSize.y/2, m_vPlayfieldSize.x + 2, heightStartOffset + 2);
+			g->fillGradient(m_vPlayfieldCenter.x - m_vPlayfieldSize.x/2 - 1, (m_vPlayfieldCenter.y - m_vPlayfieldSize.y/2) + heightStartOffset, m_vPlayfieldSize.x + 2, m_vPlayfieldSize.y-heightStartOffset, topColor, topColor, bottomColor, bottomColor);
 		}
 	}
 	g->pop3DScene();

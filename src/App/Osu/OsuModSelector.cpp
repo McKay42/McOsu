@@ -336,7 +336,7 @@ void OsuModSelector::update()
 	}
 
 	// handle dynamic CS and slider vertex buffer updates
-	if (m_CSSlider->isActive())
+	if (m_CSSlider->isActive() || m_CSSlider->hasChanged())
 	{
 		m_bWaitForCSChangeFinished = true;
 	}

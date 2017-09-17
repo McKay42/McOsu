@@ -62,6 +62,7 @@ private:
 	void save();
 
 	void onFullscreenChange(CBaseUICheckbox *checkbox);
+	void onBorderlessWindowedChange(CBaseUICheckbox *checkbox);
 	void onSkinSelect();
 	void onSkinSelect2(UString skinName);
 	void onSkinReload();
@@ -80,6 +81,7 @@ private:
 	void onSliderChangePercent(CBaseUISlider *slider);
 
 	void onKeyBindingButtonPressed(CBaseUIButton *button);
+	void onKeyBindingManiaPressedInt();
 	void onKeyBindingManiaPressed(CBaseUIButton *button);
 	void onSliderChangeVRSuperSampling(CBaseUISlider *slider);
 	void onSliderChangeVRAntiAliasing(CBaseUISlider *slider);
@@ -104,7 +106,8 @@ private:
 	OsuUIButton *addButton(UString text, ConVar *cvar = NULL);
 	OPTIONS_ELEMENT addButton(UString text, UString labelText);
 	OsuUIButton *addKeyBindButton(UString text, ConVar *cvar);
-	CBaseUICheckbox *addCheckbox(UString text, ConVar *cvar = NULL);
+	CBaseUICheckbox *addCheckbox(UString text, ConVar *cvar);
+	CBaseUICheckbox *addCheckbox(UString text, UString tooltipText = "", ConVar *cvar = NULL);
 	OsuUISlider *addSlider(UString text, float min = 0.0f, float max = 1.0f, ConVar *cvar = NULL, float label1Width = 0.0f);
 	CBaseUITextbox *addTextbox(UString text, ConVar *cvar = NULL);
 	CBaseUIElement *addSkinPreview();

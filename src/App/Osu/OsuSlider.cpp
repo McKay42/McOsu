@@ -43,6 +43,8 @@ ConVar osu_slider_shrink("osu_slider_shrink", false);
 ConVar osu_slider_reverse_arrow_black_threshold("osu_slider_reverse_arrow_black_threshold", 1.0f, "Blacken reverse arrows if the average color brightness percentage is above this value"); // looks too shitty atm
 ConVar osu_slider_curve_points_separation("osu_slider_curve_points_separation", 2.5f, "slider body curve approximation step width in osu!pixels, don't set this lower than around 1.5");
 ConVar osu_slider_curve_max_points("osu_slider_curve_max_points", 9999.0f, "maximum number of allowed interpolated curve points. quality will be forced to go down if a slider has more steps than this");
+ConVar osu_slider_body_smoothsnake("osu_slider_body_smoothsnake", true, "draw 1 extra interpolated circle mesh at the start & end of every slider for extra smooth snaking/shrinking");
+ConVar osu_slider_body_lazer_fadeout_style("osu_slider_body_lazer_fadeout_style", true, "if snaking out sliders are enabled (aka shrinking sliders), smoothly fade out the last remaining part of the body (instead of vanishing instantly)");
 
 ConVar *OsuSlider::m_osu_playfield_mirror_horizontal_ref = NULL;
 ConVar *OsuSlider::m_osu_playfield_mirror_vertical_ref = NULL;
@@ -331,9 +333,17 @@ void OsuSlider::draw(Graphics *g)
 		}
 	}
 
-	// draw start/end circle hit animation, slider body fade animation, followcircle
-	if (m_fEndSliderBodyFadeAnimation > 0.0f && m_fEndSliderBodyFadeAnimation != 1.0f && !m_beatmap->getOsu()->getModHD() && !osu_slider_shrink.getBool())
-		drawBody(g, 1.0f - m_fEndSliderBodyFadeAnimation, 0, 1);
+	// slider body fade animation, draw start/end circle hit animation
+	if (m_fEndSliderBodyFadeAnimation > 0.0f && m_fEndSliderBodyFadeAnimation != 1.0f && !m_beatmap->getOsu()->getModHD())
+	{
+		std::vector<Vector2> emptyVector;
+		std::vector<Vector2> alwaysPoints;
+		alwaysPoints.push_back(m_beatmap->osuCoords2Pixels(m_curve->pointAt(m_fSlidePercent)));
+		if (!osu_slider_shrink.getBool())
+			drawBody(g, 1.0f - m_fEndSliderBodyFadeAnimation, 0, 1);
+		else if (osu_slider_body_lazer_fadeout_style.getBool())
+			OsuSliderRenderer::draw(g, m_beatmap->getOsu(), emptyVector, alwaysPoints, m_beatmap->getHitcircleDiameter(), 0.0f, 0.0f, m_beatmap->getSkin()->getComboColorForCounter(m_iColorCounter), 1.0f - m_fEndSliderBodyFadeAnimation, getTime());
+	}
 
 	if (m_fStartHitAnimation > 0.0f && m_fStartHitAnimation != 1.0f && !m_beatmap->getOsu()->getModHD())
 	{
@@ -389,10 +399,10 @@ void OsuSlider::draw(Graphics *g)
 	{
 		Vector2 screenPos = m_beatmap->osuCoords2Pixels(getRawPosAt(0));
 
-		g->setColor(0xff0000ff);
+		g->setColor(0xffffffff);
 		g->pushTransform();
-		g->translate(screenPos.x, screenPos.y);
-		g->drawString(engine->getResourceManager()->getFont("FONT_DEFAULT"), UString::format("%li", m_iTime));
+		g->translate(screenPos.x, screenPos.y + 50);
+		g->drawString(engine->getResourceManager()->getFont("FONT_DEFAULT"), UString::format("%f", m_fSliderSnakePercent));
 		g->popTransform();
 	}
 	*/
@@ -624,7 +634,8 @@ void OsuSlider::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 		}
 	}
 
-	// draw start/end circle hit animation, slider body fade animation, followcircle
+	// draw slider body fade animation, start/end circle hit animation
+	// NOTE: sliderbody alpha fades don't work in VR yet, due to the hacky rendering method
 	/*
 	if (m_fEndSliderBodyFadeAnimation > 0.0f && m_fEndSliderBodyFadeAnimation != 1.0f && !m_beatmap->getOsu()->getModHD() && !osu_slider_shrink.getBool())
 	{
@@ -711,6 +722,19 @@ void OsuSlider::drawEndCircle(Graphics *g, float alpha, float sliderSnake)
 
 void OsuSlider::drawBody(Graphics *g, float alpha, float from, float to)
 {
+	// smooth begin/end while snaking/shrinking
+	std::vector<Vector2> alwaysPoints;
+	if (osu_slider_body_smoothsnake.getBool())
+	{
+		if (osu_slider_shrink.getBool() && m_fSliderSnakePercent > 0.999f)
+		{
+			alwaysPoints.push_back(m_beatmap->osuCoords2Pixels(m_curve->pointAt(m_fSlidePercent))); // curpoint
+			alwaysPoints.push_back(m_beatmap->osuCoords2Pixels(getRawPosAt(m_iTime + m_iObjectDuration + 1))); // endpoint (because setDrawPercent() causes the last circle mesh to become invisible too quickly)
+		}
+		if (osu_snaking_sliders.getBool() && m_fSliderSnakePercent < 1.0f)
+			alwaysPoints.push_back(m_beatmap->osuCoords2Pixels(m_curve->pointAt(m_fSliderSnakePercent))); // snakeoutpoint (only while snaking out)
+	}
+
 	if (m_beatmap->getOsu()->shouldFallBackToLegacySliderRenderer())
 	{
 		// peppy sliders
@@ -719,7 +743,8 @@ void OsuSlider::drawBody(Graphics *g, float alpha, float from, float to)
 		{
 			screenPoints[p] = m_beatmap->osuCoords2Pixels(screenPoints[p]);
 		}
-		OsuSliderRenderer::draw(g, m_beatmap->getOsu(), screenPoints, m_beatmap->getHitcircleDiameter(), from, to, m_beatmap->getSkin()->getComboColorForCounter(m_iColorCounter), alpha, getTime());
+
+		OsuSliderRenderer::draw(g, m_beatmap->getOsu(), screenPoints, alwaysPoints, m_beatmap->getHitcircleDiameter(), from, to, m_beatmap->getSkin()->getComboColorForCounter(m_iColorCounter), alpha, getTime());
 
 		// mm sliders
 		/*
@@ -731,6 +756,7 @@ void OsuSlider::drawBody(Graphics *g, float alpha, float from, float to)
 				screenSegmentPoints[s][p] = m_beatmap->osuCoords2Pixels(screenSegmentPoints[s][p]);
 			}
 		}
+
 		OsuSliderRenderer::drawMM(g, m_beatmap->getOsu(), screenSegmentPoints, m_beatmap->getHitcircleDiameter(), sliderSnakeStart, sliderSnake, skin->getComboColorForCounter(m_iColorCounter), alpha, getTime());
 		*/
 	}
@@ -742,12 +768,28 @@ void OsuSlider::drawBody(Graphics *g, float alpha, float from, float to)
 		Vector2 translation = OsuGameRules::getPlayfieldCenter(m_beatmap->getOsu());
 		if (m_osu_mod_fps_ref->getBool())
 			translation += m_beatmap->getFirstPersonCursorDelta();
-		OsuSliderRenderer::draw(g, m_beatmap->getOsu(), m_vao, translation, scale, m_beatmap->getHitcircleDiameter(), from, to, m_beatmap->getSkin()->getComboColorForCounter(m_iColorCounter), alpha, getTime());
+
+		OsuSliderRenderer::draw(g, m_beatmap->getOsu(), m_vao, alwaysPoints, translation, scale, m_beatmap->getHitcircleDiameter(), from, to, m_beatmap->getSkin()->getComboColorForCounter(m_iColorCounter), alpha, getTime());
 	}
 }
 
 void OsuSlider::drawBodyVR(Graphics *g, OsuVR *vr, Matrix4 &mvp, float alpha, float from, float to)
 {
+	// HACKHACK: code duplication aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+
+	// smooth begin/end while snaking/shrinking
+	std::vector<Vector2> alwaysPoints;
+	if (osu_slider_body_smoothsnake.getBool())
+	{
+		if (osu_slider_shrink.getBool() && m_fSliderSnakePercent > 0.999f)
+		{
+			alwaysPoints.push_back(m_beatmap->osuCoords2Pixels(m_curve->pointAt(m_fSlidePercent))); // curpoint
+			alwaysPoints.push_back(m_beatmap->osuCoords2Pixels(getRawPosAt(m_iTime + m_iObjectDuration + 1))); // endpoint (because setDrawPercent() causes the last circle mesh to become invisible too quickly)
+		}
+		if (osu_snaking_sliders.getBool() && m_fSliderSnakePercent < 1.0f)
+			alwaysPoints.push_back(m_beatmap->osuCoords2Pixels(m_curve->pointAt(m_fSliderSnakePercent))); // snakeoutpoint (only while snaking out)
+	}
+
 	if (m_beatmap->getOsu()->shouldFallBackToLegacySliderRenderer())
 	{
 		// peppy sliders
@@ -756,12 +798,12 @@ void OsuSlider::drawBodyVR(Graphics *g, OsuVR *vr, Matrix4 &mvp, float alpha, fl
 		{
 			screenPoints[p] = m_beatmap->osuCoords2Pixels(screenPoints[p]);
 		}
-		OsuSliderRenderer::drawVR(g, m_beatmap->getOsu(), vr, mvp, m_fApproachScale, screenPoints, m_beatmap->getHitcircleDiameter(), from, to, m_beatmap->getSkin()->getComboColorForCounter(m_iColorCounter), alpha, getTime());
+		OsuSliderRenderer::drawVR(g, m_beatmap->getOsu(), vr, mvp, m_fApproachScale, screenPoints, alwaysPoints, m_beatmap->getHitcircleDiameter(), from, to, m_beatmap->getSkin()->getComboColorForCounter(m_iColorCounter), alpha, getTime());
 	}
 	else
 	{
 		// vertex buffered sliders
-		OsuSliderRenderer::drawVR(g, m_beatmap->getOsu(), vr, mvp, m_fApproachScale, m_vao, m_vaoVR2, m_beatmap->getHitcircleDiameter(), from, to, m_beatmap->getSkin()->getComboColorForCounter(m_iColorCounter), alpha, getTime());
+		OsuSliderRenderer::drawVR(g, m_beatmap->getOsu(), vr, mvp, m_fApproachScale, m_vao, m_vaoVR2, alwaysPoints, m_beatmap->getHitcircleDiameter(), from, to, m_beatmap->getSkin()->getComboColorForCounter(m_iColorCounter), alpha, getTime());
 	}
 }
 
@@ -848,9 +890,9 @@ void OsuSlider::update(long curPos)
 		m_vCurPointRaw = m_curve->pointAt(m_fSlidePercent);
 		m_vCurPoint = m_beatmap->osuCoords2Pixels(m_vCurPointRaw);
 	}
-	else if (m_points.size() > 0)
+	else
 	{
-		m_vCurPointRaw = m_points[0];
+		m_vCurPointRaw = m_curve->pointAt(0.0f);
 		m_vCurPoint = m_beatmap->osuCoords2Pixels(m_vCurPointRaw);
 	}
 
@@ -908,7 +950,7 @@ void OsuSlider::update(long curPos)
 			{
 				if (curPos >= m_iTime) // TODO: there was an && m_bCursorInside there, why?
 				{
-					const Vector2 pos = m_beatmap->osuCoords2Pixels(m_points[0]);
+					const Vector2 pos = m_beatmap->osuCoords2Pixels(m_curve->pointAt(0.0f));
 					const float cursorDelta = (m_beatmap->getCursorPos() - pos).length();
 
 					float vrCursor1Delta = 0.0f;
@@ -917,8 +959,8 @@ void OsuSlider::update(long curPos)
 					bool vrCursor2Inside = false;
 					if (m_beatmap->getOsu()->isInVRMode())
 					{
-						vrCursor1Delta = (m_beatmap->getOsu()->getVR()->getCursorPos1() - m_beatmap->osuCoords2VRPixels(m_points[0])).length();
-						vrCursor2Delta = (m_beatmap->getOsu()->getVR()->getCursorPos2() - m_beatmap->osuCoords2VRPixels(m_points[0])).length();
+						vrCursor1Delta = (m_beatmap->getOsu()->getVR()->getCursorPos1() - m_beatmap->osuCoords2VRPixels(m_curve->pointAt(0.0f))).length();
+						vrCursor2Delta = (m_beatmap->getOsu()->getVR()->getCursorPos2() - m_beatmap->osuCoords2VRPixels(m_curve->pointAt(0.0f))).length();
 						vrCursor1Inside = vrCursor1Delta < ((m_beatmap->getRawHitcircleDiameter()/2.0f) * m_beatmap->getOsu()->getVR()->getCircleHitboxScale());
 						vrCursor2Inside = vrCursor2Delta < ((m_beatmap->getRawHitcircleDiameter()/2.0f) * m_beatmap->getOsu()->getVR()->getCircleHitboxScale());
 					}
@@ -1171,7 +1213,7 @@ void OsuSlider::onClickEvent(std::vector<OsuBeatmap::CLICK> &clicks)
 	{
 		const Vector2 cursorPos = m_beatmap->getCursorPos();
 
-		const Vector2 pos = m_beatmap->osuCoords2Pixels(m_points[0]);
+		const Vector2 pos = m_beatmap->osuCoords2Pixels(m_curve->pointAt(0.0f));
 		const float cursorDelta = (cursorPos - pos).length();
 
 		if (cursorDelta < m_beatmap->getHitcircleDiameter()/2.0f)

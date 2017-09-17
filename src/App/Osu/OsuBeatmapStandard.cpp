@@ -596,6 +596,9 @@ void OsuBeatmapStandard::onModUpdate(bool rebuildSliderVertexBuffers)
 		m_music->setPitch(m_osu->getPitchMultiplier());
 	}
 
+	// always recalculate stacks
+	calculateStacks();
+
 	// recalculate slider vertexbuffers
 	if (m_osu->getModHR() != m_bWasHREnabled || osu_playfield_mirror_horizontal.getBool() != m_bWasHorizontalMirrorEnabled || osu_playfield_mirror_vertical.getBool() != m_bWasVerticalMirrorEnabled)
 	{
@@ -603,7 +606,6 @@ void OsuBeatmapStandard::onModUpdate(bool rebuildSliderVertexBuffers)
 		m_bWasHorizontalMirrorEnabled = osu_playfield_mirror_horizontal.getBool();
 		m_bWasVerticalMirrorEnabled = osu_playfield_mirror_vertical.getBool();
 
-		calculateStacks();
 		if (rebuildSliderVertexBuffers)
 			updateSliderVertexBuffers();
 	}
