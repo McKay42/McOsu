@@ -40,12 +40,30 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	*/
 
 	CHANGELOG alpha29Steam;
-	alpha29Steam.title = "28.94 (Steam VR Alpha, ?)";
+	alpha29Steam.title = "28.96 (Steam VR Alpha, ?)";
+	alpha29Steam.changes.push_back("- VR: Added slider sliding vibrations / haptic feedback (Options > Virtual Reality > Haptic Feedback)");
+	alpha29Steam.changes.push_back("- Smoother snaking sliders");
+	alpha29Steam.changes.push_back("- Switched to osu!lazer slider body fadeout style for snaking out sliders (aka shrinking sliders)");
+	alpha29Steam.changes.push_back("- Fixed strange sliderstartcircle hitboxes on some 2007 maps");
+	alpha29Steam.changes.push_back("- Fixed stacks not being recalculated when changing CS Override while playing");
+	alpha29Steam.changes.push_back("- Fixed sliderbody size not updating instantly when changing CS Override slider with arrow keys");
+	alpha29Steam.changes.push_back("");
+	alpha29Steam.changes.push_back("");
+	alpha29Steam.changes.push_back("");
+	alpha29Steam.changes.push_back("- Added multiple background image drawing toggles (Options > Gameplay > General)");
+	alpha29Steam.changes.push_back("- Added partial support for \"BeatmapDirectory\" parameter");
+	alpha29Steam.changes.push_back("- Added VR ConVars: osu_vr_controller_offset_x, osu_vr_controller_offset_y, osu_vr_controller_offset_z");
+	alpha29Steam.changes.push_back("- Added description tooltips to some options");
+	alpha29Steam.changes.push_back("- Windows: Added hacky \"Borderless Windowed Fullscreen\" mode (Options > Graphics > Layout)");
+	alpha29Steam.changes.push_back("- Windows: Switched to osu!'s old 2009 BASS audio library dlls to fix some slightly desynced mp3s");
+	alpha29Steam.changes.push_back("- Windows: Stream music files instead of loading them entirely (necessary for above; faster load times)");
 	alpha29Steam.changes.push_back("- Fixed minor visual inaccuracies (approach circle fade-in duration, hidden slider body fading behaviour)");
+	alpha29Steam.changes.push_back("- Fixed skin versions lower than 2.2 drawing thumbnails in songbrowser, even though they shouldn't");
+	alpha29Steam.changes.push_back("- Fixed statistics overlay layout in combination with the target practice mod");
+	alpha29Steam.changes.push_back("- Fixed osu_mod_wobble2 sliders");
+	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("- Fixed timingpoint sample type and sample volume inaccuracies per-hitobject (osu_timingpoints_force, osu_timingpoints_offset)");
 	alpha29Steam.changes.push_back("- Fixed missing sliderbreaks when the slider duration is shorter than the miss timing window of the sliderstartcircle");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("- Added Daycore mod");
 	alpha29Steam.changes.push_back("- Added option \"Higher Quality Sliders\", Options > Graphics > Detail Settings");
