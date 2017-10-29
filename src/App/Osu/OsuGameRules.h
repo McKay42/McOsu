@@ -51,6 +51,9 @@ public:
 	static ConVar osu_mod_ming3012;
 	static ConVar osu_mod_millhioref;
 	static ConVar osu_mod_millhioref_multiplier;
+	static ConVar osu_mod_mafham;
+	static ConVar osu_mod_mafham_render_livesize;
+	static ConVar osu_stacking_ar_override;
 
 
 
@@ -158,11 +161,15 @@ public:
 
 	static float getApproachTime(OsuBeatmap *beatmap)
 	{
-		return mapDifficultyRange(beatmap->getAR(), getMinApproachTime(), getMidApproachTime(), getMaxApproachTime());
+		return osu_mod_mafham.getBool() ? beatmap->getLength()*2 : mapDifficultyRange(beatmap->getAR(), getMinApproachTime(), getMidApproachTime(), getMaxApproachTime());
 	}
 	static float getRawApproachTime(OsuBeatmap *beatmap) // ignore AR override
 	{
-		return mapDifficultyRange(beatmap->getRawAR(), getMinApproachTime(), getMidApproachTime(), getMaxApproachTime());
+		return osu_mod_mafham.getBool() ? beatmap->getLength()*2 : mapDifficultyRange(beatmap->getRawAR(), getMinApproachTime(), getMidApproachTime(), getMaxApproachTime());
+	}
+	static float getApproachTimeForStacking(OsuBeatmap *beatmap)
+	{
+		return mapDifficultyRange(osu_stacking_ar_override.getFloat() < 0.0f ? beatmap->getAR() : osu_stacking_ar_override.getFloat(), getMinApproachTime(), getMidApproachTime(), getMaxApproachTime());
 	}
 
 	static inline long getFadeInTime() {return 400;}

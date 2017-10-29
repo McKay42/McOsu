@@ -45,6 +45,8 @@ public:
 
 	virtual void onKey(KeyboardEvent &e);
 
+	void save();
+
 	void setVisible(bool visible);
 
 	bool shouldDrawVRDummyHUD();
@@ -58,8 +60,6 @@ private:
 	void updateOsuFolder();
 	void updateName();
 	void updateVRRenderTargetResolutionLabel();
-
-	void save();
 
 	void onFullscreenChange(CBaseUICheckbox *checkbox);
 	void onBorderlessWindowedChange(CBaseUICheckbox *checkbox);

@@ -43,6 +43,7 @@
 
 ConVar osu_gamemode("osu_gamemode", "std");
 
+ConVar osu_songbrowser_sortingtype("osu_songbrowser_sortingtype", "By Date Added");
 ConVar osu_songbrowser_topbar_left_percent("osu_songbrowser_topbar_left_percent", 0.93f);
 ConVar osu_songbrowser_topbar_left_width_percent("osu_songbrowser_topbar_left_width_percent", 0.265f);
 ConVar osu_songbrowser_topbar_middle_width_percent("osu_songbrowser_topbar_middle_width_percent", 0.15f);
@@ -319,6 +320,7 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 
 	// convar refs
 	m_fps_max_ref = convar->getConVarByName("fps_max");
+	m_osu_database_dynamic_star_calculation_ref = convar->getConVarByName("osu_database_dynamic_star_calculation");
 
 	// convar callbacks
 	osu_gamemode.setCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onModeChange) );
@@ -406,6 +408,9 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	// search
 	m_fSearchWaitTime = 0.0f;
 	m_bInSearch = false;
+
+	// background star calculation
+	m_iBackgroundStarCalculationIndex = 0;
 
 	updateLayout();
 }
@@ -711,6 +716,38 @@ void OsuSongBrowser2::update()
 			onGroupNoGrouping(m_noGroupingButton);
 		}
 	}
+
+	// handle background star calculation
+	if (m_beatmaps.size() > 0 && m_osu_database_dynamic_star_calculation_ref->getBool())
+	{
+		for (int s=0; s<1; s++) // one beatmap per update
+		{
+			bool canMoveToNextBeatmap = true;
+			if (m_iBackgroundStarCalculationIndex < m_beatmaps.size())
+			{
+				for (int i=0; i<m_beatmaps[m_iBackgroundStarCalculationIndex]->getDifficultiesPointer()->size(); i++)
+				{
+					if (!(*m_beatmaps[m_iBackgroundStarCalculationIndex]->getDifficultiesPointer())[i]->isBackgroundLoaderActive() && (*m_beatmaps[m_iBackgroundStarCalculationIndex]->getDifficultiesPointer())[i]->starsNoMod == 0.0f)
+					{
+						(*m_beatmaps[m_iBackgroundStarCalculationIndex]->getDifficultiesPointer())[i]->loadMetadataRaw(true);
+
+						// only one diff per beatmap per update
+						canMoveToNextBeatmap = false;
+						break;
+					}
+				}
+			}
+
+			if (canMoveToNextBeatmap)
+			{
+				m_iBackgroundStarCalculationIndex++;
+				if (m_iBackgroundStarCalculationIndex >= m_beatmaps.size())
+					m_iBackgroundStarCalculationIndex = 0;
+
+				m_iBackgroundStarCalculationIndex = clamp<int>(m_iBackgroundStarCalculationIndex, 0, m_beatmaps.size());
+			}
+		}
+	}
 }
 
 void OsuSongBrowser2::onKeyDown(KeyboardEvent &key)
@@ -958,7 +995,9 @@ void OsuSongBrowser2::onChar(KeyboardEvent &e)
 
 	// handle searching
 	KEYCODE charCode = e.getCharCode();
-	m_sSearchString.append(UString((wchar_t*)&charCode));
+	UString stringChar = "";
+	stringChar.insert(0, charCode);
+	m_sSearchString.append(stringChar);
 
 	scheduleSearchUpdate();
 }
@@ -1301,7 +1340,7 @@ bool OsuSongBrowser2::searchMatcher(OsuBeatmap *beatmap, UString searchString)
 									compareValue = diffs[d]->lengthMS / 1000;
 									break;
 								case STARS:
-									compareValue = diffs[d]->starsNoMod;
+									compareValue = std::round(diffs[d]->starsNoMod * 10.0f) / 10.0f; // round to 1 decimal place
 									break;
 								}
 
@@ -1674,7 +1713,7 @@ void OsuSongBrowser2::onDatabaseLoadingFinished()
 	}
 	*/
 
-	onSortChange(m_sortingMethods[3].name); // hardcoded to use "By Date Added" as the default sorting method
+	onSortChange(osu_songbrowser_sortingtype.getString());
 }
 
 void OsuSongBrowser2::onSortClicked(CBaseUIButton *button)
@@ -1702,19 +1741,21 @@ void OsuSongBrowser2::onSortClicked(CBaseUIButton *button)
 
 void OsuSongBrowser2::onSortChange(UString text)
 {
-	SORTING_METHOD sortingMethod;
+	SORTING_METHOD *sortingMethod = (m_sortingMethods.size() > 3 ? &m_sortingMethods[3] : NULL);
 	for (int i=0; i<m_sortingMethods.size(); i++)
 	{
 		// laziness wins again :(
 		if (m_sortingMethods[i].name == text)
 		{
-			sortingMethod = m_sortingMethods[i];
+			sortingMethod = &m_sortingMethods[i];
 			break;
 		}
 	}
+	if (sortingMethod == NULL) return;
 
-	m_sortingMethod = sortingMethod.type;
-	m_sortButton->setText(sortingMethod.name);
+	m_sortingMethod = sortingMethod->type;
+	m_sortButton->setText(sortingMethod->name);
+	osu_songbrowser_sortingtype.setValue(sortingMethod->name); // remember
 
 	struct COMPARATOR_WRAPPER
 	{
@@ -1725,7 +1766,7 @@ void OsuSongBrowser2::onSortChange(UString text)
 		}
 	};
 	COMPARATOR_WRAPPER comparatorWrapper;
-	comparatorWrapper.comp = sortingMethod.comparator;
+	comparatorWrapper.comp = sortingMethod->comparator;
 
 	// resort primitive master button array (all songbuttons, No Grouping)
 	std::sort(m_songButtons.begin(), m_songButtons.end(), comparatorWrapper);

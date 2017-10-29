@@ -19,6 +19,7 @@ class RenderTarget;
 
 class OsuVRUIElement;
 class OsuVRUISlider;
+class OsuVRUIImageCheckbox;
 
 class OsuVR
 {
@@ -73,6 +74,7 @@ private:
 	void onScreenMatrixChange(UString oldValue, UString newValue);
 	void onPlayfieldMatrixChange(UString oldValue, UString newValue);
 	void onMatrixResetClicked();
+	void onLayoutLockClicked();
 	void onKeyboardButtonClicked();
 	void onOffsetUpClicked();
 	void onOffsetDownClicked();
@@ -132,6 +134,7 @@ private:
 	std::vector<OsuVRUIElement*> m_uiElements;
 	OsuVRUIElement *m_keyboardButton;
 	OsuVRUIElement *m_matrixResetButton;
+	OsuVRUIImageCheckbox *m_lockLayoutCheckbox;
 	OsuVRUIElement *m_offsetDownButton;
 	OsuVRUIElement *m_offsetUpButton;
 	OsuVRUISlider *m_volumeSlider;

@@ -34,6 +34,8 @@
 #include "OsuSlider.h"
 #include "OsuSpinner.h"
 
+#include "OpenGLHeaders.h"
+
 ConVar osu_draw_followpoints("osu_draw_followpoints", true);
 ConVar osu_draw_reverse_order("osu_draw_reverse_order", false);
 ConVar osu_draw_playfield_border("osu_draw_playfield_border", true);
@@ -66,6 +68,7 @@ ConVar osu_mod_jigsaw2("osu_mod_jigsaw2", false);
 ConVar osu_mod_jigsaw_followcircle_radius_factor("osu_mod_jigsaw_followcircle_radius_factor", 0.0f);
 ConVar osu_mod_shirone("osu_mod_shirone", false);
 ConVar osu_mod_shirone_combo("osu_mod_shirone_combo", 20.0f);
+ConVar osu_mod_mafham_render_chunksize("osu_mod_mafham_render_chunksize", 15, "render this many hitobjects per frame chunk into the scene buffer (spreads rendering across many frames to minimize lag)");
 
 ConVar osu_debug_hiterrorbar_misaims("osu_debug_hiterrorbar_misaims", false);
 
@@ -152,6 +155,7 @@ OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 	m_bWasHorizontalMirrorEnabled = false;
 	m_bWasVerticalMirrorEnabled = false;
 	m_bWasEZEnabled = false;
+	m_bWasMafhamEnabled = false;
 	m_fPrevPlayfieldRotationFromConVar = 0.0f;
 	m_fPrevPlayfieldStretchX = 0.0f;
 	m_fPrevPlayfieldStretchY = 0.0f;
@@ -162,6 +166,15 @@ OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 
 	m_bIsPreLoading = true;
 	m_iPreLoadingIndex = 0;
+
+	m_mafhamActiveRenderTarget = NULL;
+	m_mafhamFinishedRenderTarget = NULL;
+	m_bMafhamRenderScheduled = true;
+	m_iMafhamHitObjectRenderIndex = 0;
+	m_iMafhamPrevHitObjectIndex = 0;
+	m_iMafhamActiveRenderHitObjectIndex = 0;
+	m_iMafhamFinishedRenderHitObjectIndex = 0;
+	m_bInMafhamRenderChunk = false;
 
 	// convar refs
 	if (m_osu_draw_statistics_pp == NULL)
@@ -221,7 +234,7 @@ void OsuBeatmapStandard::draw(Graphics *g)
 		return;
 
 	// draw followpoints
-	if (osu_draw_followpoints.getBool())
+	if (osu_draw_followpoints.getBool() && !OsuGameRules::osu_mod_mafham.getBool())
 		drawFollowPoints(g);
 
 	// draw all hitobjects in reverse
@@ -231,24 +244,40 @@ void OsuBeatmapStandard::draw(Graphics *g)
 		const long pvs = getPVS();
 		const bool usePVS = m_osu_pvs->getBool();
 
-		if (!osu_draw_reverse_order.getBool())
+		if (!OsuGameRules::osu_mod_mafham.getBool())
 		{
-			for (int i=m_hitobjectsSortedByEndTime.size()-1; i>=0; i--)
+			if (!osu_draw_reverse_order.getBool())
 			{
-				// PVS optimization (reversed)
-				if (usePVS)
+				for (int i=m_hitobjectsSortedByEndTime.size()-1; i>=0; i--)
 				{
-					if (m_hitobjectsSortedByEndTime[i]->isFinished() && (curPos - pvs > m_hitobjectsSortedByEndTime[i]->getTime() + m_hitobjectsSortedByEndTime[i]->getDuration())) // past objects
-						break;
-					if (m_hitobjectsSortedByEndTime[i]->getTime() > curPos + pvs) // future objects
-						continue;
-				}
+					// PVS optimization (reversed)
+					if (usePVS)
+					{
+						if (m_hitobjectsSortedByEndTime[i]->isFinished() && (curPos - pvs > m_hitobjectsSortedByEndTime[i]->getTime() + m_hitobjectsSortedByEndTime[i]->getDuration())) // past objects
+							break;
+						if (m_hitobjectsSortedByEndTime[i]->getTime() > curPos + pvs) // future objects
+							continue;
+					}
 
-				m_hitobjectsSortedByEndTime[i]->draw(g);
+					m_hitobjectsSortedByEndTime[i]->draw(g);
+				}
 			}
-		}
-		else
-		{
+			else
+			{
+				for (int i=0; i<m_hitobjectsSortedByEndTime.size(); i++)
+				{
+					// PVS optimization
+					if (usePVS)
+					{
+						if (m_hitobjectsSortedByEndTime[i]->isFinished() && (curPos - pvs > m_hitobjectsSortedByEndTime[i]->getTime() + m_hitobjectsSortedByEndTime[i]->getDuration())) // past objects
+							continue;
+						if (m_hitobjectsSortedByEndTime[i]->getTime() > curPos + pvs) // future objects
+							break;
+					}
+
+					m_hitobjectsSortedByEndTime[i]->draw(g);
+				}
+			}
 			for (int i=0; i<m_hitobjectsSortedByEndTime.size(); i++)
 			{
 				// PVS optimization
@@ -260,21 +289,125 @@ void OsuBeatmapStandard::draw(Graphics *g)
 						break;
 				}
 
-				m_hitobjectsSortedByEndTime[i]->draw(g);
+				m_hitobjectsSortedByEndTime[i]->draw2(g);
 			}
 		}
-		for (int i=0; i<m_hitobjectsSortedByEndTime.size(); i++)
+		else
 		{
-			// PVS optimization
-			if (usePVS)
+			if (m_mafhamActiveRenderTarget == NULL)
+				m_mafhamActiveRenderTarget = m_osu->getFrameBuffer();
+
+			if (m_mafhamFinishedRenderTarget == NULL)
+				m_mafhamFinishedRenderTarget = m_osu->getFrameBuffer2();
+
+			// if we have a chunk to render into the scene buffer
+			const bool shouldDrawBuffer = (m_hitobjectsSortedByEndTime.size() - m_iCurrentHitObjectIndex) > OsuGameRules::osu_mod_mafham_render_livesize.getInt();
+			bool shouldRenderChunk = m_iMafhamHitObjectRenderIndex < m_hitobjectsSortedByEndTime.size() && shouldDrawBuffer;
+			if (shouldRenderChunk)
 			{
-				if (m_hitobjectsSortedByEndTime[i]->isFinished() && (curPos - pvs > m_hitobjectsSortedByEndTime[i]->getTime() + m_hitobjectsSortedByEndTime[i]->getDuration())) // past objects
-					continue;
-				if (m_hitobjectsSortedByEndTime[i]->getTime() > curPos + pvs) // future objects
-					break;
+				m_bInMafhamRenderChunk = true;
+
+				m_mafhamActiveRenderTarget->setClearColorOnDraw(m_iMafhamHitObjectRenderIndex == 0);
+				m_mafhamActiveRenderTarget->setClearDepthOnDraw(m_iMafhamHitObjectRenderIndex == 0);
+
+				m_mafhamActiveRenderTarget->enable();
+				glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA); // HACKHACK: OpenGL hardcoded
+				int chunkCounter = 0;
+				for (int i=m_hitobjectsSortedByEndTime.size()-1 - m_iMafhamHitObjectRenderIndex; i>=0; i--, m_iMafhamHitObjectRenderIndex++)
+				{
+					chunkCounter++;
+					if (chunkCounter > osu_mod_mafham_render_chunksize.getInt())
+						break; // continue chunk render in next frame
+
+					if (i <= m_iCurrentHitObjectIndex + OsuGameRules::osu_mod_mafham_render_livesize.getInt()) // skip live objects
+					{
+						m_iMafhamHitObjectRenderIndex = m_hitobjectsSortedByEndTime.size(); // stop chunk render
+						break;
+					}
+
+					// PVS optimization (reversed)
+					if (usePVS)
+					{
+						if (m_hitobjectsSortedByEndTime[i]->isFinished() && (curPos - pvs > m_hitobjectsSortedByEndTime[i]->getTime() + m_hitobjectsSortedByEndTime[i]->getDuration())) // past objects
+						{
+							m_iMafhamHitObjectRenderIndex = m_hitobjectsSortedByEndTime.size(); // stop chunk render
+							break;
+						}
+						if (m_hitobjectsSortedByEndTime[i]->getTime() > curPos + pvs) // future objects
+							continue;
+					}
+
+					m_hitobjectsSortedByEndTime[i]->draw(g);
+
+					m_iMafhamActiveRenderHitObjectIndex = i;
+				}
+				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // HACKHACK: OpenGL hardcoded
+				m_mafhamActiveRenderTarget->disable();
+
+				m_bInMafhamRenderChunk = false;
+			}
+			shouldRenderChunk = m_iMafhamHitObjectRenderIndex < m_hitobjectsSortedByEndTime.size() && shouldDrawBuffer;
+			if (!shouldRenderChunk && m_bMafhamRenderScheduled)
+			{
+				// finished, we can now swap the active framebuffer with the one we just finished
+				m_bMafhamRenderScheduled = false;
+
+				RenderTarget *temp = m_mafhamFinishedRenderTarget;
+				m_mafhamFinishedRenderTarget = m_mafhamActiveRenderTarget;
+				m_mafhamActiveRenderTarget = temp;
+
+				m_iMafhamFinishedRenderHitObjectIndex = m_iMafhamActiveRenderHitObjectIndex;
+				m_iMafhamActiveRenderHitObjectIndex = m_hitobjectsSortedByEndTime.size(); // reset
 			}
 
-			m_hitobjectsSortedByEndTime[i]->draw2(g);
+			// draw scene buffer
+			if (shouldDrawBuffer)
+			{
+				glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA); // HACKHACK: OpenGL hardcoded
+				m_mafhamFinishedRenderTarget->draw(g, 0, 0);
+				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // HACKHACK: OpenGL hardcoded
+			}
+
+			// draw followpoints
+			if (osu_draw_followpoints.getBool())
+				drawFollowPoints(g);
+
+			// draw live hitobjects (also, code duplication yay)
+			{
+				for (int i=m_hitobjectsSortedByEndTime.size()-1; i>=0; i--)
+				{
+					// PVS optimization (reversed)
+					if (usePVS)
+					{
+						if (m_hitobjectsSortedByEndTime[i]->isFinished() && (curPos - pvs > m_hitobjectsSortedByEndTime[i]->getTime() + m_hitobjectsSortedByEndTime[i]->getDuration())) // past objects
+							break;
+						if (m_hitobjectsSortedByEndTime[i]->getTime() > curPos + pvs) // future objects
+							continue;
+					}
+
+					if (i > m_iCurrentHitObjectIndex + OsuGameRules::osu_mod_mafham_render_livesize.getInt() || (i > m_iMafhamFinishedRenderHitObjectIndex-1 && shouldDrawBuffer)) // skip non-live objects
+						continue;
+
+					m_hitobjectsSortedByEndTime[i]->draw(g);
+				}
+
+				for (int i=0; i<m_hitobjectsSortedByEndTime.size(); i++)
+				{
+					// PVS optimization
+					if (usePVS)
+					{
+						if (m_hitobjectsSortedByEndTime[i]->isFinished() && (curPos - pvs > m_hitobjectsSortedByEndTime[i]->getTime() + m_hitobjectsSortedByEndTime[i]->getDuration())) // past objects
+							continue;
+						if (m_hitobjectsSortedByEndTime[i]->getTime() > curPos + pvs) // future objects
+							break;
+					}
+
+					if (i >= m_iCurrentHitObjectIndex + OsuGameRules::osu_mod_mafham_render_livesize.getInt() || (i >= m_iMafhamFinishedRenderHitObjectIndex-1 && shouldDrawBuffer)) // skip non-live objects
+						break;
+
+					m_hitobjectsSortedByEndTime[i]->draw2(g);
+				}
+			}
 		}
 	}
 
@@ -581,6 +714,17 @@ void OsuBeatmapStandard::update()
 		else
 			m_bIsSpinnerActive = false;
 	}
+
+	// scene buffering logic
+	if (OsuGameRules::osu_mod_mafham.getBool())
+	{
+		if (!m_bMafhamRenderScheduled && m_iCurrentHitObjectIndex != m_iMafhamPrevHitObjectIndex) // if we are not already rendering and the index changed
+		{
+			m_iMafhamPrevHitObjectIndex = m_iCurrentHitObjectIndex;
+			m_iMafhamHitObjectRenderIndex = 0;
+			m_bMafhamRenderScheduled = true;
+		}
+	}
 }
 
 void OsuBeatmapStandard::onModUpdate(bool rebuildSliderVertexBuffers)
@@ -596,9 +740,6 @@ void OsuBeatmapStandard::onModUpdate(bool rebuildSliderVertexBuffers)
 		m_music->setPitch(m_osu->getPitchMultiplier());
 	}
 
-	// always recalculate stacks
-	calculateStacks();
-
 	// recalculate slider vertexbuffers
 	if (m_osu->getModHR() != m_bWasHREnabled || osu_playfield_mirror_horizontal.getBool() != m_bWasHorizontalMirrorEnabled || osu_playfield_mirror_vertical.getBool() != m_bWasVerticalMirrorEnabled)
 	{
@@ -606,17 +747,23 @@ void OsuBeatmapStandard::onModUpdate(bool rebuildSliderVertexBuffers)
 		m_bWasHorizontalMirrorEnabled = osu_playfield_mirror_horizontal.getBool();
 		m_bWasVerticalMirrorEnabled = osu_playfield_mirror_vertical.getBool();
 
+		calculateStacks();
+
 		if (rebuildSliderVertexBuffers)
 			updateSliderVertexBuffers();
 	}
 	if (m_osu->getModEZ() != m_bWasEZEnabled)
 	{
+		calculateStacks();
+
 		m_bWasEZEnabled = m_osu->getModEZ();
 		if (rebuildSliderVertexBuffers)
 			updateSliderVertexBuffers();
 	}
 	if (getHitcircleDiameter() != m_fPrevHitCircleDiameter && m_hitobjects.size() > 0)
 	{
+		calculateStacks();
+
 		m_fPrevHitCircleDiameter = getHitcircleDiameter();
 		if (rebuildSliderVertexBuffers)
 			updateSliderVertexBuffers();
@@ -629,15 +776,27 @@ void OsuBeatmapStandard::onModUpdate(bool rebuildSliderVertexBuffers)
 	}
 	if (osu_playfield_stretch_x.getFloat() != m_fPrevPlayfieldStretchX)
 	{
+		calculateStacks();
+
 		m_fPrevPlayfieldStretchX = osu_playfield_stretch_x.getFloat();
 		if (rebuildSliderVertexBuffers)
 			updateSliderVertexBuffers();
 	}
 	if (osu_playfield_stretch_y.getFloat() != m_fPrevPlayfieldStretchY)
 	{
+		calculateStacks();
+
 		m_fPrevPlayfieldStretchY = osu_playfield_stretch_y.getFloat();
 		if (rebuildSliderVertexBuffers)
 			updateSliderVertexBuffers();
+	}
+	if (OsuGameRules::osu_mod_mafham.getBool() != m_bWasMafhamEnabled)
+	{
+		m_bWasMafhamEnabled = OsuGameRules::osu_mod_mafham.getBool();
+		for (int i=0; i<m_hitobjects.size(); i++)
+		{
+			m_hitobjects[i]->update(m_iCurMusicPosWithOffsets);
+		}
 	}
 
 	// recalculate star cache for live pp
@@ -1260,8 +1419,7 @@ void OsuBeatmapStandard::updateSliderVertexBuffers()
 
 void OsuBeatmapStandard::calculateStacks()
 {
-	if (!osu_stacking.getBool())
-		return;
+	if (!osu_stacking.getBool()) return;
 
 	updateHitobjectMetrics();
 
@@ -1279,6 +1437,7 @@ void OsuBeatmapStandard::calculateStacks()
 	// peppy's algorithm
 	// https://gist.github.com/peppy/1167470
 
+	const float approachTime = OsuGameRules::getApproachTimeForStacking(this);
 	for (int i=m_hitobjects.size()-1; i>=0; i--)
 	{
 		int n = i;
@@ -1304,7 +1463,7 @@ void OsuBeatmapStandard::calculateStacks()
 				if (isSpinnerN)
 					continue;
 
-				if (objectI->getTime() - (OsuGameRules::getApproachTime(this) * m_selectedDifficulty->stackLeniency) > (objectN->getTime() + objectN->getDuration()))
+				if (objectI->getTime() - (approachTime * m_selectedDifficulty->stackLeniency) > (objectN->getTime() + objectN->getDuration()))
 					break;
 
 				Vector2 objectNEndPosition = objectN->getOriginalRawPosAt(objectN->getTime() + objectN->getDuration());
@@ -1338,7 +1497,7 @@ void OsuBeatmapStandard::calculateStacks()
 				if (isSpinner)
 					continue;
 
-				if (objectI->getTime() - (OsuGameRules::getApproachTime(this) * m_selectedDifficulty->stackLeniency) > objectN->getTime())
+				if (objectI->getTime() - (approachTime * m_selectedDifficulty->stackLeniency) > objectN->getTime())
 					break;
 
 				if (((objectN->getDuration() != 0 ? objectN->getOriginalRawPosAt(objectN->getTime() + objectN->getDuration()) : objectN->getOriginalRawPosAt(objectN->getTime())) - objectI->getOriginalRawPosAt(objectI->getTime())).length() < STACK_LENIENCE)

@@ -59,7 +59,7 @@ void DUMMY_OSU_MODS(void) {;}
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 28.96f);
+ConVar osu_version("osu_version", 28.97f);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr");
 #else
@@ -119,6 +119,7 @@ Osu::Osu()
 	m_osu_playfield_rotation = convar->getConVarByName("osu_playfield_rotation");
 	m_osu_playfield_stretch_x = convar->getConVarByName("osu_playfield_stretch_x");
 	m_osu_playfield_stretch_y = convar->getConVarByName("osu_playfield_stretch_y");
+	m_osu_draw_cursor_trail_ref = convar->getConVarByName("osu_draw_cursor_trail");
 
 	// engine settings/overrides
 	openvr->setDrawCallback( fastdelegate::MakeDelegate(this, &Osu::drawVR) );
@@ -243,8 +244,10 @@ Osu::Osu()
 
 	// renderer
 	g_vInternalResolution = engine->getScreenSize();
-	m_frameBuffer = engine->getResourceManager()->createRenderTarget(0, 0, getScreenWidth(), getScreenHeight());
 	m_backBuffer = engine->getResourceManager()->createRenderTarget(0, 0, getScreenWidth(), getScreenHeight());
+	m_sliderFrameBuffer = engine->getResourceManager()->createRenderTarget(0, 0, getScreenWidth(), getScreenHeight());
+	m_frameBuffer = engine->getResourceManager()->createRenderTarget(0, 0, getScreenWidth(), getScreenHeight());
+	m_frameBuffer2 = engine->getResourceManager()->createRenderTarget(0, 0, getScreenWidth(), getScreenHeight());
 
 	// load a few select subsystems very early
 	m_notificationOverlay = new OsuNotificationOverlay(this);
@@ -319,8 +322,8 @@ Osu::Osu()
 
 	/*
 	// DEBUG: immediately start diff of a beatmap
-	UString debugFolder = "c:/Program Files (x86)/osu!/Songs/65853 Blue Stahli - Shotgun Senorita (Zardonic Remix)/";
-	UString debugDiffFileName = "Blue Stahli - Shotgun Senorita (Zardonic Remix) (Aleks719) [Insane].osu";
+	UString debugFolder = "C:/Program Files (x86)/osu!/Songs/4392 Hyadain - Chocobo/";
+	UString debugDiffFileName = "Hyadain - Chocobo (mtmcl) [Gold].osu";
 	OsuBeatmap *debugBeatmap = new OsuBeatmapStandard(this);
 	UString beatmapPath = debugFolder;
 	beatmapPath.append(debugDiffFileName);
@@ -442,8 +445,14 @@ void Osu::draw(Graphics *g)
 		// draw VR cursors for spectators
 		if (isInVRMode() && isInPlayMode() && !getSelectedBeatmap()->isPaused() && beatmapStd != NULL)
 		{
+			// HACKHACK: temp disable until i fix it
+			float prevValue = m_osu_draw_cursor_trail_ref->getFloat();
+			m_osu_draw_cursor_trail_ref->setValue(0.0f);
+
 			m_hud->drawCursor(g, beatmapStd->osuCoords2RawPixels(m_vr->getCursorPos1() + Vector2(OsuGameRules::OSU_COORD_WIDTH/2, OsuGameRules::OSU_COORD_HEIGHT/2)), 1.0f);
 			m_hud->drawCursor(g, beatmapStd->osuCoords2RawPixels(m_vr->getCursorPos2() + Vector2(OsuGameRules::OSU_COORD_WIDTH/2, OsuGameRules::OSU_COORD_HEIGHT/2)), 1.0f);
+
+			m_osu_draw_cursor_trail_ref->setValue(prevValue);
 		}
 	}
 	else // if we are not playing
@@ -744,11 +753,14 @@ void Osu::onKeyDown(KeyboardEvent &key)
 	{
 		Shader *sliderShader = engine->getResourceManager()->getShader("slider");
 		Shader *sliderShaderVR = engine->getResourceManager()->getShader("sliderVR");
+		Shader *cursorTrailShader = engine->getResourceManager()->getShader("cursortrail");
 
 		if (sliderShader != NULL)
 			sliderShader->reload();
 		if (sliderShaderVR != NULL)
 			sliderShaderVR->reload();
+		if (cursorTrailShader != NULL)
+			cursorTrailShader->reload();
 
 		key.consume();
 	}
@@ -1332,8 +1344,10 @@ void Osu::onResolutionChanged(Vector2 newResolution)
 	}
 
 	// rendertargets
-	m_frameBuffer->rebuild(0, 0, g_vInternalResolution.x, g_vInternalResolution.y);
 	m_backBuffer->rebuild(0, 0, g_vInternalResolution.x, g_vInternalResolution.y);
+	m_sliderFrameBuffer->rebuild(0, 0, g_vInternalResolution.x, g_vInternalResolution.y);
+	m_frameBuffer->rebuild(0, 0, g_vInternalResolution.x, g_vInternalResolution.y);
+	m_frameBuffer2->rebuild(0, 0, g_vInternalResolution.x, g_vInternalResolution.y);
 
 	// mouse scaling & offset
 	// TODO: rethink scale logic
@@ -1420,6 +1434,9 @@ void Osu::onFocusLost()
 
 bool Osu::onShutdown()
 {
+	debugLog("Osu::onShutdown()\n");
+	m_optionsMenu->save();
+
 	// the only time where a shutdown could be problematic is while an update is being installed, so we block it here
 	return m_updateHandler == NULL || m_updateHandler->getStatus() != OsuUpdateHandler::STATUS::STATUS_INSTALLING_UPDATE;
 }
