@@ -184,7 +184,7 @@ void OsuCircle::drawSliderEndCircle(Graphics *g, OsuSkin *skin, Vector2 pos, flo
 
 void OsuCircle::drawApproachCircle(Graphics *g, OsuSkin *skin, Vector2 pos, Color comboColor, float hitcircleDiameter, float approachScale, float alpha, bool modHD, bool overrideHDApproachCircle)
 {
-	if ((!modHD || overrideHDApproachCircle) && osu_draw_approach_circles.getBool())
+	if ((!modHD || overrideHDApproachCircle) && osu_draw_approach_circles.getBool() && !OsuGameRules::osu_mod_mafham.getBool())
 	{
 		g->setColor(comboColor);
 
@@ -406,7 +406,7 @@ void OsuCircle::draw(Graphics *g)
 		g->pushTransform();
 			g->scale((1.0f+scale*OsuGameRules::osu_circle_fade_out_scale.getFloat()), (1.0f+scale*OsuGameRules::osu_circle_fade_out_scale.getFloat()));
 			{
-				m_beatmap->getSkin()->getHitCircleOverlay2()->setAnimationTimeOffset(m_iTime - m_iApproachTime);
+				m_beatmap->getSkin()->getHitCircleOverlay2()->setAnimationTimeOffset(!m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iApproachTime : m_beatmap->getCurMusicPosWithOffsets());
 				drawCircle(g, m_beatmap, m_vRawPos, m_iComboNumber, m_iColorCounter, 1.0f, alpha, alpha, drawNumber);
 			}
 		g->popTransform();
@@ -418,7 +418,7 @@ void OsuCircle::draw(Graphics *g)
 	// draw circle
 	const bool hd = m_beatmap->getOsu()->getModHD();
 	Vector2 shakeCorrectedPos = m_vRawPos;
-	if (engine->getTime() < m_fShakeAnimation) // handle note blocking shaking
+	if (engine->getTime() < m_fShakeAnimation && !m_beatmap->isInMafhamRenderChunk()) // handle note blocking shaking
 	{
 		float smooth = 1.0f - ((m_fShakeAnimation - engine->getTime()) / osu_circle_shake_duration.getFloat()); // goes from 0 to 1
 		if (smooth < 0.5f)
@@ -430,7 +430,7 @@ void OsuCircle::draw(Graphics *g)
 		smooth = -smooth*(smooth-2); // quad out twice
 		shakeCorrectedPos.x += std::sin(engine->getTime()*120) * smooth * osu_circle_shake_strength.getFloat();
 	}
-	m_beatmap->getSkin()->getHitCircleOverlay2()->setAnimationTimeOffset(m_iTime - m_iApproachTime);
+	m_beatmap->getSkin()->getHitCircleOverlay2()->setAnimationTimeOffset(!m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iApproachTime : m_beatmap->getCurMusicPosWithOffsets());
 	drawCircle(g, m_beatmap, shakeCorrectedPos, m_iComboNumber, m_iColorCounter, m_bWaiting && !hd ? 1.0f : m_fApproachScale, m_bWaiting && !hd ? 1.0f : m_fAlpha, m_bWaiting && !hd ? 1.0f : m_fAlpha, true, m_bOverrideHDApproachCircle);
 }
 

@@ -31,24 +31,28 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 
 	std::vector<CHANGELOG> changelogs;
 
-	// TODO: haptic slider feedback is hidden until SteamVR is fixed
-	/*
-	CHANGELOG alpha28steam;
-	alpha28steam.title = "28 (Steam VR Alpha, TODOTODO)";
-	alpha28steam.changes.push_back("- Added haptic feedback to sliders (Options > Virtual Reality > Slider Vibration Strength)");
-	changelogs.push_back(alpha28steam);
-	*/
-
 	CHANGELOG alpha29Steam;
-	alpha29Steam.title = "28.96 (Steam VR Alpha, ?)";
+	alpha29Steam.title = "28.97 (Steam VR Alpha, ?)";
+	alpha29Steam.changes.push_back("- Added smooth cursortrail support");
+	alpha29Steam.changes.push_back("- Added option \"Force Smooth CursorTrail\" (Options > Skin)");
+	alpha29Steam.changes.push_back("- Added sliderbreak counter to statistics overlay (Options > HUD > \"Draw Stats: SliderBreaks\")");
+	alpha29Steam.changes.push_back("- Star ratings in songbrowser for everyone (even without osu!.db database)");
+	alpha29Steam.changes.push_back("- VR: Added layout lock checkbox (avoid accidentally messing up your layout, especially for Oculus players)");
+	alpha29Steam.changes.push_back("- Remember selected sorting type in songbrowser");
+	alpha29Steam.changes.push_back("- Remember volume settings if changed outside options");
+	alpha29Steam.changes.push_back("- Minor performance improvements (ignore empty transparent skin images)");
+	alpha29Steam.changes.push_back("");
+	alpha29Steam.changes.push_back("");
+	alpha29Steam.changes.push_back("");
+	alpha29Steam.changes.push_back("- Added new experimental mod \"Mafham\"");
+	alpha29Steam.changes.push_back("- Added a few ConVars (osu_drain_*, osu_slider_reverse_arrow_animated)");
+	alpha29Steam.changes.push_back("- Round stars to 1 decimal place for intelligent search (e.g. \"stars=6\")");
 	alpha29Steam.changes.push_back("- VR: Added slider sliding vibrations / haptic feedback (Options > Virtual Reality > Haptic Feedback)");
 	alpha29Steam.changes.push_back("- Smoother snaking sliders");
 	alpha29Steam.changes.push_back("- Switched to osu!lazer slider body fadeout style for snaking out sliders (aka shrinking sliders)");
 	alpha29Steam.changes.push_back("- Fixed strange sliderstartcircle hitboxes on some 2007 maps");
 	alpha29Steam.changes.push_back("- Fixed stacks not being recalculated when changing CS Override while playing");
 	alpha29Steam.changes.push_back("- Fixed sliderbody size not updating instantly when changing CS Override slider with arrow keys");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("- Added multiple background image drawing toggles (Options > Gameplay > General)");
 	alpha29Steam.changes.push_back("- Added partial support for \"BeatmapDirectory\" parameter");

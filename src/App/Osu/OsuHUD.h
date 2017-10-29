@@ -16,6 +16,7 @@ class OsuVR;
 class McFont;
 class ConVar;
 class Image;
+class Shader;
 
 class OsuHUD : public OsuScreen
 {
@@ -48,6 +49,7 @@ public:
 	void animateVolumeChange();
 	void animateCursorExpand();
 	void animateCursorShrink();
+	void addCursorTrailPosition(Vector2 pos);
 
 	void resetHitErrorBar();
 
@@ -70,12 +72,13 @@ private:
 	void drawHitErrorBar(Graphics *g, float hitWindow300, float hitWindow100, float hitWindow50, float hitWindowMiss);
 	void drawProgressBar(Graphics *g, float percent, bool waiting);
 	void drawProgressBarVR(Graphics *g, Matrix4 &mvp, OsuVR *vr, float percent, bool waiting);
-	void drawStatistics(Graphics *g, int misses, int bpm, float ar, float cs, float od, int nps, int nd, int ur, int pp);
+	void drawStatistics(Graphics *g, int misses, int sliderbreaks, int bpm, float ar, float cs, float od, int nps, int nd, int ur, int pp);
 	void drawTargetHeatmap(Graphics *g, float hitcircleDiameter);
 
 	void drawStatisticText(Graphics *g, const UString text);
 
 	float getCursorScaleFactor();
+	float getCursorTrailScaleFactor();
 
 	Osu *m_osu;
 	McFont *m_tempFont;
@@ -123,8 +126,10 @@ private:
 	{
 		Vector2 pos;
 		float time;
+		float alpha;
 	};
 	std::vector<CURSORTRAIL> m_cursorTrail;
+	Shader *m_cursorTrailShader;
 
 	// target heatmap
 	struct TARGET

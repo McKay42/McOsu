@@ -83,8 +83,7 @@ void OsuVRUIButton::update(Vector2 cursorPos)
 			if (m_bIsCursorInside)
 			{
 				m_bIsActive = true;
-				if (m_clickVoidCallback != NULL)
-					m_clickVoidCallback();
+				onClicked();
 			}
 		}
 	}
@@ -93,4 +92,10 @@ void OsuVRUIButton::update(Vector2 cursorPos)
 		m_bClickCheck = false;
 		m_bIsActive = false;
 	}
+}
+
+void OsuVRUIButton::onClicked()
+{
+	if (m_clickVoidCallback != NULL)
+		m_clickVoidCallback();
 }

@@ -169,7 +169,7 @@ UString OsuUISongBrowserInfoLabel::buildSongInfoString()
 
 UString OsuUISongBrowserInfoLabel::buildDiffInfoString()
 {
-	return UString::format("CS:%.2g AR:%.2g OD:%.2g HP:%.2g Stars:%.2g", m_fCS, m_fAR, m_fOD, m_fHP, m_fStars);
+	return UString::format("CS:%.2g AR:%.2g OD:%.2g HP:%.2g Stars:%.3g", m_fCS, m_fAR, m_fOD, m_fHP, m_fStars);
 }
 
 UString OsuUISongBrowserInfoLabel::buildOffsetInfoString()

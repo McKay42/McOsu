@@ -25,13 +25,14 @@ public:
 	static ConVar *m_osu_slider_scorev2;
 	static ConVar *m_osu_draw_statistics_pp;
 	static ConVar *m_osu_debug_pp;
+	static ConVar *m_osu_database_dynamic_star_calculation;
 
 public:
 	OsuBeatmapDifficulty(Osu *osu, UString filepath, UString folder);
 	~OsuBeatmapDifficulty();
 	void unload();
 
-	bool loadMetadataRaw();
+	bool loadMetadataRaw(bool calculateStars = false);
 	bool loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject*> *hitobjects);
 
 	void loadBackgroundImage();
@@ -40,6 +41,7 @@ public:
 
 	inline unsigned long long getSortHack() const {return m_iSortHack;}
 	inline bool shouldBackgroundImageBeLoaded() const {return m_bShouldBackgroundImageBeLoaded;}
+	bool isBackgroundLoaderActive();
 
 	struct HITCIRCLE
 	{

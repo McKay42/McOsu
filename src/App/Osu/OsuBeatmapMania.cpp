@@ -157,7 +157,7 @@ void OsuBeatmapMania::update()
 void OsuBeatmapMania::onKeyDown(KeyboardEvent &key)
 {
 	// lock asap
-	std::lock_guard<std::mutex> lk(m_clicksMutex);
+	//std::lock_guard<std::mutex> lk(m_clicksMutex);
 
 	int column = getColumnForKey(getNumColumns(), key);
 	if (column != -1 && !m_bColumnKeyDown[column])
@@ -175,7 +175,7 @@ void OsuBeatmapMania::onKeyDown(KeyboardEvent &key)
 void OsuBeatmapMania::onKeyUp(KeyboardEvent &key)
 {
 	// lock asap
-	std::lock_guard<std::mutex> lk(m_clicksMutex);
+	//std::lock_guard<std::mutex> lk(m_clicksMutex);
 
 	int column = getColumnForKey(getNumColumns(), key);
 	if (column != -1 && m_bColumnKeyDown[column])

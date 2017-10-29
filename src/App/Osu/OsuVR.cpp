@@ -26,11 +26,13 @@
 #include "OsuNotificationOverlay.h"
 
 #include "OsuVRUIImageButton.h"
+#include "OsuVRUIImageCheckbox.h"
 #include "OsuVRUISlider.h"
 
 ConVar osu_vr_matrix_screen("osu_vr_matrix_screen");
 ConVar osu_vr_matrix_playfield("osu_vr_matrix_playfield");
 ConVar osu_vr_reset_matrices("osu_vr_reset_matrices");
+ConVar osu_vr_layout_lock("osu_vr_layout_lock", false);
 
 ConVar osu_vr_screen_scale("osu_vr_screen_scale", 1.64613f);
 ConVar osu_vr_playfield_scale("osu_vr_playfield_scale", 0.945593f);
@@ -142,11 +144,18 @@ OsuVR::OsuVR(Osu *osu)
 	m_matrixResetButton = button;
 	m_uiElements.push_back(m_matrixResetButton);
 
+	m_lockLayoutCheckbox = new OsuVRUIImageCheckbox(this, 0, 0, 0.3f, 0.3f, "OSU_VR_UI_ICON_LOCK_LOCKED", "OSU_VR_UI_ICON_LOCK_UNLOCKED");
+	m_lockLayoutCheckbox->setChecked(osu_vr_layout_lock.getBool());
+	m_lockLayoutCheckbox->setClickCallback( fastdelegate::MakeDelegate(this, &OsuVR::onLayoutLockClicked) );
+	m_uiElements.push_back(m_lockLayoutCheckbox);
+
 	// load/execute VR stuff only in VR builds
 	if (openvr->isReady())
 	{
 		engine->getResourceManager()->loadImage("ic_keyboard_white_48dp.png", "OSU_VR_UI_ICON_KEYBOARD");
 		engine->getResourceManager()->loadImage("ic_replay_white_48dp.png", "OSU_VR_UI_ICON_RESET");
+		engine->getResourceManager()->loadImage("ic_lock_outline_white_48dp.png", "OSU_VR_UI_ICON_LOCK_LOCKED");
+		engine->getResourceManager()->loadImage("ic_lock_open_white_48dp.png", "OSU_VR_UI_ICON_LOCK_UNLOCKED");
 		engine->getResourceManager()->loadImage("ic_add_white_48dp.png", "OSU_VR_UI_ICON_PLUS");
 		engine->getResourceManager()->loadImage("ic_remove_white_48dp.png", "OSU_VR_UI_ICON_MINUS");
 
@@ -672,7 +681,7 @@ void OsuVR::update()
 		}
 	}
 
-	if (m_osu->isNotInPlayModeOrPaused()) // only allow moving while not actively playing
+	if (m_osu->isNotInPlayModeOrPaused() && !osu_vr_layout_lock.getBool()) // only allow moving while not actively playing
 	{
 		// move virtual screen while grip button is pressed on right controller, anchor at controller
 		if (rightController->isButtonPressed(OpenVRController::BUTTON::BUTTON_GRIP))
@@ -768,7 +777,7 @@ void OsuVR::update()
 	}
 
 	// handle scaling (pinching/zooming/whatever)
-	if (m_osu->isNotInPlayModeOrPaused()) // only allow scaling while not actively playing
+	if (m_osu->isNotInPlayModeOrPaused() && !osu_vr_layout_lock.getBool()) // only allow scaling while not actively playing
 	{
 		if (openvr->getLeftController()->getTrigger() > 0.95f && openvr->getRightController()->getTrigger() > 0.95f)
 		{
@@ -902,7 +911,8 @@ void OsuVR::update()
 
 	// handle UI element visibility depending on game state
 	m_keyboardButton->setVisible(!m_osu->isInPlayMode());
-	m_matrixResetButton->setVisible(!m_osu->isInPlayMode());
+	m_matrixResetButton->setVisible(!m_osu->isInPlayMode() && !m_lockLayoutCheckbox->isChecked());
+	m_lockLayoutCheckbox->setVisible(!m_osu->isInPlayMode());
 	m_offsetDownButton->setVisible(m_osu->isInPlayMode());
 	m_offsetUpButton->setVisible(m_osu->isInPlayMode());
 	m_scrubbingSlider->setVisible(m_osu->isInPlayMode());
@@ -951,6 +961,7 @@ void OsuVR::updateLayout()
 {
 	m_keyboardButton->setPosX(m_vVirtualScreenSize.x + osu_vr_ui_offset.getFloat());
 	m_matrixResetButton->setPos(m_vVirtualScreenSize.x + osu_vr_ui_offset.getFloat(), (-m_vVirtualScreenSize.y - m_matrixResetButton->getSize().y < m_keyboardButton->getPos().y + m_keyboardButton->getSize().y ? -(m_keyboardButton->getPos().y + m_keyboardButton->getSize().y) : m_vVirtualScreenSize.y + m_matrixResetButton->getSize().y));
+	m_lockLayoutCheckbox->setPos(m_vVirtualScreenSize.x + osu_vr_ui_offset.getFloat() + m_matrixResetButton->getSize().x + osu_vr_ui_offset.getFloat(), (-m_vVirtualScreenSize.y - m_matrixResetButton->getSize().y < m_keyboardButton->getPos().y + m_keyboardButton->getSize().y ? -(m_keyboardButton->getPos().y + m_keyboardButton->getSize().y) : m_vVirtualScreenSize.y + m_matrixResetButton->getSize().y));
 	m_volumeSlider->setPos(m_vVirtualScreenSize.x/2.0f - m_volumeSlider->getSize().x/2.0f, m_volumeSlider->getSize().y + osu_vr_ui_offset.getFloat());
 
 	const float gap = 0.05f;
@@ -1010,10 +1021,10 @@ void OsuVR::resetMatrices()
 	Matrix4 screenRotation;
 	screenRotation.rotate(-90.0f, 0, 1, 0);
 	Matrix4 screenTranslation;
-	screenTranslation.translate(-openvr->getPlayAreaSize().y*0.4f, 2.0f, -openvr->getPlayAreaSize().x/2.0f);
+	screenTranslation.translate(-openvr->getPlayAreaSize().y*0.3f, 2.0f, -openvr->getPlayAreaSize().x/2.0f);
 	m_screenMatrix = screenRotation * screenTranslation;
 	m_playfieldMatrix.identity();
-	m_playfieldMatrix.translate(0, 1.5f, -(openvr->getPlayAreaSize().y/2.0f)*0.5f);
+	m_playfieldMatrix.translate(0, 1.5f, -(openvr->getPlayAreaSize().y/2.0f)*0.35f);
 
 	osu_vr_screen_scale.setValue(m_fDefaultScreenScale);
 	osu_vr_playfield_scale.setValue(m_fDefaultPlayfieldScale);
@@ -1056,6 +1067,11 @@ void OsuVR::onMatrixResetClicked()
 {
 	resetMatrices();
 	save();
+}
+
+void OsuVR::onLayoutLockClicked()
+{
+	osu_vr_layout_lock.setValue(m_lockLayoutCheckbox->isChecked() ? 1.0f : 0.0f);
 }
 
 void OsuVR::onKeyboardButtonClicked()

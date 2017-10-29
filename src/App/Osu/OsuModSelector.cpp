@@ -121,6 +121,7 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen()
 	addExperimentalCheckbox("No 100s no 50s", "300 or miss. PF \"lite\"", convar->getConVarByName("osu_mod_no100s"));
 	addExperimentalCheckbox("MinG3012", "No 100s. Only 300s or 50s. Git gud.", convar->getConVarByName("osu_mod_ming3012"));
 	addExperimentalCheckbox("MillhioreF", "Go below AR 0. Doubled approach time.", convar->getConVarByName("osu_mod_millhioref"));
+	addExperimentalCheckbox("Mafham", "Approach rate is set to negative infinity. See the entire beatmap at once.\nUses very aggressive optimizations to keep the framerate high, you have been warned!", convar->getConVarByName("osu_mod_mafham"));
 	addExperimentalCheckbox("Flip Horizontally", "Playfield is flipped horizontally.", convar->getConVarByName("osu_playfield_mirror_horizontal"));
 	addExperimentalCheckbox("Flip Vertically", "Playfield is flipped vertically.", convar->getConVarByName("osu_playfield_mirror_vertical"));
 
@@ -1019,6 +1020,11 @@ void OsuModSelector::onCheckboxChange(CBaseUICheckbox *checkbox)
 		{
 			if (m_experimentalMods[i].cvar != NULL)
 				m_experimentalMods[i].cvar->setValue(checkbox->isChecked());
+
+			// force mod update
+			if (m_osu->isInPlayMode() && m_osu->getSelectedBeatmap() != NULL)
+				m_osu->getSelectedBeatmap()->onModUpdate();
+
 			break;
 		}
 	}
