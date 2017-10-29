@@ -85,6 +85,9 @@ protected:
 			return;
 		}
 
+		if (OsuBeatmapDifficulty::m_osu_database_dynamic_star_calculation->getBool())
+			m_diff->loadMetadataRaw(true); // for stars
+
 		m_diff->loadBackgroundImagePath();
 		m_bAsyncReady = true;
 	}
@@ -117,6 +120,7 @@ struct TimingPointSortComparator
 ConVar *OsuBeatmapDifficulty::m_osu_slider_scorev2 = NULL;
 ConVar *OsuBeatmapDifficulty::m_osu_draw_statistics_pp = NULL;
 ConVar *OsuBeatmapDifficulty::m_osu_debug_pp = NULL;
+ConVar *OsuBeatmapDifficulty::m_osu_database_dynamic_star_calculation = NULL;
 unsigned long long OsuBeatmapDifficulty::sortHackCounter = 0;
 
 OsuBeatmapDifficulty::OsuBeatmapDifficulty(Osu *osu, UString filepath, UString folder)
@@ -135,6 +139,8 @@ OsuBeatmapDifficulty::OsuBeatmapDifficulty(Osu *osu, UString filepath, UString f
 		m_osu_draw_statistics_pp = convar->getConVarByName("osu_draw_statistics_pp");
 	if (m_osu_debug_pp == NULL)
 		m_osu_debug_pp = convar->getConVarByName("osu_debug_pp");
+	if (m_osu_database_dynamic_star_calculation == NULL)
+		m_osu_database_dynamic_star_calculation = convar->getConVarByName("osu_database_dynamic_star_calculation");
 
 	// default values
 	stackLeniency = 0.7f;
@@ -160,7 +166,7 @@ OsuBeatmapDifficulty::OsuBeatmapDifficulty(Osu *osu, UString filepath, UString f
 	minBPM = 0;
 	maxBPM = 0;
 	numObjects = 0;
-	starsNoMod = 0;
+	starsNoMod = 0.0f;
 	ID = 0;
 	setID = 0;
 
@@ -195,8 +201,10 @@ void OsuBeatmapDifficulty::unload()
 	m_speedStarsForNumHitObjects = std::vector<double>();
 }
 
-bool OsuBeatmapDifficulty::loadMetadataRaw()
+bool OsuBeatmapDifficulty::loadMetadataRaw(bool calculateStars)
 {
+	unload();
+
 	if (Osu::debug->getBool())
 		debugLog("OsuBeatmapDifficulty::loadMetadata() : %s\n", m_sFilePath.toUtf8());
 
@@ -234,7 +242,12 @@ bool OsuBeatmapDifficulty::loadMetadataRaw()
 			else if (curLine.find("[TimingPoints]") != std::string::npos)
 				curBlock = 5;
 			else if (curLine.find("[HitObjects]") != std::string::npos)
-				break; // stop early
+			{
+				if (calculateStars)
+					curBlock = 6; // star calculation needs hitobjects
+				else
+					break; // stop early otherwise
+			}
 
 			switch (curBlock)
 			{
@@ -373,6 +386,52 @@ bool OsuBeatmapDifficulty::loadMetadataRaw()
 					timingpoints.push_back(t);
 				}
 				break;
+			case 6: // HitObjects
+
+				int x,y;
+				long time;
+				int type;
+				int hitSound;
+
+				// minimalist hitobject loading, this only loads the parts necessary for the star calculation
+				if (sscanf(curLineChar, " %i , %i , %li , %i , %i", &x, &y, &time, &type, &hitSound) == 5)
+				{
+					if (type & 0x1) // circle
+					{
+						HITCIRCLE c;
+
+						c.x = x;
+						c.y = y;
+						c.time = time;
+
+						hitcircles.push_back(c);
+					}
+					else if (type & 0x2) // slider
+					{
+						SLIDER s;
+
+						s.x = x;
+						s.y = y;
+						s.time = time;
+						s.repeat = 0; // unused for star calculation
+						s.sliderTime = 0.0f; // unused for star calculation
+						s.sliderTimeWithoutRepeats = 0.0f; // unused for star calculation
+
+						sliders.push_back(s);
+					}
+					else if (type & 0x8) // spinner
+					{
+						SPINNER s;
+
+						s.x = x;
+						s.y = y;
+						s.time = time;
+						s.endTime = 0; // unused for star calculation
+
+						spinners.push_back(s);
+					}
+				}
+				break;
 			}
 		}
 	}
@@ -424,6 +483,21 @@ bool OsuBeatmapDifficulty::loadMetadataRaw()
 	// old beatmaps: AR = OD, there is no ApproachRate stored
 	if (!foundAR)
 		AR = OD;
+
+	// calculate default nomod standard stars, and immediately unload everything unnecessary after that
+	if (calculateStars && m_osu_database_dynamic_star_calculation->getBool())
+	{
+		if (starsNoMod == 0.0f)
+		{
+			double aimStars = 0.0;
+			double speedStars = 0.0;
+			starsNoMod = calculateStarDiff(NULL, &aimStars, &speedStars);
+			unload();
+
+			if (starsNoMod == 0.0f)
+				starsNoMod = -0.0000001f; // to avoid reloading endlessly on beatmaps which simply have zero stars (or where the calculation fails)
+		}
+	}
 
 	return true;
 }
@@ -786,7 +860,7 @@ void OsuBeatmapDifficulty::loadBackgroundImage()
 		if (m_backgroundImagePathLoader->isReady())
 			deleteBackgroundImagePathLoader();
 	}
-	else if (backgroundImageName.length() < 1) // dynamically load background image path from osu file if it wasn't set by the database
+	else if (backgroundImageName.length() < 1 || starsNoMod == 0.0) // dynamically load background image path and star rating from osu file if it wasn't set by the database
 	{
 		m_backgroundImagePathLoader = new BackgroundImagePathLoader(this);
 		engine->getResourceManager()->requestNextLoadAsync();
@@ -848,6 +922,7 @@ void OsuBeatmapDifficulty::loadBackgroundImagePath()
 			else if (curLine.find("[Colours]") != std::string::npos)
 				break; // stop early
 
+			bool found = false;
 			switch (curBlock)
 			{
 			case 0: // Events
@@ -857,12 +932,20 @@ void OsuBeatmapDifficulty::loadBackgroundImagePath()
 					if (sscanf(curLineChar, " %f , %f , \"%1023[^\"]\"", &temp, &temp, stringBuffer) == 3)
 					{
 						backgroundImageName = UString(stringBuffer);
+						found = true;
 					}
 				}
 				break;
 			}
+			if (found)
+				break;
 		}
 	}
+}
+
+bool OsuBeatmapDifficulty::isBackgroundLoaderActive()
+{
+	 return m_backgroundImagePathLoader != NULL && !m_backgroundImagePathLoader->isReady();
 }
 
 void OsuBeatmapDifficulty::buildStandardHitObjects(OsuBeatmapStandard *beatmap, std::vector<OsuHitObject*> *hitobjects)
@@ -1143,13 +1226,16 @@ std::vector<OsuBeatmapDifficulty::PPHitObject> OsuBeatmapDifficulty::generatePPH
 	std::sort(ppHitObjects.begin(), ppHitObjects.end(), HitObjectSortComparator());
 
 	// apply speed multiplier
-	if (beatmap->getOsu()->getSpeedMultiplier() != 1.0f && beatmap->getOsu()->getSpeedMultiplier() > 0.0f)
+	if (beatmap != NULL)
 	{
-		const double speedMultiplier = 1.0 / (double)beatmap->getOsu()->getSpeedMultiplier();
-		for (int i=0; i<ppHitObjects.size(); i++)
+		if (beatmap->getOsu()->getSpeedMultiplier() != 1.0f && beatmap->getOsu()->getSpeedMultiplier() > 0.0f)
 		{
-			ppHitObjects[i].time = (long)((double)ppHitObjects[i].time * speedMultiplier);
-			ppHitObjects[i].end_time = (long)((double)ppHitObjects[i].end_time * speedMultiplier);
+			const double speedMultiplier = 1.0 / (double)beatmap->getOsu()->getSpeedMultiplier();
+			for (int i=0; i<ppHitObjects.size(); i++)
+			{
+				ppHitObjects[i].time = (long)((double)ppHitObjects[i].time * speedMultiplier);
+				ppHitObjects[i].end_time = (long)((double)ppHitObjects[i].end_time * speedMultiplier);
+			}
 		}
 	}
 
@@ -1418,7 +1504,7 @@ double OsuBeatmapDifficulty::calculateStarDiffForHitObjects(std::vector<PPHitObj
 double OsuBeatmapDifficulty::calculateStarDiff(OsuBeatmap *beatmap, double *aim, double *speed, int upToObjectIndex)
 {
 	std::vector<PPHitObject> hitObjects = generatePPHitObjectsForBeatmap(beatmap);
-	return calculateStarDiffForHitObjects(hitObjects, beatmap->getCS(), aim, speed, upToObjectIndex);
+	return calculateStarDiffForHitObjects(hitObjects, (beatmap != NULL ? beatmap->getCS() : CS), aim, speed, upToObjectIndex);
 }
 
 double OsuBeatmapDifficulty::calculatePPv2(Osu *osu, OsuBeatmap *beatmap, double aim, double speed, int numHitObjects, int numCircles, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50/*, SCORE_VERSION scoreVersion*/)

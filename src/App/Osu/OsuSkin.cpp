@@ -277,7 +277,7 @@ OsuSkin::~OsuSkin()
 
 void OsuSkin::update()
 {
-	// HACKHACK: shitty check to not animate while paused with hitobjects in background
+	// shitty check to not animate while paused with hitobjects in background
 	if (m_osu->isInPlayMode() && m_osu->getSelectedBeatmap() != NULL && !m_osu->getSelectedBeatmap()->isPlaying() && !osu_skin_animation_force.getBool())
 		return;
 

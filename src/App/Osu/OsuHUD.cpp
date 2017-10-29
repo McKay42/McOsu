@@ -29,13 +29,19 @@
 #include "OsuHitObject.h"
 #include "OsuCircle.h"
 
+#include "OpenGLHeaders.h"
+
 ConVar osu_cursor_alpha("osu_cursor_alpha", 1.0f);
-ConVar osu_cursor_scale("osu_cursor_scale", 1.29f);
+ConVar osu_cursor_scale("osu_cursor_scale", 1.5f);
 ConVar osu_cursor_expand_scale_multiplier("osu_cursor_expand_scale_multiplier", 1.3f);
 ConVar osu_cursor_expand_duration("osu_cursor_expand_duration", 0.1f);
-ConVar osu_cursor_trail_length("osu_cursor_trail_length", 0.17f);
-ConVar osu_cursor_trail_spacing("osu_cursor_trail_spacing", 0.015f);
+ConVar osu_cursor_trail_length("osu_cursor_trail_length", 0.17f, "how long unsmooth cursortrails should be, in seconds");
+ConVar osu_cursor_trail_spacing("osu_cursor_trail_spacing", 0.015f, "how big the gap between consecutive unsmooth cursortrail images should be, in seconds");
 ConVar osu_cursor_trail_alpha("osu_cursor_trail_alpha", 1.0f);
+ConVar osu_cursor_trail_smooth_force("osu_cursor_trail_smooth_force", false);
+ConVar osu_cursor_trail_smooth_length("osu_cursor_trail_smooth_length", 0.5f, "how long smooth cursortrails should be, in seconds");
+ConVar osu_cursor_trail_smooth_div("osu_cursor_trail_smooth_div", 4.0f, "divide the cursortrail.png image size by this much, for determining the distance to the next trail image");
+ConVar osu_cursor_trail_max_size("osu_cursor_trail_max_size", 2048, "maximum number of rendered trail images, array size limit");
 
 ConVar osu_hud_scale("osu_hud_scale", 1.0f);
 ConVar osu_hud_hiterrorbar_scale("osu_hud_hiterrorbar_scale", 1.0f);
@@ -67,6 +73,7 @@ ConVar osu_draw_scrubbing_timeline("osu_draw_scrubbing_timeline", true);
 ConVar osu_draw_continue("osu_draw_continue", true);
 
 ConVar osu_draw_statistics_misses("osu_draw_statistics_misses", false);
+ConVar osu_draw_statistics_sliderbreaks("osu_draw_statistics_sliderbreaks", false);
 ConVar osu_draw_statistics_bpm("osu_draw_statistics_bpm", false);
 ConVar osu_draw_statistics_ar("osu_draw_statistics_ar", false);
 ConVar osu_draw_statistics_cs("osu_draw_statistics_cs", false);
@@ -94,6 +101,8 @@ OsuHUD::OsuHUD(Osu *osu)
 	m_osu_playfield_stretch_y_ref = convar->getConVarByName("osu_playfield_stretch_y");
 
 	m_tempFont = engine->getResourceManager()->getFont("FONT_DEFAULT");
+	m_cursorTrailShader = engine->getResourceManager()->loadShader("cursortrail.vsh", "cursortrail.fsh", "cursortrail");
+	m_cursorTrail.reserve(osu_cursor_trail_max_size.getInt()*2);
 
 	m_fCurFps = 60.0f;
 	m_fCurFpsSmooth = 60.0f;
@@ -136,7 +145,7 @@ void OsuHUD::draw(Graphics *g)
 			if (m_osu->getModTarget() && osu_draw_target_heatmap.getBool() && beatmapStd != NULL)
 				g->translate(0, beatmapStd->getHitcircleDiameter()*(1.0f / (osu_hud_scale.getFloat()*osu_hud_statistics_scale.getFloat())));
 
-			drawStatistics(g, m_osu->getScore()->getNumMisses(), beatmap->getBPM(), OsuGameRules::getApproachRateForSpeedMultiplier(beatmap, beatmap->getSpeedMultiplier()), beatmap->getCS(), OsuGameRules::getOverallDifficultyForSpeedMultiplier(beatmap, beatmap->getSpeedMultiplier()), beatmap->getNPS(), beatmap->getND(), m_osu->getScore()->getUnstableRate(), m_osu->getScore()->getPPv2());
+			drawStatistics(g, m_osu->getScore()->getNumMisses(), m_osu->getScore()->getNumSliderBreaks(), beatmap->getBPM(), OsuGameRules::getApproachRateForSpeedMultiplier(beatmap, beatmap->getSpeedMultiplier()), beatmap->getCS(), OsuGameRules::getOverallDifficultyForSpeedMultiplier(beatmap, beatmap->getSpeedMultiplier()), beatmap->getNPS(), beatmap->getND(), m_osu->getScore()->getUnstableRate(), m_osu->getScore()->getPPv2());
 		}
 		g->popTransform();
 
@@ -277,7 +286,7 @@ void OsuHUD::drawDummy(Graphics *g)
 
 	drawSkip(g);
 
-	drawStatistics(g, 0, 180, 9.0f, 4.0f, 8.0f, 4, 6, 90.0f, 123);
+	drawStatistics(g, 0, 0, 180, 9.0f, 4.0f, 8.0f, 4, 6, 90.0f, 123);
 
 	drawWarningArrows(g);
 
@@ -310,7 +319,7 @@ void OsuHUD::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 			if (beatmap->isInSkippableSection())
 				drawSkip(g);
 
-			drawStatistics(g, m_osu->getScore()->getNumMisses(), beatmap->getBPM(), OsuGameRules::getApproachRateForSpeedMultiplier(beatmap, beatmap->getSpeedMultiplier()), beatmap->getCS(), OsuGameRules::getOverallDifficultyForSpeedMultiplier(beatmap, beatmap->getSpeedMultiplier()), beatmap->getNPS(), beatmap->getND(), m_osu->getScore()->getUnstableRate(), m_osu->getScore()->getPPv2());
+			drawStatistics(g, m_osu->getScore()->getNumMisses(), m_osu->getScore()->getNumSliderBreaks(), beatmap->getBPM(), OsuGameRules::getApproachRateForSpeedMultiplier(beatmap, beatmap->getSpeedMultiplier()), beatmap->getCS(), OsuGameRules::getOverallDifficultyForSpeedMultiplier(beatmap, beatmap->getSpeedMultiplier()), beatmap->getNPS(), beatmap->getND(), m_osu->getScore()->getUnstableRate(), m_osu->getScore()->getPPv2());
 
 			vr->getShaderUntexturedLegacyGeneric()->enable();
 			vr->getShaderUntexturedLegacyGeneric()->setUniformMatrix4fv("matrix", mvp);
@@ -350,7 +359,7 @@ void OsuHUD::drawVRDummy(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 	{
 		drawSkip(g);
 
-		drawStatistics(g, 0, 180, 9.0f, 4.0f, 8.0f, 4, 6, 90.0f, 123);
+		drawStatistics(g, 0, 0, 180, 9.0f, 4.0f, 8.0f, 4, 6, 90.0f, 123);
 
 		vr->getShaderUntexturedLegacyGeneric()->enable();
 		vr->getShaderUntexturedLegacyGeneric()->setUniformMatrix4fv("matrix", mvp);
@@ -399,36 +408,91 @@ void OsuHUD::update()
 
 void OsuHUD::drawCursor(Graphics *g, Vector2 pos, float alphaMultiplier)
 {
-	if (osu_draw_cursor_trail.getBool())
+	Image *trailImage = m_osu->getSkin()->getCursorTrail();
+	const bool smoothCursorTrail = m_osu->getSkin()->useSmoothCursorTrail() || osu_cursor_trail_smooth_force.getBool();
+	const float trailWidth = trailImage->getWidth() * getCursorTrailScaleFactor() * osu_cursor_scale.getFloat();
+	const float trailHeight = trailImage->getHeight() * getCursorTrailScaleFactor() * osu_cursor_scale.getFloat();
+
+	if (osu_draw_cursor_trail.getBool() && trailImage->isReady())
 	{
+		// legacy code
+		/*
 		int i = m_cursorTrail.size()-1;
 		while (i >= 0)
 		{
 			float alpha = clamp<float>(((m_cursorTrail[i].time-engine->getTime())/osu_cursor_trail_length.getFloat())*alphaMultiplier, 0.0f, 1.0f);
 			if (m_cursorTrail[i].pos != pos)
 				drawCursorTrailRaw(g, alpha*osu_cursor_trail_alpha.getFloat(), m_cursorTrail[i].pos);
+
 			i--;
 		}
 
 		drawCursorTrailRaw(g, osu_cursor_trail_alpha.getFloat()*alphaMultiplier, pos);
+		*/
+
+		// add the sample for the current frame
+		addCursorTrailPosition(pos);
+
+		// this loop draws the old style trail, and updates the alpha values for each segment
+		const float trailLength = smoothCursorTrail ? osu_cursor_trail_smooth_length.getFloat() : osu_cursor_trail_length.getFloat();
+		int i = m_cursorTrail.size() - 1;
+		while (i >= 0)
+		{
+			m_cursorTrail[i].alpha = clamp<float>(((m_cursorTrail[i].time - engine->getTime()) / trailLength) * alphaMultiplier, 0.0f, 1.0f);
+
+			if (!smoothCursorTrail && m_cursorTrail[i].alpha > 0.0f)
+				drawCursorTrailRaw(g, m_cursorTrail[i].alpha*osu_cursor_trail_alpha.getFloat(), m_cursorTrail[i].pos);
+
+			i--;
+		}
+
+		// draw new style continuous smooth trail
+		if (smoothCursorTrail)
+		{
+			VertexArrayObject vao(Graphics::PRIMITIVE::PRIMITIVE_QUADS);
+			for (int i=0; i<m_cursorTrail.size(); i++)
+			{
+				Vector3 topLeft = Vector3(m_cursorTrail[i].pos.x - trailWidth/2, m_cursorTrail[i].pos.y - trailHeight/2, m_cursorTrail[i].alpha);
+				vao.addVertex(topLeft);
+				vao.addTexcoord(0, 0);
+
+				Vector3 topRight = Vector3(m_cursorTrail[i].pos.x + trailWidth/2, m_cursorTrail[i].pos.y - trailHeight/2, m_cursorTrail[i].alpha);
+				vao.addVertex(topRight);
+				vao.addTexcoord(1, 0);
+
+				Vector3 bottomRight = Vector3(m_cursorTrail[i].pos.x + trailWidth/2, m_cursorTrail[i].pos.y + trailHeight/2, m_cursorTrail[i].alpha);
+				vao.addVertex(bottomRight);
+				vao.addTexcoord(1, 1);
+
+				Vector3 bottomLeft = Vector3(m_cursorTrail[i].pos.x - trailWidth/2, m_cursorTrail[i].pos.y + trailHeight/2, m_cursorTrail[i].alpha);
+				vao.addVertex(bottomLeft);
+				vao.addTexcoord(0, 1);
+			}
+
+			m_cursorTrailShader->enable();
+			{
+				m_cursorTrailShader->setUniform1f("time", engine->getTime());
+
+				trailImage->bind();
+				{
+					glBlendFunc(GL_SRC_ALPHA, GL_ONE); // HACKHACK: OpenGL hardcoded
+					{
+						g->drawVAO(&vao);
+					}
+					glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // HACKHACK: OpenGL hardcoded
+				}
+				trailImage->unbind();
+			}
+			m_cursorTrailShader->disable();
+		}
 	}
 
 	drawCursorRaw(g, pos, alphaMultiplier);
 
-	if (osu_draw_cursor_trail.getBool())
+	// trail cleanup
+	while ((m_cursorTrail.size() > 1 && engine->getTime() > m_cursorTrail[0].time) || m_cursorTrail.size() > osu_cursor_trail_max_size.getInt()) // always leave at least 1 previous entry in there
 	{
-		// this is a bit dirty, having array manipulation and update logic in a drawing function, but it's not too bad in this case i think.
-		// necessary due to the pos variable (autopilot/auto etc.)
-		if ((m_cursorTrail.size() > 0 && m_cursorTrail[m_cursorTrail.size()-1].pos != pos && engine->getTime() > m_cursorTrail[m_cursorTrail.size()-1].time-osu_cursor_trail_length.getFloat()+osu_cursor_trail_spacing.getFloat()) || m_cursorTrail.size() == 0)
-		{
-			CURSORTRAIL ct;
-			ct.pos = pos;
-			ct.time = engine->getTime() + osu_cursor_trail_length.getFloat();
-			m_cursorTrail.push_back(ct);
-		}
-
-		if (m_cursorTrail.size() > 0 && engine->getTime() > m_cursorTrail[0].time)
-			m_cursorTrail.erase(m_cursorTrail.begin());
+		m_cursorTrail.erase(m_cursorTrail.begin());
 	}
 }
 
@@ -468,8 +532,8 @@ void OsuHUD::drawCursorRaw(Graphics *g, Vector2 pos, float alphaMultiplier)
 
 void OsuHUD::drawCursorTrailRaw(Graphics *g, float alpha, Vector2 pos)
 {
-	Image *trail = m_osu->getSkin()->getCursorTrail();
-	const float scale = getCursorScaleFactor() * (m_osu->getSkin()->isCursor2x() ? 0.5f : 1.0f); // use scale from cursor, not from trail, because fuck you
+	Image *trailImage = m_osu->getSkin()->getCursorTrail();
+	const float scale = getCursorTrailScaleFactor();
 	const float animatedScale = scale * (m_osu->getSkin()->getCursorExpand() ? m_fCursorExpandAnim : 1.0f);
 
 	g->setColor(0xffffffff);
@@ -477,7 +541,7 @@ void OsuHUD::drawCursorTrailRaw(Graphics *g, float alpha, Vector2 pos)
 	g->pushTransform();
 		g->scale(animatedScale*osu_cursor_scale.getFloat(), animatedScale*osu_cursor_scale.getFloat());
 		g->translate(pos.x, pos.y);
-		g->drawImage(trail);
+		g->drawImage(trailImage);
 	g->popTransform();
 }
 
@@ -1238,7 +1302,7 @@ void OsuHUD::drawProgressBarVR(Graphics *g, Matrix4 &mvp, OsuVR *vr, float perce
 	}
 }
 
-void OsuHUD::drawStatistics(Graphics *g, int misses, int bpm, float ar, float cs, float od, int nps, int nd, int ur, int pp)
+void OsuHUD::drawStatistics(Graphics *g, int misses, int sliderbreaks, int bpm, float ar, float cs, float od, int nps, int nd, int ur, int pp)
 {
 	g->pushTransform();
 		g->scale(osu_hud_statistics_scale.getFloat()*osu_hud_scale.getFloat(), osu_hud_statistics_scale.getFloat()*osu_hud_scale.getFloat());
@@ -1253,6 +1317,11 @@ void OsuHUD::drawStatistics(Graphics *g, int misses, int bpm, float ar, float cs
 		if (osu_draw_statistics_misses.getBool())
 		{
 			drawStatisticText(g, UString::format("Miss: %i", misses));
+			g->translate(0, yDelta);
+		}
+		if (osu_draw_statistics_sliderbreaks.getBool())
+		{
+			drawStatisticText(g, UString::format("SBreak: %i", sliderbreaks));
 			g->translate(0, yDelta);
 		}
 		if (osu_draw_statistics_bpm.getBool())
@@ -1384,6 +1453,11 @@ float OsuHUD::getCursorScaleFactor()
 	return (float)m_osu->getScreenHeight() / spriteRes;
 }
 
+float OsuHUD::getCursorTrailScaleFactor()
+{
+	return getCursorScaleFactor() * (m_osu->getSkin()->isCursor2x() ? 0.5f : 1.0f); // use scale from cursor, not from trail, because fuck you
+}
+
 void OsuHUD::animateCombo()
 {
 	m_fComboAnim1 = 0.0f;
@@ -1440,6 +1514,64 @@ void OsuHUD::animateCursorExpand()
 void OsuHUD::animateCursorShrink()
 {
 	anim->moveQuadOut(&m_fCursorExpandAnim, 1.0f, osu_cursor_expand_duration.getFloat(), 0.0f, true);
+}
+
+void OsuHUD::addCursorTrailPosition(Vector2 pos)
+{
+	if (pos.x < -m_osu->getScreenWidth() || pos.x > m_osu->getScreenWidth()*2 || pos.y < -m_osu->getScreenHeight() || pos.y > m_osu->getScreenHeight()*2) return; // fuck oob trails
+
+	Image *trailImage = m_osu->getSkin()->getCursorTrail();
+	const bool smoothCursorTrail = m_osu->getSkin()->useSmoothCursorTrail() || osu_cursor_trail_smooth_force.getBool();
+	const float trailWidth = trailImage->getWidth() * getCursorTrailScaleFactor() * osu_cursor_scale.getFloat();
+
+	CURSORTRAIL ct;
+	ct.pos = pos;
+	ct.time = engine->getTime() + (smoothCursorTrail ? osu_cursor_trail_smooth_length.getFloat() : osu_cursor_trail_length.getFloat());
+	ct.alpha = 1.0f;
+
+	if (smoothCursorTrail)
+	{
+		// interpolate mid points between the last point and the current point
+		if (m_cursorTrail.size() > 0)
+		{
+			Vector2 prevPos = m_cursorTrail[m_cursorTrail.size()-1].pos;
+			float prevTime = m_cursorTrail[m_cursorTrail.size()-1].time;
+
+			Vector2 delta = pos - prevPos;
+			int numMidPoints = delta.length() / (trailWidth/osu_cursor_trail_smooth_div.getFloat());
+			if (numMidPoints > 0)
+			{
+				Vector2 step = delta.normalize() * (trailWidth/osu_cursor_trail_smooth_div.getFloat());
+				float timeStep = (ct.time - prevTime) / (float)(numMidPoints);
+				for (int i=clamp<int>(numMidPoints-osu_cursor_trail_max_size.getInt()/2, 0, osu_cursor_trail_max_size.getInt()); i<numMidPoints; i++) // limit to half the maximum new mid points per frame
+				{
+					CURSORTRAIL mid;
+					mid.pos = prevPos + step*(i+1);
+					mid.time = prevTime + timeStep*(i+1);
+					mid.alpha = 1.0f;
+					m_cursorTrail.push_back(mid);
+				}
+			}
+		}
+		else
+			m_cursorTrail.push_back(ct);
+	}
+	else if ((m_cursorTrail.size() > 0 && engine->getTime() > m_cursorTrail[m_cursorTrail.size()-1].time-osu_cursor_trail_length.getFloat()+osu_cursor_trail_spacing.getFloat()) || m_cursorTrail.size() == 0)
+	{
+		if (m_cursorTrail.size() > 0 && m_cursorTrail[m_cursorTrail.size()-1].pos == pos)
+		{
+			m_cursorTrail[m_cursorTrail.size()-1].time = ct.time;
+			m_cursorTrail[m_cursorTrail.size()-1].alpha = 1.0f;
+		}
+		else
+			m_cursorTrail.push_back(ct);
+	}
+
+	// early cleanup
+	while (m_cursorTrail.size() > osu_cursor_trail_max_size.getInt())
+	{
+		m_cursorTrail.erase(m_cursorTrail.begin());
+	}
 }
 
 void OsuHUD::resetHitErrorBar()

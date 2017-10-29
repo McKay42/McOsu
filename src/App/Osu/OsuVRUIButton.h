@@ -21,6 +21,9 @@ public:
 	typedef fastdelegate::FastDelegate0<> ButtonClickVoidCallback;
 	void setClickCallback(ButtonClickVoidCallback clickCallback) {m_clickVoidCallback = clickCallback;}
 
+protected:
+	virtual void onClicked();
+
 private:
 	bool m_bClickCheck;
 	ButtonClickVoidCallback m_clickVoidCallback;

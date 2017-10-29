@@ -262,6 +262,9 @@ public:
 	inline UString getHitCirclePrefix() {return m_sHitCirclePrefix;}
 	inline int getHitCircleOverlap() {return m_iHitCircleOverlap;}
 
+	// custom
+	inline bool useSmoothCursorTrail() {return m_cursorMiddle != m_missingTexture;}
+
 private:
 	bool parseSkinINI(UString filepath);
 	bool compareFilenameWithSkinElementName(UString filename, UString skinElementName);

@@ -145,6 +145,7 @@ private:
 	void playSelectedDifficulty();
 
 	ConVar *m_fps_max_ref;
+	ConVar *m_osu_database_dynamic_star_calculation_ref;
 
 	Osu *m_osu;
 	std::mt19937 m_rngalg;
@@ -205,6 +206,9 @@ private:
 	UString m_sSearchString;
 	float m_fSearchWaitTime;
 	bool m_bInSearch;
+
+	// background star calculation
+	int m_iBackgroundStarCalculationIndex;
 };
 
 #endif

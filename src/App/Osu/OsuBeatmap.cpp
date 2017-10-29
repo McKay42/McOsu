@@ -77,6 +77,13 @@ ConVar osu_fail_time("osu_fail_time", 2.25f, "Timeframe in s for the slowdown ef
 ConVar osu_note_blocking("osu_note_blocking", true, "Whether to use not blocking or not");
 
 ConVar osu_drain_enabled("osu_drain_enabled", false);
+ConVar osu_drain_duration("osu_drain_duration", 0.35f);
+ConVar osu_drain_multiplier("osu_drain_multiplier", 1.0f);
+ConVar osu_drain_300("osu_drain_300", 0.035f);
+ConVar osu_drain_100("osu_drain_100", -0.10f);
+ConVar osu_drain_50("osu_drain_50", -0.125f);
+ConVar osu_drain_miss("osu_drain_miss", -0.15f);
+
 ConVar osu_debug_draw_timingpoints("osu_debug_draw_timingpoints", false);
 
 ConVar *OsuBeatmap::m_osu_pvs = &osu_pvs;
@@ -281,7 +288,7 @@ void OsuBeatmap::update()
 
 			// for nightmare mod, to avoid a miss because of the continue click
 			{
-				std::lock_guard<std::mutex> lk(m_clicksMutex);
+				//std::lock_guard<std::mutex> lk(m_clicksMutex);
 
 				m_clicks.clear();
 				m_keyUps.clear();
@@ -411,14 +418,16 @@ void OsuBeatmap::update()
 	m_iPreviousFollowPointObjectIndex = 0;
 	m_iNPS = 0;
 	m_iND = 0;
-	m_iCurrentHitObjectIndex = 0;
 	m_iCurrentNumCircles = 0;
 	{
-		std::lock_guard<std::mutex> lk(m_clicksMutex); // we need to lock this up here, else it would be possible to insert a click just before calling m_clicks.clear(), thus missing it
+		//std::lock_guard<std::mutex> lk(m_clicksMutex); // we need to lock this up here, else it would be possible to insert a click just before calling m_clicks.clear(), thus missing it
 
 		bool blockNextNotes = false;
-		const long pvs = getPVS();
+		const long pvs = !OsuGameRules::osu_mod_mafham.getBool() ? getPVS() : (m_hitobjects.size() > 0 ? (m_hitobjects[clamp<int>(m_iCurrentHitObjectIndex + OsuGameRules::osu_mod_mafham_render_livesize.getInt() + 1, 0, m_hitobjects.size()-1)]->getTime() - m_iCurMusicPosWithOffsets + 1500) : getPVS());
 		const bool usePVS = m_osu_pvs->getBool();
+
+		m_iCurrentHitObjectIndex = 0; // reset below here, since it's needed for mafham pvs
+
 		for (int i=0; i<m_hitobjects.size(); i++)
 		{
 			// the order must be like this:
@@ -508,7 +517,7 @@ void OsuBeatmap::update()
 
 			// notes per second
 			const long npsHalfGateSizeMS = (long)(500.0f * getSpeedMultiplier());
-			if (m_hitobjects[i]->getTime() > m_iCurMusicPos-npsHalfGateSizeMS && m_hitobjects[i]->getTime() < m_iCurMusicPos+npsHalfGateSizeMS)
+			if (m_hitobjects[i]->getTime() > m_iCurMusicPosWithOffsets-npsHalfGateSizeMS && m_hitobjects[i]->getTime() < m_iCurMusicPosWithOffsets+npsHalfGateSizeMS)
 				m_iNPS++;
 
 			// note density
@@ -651,7 +660,7 @@ void OsuBeatmap::keyPressed1()
 	}
 
 	// lock asap
-	std::lock_guard<std::mutex> lk(m_clicksMutex);
+	//std::lock_guard<std::mutex> lk(m_clicksMutex);
 
 	m_bPrevKeyWasKey1 = true;
 	m_bClick1Held = true;
@@ -675,7 +684,7 @@ void OsuBeatmap::keyPressed2()
 	}
 
 	// lock asap
-	std::lock_guard<std::mutex> lk(m_clicksMutex);
+	//std::lock_guard<std::mutex> lk(m_clicksMutex);
 
 	m_bPrevKeyWasKey1 = false;
 	m_bClick2Held = true;
@@ -1259,16 +1268,16 @@ void OsuBeatmap::addHitResult(OsuScore::HIT hit, long delta, bool ignoreOnHitErr
 	switch (hit)
 	{
 	case OsuScore::HIT::HIT_300:
-		addHealth(0.035f);
+		addHealth(osu_drain_300.getFloat() * osu_drain_multiplier.getFloat());
 		break;
 	case OsuScore::HIT::HIT_100:
-		addHealth(-0.10f);
+		addHealth(osu_drain_100.getFloat() * osu_drain_multiplier.getFloat());
 		break;
 	case OsuScore::HIT::HIT_50:
-		addHealth(-0.125f);
+		addHealth(osu_drain_50.getFloat() * osu_drain_multiplier.getFloat());
 		break;
 	case OsuScore::HIT::HIT_MISS:
-		addHealth(-0.15f);
+		addHealth(osu_drain_miss.getFloat() * osu_drain_multiplier.getFloat());
 		break;
 	}
 
@@ -1315,7 +1324,7 @@ void OsuBeatmap::addHealth(float percent)
 
 	float targetHealth = clamp<float>(m_fHealthReal + percent, -0.1f, 1.0f);
 	m_fHealthReal = targetHealth;
-	anim->moveQuadOut(&m_fHealth, targetHealth, 0.35f, true);
+	anim->moveQuadOut(&m_fHealth, targetHealth, osu_drain_duration.getFloat(), true);
 }
 
 void OsuBeatmap::playMissSound()

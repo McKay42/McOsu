@@ -142,7 +142,7 @@ void OsuSliderRenderer::draw(Graphics *g, Osu *osu, const std::vector<Vector2> &
 	g->setDepthBuffer(true);
 	g->setBlending(false);
 	{
-		osu->getFrameBuffer()->enable();
+		osu->getSliderFrameBuffer()->enable();
 
 		Color borderColor = osu_slider_border_tint_combo_color.getBool() ? color : osu->getSkin()->getSliderBorderColor();
 		Color bodyColor = osu->getSkin()->isSliderTrackOverridden() ? osu->getSkin()->getSliderTrackOverride() : color;
@@ -189,7 +189,7 @@ void OsuSliderRenderer::draw(Graphics *g, Osu *osu, const std::vector<Vector2> &
 		if (!osu_slider_use_gradient_image.getBool())
 			BLEND_SHADER->disable();
 
-		osu->getFrameBuffer()->disable();
+		osu->getSliderFrameBuffer()->disable();
 	}
 	g->setBlending(true);
 	g->setDepthBuffer(false);
@@ -201,8 +201,8 @@ void OsuSliderRenderer::draw(Graphics *g, Osu *osu, const std::vector<Vector2> &
 	m_fBoundingBoxMinY -= pixelFudge;
 	m_fBoundingBoxMaxY += pixelFudge;
 
-	osu->getFrameBuffer()->setColor(COLORf(alpha*osu_slider_alpha_multiplier.getFloat(), 1.0f, 1.0f, 1.0f));
-	osu->getFrameBuffer()->drawRect(g, m_fBoundingBoxMinX, m_fBoundingBoxMinY, m_fBoundingBoxMaxX - m_fBoundingBoxMinX, m_fBoundingBoxMaxY - m_fBoundingBoxMinY);
+	osu->getSliderFrameBuffer()->setColor(COLORf(alpha*osu_slider_alpha_multiplier.getFloat(), 1.0f, 1.0f, 1.0f));
+	osu->getSliderFrameBuffer()->drawRect(g, m_fBoundingBoxMinX, m_fBoundingBoxMinY, m_fBoundingBoxMaxX - m_fBoundingBoxMinX, m_fBoundingBoxMaxY - m_fBoundingBoxMinY);
 }
 
 void OsuSliderRenderer::draw(Graphics *g, Osu *osu, VertexArrayObject *vao, const std::vector<Vector2> &alwaysPoints, Vector2 translation, float scale, float hitcircleDiameter, float from, float to, Color color, float alpha, long sliderTimeForRainbow)
@@ -216,7 +216,7 @@ void OsuSliderRenderer::draw(Graphics *g, Osu *osu, VertexArrayObject *vao, cons
 	g->setDepthBuffer(true);
 	g->setBlending(false);
 	{
-		osu->getFrameBuffer()->enable();
+		osu->getSliderFrameBuffer()->enable();
 
 		Color borderColor = osu_slider_border_tint_combo_color.getBool() ? color : osu->getSkin()->getSliderBorderColor();
 		Color bodyColor = osu->getSkin()->isSliderTrackOverridden() ? osu->getSkin()->getSliderTrackOverride() : color;
@@ -268,13 +268,13 @@ void OsuSliderRenderer::draw(Graphics *g, Osu *osu, VertexArrayObject *vao, cons
 		if (!osu_slider_use_gradient_image.getBool())
 			BLEND_SHADER->disable();
 
-		osu->getFrameBuffer()->disable();
+		osu->getSliderFrameBuffer()->disable();
 	}
 	g->setBlending(true);
 	g->setDepthBuffer(false);
 
-	osu->getFrameBuffer()->setColor(COLORf(alpha*osu_slider_alpha_multiplier.getFloat(), 1.0f, 1.0f, 1.0f));
-	osu->getFrameBuffer()->draw(g, 0, 0);
+	osu->getSliderFrameBuffer()->setColor(COLORf(alpha*osu_slider_alpha_multiplier.getFloat(), 1.0f, 1.0f, 1.0f));
+	osu->getSliderFrameBuffer()->draw(g, 0, 0);
 }
 
 void OsuSliderRenderer::drawVR(Graphics *g, Osu *osu, OsuVR *vr, Matrix4 &mvp, float approachScale, const std::vector<Vector2> &points, const std::vector<Vector2> &alwaysPoints, float hitcircleDiameter, float from, float to, Color color, float alpha, long sliderTimeForRainbow)
@@ -455,7 +455,7 @@ void OsuSliderRenderer::drawMM(Graphics *g, Osu *osu, const std::vector<std::vec
 	g->setDepthBuffer(true);
 	g->setBlending(false);
 	{
-		osu->getFrameBuffer()->enable();
+		osu->getSliderFrameBuffer()->enable();
 
 		Color borderColor = osu_slider_border_tint_combo_color.getBool() ? color : osu->getSkin()->getSliderBorderColor();
 		Color bodyColor = osu->getSkin()->isSliderTrackOverridden() ? osu->getSkin()->getSliderTrackOverride() : color;
@@ -499,7 +499,7 @@ void OsuSliderRenderer::drawMM(Graphics *g, Osu *osu, const std::vector<std::vec
 		if (!osu_slider_use_gradient_image.getBool())
 			BLEND_SHADER->disable();
 
-		osu->getFrameBuffer()->disable();
+		osu->getSliderFrameBuffer()->disable();
 	}
 	g->setBlending(true);
 	g->setDepthBuffer(false);
@@ -511,8 +511,8 @@ void OsuSliderRenderer::drawMM(Graphics *g, Osu *osu, const std::vector<std::vec
 	m_fBoundingBoxMinY -= pixelFudge;
 	m_fBoundingBoxMaxY += pixelFudge;
 
-	osu->getFrameBuffer()->setColor(COLORf(alpha*osu_slider_alpha_multiplier.getFloat(), 1.0f, 1.0f, 1.0f));
-	osu->getFrameBuffer()->drawRect(g, m_fBoundingBoxMinX, m_fBoundingBoxMinY, m_fBoundingBoxMaxX - m_fBoundingBoxMinX, m_fBoundingBoxMaxY - m_fBoundingBoxMinY);
+	osu->getSliderFrameBuffer()->setColor(COLORf(alpha*osu_slider_alpha_multiplier.getFloat(), 1.0f, 1.0f, 1.0f));
+	osu->getSliderFrameBuffer()->drawRect(g, m_fBoundingBoxMinX, m_fBoundingBoxMinY, m_fBoundingBoxMaxX - m_fBoundingBoxMinX, m_fBoundingBoxMaxY - m_fBoundingBoxMinY);
 }
 
 void OsuSliderRenderer::drawFillSliderBodyPeppy(Graphics *g, Osu *osu, const std::vector<Vector2> &points, VertexArrayObject *circleMesh, float radius, int drawFromIndex, int drawUpToIndex)

@@ -126,7 +126,9 @@ public:
 	inline OsuScore *getScore() {return m_score;}
 	inline OsuUpdateHandler *getUpdateHandler() {return m_updateHandler;}
 
+	inline RenderTarget *getSliderFrameBuffer() {return m_sliderFrameBuffer;}
 	inline RenderTarget *getFrameBuffer() {return m_frameBuffer;}
+	inline RenderTarget *getFrameBuffer2() {return m_frameBuffer2;}
 	inline McFont *getTitleFont() {return m_titleFont;}
 	inline McFont *getSubTitleFont() {return m_subTitleFont;}
 	inline McFont *getSongBrowserFont() {return m_songBrowserFont;}
@@ -204,6 +206,7 @@ private:
 	ConVar *m_osu_playfield_rotation;
 	ConVar *m_osu_playfield_stretch_x;
 	ConVar *m_osu_playfield_stretch_y;
+	ConVar *m_osu_draw_cursor_trail_ref;
 
 	// interfaces
 	OsuVR *m_vr;
@@ -226,8 +229,10 @@ private:
 	std::vector<OsuScreen*> m_screens;
 
 	// rendering
-	RenderTarget *m_frameBuffer;
 	RenderTarget *m_backBuffer;
+	RenderTarget *m_sliderFrameBuffer;
+	RenderTarget *m_frameBuffer;
+	RenderTarget *m_frameBuffer2;
 	Vector2 m_vInternalResolution;
 
 	// mods

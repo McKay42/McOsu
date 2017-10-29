@@ -42,6 +42,7 @@ ConVar osu_folder("osu_folder", "/osu!/");
 #endif
 
 ConVar osu_database_enabled("osu_database_enabled", true);
+ConVar osu_database_dynamic_star_calculation("osu_database_dynamic_star_calculation", true, "dynamically calculate star ratings in the background");
 
 class OsuDatabaseLoader : public Resource
 {

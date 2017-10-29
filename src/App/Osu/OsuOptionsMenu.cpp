@@ -453,6 +453,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Load HD @2x", "On very low resolutions (below 1600x900) you can disable this to get smoother visuals.", convar->getConVarByName("osu_skin_hd"));
 	addSpacer();
 	addCheckbox("Draw CursorTrail", convar->getConVarByName("osu_draw_cursor_trail"));
+	addCheckbox("Force Smooth CursorTrail", "Usually, the presence of the cursormiddle.png skin image enables smooth cursortrails.\nThis option allows you to force enable smooth cursortrails for all skins.", convar->getConVarByName("osu_cursor_trail_smooth_force"));
 	m_cursorSizeSlider = addSlider("Cursor Size:", 0.01f, 5.0f, convar->getConVarByName("osu_cursor_scale"));
 	m_cursorSizeSlider->setAnimated(false);
 	m_cursorSizeSlider->setKeyDelta(0.01f);
@@ -497,6 +498,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSpacer();
 	addCheckbox("Draw Stats: pp (Performance Points)", convar->getConVarByName("osu_draw_statistics_pp"));
 	addCheckbox("Draw Stats: Misses", convar->getConVarByName("osu_draw_statistics_misses"));
+	addCheckbox("Draw Stats: SliderBreaks", convar->getConVarByName("osu_draw_statistics_sliderbreaks"));
 	addCheckbox("Draw Stats: BPM", convar->getConVarByName("osu_draw_statistics_bpm"));
 	addCheckbox("Draw Stats: AR", convar->getConVarByName("osu_draw_statistics_ar"));
 	addCheckbox("Draw Stats: CS", convar->getConVarByName("osu_draw_statistics_cs"));
@@ -1779,10 +1781,14 @@ void OsuOptionsMenu::save()
 	userConfigFile.append(OSU_CONFIG_FILE_NAME);
 	userConfigFile.append(".cfg");
 
-	// manual concommands (e.g. fullscreen, windowed, osu_resolution)
+	// manual commands (e.g. fullscreen, windowed, osu_resolution); meaning commands which are not necessarily visible in the options menu, or which need special handling & ordering
 	std::vector<ConVar*> manualConCommands;
 	std::vector<ConVar*> manualConVars;
 	std::vector<ConVar*> removeConCommands;
+
+	manualConVars.push_back(convar->getConVarByName("osu_songbrowser_sortingtype"));
+	if (m_osu->isInVRMode())
+		manualConVars.push_back(convar->getConVarByName("osu_vr_layout_lock"));
 
 	removeConCommands.push_back(convar->getConVarByName("windowed"));
 	removeConCommands.push_back(convar->getConVarByName("osu_skin"));
