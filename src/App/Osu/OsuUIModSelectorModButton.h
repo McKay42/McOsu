@@ -26,7 +26,7 @@ public:
 
 	void resetState();
 
-	void setState(unsigned int state, UString modName, UString tooltipText, OsuSkinImage *img);
+	void setState(unsigned int state, UString modName, UString tooltipText, std::function<OsuSkinImage*()> getImageFunc);
 	void setBaseScale(float xScale, float yScale);
 	void setAvailable(bool available) {m_bAvailable = available;}
 
@@ -54,13 +54,13 @@ private:
 	{
 		UString modName;
 		std::vector<UString> tooltipTextLines;
-		OsuSkinImage *img;
+		std::function<OsuSkinImage*()> getImageFunc;
 	};
 	std::vector<STATE> m_states;
 
 	Vector2 m_vScale;
 	float m_fRot;
-	OsuSkinImage *m_activeImage;
+	std::function<OsuSkinImage*()> getActiveImageFunc;
 };
 
 #endif

@@ -74,7 +74,7 @@ private:
 
 	void updateExperimentalLayout();
 
-	OsuUIModSelectorModButton *setModButtonOnGrid(int x, int y, int state, UString modName, UString tooltipText, OsuSkinImage *img);
+	OsuUIModSelectorModButton *setModButtonOnGrid(int x, int y, int state, UString modName, UString tooltipText, std::function<OsuSkinImage*()> getImageFunc);
 	OsuUIModSelectorModButton *getModButtonOnGrid(int x, int y);
 
 	OVERRIDE_SLIDER addOverrideSlider(UString text, UString labelText, ConVar *cvar, float min = 0.0f, float max = 12.5f);

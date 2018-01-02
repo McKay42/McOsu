@@ -474,10 +474,10 @@ void OsuSpinner::rotate(float rad)
 		if ((int)(newRotations/360.0f) > (int)(m_fRotationsNeeded)+1)
 		{
 			// extra rotations
-			m_beatmap->addScorePoints(1000);
+			m_beatmap->addScorePoints(1000, true);
 			engine->getSound()->play(m_beatmap->getSkin()->getSpinnerBonus());
 		}
-		m_beatmap->addScorePoints(100);
+		m_beatmap->addScorePoints(100, true);
 	}
 
 	// spinner sound

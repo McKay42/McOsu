@@ -55,7 +55,7 @@ public:
 
 	void addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignoreOnHitErrorBar, bool hitErrorBarOnly, bool ignoreCombo, bool ignoreScore); // only OsuBeatmap may call this function!
 	void addSliderBreak(); // only OsuBeatmap may call this function!
-	void addPoints(int points);
+	void addPoints(int points, bool isSpinner);
 
 	void setStarsTomTotal(float starsTomTotal) {m_fStarsTomTotal = starsTomTotal;}
 	void setStarsTomAim(float starsTomAim) {m_fStarsTomAim = starsTomAim;}
@@ -67,8 +67,8 @@ public:
 	inline float getStarsTomSpeed() const {return m_fStarsTomSpeed;}
 	inline float getPPv2() const {return m_fPPv2;}
 
+	unsigned long long getScore();
 	inline GRADE getGrade() const {return m_grade;}
-	inline unsigned long long getScore() const {return m_iScore;}
 	inline int getCombo() const {return m_iCombo;}
 	inline int getComboMax() const {return m_iComboMax;}
 	inline float getAccuracy() const {return m_fAccuracy;}
@@ -98,7 +98,10 @@ private:
 	float m_fStarsTomSpeed;
 	float m_fPPv2;
 
-	unsigned long long m_iScore;
+	unsigned long long m_iScoreV1;
+	unsigned long long m_iScoreV2;
+	unsigned long long m_iScoreV2ComboPortion;
+	unsigned long long m_iBonusPoints;
 	int m_iCombo;
 	int m_iComboMax;
 	int m_iComboFull;

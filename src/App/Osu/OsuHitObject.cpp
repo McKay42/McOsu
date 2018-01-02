@@ -51,6 +51,7 @@ void OsuHitObject::drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiam
 	g->setColor(0xffffffff);
 	g->setAlpha(animPercent);
 	g->pushTransform();
+	{
 		float hitImageScale = 1.0f;
 		switch (result)
 		{
@@ -67,6 +68,7 @@ void OsuHitObject::drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiam
 			hitImageScale = (rawHitcircleDiameter / skin->getHit300()->getSizeBaseRaw().x) * osuCoordScaleMultiplier;
 			break;
 		}
+
 		switch (result)
 		{
 		case OsuScore::HIT::HIT_MISS:
@@ -80,16 +82,19 @@ void OsuHitObject::drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiam
 			*/
 			if (skin->getHit0()->getNumImages() > 1) // special case: animated hitresults don't fade out
 				g->setAlpha(1.0f);
+
 			skin->getHit0()->drawRaw(g, rawPos, hitImageScale*osu_hitresult_scale.getFloat());
 			break;
 		case OsuScore::HIT::HIT_50:
 			if (skin->getHit50()->getNumImages() > 1) // special case: animated hitresults don't fade out
 				g->setAlpha(1.0f);
+
 			skin->getHit50()->drawRaw(g, rawPos, hitImageScale*osu_hitresult_scale.getFloat());
 			break;
 		case OsuScore::HIT::HIT_100:
 			if (skin->getHit100()->getNumImages() > 1) // special case: animated hitresults don't fade out
 				g->setAlpha(1.0f);
+
 			skin->getHit100()->drawRaw(g, rawPos, hitImageScale*osu_hitresult_scale.getFloat());
 			break;
 		case OsuScore::HIT::HIT_300:
@@ -97,10 +102,12 @@ void OsuHitObject::drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiam
 			{
 				if (skin->getHit300()->getNumImages() > 1) // special case: animated hitresults don't fade out
 					g->setAlpha(1.0f);
+
 				skin->getHit300()->drawRaw(g, rawPos, hitImageScale*osu_hitresult_scale.getFloat());
 			}
 			break;
 		}
+	}
 	g->popTransform();
 }
 
@@ -182,17 +189,16 @@ void OsuHitObject::update(long curPos)
 
 	if (curPos >= (m_iTime - m_iApproachTime) && curPos < (m_iTime + m_iObjectDuration) ) // 1 ms fudge by using >=, shouldn't really be a problem
 	{
-		const bool hidden = m_beatmap->getOsu()->getModHD();
-
 		// approach circle scale
-		const float scale = (float)m_iDelta / (float)m_iApproachTime;
+		const float scale = clamp<float>((float)m_iDelta / (float)m_iApproachTime, 0.0f, 1.0f);
 		m_fApproachScale = 1 + scale * osu_approach_scale_multiplier.getFloat();
 
 		// hitobject body fadein
 		const long fadeInStart = m_iTime - m_iApproachTime;
 		const long fadeInEnd = std::min(m_iTime, m_iTime - m_iApproachTime + m_iFadeInTime); // min() ensures that the fade always finishes at m_iTime (even if the fadeintime is longer than the approachtime)
 		m_fAlpha = m_fAlphaWithoutHidden = clamp<float>(1.0f - ((float)(fadeInEnd - curPos) / (float)(fadeInEnd - fadeInStart)), 0.0f, 1.0f);
-		if (hidden)
+
+		if (m_beatmap->getOsu()->getModHD())
 		{
 			// hidden hitobject body fadein
 			const long hiddenFadeInStart = m_iTime - m_iApproachTime;

@@ -98,8 +98,8 @@ public:
 	void toggleChangelog();
 	void toggleEditor();
 
-	void volumeDown();
-	void volumeUp();
+	void volumeUp(int multiplier = 1) {onVolumeChange(multiplier);}
+	void volumeDown(int multiplier = 1) {onVolumeChange(-multiplier);}
 
 	void saveScreenshot();
 
@@ -146,6 +146,7 @@ public:
 	inline bool getModRelax() const {return m_bModRelax;}
 	inline bool getModSpunout() const {return m_bModSpunout;}
 	inline bool getModTarget() const {return m_bModTarget;}
+	inline bool getModScorev2() const {return m_bModScorev2;}
 	inline bool getModDT() const {return m_bModDT;}
 	inline bool getModNC() const {return m_bModNC;}
 	inline bool getModNF() const {return m_bModNF;}
@@ -174,6 +175,9 @@ private:
 	static Vector2 g_vInternalResolution;
 
 	void updateModsForConVarTemplate(UString oldValue, UString newValue) {updateMods();}
+	void onVolumeChange(int multiplier);
+
+	void rebuildRenderTargets();
 
 	// callbacks
 	void onInternalResolutionChanged(UString oldValue, UString args);
@@ -196,6 +200,8 @@ private:
 	void onKey1Change(bool pressed, bool mouse);
 	void onKey2Change(bool pressed, bool mouse);
 
+	void onModMafhamChange(UString oldValue, UString newValue);
+
 	// convar refs
 	ConVar *m_osu_folder_ref;
 	ConVar *m_osu_draw_hud_ref;
@@ -207,6 +213,8 @@ private:
 	ConVar *m_osu_playfield_stretch_x;
 	ConVar *m_osu_playfield_stretch_y;
 	ConVar *m_osu_draw_cursor_trail_ref;
+	ConVar *m_osu_volume_effects_ref;
+	ConVar *m_osu_mod_mafham_ref;
 
 	// interfaces
 	OsuVR *m_vr;
@@ -241,6 +249,7 @@ private:
 	bool m_bModRelax;
 	bool m_bModSpunout;
 	bool m_bModTarget;
+	bool m_bModScorev2;
 	bool m_bModDT;
 	bool m_bModNC;
 	bool m_bModNF;

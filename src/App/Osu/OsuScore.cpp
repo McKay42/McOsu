@@ -18,7 +18,7 @@
 #include "OsuGameRules.h"
 
 ConVar osu_hiterrorbar_misses("osu_hiterrorbar_misses", true);
-ConVar osu_pp_live_type("osu_pp_live_type", 2.0f, "type of algorithm to use for live unfinished beatmap pp calculation: 0 = 'vanilla', 1 = 'fake' total acc interp, 2 = 'real' cut off beatmap at current point (default)");
+ConVar osu_pp_live_type("osu_pp_live_type", 2, "type of algorithm to use for live unfinished beatmap pp calculation: 0 = 'vanilla', 1 = 'fake' total acc interp, 2 = 'real' cut off beatmap at current point (default)");
 ConVar osu_debug_pp("osu_debug_pp", false);
 
 ConVar *OsuScore::m_osu_draw_statistics_pp = NULL;
@@ -39,7 +39,10 @@ void OsuScore::reset()
 	m_fStarsTomSpeed = 0.0f;
 	m_fPPv2 = 0.0f;
 	m_grade = OsuScore::GRADE::GRADE_N;
-	m_iScore = 0;
+	m_iScoreV1 = 0;
+	m_iScoreV2 = 0;
+	m_iScoreV2ComboPortion = 0;
+	m_iBonusPoints = 0;
 	m_iCombo = 0;
 	m_iComboMax = 0;
 	m_iComboFull = 0;
@@ -60,7 +63,7 @@ void OsuScore::reset()
 
 void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignoreOnHitErrorBar, bool hitErrorBarOnly, bool ignoreCombo, bool ignoreScore)
 {
-	const int scoreComboMultiplier = std::max(m_iCombo-1, 0);
+	const int scoreComboMultiplier = std::max(m_iCombo-1, 0); // current combo, excluding the current hitobject which caused the addHitResult() call
 
 	// handle hits (and misses)
 	if (hit != OsuScore::HIT::HIT_MISS)
@@ -115,8 +118,8 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignor
 		}
 	}
 
-	// add hitValue to score
-	const float sumDifficultyPoints = beatmap->getCS() + beatmap->getHP() + beatmap->getOD();
+	// add hitValue to score, recalculate scoreV1
+	const float sumDifficultyPoints = beatmap->getSelectedDifficulty()->CS + beatmap->getSelectedDifficulty()->HP + beatmap->getSelectedDifficulty()->OD;
 	int difficultyMultiplier = 2;
 	if (sumDifficultyPoints > 5.0f)
 		difficultyMultiplier = 3;
@@ -127,7 +130,7 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignor
 	if (sumDifficultyPoints > 24.0f)
 		difficultyMultiplier = 6;
 	if (!ignoreScore)
-		m_iScore += hitValue + ((hitValue * (unsigned long long)((double)scoreComboMultiplier * (double)difficultyMultiplier * (double)m_osu->getScoreMultiplier())) / (unsigned long long)25);
+		m_iScoreV1 += hitValue + ((hitValue * (unsigned long long)((double)scoreComboMultiplier * (double)difficultyMultiplier * (double)m_osu->getScoreMultiplier())) / (unsigned long long)25);
 
 	const float totalHitPoints = m_iNum50s*(1.0f/6.0f)+ m_iNum100s*(2.0f/6.0f) + m_iNum300s;
 	const float totalNumHits = m_iNumMisses + m_iNum50s + m_iNum100s + m_iNum300s;
@@ -140,6 +143,22 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignor
 		m_fAccuracy = 1.0f;
 	else
 		m_fAccuracy = totalHitPoints / totalNumHits;
+
+	// recalculate scoreV2
+	m_iScoreV2ComboPortion += (unsigned long long)((double)hitValue * (1.0 + (double)scoreComboMultiplier / 10.0));
+	if (m_osu->getModScorev2())
+	{
+		const int numHitObjects = beatmap->getSelectedDifficulty()->hitcircles.size() + beatmap->getSelectedDifficulty()->sliders.size() + beatmap->getSelectedDifficulty()->spinners.size();
+		const double maximumAccurateHits = numHitObjects;
+
+		// TODO: this should also scale and respect all of these with combo: sliderticks 10, sliderend 30, sliderrepeats 30
+		// currently they are completely ignored (don't count towards score v2 score at all)
+
+		if (totalNumHits > 0)
+			m_iScoreV2 = (unsigned long long)(((double)m_iScoreV2ComboPortion / (double)beatmap->getSelectedDifficulty()->getScoreV2ComboPortionMaximum() * 700000.0 + std::pow((double)m_fAccuracy, 10.0) * ((double)totalNumHits / maximumAccurateHits) * 300000.0 + (double)m_iBonusPoints) * (double)m_osu->getScoreMultiplier());
+
+		///debugLog("%i / %i, combo = %ix\n", (int)m_iScoreV2ComboPortion, (int)beatmap->getSelectedDifficulty()->getScoreV2ComboPortionMaximum(), m_iCombo);
+	}
 
 	// recalculate grade
 	m_grade = OsuScore::GRADE::GRADE_D;
@@ -253,7 +272,15 @@ void OsuScore::addSliderBreak()
 	m_iNumSliderBreaks++;
 }
 
-void OsuScore::addPoints(int points)
+void OsuScore::addPoints(int points, bool isSpinner)
 {
-	m_iScore += (unsigned long long)points;
+	m_iScoreV1 += (unsigned long long)points;
+
+	if (isSpinner)
+		m_iBonusPoints += points; // only used for scorev2 calculation currently
+}
+
+unsigned long long OsuScore::getScore()
+{
+	return m_osu->getModScorev2() ? m_iScoreV2 : m_iScoreV1;
 }

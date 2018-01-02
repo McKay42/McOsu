@@ -63,7 +63,6 @@ ConVar osu_mod_wobble2("osu_mod_wobble2", false);
 ConVar osu_mod_wobble_strength("osu_mod_wobble_strength", 25.0f);
 ConVar osu_mod_wobble_frequency("osu_mod_wobble_frequency", 1.0f);
 ConVar osu_mod_wobble_rotation_speed("osu_mod_wobble_rotation_speed", 1.0f);
-ConVar osu_mod_fps("osu_mod_fps", false);
 ConVar osu_mod_jigsaw2("osu_mod_jigsaw2", false);
 ConVar osu_mod_jigsaw_followcircle_radius_factor("osu_mod_jigsaw_followcircle_radius_factor", 0.0f);
 ConVar osu_mod_shirone("osu_mod_shirone", false);
@@ -216,7 +215,7 @@ void OsuBeatmapStandard::draw(Graphics *g)
 	if (isLoading()) return; // only start drawing the rest of the playfield if everything has loaded
 
 	// draw first person crosshair
-	if (osu_mod_fps.getBool())
+	if (OsuGameRules::osu_mod_fps.getBool())
 	{
 		const int length = 15;
 		Vector2 center = osuCoords2Pixels(Vector2(OsuGameRules::OSU_COORD_WIDTH/2, OsuGameRules::OSU_COORD_HEIGHT/2));
@@ -226,7 +225,7 @@ void OsuBeatmapStandard::draw(Graphics *g)
 	}
 
 	// draw playfield border
-	if (osu_draw_playfield_border.getBool() && !osu_mod_fps.getBool())
+	if (osu_draw_playfield_border.getBool() && !OsuGameRules::osu_mod_fps.getBool())
 		m_osu->getHUD()->drawPlayfieldBorder(g, m_vPlayfieldCenter, m_vPlayfieldSize, m_fHitcircleDiameter);
 
 	// allow players to not draw all hitobjects twice if in VR
@@ -916,7 +915,7 @@ Vector2 OsuBeatmapStandard::osuCoords2Pixels(Vector2 coords)
 	coords += m_vPlayfieldOffset; // the offset is already scaled, just add it
 
 	// first person mod, centered cursor
-	if (osu_mod_fps.getBool())
+	if (OsuGameRules::osu_mod_fps.getBool())
 	{
 		// this is the worst hack possible (engine->isDrawing()), but it works
 		// the problem is that this same function is called while draw()ing and update()ing
@@ -1053,7 +1052,7 @@ Vector2 OsuBeatmapStandard::osuCoords2LegacyPixels(Vector2 coords)
 
 Vector2 OsuBeatmapStandard::getCursorPos()
 {
-	if (osu_mod_fps.getBool() && !m_bIsPaused)
+	if (OsuGameRules::osu_mod_fps.getBool() && !m_bIsPaused)
 	{
 		if (m_osu->getModAuto() || m_osu->getModAutopilot())
 			return m_vAutoCursorPos;
@@ -1162,7 +1161,7 @@ void OsuBeatmapStandard::onPaused()
 
 	m_vContinueCursorPoint = engine->getMouse()->getPos();
 
-	if (osu_mod_fps.getBool())
+	if (OsuGameRules::osu_mod_fps.getBool())
 		m_vContinueCursorPoint = OsuGameRules::getPlayfieldCenter(m_osu);
 }
 
@@ -1387,13 +1386,13 @@ void OsuBeatmapStandard::updateHitobjectMetrics()
 	m_fXMultiplier = OsuGameRules::getHitCircleXMultiplier(m_osu);
 	m_fHitcircleDiameter = OsuGameRules::getHitCircleDiameter(this);
 
-	const float osuCoordScaleMultiplier = (getHitcircleDiameter()/m_fRawHitcircleDiameter);
+	const float osuCoordScaleMultiplier = (getHitcircleDiameter() / m_fRawHitcircleDiameter);
 
 	m_fNumberScale = (m_fRawHitcircleDiameter / (160.0f * (skin->isDefault12x() ? 2.0f : 1.0f))) * osuCoordScaleMultiplier * osu_number_scale_multiplier.getFloat();
 	m_fHitcircleOverlapScale = (m_fRawHitcircleDiameter / (160.0f)) * osuCoordScaleMultiplier * osu_number_scale_multiplier.getFloat();
 
-	m_fRawSliderFollowCircleDiameter = getRawHitcircleDiameter() * (m_osu->getModNM() || osu_mod_jigsaw2.getBool() ? (1.0f*(1.0f - osu_mod_jigsaw_followcircle_radius_factor.getFloat()) + osu_mod_jigsaw_followcircle_radius_factor.getFloat()*2.4f) : 2.4f);
-	m_fSliderFollowCircleDiameter = getHitcircleDiameter() * (m_osu->getModNM() || osu_mod_jigsaw2.getBool() ? (1.0f*(1.0f - osu_mod_jigsaw_followcircle_radius_factor.getFloat()) + osu_mod_jigsaw_followcircle_radius_factor.getFloat()*2.4f) : 2.4f);
+	m_fRawSliderFollowCircleDiameter = getRawHitcircleDiameter() * (m_osu->getModNM() || osu_mod_jigsaw2.getBool() ? (1.0f*(1.0f - osu_mod_jigsaw_followcircle_radius_factor.getFloat()) + osu_mod_jigsaw_followcircle_radius_factor.getFloat()*OsuGameRules::osu_slider_followcircle_size_multiplier.getFloat()) : OsuGameRules::osu_slider_followcircle_size_multiplier.getFloat());
+	m_fSliderFollowCircleDiameter = getHitcircleDiameter() * (m_osu->getModNM() || osu_mod_jigsaw2.getBool() ? (1.0f*(1.0f - osu_mod_jigsaw_followcircle_radius_factor.getFloat()) + osu_mod_jigsaw_followcircle_radius_factor.getFloat()*OsuGameRules::osu_slider_followcircle_size_multiplier.getFloat()) : OsuGameRules::osu_slider_followcircle_size_multiplier.getFloat());
 }
 
 void OsuBeatmapStandard::updateSliderVertexBuffers()

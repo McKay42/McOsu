@@ -35,6 +35,7 @@
 
 #include "OsuUIBackButton.h"
 #include "OsuUIContextMenu.h"
+#include "OsuUISearchOverlay.h"
 #include "OsuUISelectionButton.h"
 #include "OsuUISongBrowserInfoLabel.h"
 #include "OsuUISongBrowserSongButton.h"
@@ -406,6 +407,8 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	m_fPulseAnimation = 0.0f;
 
 	// search
+	m_search = new OsuUISearchOverlay(m_osu, 0, 0, 0, 0, "");
+	m_search->setOffsetRight(10);
 	m_fSearchWaitTime = 0.0f;
 	m_bInSearch = false;
 
@@ -431,6 +434,7 @@ OsuSongBrowser2::~OsuSongBrowser2()
 		delete m_difficultyCollectionButtons[i];
 	}
 
+	SAFE_DELETE(m_search);
 	SAFE_DELETE(m_topbarLeft);
 	SAFE_DELETE(m_topbarRight);
 	SAFE_DELETE(m_bottombar);
@@ -468,42 +472,11 @@ void OsuSongBrowser2::draw(Graphics *g)
 	// draw song browser
 	m_songBrowser->draw(g);
 
-	// draw search text and background
-	UString searchText1 = "Search: ";
-	UString searchText2 = "Type to search!";
-	UString combinedSearchText = searchText1;
-	combinedSearchText.append(searchText2);
-	McFont *searchTextFont = m_osu->getSubTitleFont();
-	float searchTextScale = 0.75f;
-	bool hasSearchSubTextVisible = m_sSearchString.length() > 0 && m_bInSearch;
-	g->setColor(COLOR(m_sSearchString.length() > 0 ? 100 : 30, 0, 0, 0));
-	g->fillRect(m_songBrowser->getPos().x + m_songBrowser->getSize().x*0.75f - searchTextFont->getStringWidth(combinedSearchText)*searchTextScale/2 - (searchTextFont->getHeight()*searchTextScale)*0.5f, m_songBrowser->getPos().y, m_songBrowser->getSize().x, (searchTextFont->getHeight()*searchTextScale)*(hasSearchSubTextVisible ? 4.0f : 3.0f));
-	g->setColor(0xffffffff);
-	g->pushTransform();
-		g->translate(0, searchTextFont->getHeight()/2);
-		g->scale(searchTextScale, searchTextScale);
-		g->translate(m_songBrowser->getPos().x + m_songBrowser->getSize().x*0.75f - searchTextFont->getStringWidth(combinedSearchText)*searchTextScale/2, m_songBrowser->getPos().y + (searchTextFont->getHeight()*searchTextScale)*1.5f);
-
-		// draw search text and text
-		g->pushTransform();
-			g->setColor(0xff00ff00);
-			g->drawString(searchTextFont, searchText1);
-			g->setColor(0xffffffff);
-			g->translate(searchTextFont->getStringWidth(searchText1)*searchTextScale, 0);
-			if (m_sSearchString.length() < 1)
-				g->drawString(searchTextFont, searchText2);
-			else
-				g->drawString(searchTextFont, m_sSearchString);
-		g->popTransform();
-
-		// draw number of matches
-		if (hasSearchSubTextVisible)
-		{
-			g->setColor(0xffffffff);
-			g->translate(0, (searchTextFont->getHeight()*searchTextScale)*1.5f);
-			g->drawString(searchTextFont, m_visibleSongButtons.size() > 0 ? UString::format("%i matches found!", m_visibleSongButtons.size()) : "No matches found. Hit ESC to reset.");
-		}
-	g->popTransform();
+	// draw search
+	m_search->setSearchString(m_sSearchString);
+	m_search->setDrawNumResults(m_bInSearch);
+	m_search->setNumFoundResults(m_visibleSongButtons.size());
+	m_search->draw(g);
 
 	// draw top bar
 	g->setColor(0xffffffff);
@@ -644,6 +617,10 @@ void OsuSongBrowser2::update()
 		return;
 	}
 
+	// HACKHACK:
+	if (m_osu->getHUD()->isVolumeOverlayBusy())
+		engine->getMouse()->resetWheelDelta();
+
 	m_songBrowser->update();
 	m_songBrowser->getContainer()->update_pos(); // necessary due to constant animations
 	m_topbarLeft->update();
@@ -651,7 +628,7 @@ void OsuSongBrowser2::update()
 	m_bottombar->update();
 	m_contextMenu->update();
 
-	if (m_contextMenu->isMouseInside())
+	if (m_contextMenu->isMouseInside() || m_osu->getHUD()->isVolumeOverlayBusy())
 	{
 		m_topbarRight->stealFocus();
 		m_songBrowser->stealFocus();
@@ -792,6 +769,7 @@ void OsuSongBrowser2::onKeyDown(KeyboardEvent &key)
 				}
 				else
 					m_sSearchString = m_sSearchString.substr(0, m_sSearchString.length()-1);
+
 				scheduleSearchUpdate(m_sSearchString.length() == 0);
 			}
 			break;
@@ -1584,6 +1562,9 @@ void OsuSongBrowser2::updateLayout()
 	m_songBrowser->setPos(m_topbarLeft->getPos().x + m_topbarLeft->getSize().x + 1, m_topbarRight->getPos().y + m_topbarRight->getSize().y + 2);
 	m_songBrowser->setSize(m_osu->getScreenWidth() - (m_topbarLeft->getPos().x + m_topbarLeft->getSize().x), m_osu->getScreenHeight() - m_songBrowser->getPos().y - m_bottombar->getSize().y+2);
 	updateSongButtonLayout();
+
+	m_search->setPos(m_songBrowser->getPos());
+	m_search->setSize(m_songBrowser->getSize());
 }
 
 void OsuSongBrowser2::onBack()
@@ -1838,9 +1819,7 @@ void OsuSongBrowser2::onAfterSortingOrGroupChange(CBaseUIButton *b)
 	if (isAnythingSelected)
 		scrollToSelectedSongButton();
 	else
-	{
 		m_songBrowser->scrollToTop();
-	}
 }
 
 void OsuSongBrowser2::onSelectionMode()

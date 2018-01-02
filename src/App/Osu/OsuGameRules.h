@@ -46,6 +46,7 @@ public:
 	//	Experimental Mods  //
 	//*********************//
 
+	static ConVar osu_mod_fps;
 	static ConVar osu_mod_no50s;
 	static ConVar osu_mod_no100s;
 	static ConVar osu_mod_ming3012;
@@ -265,6 +266,8 @@ public:
 	//	Hitobject Scaling  //
 	//*********************//
 
+	static ConVar osu_slider_followcircle_size_multiplier;
+
 	static float getRawHitCircleDiameter(float CS)
 	{
 		return ((1.0f - 0.7f*(CS - 5.0f) / 5.0f) / 2.0f) * 128.0f; // gives the circle diameter in osu!pixels, goes negative above CS 12.1429
@@ -313,7 +316,10 @@ public:
 	{
 		const Vector2 playfieldSize = getPlayfieldSize(osu);
 		const int bottomBorderSize = osu_playfield_border_bottom_percent.getFloat()*osu->getScreenHeight();
-		const int playfieldYOffset = (osu->getScreenHeight()/2.0f - (playfieldSize.y/2.0f)) - bottomBorderSize;
+		int playfieldYOffset = (osu->getScreenHeight()/2.0f - (playfieldSize.y/2.0f)) - bottomBorderSize;
+
+		if (osu_mod_fps.getBool())
+			playfieldYOffset = 0; // first person mode doesn't need any offsets, cursor/crosshair should be centered on screen
 
 		return Vector2((osu->getScreenWidth()-playfieldSize.x)/2.0f, (osu->getScreenHeight()-playfieldSize.y)/2.0f + playfieldYOffset);
 	}

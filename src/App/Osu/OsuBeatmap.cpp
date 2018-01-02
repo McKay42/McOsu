@@ -1305,9 +1305,9 @@ void OsuBeatmap::addSliderBreak()
 	m_osu->getScore()->addSliderBreak();
 }
 
-void OsuBeatmap::addScorePoints(int points)
+void OsuBeatmap::addScorePoints(int points, bool isSpinner)
 {
-	m_osu->getScore()->addPoints(points);
+	m_osu->getScore()->addPoints(points, isSpinner);
 }
 
 void OsuBeatmap::addHealth(float percent)

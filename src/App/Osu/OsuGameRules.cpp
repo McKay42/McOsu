@@ -24,6 +24,9 @@ ConVar OsuGameRules::osu_slider_followcircle_fadeout_scale_time("osu_slider_foll
 ConVar OsuGameRules::osu_slider_followcircle_tick_pulse_time("osu_slider_followcircle_tick_pulse_time", 0.2f);
 ConVar OsuGameRules::osu_slider_followcircle_tick_pulse_scale("osu_slider_followcircle_tick_pulse_scale", 0.1f);
 
+ConVar OsuGameRules::osu_slider_followcircle_size_multiplier("osu_slider_followcircle_size_multiplier", 2.4f);
+
+ConVar OsuGameRules::osu_mod_fps("osu_mod_fps", false);
 ConVar OsuGameRules::osu_mod_no50s("osu_mod_no50s", false);
 ConVar OsuGameRules::osu_mod_no100s("osu_mod_no100s", false);
 ConVar OsuGameRules::osu_mod_ming3012("osu_mod_ming3012", false);

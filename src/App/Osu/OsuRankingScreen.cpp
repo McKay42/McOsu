@@ -115,6 +115,8 @@ void OsuRankingScreen::draw(Graphics *g)
 		drawModImage(g, m_osu->getSkin()->getSelectionModDoubleTime(), modPos);
 	if (m_osu->getModNM())
 		drawModImage(g, m_osu->getSkin()->getSelectionModNightmare(), modPos);
+	if (m_osu->getModScorev2())
+		drawModImage(g, m_osu->getSkin()->getSelectionModScorev2(), modPos);
 	if (m_osu->getModTarget())
 		drawModImage(g, m_osu->getSkin()->getSelectionModTarget(), modPos);
 	if (m_osu->getModSpunout())

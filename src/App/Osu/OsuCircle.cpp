@@ -22,6 +22,8 @@
 #include "OsuGameRules.h"
 #include "OsuBeatmapStandard.h"
 
+ConVar osu_bug_flicker_log("osu_bug_flicker_log", false);
+
 ConVar osu_circle_color_saturation("osu_circle_color_saturation", 1.0f);
 ConVar osu_circle_rainbow("osu_circle_rainbow", false);
 ConVar osu_circle_number_rainbow("osu_circle_number_rainbow", false);
@@ -203,7 +205,7 @@ void OsuCircle::drawApproachCircle(Graphics *g, OsuSkin *skin, Vector2 pos, Colo
 		g->setAlpha(alpha*osu_approach_circle_alpha_multiplier.getFloat());
 		if (approachScale > 1.0f)
 		{
-			float approachCircleImageScale = hitcircleDiameter / (128.0f * (skin->isApproachCircle2x() ? 2.0f : 1.0f));
+			const float approachCircleImageScale = hitcircleDiameter / (128.0f * (skin->isApproachCircle2x() ? 2.0f : 1.0f));
 
 			g->pushTransform();
 				g->scale(approachCircleImageScale*approachScale, approachCircleImageScale*approachScale);
@@ -441,6 +443,14 @@ void OsuCircle::draw2(Graphics *g)
 
 	// draw approach circle
 	const bool hd = m_beatmap->getOsu()->getModHD();
+
+	// HACKHACK: don't fucking change this piece of code here, it fixes a heisenbug (https://github.com/McKay42/McOsu/issues/165)
+	if (osu_bug_flicker_log.getBool())
+	{
+		const float approachCircleImageScale = m_beatmap->getHitcircleDiameter() / (128.0f * (m_beatmap->getSkin()->isApproachCircle2x() ? 2.0f : 1.0f));
+		debugLog("m_iTime = %ld, aScale = %f, iScale = %f\n", m_iTime, m_fApproachScale, approachCircleImageScale);
+	}
+
 	drawApproachCircle(g, m_beatmap, m_vRawPos, m_iComboNumber, m_iColorCounter, m_bWaiting && !hd ? 1.0f : m_fApproachScale, m_bWaiting && !hd ? 1.0f : m_fAlphaForApproachCircle, m_bOverrideHDApproachCircle);
 }
 

@@ -204,6 +204,7 @@ public:
 	static double calculateBaseStrain(double strain);
 
 	inline int getMaxCombo() {return m_iMaxCombo;}
+	inline unsigned long long getScoreV2ComboPortionMaximum() {return m_fScoreV2ComboPortionMaximum;}
 	inline double getAimStarsForUpToHitObjectIndex(int upToHitObjectIndex) {return (m_aimStarsForNumHitObjects.size() > 0 ? m_aimStarsForNumHitObjects[clamp<int>(upToHitObjectIndex, 0, m_aimStarsForNumHitObjects.size()-1)] : 0);}
 	inline double getSpeedStarsForUpToHitObjectIndex(int upToHitObjectIndex) {return (m_speedStarsForNumHitObjects.size() > 0 ? m_speedStarsForNumHitObjects[clamp<int>(upToHitObjectIndex, 0, m_speedStarsForNumHitObjects.size()-1)] : 0);}
 
@@ -233,10 +234,11 @@ private:
 	BackgroundImagePathLoader *m_backgroundImagePathLoader;
 	unsigned long long m_iSortHack;
 
-	// for pp & star calculation
+	// for pp & star & score calculation
 	int m_iMaxCombo;
 	std::vector<double> m_aimStarsForNumHitObjects;
 	std::vector<double> m_speedStarsForNumHitObjects;
+	unsigned long long m_fScoreV2ComboPortionMaximum;
 };
 
 #endif
