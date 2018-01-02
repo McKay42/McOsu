@@ -31,8 +31,8 @@
 #include "CBaseUIContainer.h"
 #include "CBaseUIButton.h"
 
-#define MCOSU_VERSION_TEXT "Alpha"
-#define MCOSU_BANNER_TEXT "--"
+#define MCOSU_VERSION_TEXT "Version"
+#define MCOSU_BANNER_TEXT "--Debug--"
 UString OsuMainMenu::MCOSU_MAIN_BUTTON_TEXT = UString("McOsu");
 UString OsuMainMenu::MCOSU_MAIN_BUTTON_SUBTEXT = UString("Practice Client");
 #define MCOSU_MAIN_BUTTON_BACK_TEXT "by McKay"
@@ -519,6 +519,12 @@ void OsuMainMenu::update()
 		return;
 
 	updateLayout();
+
+	if (m_osu->getHUD()->isVolumeOverlayBusy())
+	{
+		m_mainButton->stealFocus();
+		m_container->stealFocus();
+	}
 
 	// the main button always gets top focus
 	m_mainButton->update();

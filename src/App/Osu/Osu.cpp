@@ -53,13 +53,15 @@
 
 #include "OsuHitObject.h"
 
+#include "OsuUIVolumeSlider.h"
+
 void DUMMY_OSU_LETTERBOXING(UString oldValue, UString newValue) {;}
 void DUMMY_OSU_VOLUME_MUSIC_ARGS(UString oldValue, UString newValue) {;}
 void DUMMY_OSU_MODS(void) {;}
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 28.97f);
+ConVar osu_version("osu_version", 28.98f);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr");
 #else
@@ -120,6 +122,8 @@ Osu::Osu()
 	m_osu_playfield_stretch_x = convar->getConVarByName("osu_playfield_stretch_x");
 	m_osu_playfield_stretch_y = convar->getConVarByName("osu_playfield_stretch_y");
 	m_osu_draw_cursor_trail_ref = convar->getConVarByName("osu_draw_cursor_trail");
+	m_osu_volume_effects_ref = convar->getConVarByName("osu_volume_effects");
+	m_osu_mod_mafham_ref = convar->getConVarByName("osu_mod_mafham");
 
 	// engine settings/overrides
 	openvr->setDrawCallback( fastdelegate::MakeDelegate(this, &Osu::drawVR) );
@@ -217,6 +221,7 @@ Osu::Osu()
 	m_bModRelax = false;
 	m_bModSpunout = false;
 	m_bModTarget = false;
+	m_bModScorev2 = false;
 	m_bModDT = false;
 	m_bModNC = false;
 	m_bModNF = false;
@@ -246,8 +251,8 @@ Osu::Osu()
 	g_vInternalResolution = engine->getScreenSize();
 	m_backBuffer = engine->getResourceManager()->createRenderTarget(0, 0, getScreenWidth(), getScreenHeight());
 	m_sliderFrameBuffer = engine->getResourceManager()->createRenderTarget(0, 0, getScreenWidth(), getScreenHeight());
-	m_frameBuffer = engine->getResourceManager()->createRenderTarget(0, 0, getScreenWidth(), getScreenHeight());
-	m_frameBuffer2 = engine->getResourceManager()->createRenderTarget(0, 0, getScreenWidth(), getScreenHeight());
+	m_frameBuffer = engine->getResourceManager()->createRenderTarget(0, 0, 64, 64);
+	m_frameBuffer2 = engine->getResourceManager()->createRenderTarget(0, 0, 64, 64);
 
 	// load a few select subsystems very early
 	m_notificationOverlay = new OsuNotificationOverlay(this);
@@ -367,6 +372,11 @@ Osu::Osu()
 		// this will leak memory (one OsuBeatmap object and one OsuBeatmapDifficulty object), but who cares (since debug only)
 	}
 	*/
+
+
+
+	// HACKHACK: memory/performance optimization; if osu_mod_mafham is not enabled, reduce the two rendertarget sizes to 64x64
+	m_osu_mod_mafham_ref->setCallback( fastdelegate::MakeDelegate(this, &Osu::onModMafhamChange) );
 }
 
 Osu::~Osu()
@@ -528,6 +538,8 @@ void Osu::drawVR(Graphics *g)
 
 void Osu::update()
 {
+	const int wheelDelta = engine->getMouse()->getWheelDeltaVertical(); // HACKHACK: songbrowser focus
+
 	if (m_skin != NULL)
 		m_skin->update();
 
@@ -564,7 +576,7 @@ void Osu::update()
 			bool isAnyOsuKeyDown = (m_bKeyboardKey1Down || m_bKeyboardKey2Down || m_bMouseKey1Down || m_bMouseKey2Down);
 			bool isAnyVRKeyDown = isInVRMode() && !m_vr->isUIActive() && (openvr->getLeftController()->isButtonPressed(OpenVRController::BUTTON::BUTTON_STEAMVR_TOUCHPAD) || openvr->getRightController()->isButtonPressed(OpenVRController::BUTTON::BUTTON_STEAMVR_TOUCHPAD)
 												|| openvr->getLeftController()->getTrigger() > 0.95f || openvr->getRightController()->getTrigger() > 0.95f);
-			if (engine->getMouse()->isLeftDown() || isAnyOsuKeyDown || isAnyVRKeyDown)
+			if (!m_hud->isVolumeOverlayBusy() && (engine->getMouse()->isLeftDown() || isAnyOsuKeyDown || isAnyVRKeyDown))
 			{
 				if (m_hud->getSkipClickRect().contains(engine->getMouse()->getPos()) || isAnyVRKeyDown)
 					m_bSkipScheduled = true;
@@ -671,17 +683,22 @@ void Osu::update()
 	}
 
 	// handle mousewheel volume change
-	if ((m_songBrowser2 != NULL && (!m_songBrowser2->isVisible() || engine->getKeyboard()->isAltDown())) && !m_optionsMenu->isVisible() && !m_vrTutorial->isVisible() && !m_changelog->isVisible() && (!m_modSelector->isMouseInScrollView() || engine->getKeyboard()->isAltDown()))
+	if ((m_songBrowser2 != NULL && (!m_songBrowser2->isVisible() || engine->getKeyboard()->isAltDown() || m_hud->isVolumeOverlayBusy()))
+			&& !m_optionsMenu->isVisible()
+			&& !m_vrTutorial->isVisible()
+			&& !m_changelog->isVisible()
+			&& (!m_modSelector->isMouseInScrollView() || engine->getKeyboard()->isAltDown()))
 	{
 		if ((!(isInPlayMode() && !m_pauseMenu->isVisible()) && !m_rankingScreen->isVisible()) || (isInPlayMode() && !osu_disable_mousewheel.getBool()) || engine->getKeyboard()->isAltDown())
 		{
-			int wheelDelta = engine->getMouse()->getWheelDeltaVertical();
 			if (wheelDelta != 0)
 			{
+				const int multiplier = std::max(1, std::abs(wheelDelta) / 120);
+
 				if (wheelDelta > 0)
-					volumeUp();
+					volumeUp(multiplier);
 				else
-					volumeDown();
+					volumeDown(multiplier);
 			}
 		}
 	}
@@ -706,6 +723,7 @@ void Osu::updateMods()
 	m_bModRelax = osu_mods.getString().find("relax") != -1;
 	m_bModSpunout = osu_mods.getString().find("spunout") != -1;
 	m_bModTarget = osu_mods.getString().find("practicetarget") != -1;
+	m_bModScorev2 = osu_mods.getString().find("v2") != -1;
 	m_bModDT = osu_mods.getString().find("dt") != -1;
 	m_bModNC = osu_mods.getString().find("nc") != -1;
 	m_bModNF = osu_mods.getString().find("nf") != -1;
@@ -964,6 +982,18 @@ void Osu::onKeyDown(KeyboardEvent &key)
 			volumeUp();
 		if (key == (KEYCODE)OsuKeyBindings::DECREASE_VOLUME.getInt())
 			volumeDown();
+
+		// volume slider selection
+		if (m_hud->isVolumeOverlayVisible())
+		{
+			if (key != (KEYCODE)OsuKeyBindings::INCREASE_VOLUME.getInt() && key != (KEYCODE)OsuKeyBindings::DECREASE_VOLUME.getInt())
+			{
+				if (key == KEY_LEFT)
+					m_hud->selectVolumeNext();
+				if (key == KEY_RIGHT)
+					m_hud->selectVolumePrev();
+			}
+		}
 	}
 }
 
@@ -1099,17 +1129,22 @@ void Osu::toggleEditor()
 	m_bToggleEditorScheduled = true;
 }
 
-void Osu::volumeDown()
+void Osu::onVolumeChange(int multiplier)
 {
-	float newVolume = clamp<float>(osu_volume_master.getFloat() - osu_volume_change_interval.getFloat(), 0.0f, 1.0f);
-	osu_volume_master.setValue(newVolume);
-	m_hud->animateVolumeChange();
-}
+	// chose which volume to change, depending on the volume overlay, default is master
+	ConVar *volumeConVar = &osu_volume_master;
+	if (m_hud->getVolumeMusicSlider()->isSelected())
+		volumeConVar = &osu_volume_music;
+	else if (m_hud->getVolumeEffectsSlider()->isSelected())
+		volumeConVar = m_osu_volume_effects_ref;
 
-void Osu::volumeUp()
-{
-	float newVolume = clamp<float>(osu_volume_master.getFloat() + osu_volume_change_interval.getFloat(), 0.0f, 1.0f);
-	osu_volume_master.setValue(newVolume);
+	// change the volume
+	if (m_hud->isVolumeOverlayVisible())
+	{
+		float newVolume = clamp<float>(volumeConVar->getFloat() + osu_volume_change_interval.getFloat()*multiplier, 0.0f, 1.0f);
+		volumeConVar->setValue(newVolume);
+	}
+
 	m_hud->animateVolumeChange();
 }
 
@@ -1192,6 +1227,7 @@ void Osu::onPlayEnd(bool quit)
 }
 
 
+
 OsuBeatmap *Osu::getSelectedBeatmap()
 {
 	if (m_songBrowser2 != NULL)
@@ -1227,7 +1263,7 @@ float Osu::getScoreMultiplier()
 {
 	float multiplier = 1.0f;
 
-	if (m_bModEZ/* || m_bModNF*/) // TODO: commented until proper drain is implemented
+	if (m_bModEZ/* || m_bModNF*/) // commented until proper drain is implemented
 		multiplier *= 0.5f;
 	if (m_bModHT || m_bModDC)
 		multiplier *= 0.3f;
@@ -1344,10 +1380,7 @@ void Osu::onResolutionChanged(Vector2 newResolution)
 	}
 
 	// rendertargets
-	m_backBuffer->rebuild(0, 0, g_vInternalResolution.x, g_vInternalResolution.y);
-	m_sliderFrameBuffer->rebuild(0, 0, g_vInternalResolution.x, g_vInternalResolution.y);
-	m_frameBuffer->rebuild(0, 0, g_vInternalResolution.x, g_vInternalResolution.y);
-	m_frameBuffer2->rebuild(0, 0, g_vInternalResolution.x, g_vInternalResolution.y);
+	rebuildRenderTargets();
 
 	// mouse scaling & offset
 	// TODO: rethink scale logic
@@ -1372,6 +1405,23 @@ void Osu::onResolutionChanged(Vector2 newResolution)
 
 	// cursor clipping
 	updateConfineCursor();
+}
+
+void Osu::rebuildRenderTargets()
+{
+	m_backBuffer->rebuild(0, 0, g_vInternalResolution.x, g_vInternalResolution.y);
+	m_sliderFrameBuffer->rebuild(0, 0, g_vInternalResolution.x, g_vInternalResolution.y);
+
+	if (m_osu_mod_mafham_ref->getBool())
+	{
+		m_frameBuffer->rebuild(0, 0, g_vInternalResolution.x, g_vInternalResolution.y);
+		m_frameBuffer2->rebuild(0, 0, g_vInternalResolution.x, g_vInternalResolution.y);
+	}
+	else
+	{
+		m_frameBuffer->rebuild(0, 0, 64, 64);
+		m_frameBuffer2->rebuild(0, 0, 64, 64);
+	}
 }
 
 void Osu::onInternalResolutionChanged(UString oldValue, UString args)
@@ -1588,6 +1638,11 @@ void Osu::onKey2Change(bool pressed, bool mouse)
 		else if (!m_bKeyboardKey2Down && !m_bMouseKey2Down && !m_bKeyboardKey1Down && !m_bMouseKey1Down)
 			m_hud->animateCursorShrink();
 	}
+}
+
+void Osu::onModMafhamChange(UString oldValue, UString newValue)
+{
+	rebuildRenderTargets();
 }
 
 

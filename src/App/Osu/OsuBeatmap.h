@@ -136,7 +136,7 @@ public:
 	void consumeKeyUpEvent();
 	void addHitResult(OsuScore::HIT hit, long delta, bool ignoreOnHitErrorBar = false, bool hitErrorBarOnly = false, bool ignoreCombo = false, bool ignoreScore = false);
 	void addSliderBreak();
-	void addScorePoints(int points);
+	void addScorePoints(int points, bool isSpinner = false);
 	void addHealth(float percent);
 	void playMissSound();
 	void updateTimingPoints(long curPos);

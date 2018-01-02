@@ -247,6 +247,7 @@ OsuSkin::OsuSkin(Osu *osu, UString filepath)
 
 	// custom
 	m_iSampleSet = 1;
+	m_iSampleVolume = (int)(osu_volume_effects.getFloat()*100.0f);
 
 	load();
 
@@ -442,6 +443,7 @@ void OsuSkin::load()
 	m_selectionModAutoplay = createOsuSkinImage("selection-mod-autoplay", Vector2(68, 66), 38);
 	m_selectionModNightmare = createOsuSkinImage("selection-mod-nightmare", Vector2(68, 66), 38);
 	m_selectionModTarget = createOsuSkinImage("selection-mod-target", Vector2(68, 66), 38);
+	m_selectionModScorev2 = createOsuSkinImage("selection-mod-scorev2", Vector2(68, 66), 38);
 
 	checkLoadImage(&m_pauseContinue, "pause-continue", "OSU_SKIN_PAUSE_CONTINUE");
 	checkLoadImage(&m_pauseRetry, "pause-retry", "OSU_SKIN_PAUSE_RETRY");
@@ -601,12 +603,14 @@ void OsuSkin::load()
 		m_defaultButtonLeft = defaultButtonLeft;
 	else if (defaultButtonLeft2 != NULL)
 		m_defaultButtonLeft = defaultButtonLeft2;
+
 	Image *defaultButtonMiddle = engine->getResourceManager()->getImage("OSU_SKIN_BUTTON_MIDDLE_DEFAULT");
 	Image *defaultButtonMiddle2 = engine->getResourceManager()->getImage("OSU_SKIN_BUTTON_MIDDLE");
 	if (defaultButtonMiddle != NULL)
 		m_defaultButtonMiddle = defaultButtonMiddle;
 	else if (defaultButtonMiddle2 != NULL)
 		m_defaultButtonMiddle = defaultButtonMiddle2;
+
 	Image *defaultButtonRight = engine->getResourceManager()->getImage("OSU_SKIN_BUTTON_RIGHT_DEFAULT");
 	Image *defaultButtonRight2 = engine->getResourceManager()->getImage("OSU_SKIN_BUTTON_RIGHT");
 	if (defaultButtonRight != NULL)
@@ -754,12 +758,14 @@ bool OsuSkin::parseSkinINI(UString filepath)
 void OsuSkin::onEffectVolumeChange(UString oldValue, UString newValue)
 {
 	float volume = newValue.toFloat();
-	m_iSampleVolume = (int)(volume*100.0f);
 
 	for (int i=0; i<m_sounds.size(); i++)
 	{
 		m_sounds[i]->setVolume(volume);
 	}
+
+	// restore sample volumes
+	setSampleVolume(clamp<float>((float)m_iSampleVolume / 100.0f, 0.0f, 1.0f));
 }
 
 void OsuSkin::setSampleSet(int sampleSet)

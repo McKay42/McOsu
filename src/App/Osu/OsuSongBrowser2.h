@@ -17,6 +17,7 @@ class OsuDatabase;
 class OsuBeatmapDifficulty;
 
 class OsuUIContextMenu;
+class OsuUISearchOverlay;
 class OsuUISelectionButton;
 class OsuUISongBrowserInfoLabel;
 class OsuUISongBrowserButton;
@@ -203,6 +204,7 @@ private:
 	std::vector<OsuBeatmap*> m_previousRandomBeatmaps;
 
 	// search
+	OsuUISearchOverlay *m_search;
 	UString m_sSearchString;
 	float m_fSearchWaitTime;
 	bool m_bInSearch;
