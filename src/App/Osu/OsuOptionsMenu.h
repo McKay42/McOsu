@@ -16,6 +16,7 @@ class Osu;
 class OsuUIButton;
 class OsuUISlider;
 class OsuUIContextMenu;
+class OsuUISearchOverlay;
 
 class CBaseUIContainer;
 class CBaseUIImageButton;
@@ -56,6 +57,8 @@ private:
 
 	virtual void updateLayout();
 	virtual void onBack();
+
+	void scheduleSearchUpdate();
 
 	void updateOsuFolder();
 	void updateName();
@@ -116,6 +119,9 @@ private:
 	Osu *m_osu;
 	CBaseUIContainer *m_container;
 	CBaseUIScrollView *m_options;
+	OsuUIContextMenu *m_contextMenu;
+	OsuUISearchOverlay *m_search;
+	CBaseUILabel *m_spacer;
 
 	// custom
 	CBaseUICheckbox *m_fullscreenCheckbox;
@@ -148,14 +154,15 @@ private:
 	ConVar *m_waitingKey;
 	ConVar *m_osu_slider_curve_points_separation;
 
-	OsuUIContextMenu *m_contextMenu;
-
 	float m_fOsuFolderTextboxInvalidAnim;
 	float m_fVibrationStrengthExampleTimer;
 
 	// mania layout
 	int m_iManiaK;
 	int m_iManiaKey;
+
+	// search
+	UString m_sSearchString;
 };
 
 #endif

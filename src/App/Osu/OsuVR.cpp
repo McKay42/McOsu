@@ -1103,6 +1103,7 @@ void OsuVR::onOffsetDownClicked()
 void OsuVR::onVolumeSliderChange(OsuVRUISlider *slider)
 {
 	m_osu_volume_master_ref->setValue(slider->getFloat());
+	m_osu->getHUD()->animateVolumeChange();
 }
 
 void OsuVR::onScrubbingSliderChange(OsuVRUISlider *slider)

@@ -31,13 +31,13 @@ OsuUIModSelectorModButton::OsuUIModSelectorModButton(Osu *osu, OsuModSelector *o
 	m_bAvailable = true;
 	m_bOn = false;
 
-	m_activeImage = NULL;
+	getActiveImageFunc = NULL;
 }
 
 void OsuUIModSelectorModButton::draw(Graphics *g)
 {
 	if (!m_bVisible) return;
-	if (m_activeImage != NULL)
+	if (getActiveImageFunc != NULL && getActiveImageFunc())
 	{
 		g->pushTransform();
 
@@ -47,16 +47,23 @@ void OsuUIModSelectorModButton::draw(Graphics *g)
 			g->rotate(m_fRot);
 
 		g->setColor(0xffffffff);
-		m_activeImage->draw(g, m_vPos + m_vSize/2);
+		getActiveImageFunc()->draw(g, m_vPos + m_vSize/2);
 
 		g->popTransform();
 	}
 
 	if (!m_bAvailable)
 	{
+		const int size = m_vSize.x > m_vSize.y ? m_vSize.x : m_vSize.y;
+
+		g->setColor(0xff000000);
+		g->drawLine(m_vPos.x + 1, m_vPos.y, m_vPos.x + size + 1, m_vPos.y + size);
 		g->setColor(0xffffffff);
-		g->drawLine(m_vPos, m_vPos + m_vSize);
-		g->drawLine(m_vPos.x + m_vSize.x, m_vPos.y, m_vPos.x, m_vPos.y + m_vSize.y);
+		g->drawLine(m_vPos.x, m_vPos.y, m_vPos.x + size, m_vPos.y + size);
+		g->setColor(0xff000000);
+		g->drawLine(m_vPos.x + size + 1, m_vPos.y, m_vPos.x + 1, m_vPos.y + size);
+		g->setColor(0xffffffff);
+		g->drawLine(m_vPos.x + size, m_vPos.y, m_vPos.x, m_vPos.y + size);
 	}
 }
 
@@ -165,33 +172,31 @@ void OsuUIModSelectorModButton::setState(int state)
 	m_iState = state;
 
 	// update image
-	if (m_iState < m_states.size() && m_states.size() > 0 && m_states[m_iState].img != NULL)
-	{
-		m_activeImage = m_states[m_iState].img;
-	}
+	if (m_iState < m_states.size() && m_states.size() > 0 && m_states[m_iState].getImageFunc != NULL)
+		getActiveImageFunc = m_states[m_iState].getImageFunc;
 
 	// update mods
 	m_osuModSelector->updateModConVar();
 }
 
-void OsuUIModSelectorModButton::setState(unsigned int state, UString modName, UString tooltipText, OsuSkinImage *img)
+void OsuUIModSelectorModButton::setState(unsigned int state, UString modName, UString tooltipText, std::function<OsuSkinImage*()> getImageFunc)
 {
 	// dynamically add new state
 	while (m_states.size() < state+1)
 	{
 		STATE t;
-		t.img = NULL;
+		t.getImageFunc = NULL;
 		m_states.push_back(t);
 	}
 	m_states[state].modName = modName;
 	m_states[state].tooltipTextLines = tooltipText.split("\n");
-	m_states[state].img = img;
+	m_states[state].getImageFunc = getImageFunc;
 
 	// set initial state image
 	if (m_states.size() == 1)
-		m_activeImage = m_states[0].img;
+		getActiveImageFunc = m_states[0].getImageFunc;
 	else if (m_iState > -1 && m_iState < m_states.size()) // update current state image
-		m_activeImage = m_states[m_iState].img;
+		getActiveImageFunc = m_states[m_iState].getImageFunc;
 }
 
 UString OsuUIModSelectorModButton::getActiveModName()

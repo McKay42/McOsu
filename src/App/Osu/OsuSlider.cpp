@@ -1100,8 +1100,8 @@ void OsuSlider::update(long curPos)
 
 				float percent = numActualHits / numMaxPossibleHits;
 
-				bool allow300 = osu_slider_scorev2.getBool() ? (m_startResult == OsuScore::HIT::HIT_300) : true;
-				bool allow100 = osu_slider_scorev2.getBool() ? (m_startResult == OsuScore::HIT::HIT_300 || m_startResult == OsuScore::HIT::HIT_100) : true;
+				bool allow300 = (osu_slider_scorev2.getBool() || m_beatmap->getOsu()->getModScorev2()) ? (m_startResult == OsuScore::HIT::HIT_300) : true;
+				bool allow100 = (osu_slider_scorev2.getBool() || m_beatmap->getOsu()->getModScorev2()) ? (m_startResult == OsuScore::HIT::HIT_300 || m_startResult == OsuScore::HIT::HIT_100) : true;
 
 				if (percent >= 0.999f && allow300)
 					m_endResult = OsuScore::HIT::HIT_300;

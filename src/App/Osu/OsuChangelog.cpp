@@ -32,7 +32,15 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	std::vector<CHANGELOG> changelogs;
 
 	CHANGELOG alpha29Steam;
-	alpha29Steam.title = "28.97 (Steam VR Alpha, ?)";
+	alpha29Steam.title = UString::format("28.98 (Steam VR Version, %s, %s)", __DATE__, __TIME__);
+	alpha29Steam.changes.push_back("- Added Score v2 mod");
+	alpha29Steam.changes.push_back("- Added search support to options menu");
+	alpha29Steam.changes.push_back("- Added proper volume overlay HUD with individual sliders for master/effects/music");
+	alpha29Steam.changes.push_back("- Added/Fixed ConVars: osu_slider_followcircle_size_multiplier, osu_cursor_trail_alpha,");
+	alpha29Steam.changes.push_back("                                     osu_hud_volume_duration, osu_hud_volume_size_multiplier");
+	alpha29Steam.changes.push_back("");
+	alpha29Steam.changes.push_back("");
+	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("- Added smooth cursortrail support");
 	alpha29Steam.changes.push_back("- Added option \"Force Smooth CursorTrail\" (Options > Skin)");
 	alpha29Steam.changes.push_back("- Added sliderbreak counter to statistics overlay (Options > HUD > \"Draw Stats: SliderBreaks\")");
@@ -40,9 +48,8 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha29Steam.changes.push_back("- VR: Added layout lock checkbox (avoid accidentally messing up your layout, especially for Oculus players)");
 	alpha29Steam.changes.push_back("- Remember selected sorting type in songbrowser");
 	alpha29Steam.changes.push_back("- Remember volume settings if changed outside options");
+	alpha29Steam.changes.push_back("- Linux: Fixed number hotkeys not working in mod selector");
 	alpha29Steam.changes.push_back("- Minor performance improvements (ignore empty transparent skin images)");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("- Added new experimental mod \"Mafham\"");
 	alpha29Steam.changes.push_back("- Added a few ConVars (osu_drain_*, osu_slider_reverse_arrow_animated)");

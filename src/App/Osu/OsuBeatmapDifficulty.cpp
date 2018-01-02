@@ -173,6 +173,7 @@ OsuBeatmapDifficulty::OsuBeatmapDifficulty(Osu *osu, UString filepath, UString f
 	m_backgroundImagePathLoader = NULL;
 
 	m_iMaxCombo = 0;
+	m_fScoreV2ComboPortionMaximum = 1;
 
 	m_iSortHack = sortHackCounter++;
 }
@@ -830,6 +831,36 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 	    }
 	};
 	std::sort(hitobjects->begin(), hitobjects->end(), HitObjectSortComparator());
+
+	// precalculate Score v2 combo portion maximum
+	if (beatmapStandard != NULL)
+	{
+		if (hitobjects->size() > 0)
+			m_fScoreV2ComboPortionMaximum = 0;
+
+		int combo = 0;
+		for (int i=0; i<hitobjects->size(); i++)
+		{
+			int scoreComboMultiplier = std::max(combo-1, 0);
+
+			OsuCircle *circlePointer = dynamic_cast<OsuCircle*>((*(hitobjects))[i]);
+			OsuSlider *sliderPointer = dynamic_cast<OsuSlider*>((*(hitobjects))[i]);
+			OsuSpinner *spinnerPointer = dynamic_cast<OsuSpinner*>((*(hitobjects))[i]);
+
+			if (circlePointer != NULL || spinnerPointer != NULL)
+			{
+				m_fScoreV2ComboPortionMaximum += (unsigned long long)(300.0 * (1.0 + (double)scoreComboMultiplier / 10.0));
+				combo++;
+			}
+			else if (sliderPointer != NULL)
+			{
+				combo += 1 + sliderPointer->getClicks().size();
+				scoreComboMultiplier = std::max(combo-1, 0);
+				m_fScoreV2ComboPortionMaximum += (unsigned long long)(300.0 * (1.0 + (double)scoreComboMultiplier / 10.0));
+				combo++;
+			}
+		}
+	}
 
 	// special rule for first hitobject (for 1 approach circle with HD)
 	if (osu_show_approach_circle_on_first_hidden_object.getBool())
@@ -1511,7 +1542,7 @@ double OsuBeatmapDifficulty::calculatePPv2(Osu *osu, OsuBeatmap *beatmap, double
 {
 	// depends on active mods + OD + AR
 
-	SCORE_VERSION scoreVersion = m_osu_slider_scorev2->getBool() ? SCORE_VERSION::SCORE_V2 : SCORE_VERSION::SCORE_V1;
+	SCORE_VERSION scoreVersion = (m_osu_slider_scorev2->getBool() || osu->getModScorev2()) ? SCORE_VERSION::SCORE_V2 : SCORE_VERSION::SCORE_V1;
 
 	// not sure what's going on here, but osu is using some strange incorrect rounding (e.g. 13.5 ms for OD 11.08333 (for OD 10 with DT), which is incorrect because the 13.5 should get rounded down to 13 ms)
 	/*
