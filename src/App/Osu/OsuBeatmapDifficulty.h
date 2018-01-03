@@ -15,6 +15,7 @@ class BackgroundImagePathLoader;
 class Osu;
 class OsuBeatmap;
 class OsuBeatmapStandard;
+class OsuBeatmapMania;
 
 class OsuHitObject;
 
@@ -24,13 +25,14 @@ public:
 	static ConVar *m_osu_slider_scorev2;
 	static ConVar *m_osu_draw_statistics_pp;
 	static ConVar *m_osu_debug_pp;
+	static ConVar *m_osu_database_dynamic_star_calculation;
 
 public:
 	OsuBeatmapDifficulty(Osu *osu, UString filepath, UString folder);
 	~OsuBeatmapDifficulty();
 	void unload();
 
-	bool loadMetadataRaw();
+	bool loadMetadataRaw(bool calculateStars = false);
 	bool loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject*> *hitobjects);
 
 	void loadBackgroundImage();
@@ -39,6 +41,7 @@ public:
 
 	inline unsigned long long getSortHack() const {return m_iSortHack;}
 	inline bool shouldBackgroundImageBeLoaded() const {return m_bShouldBackgroundImageBeLoaded;}
+	bool isBackgroundLoaderActive();
 
 	struct HITCIRCLE
 	{
@@ -48,6 +51,7 @@ public:
 		int number;
 		int colorCounter;
 		bool clicked;
+		long maniaEndTime;
 	};
 
 	struct SLIDER_CLICK
@@ -200,6 +204,7 @@ public:
 	static double calculateBaseStrain(double strain);
 
 	inline int getMaxCombo() {return m_iMaxCombo;}
+	inline unsigned long long getScoreV2ComboPortionMaximum() {return m_fScoreV2ComboPortionMaximum;}
 	inline double getAimStarsForUpToHitObjectIndex(int upToHitObjectIndex) {return (m_aimStarsForNumHitObjects.size() > 0 ? m_aimStarsForNumHitObjects[clamp<int>(upToHitObjectIndex, 0, m_aimStarsForNumHitObjects.size()-1)] : 0);}
 	inline double getSpeedStarsForUpToHitObjectIndex(int upToHitObjectIndex) {return (m_speedStarsForNumHitObjects.size() > 0 ? m_speedStarsForNumHitObjects[clamp<int>(upToHitObjectIndex, 0, m_speedStarsForNumHitObjects.size()-1)] : 0);}
 
@@ -210,7 +215,7 @@ private:
 
 	// every supported type of beatmap/gamemode gets its own build function here. it should build the hitobject classes from the data loaded from disk.
 	void buildStandardHitObjects(OsuBeatmapStandard *beatmap, std::vector<OsuHitObject*> *hitobjects);
-	// void buildManiaHitObjects(OsuBeatmapMania *beatmap, std::vector<OsuHitObject*> *hitobjects);
+	void buildManiaHitObjects(OsuBeatmapMania *beatmap, std::vector<OsuHitObject*> *hitobjects);
 	// void buildTaikoHitObjects(OsuBeatmapTaiko *beatmap, std::vector<OsuHitObject*> *hitobjects);
 
 	// generic helper functions
@@ -229,10 +234,11 @@ private:
 	BackgroundImagePathLoader *m_backgroundImagePathLoader;
 	unsigned long long m_iSortHack;
 
-	// for pp & star calculation
+	// for pp & star & score calculation
 	int m_iMaxCombo;
 	std::vector<double> m_aimStarsForNumHitObjects;
 	std::vector<double> m_speedStarsForNumHitObjects;
+	unsigned long long m_fScoreV2ComboPortionMaximum;
 };
 
 #endif

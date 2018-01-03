@@ -35,18 +35,23 @@
 
 #include "OsuUIBackButton.h"
 #include "OsuUIContextMenu.h"
+#include "OsuUISearchOverlay.h"
 #include "OsuUISelectionButton.h"
 #include "OsuUISongBrowserInfoLabel.h"
 #include "OsuUISongBrowserSongButton.h"
 #include "OsuUISongBrowserSongDifficultyButton.h"
 #include "OsuUISongBrowserCollectionButton.h"
 
+ConVar osu_gamemode("osu_gamemode", "std");
+
+ConVar osu_songbrowser_sortingtype("osu_songbrowser_sortingtype", "By Date Added");
 ConVar osu_songbrowser_topbar_left_percent("osu_songbrowser_topbar_left_percent", 0.93f);
 ConVar osu_songbrowser_topbar_left_width_percent("osu_songbrowser_topbar_left_width_percent", 0.265f);
 ConVar osu_songbrowser_topbar_middle_width_percent("osu_songbrowser_topbar_middle_width_percent", 0.15f);
 ConVar osu_songbrowser_topbar_right_height_percent("osu_songbrowser_topbar_right_height_percent", 0.5f);
 ConVar osu_songbrowser_topbar_right_percent("osu_songbrowser_topbar_right_percent", 0.378f);
 ConVar osu_songbrowser_bottombar_percent("osu_songbrowser_bottombar_percent", 0.116f);
+ConVar osu_draw_songbrowser_background_image("osu_draw_songbrowser_background_image", true);
 
 
 
@@ -298,7 +303,10 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 {
 	m_osu = osu;
 
+	// random selection algorithm init
 	m_rngalg = std::mt19937(time(0));
+
+	// sorting/grouping + methods
 	m_group = GROUP::GROUP_NO_GROUPING;
 	m_sortingMethod = SORT::SORT_ARTIST;
 
@@ -313,6 +321,10 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 
 	// convar refs
 	m_fps_max_ref = convar->getConVarByName("fps_max");
+	m_osu_database_dynamic_star_calculation_ref = convar->getConVarByName("osu_database_dynamic_star_calculation");
+
+	// convar callbacks
+	osu_gamemode.setCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onModeChange) );
 
 	// engine settings
 	engine->getMouse()->addListener(this);
@@ -369,6 +381,11 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	m_bottombar = new CBaseUIContainer(0, 0, 0, 0, "");
 
 	///addBottombarNavButton();
+	/*
+	CBaseUIButton *modeButton = addBottombarNavButton();
+	modeButton->setText("std");
+	modeButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onSelectionMode) );
+	*/
 	addBottombarNavButton()->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onSelectionMods) );
 	addBottombarNavButton()->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onSelectionRandom) );
 	///addBottombarNavButton()->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser::onSelectionOptions) );
@@ -390,8 +407,13 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	m_fPulseAnimation = 0.0f;
 
 	// search
+	m_search = new OsuUISearchOverlay(m_osu, 0, 0, 0, 0, "");
+	m_search->setOffsetRight(10);
 	m_fSearchWaitTime = 0.0f;
 	m_bInSearch = false;
+
+	// background star calculation
+	m_iBackgroundStarCalculationIndex = 0;
 
 	updateLayout();
 }
@@ -412,6 +434,7 @@ OsuSongBrowser2::~OsuSongBrowser2()
 		delete m_difficultyCollectionButtons[i];
 	}
 
+	SAFE_DELETE(m_search);
 	SAFE_DELETE(m_topbarLeft);
 	SAFE_DELETE(m_topbarRight);
 	SAFE_DELETE(m_bottombar);
@@ -443,47 +466,17 @@ void OsuSongBrowser2::draw(Graphics *g)
 	g->fillRect(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight());
 
 	// draw background image
-	drawSelectedBeatmapBackgroundImage(g, m_osu);
+	if (osu_draw_songbrowser_background_image.getBool())
+		drawSelectedBeatmapBackgroundImage(g, m_osu);
 
 	// draw song browser
 	m_songBrowser->draw(g);
 
-	// draw search text and background
-	UString searchText1 = "Search: ";
-	UString searchText2 = "Type to search!";
-	UString combinedSearchText = searchText1;
-	combinedSearchText.append(searchText2);
-	McFont *searchTextFont = m_osu->getSubTitleFont();
-	float searchTextScale = 0.75f;
-	bool hasSearchSubTextVisible = m_sSearchString.length() > 0 && m_bInSearch;
-	g->setColor(COLOR(m_sSearchString.length() > 0 ? 100 : 30, 0, 0, 0));
-	g->fillRect(m_songBrowser->getPos().x + m_songBrowser->getSize().x*0.75f - searchTextFont->getStringWidth(combinedSearchText)*searchTextScale/2 - (searchTextFont->getHeight()*searchTextScale)*0.5f, m_songBrowser->getPos().y, m_songBrowser->getSize().x, (searchTextFont->getHeight()*searchTextScale)*(hasSearchSubTextVisible ? 4.0f : 3.0f));
-	g->setColor(0xffffffff);
-	g->pushTransform();
-		g->translate(0, searchTextFont->getHeight()/2);
-		g->scale(searchTextScale, searchTextScale);
-		g->translate(m_songBrowser->getPos().x + m_songBrowser->getSize().x*0.75f - searchTextFont->getStringWidth(combinedSearchText)*searchTextScale/2, m_songBrowser->getPos().y + (searchTextFont->getHeight()*searchTextScale)*1.5f);
-
-		// draw search text and text
-		g->pushTransform();
-			g->setColor(0xff00ff00);
-			g->drawString(searchTextFont, searchText1);
-			g->setColor(0xffffffff);
-			g->translate(searchTextFont->getStringWidth(searchText1)*searchTextScale, 0);
-			if (m_sSearchString.length() < 1)
-				g->drawString(searchTextFont, searchText2);
-			else
-				g->drawString(searchTextFont, m_sSearchString);
-		g->popTransform();
-
-		// draw number of matches
-		if (hasSearchSubTextVisible)
-		{
-			g->setColor(0xffffffff);
-			g->translate(0, (searchTextFont->getHeight()*searchTextScale)*1.5f);
-			g->drawString(searchTextFont, m_visibleSongButtons.size() > 0 ? UString::format("%i matches found!", m_visibleSongButtons.size()) : "No matches found. Hit ESC to reset.");
-		}
-	g->popTransform();
+	// draw search
+	m_search->setSearchString(m_sSearchString);
+	m_search->setDrawNumResults(m_bInSearch);
+	m_search->setNumFoundResults(m_visibleSongButtons.size());
+	m_search->draw(g);
 
 	// draw top bar
 	g->setColor(0xffffffff);
@@ -624,6 +617,10 @@ void OsuSongBrowser2::update()
 		return;
 	}
 
+	// HACKHACK:
+	if (m_osu->getHUD()->isVolumeOverlayBusy())
+		engine->getMouse()->resetWheelDelta();
+
 	m_songBrowser->update();
 	m_songBrowser->getContainer()->update_pos(); // necessary due to constant animations
 	m_topbarLeft->update();
@@ -631,7 +628,7 @@ void OsuSongBrowser2::update()
 	m_bottombar->update();
 	m_contextMenu->update();
 
-	if (m_contextMenu->isMouseInside())
+	if (m_contextMenu->isMouseInside() || m_osu->getHUD()->isVolumeOverlayBusy())
 	{
 		m_topbarRight->stealFocus();
 		m_songBrowser->stealFocus();
@@ -696,6 +693,38 @@ void OsuSongBrowser2::update()
 			onGroupNoGrouping(m_noGroupingButton);
 		}
 	}
+
+	// handle background star calculation
+	if (m_beatmaps.size() > 0 && m_osu_database_dynamic_star_calculation_ref->getBool())
+	{
+		for (int s=0; s<1; s++) // one beatmap per update
+		{
+			bool canMoveToNextBeatmap = true;
+			if (m_iBackgroundStarCalculationIndex < m_beatmaps.size())
+			{
+				for (int i=0; i<m_beatmaps[m_iBackgroundStarCalculationIndex]->getDifficultiesPointer()->size(); i++)
+				{
+					if (!(*m_beatmaps[m_iBackgroundStarCalculationIndex]->getDifficultiesPointer())[i]->isBackgroundLoaderActive() && (*m_beatmaps[m_iBackgroundStarCalculationIndex]->getDifficultiesPointer())[i]->starsNoMod == 0.0f)
+					{
+						(*m_beatmaps[m_iBackgroundStarCalculationIndex]->getDifficultiesPointer())[i]->loadMetadataRaw(true);
+
+						// only one diff per beatmap per update
+						canMoveToNextBeatmap = false;
+						break;
+					}
+				}
+			}
+
+			if (canMoveToNextBeatmap)
+			{
+				m_iBackgroundStarCalculationIndex++;
+				if (m_iBackgroundStarCalculationIndex >= m_beatmaps.size())
+					m_iBackgroundStarCalculationIndex = 0;
+
+				m_iBackgroundStarCalculationIndex = clamp<int>(m_iBackgroundStarCalculationIndex, 0, m_beatmaps.size());
+			}
+		}
+	}
 }
 
 void OsuSongBrowser2::onKeyDown(KeyboardEvent &key)
@@ -740,6 +769,7 @@ void OsuSongBrowser2::onKeyDown(KeyboardEvent &key)
 				}
 				else
 					m_sSearchString = m_sSearchString.substr(0, m_sSearchString.length()-1);
+
 				scheduleSearchUpdate(m_sSearchString.length() == 0);
 			}
 			break;
@@ -762,13 +792,13 @@ void OsuSongBrowser2::onKeyDown(KeyboardEvent &key)
 	if (key == KEY_F1 && !m_bF1Pressed)
 	{
 		m_bF1Pressed = true;
-		m_bottombarNavButtons[0]->keyboardPulse();
+		m_bottombarNavButtons[m_bottombarNavButtons.size() > 2 ? 1 : 0]->keyboardPulse();
 		onSelectionMods();
 	}
 	if (key == KEY_F2 && !m_bF2Pressed)
 	{
 		m_bF2Pressed = true;
-		m_bottombarNavButtons[1]->keyboardPulse();
+		m_bottombarNavButtons[m_bottombarNavButtons.size() > 2 ? 2 : 1]->keyboardPulse();
 		onSelectionRandom();
 	}
 	if (key == KEY_F3)
@@ -943,7 +973,9 @@ void OsuSongBrowser2::onChar(KeyboardEvent &e)
 
 	// handle searching
 	KEYCODE charCode = e.getCharCode();
-	m_sSearchString.append(UString((wchar_t*)&charCode));
+	UString stringChar = "";
+	stringChar.insert(0, charCode);
+	m_sSearchString.append(stringChar);
 
 	scheduleSearchUpdate();
 }
@@ -1286,7 +1318,7 @@ bool OsuSongBrowser2::searchMatcher(OsuBeatmap *beatmap, UString searchString)
 									compareValue = diffs[d]->lengthMS / 1000;
 									break;
 								case STARS:
-									compareValue = diffs[d]->starsNoMod;
+									compareValue = std::round(diffs[d]->starsNoMod * 10.0f) / 10.0f; // round to 1 decimal place
 									break;
 								}
 
@@ -1441,19 +1473,22 @@ bool OsuSongBrowser2::findSubstringInDifficulty(OsuBeatmapDifficulty *diff, UStr
 
 void OsuSongBrowser2::updateLayout()
 {
-	m_bottombarNavButtons[0]->setImageResourceName(m_osu->getSkin()->getSelectionMods()->getName());
-	m_bottombarNavButtons[0]->setImageResourceNameOver(m_osu->getSkin()->getSelectionModsOver()->getName());
-	m_bottombarNavButtons[1]->setImageResourceName(m_osu->getSkin()->getSelectionRandom()->getName());
-	m_bottombarNavButtons[1]->setImageResourceNameOver(m_osu->getSkin()->getSelectionRandomOver()->getName());
-	/*
-	m_bottombarNavButtons[0]->setImageResourceName(m_osu->getSkin()->getSelectionMode()->getName());
-	m_bottombarNavButtons[0]->setImageResourceNameOver(m_osu->getSkin()->getSelectionModeOver()->getName());
-	m_bottombarNavButtons[1]->setImageResourceName(m_osu->getSkin()->getSelectionMods()->getName());
-	m_bottombarNavButtons[1]->setImageResourceNameOver(m_osu->getSkin()->getSelectionModsOver()->getName());
-	m_bottombarNavButtons[2]->setImageResourceName(m_osu->getSkin()->getSelectionRandom()->getName());
-	m_bottombarNavButtons[2]->setImageResourceNameOver(m_osu->getSkin()->getSelectionRandomOver()->getName());
-	*/
-	///m_bottombarNavButtons[2]->setImageResourceName(m_osu->getSkin()->getSelectionOptions()->getName());
+	if (m_bottombarNavButtons.size() == 3)
+	{
+		m_bottombarNavButtons[0]->setImageResourceName(m_osu->getSkin()->getSelectionMode()->getName());
+		m_bottombarNavButtons[0]->setImageResourceNameOver(m_osu->getSkin()->getSelectionModeOver()->getName());
+		m_bottombarNavButtons[1]->setImageResourceName(m_osu->getSkin()->getSelectionMods()->getName());
+		m_bottombarNavButtons[1]->setImageResourceNameOver(m_osu->getSkin()->getSelectionModsOver()->getName());
+		m_bottombarNavButtons[2]->setImageResourceName(m_osu->getSkin()->getSelectionRandom()->getName());
+		m_bottombarNavButtons[2]->setImageResourceNameOver(m_osu->getSkin()->getSelectionRandomOver()->getName());
+	}
+	else if (m_bottombarNavButtons.size() == 2)
+	{
+		m_bottombarNavButtons[0]->setImageResourceName(m_osu->getSkin()->getSelectionMods()->getName());
+		m_bottombarNavButtons[0]->setImageResourceNameOver(m_osu->getSkin()->getSelectionModsOver()->getName());
+		m_bottombarNavButtons[1]->setImageResourceName(m_osu->getSkin()->getSelectionRandom()->getName());
+		m_bottombarNavButtons[1]->setImageResourceNameOver(m_osu->getSkin()->getSelectionRandomOver()->getName());
+	}
 
 	//************************************************************************************************************************************//
 
@@ -1527,6 +1562,9 @@ void OsuSongBrowser2::updateLayout()
 	m_songBrowser->setPos(m_topbarLeft->getPos().x + m_topbarLeft->getSize().x + 1, m_topbarRight->getPos().y + m_topbarRight->getSize().y + 2);
 	m_songBrowser->setSize(m_osu->getScreenWidth() - (m_topbarLeft->getPos().x + m_topbarLeft->getSize().x), m_osu->getScreenHeight() - m_songBrowser->getPos().y - m_bottombar->getSize().y+2);
 	updateSongButtonLayout();
+
+	m_search->setPos(m_songBrowser->getPos());
+	m_search->setSize(m_songBrowser->getSize());
 }
 
 void OsuSongBrowser2::onBack()
@@ -1656,7 +1694,7 @@ void OsuSongBrowser2::onDatabaseLoadingFinished()
 	}
 	*/
 
-	onSortChange(m_sortingMethods[3].name); // hardcoded to use "By Date Added" as the default sorting method
+	onSortChange(osu_songbrowser_sortingtype.getString());
 }
 
 void OsuSongBrowser2::onSortClicked(CBaseUIButton *button)
@@ -1684,19 +1722,21 @@ void OsuSongBrowser2::onSortClicked(CBaseUIButton *button)
 
 void OsuSongBrowser2::onSortChange(UString text)
 {
-	SORTING_METHOD sortingMethod;
+	SORTING_METHOD *sortingMethod = (m_sortingMethods.size() > 3 ? &m_sortingMethods[3] : NULL);
 	for (int i=0; i<m_sortingMethods.size(); i++)
 	{
 		// laziness wins again :(
 		if (m_sortingMethods[i].name == text)
 		{
-			sortingMethod = m_sortingMethods[i];
+			sortingMethod = &m_sortingMethods[i];
 			break;
 		}
 	}
+	if (sortingMethod == NULL) return;
 
-	m_sortingMethod = sortingMethod.type;
-	m_sortButton->setText(sortingMethod.name);
+	m_sortingMethod = sortingMethod->type;
+	m_sortButton->setText(sortingMethod->name);
+	osu_songbrowser_sortingtype.setValue(sortingMethod->name); // remember
 
 	struct COMPARATOR_WRAPPER
 	{
@@ -1707,7 +1747,7 @@ void OsuSongBrowser2::onSortChange(UString text)
 		}
 	};
 	COMPARATOR_WRAPPER comparatorWrapper;
-	comparatorWrapper.comp = sortingMethod.comparator;
+	comparatorWrapper.comp = sortingMethod->comparator;
 
 	// resort primitive master button array (all songbuttons, No Grouping)
 	std::sort(m_songButtons.begin(), m_songButtons.end(), comparatorWrapper);
@@ -1779,9 +1819,22 @@ void OsuSongBrowser2::onAfterSortingOrGroupChange(CBaseUIButton *b)
 	if (isAnythingSelected)
 		scrollToSelectedSongButton();
 	else
-	{
 		m_songBrowser->scrollToTop();
-	}
+}
+
+void OsuSongBrowser2::onSelectionMode()
+{
+	engine->getSound()->play(m_osu->getSkin()->getMenuClick());
+
+	m_contextMenu->setPos(m_bottombarNavButtons[0]->getPos());
+	m_contextMenu->setRelPos(m_bottombarNavButtons[0]->getRelPos());
+	m_contextMenu->begin();
+	m_contextMenu->addButton("std");
+	m_contextMenu->addButton("mania");
+	m_contextMenu->setPos(m_contextMenu->getPos() - Vector2(0, m_contextMenu->getSize().y));
+	m_contextMenu->setRelPos(m_contextMenu->getRelPos() - Vector2(0, m_contextMenu->getSize().y));
+	m_contextMenu->end();
+	m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onModeChange) );
 }
 
 void OsuSongBrowser2::onSelectionMods()
@@ -1802,6 +1855,29 @@ void OsuSongBrowser2::onSelectionRandom()
 void OsuSongBrowser2::onSelectionOptions()
 {
 	engine->getSound()->play(m_osu->getSkin()->getMenuClick());
+}
+
+void OsuSongBrowser2::onModeChange(UString text)
+{
+	if (m_bottombarNavButtons.size() > 2)
+		m_bottombarNavButtons[0]->setText(text);
+
+	if (text == "std")
+	{
+		if (m_osu->getGamemode() != Osu::GAMEMODE::STD)
+		{
+			m_osu->setGamemode(Osu::GAMEMODE::STD);
+			refreshBeatmaps();
+		}
+	}
+	else if (text == "mania")
+	{
+		if (m_osu->getGamemode() != Osu::GAMEMODE::MANIA)
+		{
+			m_osu->setGamemode(Osu::GAMEMODE::MANIA);
+			refreshBeatmaps();
+		}
+	}
 }
 
 void OsuSongBrowser2::selectSongButton(OsuUISongBrowserButton *songButton)

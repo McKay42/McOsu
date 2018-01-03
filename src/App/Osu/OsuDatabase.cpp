@@ -10,15 +10,18 @@
 #include "Engine.h"
 #include "ConVar.h"
 #include "Timer.h"
+#include "File.h"
 #include "ResourceManager.h"
 
 #include "Osu.h"
 #include "OsuFile.h"
 #include "OsuNotificationOverlay.h"
+
 #include "OsuBeatmap.h"
 #include "OsuBeatmapDifficulty.h"
-#include "OsuBeatmapStandard.h"
 #include "OsuBeatmapExample.h"
+#include "OsuBeatmapStandard.h"
+#include "OsuBeatmapMania.h"
 
 #if defined(_WIN32) || defined(_WIN64) || defined(__WIN32__) || defined(__CYGWIN__) || defined(__CYGWIN32__) || defined(__TOS_WIN__) || defined(__WINDOWS__)
 
@@ -39,6 +42,7 @@ ConVar osu_folder("osu_folder", "/osu!/");
 #endif
 
 ConVar osu_database_enabled("osu_database_enabled", true);
+ConVar osu_database_dynamic_star_calculation("osu_database_dynamic_star_calculation", true, "dynamically calculate star ratings in the background");
 
 class OsuDatabaseLoader : public Resource
 {
@@ -270,6 +274,65 @@ void OsuDatabase::loadDB(OsuFile *db)
 		return;
 	}
 
+	// get BeatmapDirectory parameter from osu!.<OS_USERNAME>.cfg
+	// fallback to /Songs/ if it doesn't exist
+	UString songFolder = osu_folder.getString();
+	bool haveCustomBeatmapDirectory = false;
+	if (env->getUsername().length() > 0)
+	{
+		UString osuUserConfigFilePath = osu_folder.getString();
+		osuUserConfigFilePath.append("osu!.");
+		osuUserConfigFilePath.append(env->getUsername());
+		osuUserConfigFilePath.append(".cfg");
+
+		File file(osuUserConfigFilePath);
+		char stringBuffer[1024];
+		while (file.canRead())
+		{
+			UString uCurLine = file.readLine();
+			const char *curLineChar = uCurLine.toUtf8();
+			std::string curLine(curLineChar);
+
+			memset(stringBuffer, '\0', 1024);
+			if (sscanf(curLineChar, " BeatmapDirectory = %1023[^\n]", stringBuffer) == 1)
+			{
+				UString beatmapDirectory = UString(stringBuffer);
+				beatmapDirectory = beatmapDirectory.trim();
+				if (beatmapDirectory.length() > 2)
+				{
+					haveCustomBeatmapDirectory = true;
+
+					// if we have an absolute path, use it in its entirety.
+					// otherwise, append the beatmapDirectory to the songFolder (which uses the osu_folder as the starting point)
+					if (beatmapDirectory.find(":") != -1)
+						songFolder = beatmapDirectory;
+					else
+					{
+						// ensure that beatmapDirectory doesn't start with a slash
+						const wchar_t *uDir = beatmapDirectory.wc_str();
+						if (uDir[0] == L'/' || uDir[0] == L'\\')
+							beatmapDirectory.erase(0, 1);
+
+						songFolder.append(beatmapDirectory);
+					}
+
+					// ensure that the songFolder ends with a slash
+					if (songFolder.length() > 0)
+					{
+						const wchar_t *uFolder = songFolder.wc_str();
+						if (uFolder[songFolder.length()-1] != L'/' && uFolder[songFolder.length()-1] != L'\\')
+							songFolder.append("/");
+					}
+				}
+				break;
+			}
+		}
+	}
+	if (!haveCustomBeatmapDirectory)
+		songFolder.append("Songs/");
+
+	debugLog("Database: songFolder = %s\n", songFolder.toUtf8());
+
 	m_importTimer->start();
 
 	// read header
@@ -300,8 +363,6 @@ void OsuDatabase::loadDB(OsuFile *db)
 		UString path;
 		std::vector<OsuBeatmapDifficulty*> diffs;
 	};
-	UString songFolder = osu_folder.getString();
-	songFolder.append("Songs/");
 	std::vector<BeatmapSet> beatmapSets;
 	for (int i=0; i<m_iNumBeatmapsToLoad; i++)
 	{
@@ -443,7 +504,7 @@ void OsuDatabase::loadDB(OsuFile *db)
 		fullFilePath.append(osuFileName);
 
 		// fill diff with data
-		if (mode == 0) // only use osu!standard diffs
+		if ((mode == 0 && m_osu->getGamemode() == Osu::GAMEMODE::STD) || (mode == 0x03 && m_osu->getGamemode() == Osu::GAMEMODE::MANIA)) // gamemode filter
 		{
 			OsuBeatmapDifficulty *diff = new OsuBeatmapDifficulty(m_osu, fullFilePath, beatmapPath);
 
@@ -547,7 +608,7 @@ void OsuDatabase::loadDB(OsuFile *db)
 		{
 			if (beatmapSets[i].setID > 0)
 			{
-				OsuBeatmap *bm = new OsuBeatmapStandard(m_osu);
+				OsuBeatmap *bm = createBeatmapForActiveGamemode();
 				bm->setDifficulties(beatmapSets[i].diffs);
 				m_beatmaps.push_back(bm);
 			}
@@ -589,7 +650,7 @@ void OsuDatabase::loadDB(OsuFile *db)
 					// if we couldn't find any beatmap with our title and artist, create a new one
 					if (!existsAlready)
 					{
-						OsuBeatmap *bm = new OsuBeatmapStandard(m_osu);
+						OsuBeatmap *bm = createBeatmapForActiveGamemode();
 						std::vector<OsuBeatmapDifficulty*> diffs;
 						diffs.push_back(beatmapSets[i].diffs[b]);
 						bm->setDifficulties(diffs);
@@ -808,9 +869,19 @@ OsuBeatmap *OsuDatabase::loadRawBeatmap(UString beatmapPath)
 	// if we found any valid diffs, create beatmap
 	if (diffs.size() > 0)
 	{
-		result = new OsuBeatmapStandard(m_osu);
+		result = createBeatmapForActiveGamemode();
 		result->setDifficulties(diffs);
 	}
 
 	return result;
+}
+
+OsuBeatmap *OsuDatabase::createBeatmapForActiveGamemode()
+{
+	if (m_osu->getGamemode() == Osu::GAMEMODE::STD)
+		return new OsuBeatmapStandard(m_osu);
+	else if (m_osu->getGamemode() == Osu::GAMEMODE::MANIA)
+		return new OsuBeatmapMania(m_osu);
+
+	return NULL;
 }

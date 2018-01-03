@@ -137,6 +137,7 @@ public:
 	inline OsuSkinImage *getSelectionModAutoplay() {return m_selectionModAutoplay;}
 	inline OsuSkinImage *getSelectionModNightmare() {return m_selectionModNightmare;}
 	inline OsuSkinImage *getSelectionModTarget() {return m_selectionModTarget;}
+	inline OsuSkinImage *getSelectionModScorev2() {return m_selectionModScorev2;}
 
 	inline Image *getPauseContinue() {return m_pauseContinue;}
 	inline Image *getPauseRetry() {return m_pauseRetry;}
@@ -262,6 +263,9 @@ public:
 	inline UString getHitCirclePrefix() {return m_sHitCirclePrefix;}
 	inline int getHitCircleOverlap() {return m_iHitCircleOverlap;}
 
+	// custom
+	inline bool useSmoothCursorTrail() {return m_cursorMiddle != m_missingTexture;}
+
 private:
 	bool parseSkinINI(UString filepath);
 	bool compareFilenameWithSkinElementName(UString filename, UString skinElementName);
@@ -372,6 +376,7 @@ private:
 	OsuSkinImage *m_selectionModAutoplay;
 	OsuSkinImage *m_selectionModNightmare;
 	OsuSkinImage *m_selectionModTarget;
+	OsuSkinImage *m_selectionModScorev2;
 
 	Image *m_pauseContinue;
 	Image *m_pauseRetry;

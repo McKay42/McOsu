@@ -16,6 +16,12 @@ class OsuVR;
 class McFont;
 class ConVar;
 class Image;
+class Shader;
+class VertexArrayObject;
+
+class OsuUIVolumeSlider;
+
+class CBaseUIContainer;
 
 class OsuHUD : public OsuScreen
 {
@@ -48,10 +54,19 @@ public:
 	void animateVolumeChange();
 	void animateCursorExpand();
 	void animateCursorShrink();
+	void addCursorTrailPosition(Vector2 pos);
+
+	void selectVolumePrev();
+	void selectVolumeNext();
 
 	void resetHitErrorBar();
 
 	McRect getSkipClickRect();
+	bool isVolumeOverlayVisible();
+	bool isVolumeOverlayBusy();
+	OsuUIVolumeSlider *getVolumeMasterSlider() {return m_volumeMaster;}
+	OsuUIVolumeSlider *getVolumeEffectsSlider() {return m_volumeEffects;}
+	OsuUIVolumeSlider *getVolumeMusicSlider() {return m_volumeMusic;}
 
 	void drawSkip(Graphics *g);
 
@@ -64,24 +79,30 @@ private:
 	void drawScore(Graphics *g, unsigned long long score);
 	void drawHP(Graphics *g, float health);
 
-
 	void drawWarningArrows(Graphics *g, float hitcircleDiameter = 0.0f);
 	void drawContinue(Graphics *g, Vector2 cursor, float hitcircleDiameter = 0.0f);
 	void drawHitErrorBar(Graphics *g, float hitWindow300, float hitWindow100, float hitWindow50, float hitWindowMiss);
 	void drawProgressBar(Graphics *g, float percent, bool waiting);
 	void drawProgressBarVR(Graphics *g, Matrix4 &mvp, OsuVR *vr, float percent, bool waiting);
-	void drawStatistics(Graphics *g, int misses, int bpm, float ar, float cs, float od, int nps, int nd, int ur, int pp);
+	void drawStatistics(Graphics *g, int misses, int sliderbreaks, int bpm, float ar, float cs, float od, int nps, int nd, int ur, int pp);
 	void drawTargetHeatmap(Graphics *g, float hitcircleDiameter);
+	void drawScrubbingTimeline(Graphics *g, unsigned long beatmapTime, unsigned long beatmapLength, unsigned long beatmapLengthPlayable, unsigned long beatmapStartTimePlayable, float beatmapPercentFinishedPlayable);
 
 	void drawStatisticText(Graphics *g, const UString text);
 
 	float getCursorScaleFactor();
+	float getCursorTrailScaleFactor();
+
+	void onVolumeOverlaySizeChange(UString oldValue, UString newValue);
 
 	Osu *m_osu;
 	McFont *m_tempFont;
 
 	ConVar *m_host_timescale_ref;
 	ConVar *m_osu_volume_master_ref;
+	ConVar *m_osu_volume_effects_ref;
+	ConVar *m_osu_volume_music_ref;
+	ConVar *m_osu_volume_change_interval_ref;
 	ConVar *m_osu_mod_target_300_percent_ref;
 	ConVar *m_osu_mod_target_100_percent_ref;
 	ConVar *m_osu_mod_target_50_percent_ref;
@@ -116,15 +137,22 @@ private:
 	float m_fLastVolume;
 	float m_fVolumeChangeTime;
 	float m_fVolumeChangeFade;
+	CBaseUIContainer *m_volumeSliderOverlayContainer;
+	OsuUIVolumeSlider *m_volumeMaster;
+	OsuUIVolumeSlider *m_volumeEffects;
+	OsuUIVolumeSlider *m_volumeMusic;
 
-	// cursor
+	// cursor & trail
 	float m_fCursorExpandAnim;
 	struct CURSORTRAIL
 	{
 		Vector2 pos;
 		float time;
+		float alpha;
 	};
 	std::vector<CURSORTRAIL> m_cursorTrail;
+	Shader *m_cursorTrailShader;
+	VertexArrayObject *m_cursorTrailVAO;
 
 	// target heatmap
 	struct TARGET

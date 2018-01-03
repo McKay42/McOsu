@@ -34,6 +34,7 @@
 
 ConVar osu_rankingscreen_topbar_height_percent("osu_rankingscreen_topbar_height_percent", 0.785f);
 ConVar osu_rankingscreen_pp("osu_rankingscreen_pp", true);
+ConVar osu_draw_rankingscreen_background_image("osu_draw_rankingscreen_background_image", true);
 
 OsuRankingScreen::OsuRankingScreen(Osu *osu) : OsuScreenBackable(osu)
 {
@@ -91,7 +92,8 @@ void OsuRankingScreen::draw(Graphics *g)
 	if (!m_bVisible) return;
 
 	// draw background image
-	OsuSongBrowser2::drawSelectedBeatmapBackgroundImage(g, m_osu);
+	if (osu_draw_rankingscreen_background_image.getBool())
+		OsuSongBrowser2::drawSelectedBeatmapBackgroundImage(g, m_osu);
 
 	m_rankings->draw(g);
 
@@ -113,6 +115,8 @@ void OsuRankingScreen::draw(Graphics *g)
 		drawModImage(g, m_osu->getSkin()->getSelectionModDoubleTime(), modPos);
 	if (m_osu->getModNM())
 		drawModImage(g, m_osu->getSkin()->getSelectionModNightmare(), modPos);
+	if (m_osu->getModScorev2())
+		drawModImage(g, m_osu->getSkin()->getSelectionModScorev2(), modPos);
 	if (m_osu->getModTarget())
 		drawModImage(g, m_osu->getSkin()->getSelectionModTarget(), modPos);
 	if (m_osu->getModSpunout())

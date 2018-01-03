@@ -18,6 +18,7 @@
 #include "ConVar.h"
 
 #include "Osu.h"
+#include "OsuHUD.h"
 #include "OsuSkin.h"
 #include "OsuSkinImage.h"
 #include "OsuBeatmap.h"
@@ -63,7 +64,7 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen()
 	m_previousDifficulty = NULL;
 
 	// build mod grid buttons
-	m_iGridWidth = 5;
+	m_iGridWidth = 6;
 	m_iGridHeight = 3;
 
 	for (int x=0; x<m_iGridWidth; x++)
@@ -121,6 +122,7 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen()
 	addExperimentalCheckbox("No 100s no 50s", "300 or miss. PF \"lite\"", convar->getConVarByName("osu_mod_no100s"));
 	addExperimentalCheckbox("MinG3012", "No 100s. Only 300s or 50s. Git gud.", convar->getConVarByName("osu_mod_ming3012"));
 	addExperimentalCheckbox("MillhioreF", "Go below AR 0. Doubled approach time.", convar->getConVarByName("osu_mod_millhioref"));
+	addExperimentalCheckbox("Mafham", "Approach rate is set to negative infinity. See the entire beatmap at once.\nUses very aggressive optimizations to keep the framerate high, you have been warned!", convar->getConVarByName("osu_mod_mafham"));
 	addExperimentalCheckbox("Flip Horizontally", "Playfield is flipped horizontally.", convar->getConVarByName("osu_playfield_mirror_horizontal"));
 	addExperimentalCheckbox("Flip Vertically", "Playfield is flipped vertically.", convar->getConVarByName("osu_playfield_mirror_vertical"));
 
@@ -138,27 +140,28 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen()
 
 void OsuModSelector::updateButtons()
 {
-	m_modButtonEasy = setModButtonOnGrid(0, 0, 0, "ez", "Reduces overall difficulty - larger circles, more forgiving HP drain, less accuracy required.", m_osu->getSkin()->getSelectionModEasy());
-	m_modButtonNofail = setModButtonOnGrid(1, 0, 0, "nf", "You can't fail. No matter what.", m_osu->getSkin()->getSelectionModNoFail());
+	m_modButtonEasy = setModButtonOnGrid(0, 0, 0, "ez", "Reduces overall difficulty - larger circles, more forgiving HP drain, less accuracy required.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModEasy();});
+	m_modButtonNofail = setModButtonOnGrid(1, 0, 0, "nf", "You can't fail. No matter what.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModNoFail();});
 	m_modButtonNofail->setAvailable(convar->getConVarByName("osu_drain_enabled")->getBool());
-	m_modButtonHalftime = setModButtonOnGrid(2, 0, 0, "ht", "Less zoom.", m_osu->getSkin()->getSelectionModHalfTime());
-	setModButtonOnGrid(2, 0, 1, "dc", "A E S T H E T I C", m_osu->getSkin()->getSelectionModDayCore());
-	setModButtonOnGrid(4, 0, 0, "nm", "Massively reduced slider follow circle radius. Unnecessary clicks count as misses.", m_osu->getSkin()->getSelectionModNightmare());
+	m_modButtonHalftime = setModButtonOnGrid(2, 0, 0, "ht", "Less zoom.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModHalfTime();});
+	setModButtonOnGrid(2, 0, 1, "dc", "A E S T H E T I C", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModDayCore();});
+	setModButtonOnGrid(4, 0, 0, "nm", "Massively reduced slider follow circle radius. Unnecessary clicks count as misses.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModNightmare();});
 
-	m_modButtonHardrock = setModButtonOnGrid(0, 1, 0, "hr", "Everything just got a bit harder...", m_osu->getSkin()->getSelectionModHardRock());
-	m_modButtonSuddendeath = setModButtonOnGrid(1, 1, 0, "sd", "Miss a note and fail.", m_osu->getSkin()->getSelectionModSuddenDeath());
-	setModButtonOnGrid(1, 1, 1, "ss", "SS or quit.", m_osu->getSkin()->getSelectionModPerfect());
-	m_modButtonDoubletime = setModButtonOnGrid(2, 1, 0, "dt", "Zoooooooooom.", m_osu->getSkin()->getSelectionModDoubleTime());
-	setModButtonOnGrid(2, 1, 1, "nc", "uguuuuuuuu", m_osu->getSkin()->getSelectionModNightCore());
-	m_modButtonHidden = setModButtonOnGrid(3, 1, 0, "hd", "Play with no approach circles and fading notes for a slight score advantage.", m_osu->getSkin()->getSelectionModHidden());
-	m_modButtonFlashlight = setModButtonOnGrid(4, 1, 0, "fl", "Restricted view area.", m_osu->getSkin()->getSelectionModFlashlight());
+	m_modButtonHardrock = setModButtonOnGrid(0, 1, 0, "hr", "Everything just got a bit harder...", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModHardRock();});
+	m_modButtonSuddendeath = setModButtonOnGrid(1, 1, 0, "sd", "Miss a note and fail.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModSuddenDeath();});
+	setModButtonOnGrid(1, 1, 1, "ss", "SS or quit.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModPerfect();});
+	m_modButtonDoubletime = setModButtonOnGrid(2, 1, 0, "dt", "Zoooooooooom.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModDoubleTime();});
+	setModButtonOnGrid(2, 1, 1, "nc", "uguuuuuuuu", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModNightCore();});
+	m_modButtonHidden = setModButtonOnGrid(3, 1, 0, "hd", "Play with no approach circles and fading notes for a slight score advantage.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModHidden();});
+	m_modButtonFlashlight = setModButtonOnGrid(4, 1, 0, "fl", "Restricted view area.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModFlashlight();});
 	getModButtonOnGrid(4, 1)->setAvailable(false);
 
-	m_modButtonRelax = setModButtonOnGrid(0, 2, 0, "relax", "You don't need to click.\nGive your clicking/tapping fingers a break from the heat of things.\n** UNRANKED **", m_osu->getSkin()->getSelectionModRelax());
-	m_modButtonAutopilot = setModButtonOnGrid(1, 2, 0, "autopilot", "Automatic cursor movement - just follow the rhythm.\n** UNRANKED **", m_osu->getSkin()->getSelectionModAutopilot());
-	m_modButtonSpunout = setModButtonOnGrid(2, 2, 0, "spunout", "Spinners will be automatically completed.", m_osu->getSkin()->getSelectionModSpunOut());
-	m_modButtonAuto = setModButtonOnGrid(3, 2, 0, "auto", "Watch a perfect automated play through the song.", m_osu->getSkin()->getSelectionModAutoplay());
-	setModButtonOnGrid(4, 2, 0, "practicetarget", "Accuracy is based on the distance to the center of all hitobjects.\n300s still require at least being in the hit window of a 100 in addition to the rule above.", m_osu->getSkin()->getSelectionModTarget());
+	m_modButtonRelax = setModButtonOnGrid(0, 2, 0, "relax", "You don't need to click.\nGive your clicking/tapping fingers a break from the heat of things.\n** UNRANKED **", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModRelax();});
+	m_modButtonAutopilot = setModButtonOnGrid(1, 2, 0, "autopilot", "Automatic cursor movement - just follow the rhythm.\n** UNRANKED **", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModAutopilot();});
+	m_modButtonSpunout = setModButtonOnGrid(2, 2, 0, "spunout", "Spinners will be automatically completed.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModSpunOut();});
+	m_modButtonAuto = setModButtonOnGrid(3, 2, 0, "auto", "Watch a perfect automated play through the song.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModAutoplay();});
+	setModButtonOnGrid(4, 2, 0, "practicetarget", "Accuracy is based on the distance to the center of all hitobjects.\n300s still require at least being in the hit window of a 100 in addition to the rule above.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModTarget();});
+	setModButtonOnGrid(5, 2, 0, "v2", "Try the future scoring system.\n** UNRANKED **", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModScorev2();});
 }
 
 OsuModSelector::~OsuModSelector()
@@ -305,6 +308,9 @@ void OsuModSelector::update()
 	else
 		m_experimentalContainer->stealFocus();
 
+	if (m_osu->getHUD()->isVolumeOverlayBusy())
+		m_container->stealFocus();
+
 	// update
 	m_container->update();
 	m_overrideSliderContainer->update();
@@ -336,7 +342,7 @@ void OsuModSelector::update()
 	}
 
 	// handle dynamic CS and slider vertex buffer updates
-	if (m_CSSlider->isActive())
+	if (m_CSSlider->isActive() || m_CSSlider->hasChanged())
 	{
 		m_bWaitForCSChangeFinished = true;
 	}
@@ -663,13 +669,13 @@ void OsuModSelector::updateOverrideSliders()
 	}
 }
 
-OsuUIModSelectorModButton *OsuModSelector::setModButtonOnGrid(int x, int y, int state, UString modName, UString tooltipText, OsuSkinImage *img)
+OsuUIModSelectorModButton *OsuModSelector::setModButtonOnGrid(int x, int y, int state, UString modName, UString tooltipText, std::function<OsuSkinImage*()> getImageFunc)
 {
 	OsuUIModSelectorModButton *modButton = getModButtonOnGrid(x, y);
 
 	if (modButton != NULL)
 	{
-		modButton->setState(state, modName, tooltipText, img);
+		modButton->setState(state, modName, tooltipText, getImageFunc);
 		modButton->setVisible(true);
 	}
 
@@ -1019,6 +1025,11 @@ void OsuModSelector::onCheckboxChange(CBaseUICheckbox *checkbox)
 		{
 			if (m_experimentalMods[i].cvar != NULL)
 				m_experimentalMods[i].cvar->setValue(checkbox->isChecked());
+
+			// force mod update
+			if (m_osu->isInPlayMode() && m_osu->getSelectedBeatmap() != NULL)
+				m_osu->getSelectedBeatmap()->onModUpdate();
+
 			break;
 		}
 	}

@@ -19,6 +19,7 @@
 
 #include "OsuUISongBrowserSongDifficultyButton.h"
 
+ConVar osu_draw_songbrowser_thumbnails("osu_draw_songbrowser_thumbnails", true);
 ConVar osu_songbrowser_thumbnail_delay("osu_songbrowser_thumbnail_delay", 0.1f);
 
 float OsuUISongBrowserSongButton::thumbnailYRatio = 1.333333f;
@@ -130,7 +131,7 @@ void OsuUISongBrowserSongButton::draw(Graphics *g)
 
 void OsuUISongBrowserSongButton::drawBeatmapBackgroundThumbnail(Graphics *g, Image *image)
 {
-	if (image == NULL) return;
+	if (!osu_draw_songbrowser_thumbnails.getBool() || image == NULL || m_osu->getSkin()->getVersion() < 2.2f) return;
 
 	// scaling
 	const Vector2 pos = getActualPos();
@@ -236,7 +237,10 @@ void OsuUISongBrowserSongButton::updateLayoutEx()
 	// scaling
 	const Vector2 size = getActualSize();
 
-	m_fTextOffset = size.y*thumbnailYRatio + size.x*0.02f;
+	if (m_osu->getSkin()->getVersion() < 2.2f)
+		m_fTextOffset = size.x*0.02f*2.0f;
+	else
+		m_fTextOffset = size.y*thumbnailYRatio  + size.x*0.02f;
 }
 
 OsuUISongBrowserSongButton *OsuUISongBrowserSongButton::setVisible(bool visible)
@@ -254,6 +258,7 @@ std::vector<OsuUISongBrowserButton*> OsuUISongBrowserSongButton::getChildren()
 {
 	if (m_bSelected)
 		return m_children;
+
 	return std::vector<OsuUISongBrowserButton*>();
 }
 
@@ -270,6 +275,7 @@ void OsuUISongBrowserSongButton::onSelected(bool wasSelected)
 		previousButton->deselect();
 	else
 		m_songBrowser->rebuildSongButtons(false); // this is in the else-branch to avoid double execution (since it is already executed in deselect())
+
 	previousButton = this;
 
 	// now, automatically select the bottom child

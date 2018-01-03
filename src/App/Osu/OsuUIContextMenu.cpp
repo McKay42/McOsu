@@ -91,6 +91,7 @@ void OsuUIContextMenu::onFocusStolen()
 
 void OsuUIContextMenu::begin()
 {
+	m_clickCallback = NULL;
 	m_iYCounter = 0;
 	m_iWidthCounter = 0;
 	m_container->clear();
