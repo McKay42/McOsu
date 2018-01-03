@@ -25,13 +25,21 @@
 #include "OsuKeyBindings.h"
 #include "OsuNotificationOverlay.h"
 
+#include "OsuVRUIImageButton.h"
+#include "OsuVRUIImageCheckbox.h"
+#include "OsuVRUISlider.h"
+
 ConVar osu_vr_matrix_screen("osu_vr_matrix_screen");
 ConVar osu_vr_matrix_playfield("osu_vr_matrix_playfield");
 ConVar osu_vr_reset_matrices("osu_vr_reset_matrices");
+ConVar osu_vr_layout_lock("osu_vr_layout_lock", false);
 
 ConVar osu_vr_screen_scale("osu_vr_screen_scale", 1.64613f);
 ConVar osu_vr_playfield_scale("osu_vr_playfield_scale", 0.945593f);
 ConVar osu_vr_hud_scale("osu_vr_hud_scale", 4.0f);
+ConVar osu_vr_controller_offset_x("osu_vr_controller_offset_x", 0.0f);
+ConVar osu_vr_controller_offset_y("osu_vr_controller_offset_y", 0.0f);
+ConVar osu_vr_controller_offset_z("osu_vr_controller_offset_z", 0.0f);
 ConVar osu_vr_controller_pinch_scale_multiplier("osu_vr_controller_pinch_scale_multiplier", 2.0f);
 ConVar osu_vr_controller_warning_distance_enabled("osu_vr_controller_warning_distance_enabled", true);
 ConVar osu_vr_controller_warning_distance_start("osu_vr_controller_warning_distance_start", -0.20f);
@@ -46,7 +54,7 @@ ConVar osu_vr_circle_hitbox_scale("osu_vr_circle_hitbox_scale", 1.5f, "scales th
 ConVar osu_vr_cursor_alpha("osu_vr_cursor_alpha", 0.15f);
 
 ConVar osu_vr_controller_vibration_strength("osu_vr_controller_vibration_strength", 0.45f);
-ConVar osu_vr_slider_controller_vibration_strength("osu_vr_slider_controller_vibration_strength", /*0.05f*/0.0f);
+ConVar osu_vr_slider_controller_vibration_strength("osu_vr_slider_controller_vibration_strength", 0.05f /*0.0f*/);
 
 ConVar osu_vr_draw_playfield("osu_vr_draw_playfield", true);
 ConVar osu_vr_draw_floor("osu_vr_draw_floor", true);
@@ -54,357 +62,6 @@ ConVar osu_vr_draw_floor("osu_vr_draw_floor", true);
 ConVar osu_vr_ui_offset("osu_vr_ui_offset", 0.1f);
 
 const char *OsuVR::OSUVR_CONFIG_FILE_NAME = "osuvrplayarea";
-
-
-
-class OsuVRUIElement
-{
-public:
-	OsuVRUIElement(OsuVR *vr, float x, float y, float width, float height)
-	{
-		m_vr = vr;
-		m_vPos = Vector2(x, y);
-		m_vSize = Vector2(width, height);
-		m_bIsVisible = true;
-		m_bIsActive = false;
-		m_bIsCursorInside = false;
-	}
-	virtual ~OsuVRUIElement() {;}
-
-	virtual void drawVR(Graphics *g, Matrix4 &mvp) {;}
-	virtual void update(Vector2 cursorPos)
-	{
-		McRect bounds(m_vPos.x, -m_vPos.y, m_vSize.x, m_vSize.y);
-		if (bounds.contains(Vector2(cursorPos.x, -cursorPos.y)))
-			m_bIsCursorInside = true;
-		else
-			m_bIsCursorInside = false;
-	}
-
-	void setPos(Vector2 pos) {m_vPos = pos;}
-	void setPos(float x, float y) {m_vPos.x = x; m_vPos.y = y;}
-	void setPosX(float x) {m_vPos.x = x;}
-	void setPosY(float y) {m_vPos.y = y;}
-	void setSize(Vector2 size) {m_vSize = size;}
-
-	void setVisible(bool visible) {m_bIsVisible = visible;}
-
-	inline const Vector2& getPos() const {return m_vPos;}
-	inline const Vector2& getSize() const {return m_vSize;}
-
-	inline bool isVisible() {return m_bIsVisible;}
-	inline bool isActive() {return m_bIsActive && isVisible();}
-	inline bool isCursorInside() {return m_bIsCursorInside && isVisible();}
-
-protected:
-	OsuVR *m_vr;
-
-	Vector2 m_vPos;
-	Vector2 m_vSize;
-
-	bool m_bIsVisible;
-	bool m_bIsActive;
-	bool m_bIsCursorInside;
-};
-
-class OsuVRUIButton : public OsuVRUIElement
-{
-public:
-	OsuVRUIButton(OsuVR *vr, float x, float y, float width, float height) : OsuVRUIElement(vr, x, y, width, height)
-	{
-		m_bClickCheck = false;
-		m_clickVoidCallback = NULL;
-	}
-
-	virtual void drawVR(Graphics *g, Matrix4 &mvp)
-	{
-		OsuVRUIElement::drawVR(g, mvp);
-		if (!m_bIsVisible) return;
-
-		const float lineThickness = 0.0035f;
-
-		// border line mesh
-		VertexArrayObject vao2(Graphics::PRIMITIVE::PRIMITIVE_QUADS);
-
-		vao2.addVertex(0, 0, 0);
-		vao2.addVertex(lineThickness, 0, 0);
-		vao2.addVertex(lineThickness, -m_vSize.y, 0);
-		vao2.addVertex(0, -m_vSize.y, 0);
-
-		vao2.addVertex(m_vSize.x, 0, 0);
-		vao2.addVertex(m_vSize.x - lineThickness, 0, 0);
-		vao2.addVertex(m_vSize.x - lineThickness, -m_vSize.y, 0);
-		vao2.addVertex(m_vSize.x, -m_vSize.y, 0);
-
-		vao2.addVertex(0, 0, 0);
-		vao2.addVertex(m_vSize.x, 0, 0);
-		vao2.addVertex(m_vSize.x, -lineThickness, 0);
-		vao2.addVertex(0, -lineThickness, 0);
-
-		vao2.addVertex(0, -m_vSize.y, 0);
-		vao2.addVertex(m_vSize.x, -m_vSize.y, 0);
-		vao2.addVertex(m_vSize.x, -m_vSize.y + lineThickness, 0);
-		vao2.addVertex(0, -m_vSize.y + lineThickness, 0);
-
-		// position
-		Matrix4 translation;
-		translation.translate(m_vPos.x, m_vPos.y, 0);
-		Matrix4 finalMVP = mvp * translation;
-
-		// draw border line
-		m_vr->getShaderUntexturedGeneric()->enable();
-		m_vr->getShaderUntexturedGeneric()->setUniformMatrix4fv("matrix", finalMVP);
-		{
-			g->setColor(m_bIsCursorInside ? 0xffffffff : 0xff666666);
-			g->drawVAO(&vao2);
-		}
-		m_vr->getShaderUntexturedGeneric()->disable();
-	}
-
-	virtual void update(Vector2 cursorPos)
-	{
-		OsuVRUIElement::update(cursorPos);
-		if (!m_bIsVisible) return;
-
-		OpenVRController *controller = openvr->getController();
-
-		if (controller->getTrigger() > 0.95f || controller->isButtonPressed(OpenVRController::BUTTON::BUTTON_STEAMVR_TOUCHPAD))
-		{
-			// trigger click callback once (until released again)
-			if (!m_bClickCheck)
-			{
-				m_bClickCheck = true;
-
-				// within bounds
-				if (m_bIsCursorInside)
-				{
-					m_bIsActive = true;
-					if (m_clickVoidCallback != NULL)
-						m_clickVoidCallback();
-				}
-			}
-		}
-		else
-		{
-			m_bClickCheck = false;
-			m_bIsActive = false;
-		}
-	}
-
-	typedef fastdelegate::FastDelegate0<> ButtonClickVoidCallback;
-	void setClickCallback(ButtonClickVoidCallback clickCallback) {m_clickVoidCallback = clickCallback;}
-
-private:
-	bool m_bClickCheck;
-	ButtonClickVoidCallback m_clickVoidCallback;
-};
-
-class OsuVRUIImageButton : public OsuVRUIButton
-{
-public:
-	OsuVRUIImageButton(OsuVR *vr, float x, float y, float width, float height, UString imageResourceName) : OsuVRUIButton(vr, x, y, width, height)
-	{
-		m_sImageResourceName = imageResourceName;
-		updateImageResource();
-	}
-
-	virtual void drawVR(Graphics *g, Matrix4 &mvp)
-	{
-		OsuVRUIButton::drawVR(g, mvp);
-		if (!m_bIsVisible) return;
-		if (m_image == NULL) return;
-
-		// icon mesh
-		VertexArrayObject vao(Graphics::PRIMITIVE::PRIMITIVE_QUADS);
-
-		Color color = m_bIsCursorInside ? 0xffffffff : 0xff666666;
-
-		vao.addVertex(0, 0, 0);
-		vao.addTexcoord(0, 0);
-		vao.addColor(color);
-		vao.addVertex(m_vSize.x, 0, 0);
-		vao.addTexcoord(1, 0);
-		vao.addColor(color);
-		vao.addVertex(m_vSize.x, -m_vSize.y, 0);
-		vao.addTexcoord(1, 1);
-		vao.addColor(color);
-		vao.addVertex(0, -m_vSize.y, 0);
-		vao.addTexcoord(0, 1);
-		vao.addColor(color);
-
-		// position
-		Matrix4 translation;
-		translation.translate(m_vPos.x, m_vPos.y, 0);
-		Matrix4 finalMVP = mvp * translation;
-
-		// draw icon
-		m_vr->getShaderTexturedGeneric()->enable();
-		m_vr->getShaderTexturedGeneric()->setUniformMatrix4fv("matrix", finalMVP);
-		{
-			if (m_image != NULL)
-				m_image->bind();
-			g->drawVAO(&vao);
-			if (m_image != NULL)
-				m_image->unbind();
-		}
-		m_vr->getShaderTexturedGeneric()->disable();
-	}
-
-	virtual void update(Vector2 cursorPos)
-	{
-		OsuVRUIButton::update(cursorPos);
-		if (!m_bIsVisible) return;
-
-		if (m_image == NULL)
-			updateImageResource();
-	}
-
-private:
-	void updateImageResource()
-	{
-		m_image = engine->getResourceManager()->getImage(m_sImageResourceName);
-	}
-
-	UString m_sImageResourceName;
-	Image *m_image;
-};
-
-class OsuVRUISlider : public OsuVRUIElement
-{
-public:
-	OsuVRUISlider(OsuVR *vr, float x, float y, float width, float height) : OsuVRUIElement(vr, x, y, width, height)
-	{
-		m_bClickCheck = false;
-		m_sliderChangeCallback = NULL;
-		m_fMinValue = 0.0f;
-		m_fMaxValue = 1.0f;
-		m_fCurValue = 0.0f;
-		m_fCurPercent = 0.0f;
-	}
-
-	virtual void drawVR(Graphics *g, Matrix4 &mvp)
-	{
-		OsuVRUIElement::drawVR(g, mvp);
-		if (!m_bIsVisible) return;
-
-		const float lineThickness = 0.0035f;
-
-		Color color = (m_bIsCursorInside || m_bIsActive) ? 0xffffffff : 0xff666666;
-
-		// border line mesh
-		VertexArrayObject vao(Graphics::PRIMITIVE::PRIMITIVE_QUADS);
-
-		vao.addVertex(0, 0, 0);
-		vao.addVertex(lineThickness, 0, 0);
-		vao.addVertex(lineThickness, -m_vSize.y, 0);
-		vao.addVertex(0, -m_vSize.y, 0);
-
-		vao.addVertex(m_vSize.x, 0, 0);
-		vao.addVertex(m_vSize.x - lineThickness, 0, 0);
-		vao.addVertex(m_vSize.x - lineThickness, -m_vSize.y, 0);
-		vao.addVertex(m_vSize.x, -m_vSize.y, 0);
-
-		vao.addVertex(0, 0, 0);
-		vao.addVertex(m_vSize.x, 0, 0);
-		vao.addVertex(m_vSize.x, -lineThickness, 0);
-		vao.addVertex(0, -lineThickness, 0);
-
-		vao.addVertex(0, -m_vSize.y, 0);
-		vao.addVertex(m_vSize.x, -m_vSize.y, 0);
-		vao.addVertex(m_vSize.x, -m_vSize.y + lineThickness, 0);
-		vao.addVertex(0, -m_vSize.y + lineThickness, 0);
-
-		// percentage fill mesh
-		VertexArrayObject vao2(Graphics::PRIMITIVE::PRIMITIVE_QUADS);
-
-		vao2.addVertex(0, 0, 0);
-		vao2.addVertex(m_vSize.x*m_fCurPercent, 0, 0);
-		vao2.addVertex(m_vSize.x*m_fCurPercent, -m_vSize.y, 0);
-		vao2.addVertex(0, -m_vSize.y, 0);
-
-		// position
-		Matrix4 translation;
-		translation.translate(m_vPos.x, m_vPos.y, 0);
-		Matrix4 finalMVP = mvp * translation;
-
-		// draw border line and fill
-		m_vr->getShaderUntexturedGeneric()->enable();
-		m_vr->getShaderUntexturedGeneric()->setUniformMatrix4fv("matrix", finalMVP);
-		{
-			g->setColor(color);
-			g->drawVAO(&vao);
-			g->drawVAO(&vao2);
-		}
-		m_vr->getShaderUntexturedGeneric()->disable();
-
-
-	}
-
-	virtual void update(Vector2 cursorPos)
-	{
-		OsuVRUIElement::update(cursorPos);
-		if (!m_bIsVisible) return;
-
-		OpenVRController *controller = openvr->getController();
-
-		if (controller->getTrigger() > 0.95f || controller->isButtonPressed(OpenVRController::BUTTON::BUTTON_STEAMVR_TOUCHPAD))
-		{
-			// trigger once if clicked
-			if (!m_bClickCheck)
-			{
-				m_bClickCheck = true;
-
-				// within bounds
-				if (m_bIsCursorInside)
-					m_bIsActive = true;
-			}
-		}
-		else
-		{
-			m_bClickCheck = false;
-			m_bIsActive = false;
-		}
-
-		// handle sliding
-		if (m_bIsActive)
-		{
-			const float percent = clamp<float>((cursorPos.x - m_vPos.x)/m_vSize.x, 0.0f, 1.0f);
-			bool hasChanged = percent != m_fCurPercent;
-			m_fCurPercent = percent;
-			m_fCurValue = lerp<float>(m_fMinValue, m_fMaxValue, m_fCurPercent);
-
-			if (m_sliderChangeCallback != NULL && hasChanged)
-				m_sliderChangeCallback(this);
-		}
-	}
-
-	typedef fastdelegate::FastDelegate1<OsuVRUISlider*> SliderChangeCallback;
-	void setChangeCallback(SliderChangeCallback changeCallback) {m_sliderChangeCallback = changeCallback;}
-
-	void setValue(float value, bool ignoreCallback = false)
-	{
-		if (value == m_fCurValue || m_bIsActive) return;
-
-		float newValue = clamp<float>(value, m_fMinValue, m_fMaxValue);
-		if (newValue == m_fCurValue) return;
-
-		m_fCurValue = newValue;
-		m_fCurPercent = clamp<float>((m_fCurValue-m_fMinValue) / (std::abs(m_fMaxValue-m_fMinValue)), 0.0f, 1.0f);
-
-		if (m_sliderChangeCallback != NULL && !ignoreCallback)
-			m_sliderChangeCallback(this);
-	}
-
-	inline float getFloat() {return m_fCurValue;}
-
-private:
-	SliderChangeCallback m_sliderChangeCallback;
-
-	float m_fMinValue, m_fMaxValue, m_fCurValue, m_fCurPercent;
-	bool m_bClickCheck;
-};
-
-
 
 OsuVR::OsuVR(Osu *osu)
 {
@@ -429,6 +86,7 @@ OsuVR::OsuVR(Osu *osu)
 
 	m_bDrawLaser = false;
 	m_bScreenIntersection = false;
+	m_bClickHeldStartedInScreen = false;
 	m_bPlayfieldIntersection1 = false;
 	m_bPlayfieldIntersection2 = false;
 	m_fPlayfieldCursorDist1 = 0.0f;
@@ -486,11 +144,18 @@ OsuVR::OsuVR(Osu *osu)
 	m_matrixResetButton = button;
 	m_uiElements.push_back(m_matrixResetButton);
 
+	m_lockLayoutCheckbox = new OsuVRUIImageCheckbox(this, 0, 0, 0.3f, 0.3f, "OSU_VR_UI_ICON_LOCK_LOCKED", "OSU_VR_UI_ICON_LOCK_UNLOCKED");
+	m_lockLayoutCheckbox->setChecked(osu_vr_layout_lock.getBool());
+	m_lockLayoutCheckbox->setClickCallback( fastdelegate::MakeDelegate(this, &OsuVR::onLayoutLockClicked) );
+	m_uiElements.push_back(m_lockLayoutCheckbox);
+
 	// load/execute VR stuff only in VR builds
 	if (openvr->isReady())
 	{
 		engine->getResourceManager()->loadImage("ic_keyboard_white_48dp.png", "OSU_VR_UI_ICON_KEYBOARD");
 		engine->getResourceManager()->loadImage("ic_replay_white_48dp.png", "OSU_VR_UI_ICON_RESET");
+		engine->getResourceManager()->loadImage("ic_lock_outline_white_48dp.png", "OSU_VR_UI_ICON_LOCK_LOCKED");
+		engine->getResourceManager()->loadImage("ic_lock_open_white_48dp.png", "OSU_VR_UI_ICON_LOCK_UNLOCKED");
 		engine->getResourceManager()->loadImage("ic_add_white_48dp.png", "OSU_VR_UI_ICON_PLUS");
 		engine->getResourceManager()->loadImage("ic_remove_white_48dp.png", "OSU_VR_UI_ICON_MINUS");
 
@@ -584,7 +249,7 @@ OsuVR::OsuVR(Osu *osu)
 		// set default matrices to conform to play area
 		resetMatrices();
 
-		// execute the vr config file (this then overwrites the matrices with the user settings)
+		// execute the vr config file (this then overwrites the matrices with the user settings if they exist)
 		Console::execConfigFile(OSUVR_CONFIG_FILE_NAME);
 	}
 }
@@ -879,7 +544,7 @@ void OsuVR::update()
 			m_vScreenIntersectionPoint2D.y = y*m_vVirtualScreenSize.y;
 
 			Vector2 newMousePos = Vector2(x*engine->getScreenWidth(), y*engine->getScreenHeight());
-			if (newMousePos.x >= 0 && newMousePos.y >= 0 && newMousePos.x < engine->getScreenWidth() && newMousePos.y < engine->getScreenHeight())
+			if ((newMousePos.x >= 0 && newMousePos.y >= 0 && newMousePos.x < engine->getScreenWidth() && newMousePos.y < engine->getScreenHeight()) || m_bClickHeldStartedInScreen)
 			{
 				m_bDrawLaser = true;
 				m_bScreenIntersection = true;
@@ -904,16 +569,23 @@ void OsuVR::update()
 
 	// calculate virtual playfield plane and the two virtual cursors
 	{
+		// certain controllers need (hardcoded) offsets, e.g. Oculus Touch
+		// this offset is only really necessary for the virtual cursors on the playfield
+		Vector3 controllerOffset = Vector3(osu_vr_controller_offset_x.getFloat(), osu_vr_controller_offset_z.getFloat(), -osu_vr_controller_offset_y.getFloat());
+		//if (openvr->getTrackingSystemName().find("oculus") != -1)
+		//	controllerOffset += Vector3(0, 0, 0.08f); // TODO: insert correct values here
+
 		Vector4 topLeft = m_playfieldMatrix * Vector4(0, 0, 0, 1);
 		Vector4 right = (m_playfieldMatrix * Vector4(1, 0, 1, 1));
 		Vector4 down = (m_playfieldMatrix * Vector4(0, -1, 1, 1));
 		Vector3 normal = (m_playfieldMatrix * Vector3(0, 0, 1)).normalize();
 
 		// get closest distance intersection with playfield
-		float leftIntersectionDistance = intersectRayPlane(leftController->getPosition(), -normal, Vector3(topLeft.x, topLeft.y, topLeft.z), normal);
+		Vector3 leftControllerPosition = leftController->getPosition() + (leftController->getMatrixPose() * controllerOffset);
+		float leftIntersectionDistance = intersectRayPlane(leftControllerPosition, -normal, Vector3(topLeft.x, topLeft.y, topLeft.z), normal);
 		if (leftIntersectionDistance != 0.0f)
 		{
-			m_vPlayfieldIntersectionPoint1 = leftController->getPosition() - normal*leftIntersectionDistance;
+			m_vPlayfieldIntersectionPoint1 = leftControllerPosition - normal*leftIntersectionDistance;
 
 			// calculate virtual cursor position
 			Vector3 localRight = (Vector3(right.x, right.y, right.z) - Vector3(topLeft.x, topLeft.y, topLeft.z));
@@ -937,10 +609,11 @@ void OsuVR::update()
 			*/
 		}
 
-		float rightIntersectionDistance = intersectRayPlane(rightController->getPosition(), -normal, Vector3(topLeft.x, topLeft.y, topLeft.z), normal);
+		Vector3 rightControllerPosition = rightController->getPosition() + (rightController->getMatrixPose() * controllerOffset);
+		float rightIntersectionDistance = intersectRayPlane(rightControllerPosition, -normal, Vector3(topLeft.x, topLeft.y, topLeft.z), normal);
 		if (rightIntersectionDistance != 0.0f)
 		{
-			m_vPlayfieldIntersectionPoint2 = rightController->getPosition() - normal*rightIntersectionDistance;
+			m_vPlayfieldIntersectionPoint2 = rightControllerPosition - normal*rightIntersectionDistance;
 
 			// calculate virtual cursor position
 			Vector3 localRight = (Vector3(right.x, right.y, right.z) - Vector3(topLeft.x, topLeft.y, topLeft.z));
@@ -1008,7 +681,7 @@ void OsuVR::update()
 		}
 	}
 
-	if (m_osu->isNotInPlayModeOrPaused()) // only allow moving while not actively playing
+	if (m_osu->isNotInPlayModeOrPaused() && !osu_vr_layout_lock.getBool()) // only allow moving while not actively playing
 	{
 		// move virtual screen while grip button is pressed on right controller, anchor at controller
 		if (rightController->isButtonPressed(OpenVRController::BUTTON::BUTTON_GRIP))
@@ -1104,7 +777,7 @@ void OsuVR::update()
 	}
 
 	// handle scaling (pinching/zooming/whatever)
-	if (m_osu->isNotInPlayModeOrPaused()) // only allow scaling while not actively playing
+	if (m_osu->isNotInPlayModeOrPaused() && !osu_vr_layout_lock.getBool()) // only allow scaling while not actively playing
 	{
 		if (openvr->getLeftController()->getTrigger() > 0.95f && openvr->getRightController()->getTrigger() > 0.95f)
 		{
@@ -1148,6 +821,9 @@ void OsuVR::update()
 		{
 			m_bClickCheck = false;
 			engine->onMouseLeftChange(true);
+
+			if (m_bScreenIntersection)
+				m_bClickHeldStartedInScreen = true;
 		}
 	}
 	else
@@ -1156,6 +832,8 @@ void OsuVR::update()
 		{
 			m_bClickCheck = true;
 			engine->onMouseLeftChange(false);
+
+			m_bClickHeldStartedInScreen = false;
 		}
 	}
 
@@ -1233,7 +911,8 @@ void OsuVR::update()
 
 	// handle UI element visibility depending on game state
 	m_keyboardButton->setVisible(!m_osu->isInPlayMode());
-	m_matrixResetButton->setVisible(!m_osu->isInPlayMode());
+	m_matrixResetButton->setVisible(!m_osu->isInPlayMode() && !m_lockLayoutCheckbox->isChecked());
+	m_lockLayoutCheckbox->setVisible(!m_osu->isInPlayMode());
 	m_offsetDownButton->setVisible(m_osu->isInPlayMode());
 	m_offsetUpButton->setVisible(m_osu->isInPlayMode());
 	m_scrubbingSlider->setVisible(m_osu->isInPlayMode());
@@ -1252,7 +931,7 @@ float OsuVR::intersectRayPlane(Vector3 rayOrigin, Vector3 rayDir, Vector3 planeO
 	float numer = planeNormal.dot(rayOrigin) + d;
 	float denom = planeNormal.dot(rayDir);
 
-	if (denom == 0)  // normal is orthogonal to vector, can't intersect
+	if (denom == 0.0f)  // normal is orthogonal to vector, can't intersect
 		return 0.0f;
 
 	return -(numer / denom);
@@ -1282,6 +961,7 @@ void OsuVR::updateLayout()
 {
 	m_keyboardButton->setPosX(m_vVirtualScreenSize.x + osu_vr_ui_offset.getFloat());
 	m_matrixResetButton->setPos(m_vVirtualScreenSize.x + osu_vr_ui_offset.getFloat(), (-m_vVirtualScreenSize.y - m_matrixResetButton->getSize().y < m_keyboardButton->getPos().y + m_keyboardButton->getSize().y ? -(m_keyboardButton->getPos().y + m_keyboardButton->getSize().y) : m_vVirtualScreenSize.y + m_matrixResetButton->getSize().y));
+	m_lockLayoutCheckbox->setPos(m_vVirtualScreenSize.x + osu_vr_ui_offset.getFloat() + m_matrixResetButton->getSize().x + osu_vr_ui_offset.getFloat(), (-m_vVirtualScreenSize.y - m_matrixResetButton->getSize().y < m_keyboardButton->getPos().y + m_keyboardButton->getSize().y ? -(m_keyboardButton->getPos().y + m_keyboardButton->getSize().y) : m_vVirtualScreenSize.y + m_matrixResetButton->getSize().y));
 	m_volumeSlider->setPos(m_vVirtualScreenSize.x/2.0f - m_volumeSlider->getSize().x/2.0f, m_volumeSlider->getSize().y + osu_vr_ui_offset.getFloat());
 
 	const float gap = 0.05f;
@@ -1341,10 +1021,10 @@ void OsuVR::resetMatrices()
 	Matrix4 screenRotation;
 	screenRotation.rotate(-90.0f, 0, 1, 0);
 	Matrix4 screenTranslation;
-	screenTranslation.translate(-openvr->getPlayAreaSize().y*0.4f, 2.0f, -openvr->getPlayAreaSize().x/2.0f);
+	screenTranslation.translate(-openvr->getPlayAreaSize().y*0.3f, 2.0f, -openvr->getPlayAreaSize().x/2.0f);
 	m_screenMatrix = screenRotation * screenTranslation;
 	m_playfieldMatrix.identity();
-	m_playfieldMatrix.translate(0, 1.5f, -(openvr->getPlayAreaSize().y/2.0f)*0.5f);
+	m_playfieldMatrix.translate(0, 1.5f, -(openvr->getPlayAreaSize().y/2.0f)*0.35f);
 
 	osu_vr_screen_scale.setValue(m_fDefaultScreenScale);
 	osu_vr_playfield_scale.setValue(m_fDefaultPlayfieldScale);
@@ -1389,6 +1069,11 @@ void OsuVR::onMatrixResetClicked()
 	save();
 }
 
+void OsuVR::onLayoutLockClicked()
+{
+	osu_vr_layout_lock.setValue(m_lockLayoutCheckbox->isChecked() ? 1.0f : 0.0f);
+}
+
 void OsuVR::onKeyboardButtonClicked()
 {
 	openvr->getController()->triggerHapticPulse(2500);
@@ -1418,6 +1103,7 @@ void OsuVR::onOffsetDownClicked()
 void OsuVR::onVolumeSliderChange(OsuVRUISlider *slider)
 {
 	m_osu_volume_master_ref->setValue(slider->getFloat());
+	m_osu->getHUD()->animateVolumeChange();
 }
 
 void OsuVR::onScrubbingSliderChange(OsuVRUISlider *slider)

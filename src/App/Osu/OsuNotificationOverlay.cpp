@@ -93,10 +93,11 @@ void OsuNotificationOverlay::onKeyDown(KeyboardEvent &e)
 		osu_notification_duration.setValue(prevDuration); // restore convar
 		*/
 
+		m_bWaitForKey = false;
+
 		if (m_keyListener != NULL)
 			m_keyListener->onKey(e);
 
-		m_bWaitForKey = false;
 		e.consume();
 	}
 

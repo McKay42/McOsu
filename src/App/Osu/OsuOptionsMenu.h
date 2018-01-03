@@ -16,6 +16,7 @@ class Osu;
 class OsuUIButton;
 class OsuUISlider;
 class OsuUIContextMenu;
+class OsuUISearchOverlay;
 
 class CBaseUIContainer;
 class CBaseUIImageButton;
@@ -45,6 +46,8 @@ public:
 
 	virtual void onKey(KeyboardEvent &e);
 
+	void save();
+
 	void setVisible(bool visible);
 
 	bool shouldDrawVRDummyHUD();
@@ -55,13 +58,14 @@ private:
 	virtual void updateLayout();
 	virtual void onBack();
 
+	void scheduleSearchUpdate();
+
 	void updateOsuFolder();
 	void updateName();
 	void updateVRRenderTargetResolutionLabel();
 
-	void save();
-
 	void onFullscreenChange(CBaseUICheckbox *checkbox);
+	void onBorderlessWindowedChange(CBaseUICheckbox *checkbox);
 	void onSkinSelect();
 	void onSkinSelect2(UString skinName);
 	void onSkinReload();
@@ -80,6 +84,8 @@ private:
 	void onSliderChangePercent(CBaseUISlider *slider);
 
 	void onKeyBindingButtonPressed(CBaseUIButton *button);
+	void onKeyBindingManiaPressedInt();
+	void onKeyBindingManiaPressed(CBaseUIButton *button);
 	void onSliderChangeVRSuperSampling(CBaseUISlider *slider);
 	void onSliderChangeVRAntiAliasing(CBaseUISlider *slider);
 	void onSliderChangeSliderQuality(CBaseUISlider *slider);
@@ -103,7 +109,8 @@ private:
 	OsuUIButton *addButton(UString text, ConVar *cvar = NULL);
 	OPTIONS_ELEMENT addButton(UString text, UString labelText);
 	OsuUIButton *addKeyBindButton(UString text, ConVar *cvar);
-	CBaseUICheckbox *addCheckbox(UString text, ConVar *cvar = NULL);
+	CBaseUICheckbox *addCheckbox(UString text, ConVar *cvar);
+	CBaseUICheckbox *addCheckbox(UString text, UString tooltipText = "", ConVar *cvar = NULL);
 	OsuUISlider *addSlider(UString text, float min = 0.0f, float max = 1.0f, ConVar *cvar = NULL, float label1Width = 0.0f);
 	CBaseUITextbox *addTextbox(UString text, ConVar *cvar = NULL);
 	CBaseUIElement *addSkinPreview();
@@ -112,6 +119,9 @@ private:
 	Osu *m_osu;
 	CBaseUIContainer *m_container;
 	CBaseUIScrollView *m_options;
+	OsuUIContextMenu *m_contextMenu;
+	OsuUISearchOverlay *m_search;
+	CBaseUILabel *m_spacer;
 
 	// custom
 	CBaseUICheckbox *m_fullscreenCheckbox;
@@ -144,10 +154,15 @@ private:
 	ConVar *m_waitingKey;
 	ConVar *m_osu_slider_curve_points_separation;
 
-	OsuUIContextMenu *m_contextMenu;
-
 	float m_fOsuFolderTextboxInvalidAnim;
 	float m_fVibrationStrengthExampleTimer;
+
+	// mania layout
+	int m_iManiaK;
+	int m_iManiaKey;
+
+	// search
+	UString m_sSearchString;
 };
 
 #endif

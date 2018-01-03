@@ -112,8 +112,9 @@ private:
 
 	float m_fSlidePercent; // 0.0f - 1.0f - 0.0f - 1.0f - etc.
 	float m_fActualSlidePercent; // 0.0f - 1.0f
-	float m_fHiddenAlpha;
-	float m_fHiddenSlowFadeAlpha;
+	float m_fSliderSnakePercent;
+	float m_fReverseArrowAlpha;
+	float m_fBodyAlpha;
 
 	Vector2 m_vCurPoint;
 	Vector2 m_vCurPointRaw;

@@ -17,6 +17,7 @@
 #include "OsuSkinImage.h"
 #include "OsuGameRules.h"
 #include "OsuBeatmapStandard.h"
+#include "OsuBeatmapMania.h"
 #include "OsuHUD.h"
 
 ConVar osu_hitresult_draw_300s("osu_hitresult_draw_300s", false);
@@ -50,6 +51,7 @@ void OsuHitObject::drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiam
 	g->setColor(0xffffffff);
 	g->setAlpha(animPercent);
 	g->pushTransform();
+	{
 		float hitImageScale = 1.0f;
 		switch (result)
 		{
@@ -66,6 +68,7 @@ void OsuHitObject::drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiam
 			hitImageScale = (rawHitcircleDiameter / skin->getHit300()->getSizeBaseRaw().x) * osuCoordScaleMultiplier;
 			break;
 		}
+
 		switch (result)
 		{
 		case OsuScore::HIT::HIT_MISS:
@@ -79,16 +82,19 @@ void OsuHitObject::drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiam
 			*/
 			if (skin->getHit0()->getNumImages() > 1) // special case: animated hitresults don't fade out
 				g->setAlpha(1.0f);
+
 			skin->getHit0()->drawRaw(g, rawPos, hitImageScale*osu_hitresult_scale.getFloat());
 			break;
 		case OsuScore::HIT::HIT_50:
 			if (skin->getHit50()->getNumImages() > 1) // special case: animated hitresults don't fade out
 				g->setAlpha(1.0f);
+
 			skin->getHit50()->drawRaw(g, rawPos, hitImageScale*osu_hitresult_scale.getFloat());
 			break;
 		case OsuScore::HIT::HIT_100:
 			if (skin->getHit100()->getNumImages() > 1) // special case: animated hitresults don't fade out
 				g->setAlpha(1.0f);
+
 			skin->getHit100()->drawRaw(g, rawPos, hitImageScale*osu_hitresult_scale.getFloat());
 			break;
 		case OsuScore::HIT::HIT_300:
@@ -96,10 +102,12 @@ void OsuHitObject::drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiam
 			{
 				if (skin->getHit300()->getNumImages() > 1) // special case: animated hitresults don't fade out
 					g->setAlpha(1.0f);
+
 				skin->getHit300()->drawRaw(g, rawPos, hitImageScale*osu_hitresult_scale.getFloat());
 			}
 			break;
 		}
+	}
 	g->popTransform();
 }
 
@@ -114,18 +122,14 @@ OsuHitObject::OsuHitObject(long time, int sampleType, int comboNumber, int color
 	m_beatmap = beatmap;
 
 	m_fAlpha = 0.0f;
+	m_fAlphaWithoutHidden = 0.0f;
+	m_fAlphaForApproachCircle = 0.0f;
 	m_fApproachScale = 0.0f;
-	m_fFadeInScale = 0.0f;
 	m_iApproachTime = 0;
 	m_iFadeInTime = 0;
-	m_iObjectTime = 0;
 	m_iObjectDuration = 0;
 	m_iDelta = 0;
-	m_iObjectTime = 0;
 	m_iObjectDuration = 0;
-
-	m_iHiddenDecayTime = 0;
-	m_iHiddenTimeDiff = 0;
 
 	m_bVisible = false;
 	m_bFinished = false;
@@ -144,51 +148,74 @@ void OsuHitObject::draw(Graphics *g)
 	if (m_hitResults.size() > 0)
 	{
 		OsuBeatmapStandard *beatmapStd = dynamic_cast<OsuBeatmapStandard*>(m_beatmap);
-		if (beatmapStd != NULL)
+		OsuBeatmapMania *beatmapMania = dynamic_cast<OsuBeatmapMania*>(m_beatmap);
+
+		OsuSkin *skin = m_beatmap->getSkin();
+		for (int i=0; i<m_hitResults.size(); i++)
 		{
-			for (int i=0; i<m_hitResults.size(); i++)
-			{
-				const long offset = m_iTime + m_iObjectDuration + m_hitResults[i].delta;
+			const long offset = m_iTime + m_iObjectDuration + m_hitResults[i].delta;
 
-				beatmapStd->getSkin()->getHit0()->setAnimationTimeOffset(offset);
-				beatmapStd->getSkin()->getHit0()->setAnimationFrameClampUp();
-				beatmapStd->getSkin()->getHit50()->setAnimationTimeOffset(offset);
-				beatmapStd->getSkin()->getHit50()->setAnimationFrameClampUp();
-				beatmapStd->getSkin()->getHit100()->setAnimationTimeOffset(offset);
-				beatmapStd->getSkin()->getHit100()->setAnimationFrameClampUp();
-				beatmapStd->getSkin()->getHit100k()->setAnimationTimeOffset(offset);
-				beatmapStd->getSkin()->getHit100k()->setAnimationFrameClampUp();
-				beatmapStd->getSkin()->getHit300()->setAnimationTimeOffset(offset);
-				beatmapStd->getSkin()->getHit300()->setAnimationFrameClampUp();
-				beatmapStd->getSkin()->getHit300g()->setAnimationTimeOffset(offset);
-				beatmapStd->getSkin()->getHit300g()->setAnimationFrameClampUp();
-				beatmapStd->getSkin()->getHit300k()->setAnimationTimeOffset(offset);
-				beatmapStd->getSkin()->getHit300k()->setAnimationFrameClampUp();
+			skin->getHit0()->setAnimationTimeOffset(offset);
+			skin->getHit0()->setAnimationFrameClampUp();
+			skin->getHit50()->setAnimationTimeOffset(offset);
+			skin->getHit50()->setAnimationFrameClampUp();
+			skin->getHit100()->setAnimationTimeOffset(offset);
+			skin->getHit100()->setAnimationFrameClampUp();
+			skin->getHit100k()->setAnimationTimeOffset(offset);
+			skin->getHit100k()->setAnimationFrameClampUp();
+			skin->getHit300()->setAnimationTimeOffset(offset);
+			skin->getHit300()->setAnimationFrameClampUp();
+			skin->getHit300g()->setAnimationTimeOffset(offset);
+			skin->getHit300g()->setAnimationFrameClampUp();
+			skin->getHit300k()->setAnimationTimeOffset(offset);
+			skin->getHit300k()->setAnimationFrameClampUp();
 
+			if (beatmapStd != NULL)
 				drawHitResult(g, beatmapStd, beatmapStd->osuCoords2Pixels(m_hitResults[i].rawPos), m_hitResults[i].result, clamp<float>(((m_hitResults[i].anim - engine->getTime()) / m_hitResults[i].duration), 0.0f, 1.0f), ((m_hitResults[i].defaultanim - engine->getTime()) / m_hitResults[i].defaultduration));
-			}
+			else if (beatmapMania != NULL)
+				drawHitResult(g, skin, 200.0f, 150.0f, m_hitResults[i].rawPos, m_hitResults[i].result, clamp<float>(((m_hitResults[i].anim - engine->getTime()) / m_hitResults[i].duration), 0.0f, 1.0f), ((m_hitResults[i].defaultanim - engine->getTime()) / m_hitResults[i].defaultduration));
 		}
 	}
 }
 
 void OsuHitObject::update(long curPos)
 {
-	m_iApproachTime = (long)OsuGameRules::getApproachTime(m_beatmap);
-	m_iHiddenDecayTime = OsuGameRules::getHiddenDecayTimeFromApproachTime(m_iApproachTime);
-	m_iHiddenTimeDiff = OsuGameRules::getHiddenTimeDiffFromApproachTime(m_iApproachTime);
-	m_iFadeInTime = OsuGameRules::getFadeInTimeFromApproachTime(m_iApproachTime);
+	m_fAlphaForApproachCircle = 0.0f;
 
-	m_iObjectTime = m_iApproachTime + m_iFadeInTime + (m_beatmap->getOsu()->getModHD() ? m_iHiddenTimeDiff : 0);
+	m_iApproachTime = (long)OsuGameRules::getApproachTime(m_beatmap);
+	m_iFadeInTime = OsuGameRules::getFadeInTime();
+
 	m_iDelta = m_iTime - curPos;
 
-	if (curPos >= m_iTime - m_iObjectTime && curPos < m_iTime+m_iObjectDuration ) // 1 ms fudge by using >=, shouldn't really be a problem
+	if (curPos >= (m_iTime - m_iApproachTime) && curPos < (m_iTime + m_iObjectDuration) ) // 1 ms fudge by using >=, shouldn't really be a problem
 	{
-		// this calculates the default alpha and approach circle scale for playing without mods
-		float scale = (float)m_iDelta / (float)m_iApproachTime;
+		// approach circle scale
+		const float scale = clamp<float>((float)m_iDelta / (float)m_iApproachTime, 0.0f, 1.0f);
 		m_fApproachScale = 1 + scale * osu_approach_scale_multiplier.getFloat();
 
-		m_fFadeInScale = ((float)m_iDelta - (float)m_iApproachTime + (float)m_iFadeInTime) / (float)m_iFadeInTime;
-		m_fAlpha = clamp<float>(1.0f - m_fFadeInScale, 0.0f, 1.0f);
+		// hitobject body fadein
+		const long fadeInStart = m_iTime - m_iApproachTime;
+		const long fadeInEnd = std::min(m_iTime, m_iTime - m_iApproachTime + m_iFadeInTime); // min() ensures that the fade always finishes at m_iTime (even if the fadeintime is longer than the approachtime)
+		m_fAlpha = m_fAlphaWithoutHidden = clamp<float>(1.0f - ((float)(fadeInEnd - curPos) / (float)(fadeInEnd - fadeInStart)), 0.0f, 1.0f);
+
+		if (m_beatmap->getOsu()->getModHD())
+		{
+			// hidden hitobject body fadein
+			const long hiddenFadeInStart = m_iTime - m_iApproachTime;
+			const long hiddenFadeInEnd = m_iTime - (long)(m_iApproachTime * 0.6f);
+			m_fAlpha = clamp<float>(1.0f - ((float)(hiddenFadeInEnd - curPos) / (float)(hiddenFadeInEnd - hiddenFadeInStart)), 0.0f, 1.0f);
+
+			// hidden hitobject body fadeout
+			const long hiddenFadeOutStart = m_iTime - (long)(m_iApproachTime * 0.6f);
+			const long hiddenFadeOutEnd = m_iTime - (long)(m_iApproachTime * 0.3f);
+			if (curPos >= hiddenFadeOutStart)
+				m_fAlpha = clamp<float>(((float)(hiddenFadeOutEnd - curPos) / (float)(hiddenFadeOutEnd - hiddenFadeOutStart)), 0.0f, 1.0f);
+		}
+
+		// approach circle fadein (doubled fadeintime)
+		const long approachCircleFadeStart = m_iTime - m_iApproachTime;
+		const long approachCircleFadeEnd = std::min(m_iTime, m_iTime - m_iApproachTime + 2*m_iFadeInTime); // min() ensures that the fade always finishes at m_iTime (even if the fadeintime is longer than the approachtime)
+		m_fAlphaForApproachCircle = clamp<float>(1.0f - ((float)(approachCircleFadeEnd - curPos) / (float)(approachCircleFadeEnd - approachCircleFadeStart)), 0.0f, 1.0f);
 
 		m_bVisible = true;
 	}

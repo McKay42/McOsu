@@ -56,6 +56,12 @@ public:
 
 	static bool findIgnoreCase(const std::string &haystack, const std::string &needle);
 
+	enum class GAMEMODE
+	{
+		STD,
+		MANIA
+	};
+
 public:
 	Osu();
 	virtual ~Osu();
@@ -92,16 +98,20 @@ public:
 	void toggleChangelog();
 	void toggleEditor();
 
-	void volumeDown();
-	void volumeUp();
+	void volumeUp(int multiplier = 1) {onVolumeChange(multiplier);}
+	void volumeDown(int multiplier = 1) {onVolumeChange(-multiplier);}
 
 	void saveScreenshot();
 
 	void reloadSkin() {onSkinReload();}
 
-	inline Vector2 getScreenSize() {return g_vInternalResolution;}
-	inline int getScreenWidth() {return (int)g_vInternalResolution.x;}
-	inline int getScreenHeight() {return (int)g_vInternalResolution.y;}
+	void setGamemode(GAMEMODE gamemode) {m_gamemode = gamemode;}
+
+	inline GAMEMODE getGamemode() const {return m_gamemode;}
+
+	inline Vector2 getScreenSize() const {return g_vInternalResolution;}
+	inline int getScreenWidth() const {return (int)g_vInternalResolution.x;}
+	inline int getScreenHeight() const {return (int)g_vInternalResolution.y;}
 
 	OsuBeatmap *getSelectedBeatmap();
 
@@ -116,7 +126,9 @@ public:
 	inline OsuScore *getScore() {return m_score;}
 	inline OsuUpdateHandler *getUpdateHandler() {return m_updateHandler;}
 
+	inline RenderTarget *getSliderFrameBuffer() {return m_sliderFrameBuffer;}
 	inline RenderTarget *getFrameBuffer() {return m_frameBuffer;}
+	inline RenderTarget *getFrameBuffer2() {return m_frameBuffer2;}
 	inline McFont *getTitleFont() {return m_titleFont;}
 	inline McFont *getSubTitleFont() {return m_subTitleFont;}
 	inline McFont *getSongBrowserFont() {return m_songBrowserFont;}
@@ -129,29 +141,30 @@ public:
 	float getSpeedMultiplier();		// with override
 	float getPitchMultiplier();
 
-	inline bool getModAuto() {return m_bModAuto;}
-	inline bool getModAutopilot() {return m_bModAutopilot;}
-	inline bool getModRelax() {return m_bModRelax;}
-	inline bool getModSpunout() {return m_bModSpunout;}
-	inline bool getModTarget() {return m_bModTarget;}
-	inline bool getModDT() {return m_bModDT;}
-	inline bool getModNC() {return m_bModNC;}
-	inline bool getModNF() {return m_bModNF;}
-	inline bool getModHT() {return m_bModHT;}
-	inline bool getModDC() {return m_bModDC;}
-	inline bool getModHD() {return m_bModHD;}
-	inline bool getModHR() {return m_bModHR;}
-	inline bool getModEZ() {return m_bModEZ;}
-	inline bool getModSD() {return m_bModSD;}
-	inline bool getModSS() {return m_bModSS;}
-	inline bool getModNM() {return m_bModNM;}
+	inline bool getModAuto() const {return m_bModAuto;}
+	inline bool getModAutopilot() const {return m_bModAutopilot;}
+	inline bool getModRelax() const {return m_bModRelax;}
+	inline bool getModSpunout() const {return m_bModSpunout;}
+	inline bool getModTarget() const {return m_bModTarget;}
+	inline bool getModScorev2() const {return m_bModScorev2;}
+	inline bool getModDT() const {return m_bModDT;}
+	inline bool getModNC() const {return m_bModNC;}
+	inline bool getModNF() const {return m_bModNF;}
+	inline bool getModHT() const {return m_bModHT;}
+	inline bool getModDC() const {return m_bModDC;}
+	inline bool getModHD() const {return m_bModHD;}
+	inline bool getModHR() const {return m_bModHR;}
+	inline bool getModEZ() const {return m_bModEZ;}
+	inline bool getModSD() const {return m_bModSD;}
+	inline bool getModSS() const {return m_bModSS;}
+	inline bool getModNM() const {return m_bModNM;}
 
 	bool isInPlayMode();
 	bool isNotInPlayModeOrPaused();
 	bool isInVRMode();
 
-	inline bool isSeeking() {return m_bSeeking;}
-	inline float getQuickSaveTime() {return m_fQuickSaveTime;}
+	inline bool isSeeking() const {return m_bSeeking;}
+	inline float getQuickSaveTime() const {return m_fQuickSaveTime;}
 
 	bool shouldFallBackToLegacySliderRenderer(); // certain mods or actions require OsuSliders to render dynamically (e.g. wobble or the CS override slider)
 
@@ -162,6 +175,9 @@ private:
 	static Vector2 g_vInternalResolution;
 
 	void updateModsForConVarTemplate(UString oldValue, UString newValue) {updateMods();}
+	void onVolumeChange(int multiplier);
+
+	void rebuildRenderTargets();
 
 	// callbacks
 	void onInternalResolutionChanged(UString oldValue, UString args);
@@ -184,15 +200,21 @@ private:
 	void onKey1Change(bool pressed, bool mouse);
 	void onKey2Change(bool pressed, bool mouse);
 
+	void onModMafhamChange(UString oldValue, UString newValue);
+
 	// convar refs
 	ConVar *m_osu_folder_ref;
 	ConVar *m_osu_draw_hud_ref;
 	ConVar *m_osu_mod_fps_ref;
 	ConVar *m_osu_mod_wobble_ref;
+	ConVar *m_osu_mod_wobble2_ref;
 	ConVar *m_osu_mod_minimize_ref;
 	ConVar *m_osu_playfield_rotation;
 	ConVar *m_osu_playfield_stretch_x;
 	ConVar *m_osu_playfield_stretch_y;
+	ConVar *m_osu_draw_cursor_trail_ref;
+	ConVar *m_osu_volume_effects_ref;
+	ConVar *m_osu_mod_mafham_ref;
 
 	// interfaces
 	OsuVR *m_vr;
@@ -215,8 +237,10 @@ private:
 	std::vector<OsuScreen*> m_screens;
 
 	// rendering
-	RenderTarget *m_frameBuffer;
 	RenderTarget *m_backBuffer;
+	RenderTarget *m_sliderFrameBuffer;
+	RenderTarget *m_frameBuffer;
+	RenderTarget *m_frameBuffer2;
 	Vector2 m_vInternalResolution;
 
 	// mods
@@ -225,6 +249,7 @@ private:
 	bool m_bModRelax;
 	bool m_bModSpunout;
 	bool m_bModTarget;
+	bool m_bModScorev2;
 	bool m_bModDT;
 	bool m_bModNC;
 	bool m_bModNF;
@@ -276,6 +301,7 @@ private:
 	CWindowManager *m_windowManager;
 
 	// custom
+	GAMEMODE m_gamemode;
 	bool m_bScheduleEndlessModNextBeatmap;
 };
 

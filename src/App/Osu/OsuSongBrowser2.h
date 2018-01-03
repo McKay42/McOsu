@@ -17,6 +17,7 @@ class OsuDatabase;
 class OsuBeatmapDifficulty;
 
 class OsuUIContextMenu;
+class OsuUISearchOverlay;
 class OsuUISelectionButton;
 class OsuUISongBrowserInfoLabel;
 class OsuUISongBrowserButton;
@@ -132,9 +133,12 @@ private:
 
 	void onAfterSortingOrGroupChange(CBaseUIButton *b);
 
+	void onSelectionMode();
 	void onSelectionMods();
 	void onSelectionRandom();
 	void onSelectionOptions();
+
+	void onModeChange(UString text);
 
 	void selectSongButton(OsuUISongBrowserButton *songButton);
 	void selectRandomBeatmap();
@@ -142,6 +146,7 @@ private:
 	void playSelectedDifficulty();
 
 	ConVar *m_fps_max_ref;
+	ConVar *m_osu_database_dynamic_star_calculation_ref;
 
 	Osu *m_osu;
 	std::mt19937 m_rngalg;
@@ -199,9 +204,13 @@ private:
 	std::vector<OsuBeatmap*> m_previousRandomBeatmaps;
 
 	// search
+	OsuUISearchOverlay *m_search;
 	UString m_sSearchString;
 	float m_fSearchWaitTime;
 	bool m_bInSearch;
+
+	// background star calculation
+	int m_iBackgroundStarCalculationIndex;
 };
 
 #endif
