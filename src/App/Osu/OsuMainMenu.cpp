@@ -31,8 +31,8 @@
 #include "CBaseUIContainer.h"
 #include "CBaseUIButton.h"
 
-#define MCOSU_VERSION_TEXT "Alpha"
-#define MCOSU_BANNER_TEXT "-SteamVR Bug! Random freezes on controller vibration-"
+#define MCOSU_VERSION_TEXT "Version"
+#define MCOSU_BANNER_TEXT "--Debug--"
 UString OsuMainMenu::MCOSU_MAIN_BUTTON_TEXT = UString("McOsu");
 UString OsuMainMenu::MCOSU_MAIN_BUTTON_SUBTEXT = UString("Practice Client");
 #define MCOSU_MAIN_BUTTON_BACK_TEXT "by McKay"
@@ -178,7 +178,6 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen()
 	m_fCenterOffsetAnim = 0.0f;
 	m_bMenuElementsVisible = false;
 
-	m_fShutdownScheduledTime = 0.0f;
 	m_fMainMenuAnimTime = 0.0f;
 	m_fMainMenuAnim = 0.0f;
 	m_fMainMenuAnim1 = 0.0f;
@@ -187,6 +186,9 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen()
 	m_fMainMenuAnim1Target = 0.0f;
 	m_fMainMenuAnim2Target = 0.0f;
 	m_fMainMenuAnim3Target = 0.0f;
+
+	m_fShutdownScheduledTime = 0.0f;
+	m_bWasCleanShutdown = false;
 
 	m_fUpdateStatusTime = 0.0f;
 	m_fUpdateButtonTextTime = 0.0f;
@@ -255,6 +257,10 @@ OsuMainMenu::~OsuMainMenu()
 {
 	SAFE_DELETE(m_container);
 	SAFE_DELETE(m_updateAvailableButton);
+
+	// if the user didn't click on the update notification during this session, quietly remove it so it's not annoying
+	if (m_bWasCleanShutdown)
+		writeVersionFile();
 }
 
 void OsuMainMenu::draw(Graphics *g)
@@ -290,7 +296,7 @@ void OsuMainMenu::draw(Graphics *g)
 	McRect mainButtonRect = McRect(m_vCenter.x - size.x/2.0f - m_fCenterOffsetAnim, m_vCenter.y - size.y/2.0f, size.x, size.y);
 
 	// draw banner
-	if (m_osu->isInVRMode())
+	if (/*m_osu->isInVRMode()*/false)
 	{
 		McFont *bannerFont = m_osu->getSubTitleFont();
 		float bannerStringWidth = bannerFont->getStringWidth(MCOSU_BANNER_TEXT);
@@ -330,11 +336,24 @@ void OsuMainMenu::draw(Graphics *g)
 
 		const float scale = m_versionButton->getSize().x / m_osu->getSkin()->getPlayWarningArrow2()->getSizeBaseRaw().x;
 
+		const Vector2 arrowPos = Vector2(m_versionButton->getSize().x/2, m_osu->getScreenHeight() - m_versionButton->getSize().y*2 - m_versionButton->getSize().y*scale);
+
+		UString notificationText = "click!";
 		g->setColor(0xffffffff);
 		g->pushTransform();
-		g->rotate(90.0f);
-		g->translate(0, -offset*2, 0);
-		m_osu->getSkin()->getPlayWarningArrow2()->drawRaw(g, Vector2(m_versionButton->getSize().x/2, m_osu->getScreenHeight() - m_versionButton->getSize().y*2 - m_versionButton->getSize().y*scale), scale);
+		{
+			g->translate(arrowPos.x - smallFont->getStringWidth(notificationText)/2.0f, (-offset*2)*scale + arrowPos.y - (m_osu->getSkin()->getPlayWarningArrow2()->getSizeBaseRaw().y*scale)/1.5f, 0);
+			g->drawString(smallFont, notificationText);
+		}
+		g->popTransform();
+
+		g->setColor(0xffffffff);
+		g->pushTransform();
+		{
+			g->rotate(90.0f);
+			g->translate(0, -offset*2, 0);
+			m_osu->getSkin()->getPlayWarningArrow2()->drawRaw(g, arrowPos, scale);
+		}
 		g->popTransform();
 	}
 
@@ -500,6 +519,12 @@ void OsuMainMenu::update()
 		return;
 
 	updateLayout();
+
+	if (m_osu->getHUD()->isVolumeOverlayBusy())
+	{
+		m_mainButton->stealFocus();
+		m_container->stealFocus();
+	}
 
 	// the main button always gets top focus
 	m_mainButton->update();
@@ -765,6 +790,17 @@ void OsuMainMenu::setMenuElementsVisible(bool visible, bool animate)
 	}
 }
 
+void OsuMainMenu::writeVersionFile()
+{
+	// remember, don't show the notification arrow until the version changes again
+	std::ofstream versionFile(MCOSU_NEWVERSION_NOTIFICATION_TRIGGER_FILE);
+	if (versionFile.good())
+	{
+		versionFile << Osu::version->getFloat();
+		versionFile.close();
+	}
+}
+
 OsuMainMenuButton *OsuMainMenu::addMainMenuButton(UString text)
 {
 	OsuMainMenuButton *button = new OsuMainMenuButton(this, m_vSize.x, 0, 1, 1, "", text);
@@ -807,6 +843,7 @@ void OsuMainMenu::onOptionsButtonPressed()
 void OsuMainMenu::onExitButtonPressed()
 {
 	m_fShutdownScheduledTime = engine->getTime() + 0.5f;
+	m_bWasCleanShutdown = true;
 	setMenuElementsVisible(false);
 }
 
@@ -832,15 +869,7 @@ void OsuMainMenu::onGithubPressed()
 void OsuMainMenu::onVersionPressed()
 {
 	m_bDrawVersionNotificationArrow = false;
-
-	// remember, don't show the notification arrow until the version changes again
-	std::ofstream versionFile(MCOSU_NEWVERSION_NOTIFICATION_TRIGGER_FILE);
-	if (versionFile.good())
-	{
-		versionFile << Osu::version->getFloat();
-		versionFile.close();
-	}
-
+	writeVersionFile();
 	m_osu->toggleChangelog();
 }
 

@@ -48,6 +48,7 @@ public:
 	inline float getHitcircleOverlapScale() {return m_fHitcircleOverlapScale;}
 	inline float getSliderFollowCircleDiameter() {return m_fSliderFollowCircleDiameter;}
 	inline float getRawSliderFollowCircleDiameter() {return m_fRawSliderFollowCircleDiameter;}
+	inline bool isInMafhamRenderChunk() const {return m_bInMafhamRenderChunk;}
 
 	// score
 	inline int getNumHitObjects() {return m_hitobjects.size();}
@@ -117,6 +118,7 @@ private:
 	bool m_bWasHorizontalMirrorEnabled;
 	bool m_bWasVerticalMirrorEnabled;
 	bool m_bWasEZEnabled;
+	bool m_bWasMafhamEnabled;
 	float m_fPrevPlayfieldRotationFromConVar;
 	float m_fPrevPlayfieldStretchX;
 	float m_fPrevPlayfieldStretchY;
@@ -128,6 +130,15 @@ private:
 	int m_iPreLoadingIndex;
 	bool m_bIsVRDraw; // for switching legacy drawing to osuCoords2Pixels/osuCoords2VRPixels
 	bool m_bWasHREnabled; // dynamic stack recalculation
+
+	RenderTarget *m_mafhamActiveRenderTarget;
+	RenderTarget *m_mafhamFinishedRenderTarget;
+	bool m_bMafhamRenderScheduled;
+	int m_iMafhamHitObjectRenderIndex; // scene buffering for rendering entire beatmaps at once with an acceptable framerate
+	int m_iMafhamPrevHitObjectIndex;
+	int m_iMafhamActiveRenderHitObjectIndex;
+	int m_iMafhamFinishedRenderHitObjectIndex;
+	bool m_bInMafhamRenderChunk; // used by OsuSlider to not animate the reverse arrow, and by OsuCircle to not animate note blocking shaking, while being rendered into the scene buffer
 };
 
 #endif

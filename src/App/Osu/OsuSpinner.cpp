@@ -90,7 +90,7 @@ void OsuSpinner::draw(Graphics *g)
 	finishScaleRatio =  -finishScaleRatio*(finishScaleRatio-2);
 	const float finishScale = 0.80f + finishScaleRatio*0.20f; // the spinner grows until reaching 100% during spinning, depending on how many spins are left
 
-	if (skin->getSpinnerBackground() != skin->getMissingTexture() || skin->getVersion() < 2) // old style
+	if (skin->getSpinnerBackground() != skin->getMissingTexture() || skin->getVersion() < 2.0f) // old style
 	{
 		// draw spinner circle
 		if (skin->getSpinnerCircle() != skin->getMissingTexture())
@@ -98,7 +98,7 @@ void OsuSpinner::draw(Graphics *g)
 			float spinnerCircleScale = globalBaseSize / (globalBaseSkinSize * (skin->isSpinnerCircle2x() ? 2.0f : 1.0f));
 
 			g->setColor(0xffffffff);
-			g->setAlpha(m_fAlpha);
+			g->setAlpha(m_fAlphaWithoutHidden);
 			g->pushTransform();
 				g->rotate(m_fDrawRot);
 				g->scale(spinnerCircleScale*globalScale, spinnerCircleScale*globalScale);
@@ -113,7 +113,7 @@ void OsuSpinner::draw(Graphics *g)
 			float spinnerApproachCircleImageScale = globalBaseSize / ((globalBaseSkinSize/2) * (skin->isSpinnerApproachCircle2x() ? 2.0f : 1.0f));
 
 			g->setColor(skin->getSpinnerApproachCircleColor());
-			g->setAlpha(m_fAlpha);
+			g->setAlpha(m_fAlphaWithoutHidden);
 			g->pushTransform();
 				g->scale(spinnerApproachCircleImageScale*m_fPercent*globalScale, spinnerApproachCircleImageScale*m_fPercent*globalScale);
 				g->translate(center.x, center.y);
@@ -129,7 +129,7 @@ void OsuSpinner::draw(Graphics *g)
 			const float spinnerBottomImageScale = globalBaseSize / (globalBaseSkinSize * (skin->isSpinnerBottom2x() ? 2.0f : 1.0f));
 
 			g->setColor(0xffffffff);
-			g->setAlpha(m_fAlpha);
+			g->setAlpha(m_fAlphaWithoutHidden);
 			g->pushTransform();
 				g->rotate(m_fDrawRot/7.0f);
 				g->scale(spinnerBottomImageScale*finishScale*globalScale, spinnerBottomImageScale*finishScale*globalScale);
@@ -144,7 +144,7 @@ void OsuSpinner::draw(Graphics *g)
 			const float spinnerTopImageScale = globalBaseSize / (globalBaseSkinSize * (skin->isSpinnerTop2x() ? 2.0f : 1.0f));
 
 			g->setColor(0xffffffff);
-			g->setAlpha(m_fAlpha);
+			g->setAlpha(m_fAlphaWithoutHidden);
 			g->pushTransform();
 				g->rotate(m_fDrawRot/2.0f);
 				g->scale(spinnerTopImageScale*finishScale*globalScale, spinnerTopImageScale*finishScale*globalScale);
@@ -159,7 +159,7 @@ void OsuSpinner::draw(Graphics *g)
 			const float spinnerMiddle2ImageScale = globalBaseSize / (globalBaseSkinSize * (skin->isSpinnerMiddle22x() ? 2.0f : 1.0f));
 
 			g->setColor(0xffffffff);
-			g->setAlpha(m_fAlpha);
+			g->setAlpha(m_fAlphaWithoutHidden);
 			g->pushTransform();
 				g->rotate(m_fDrawRot);
 				g->scale(spinnerMiddle2ImageScale*finishScale*globalScale, spinnerMiddle2ImageScale*finishScale*globalScale);
@@ -172,7 +172,7 @@ void OsuSpinner::draw(Graphics *g)
 			const float spinnerMiddleImageScale = globalBaseSize / (globalBaseSkinSize * (skin->isSpinnerMiddle2x() ? 2.0f : 1.0f));
 
 			g->setColor(COLOR(255, 255, (int)(255*m_fPercent), (int)(255*m_fPercent)));
-			g->setAlpha(m_fAlpha);
+			g->setAlpha(m_fAlphaWithoutHidden);
 			g->pushTransform();
 				g->rotate(m_fDrawRot/2.0f); // apparently does not rotate in osu
 				g->scale(spinnerMiddleImageScale*finishScale*globalScale, spinnerMiddleImageScale*finishScale*globalScale);
@@ -187,7 +187,7 @@ void OsuSpinner::draw(Graphics *g)
 			const float spinnerApproachCircleImageScale = globalBaseSize / ((globalBaseSkinSize/2) * (skin->isSpinnerApproachCircle2x() ? 2.0f : 1.0f));
 
 			g->setColor(skin->getSpinnerApproachCircleColor());
-			g->setAlpha(m_fAlpha);
+			g->setAlpha(m_fAlphaWithoutHidden);
 			g->pushTransform();
 				g->scale(spinnerApproachCircleImageScale*m_fPercent*globalScale, spinnerApproachCircleImageScale*m_fPercent*globalScale);
 				g->translate(center.x, center.y);
@@ -215,7 +215,7 @@ void OsuSpinner::draw(Graphics *g)
 		float spinerSpinImageScale = Osu::getImageScale(m_beatmap->getOsu(), skin->getSpinnerSpin(), 80);
 
 		g->setColor(0xffffffff);
-		g->setAlpha(m_fAlpha);
+		g->setAlpha(m_fAlphaWithoutHidden);
 		g->pushTransform();
 		g->scale(spinerSpinImageScale, spinerSpinImageScale);
 		g->translate(center.x, center.y + m_beatmap->getPlayfieldSize().y*0.30f);
@@ -474,10 +474,10 @@ void OsuSpinner::rotate(float rad)
 		if ((int)(newRotations/360.0f) > (int)(m_fRotationsNeeded)+1)
 		{
 			// extra rotations
-			m_beatmap->addScorePoints(1000);
+			m_beatmap->addScorePoints(1000, true);
 			engine->getSound()->play(m_beatmap->getSkin()->getSpinnerBonus());
 		}
-		m_beatmap->addScorePoints(100);
+		m_beatmap->addScorePoints(100, true);
 	}
 
 	// spinner sound
