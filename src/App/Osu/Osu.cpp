@@ -316,7 +316,6 @@ Osu::Osu()
 	//m_changelog->setVisible(true);
 	//m_editor->setVisible(true);
 
-
 	if (isInVRMode() && osu_vr_tutorial.getBool())
 		m_vrTutorial->setVisible(true);
 	else
@@ -324,11 +323,10 @@ Osu::Osu()
 
 	m_updateHandler->checkForUpdates();
 
-
 	/*
 	// DEBUG: immediately start diff of a beatmap
-	UString debugFolder = "C:/Program Files (x86)/osu!/Songs/4392 Hyadain - Chocobo/";
-	UString debugDiffFileName = "Hyadain - Chocobo (mtmcl) [Gold].osu";
+	UString debugFolder = "C:/Program Files (x86)/osu!/Songs/537048 Erehamonika remixed by kors k - Der Wald (Kors K Remix)/";
+	UString debugDiffFileName = "Erehamonika remixed by kors k - Der Wald (Kors K Remix) (Rucker) [Maze].osu";
 	OsuBeatmap *debugBeatmap = new OsuBeatmapStandard(this);
 	UString beatmapPath = debugFolder;
 	beatmapPath.append(debugDiffFileName);
@@ -1389,7 +1387,7 @@ void Osu::onResolutionChanged(Vector2 newResolution)
 		if (osu_letterboxing.getBool())
 		{
 			engine->getMouse()->setOffset(-Vector2(engine->getScreenWidth()/2 - g_vInternalResolution.x/2, engine->getScreenHeight()/2 - g_vInternalResolution.y/2));
-			engine->getMouse()->setScale(Vector2(1,1));
+			engine->getMouse()->setScale(Vector2(g_vInternalResolution.x / engine->getScreenWidth(), g_vInternalResolution.y / engine->getScreenHeight()));
 		}
 		else
 		{

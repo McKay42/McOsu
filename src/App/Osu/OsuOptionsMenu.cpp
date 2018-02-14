@@ -30,8 +30,9 @@
 #include "OsuSkin.h"
 #include "OsuGameRules.h"
 #include "OsuKeyBindings.h"
-#include "OsuCircle.h"
+#include "OsuNotificationOverlay.h"
 #include "OsuSliderRenderer.h"
+#include "OsuCircle.h"
 
 #include "OsuUIButton.h"
 #include "OsuUISlider.h"
@@ -228,6 +229,8 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_iManiaK = 0;
 	m_iManiaKey = 0;
 
+	m_fSearchOnCharKeybindHackTime = 0.0f;
+
 	m_container = new CBaseUIContainer(0, 0, 0, 0, "");
 
 	m_options = new CBaseUIScrollView(0, -1, 0, 0, "");
@@ -390,18 +393,31 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSection("Input");
 
 	addSubSection("Mouse");
-	addSlider("Sensitivity:", 0.1f, 6.0f, convar->getConVarByName("mouse_sensitivity"))->setKeyDelta(0.01f);
-	addCheckbox("Raw Input", convar->getConVarByName("mouse_raw_input"));
-	addCheckbox("Map Absolute Raw Input to Window", convar->getConVarByName("mouse_raw_input_absolute_to_window"));
+	if (env->getOS() == Environment::OS::OS_WINDOWS)
+	{
+		addSlider("Sensitivity:", 0.1f, 6.0f, convar->getConVarByName("mouse_sensitivity"))->setKeyDelta(0.01f);
+		addCheckbox("Raw Input", convar->getConVarByName("mouse_raw_input"));
+		addCheckbox("Map Absolute Raw Input to Window", convar->getConVarByName("mouse_raw_input_absolute_to_window"));
+	}
+	if (env->getOS() == Environment::OS::OS_LINUX)
+	{
+		addLabel("Use system settings to change the mouse sensitivity.")->setTextColor(0xff555555);
+		addLabel("");
+		addLabel("Use xinput or xsetwacom to change the tablet area.")->setTextColor(0xff555555);
+		addLabel("");
+	}
 	addCheckbox("Confine Cursor (Windowed)", convar->getConVarByName("osu_confine_cursor_windowed"));
 	addCheckbox("Confine Cursor (Fullscreen)", convar->getConVarByName("osu_confine_cursor_fullscreen"));
 	addCheckbox("Disable Mouse Wheel in Play Mode", convar->getConVarByName("osu_disable_mousewheel"));
 	addCheckbox("Disable Mouse Buttons in Play Mode", convar->getConVarByName("osu_disable_mousebuttons"));
 
-	addSubSection("Tablet");
-	addCheckbox("OS TabletPC Support", "Enable this if your tablet clicks aren't handled correctly.", convar->getConVarByName("win_realtimestylus"));
-	addCheckbox("Windows Ink Workaround", "Enable this if your tablet cursor is stuck in a tiny area on the top left of the screen.\nIf this doesn't fix it, use \"Ignore Sensitivity & Raw Input\" below.", convar->getConVarByName("win_ink_workaround"));
-	addCheckbox("Ignore Sensitivity & Raw Input", "Only use this if nothing else works.\nIf this is enabled, then the in-game sensitivity slider will no longer work for tablets!\n(You can then instead use your tablet configuration software to change the tablet area.)", convar->getConVarByName("tablet_sensitivity_ignore"));
+	if (env->getOS() == Environment::OS::OS_WINDOWS)
+	{
+		addSubSection("Tablet");
+		addCheckbox("OS TabletPC Support", "Enable this if your tablet clicks aren't handled correctly.", convar->getConVarByName("win_realtimestylus"));
+		addCheckbox("Windows Ink Workaround", "Enable this if your tablet cursor is stuck in a tiny area on the top left of the screen.\nIf this doesn't fix it, use \"Ignore Sensitivity & Raw Input\" below.", convar->getConVarByName("win_ink_workaround"));
+		addCheckbox("Ignore Sensitivity & Raw Input", "Only use this if nothing else works.\nIf this is enabled, then the in-game sensitivity slider will no longer work for tablets!\n(You can then instead use your tablet configuration software to change the tablet area.)", convar->getConVarByName("tablet_sensitivity_ignore"));
+	}
 
 	addSpacer();
 	addSubSection("Keyboard");
@@ -693,6 +709,10 @@ void OsuOptionsMenu::update()
 	}
 	if (m_vrSliderVibrationStrengthSlider != NULL && m_vrSliderVibrationStrengthSlider->isActive())
 		openvr->getController()->triggerHapticPulse(m_osu->getVR()->getSliderHapticPulseStrength());
+
+	// hack to avoid entering search text while binding keys
+	if (m_osu->getNotificationOverlay()->isVisible())
+		m_fSearchOnCharKeybindHackTime = engine->getTime() + 0.1f;
 }
 
 void OsuOptionsMenu::onKeyDown(KeyboardEvent &e)
@@ -774,7 +794,7 @@ void OsuOptionsMenu::onChar(KeyboardEvent &e)
 	if (e.isConsumed()) return;
 
 	// handle searching
-	if (e.getCharCode() < 32 || !m_bVisible || (engine->getKeyboard()->isControlDown() && !engine->getKeyboard()->isAltDown()))
+	if (e.getCharCode() < 32 || !m_bVisible || (engine->getKeyboard()->isControlDown() && !engine->getKeyboard()->isAltDown()) || m_fSearchOnCharKeybindHackTime > engine->getTime())
 		return;
 
 	KEYCODE charCode = e.getCharCode();

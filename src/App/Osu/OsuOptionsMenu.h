@@ -163,6 +163,7 @@ private:
 
 	// search
 	UString m_sSearchString;
+	float m_fSearchOnCharKeybindHackTime;
 };
 
 #endif
