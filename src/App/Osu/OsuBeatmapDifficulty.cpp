@@ -797,15 +797,22 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 		}
 
 		// ticks
-		float tickLengthDiv = ((100.0f * sliderMultiplier) / sliderTickRate) / getTimingPointMultiplierForSlider(s);
-		float tickDurationPercentOfSliderLength = tickLengthDiv / s->pixelLength;
-		int tickCount = (int)std::ceil(s->pixelLength / tickLengthDiv) - 1;
+		float minTickPixelDistanceFromEnd = 0.01f * getSliderVelocity(s);
+		float tickPixelLength = getSliderTickDistance() / getTimingPointMultiplierForSlider(s);
+		float tickDurationPercentOfSliderLength = tickPixelLength / (s->pixelLength == 0.0f ? 1.0f : s->pixelLength);
+		int tickCount = (int)std::ceil(s->pixelLength / tickPixelLength) - 1;
 		if (tickCount > 0)
 		{
 			float tickTOffset = tickDurationPercentOfSliderLength;
 			float t = tickTOffset;
+			float pixelDistanceToEnd = s->pixelLength;
 			for (int i=0; i<tickCount; i++, t+=tickTOffset)
 			{
+				// skip ticks which are too close to the end of the slider
+				pixelDistanceToEnd -= tickPixelLength;
+				if (pixelDistanceToEnd <= minTickPixelDistanceFromEnd)
+					break;
+
 				s->ticks.push_back(t);
 			}
 		}
@@ -1065,10 +1072,24 @@ void OsuBeatmapDifficulty::buildManiaHitObjects(OsuBeatmapMania *beatmap, std::v
 	}
 }
 
+float OsuBeatmapDifficulty::getSliderTickDistance()
+{
+	return ((100.0f * sliderMultiplier) / sliderTickRate);
+}
+
 float OsuBeatmapDifficulty::getSliderTimeForSlider(SLIDER *slider)
 {
 	const float duration = getTimingInfoForTime(slider->time).beatLength * (slider->pixelLength / sliderMultiplier) / 100.0f;
 	return duration >= 1.0f ? duration : 1.0f; // sanity check
+}
+
+float OsuBeatmapDifficulty::getSliderVelocity(SLIDER *slider)
+{
+	const float beatLength = getTimingInfoForTime(slider->time).beatLength;
+	if (beatLength > 0.0f)
+		return (getSliderTickDistance() * sliderTickRate * (1000.0f / beatLength));
+	else
+		return getSliderTickDistance() * sliderTickRate;
 }
 
 float OsuBeatmapDifficulty::getTimingPointMultiplierForSlider(SLIDER *slider)
