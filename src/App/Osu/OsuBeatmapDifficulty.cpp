@@ -798,10 +798,11 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 
 		// ticks
 		float tickLengthDiv = ((100.0f * sliderMultiplier) / sliderTickRate) / getTimingPointMultiplierForSlider(s);
-		int tickCount = (int) std::ceil(s->pixelLength / tickLengthDiv) - 1;
+		float tickDurationPercentOfSliderLength = tickLengthDiv / s->pixelLength;
+		int tickCount = (int)std::ceil(s->pixelLength / tickLengthDiv) - 1;
 		if (tickCount > 0)
 		{
-			float tickTOffset = 1.0f / (tickCount + 1);
+			float tickTOffset = tickDurationPercentOfSliderLength;
 			float t = tickTOffset;
 			for (int i=0; i<tickCount; i++, t+=tickTOffset)
 			{
