@@ -33,13 +33,23 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 
 	CHANGELOG alpha29Steam;
 	alpha29Steam.title = UString::format("28.98 (Steam VR Version, %s, %s)", __DATE__, __TIME__);
+	alpha29Steam.changes.push_back("- Reworked Mouse/Tablet input handling");
+	alpha29Steam.changes.push_back("- Fixed cursor jerking to bottom right corner when accidentally wiggling mouse while using tablet");
+	alpha29Steam.changes.push_back("- Fixed letterboxing cursor behavior (clipping/confining)");
+	alpha29Steam.changes.push_back("- Fixed desynced slider ticks (e.g. Der Wald [Maze], first three sliders)");
+	alpha29Steam.changes.push_back("");
+	alpha29Steam.changes.push_back("");
+	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("- Added Score v2 mod");
 	alpha29Steam.changes.push_back("- Added search support to options menu");
 	alpha29Steam.changes.push_back("- Added proper volume overlay HUD with individual sliders for master/effects/music");
 	alpha29Steam.changes.push_back("- Added/Fixed ConVars: osu_slider_followcircle_size_multiplier, osu_cursor_trail_alpha,");
 	alpha29Steam.changes.push_back("                                     osu_hud_volume_duration, osu_hud_volume_size_multiplier");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("");
+	alpha29Steam.changes.push_back("- Fixed entering search text while binding keys in options menu");
+	alpha29Steam.changes.push_back("- Linux: Updated BASS audio library to version 2.4.13 (19/12/2017)");
+	alpha29Steam.changes.push_back("- Linux: Added support for confine cursor (i.e. Options > Input > Mouse > Confine Cursor, works now)");
+	alpha29Steam.changes.push_back("- Linux: Added support for key names (i.e. Options > Input > Keyboard, key names instead of numbers)");
+	alpha29Steam.changes.push_back("- Linux: Added support for focus changes (i.e. Options > General > Window > Pause on Focus Loss, fps_max_background)");
 	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("- Added smooth cursortrail support");
 	alpha29Steam.changes.push_back("- Added option \"Force Smooth CursorTrail\" (Options > Skin)");
