@@ -219,7 +219,9 @@ private:
 	// void buildTaikoHitObjects(OsuBeatmapTaiko *beatmap, std::vector<OsuHitObject*> *hitobjects);
 
 	// generic helper functions
+	float getSliderTickDistance();
 	float getSliderTimeForSlider(SLIDER *slider);
+	float getSliderVelocity(SLIDER *slider);
 	float getTimingPointMultiplierForSlider(SLIDER *slider); // needed for slider ticks
 
 	void deleteBackgroundImagePathLoader();
