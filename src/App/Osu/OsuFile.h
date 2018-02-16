@@ -30,9 +30,9 @@ public:
 
 	unsigned char readByte();
 	short readShort();
-	int readInt();
-	long readLong();
-	long long readLongLong();
+	int32_t readInt();
+	int64_t readLong();
+	int64_t readLongLong();
 	uint64_t readULEB128();
 	float readFloat();
 	double readDouble();
