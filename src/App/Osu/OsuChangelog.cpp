@@ -37,6 +37,7 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha29Steam.changes.push_back("- Fixed cursor jerking to bottom right corner when accidentally wiggling mouse while using tablet");
 	alpha29Steam.changes.push_back("- Fixed letterboxing cursor behavior (clipping/confining)");
 	alpha29Steam.changes.push_back("- Fixed desynced slider ticks (e.g. Der Wald [Maze], first three sliders)");
+	alpha29Steam.changes.push_back("- Linux: Fixed crash when reloading osu database beatmaps via F5 in songbrowser");
 	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("");
