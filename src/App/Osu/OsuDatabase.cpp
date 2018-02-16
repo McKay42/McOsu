@@ -51,6 +51,7 @@ public:
 	{
 		m_db = db;
 		m_bNeedRawLoad = false;
+		m_bNeedCleanup = false;
 
 		m_bAsyncReady = false;
 		m_bReady = false;
@@ -62,6 +63,21 @@ protected:
 		// legacy loading, if db is not found or by convar
 		if (m_bNeedRawLoad)
 			m_db->loadRaw();
+		else
+		{
+			// HACKHACK: delete all previously loaded beatmaps here (must do this from the main thread due to textures etc.)
+			// this is an absolutely disgusting fix
+			// originally this was done in m_db->loadDB(db), but that was not run on the main thread and crashed on linux
+			if (m_bNeedCleanup)
+			{
+				m_bNeedCleanup = false;
+				for (int i=0; i<m_toCleanup.size(); i++)
+				{
+					delete m_toCleanup[i];
+				}
+				m_toCleanup.clear();
+			}
+		}
 
 		m_bReady = true;
 		delete this; // commit sudoku
@@ -77,6 +93,10 @@ protected:
 		// load database
 		if (db->isReady() && osu_database_enabled.getBool())
 		{
+			m_bNeedCleanup = true;
+			m_toCleanup = m_db->m_beatmaps;
+			m_db->m_beatmaps.clear();
+
 			m_db->m_fLoadingProgress = 0.25f;
 			m_db->loadDB(db);
 		}
@@ -94,6 +114,9 @@ protected:
 private:
 	OsuDatabase *m_db;
 	bool m_bNeedRawLoad;
+
+	bool m_bNeedCleanup;
+	std::vector<OsuBeatmap*> m_toCleanup;
 };
 
 OsuDatabase::OsuDatabase(Osu *osu)
@@ -262,10 +285,10 @@ void OsuDatabase::loadDB(OsuFile *db)
 {
 	// reset
 	m_collections.clear();
-	for (int i=0; i<m_beatmaps.size(); i++)
-	{
-		delete m_beatmaps[i];
-	}
+
+	if (m_beatmaps.size() > 0)
+		debugLog("WARNING: OsuDatabase::loadDB() called without cleared m_beatmaps!!!\n");
+
 	m_beatmaps.clear();
 
 	if (!db->isReady())

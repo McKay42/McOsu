@@ -131,12 +131,24 @@ OsuSlider::OsuSlider(char type, int repeat, float pixelLength, std::vector<Vecto
 	{
 		for (int t=0; t<m_ticks.size(); t++)
 		{
+			// NOTE: repeat ticks are not necessarily symmetric.
+			//
+			// e.g. this slider: [1]=======*==[2]
+			//
+			// the '*' is where the tick is, let's say percent = 0.75
+			// on repeat 0, the tick is at: m_iTime + 0.75*m_fSliderTimeWithoutRepeats
+			// but on repeat 1, the tick is at: m_iTime + 1*m_fSliderTimeWithoutRepeats + (1.0 - 0.75)*m_fSliderTimeWithoutRepeats
+			// this gives better readability at the cost of invalid rhythms: ticks are guaranteed to always be at the same position, even in repeats
+			// so, depending on which repeat we are in (even or odd), we either do (percent) or (1.0 - percent)
+
+			const float tickPercentRelativeToRepeatFromStartAbs = (((i+1) % 2) != 0 ? m_ticks[t].percent : 1.0f - m_ticks[t].percent);
+
 			SLIDERCLICK sc;
-			sc.time = m_iTime + (long)(m_fSliderTimeWithoutRepeats*i) + (long)(m_ticks[t].percent*m_fSliderTimeWithoutRepeats);
+			sc.time = m_iTime + (long)(m_fSliderTimeWithoutRepeats*i) + (long)(tickPercentRelativeToRepeatFromStartAbs*m_fSliderTimeWithoutRepeats);
 			sc.finished = false;
 			sc.successful = false;
 			sc.type = 1;
-			sc.tickIndex = (i % 2) == 0 ? t : m_ticks.size()-t-1;
+			sc.tickIndex = t;
 			m_clicks.push_back(sc);
 		}
 	}
@@ -213,7 +225,7 @@ void OsuSlider::draw(Graphics *g)
 			drawBody(g, alpha, sliderSnakeStart, sliderSnake);
 
 		// draw slider ticks
-		float tickImageScale = (m_beatmap->getHitcircleDiameter() / (16.0f * (skin->isSliderScorePoint2x() ? 2.0f : 1.0f)))*0.125f;
+		const float tickImageScale = (m_beatmap->getHitcircleDiameter() / (16.0f * (skin->isSliderScorePoint2x() ? 2.0f : 1.0f)))*0.125f;
 		for (int t=0; t<m_ticks.size(); t++)
 		{
 			if (m_ticks[t].finished || m_ticks[t].percent > sliderSnake)
@@ -528,7 +540,7 @@ void OsuSlider::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 			drawBodyVR(g, vr, finalMVP, alpha, sliderSnakeStart, sliderSnake);
 
 		// draw slider ticks
-		float tickImageScale = (m_beatmap->getHitcircleDiameter() / (16.0f * (skin->isSliderScorePoint2x() ? 2.0f : 1.0f)))*0.125f;
+		const float tickImageScale = (m_beatmap->getHitcircleDiameter() / (16.0f * (skin->isSliderScorePoint2x() ? 2.0f : 1.0f)))*0.125f;
 		for (int t=0; t<m_ticks.size(); t++)
 		{
 			if (m_ticks[t].finished || m_ticks[t].percent > sliderSnake)
