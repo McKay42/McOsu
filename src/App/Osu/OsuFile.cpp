@@ -50,29 +50,29 @@ short OsuFile::readShort()
 	return value;
 }
 
-int OsuFile::readInt()
+int32_t OsuFile::readInt()
 {
 	if (!m_bReady || m_readPointer > (m_buffer + m_iFileSize - 4)) return 0;
 
-	const int value = (int)*(int*)m_readPointer;
+	const int32_t value = (int32_t)*(int32_t*)m_readPointer;
 	m_readPointer += 4;
 	return value;
 }
 
-long OsuFile::readLong()
+int64_t OsuFile::readLong()
 {
 	if (!m_bReady || m_readPointer > (m_buffer + m_iFileSize - 8)) return 0;
 
-	const long value = (long)*(long*)m_readPointer;
+	const int64_t value = (int64_t)*(int64_t*)m_readPointer;
 	m_readPointer += 8;
 	return value;
 }
 
-long long OsuFile::readLongLong()
+int64_t OsuFile::readLongLong()
 {
 	if (!m_bReady || m_readPointer > (m_buffer + m_iFileSize - 8)) return 0;
 
-	const long long value = (long long)*(long long*)m_readPointer;
+	const int64_t value = (int64_t)*(int64_t*)m_readPointer;
 	m_readPointer += 8;
 	return value;
 }
