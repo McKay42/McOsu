@@ -277,7 +277,7 @@ Osu::Osu()
 	skinFolder.append(osu_skin.getString());
 	skinFolder.append("/");
 	if (m_skin == NULL) // the skin may already be loaded by Console::execConfigFile() above
-		m_skin = new OsuSkin(this, skinFolder);
+		m_skin = new OsuSkin(this, skinFolder, (osu_skin.getString() == "default" || osu_skin.getString() == "defaultvr"));
 
 	// load subsystems, add them to the screens array
 	m_tooltipOverlay = new OsuTooltipOverlay(this);
@@ -1261,7 +1261,7 @@ float Osu::getScoreMultiplier()
 {
 	float multiplier = 1.0f;
 
-	if (m_bModEZ/* || m_bModNF*/) // commented until proper drain is implemented
+	if (m_bModEZ || m_bModNF)
 		multiplier *= 0.5f;
 	if (m_bModHT || m_bModDC)
 		multiplier *= 0.3f;
@@ -1504,7 +1504,7 @@ void Osu::onSkinChange(UString oldValue, UString newValue)
 		skinFolder.append("Skins/");
 		skinFolder.append(newValue);
 		skinFolder.append("/");
-		m_skin = new OsuSkin(this, skinFolder);
+		m_skin = new OsuSkin(this, skinFolder, (newValue == "default" || newValue == "defaultvr"));
 
 		// force
 		onResolutionChanged(g_vInternalResolution);
