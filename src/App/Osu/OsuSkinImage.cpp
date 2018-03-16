@@ -17,7 +17,7 @@
 
 ConVar osu_skin_animation_fps_override("osu_skin_animation_fps_override", -1.0f);
 
-OsuSkinImage::OsuSkinImage(OsuSkin *skin, UString skinElementName, Vector2 baseSizeForScaling2x, float osuSize, UString animationSeparator)
+OsuSkinImage::OsuSkinImage(OsuSkin *skin, UString skinElementName, Vector2 baseSizeForScaling2x, float osuSize, UString animationSeparator, bool ignoreDefaultSkin)
 {
 	m_skin = skin;
 	m_vBaseSizeForScaling2x = baseSizeForScaling2x;
@@ -32,7 +32,10 @@ OsuSkinImage::OsuSkinImage(OsuSkin *skin, UString skinElementName, Vector2 baseS
 	// logic: first load user skin (true), and if no image could be found then load the default skin (false)
 	// this is necessary so that all elements can be correctly overridden with a user skin (e.g. if the user skin only has sliderb.png, but the default skin has sliderb0.png!)
 	if (!load(skinElementName, animationSeparator, true))
-		load(skinElementName, animationSeparator, false);
+	{
+		if (!ignoreDefaultSkin)
+			load(skinElementName, animationSeparator, false);
+	}
 
 	// if we couldn't load ANYTHING at all, gracefully fallback to missing texture
 	if (m_images.size() < 1)
