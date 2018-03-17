@@ -14,12 +14,12 @@
 #include "ConVar.h"
 #include "File.h"
 
-#include <string.h>
-
 #include "Osu.h"
 #include "OsuSkinImage.h"
 #include "OsuBeatmap.h"
 #include "OsuNotificationOverlay.h"
+
+#include <string.h>
 
 #define OSU_BITMASK_HITWHISTLE 0x2
 #define OSU_BITMASK_HITFINISH 0x4
@@ -29,7 +29,6 @@ void DUMMY_OSU_VOLUME_EFFECTS_ARGS(UString oldValue, UString newValue) {;}
 
 ConVar osu_volume_effects("osu_volume_effects", 1.0f, DUMMY_OSU_VOLUME_EFFECTS_ARGS);
 ConVar osu_skin_hd("osu_skin_hd", true);
-ConVar osu_skin_load_async("osu_skin_load_async", false, "VERY experimental, changing skins too quickly will crash the engine (due to known behaviour)");
 ConVar osu_skin_color_index_add("osu_skin_color_index_add", 0);
 ConVar osu_skin_animation_force("osu_skin_animation_force", false);
 ConVar osu_skin_use_skin_hitsounds("osu_skin_use_skin_hitsounds", true, "If enabled: Use skin's sound samples. If disabled: Use default skin's sound samples. For hitsounds only.");
@@ -42,10 +41,11 @@ Image *OsuSkin::m_missingTexture = NULL;
 ConVar *OsuSkin::m_osu_skin_ref = NULL;
 ConVar *OsuSkin::m_osu_skin_hd = &osu_skin_hd;
 
-OsuSkin::OsuSkin(Osu *osu, UString filepath)
+OsuSkin::OsuSkin(Osu *osu, UString filepath, bool isDefaultSkin)
 {
 	m_osu = osu;
 	m_sFilePath = filepath;
+	m_bIsDefaultSkin = isDefaultSkin;
 
 	if (m_osu->isInVRMode())
 		OSUSKIN_DEFAULT_SKIN_PATH = "defaultvr/";
@@ -393,19 +393,19 @@ void OsuSkin::load()
 	m_hit300k->setAnimationFramerate(60);
 
 	checkLoadImage(&m_sliderGradient, "slidergradient", "OSU_SKIN_SLIDERGRADIENT");
-	m_sliderb = createOsuSkinImage("sliderb", Vector2(128, 128), 64, "");
+	m_sliderb = createOsuSkinImage("sliderb", Vector2(128, 128), 64, false, "");
 	m_sliderb->setAnimationFramerate(/*45.0f*/ 50.0f);
 	checkLoadImage(&m_sliderScorePoint, "sliderscorepoint", "OSU_SKIN_SLIDERSCOREPOINT");
 	m_sliderFollowCircle2 = createOsuSkinImage("sliderfollowcircle", Vector2(259, 259), 64);
-	checkLoadImage(&m_sliderStartCircle, "sliderstartcircle", "OSU_SKIN_SLIDERSTARTCIRCLE");
-	m_sliderStartCircle2 = createOsuSkinImage("sliderstartcircle", Vector2(128, 128), 64);
-	checkLoadImage(&m_sliderStartCircleOverlay, "sliderstartcircleoverlay", "OSU_SKIN_SLIDERSTARTCIRCLEOVERLAY");
-	m_sliderStartCircleOverlay2 = createOsuSkinImage("sliderstartcircleoverlay", Vector2(128, 128), 64);
+	checkLoadImage(&m_sliderStartCircle, "sliderstartcircle", "OSU_SKIN_SLIDERSTARTCIRCLE", !m_bIsDefaultSkin); // !m_bIsDefaultSkin ensures that default doesn't override user, in these special cases
+	m_sliderStartCircle2 = createOsuSkinImage("sliderstartcircle", Vector2(128, 128), 64, !m_bIsDefaultSkin);
+	checkLoadImage(&m_sliderStartCircleOverlay, "sliderstartcircleoverlay", "OSU_SKIN_SLIDERSTARTCIRCLEOVERLAY", !m_bIsDefaultSkin);
+	m_sliderStartCircleOverlay2 = createOsuSkinImage("sliderstartcircleoverlay", Vector2(128, 128), 64, !m_bIsDefaultSkin);
 	m_sliderStartCircleOverlay2->setAnimationFramerate(2);
-	checkLoadImage(&m_sliderEndCircle, "sliderendcircle", "OSU_SKIN_SLIDERENDCIRCLE");
-	m_sliderEndCircle2 = createOsuSkinImage("sliderendcircle", Vector2(128, 128), 64);
-	checkLoadImage(&m_sliderEndCircleOverlay, "sliderendcircleoverlay", "OSU_SKIN_SLIDERENDCIRCLEOVERLAY");
-	m_sliderEndCircleOverlay2 = createOsuSkinImage("sliderendcircleoverlay", Vector2(128, 128), 64);
+	checkLoadImage(&m_sliderEndCircle, "sliderendcircle", "OSU_SKIN_SLIDERENDCIRCLE", !m_bIsDefaultSkin);
+	m_sliderEndCircle2 = createOsuSkinImage("sliderendcircle", Vector2(128, 128), 64, !m_bIsDefaultSkin);
+	checkLoadImage(&m_sliderEndCircleOverlay, "sliderendcircleoverlay", "OSU_SKIN_SLIDERENDCIRCLEOVERLAY", !m_bIsDefaultSkin);
+	m_sliderEndCircleOverlay2 = createOsuSkinImage("sliderendcircleoverlay", Vector2(128, 128), 64, !m_bIsDefaultSkin);
 	m_sliderEndCircleOverlay2->setAnimationFramerate(2);
 
 	checkLoadImage(&m_spinnerBackground, "spinner-background", "OSU_SKIN_SPINNERBACKGROUND");
@@ -868,19 +868,16 @@ void OsuSkin::playSliderTickSound()
 	}
 }
 
-OsuSkinImage *OsuSkin::createOsuSkinImage(UString skinElementName, Vector2 baseSizeForScaling2x, float osuSize, UString animationSeparator)
+OsuSkinImage *OsuSkin::createOsuSkinImage(UString skinElementName, Vector2 baseSizeForScaling2x, float osuSize, bool ignoreDefaultSkin, UString animationSeparator)
 {
-	OsuSkinImage *skinImage = new OsuSkinImage(this, skinElementName, baseSizeForScaling2x, osuSize, animationSeparator);
+	OsuSkinImage *skinImage = new OsuSkinImage(this, skinElementName, baseSizeForScaling2x, osuSize, animationSeparator, ignoreDefaultSkin);
 	m_images.push_back(skinImage);
-
 	return skinImage;
 }
 
 void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, UString resourceName, bool ignoreDefaultSkin, UString fileExtension)
 {
-	// we are already loaded
-	if (*addressOfPointer != m_missingTexture)
-		return;
+	if (*addressOfPointer != m_missingTexture) return; // we are already loaded
 
 	// check if an @2x version of this image exists
 	if (osu_skin_hd.getBool())
@@ -897,8 +894,6 @@ void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, 
 			{
 				UString defaultResourceName = resourceName;
 				defaultResourceName.append("_DEFAULT"); // so we don't load the default skin twice
-				if (osu_skin_load_async.getBool())
-					engine->getResourceManager()->requestNextLoadAsync();
 				*addressOfPointer = engine->getResourceManager()->loadImageAbs(defaultFilePath, defaultResourceName);
 				///m_resources.push_back(*addressOfPointer); // HACKHACK: also reload default skin
 			}
@@ -912,8 +907,6 @@ void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, 
 
 		if (env->fileExists(filepath1))
 		{
-			if (osu_skin_load_async.getBool())
-				engine->getResourceManager()->requestNextLoadAsync();
 			*addressOfPointer = engine->getResourceManager()->loadImageAbs(filepath1, resourceName);
 			m_resources.push_back(*addressOfPointer);
 
@@ -935,8 +928,6 @@ void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, 
 		{
 			UString defaultResourceName = resourceName;
 			defaultResourceName.append("_DEFAULT"); // so we don't load the default skin twice
-			if (osu_skin_load_async.getBool())
-				engine->getResourceManager()->requestNextLoadAsync();
 			*addressOfPointer = engine->getResourceManager()->loadImageAbs(defaultFilePath, defaultResourceName);
 			///m_resources.push_back(*addressOfPointer); // HACKHACK: also reload default skin
 		}
@@ -950,8 +941,6 @@ void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, 
 
 	if (env->fileExists(filepath2))
 	{
-		if (osu_skin_load_async.getBool())
-			engine->getResourceManager()->requestNextLoadAsync();
 		*addressOfPointer = engine->getResourceManager()->loadImageAbs(filepath2, resourceName);
 		m_resources.push_back(*addressOfPointer);
 	}
@@ -959,9 +948,7 @@ void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, 
 
 void OsuSkin::checkLoadSound(Sound **addressOfPointer, UString skinElementName, UString resourceName, bool isOverlayable, bool isSample, bool loop)
 {
-	// we are already loaded
-	if (*addressOfPointer != NULL)
-		return;
+	if (*addressOfPointer != NULL) return; // we are already loaded
 
 	// load default
 
@@ -978,17 +965,9 @@ void OsuSkin::checkLoadSound(Sound **addressOfPointer, UString skinElementName, 
 	UString defaultResourceName = resourceName;
 	defaultResourceName.append("_DEFAULT"); // so we don't load the default skin twice
 	if (env->fileExists(defaultpath1))
-	{
-		if (osu_skin_load_async.getBool())
-			engine->getResourceManager()->requestNextLoadAsync();
 		*addressOfPointer = engine->getResourceManager()->loadSoundAbs(defaultpath1, defaultResourceName, false, false, loop);
-	}
 	else if (env->fileExists(defaultpath2))
-	{
-		if (osu_skin_load_async.getBool())
-			engine->getResourceManager()->requestNextLoadAsync();
 		*addressOfPointer = engine->getResourceManager()->loadSoundAbs(defaultpath2, defaultResourceName, false, false, loop);
-	}
 
 	// and then the actual specified skin
 
@@ -1005,17 +984,9 @@ void OsuSkin::checkLoadSound(Sound **addressOfPointer, UString skinElementName, 
 
 		// load it
 		if (env->fileExists(filepath1))
-		{
-			if (osu_skin_load_async.getBool())
-				engine->getResourceManager()->requestNextLoadAsync();
 			*addressOfPointer = engine->getResourceManager()->loadSoundAbs(filepath1, resourceName, false, false, loop);
-		}
 		else if (env->fileExists(filepath2))
-		{
-			if (osu_skin_load_async.getBool())
-				engine->getResourceManager()->requestNextLoadAsync();
 			*addressOfPointer = engine->getResourceManager()->loadSoundAbs(filepath2, resourceName, false, false, loop);
-		}
 	}
 
 	if ((*addressOfPointer) != NULL)
