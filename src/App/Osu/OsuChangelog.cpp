@@ -33,13 +33,17 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 
 	CHANGELOG alpha29Steam;
 	alpha29Steam.title = UString::format("28.98 (Steam VR Version, %s, %s)", __DATE__, __TIME__);
+	alpha29Steam.changes.push_back("- Improved multi-monitor handling: Remember game monitor, Fullscreen to closest monitor");
+	alpha29Steam.changes.push_back("- Don't auto minimize window on focus lost if \"Borderless Windowed Fullscreen\" is enabled");
+	alpha29Steam.changes.push_back("- Added ConVars: monitor, minimize_on_focus_lost_if_borderless_windowed_fullscreen");
+	alpha29Steam.changes.push_back("");
+	alpha29Steam.changes.push_back("");
+	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("- Reworked Mouse/Tablet input handling");
 	alpha29Steam.changes.push_back("- Fixed cursor jerking to bottom right corner when accidentally wiggling mouse while using tablet");
 	alpha29Steam.changes.push_back("- Fixed letterboxing cursor behavior (clipping/confining)");
 	alpha29Steam.changes.push_back("- Fixed desynced slider ticks (e.g. Der Wald [Maze], first three sliders)");
 	alpha29Steam.changes.push_back("- Linux: Fixed crash when reloading osu database beatmaps via F5 in songbrowser");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("- Added Score v2 mod");
 	alpha29Steam.changes.push_back("- Added search support to options menu");

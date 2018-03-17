@@ -26,7 +26,7 @@ public:
 	static ConVar *m_osu_skin_hd;
 
 public:
-	OsuSkin(Osu *osu, UString filepath);
+	OsuSkin(Osu *osu, UString filepath, bool isDefaultSkin = false);
 	virtual ~OsuSkin();
 
 	void update();
@@ -265,11 +265,12 @@ public:
 
 	// custom
 	inline bool useSmoothCursorTrail() {return m_cursorMiddle != m_missingTexture;}
+	inline bool isDefaultSkin() {return m_bIsDefaultSkin;}
 
 private:
 	bool parseSkinINI(UString filepath);
 	bool compareFilenameWithSkinElementName(UString filename, UString skinElementName);
-	OsuSkinImage *createOsuSkinImage(UString skinElementName, Vector2 baseSizeForScaling2x, float osuSize, UString animationSeparator = "-");
+	OsuSkinImage *createOsuSkinImage(UString skinElementName, Vector2 baseSizeForScaling2x, float osuSize, bool ignoreDefaultSkin = false, UString animationSeparator = "-");
 	void checkLoadImage(Image **addressOfPointer, UString skinElementName, UString resourceName, bool ignoreDefaultSkin = false, UString fileExtension = "png");
 	void checkLoadSound(Sound **addressOfPointer, UString skinElementName, UString resourceName, bool isOverlayable = false, bool isSample = false, bool loop = false);
 
@@ -278,6 +279,7 @@ private:
 	static ConVar *m_osu_skin_ref;
 
 	Osu *m_osu;
+	bool m_bIsDefaultSkin;
 	UString m_sFilePath;
 	std::vector<Resource*> m_resources;
 	std::vector<Sound*> m_sounds;
