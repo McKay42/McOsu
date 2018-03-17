@@ -17,7 +17,7 @@ class Image;
 class OsuSkinImage
 {
 public:
-	OsuSkinImage(OsuSkin *skin, UString skinElementName, Vector2 baseSizeForScaling2x, float osuSize, UString animationSeparator = "-");
+	OsuSkinImage(OsuSkin *skin, UString skinElementName, Vector2 baseSizeForScaling2x, float osuSize, UString animationSeparator = "-", bool ignoreDefaultSkin = false);
 	virtual ~OsuSkinImage();
 
 	virtual void draw(Graphics *g, Vector2 pos, float scale = 1.0f); // for objects scaled automatically to the current resolution

@@ -2026,6 +2026,7 @@ void OsuOptionsMenu::save()
 	if (m_osu->isInVRMode())
 		manualConVars.push_back(convar->getConVarByName("osu_vr_layout_lock"));
 
+	removeConCommands.push_back(convar->getConVarByName("monitor"));
 	removeConCommands.push_back(convar->getConVarByName("windowed"));
 	removeConCommands.push_back(convar->getConVarByName("osu_skin"));
 	removeConCommands.push_back(convar->getConVarByName("snd_output_device"));
@@ -2129,6 +2130,7 @@ void OsuOptionsMenu::save()
 	}
 
 	// hardcoded (!)
+	out << "monitor " << env->getMonitor() << "\n";
 	if (engine->getSound()->getOutputDevice() != "Default")
 		out << "snd_output_device " << engine->getSound()->getOutputDevice().toUtf8() << "\n";
 	if (!m_fullscreenCheckbox->isChecked())
