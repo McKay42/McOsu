@@ -36,6 +36,9 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha29Steam.changes.push_back("- Improved multi-monitor handling: Remember game monitor, Fullscreen to closest monitor");
 	alpha29Steam.changes.push_back("- Don't auto minimize window on focus lost if \"Borderless Windowed Fullscreen\" is enabled");
 	alpha29Steam.changes.push_back("- Added ConVars: monitor, minimize_on_focus_lost_if_borderless_windowed_fullscreen");
+	alpha29Steam.changes.push_back("- Windows: Disable IME by default");
+	alpha29Steam.changes.push_back("- Linux: Window is no longer resizable, added support for setWindowResizable()");
+	alpha29Steam.changes.push_back("- Linux: Disabling fullscreen no longer causes annoying oversized window");
 	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("");
