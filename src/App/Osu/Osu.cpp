@@ -789,13 +789,6 @@ void Osu::onKeyDown(KeyboardEvent &key)
 		key.consume();
 	}
 
-	// fullscreen toggle
-	if (engine->getKeyboard()->isAltDown() && key == KEY_ENTER)
-	{
-		engine->toggleFullscreen();
-		key.consume();
-	}
-
 	// arrow keys volume (alt)
 	if (engine->getKeyboard()->isAltDown() && key == (KEYCODE)OsuKeyBindings::INCREASE_VOLUME.getInt())
 	{
