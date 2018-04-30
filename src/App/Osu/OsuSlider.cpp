@@ -595,7 +595,7 @@ void OsuSlider::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 				float pulse = (div - fmod(std::abs(m_beatmap->getCurMusicPos())/1000.0f, div))/div;
 				pulse *= pulse; // quad in
 
-				if (osu_slider_reverse_arrow_animated.getBool())
+				if (!osu_slider_reverse_arrow_animated.getBool() || m_beatmap->isInMafhamRenderChunk())
 					pulse = 0.0f;
 
 				// end

@@ -36,7 +36,7 @@ public:
 
 	// samples
 	void setSampleSet(int sampleSet);
-	void setSampleVolume(float volume);
+	void setSampleVolume(float volume, bool force = false);
 
 	void playHitCircleSound(int sampleType);
 	void playSliderTickSound();

@@ -765,7 +765,7 @@ void OsuSkin::onEffectVolumeChange(UString oldValue, UString newValue)
 	}
 
 	// restore sample volumes
-	setSampleVolume(clamp<float>((float)m_iSampleVolume / 100.0f, 0.0f, 1.0f));
+	setSampleVolume(clamp<float>((float)m_iSampleVolume / 100.0f, 0.0f, 1.0f), true);
 }
 
 void OsuSkin::setSampleSet(int sampleSet)
@@ -777,12 +777,12 @@ void OsuSkin::setSampleSet(int sampleSet)
 	m_iSampleSet = sampleSet;
 }
 
-void OsuSkin::setSampleVolume(float volume)
+void OsuSkin::setSampleVolume(float volume, bool force)
 {
 	if (osu_ignore_beatmap_sample_volume.getBool()) return;
 
 	float sampleVolume = volume*osu_volume_effects.getFloat();
-	if (m_iSampleVolume == (int)(sampleVolume*100.0f))
+	if (!force && m_iSampleVolume == (int)(sampleVolume*100.0f))
 		return;
 
 	m_iSampleVolume = (int)(sampleVolume*100.0f);
