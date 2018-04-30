@@ -393,9 +393,18 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSection("Input");
 
 	addSubSection("Mouse");
-	if (env->getOS() == Environment::OS::OS_WINDOWS)
+	if (env->getOS() == Environment::OS::OS_WINDOWS || env->getOS() == Environment::OS::OS_MACOS)
 	{
 		addSlider("Sensitivity:", 0.1f, 6.0f, convar->getConVarByName("mouse_sensitivity"))->setKeyDelta(0.01f);
+		if (env->getOS() == Environment::OS::OS_MACOS)
+		{
+			addLabel("");
+			addLabel("WARNING: Set Sensitivity to 1 for tablets!")->setTextColor(0xffff0000);
+			addLabel("");
+		}
+	}
+	if (env->getOS() == Environment::OS::OS_WINDOWS)
+	{
 		addCheckbox("Raw Input", convar->getConVarByName("mouse_raw_input"));
 		addCheckbox("Map Absolute Raw Input to Window", convar->getConVarByName("mouse_raw_input_absolute_to_window"));
 	}
@@ -493,9 +502,9 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Use combo color as tint for slider ball", convar->getConVarByName("osu_slider_ball_tint_combo_color"));
 	addCheckbox("Use combo color as tint for slider border", convar->getConVarByName("osu_slider_border_tint_combo_color"));
 	addCheckbox("Draw SliderEndCircle", convar->getConVarByName("osu_slider_draw_endcircle"));
-	addSlider("Slider Opacity", 0.0f, 1.0f, convar->getConVarByName("osu_slider_alpha_multiplier"));
-	addSlider("SliderBody Opacity", 0.0f, 1.0f, convar->getConVarByName("osu_slider_body_alpha_multiplier"));
-	addSlider("SliderBody Color Saturation", 0.0f, 1.0f, convar->getConVarByName("osu_slider_body_color_saturation"));
+	addSlider("Slider Opacity", 0.0f, 1.0f, convar->getConVarByName("osu_slider_alpha_multiplier"), 200.0f);
+	addSlider("SliderBody Opacity", 0.0f, 1.0f, convar->getConVarByName("osu_slider_body_alpha_multiplier"), 200.0f);
+	addSlider("SliderBody Saturation", 0.0f, 1.0f, convar->getConVarByName("osu_slider_body_color_saturation"), 200.0f);
 	addSlider("SliderBorder Size", 0.0f, 9.0f, convar->getConVarByName("osu_slider_border_size_multiplier"))->setKeyDelta(0.01f);
 
 	//**************************************************************************************************************************//
@@ -503,8 +512,8 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSection("Gameplay");
 
 	addSubSection("General");
-	addSlider("Background Dim:", 0.0f, 1.0f, convar->getConVarByName("osu_background_dim"))->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
-	m_backgroundBrightnessSlider = addSlider("Background Brightness:", 0.0f, 1.0f, convar->getConVarByName("osu_background_brightness"));
+	addSlider("Background Dim:", 0.0f, 1.0f, convar->getConVarByName("osu_background_dim"), 220.0f)->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
+	m_backgroundBrightnessSlider = addSlider("Background Brightness:", 0.0f, 1.0f, convar->getConVarByName("osu_background_brightness"), 220.0f);
 	m_backgroundBrightnessSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
 	addCheckbox("Load Background Images (!)", convar->getConVarByName("osu_load_beatmap_background_images"));
 	addCheckbox("Draw Background in Beatmap", convar->getConVarByName("osu_draw_beatmap_background_image"));
@@ -540,22 +549,22 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_hudSizeSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
 	m_hudSizeSlider->setKeyDelta(0.01f);
 	addSpacer();
-	m_hudComboScaleSlider = addSlider("Combo Scale:", 0.1f, 3.0f, convar->getConVarByName("osu_hud_combo_scale"), 165.0f);
+	m_hudComboScaleSlider = addSlider("Combo Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_hud_combo_scale"), 165.0f);
 	m_hudComboScaleSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
 	m_hudComboScaleSlider->setKeyDelta(0.01f);
-	m_hudScoreScaleSlider = addSlider("Score Scale:", 0.1f, 3.0f, convar->getConVarByName("osu_hud_score_scale"), 165.0f);
+	m_hudScoreScaleSlider = addSlider("Score Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_hud_score_scale"), 165.0f);
 	m_hudScoreScaleSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
 	m_hudScoreScaleSlider->setKeyDelta(0.01f);
-	m_hudAccuracyScaleSlider = addSlider("Accuracy Scale:", 0.1f, 3.0f, convar->getConVarByName("osu_hud_accuracy_scale"), 165.0f);
+	m_hudAccuracyScaleSlider = addSlider("Accuracy Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_hud_accuracy_scale"), 165.0f);
 	m_hudAccuracyScaleSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
 	m_hudAccuracyScaleSlider->setKeyDelta(0.01f);
-	m_hudHiterrorbarScaleSlider = addSlider("HitErrorBar Scale:", 0.1f, 3.0f, convar->getConVarByName("osu_hud_hiterrorbar_scale"), 165.0f);
+	m_hudHiterrorbarScaleSlider = addSlider("HitErrorBar Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_hud_hiterrorbar_scale"), 165.0f);
 	m_hudHiterrorbarScaleSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
 	m_hudHiterrorbarScaleSlider->setKeyDelta(0.01f);
-	m_hudProgressbarScaleSlider = addSlider("ProgressBar Scale:", 0.1f, 3.0f, convar->getConVarByName("osu_hud_progressbar_scale"), 165.0f);
+	m_hudProgressbarScaleSlider = addSlider("ProgressBar Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_hud_progressbar_scale"), 165.0f);
 	m_hudProgressbarScaleSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
 	m_hudProgressbarScaleSlider->setKeyDelta(0.01f);
-	m_statisticsOverlayScaleSlider = addSlider("Statistics Scale:", 0.1f, 3.0f, convar->getConVarByName("osu_hud_statistics_scale"), 165.0f);
+	m_statisticsOverlayScaleSlider = addSlider("Statistics Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_hud_statistics_scale"), 165.0f);
 	m_statisticsOverlayScaleSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
 	m_statisticsOverlayScaleSlider->setKeyDelta(0.01f);
 
