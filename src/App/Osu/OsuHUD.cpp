@@ -409,25 +409,13 @@ void OsuHUD::update()
 void OsuHUD::drawCursor(Graphics *g, Vector2 pos, float alphaMultiplier)
 {
 	Image *trailImage = m_osu->getSkin()->getCursorTrail();
-	const bool smoothCursorTrail = m_osu->getSkin()->useSmoothCursorTrail() || osu_cursor_trail_smooth_force.getBool();
-	const float trailWidth = trailImage->getWidth() * getCursorTrailScaleFactor() * osu_cursor_scale.getFloat();
-	const float trailHeight = trailImage->getHeight() * getCursorTrailScaleFactor() * osu_cursor_scale.getFloat();
 
 	if (osu_draw_cursor_trail.getBool() && trailImage->isReady())
 	{
-		// legacy code
-		/*
-		int i = m_cursorTrail.size()-1;
-		while (i >= 0)
-		{
-			float alpha = clamp<float>(((m_cursorTrail[i].time-engine->getTime())/osu_cursor_trail_length.getFloat())*alphaMultiplier, 0.0f, 1.0f);
-			if (m_cursorTrail[i].pos != pos)
-				drawCursorTrailRaw(g, alpha*osu_cursor_trail_alpha.getFloat(), m_cursorTrail[i].pos);
+		const bool smoothCursorTrail = m_osu->getSkin()->useSmoothCursorTrail() || osu_cursor_trail_smooth_force.getBool();
 
-			i--;
-		}
-		drawCursorTrailRaw(g, osu_cursor_trail_alpha.getFloat()*alphaMultiplier, pos);
-		*/
+		const float trailWidth = trailImage->getWidth() * getCursorTrailScaleFactor() * osu_cursor_scale.getFloat();
+		const float trailHeight = trailImage->getHeight() * getCursorTrailScaleFactor() * osu_cursor_scale.getFloat();
 
 		if (smoothCursorTrail)
 			m_cursorTrailVAO->empty();
@@ -444,24 +432,30 @@ void OsuHUD::drawCursor(Graphics *g, Vector2 pos, float alphaMultiplier)
 
 			if (smoothCursorTrail)
 			{
-				const Vector3 topLeft = Vector3(m_cursorTrail[i].pos.x - trailWidth/2, m_cursorTrail[i].pos.y - trailHeight/2, m_cursorTrail[i].alpha);
+				const float scaleAnimTrailWidthHalf = (trailWidth/2) * m_cursorTrail[i].scale;
+				const float scaleAnimTrailHeightHalf = (trailHeight/2) * m_cursorTrail[i].scale;
+
+				const Vector3 topLeft = Vector3(m_cursorTrail[i].pos.x - scaleAnimTrailWidthHalf, m_cursorTrail[i].pos.y - scaleAnimTrailHeightHalf, m_cursorTrail[i].alpha);
 				m_cursorTrailVAO->addVertex(topLeft);
 				m_cursorTrailVAO->addTexcoord(0, 0);
 
-				const Vector3 topRight = Vector3(m_cursorTrail[i].pos.x + trailWidth/2, m_cursorTrail[i].pos.y - trailHeight/2, m_cursorTrail[i].alpha);
+				const Vector3 topRight = Vector3(m_cursorTrail[i].pos.x + scaleAnimTrailWidthHalf, m_cursorTrail[i].pos.y - scaleAnimTrailHeightHalf, m_cursorTrail[i].alpha);
 				m_cursorTrailVAO->addVertex(topRight);
 				m_cursorTrailVAO->addTexcoord(1, 0);
 
-				const Vector3 bottomRight = Vector3(m_cursorTrail[i].pos.x + trailWidth/2, m_cursorTrail[i].pos.y + trailHeight/2, m_cursorTrail[i].alpha);
+				const Vector3 bottomRight = Vector3(m_cursorTrail[i].pos.x + scaleAnimTrailWidthHalf, m_cursorTrail[i].pos.y + scaleAnimTrailHeightHalf, m_cursorTrail[i].alpha);
 				m_cursorTrailVAO->addVertex(bottomRight);
 				m_cursorTrailVAO->addTexcoord(1, 1);
 
-				const Vector3 bottomLeft = Vector3(m_cursorTrail[i].pos.x - trailWidth/2, m_cursorTrail[i].pos.y + trailHeight/2, m_cursorTrail[i].alpha);
+				const Vector3 bottomLeft = Vector3(m_cursorTrail[i].pos.x - scaleAnimTrailWidthHalf, m_cursorTrail[i].pos.y + scaleAnimTrailHeightHalf, m_cursorTrail[i].alpha);
 				m_cursorTrailVAO->addVertex(bottomLeft);
 				m_cursorTrailVAO->addTexcoord(0, 1);
 			}
-			else if (m_cursorTrail[i].alpha > 0.0f)
-				drawCursorTrailRaw(g, m_cursorTrail[i].alpha, m_cursorTrail[i].pos);
+			else // old style trail
+			{
+				if (m_cursorTrail[i].alpha > 0.0f)
+					drawCursorTrailRaw(g, m_cursorTrail[i].alpha, m_cursorTrail[i].pos);
+			}
 
 			i--;
 		}
@@ -1660,34 +1654,41 @@ void OsuHUD::addCursorTrailPosition(Vector2 pos)
 	if (pos.x < -m_osu->getScreenWidth() || pos.x > m_osu->getScreenWidth()*2 || pos.y < -m_osu->getScreenHeight() || pos.y > m_osu->getScreenHeight()*2) return; // fuck oob trails
 
 	Image *trailImage = m_osu->getSkin()->getCursorTrail();
+
 	const bool smoothCursorTrail = m_osu->getSkin()->useSmoothCursorTrail() || osu_cursor_trail_smooth_force.getBool();
-	const float trailWidth = trailImage->getWidth() * getCursorTrailScaleFactor() * osu_cursor_scale.getFloat();
+
+	const float scaleAnim = (m_osu->getSkin()->getCursorExpand() ? m_fCursorExpandAnim : 1.0f);
+	const float trailWidth = trailImage->getWidth() * getCursorTrailScaleFactor() * scaleAnim * osu_cursor_scale.getFloat();
 
 	CURSORTRAIL ct;
 	ct.pos = pos;
 	ct.time = engine->getTime() + (smoothCursorTrail ? osu_cursor_trail_smooth_length.getFloat() : osu_cursor_trail_length.getFloat());
 	ct.alpha = 1.0f;
+	ct.scale = scaleAnim;
 
 	if (smoothCursorTrail)
 	{
 		// interpolate mid points between the last point and the current point
 		if (m_cursorTrail.size() > 0)
 		{
-			Vector2 prevPos = m_cursorTrail[m_cursorTrail.size()-1].pos;
-			float prevTime = m_cursorTrail[m_cursorTrail.size()-1].time;
+			const Vector2 prevPos = m_cursorTrail[m_cursorTrail.size()-1].pos;
+			const float prevTime = m_cursorTrail[m_cursorTrail.size()-1].time;
+			const float prevScale = m_cursorTrail[m_cursorTrail.size()-1].scale;
 
 			Vector2 delta = pos - prevPos;
-			int numMidPoints = delta.length() / (trailWidth/osu_cursor_trail_smooth_div.getFloat());
+			const int numMidPoints = (int)(delta.length() / (trailWidth/osu_cursor_trail_smooth_div.getFloat()));
 			if (numMidPoints > 0)
 			{
-				Vector2 step = delta.normalize() * (trailWidth/osu_cursor_trail_smooth_div.getFloat());
-				float timeStep = (ct.time - prevTime) / (float)(numMidPoints);
+				const Vector2 step = delta.normalize() * (trailWidth/osu_cursor_trail_smooth_div.getFloat());
+				const float timeStep = (ct.time - prevTime) / (float)(numMidPoints);
+				const float scaleStep = (ct.scale - prevScale) / (float)(numMidPoints);
 				for (int i=clamp<int>(numMidPoints-osu_cursor_trail_max_size.getInt()/2, 0, osu_cursor_trail_max_size.getInt()); i<numMidPoints; i++) // limit to half the maximum new mid points per frame
 				{
 					CURSORTRAIL mid;
 					mid.pos = prevPos + step*(i+1);
 					mid.time = prevTime + timeStep*(i+1);
 					mid.alpha = 1.0f;
+					mid.scale = prevScale + scaleStep*(i+1);
 					m_cursorTrail.push_back(mid);
 				}
 			}
@@ -1701,6 +1702,7 @@ void OsuHUD::addCursorTrailPosition(Vector2 pos)
 		{
 			m_cursorTrail[m_cursorTrail.size()-1].time = ct.time;
 			m_cursorTrail[m_cursorTrail.size()-1].alpha = 1.0f;
+			m_cursorTrail[m_cursorTrail.size()-1].scale = ct.scale;
 		}
 		else
 			m_cursorTrail.push_back(ct);
