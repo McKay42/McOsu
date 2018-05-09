@@ -149,6 +149,7 @@ private:
 		Vector2 pos;
 		float time;
 		float alpha;
+		float scale;
 	};
 	std::vector<CURSORTRAIL> m_cursorTrail;
 	Shader *m_cursorTrailShader;

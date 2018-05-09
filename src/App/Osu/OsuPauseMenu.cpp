@@ -201,13 +201,7 @@ void OsuPauseMenu::onKeyDown(KeyboardEvent &e)
 {
 	if (!m_bVisible) return;
 
-	if (e == KEY_1)
-		onContinueClicked();
-	else if (e == KEY_2)
-		onRetryClicked();
-	else if (e == KEY_3)
-		onBackClicked();
-	else if (e == (KEYCODE)OsuKeyBindings::LEFT_CLICK.getInt() || e == (KEYCODE)OsuKeyBindings::RIGHT_CLICK.getInt())
+	if (e == (KEYCODE)OsuKeyBindings::LEFT_CLICK.getInt() || e == (KEYCODE)OsuKeyBindings::RIGHT_CLICK.getInt())
 	{
 		bool fireButtonClick = false;
 		if (e == (KEYCODE)OsuKeyBindings::LEFT_CLICK.getInt() && !m_bClick1Down)
