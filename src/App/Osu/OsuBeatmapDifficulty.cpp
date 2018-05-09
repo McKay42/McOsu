@@ -228,7 +228,8 @@ bool OsuBeatmapDifficulty::loadMetadataRaw(bool calculateStars)
 		const char *curLineChar = uCurLine.toUtf8();
 		std::string curLine(curLineChar);
 
-		if (curLine.find("//") == std::string::npos) // ignore comments
+		const int commentIndex = curLine.find("//");
+		if (commentIndex == std::string::npos || commentIndex != 0) // ignore comments, but only if at the beginning of a line (e.g. allow Artist:DJ'TEKINA//SOMETHING)
 		{
 			if (curLine.find("[General]") != std::string::npos)
 				curBlock = 0;
@@ -536,7 +537,8 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 		const char *curLineChar = uCurLine.toUtf8();
 		std::string curLine(curLineChar);
 
-		if (curLine.find("//") == std::string::npos) // ignore comments
+		const int commentIndex = curLine.find("//");
+		if (commentIndex == std::string::npos || commentIndex != 0) // ignore comments, but only if at the beginning of a line (e.g. allow Artist:DJ'TEKINA//SOMETHING)
 		{
 			if (curLine.find("[Events]") != std::string::npos)
 				curBlock = 1;
@@ -954,7 +956,8 @@ void OsuBeatmapDifficulty::loadBackgroundImagePath()
 		const char *curLineChar = uCurLine.toUtf8();
 		std::string curLine(curLineChar);
 
-		if (curLine.find("//") == std::string::npos) // ignore comments
+		const int commentIndex = curLine.find("//");
+		if (commentIndex == std::string::npos || commentIndex != 0) // ignore comments, but only if at the beginning of a line (e.g. allow Artist:DJ'TEKINA//SOMETHING)
 		{
 			if (curLine.find("[Events]") != std::string::npos)
 				curBlock = 0;
@@ -1508,7 +1511,7 @@ double OsuBeatmapDifficulty::calculateStarDiffForHitObjects(std::vector<PPHitObj
 			double weight = 1.0;
 
 			// sort strains from greatest to lowest
-			std::sort(highestStrains.begin(), highestStrains.end(), std::greater<double>()); // TODO: get rid of std::greater (y tho)
+			std::sort(highestStrains.begin(), highestStrains.end(), std::greater<double>());
 
 			// weigh the top strains
 			for (size_t i=0; i<highestStrains.size(); i++)
@@ -1655,7 +1658,7 @@ double OsuBeatmapDifficulty::calculatePPv2(Osu *osu, OsuBeatmap *beatmap, double
 
 	// hidden
 	if (osu->getModHD())
-		aim_value *= 1.18;
+		aim_value *= 1.03; // https://github.com/ppy/osu-performance/pull/42
 
 	// flashlight
 	// TODO: not yet implemented
@@ -1679,6 +1682,11 @@ double OsuBeatmapDifficulty::calculatePPv2(Osu *osu, OsuBeatmap *beatmap, double
 	speed_value *= length_bonus;
 	speed_value *= miss_penality;
 	speed_value *= combo_break;
+
+	// hidden
+	if (osu->getModHD())
+		speed_value *= 1.18; // https://github.com/ppy/osu-performance/pull/42
+
 	speed_value *= acc_bonus;
 	speed_value *= od_bonus;
 

@@ -1614,7 +1614,7 @@ OsuSliderCurveTypeBezier2::OsuSliderCurveTypeBezier2(const std::vector<Vector2> 
 	{
 		// opsu bezier (takes very long for certain aspire sliders)
 		float approxlength = 0;
-		for (int i=0; i<points.size()-1; i++)
+		for (int i=0; i<(int)(points.size()-1); i++)
 		{
 			approxlength += (points[i] - points[i + 1]).length();
 		}
@@ -2152,7 +2152,7 @@ BezierApproximator::BezierApproximator(std::vector<Vector2> controlPoints)
 
 bool BezierApproximator::isFlatEnough(std::vector<Vector2> controlPoints)
 {
-    for (int i=1; i<controlPoints.size() - 1; i++)
+    for (int i=1; i<(int)(controlPoints.size() - 1); i++)
     {
         if (std::pow((controlPoints[i - 1] - 2 * controlPoints[i] + controlPoints[i + 1]).length(), 2.0f) > TOLERANCE_SQ * 4)
             return false;
