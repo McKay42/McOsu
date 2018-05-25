@@ -24,6 +24,7 @@
 #include "CBaseUILabel.h"
 
 #include "Osu.h"
+#include "OsuMultiplayer.h"
 #include "OsuHUD.h"
 #include "OsuSkin.h"
 #include "OsuSkinImage.h"
@@ -1000,8 +1001,10 @@ void OsuSongBrowser2::onPlayEnd(bool quit)
 	m_bHasSelectedAndIsPlaying = false;
 }
 
-void OsuSongBrowser2::onDifficultySelected(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff, bool play)
+void OsuSongBrowser2::onDifficultySelected(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff, bool play, bool mp)
 {
+	m_osu->getMultiplayer()->onServerPlayStateChange(OsuMultiplayer::STATE::SELECT, 0, false, beatmap);
+
 	// remember it
 	if (beatmap != m_selectedBeatmap)
 		m_previousRandomBeatmaps.push_back(beatmap);
@@ -1014,13 +1017,23 @@ void OsuSongBrowser2::onDifficultySelected(OsuBeatmap *beatmap, OsuBeatmapDiffic
 	// start playing
 	if (play)
 	{
-		m_osu->onBeforePlayStart();
-		if (beatmap->play())
+		bool clientPlayStateChangeRequestBeatmapSent = false;
+		if (m_osu->isInMultiplayer() && !mp)
 		{
-			m_bHasSelectedAndIsPlaying = true;
-			setVisible(false);
+			// clients may also select beatmaps (the server can then decide if it wants to broadcast or ignore it)
+			clientPlayStateChangeRequestBeatmapSent = m_osu->getMultiplayer()->onClientPlayStateChangeRequestBeatmap(beatmap);
+		}
 
-			m_osu->onPlayStart();
+		if (!clientPlayStateChangeRequestBeatmapSent)
+		{
+			m_osu->onBeforePlayStart();
+			if (beatmap->play())
+			{
+				m_bHasSelectedAndIsPlaying = true;
+				setVisible(false);
+
+				m_osu->onPlayStart();
+			}
 		}
 	}
 
@@ -1030,6 +1043,51 @@ void OsuSongBrowser2::onDifficultySelected(OsuBeatmap *beatmap, OsuBeatmapDiffic
 
 	// notify mod selector (for BPM override slider, else we get inconsistent values)
 	m_osu->getModSelector()->checkUpdateBPMSliderSlaves();
+}
+
+void OsuSongBrowser2::onDifficultySelectedMP(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff, bool play)
+{
+	onDifficultySelected(beatmap, diff, play, true);
+}
+
+void OsuSongBrowser2::selectBeatmapMP(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff)
+{
+	// this is a bit hacky, but the easiest solution (since we are using the visible songbuttons)
+	{
+		// force no grouping
+		if (m_group != GROUP::GROUP_NO_GROUPING)
+			onGroupNoGrouping(m_noGroupingButton);
+
+		// force exit search
+		if (m_sSearchString.length() > 0)
+		{
+			m_sSearchString = "";
+			scheduleSearchUpdate(true);
+		}
+	}
+
+	for (int i=0; i<m_visibleSongButtons.size(); i++)
+	{
+		if (m_visibleSongButtons[i]->getBeatmap() == beatmap)
+		{
+			OsuUISongBrowserButton *songButton = m_visibleSongButtons[i];
+			for (int c=0; c<songButton->getChildrenAbs().size(); c++)
+			{
+				OsuUISongBrowserSongDifficultyButton *diffButton = dynamic_cast<OsuUISongBrowserSongDifficultyButton*>(songButton->getChildrenAbs()[c]);
+				if (diffButton != NULL && diffButton->getDiff() == diff)
+				{
+					if (!songButton->isSelected())
+						songButton->select();
+
+					if (!diffButton->isSelected())
+						diffButton->select();
+
+					break;
+				}
+			}
+			break;
+		}
+	}
 }
 
 void OsuSongBrowser2::refreshBeatmaps()

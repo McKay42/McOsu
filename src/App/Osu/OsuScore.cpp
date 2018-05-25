@@ -11,6 +11,7 @@
 #include "ConVar.h"
 
 #include "Osu.h"
+#include "OsuMultiplayer.h"
 #include "OsuBeatmap.h"
 #include "OsuBeatmapStandard.h"
 #include "OsuBeatmapDifficulty.h"
@@ -34,11 +35,16 @@ OsuScore::OsuScore(Osu *osu)
 
 void OsuScore::reset()
 {
+	m_hitresults = std::vector<HIT>();
+	m_hitdeltas = std::vector<int>();
+
+	m_grade = OsuScore::GRADE::GRADE_N;
+
 	m_fStarsTomTotal = 0.0f;
 	m_fStarsTomAim = 0.0f;
 	m_fStarsTomSpeed = 0.0f;
 	m_fPPv2 = 0.0f;
-	m_grade = OsuScore::GRADE::GRADE_N;
+
 	m_iScoreV1 = 0;
 	m_iScoreV2 = 0;
 	m_iScoreV2ComboPortion = 0;
@@ -50,6 +56,7 @@ void OsuScore::reset()
 	m_fHitErrorAvgMin = 0.0f;
 	m_fHitErrorAvgMax = 0.0f;
 	m_fUnstableRate = 0.0f;
+
 	m_iNumMisses = 0;
 	m_iNumSliderBreaks = 0;
 	m_iNum50s = 0;
@@ -57,8 +64,11 @@ void OsuScore::reset()
 	m_iNum100ks = 0;
 	m_iNum300s = 0;
 	m_iNum300gs = 0;
-	m_hitresults = std::vector<HIT>();
-	m_hitdeltas = std::vector<int>();
+
+	m_bDead = false;
+	m_bDied = false;
+
+	onScoreChange();
 }
 
 void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignoreOnHitErrorBar, bool hitErrorBarOnly, bool ignoreCombo, bool ignoreScore)
@@ -264,12 +274,16 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignor
 		else
 			m_fPPv2 = 0.0f;
 	}
+
+	onScoreChange();
 }
 
 void OsuScore::addSliderBreak()
 {
 	m_iCombo = 0;
 	m_iNumSliderBreaks++;
+
+	onScoreChange();
 }
 
 void OsuScore::addPoints(int points, bool isSpinner)
@@ -278,9 +292,29 @@ void OsuScore::addPoints(int points, bool isSpinner)
 
 	if (isSpinner)
 		m_iBonusPoints += points; // only used for scorev2 calculation currently
+
+	onScoreChange();
+}
+
+void OsuScore::setDead(bool dead)
+{
+	if (m_bDead == dead) return;
+
+	m_bDead = dead;
+
+	if (m_bDead)
+		m_bDied = true;
+
+	onScoreChange();
 }
 
 unsigned long long OsuScore::getScore()
 {
 	return m_osu->getModScorev2() ? m_iScoreV2 : m_iScoreV1;
+}
+
+void OsuScore::onScoreChange()
+{
+	if (m_osu->getMultiplayer() != NULL)
+		m_osu->getMultiplayer()->onClientScoreChange(getCombo(), getAccuracy(), getScore(), isDead());
 }

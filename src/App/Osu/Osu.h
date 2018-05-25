@@ -14,6 +14,7 @@
 class CWindowManager;
 
 class OsuVR;
+class OsuMultiplayer;
 class OsuMainMenu;
 class OsuPauseMenu;
 class OsuOptionsMenu;
@@ -116,6 +117,8 @@ public:
 	OsuBeatmap *getSelectedBeatmap();
 
 	inline OsuVR *getVR() {return m_vr;}
+	inline OsuMultiplayer *getMultiplayer() {return m_multiplayer;}
+	inline OsuSongBrowser2 *getSongBrowser() {return m_songBrowser2;}
 	inline OsuSkin *getSkin() {return m_skin;}
 	inline OsuHUD *getHUD() {return m_hud;}
 	inline OsuNotificationOverlay *getNotificationOverlay() {return m_notificationOverlay;}
@@ -162,6 +165,7 @@ public:
 	bool isInPlayMode();
 	bool isNotInPlayModeOrPaused();
 	bool isInVRMode();
+	bool isInMultiplayer();
 
 	inline bool isSeeking() const {return m_bSeeking;}
 	inline float getQuickSaveTime() const {return m_fQuickSaveTime;}
@@ -218,6 +222,7 @@ private:
 
 	// interfaces
 	OsuVR *m_vr;
+	OsuMultiplayer *m_multiplayer;
 	OsuMainMenu *m_mainMenu;
 	OsuOptionsMenu *m_optionsMenu;
 	OsuSongBrowser2 *m_songBrowser2;
@@ -303,6 +308,7 @@ private:
 	// custom
 	GAMEMODE m_gamemode;
 	bool m_bScheduleEndlessModNextBeatmap;
+	int m_iMultiplayerClientNumEscPresses;
 };
 
 #endif

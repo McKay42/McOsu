@@ -19,6 +19,7 @@
 
 #include "Osu.h"
 #include "OsuVR.h"
+#include "OsuMultiplayer.h"
 #include "OsuSkin.h"
 #include "OsuSkinImage.h"
 #include "OsuBeatmap.h"
@@ -65,6 +66,7 @@ ConVar osu_hud_statistics_offset_x("osu_hud_statistics_offset_x", 5.0f);
 ConVar osu_hud_statistics_offset_y("osu_hud_statistics_offset_y", 0.0f);
 ConVar osu_hud_volume_duration("osu_hud_volume_duration", 1.0f);
 ConVar osu_hud_volume_size_multiplier("osu_hud_volume_size_multiplier", 1.5f);
+ConVar osu_hud_playerlist_scale("osu_hud_playerlist_scale", 1.0f);
 
 ConVar osu_draw_cursor_trail("osu_draw_cursor_trail", true);
 ConVar osu_draw_hud("osu_draw_hud", true);
@@ -77,6 +79,7 @@ ConVar osu_draw_accuracy("osu_draw_accuracy", true);
 ConVar osu_draw_target_heatmap("osu_draw_target_heatmap", true);
 ConVar osu_draw_scrubbing_timeline("osu_draw_scrubbing_timeline", true);
 ConVar osu_draw_continue("osu_draw_continue", true);
+ConVar osu_draw_playerlist("osu_draw_playerlist", true);
 
 ConVar osu_draw_statistics_misses("osu_draw_statistics_misses", false);
 ConVar osu_draw_statistics_sliderbreaks("osu_draw_statistics_sliderbreaks", false);
@@ -109,6 +112,7 @@ OsuHUD::OsuHUD(Osu *osu)
 	m_osu_mod_target_50_percent_ref = convar->getConVarByName("osu_mod_target_50_percent");
 	m_osu_playfield_stretch_x_ref = convar->getConVarByName("osu_playfield_stretch_x");
 	m_osu_playfield_stretch_y_ref = convar->getConVarByName("osu_playfield_stretch_y");
+	m_osu_mp_win_condition_accuracy_ref = convar->getConVarByName("osu_mp_win_condition_accuracy");
 
 	// convar callbacks
 	osu_hud_volume_size_multiplier.setCallback( fastdelegate::MakeDelegate(this, &OsuHUD::onVolumeOverlaySizeChange) );
@@ -178,6 +182,9 @@ void OsuHUD::draw(Graphics *g)
 
 	if (osu_draw_hud.getBool())
 	{
+		if (osu_draw_playerlist.getBool())
+			drawPlayerList(g);
+
 		if (beatmap->isInSkippableSection())
 			drawSkip(g);
 
@@ -1037,6 +1044,180 @@ void OsuHUD::drawWarningArrows(Graphics *g, float hitcircleDiameter)
 
 	drawWarningArrow(g, Vector2(m_osu->getScreenWidth() - m_osu->getUIScale(m_osu, 28), OsuGameRules::getPlayfieldCenter(m_osu).y - OsuGameRules::getPlayfieldSize(m_osu).y/2 + part*2), true);
 	drawWarningArrow(g, Vector2(m_osu->getScreenWidth() - m_osu->getUIScale(m_osu, 28), OsuGameRules::getPlayfieldCenter(m_osu).y - OsuGameRules::getPlayfieldSize(m_osu).y/2 + part*2 + part*13), true);
+}
+
+void OsuHUD::drawPlayerList(Graphics *g)
+{
+	if (!m_osu->isInMultiplayer()) return;
+
+	McFont *font = m_osu->getSubTitleFont();
+	McFont *scoreFont = m_tempFont;
+	McFont *smallFont = engine->getResourceManager()->getFont("FONT_CONSOLE");
+
+	const Color backgroundColor = 0x55000000;
+	const Color backgroundColorDead = 0x55660000;
+	const Color backgroundColorMissingBeatmap = 0x55aa0000;
+
+	const Color nameColor = 0xffffffff;
+	const Color placeColor = 0xff343767;
+	const Color comboColor = 0xffaeddf5;
+	const Color scoreOrAccuracyColor = 0xffffffff;
+
+	const Color deadColor = 0xffee0000;
+
+	const float scale = osu_hud_playerlist_scale.getFloat() * osu_hud_scale.getFloat();
+
+	const int lineSegmentHeight = font->getHeight()*1.5f*scale;
+	const int lineHeight = lineSegmentHeight*2.75f;
+	const int paddingLeft = 5*scale;
+	const int placeNumberPadding = 65*scale;
+
+	const int backgroundBorderPadding = 10*scale;
+
+	std::vector<OsuMultiplayer::PLAYER> players = m_osu->getMultiplayer()->getPlayers();
+	g->pushTransform();
+	g->scale(scale, scale);
+	if (players.size() > 0)
+	{
+		const int startPosY = (int)(m_osu->getScreenHeight()/2 - (int)((lineHeight*players.size())/2));
+		const int textStartPosY = (int)(startPosY + font->getHeight()*scale);
+
+		int maxNameStringWidth = 0;
+		for (int i=0; i<players.size(); i++)
+		{
+			const float width = font->getStringWidth(players[i].name)*scale;
+			if (width > maxNameStringWidth)
+				maxNameStringWidth = width;
+		}
+
+		// draw background
+		const int backgroundHeight = lineSegmentHeight + font->getHeight()*scale;
+		g->pushTransform();
+		g->scale(1.0f/scale, 1.0f/scale);
+		for (int i=0; i<players.size(); i++)
+		{
+			g->setColor((players[i].missingBeatmap ? backgroundColorMissingBeatmap : (players[i].dead ? backgroundColorDead : backgroundColor)));
+			g->fillRect(0, startPosY - backgroundBorderPadding/2 + lineHeight*i, paddingLeft + maxNameStringWidth + placeNumberPadding + backgroundBorderPadding/2 + 1*scale, backgroundHeight + backgroundBorderPadding*1.25f);
+		}
+		g->popTransform();
+
+		// draw place number
+		g->pushTransform();
+		{
+			g->translate(paddingLeft + maxNameStringWidth + placeNumberPadding, textStartPosY);
+			for (int i=0; i<players.size(); i++)
+			{
+				UString string = UString::format("%i", (i+1));
+
+				const int width = font->getStringWidth(string)*scale;
+
+				g->pushTransform();
+				{
+					g->translate(-width, 0);
+					g->translate(1, 1);
+					g->setColor(0xff000000);
+					g->drawString(font, string);
+					g->translate(-1, -1);
+					g->setColor(placeColor);
+					g->drawString(font, string);
+				}
+				g->popTransform();
+				g->translate(0, lineHeight);
+			}
+		}
+		g->popTransform();
+
+		// draw names
+		g->pushTransform();
+		{
+			g->translate(paddingLeft, textStartPosY);
+			for (int i=0; i<players.size(); i++)
+			{
+				UString name = UString(players[i].name);
+				if (players[i].missingBeatmap)
+					name.append(" [no map]");
+
+				g->translate(1, 1);
+				g->setColor(0xff000000);
+				g->drawString(font, name);
+				g->translate(-1, -1);
+				g->setColor(players[i].dead || players[i].missingBeatmap ? deadColor : nameColor);
+				g->drawString(font, name);
+				g->translate(0, lineHeight);
+			}
+		}
+		g->popTransform();
+
+		// draw combo
+		g->pushTransform();
+		{
+			g->translate(paddingLeft + maxNameStringWidth + placeNumberPadding, textStartPosY + lineSegmentHeight);
+			for (int i=0; i<players.size(); i++)
+			{
+				UString string = UString::format("%ix", (players[i].combo));
+
+				const int width = font->getStringWidth(string)*scale;
+
+				g->pushTransform();
+				{
+					g->translate(-width, 0);
+					g->translate(1, 1);
+					g->setColor(0xff000000);
+					g->drawString(font, string);
+					g->translate(-1, -1);
+					g->setColor(comboColor);
+					g->drawString(font, string);
+				}
+				g->popTransform();
+				g->translate(0, lineHeight);
+			}
+		}
+		g->popTransform();
+
+		// draw score or accuracy
+		g->pushTransform();
+		{
+			g->translate(paddingLeft, textStartPosY + lineSegmentHeight);
+			for (int i=0; i<players.size(); i++)
+			{
+				UString string = !m_osu_mp_win_condition_accuracy_ref->getBool() ? UString::format("%llu", (players[i].score)) : UString::format("%.2f %%", (players[i].accuracy*100.0f));
+
+				g->translate(1, 1);
+				g->setColor(0xff000000);
+				g->drawString(scoreFont, string);
+				g->translate(-1, -1);
+				g->setColor(players[i].dead ? deadColor : scoreOrAccuracyColor);
+				g->drawString(scoreFont, string);
+				g->translate(0, lineHeight);
+			}
+		}
+		g->popTransform();
+
+		// draw accuracy or score (end of round)
+		if (!m_osu->isInPlayMode())
+		{
+			smallFont->getTextureAtlas()->getAtlasImage()->setFilterMode(Graphics::FILTER_MODE::FILTER_MODE_LINEAR); // HACKHACK
+			g->pushTransform();
+			{
+				g->translate(paddingLeft, textStartPosY + lineSegmentHeight - scoreFont->getHeight()*scale - 3*scale);
+				for (int i=0; i<players.size(); i++)
+				{
+					UString string = m_osu_mp_win_condition_accuracy_ref->getBool() ? UString::format("%llu", (players[i].score)) : UString::format("%.2f %%", (players[i].accuracy*100.0f));
+
+					g->translate(1, 1);
+					g->setColor(0xff000000);
+					g->drawString(smallFont, string);
+					g->translate(-1, -1);
+					g->setColor(players[i].dead ? deadColor : scoreOrAccuracyColor);
+					g->drawString(smallFont, string);
+					g->translate(0, lineHeight);
+				}
+			}
+			g->popTransform();
+			smallFont->getTextureAtlas()->getAtlasImage()->setFilterMode(Graphics::FILTER_MODE::FILTER_MODE_NONE); // HACKHACK
+		}
+	}
+	g->popTransform();
 }
 
 void OsuHUD::drawContinue(Graphics *g, Vector2 cursor, float hitcircleDiameter)

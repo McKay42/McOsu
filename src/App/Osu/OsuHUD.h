@@ -46,6 +46,7 @@ public:
 	void drawComboSimple(Graphics *g, int combo, float scale = 1.0f); // used by OsuRankingScreen
 	void drawAccuracySimple(Graphics *g, float accuracy, float scale = 1.0f); // used by OsuRankingScreen
 	void drawWarningArrow(Graphics *g, Vector2 pos, bool flipVertically, bool originLeft = true);
+	void drawPlayerList(Graphics *g);
 
 	void animateCombo();
 	void addHitError(long delta, bool miss = false, bool misaim = false);
@@ -108,6 +109,7 @@ private:
 	ConVar *m_osu_mod_target_50_percent_ref;
 	ConVar *m_osu_playfield_stretch_x_ref;
 	ConVar *m_osu_playfield_stretch_y_ref;
+	ConVar *m_osu_mp_win_condition_accuracy_ref;
 
 	// shit code
 	float m_fAccuracyXOffset;
