@@ -22,6 +22,7 @@
 
 #include "Osu.h"
 #include "OsuVR.h"
+#include "OsuMultiplayer.h"
 #include "OsuHUD.h"
 #include "OsuSkin.h"
 #include "OsuPauseMenu.h"
@@ -623,6 +624,9 @@ void OsuBeatmap::update()
 	if (m_fHealth < 0.01f && !m_osu->getModNF()) // less than 1 percent, meaning that if health went from 100 to 0 in integer steps you would be dead
 		fail();
 
+	if (m_fHealth > 0.99f && m_osu->getScore()->isDead())
+		m_osu->getScore()->setDead(false);
+
 	if (m_bFailed)
 	{
 		float failTimePercent = clamp<float>((m_fFailTime - engine->getTime()) / osu_fail_time.getFloat(), 0.0f, 1.0f); // goes from 1 to 0 over the duration of osu_fail_time
@@ -642,8 +646,7 @@ void OsuBeatmap::update()
 
 void OsuBeatmap::skipEmptySection()
 {
-	if (!m_bIsInSkippableSection)
-		return;
+	if (!m_bIsInSkippableSection) return;
 
 	m_music->setPositionMS(m_iNextHitObjectTime - 2500);
 	m_bIsInSkippableSection = false;
@@ -846,6 +849,8 @@ void OsuBeatmap::restart(bool quick)
 	}
 	else if (m_bIsPaused)
 		pause(false);
+
+	onRestart(quick);
 }
 
 void OsuBeatmap::actualRestart()
@@ -897,6 +902,9 @@ void OsuBeatmap::pause(bool quitIfWaiting)
 	if (m_selectedDifficulty == NULL)
 		return;
 
+	const bool isFirstPause = !m_bContinueScheduled;
+	const bool forceContinueWithoutSchedule = m_osu->isInMultiplayer();
+
 	if (m_bIsPlaying) // if we are playing, aka if this is the first time pausing
 	{
 		if (m_bIsWaiting && quitIfWaiting) // if we are still m_bIsWaiting, pausing the game via the escape key is the same as stopping playing
@@ -907,13 +915,11 @@ void OsuBeatmap::pause(bool quitIfWaiting)
 			engine->getSound()->pause(m_music);
 			m_bIsPlaying = false;
 			m_bIsPaused = true;
-
-			onPaused();
 		}
 	}
 	else if (m_bIsPaused && !m_bContinueScheduled) // if this is the first time unpausing
 	{
-		if (m_osu->getModAuto() || m_osu->getModAutopilot() || m_bIsInSkippableSection) // under certain conditions, immediately continue the beatmap without waiting for the user to click
+		if (m_osu->getModAuto() || m_osu->getModAutopilot() || m_bIsInSkippableSection || forceContinueWithoutSchedule) // under certain conditions, immediately continue the beatmap without waiting for the user to click
 		{
 			if (!m_bIsWaiting) // only force play() if we were not early waiting
 				engine->getSound()->play(m_music);
@@ -930,6 +936,11 @@ void OsuBeatmap::pause(bool quitIfWaiting)
 	}
 	else // if this is not the first time pausing/unpausing, then just toggle the pause state (the visibility of the pause menu is handled in the Osu class, a bit shit)
 		m_bIsPaused = !m_bIsPaused;
+
+	if (m_bIsPaused)
+		onPaused(isFirstPause);
+	else
+		onUnpaused();
 
 	// don't kill VR players while paused
 	anim->deleteExistingAnimation(&m_fHealth);
@@ -980,10 +991,24 @@ void OsuBeatmap::fail()
 {
 	if (m_bFailed) return;
 
-	engine->getSound()->play(getSkin()->getFailsound());
+	if (!m_osu->isInMultiplayer())
+	{
+		engine->getSound()->play(getSkin()->getFailsound());
 
-	m_bFailed = true;
-	m_fFailTime = engine->getTime() + osu_fail_time.getFloat(); // trigger music slowdown and delayed menu, see update()
+		m_bFailed = true;
+		m_fFailTime = engine->getTime() + osu_fail_time.getFloat(); // trigger music slowdown and delayed menu, see update()
+	}
+	else if (!m_osu->getScore()->isDead())
+	{
+		anim->deleteExistingAnimation(&m_fHealth);
+		m_fHealth = 0.0f;
+
+		if (!m_osu->getScore()->hasDied())
+			m_osu->getNotificationOverlay()->addNotification("You have failed, but you can keep playing!");
+	}
+
+	if (!m_osu->getScore()->isDead())
+		m_osu->getScore()->setDead(true);
 }
 
 void OsuBeatmap::setVolume(float volume)
@@ -1008,6 +1033,8 @@ void OsuBeatmap::seekPercent(double percent)
 {
 	if (m_selectedDifficulty == NULL || (!m_bIsPlaying && !m_bIsPaused) || m_music == NULL || m_bFailed)
 		return;
+
+	m_osu->getMultiplayer()->onServerPlayStateChange(OsuMultiplayer::SEEK, (unsigned long)(m_music->getLengthMS() * percent));
 
 	m_bWasSeekFrame = true;
 	m_fWaitTime = 0.0f;
@@ -1037,6 +1064,8 @@ void OsuBeatmap::seekMS(unsigned long ms)
 {
 	if (m_selectedDifficulty == NULL || (!m_bIsPlaying && !m_bIsPaused) || m_music == NULL || m_bFailed)
 		return;
+
+	m_osu->getMultiplayer()->onServerPlayStateChange(OsuMultiplayer::SEEK, ms);
 
 	m_bWasSeekFrame = true;
 	m_fWaitTime = 0.0f;

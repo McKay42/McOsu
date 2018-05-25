@@ -33,7 +33,8 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 
 	CHANGELOG alpha29Steam;
 	alpha29Steam.title = UString::format("28.98 (Steam VR Version, %s, %s)", __DATE__, __TIME__);
-	alpha29Steam.changes.push_back("- Updated pp algorithm (HD changes), see https://github.com/ppy/osu-performance/pull/42");
+	alpha29Steam.changes.push_back("- Updated pp algorithm (2), see https://github.com/ppy/osu-performance/pull/47");
+	alpha29Steam.changes.push_back("- Updated pp algorithm (1), see https://github.com/ppy/osu-performance/pull/42");
 	alpha29Steam.changes.push_back("- Removed number keys being hardcoded keybinds for pause menu (1,2,3)");
 	alpha29Steam.changes.push_back("- Fixed smooth cursortrail not expanding with animation");
 	alpha29Steam.changes.push_back("- Fixed sample volumes being reset when tabbing out or losing window focus");

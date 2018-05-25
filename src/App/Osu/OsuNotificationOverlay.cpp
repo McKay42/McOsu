@@ -49,6 +49,7 @@ void OsuNotificationOverlay::drawNotificationText(Graphics *g, OsuNotificationOv
 	int stringWidth = font->getStringWidth(n.text);
 
 	g->pushTransform();
+	{
 		g->setColor(0xff000000);
 		g->setAlpha(n.alpha);
 		g->translate((int)(m_osu->getScreenWidth()/2 - stringWidth/2 + 1), (int)(m_osu->getScreenHeight()/2 + font->getHeight()/2 + n.fallAnim*height*0.15f + 1));
@@ -58,6 +59,7 @@ void OsuNotificationOverlay::drawNotificationText(Graphics *g, OsuNotificationOv
 		g->setAlpha(n.alpha);
 		g->translate(-1, -1);
 		g->drawString(font, n.text);
+	}
 	g->popTransform();
 }
 
@@ -121,8 +123,10 @@ void OsuNotificationOverlay::onChar(KeyboardEvent &e)
 		e.consume();
 }
 
-void OsuNotificationOverlay::addNotification(UString text, Color textColor, bool waitForKey)
+void OsuNotificationOverlay::addNotification(UString text, Color textColor, bool waitForKey, float duration)
 {
+	const float notificationDuration = (duration < 0.0f ? osu_notification_duration.getFloat() : duration);
+
 	// swap effect
 	if (isVisible())
 	{
@@ -149,9 +153,10 @@ void OsuNotificationOverlay::addNotification(UString text, Color textColor, bool
 	m_notification1.textColor = textColor;
 
 	if (!waitForKey)
-		m_notification1.time = engine->getTime() + osu_notification_duration.getFloat() + fadeOutTime;
+		m_notification1.time = engine->getTime() + notificationDuration + fadeOutTime;
 	else
 		m_notification1.time = 0.0f;
+
 	m_notification1.alpha = 0.0f;
 	m_notification1.backgroundAnim = 0.5f;
 	m_notification1.fallAnim = 0.0f;
@@ -163,7 +168,7 @@ void OsuNotificationOverlay::addNotification(UString text, Color textColor, bool
 		anim->moveLinear(&m_notification1.alpha, 1.0f, 0.075f, true);
 
 	if (!waitForKey)
-		anim->moveQuadOut(&m_notification1.alpha, 0.0f, fadeOutTime, osu_notification_duration.getFloat(), false);
+		anim->moveQuadOut(&m_notification1.alpha, 0.0f, fadeOutTime, notificationDuration, false);
 
 	anim->moveQuadOut(&m_notification1.backgroundAnim, 1.0f, 0.15f, 0.0f, true);
 }

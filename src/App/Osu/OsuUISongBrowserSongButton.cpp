@@ -53,8 +53,11 @@ OsuUISongBrowserSongButton::OsuUISongBrowserSongButton(Osu *osu, OsuSongBrowser2
 	// build children
 	if (m_beatmap != NULL)
 	{
-		// sort difficulties by difficulty
 		std::vector<OsuBeatmapDifficulty*> difficulties = m_beatmap->getDifficulties();
+
+		// NOTE: sorting moved to onSelected()
+		/*
+		// sort difficulties by difficulty
 		struct SortComparator
 		{
 			bool operator() (OsuBeatmapDifficulty const *a, OsuBeatmapDifficulty const *b) const
@@ -84,6 +87,7 @@ OsuUISongBrowserSongButton::OsuUISongBrowserSongButton(Osu *osu, OsuSongBrowser2
 			}
 		};
 		std::sort(difficulties.begin(), difficulties.end(), SortComparator());
+		*/
 
 		// and add them
 		for (int i=0; i<difficulties.size(); i++)
@@ -269,6 +273,40 @@ void OsuUISongBrowserSongButton::onSelected(bool wasSelected)
 		deselect();
 		return;
 	}
+
+	// sort m_children by difficulty (since it might have been updated in the meantime)
+	struct SortComparator
+	{
+		bool operator() (OsuUISongBrowserButton const *aDiff, OsuUISongBrowserButton const *bDiff) const
+		{
+			const OsuBeatmapDifficulty *a = ((OsuUISongBrowserSongDifficultyButton*)aDiff)->getDiff();
+			const OsuBeatmapDifficulty *b = ((OsuUISongBrowserSongDifficultyButton*)bDiff)->getDiff();
+
+			const unsigned long diff1 = (a->AR+1)*(a->CS+1)*(a->HP+1)*(a->OD+1)*(a->maxBPM > 0 ? a->maxBPM : 1);
+			const unsigned long diff2 = (b->AR+1)*(b->CS+1)*(b->HP+1)*(b->OD+1)*(b->maxBPM > 0 ? b->maxBPM : 1);
+
+			const float stars1 = a->starsNoMod;
+			const float stars2 = b->starsNoMod;
+
+			if (stars1 > 0 && stars2 > 0)
+			{
+				// strict weak ordering!
+				if (stars1 == stars2)
+					return a->getSortHack() < b->getSortHack();
+				else
+					return stars1 < stars2;
+			}
+			else
+			{
+				// strict weak ordering!
+				if (diff1 == diff2)
+					return a->getSortHack() < b->getSortHack();
+				else
+					return diff1 < diff2;
+			}
+		}
+	};
+	std::sort(m_children.begin(), m_children.end(), SortComparator());
 
 	// automatically deselect previous selection if another beatmap is selected
 	if (previousButton != NULL && previousButton != this)
