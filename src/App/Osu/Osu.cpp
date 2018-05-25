@@ -15,7 +15,6 @@
 #include "ConsoleBox.h"
 #include "ResourceManager.h"
 #include "AnimationHandler.h"
-#include "NetworkHandler.h"
 #include "SoundEngine.h"
 #include "Console.h"
 #include "ConVar.h"
@@ -28,6 +27,7 @@
 //#include "DebugMonitor.h"
 
 #include "OsuVR.h"
+#include "OsuMultiplayer.h"
 #include "OsuMainMenu.h"
 #include "OsuOptionsMenu.h"
 #include "OsuSongBrowser2.h"
@@ -192,6 +192,7 @@ Osu::Osu()
 	m_songBrowser2 = NULL;
 	m_modSelector = NULL;
 	m_updateHandler = NULL;
+	m_multiplayer = NULL;
 
 	m_bF1 = false;
 	m_bUIToggleCheck = false;
@@ -238,6 +239,7 @@ Osu::Osu()
 
 	m_gamemode = GAMEMODE::STD;
 	m_bScheduleEndlessModNextBeatmap = false;
+	m_iMultiplayerClientNumEscPresses = 0;
 
 	// debug
 	m_windowManager = new CWindowManager();
@@ -282,6 +284,7 @@ Osu::Osu()
 	// load subsystems, add them to the screens array
 	m_tooltipOverlay = new OsuTooltipOverlay(this);
 	m_vr = new OsuVR(this);
+	m_multiplayer = new OsuMultiplayer(this);
 	m_mainMenu = new OsuMainMenu(this);
 	m_optionsMenu = new OsuOptionsMenu(this);
 	m_songBrowser2 = new OsuSongBrowser2(this);
@@ -394,6 +397,7 @@ Osu::~Osu()
 	SAFE_DELETE(m_skin);
 	SAFE_DELETE(m_score);
 	SAFE_DELETE(m_vr);
+	SAFE_DELETE(m_multiplayer);
 }
 
 void Osu::draw(Graphics *g)
@@ -475,6 +479,8 @@ void Osu::draw(Graphics *g)
 		m_editor->draw(g);
 		m_optionsMenu->draw(g);
 		m_rankingScreen->draw(g);
+
+		m_hud->drawPlayerList(g);
 
 		if (osu_draw_fps.getBool())
 			m_hud->drawFps(g);
@@ -559,12 +565,15 @@ void Osu::update()
 		// scrubbing/seeking
 		if ((engine->getKeyboard()->isControlDown() && engine->getKeyboard()->isAltDown()) || m_bSeekKey)
 		{
-			m_bSeeking = true;
-			const float percent = clamp<float>(engine->getMouse()->getPos().x/getScreenWidth(), 0.0f, 1.0f);
-			if (engine->getMouse()->isLeftDown())
-				getSelectedBeatmap()->seekPercentPlayable(percent);
-			if (engine->getMouse()->isRightDown())
-				m_fQuickSaveTime = clamp<float>((float)((getSelectedBeatmap()->getStartTimePlayable()+getSelectedBeatmap()->getLengthPlayable())*percent) / (float)getSelectedBeatmap()->getLength(), 0.0f, 1.0f);
+			if (!isInMultiplayer() || m_multiplayer->isServer())
+			{
+				m_bSeeking = true;
+				const float percent = clamp<float>(engine->getMouse()->getPos().x/getScreenWidth(), 0.0f, 1.0f);
+				if (engine->getMouse()->isLeftDown())
+					getSelectedBeatmap()->seekPercentPlayable(percent);
+				if (engine->getMouse()->isRightDown())
+					m_fQuickSaveTime = clamp<float>((float)((getSelectedBeatmap()->getStartTimePlayable()+getSelectedBeatmap()->getLengthPlayable())*percent) / (float)getSelectedBeatmap()->getLength(), 0.0f, 1.0f);
+			}
 		}
 
 		// skip button clicking
@@ -585,7 +594,12 @@ void Osu::update()
 		if (m_bSkipScheduled)
 		{
 			if (getSelectedBeatmap()->isInSkippableSection() && !getSelectedBeatmap()->isPaused())
-				getSelectedBeatmap()->skipEmptySection();
+			{
+				m_multiplayer->onServerPlayStateChange(OsuMultiplayer::STATE::SKIP);
+
+				if (!isInMultiplayer() || m_multiplayer->isServer())
+					getSelectedBeatmap()->skipEmptySection();
+			}
 
 			m_bSkipScheduled = false;
 		}
@@ -595,9 +609,12 @@ void Osu::update()
 		{
 			m_fQuickRetryTime = 0.0f;
 
-			getSelectedBeatmap()->restart(true);
-			getSelectedBeatmap()->update();
-			m_pauseMenu->setVisible(false);
+			if (!isInMultiplayer() || m_multiplayer->isServer())
+			{
+				getSelectedBeatmap()->restart(true);
+				getSelectedBeatmap()->update();
+				m_pauseMenu->setVisible(false);
+			}
 		}
 	}
 
@@ -883,10 +900,13 @@ void Osu::onKeyDown(KeyboardEvent &key)
 			}
 
 			// quick save/load
-			if (key == (KEYCODE)OsuKeyBindings::QUICK_SAVE.getInt())
-				m_fQuickSaveTime = getSelectedBeatmap()->getPercentFinished();
-			if (key == (KEYCODE)OsuKeyBindings::QUICK_LOAD.getInt())
-				getSelectedBeatmap()->seekPercent(m_fQuickSaveTime);
+			if (!isInMultiplayer() || m_multiplayer->isServer())
+			{
+				if (key == (KEYCODE)OsuKeyBindings::QUICK_SAVE.getInt())
+					m_fQuickSaveTime = getSelectedBeatmap()->getPercentFinished();
+				if (key == (KEYCODE)OsuKeyBindings::QUICK_LOAD.getInt())
+					getSelectedBeatmap()->seekPercent(m_fQuickSaveTime);
+			}
 		}
 
 		// while paused or maybe not paused
@@ -921,17 +941,33 @@ void Osu::onKeyDown(KeyboardEvent &key)
 			// toggle pause menu
 			if ((key == (KEYCODE)OsuKeyBindings::GAME_PAUSE.getInt() || key == KEY_ESCAPE) && !m_bEscape)
 			{
-				if (!getSelectedBeatmap()->hasFailed() || !m_pauseMenu->isVisible()) // you can open the pause menu while the failing animation is happening, but never close it then
+				if (!isInMultiplayer() || m_multiplayer->isServer() || m_iMultiplayerClientNumEscPresses > 1)
 				{
-					m_bEscape = true;
-					getSelectedBeatmap()->pause();
-					m_pauseMenu->setVisible(getSelectedBeatmap()->isPaused());
+					if (m_iMultiplayerClientNumEscPresses > 1)
+					{
+						getSelectedBeatmap()->stop(true);
+					}
+					else
+					{
+						if (!getSelectedBeatmap()->hasFailed() || !m_pauseMenu->isVisible()) // you can open the pause menu while the failing animation is happening, but never close it then
+						{
+							m_bEscape = true;
+							getSelectedBeatmap()->pause();
+							m_pauseMenu->setVisible(getSelectedBeatmap()->isPaused());
 
-					key.consume();
+							key.consume();
+						}
+						else // pressing escape while in failed pause menu
+						{
+							getSelectedBeatmap()->stop(true);
+						}
+					}
 				}
-				else // pressing escape while in failed pause menu
+				else
 				{
-					getSelectedBeatmap()->stop(true);
+					m_iMultiplayerClientNumEscPresses++;
+					if (m_iMultiplayerClientNumEscPresses == 2)
+						m_notificationOverlay->addNotification("Hit 'Escape' once more to exit this multiplayer match.", 0xffffffff, false, 0.75f);
 				}
 			}
 
@@ -1160,6 +1196,15 @@ void Osu::onBeforePlayStart()
 	engine->getSound()->play(m_skin->getMenuHit());
 
 	updateMods();
+
+	// mp hack
+	{
+		m_mainMenu->setVisible(false);
+		m_modSelector->setVisible(false);
+		m_optionsMenu->setVisible(false);
+		m_pauseMenu->setVisible(false);
+		m_rankingScreen->setVisible(false);
+	}
 }
 
 void Osu::onPlayStart()
@@ -1188,6 +1233,13 @@ void Osu::onPlayEnd(bool quit)
 	{
 		if (!osu_mod_endless.getBool())
 		{
+			if (isInMultiplayer())
+			{
+				// score packets while playing are sent unreliably, but at the end we want to have reliably synced values across all players
+				// also, at the end, we display the maximum achieved combo instead of the current one
+				m_multiplayer->onClientScoreChange(m_score->getComboMax(), m_score->getAccuracy(), m_score->getScore(), m_score->isDead(), true);
+			}
+
 			m_rankingScreen->setScore(m_score);
 			m_rankingScreen->setBeatmapInfo(getSelectedBeatmap(), getSelectedBeatmap()->getSelectedDifficulty());
 			engine->getSound()->play(m_skin->getApplause());
@@ -1205,6 +1257,8 @@ void Osu::onPlayEnd(bool quit)
 
 	env->setCursorVisible(false);
 	m_bShouldCursorBeVisible = false;
+
+	m_iMultiplayerClientNumEscPresses = 0;
 
 	if (m_songBrowser2 != NULL)
 		m_songBrowser2->onPlayEnd(quit);
@@ -1324,6 +1378,11 @@ bool Osu::isNotInPlayModeOrPaused()
 bool Osu::isInVRMode()
 {
 	return osu_vr.getBool() && openvr->isReady();
+}
+
+bool Osu::isInMultiplayer()
+{
+	return m_multiplayer->isInMultiplayer();
 }
 
 bool Osu::shouldFallBackToLegacySliderRenderer()
@@ -1464,9 +1523,12 @@ void Osu::onFocusLost()
 {
 	if (isInPlayMode() && !getSelectedBeatmap()->isPaused() && osu_pause_on_focus_loss.getBool())
 	{
-		getSelectedBeatmap()->pause(false);
-		m_pauseMenu->setVisible(true);
-		m_modSelector->setVisible(false);
+		if (!isInMultiplayer())
+		{
+			getSelectedBeatmap()->pause(false);
+			m_pauseMenu->setVisible(true);
+			m_modSelector->setVisible(false);
+		}
 	}
 
 	// release cursor clip

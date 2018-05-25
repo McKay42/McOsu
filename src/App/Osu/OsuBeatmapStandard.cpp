@@ -22,6 +22,7 @@
 
 #include "Osu.h"
 #include "OsuVR.h"
+#include "OsuMultiplayer.h"
 #include "OsuHUD.h"
 #include "OsuSkin.h"
 #include "OsuSkinImage.h"
@@ -730,6 +731,8 @@ void OsuBeatmapStandard::onModUpdate(bool rebuildSliderVertexBuffers)
 {
 	debugLog("OsuBeatmapStandard::onModUpdate() @ %f\n", engine->getTime());
 
+	m_osu->getMultiplayer()->onServerModUpdate();
+
 	updatePlayfieldMetrics();
 	updateHitobjectMetrics();
 
@@ -1087,6 +1090,8 @@ void OsuBeatmapStandard::onBeforeLoad()
 {
 	debugLog("OsuBeatmapStandard::onBeforeLoad()\n");
 
+	m_osu->getMultiplayer()->onServerPlayStateChange(OsuMultiplayer::STATE::START, 0, false, this);
+
 	// some hitobjects already need this information to be up-to-date before their constructor is called
 	updatePlayfieldMetrics();
 	updateHitobjectMetrics();
@@ -1147,22 +1152,45 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 		m_osu->getScore()->setStarsTomAim(m_fAimStars);
 		m_osu->getScore()->setStarsTomSpeed(m_fSpeedStars);
 		m_osu->getScore()->setPPv2(pp);
+		debugLog("OsuBeatmapStandard::onBeforeStop() done.\n");
 	}
 }
 
 void OsuBeatmapStandard::onStop(bool quit)
 {
 	debugLog("OsuBeatmapStandard::onStop()\n");
+
+	if (quit)
+		m_osu->getMultiplayer()->onServerPlayStateChange(OsuMultiplayer::STATE::STOP);
 }
 
-void OsuBeatmapStandard::onPaused()
+void OsuBeatmapStandard::onPaused(bool first)
 {
 	debugLog("OsuBeatmapStandard::onPaused()\n");
 
-	m_vContinueCursorPoint = engine->getMouse()->getPos();
+	m_osu->getMultiplayer()->onServerPlayStateChange(OsuMultiplayer::STATE::PAUSE);
 
-	if (OsuGameRules::osu_mod_fps.getBool())
-		m_vContinueCursorPoint = OsuGameRules::getPlayfieldCenter(m_osu);
+	if (first)
+	{
+		m_vContinueCursorPoint = engine->getMouse()->getPos();
+
+		if (OsuGameRules::osu_mod_fps.getBool())
+			m_vContinueCursorPoint = OsuGameRules::getPlayfieldCenter(m_osu);
+	}
+}
+
+void OsuBeatmapStandard::onUnpaused()
+{
+	debugLog("OsuBeatmapStandard::onUnpaused()\n");
+
+	m_osu->getMultiplayer()->onServerPlayStateChange(OsuMultiplayer::STATE::UNPAUSE);
+}
+
+void OsuBeatmapStandard::onRestart(bool quick)
+{
+	debugLog("OsuBeatmapStandard::onRestart()\n");
+
+	m_osu->getMultiplayer()->onServerPlayStateChange(OsuMultiplayer::STATE::RESTART, 0, quick);
 }
 
 void OsuBeatmapStandard::updateAutoCursorPos()

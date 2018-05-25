@@ -56,6 +56,7 @@ public:
 	void addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignoreOnHitErrorBar, bool hitErrorBarOnly, bool ignoreCombo, bool ignoreScore); // only OsuBeatmap may call this function!
 	void addSliderBreak(); // only OsuBeatmap may call this function!
 	void addPoints(int points, bool isSpinner);
+	void setDead(bool dead);
 
 	void setStarsTomTotal(float starsTomTotal) {m_fStarsTomTotal = starsTomTotal;}
 	void setStarsTomAim(float starsTomAim) {m_fStarsTomAim = starsTomAim;}
@@ -83,8 +84,13 @@ public:
 	inline int getNum300s() const {return m_iNum300s;}
 	inline int getNum300gs() const {return m_iNum300gs;}
 
+	inline bool isDead() const {return m_bDead;}
+	inline bool hasDied() const {return m_bDied;}
+
 private:
 	static ConVar *m_osu_draw_statistics_pp;
+
+	void onScoreChange();
 
 	Osu *m_osu;
 
@@ -117,6 +123,9 @@ private:
 	int m_iNum100ks;
 	int m_iNum300s;
 	int m_iNum300gs;
+
+	bool m_bDead;
+	bool m_bDied;
 };
 
 #endif

@@ -173,7 +173,7 @@ void OsuDatabase::update()
 		{
 			if (m_bKYS.load()) break; // cancellation point
 
-			if (m_rawLoadBeatmapFolders.size() > 0)
+			if (m_rawLoadBeatmapFolders.size() > 0 && m_iCurRawBeatmapLoadIndex < m_rawLoadBeatmapFolders.size())
 			{
 				UString curBeatmap = m_rawLoadBeatmapFolders[m_iCurRawBeatmapLoadIndex++];
 				m_rawBeatmapFolders.push_back(curBeatmap); // for future incremental loads, so that we know what's been loaded already
@@ -194,7 +194,7 @@ void OsuDatabase::update()
 			m_fLoadingProgress = (float)m_iCurRawBeatmapLoadIndex / (float)m_iNumBeatmapsToLoad;
 
 			// check if we are finished
-			if (m_iCurRawBeatmapLoadIndex >= m_iNumBeatmapsToLoad)
+			if (m_iCurRawBeatmapLoadIndex >= m_iNumBeatmapsToLoad || m_iCurRawBeatmapLoadIndex > (int)(m_rawLoadBeatmapFolders.size()-1))
 			{
 				m_rawLoadBeatmapFolders.clear();
 				m_bRawBeatmapLoadScheduled = false;
@@ -239,14 +239,17 @@ void OsuDatabase::loadRaw()
 		std::vector<UString> toLoad;
 		for (int i=0; i<m_iNumBeatmapsToLoad; i++)
 		{
-			if (i < m_rawBeatmapFolders.size())
+			bool alreadyLoaded = false;
+			for (int j=0; j<m_rawBeatmapFolders.size(); j++)
 			{
-				if (m_rawBeatmapFolders[i] == m_rawLoadBeatmapFolders[i])
-					continue;
-				else
-					toLoad.push_back(m_rawLoadBeatmapFolders[i]);
+				if (m_rawLoadBeatmapFolders[i] == m_rawBeatmapFolders[j])
+				{
+					alreadyLoaded = true;
+					break;
+				}
 			}
-			else
+
+			if (!alreadyLoaded)
 				toLoad.push_back(m_rawLoadBeatmapFolders[i]);
 		}
 
@@ -259,8 +262,8 @@ void OsuDatabase::loadRaw()
 		m_bFoundChanges = m_iNumBeatmapsToLoad > 0;
 		if (m_bFoundChanges)
 			m_osu->getNotificationOverlay()->addNotification(UString::format(m_iNumBeatmapsToLoad == 1 ? "Adding %i new beatmap." : "Adding %i new beatmaps.", m_iNumBeatmapsToLoad), 0xff00ff00);
-		//else
-		//	m_osu->getNotificationOverlay()->addNotification(UString::format("No new beatmaps detected.", m_iNumBeatmapsToLoad), 0xff00ff00);
+		else
+			m_osu->getNotificationOverlay()->addNotification(UString::format("No new beatmaps detected.", m_iNumBeatmapsToLoad), 0xff00ff00);
 	}
 
 	debugLog("Database: Building beatmap database ...\n");
@@ -397,12 +400,12 @@ void OsuDatabase::loadDB(OsuFile *db)
 		m_fLoadingProgress = 0.25f + 0.5f*((float)(i+1)/(float)m_iNumBeatmapsToLoad);
 
 		unsigned int size = db->readInt();
-		UString artistName = db->readString();
+		UString artistName = db->readString().trim();
 		UString artistNameUnicode = db->readString();
-		UString songTitle = db->readString();
+		UString songTitle = db->readString().trim();
 		UString songTitleUnicode = db->readString();
-		UString creatorName = db->readString();
-		UString difficultyName = db->readString();
+		UString creatorName = db->readString().trim();
+		UString difficultyName = db->readString().trim();
 		UString audioFileName = db->readString();
 		UString md5hash = db->readString();
 		UString osuFileName = db->readString();
@@ -497,8 +500,8 @@ void OsuDatabase::loadDB(OsuFile *db)
 		unsigned char mode = db->readByte();
 		//debugLog("localOffset = %i, stackLeniency = %f, mode = %i\n", localOffset, stackLeniency, mode);
 
-		UString songSource = db->readString();
-		UString songTags = db->readString();
+		UString songSource = db->readString().trim();
+		UString songTags = db->readString().trim();
 		//debugLog("songSource = %s, songTags = %s\n", songSource.toUtf8(), songTags.toUtf8());
 
 		short onlineOffset = db->readShort();
@@ -598,6 +601,10 @@ void OsuDatabase::loadDB(OsuFile *db)
 				tp.kiai = false;
 				diff->timingpoints.push_back(tp);
 			}
+
+			// (the diff is now fully built)
+
+			diff->generateUUIDFromMetadata();
 
 			// now, search if the current set (to which this diff would belong) already exists and add it there, or if it doesn't exist then create the set
 			bool beatmapSetExists = false;

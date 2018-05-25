@@ -31,8 +31,8 @@ public:
 	virtual OsuBeatmap *getBeatmap() const {return m_beatmap;}
 	virtual std::vector<OsuUISongBrowserButton*> getChildren();
 
-	inline OsuBeatmapDifficulty *getDiff() {return m_diff;}
-	inline OsuUISongBrowserSongButton *getParent() {return m_parent;}
+	inline OsuBeatmapDifficulty *getDiff() const {return m_diff;}
+	inline OsuUISongBrowserSongButton *getParent() const {return m_parent;}
 
 protected:
 	virtual void onSelected(bool wasSelected);

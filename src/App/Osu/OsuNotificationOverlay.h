@@ -32,7 +32,7 @@ public:
 	void onKeyUp(KeyboardEvent &e);
 	void onChar(KeyboardEvent &e);
 
-	void addNotification(UString text, Color textColor = 0xffffffff, bool waitForKey = false);
+	void addNotification(UString text, Color textColor = 0xffffffff, bool waitForKey = false, float duration = -1.0f);
 
 	void stopWaitingForKey();
 

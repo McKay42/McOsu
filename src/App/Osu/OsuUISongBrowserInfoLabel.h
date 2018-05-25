@@ -24,6 +24,7 @@ public:
 	void draw(Graphics *g);
 
 	void setFromBeatmap(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff);
+	void setFromMissingBeatmap(long beatmapId);
 
 	void setArtist(UString artist) {m_sArtist = artist;}
 	void setTitle(UString title) {m_sTitle = title;}
@@ -47,6 +48,8 @@ public:
 	float getMinimumHeight();
 
 private:
+	virtual void onMouseUpInside();
+
 	UString buildTitleString();
 	UString buildSubTitleString();
 	UString buildSongInfoString();
@@ -80,6 +83,9 @@ private:
 
 	long m_iLocalOffset;
 	long m_iOnlineOffset;
+
+	// custom
+	long m_iBeatmapId;
 };
 
 #endif

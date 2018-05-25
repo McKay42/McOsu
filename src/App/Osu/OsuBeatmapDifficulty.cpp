@@ -11,6 +11,7 @@
 #include "ResourceManager.h"
 #include "ConVar.h"
 #include "File.h"
+#include "MD5.h"
 
 #include "Osu.h"
 #include "OsuSkin.h"
@@ -169,6 +170,10 @@ OsuBeatmapDifficulty::OsuBeatmapDifficulty(Osu *osu, UString filepath, UString f
 	starsNoMod = 0.0f;
 	ID = 0;
 	setID = 0;
+	for (int i=0; i<16; i++)
+	{
+		uuid[i] = 0;
+	}
 
 	m_backgroundImagePathLoader = NULL;
 
@@ -315,9 +320,7 @@ bool OsuBeatmapDifficulty::loadMetadataRaw(bool calculateStars)
 					memset(stringBuffer, '\0', 1024);
 					if (sscanf(curLineChar, " BeatmapID :%1023[^\n]", stringBuffer) == 1)
 					{
-						// FUCK stol(), causing crashes in e.g. std::stol("--123456");
-						//beatmapId = std::stol(stringBuffer);
-						beatmapId = 0;
+						sscanf(stringBuffer, " %ld ", &beatmapId);
 					}
 				}
 				break;
@@ -485,6 +488,8 @@ bool OsuBeatmapDifficulty::loadMetadataRaw(bool calculateStars)
 	// old beatmaps: AR = OD, there is no ApproachRate stored
 	if (!foundAR)
 		AR = OD;
+
+	generateUUIDFromMetadata();
 
 	// calculate default nomod standard stars, and immediately unload everything unnecessary after that
 	if (calculateStars && m_osu_database_dynamic_star_calculation->getBool())
@@ -982,6 +987,30 @@ void OsuBeatmapDifficulty::loadBackgroundImagePath()
 			if (found)
 				break;
 		}
+	}
+}
+
+void OsuBeatmapDifficulty::generateUUIDFromMetadata()
+{
+	// the goal of this is to have a unique-enough identification for beatmaps for network play
+	UString inputString = UString("");
+	inputString.append(title);
+	inputString.append(artist);
+	inputString.append(creator);
+	inputString.append(name);
+	inputString.append(source);
+	inputString.append(tags);
+
+	// generate MD5 hash
+	const unsigned char *input = (unsigned char*)inputString.toUtf8();
+	MD5 hasher;
+	hasher.update(input, inputString.length());
+	hasher.finalize();
+	unsigned char *md5hash = hasher.getDigest();
+
+	for (int i=0; i<16; i++)
+	{
+		uuid[i] = md5hash[i];
 	}
 }
 
@@ -1658,7 +1687,7 @@ double OsuBeatmapDifficulty::calculatePPv2(Osu *osu, OsuBeatmap *beatmap, double
 
 	// hidden
 	if (osu->getModHD())
-		aim_value *= 1.03; // https://github.com/ppy/osu-performance/pull/42
+		aim_value *= (1.02 + std::max(11.0 - ar, 0.0) / 50.0); // https://github.com/ppy/osu-performance/pull/47
 
 	// flashlight
 	// TODO: not yet implemented
