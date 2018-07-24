@@ -28,12 +28,13 @@ public:
 
 	virtual void onResolutionChange(Vector2 newResolution);
 
+	virtual void stealFocus();
+
 protected:
 	virtual void onBack() = 0;
 
 	virtual void updateLayout();
 
-	Osu *m_osu;
 	OsuUIBackButton *m_backButton;
 };
 

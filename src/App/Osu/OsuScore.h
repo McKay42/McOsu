@@ -48,6 +48,9 @@ public:
 		GRADE_N
 	};
 
+	static float calculateAccuracy(int num300s, int num100s, int num50s, int numMisses);
+	static GRADE calculateGrade(int num300s, int num100s, int num50s, int numMisses, bool modHidden, bool modFlashlight);
+
 public:
 	OsuScore(Osu *osu);
 
@@ -56,16 +59,19 @@ public:
 	void addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignoreOnHitErrorBar, bool hitErrorBarOnly, bool ignoreCombo, bool ignoreScore); // only OsuBeatmap may call this function!
 	void addSliderBreak(); // only OsuBeatmap may call this function!
 	void addPoints(int points, bool isSpinner);
+	void setDead(bool dead);
 
 	void setStarsTomTotal(float starsTomTotal) {m_fStarsTomTotal = starsTomTotal;}
 	void setStarsTomAim(float starsTomAim) {m_fStarsTomAim = starsTomAim;}
 	void setStarsTomSpeed(float starsTomSpeed) {m_fStarsTomSpeed = starsTomSpeed;}
 	void setPPv2(float ppv2) {m_fPPv2 = ppv2;}
+	void setIndex(int index) {m_iIndex = index;}
 
 	inline float getStarsTomTotal() const {return m_fStarsTomTotal;}
 	inline float getStarsTomAim() const {return m_fStarsTomAim;}
 	inline float getStarsTomSpeed() const {return m_fStarsTomSpeed;}
 	inline float getPPv2() const {return m_fPPv2;}
+	inline int getIndex() const {return m_iIndex;}
 
 	unsigned long long getScore();
 	inline GRADE getGrade() const {return m_grade;}
@@ -83,8 +89,13 @@ public:
 	inline int getNum300s() const {return m_iNum300s;}
 	inline int getNum300gs() const {return m_iNum300gs;}
 
+	inline bool isDead() const {return m_bDead;}
+	inline bool hasDied() const {return m_bDied;}
+
 private:
 	static ConVar *m_osu_draw_statistics_pp;
+
+	void onScoreChange();
 
 	Osu *m_osu;
 
@@ -97,6 +108,7 @@ private:
 	float m_fStarsTomAim;
 	float m_fStarsTomSpeed;
 	float m_fPPv2;
+	int m_iIndex;
 
 	unsigned long long m_iScoreV1;
 	unsigned long long m_iScoreV2;
@@ -117,6 +129,9 @@ private:
 	int m_iNum100ks;
 	int m_iNum300s;
 	int m_iNum300gs;
+
+	bool m_bDead;
+	bool m_bDied;
 };
 
 #endif

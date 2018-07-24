@@ -67,7 +67,9 @@ private:
 	virtual void onPlayStart();
 	virtual void onBeforeStop(bool quit);
 	virtual void onStop(bool quit);
-	virtual void onPaused();
+	virtual void onPaused(bool first);
+	virtual void onUnpaused();
+	virtual void onRestart(bool quick);
 
 	void drawFollowPoints(Graphics *g);
 
@@ -82,6 +84,7 @@ private:
 	void updateStarCache(); // incremental stars (used for live pp type 2)
 	void stopStarCacheLoader();
 	bool isLoadingStarCache();
+	bool isLoadingInt();
 
 	// beatmap
 	bool m_bIsSpinnerActive;

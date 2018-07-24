@@ -10,6 +10,8 @@
 
 #include "CBaseUIImage.h"
 
+#include "OsuDatabase.h"
+
 class Osu;
 class OsuScore;
 class OsuSkinImage;
@@ -18,11 +20,11 @@ class OsuUIRankingScreenRankingPanel : public CBaseUIImage
 {
 public:
 	OsuUIRankingScreenRankingPanel(Osu *osu);
-	virtual ~OsuUIRankingScreenRankingPanel();
 
 	virtual void draw(Graphics *g);
 
 	void setScore(OsuScore *score);
+	void setScore(OsuDatabase::Score score);
 
 private:
 	void drawHitImage(Graphics *g, OsuSkinImage *img, float scale, Vector2 pos);

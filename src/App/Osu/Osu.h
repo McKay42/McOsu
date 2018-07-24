@@ -14,6 +14,7 @@
 class CWindowManager;
 
 class OsuVR;
+class OsuMultiplayer;
 class OsuMainMenu;
 class OsuPauseMenu;
 class OsuOptionsMenu;
@@ -115,24 +116,28 @@ public:
 
 	OsuBeatmap *getSelectedBeatmap();
 
-	inline OsuVR *getVR() {return m_vr;}
-	inline OsuSkin *getSkin() {return m_skin;}
-	inline OsuHUD *getHUD() {return m_hud;}
-	inline OsuNotificationOverlay *getNotificationOverlay() {return m_notificationOverlay;}
-	inline OsuTooltipOverlay *getTooltipOverlay() {return m_tooltipOverlay;}
-	inline OsuModSelector *getModSelector() {return m_modSelector;}
-	inline OsuPauseMenu *getPauseMenu() {return m_pauseMenu;}
-	inline OsuRankingScreen *getRankingScreen() {return m_rankingScreen;}
-	inline OsuScore *getScore() {return m_score;}
-	inline OsuUpdateHandler *getUpdateHandler() {return m_updateHandler;}
+	inline OsuVR *getVR() const {return m_vr;}
+	inline OsuMultiplayer *getMultiplayer() const {return m_multiplayer;}
+	inline OsuOptionsMenu *getOptionsMenu() const {return m_optionsMenu;}
+	inline OsuSongBrowser2 *getSongBrowser() const {return m_songBrowser2;}
+	inline OsuSkin *getSkin() const {return m_skin;}
+	inline OsuHUD *getHUD() const {return m_hud;}
+	inline OsuNotificationOverlay *getNotificationOverlay() const {return m_notificationOverlay;}
+	inline OsuTooltipOverlay *getTooltipOverlay() const {return m_tooltipOverlay;}
+	inline OsuModSelector *getModSelector() const {return m_modSelector;}
+	inline OsuPauseMenu *getPauseMenu() const {return m_pauseMenu;}
+	inline OsuRankingScreen *getRankingScreen() const {return m_rankingScreen;}
+	inline OsuScore *getScore() const {return m_score;}
+	inline OsuUpdateHandler *getUpdateHandler() const {return m_updateHandler;}
 
-	inline RenderTarget *getSliderFrameBuffer() {return m_sliderFrameBuffer;}
-	inline RenderTarget *getFrameBuffer() {return m_frameBuffer;}
-	inline RenderTarget *getFrameBuffer2() {return m_frameBuffer2;}
-	inline McFont *getTitleFont() {return m_titleFont;}
-	inline McFont *getSubTitleFont() {return m_subTitleFont;}
-	inline McFont *getSongBrowserFont() {return m_songBrowserFont;}
-	inline McFont *getSongBrowserFontBold() {return m_songBrowserFontBold;}
+	inline RenderTarget *getSliderFrameBuffer() const {return m_sliderFrameBuffer;}
+	inline RenderTarget *getFrameBuffer() const {return m_frameBuffer;}
+	inline RenderTarget *getFrameBuffer2() const {return m_frameBuffer2;}
+	inline McFont *getTitleFont() const {return m_titleFont;}
+	inline McFont *getSubTitleFont() const {return m_subTitleFont;}
+	inline McFont *getSongBrowserFont() const {return m_songBrowserFont;}
+	inline McFont *getSongBrowserFontBold() const {return m_songBrowserFontBold;}
+	inline McFont *getFontIcons() const {return m_fontIcons;}
 
 	float getDifficultyMultiplier();
 	float getCSDifficultyMultiplier();
@@ -159,9 +164,13 @@ public:
 	inline bool getModSS() const {return m_bModSS;}
 	inline bool getModNM() const {return m_bModNM;}
 
+	inline std::vector<ConVar*> getExperimentalMods() const {return m_experimentalMods;}
+
 	bool isInPlayMode();
 	bool isNotInPlayModeOrPaused();
 	bool isInVRMode();
+	inline bool isInVRDraw() const {return m_bIsInVRDraw;}
+	bool isInMultiplayer();
 
 	inline bool isSeeking() const {return m_bSeeking;}
 	inline float getQuickSaveTime() const {return m_fQuickSaveTime;}
@@ -176,6 +185,7 @@ private:
 
 	void updateModsForConVarTemplate(UString oldValue, UString newValue) {updateMods();}
 	void onVolumeChange(int multiplier);
+	void onAudioOutputDeviceChange();
 
 	void rebuildRenderTargets();
 
@@ -205,6 +215,7 @@ private:
 	// convar refs
 	ConVar *m_osu_folder_ref;
 	ConVar *m_osu_draw_hud_ref;
+	ConVar *m_osu_draw_scoreboard;
 	ConVar *m_osu_mod_fps_ref;
 	ConVar *m_osu_mod_wobble_ref;
 	ConVar *m_osu_mod_wobble2_ref;
@@ -215,9 +226,11 @@ private:
 	ConVar *m_osu_draw_cursor_trail_ref;
 	ConVar *m_osu_volume_effects_ref;
 	ConVar *m_osu_mod_mafham_ref;
+	ConVar *m_snd_change_check_interval_ref;
 
 	// interfaces
 	OsuVR *m_vr;
+	OsuMultiplayer *m_multiplayer;
 	OsuMainMenu *m_mainMenu;
 	OsuOptionsMenu *m_optionsMenu;
 	OsuSongBrowser2 *m_songBrowser2;
@@ -262,9 +275,12 @@ private:
 	bool m_bModSS;
 	bool m_bModNM;
 
+	std::vector<ConVar*> m_experimentalMods;
+
 	// keys
 	bool m_bF1;
 	bool m_bUIToggleCheck;
+	bool m_bScoreboardToggleCheck;
 	bool m_bTab;
 	bool m_bEscape;
 	bool m_bKeyboardKey1Down;
@@ -283,6 +299,7 @@ private:
 	bool m_bToggleModSelectionScheduled;
 	bool m_bToggleSongBrowserScheduled;
 	bool m_bToggleOptionsMenuScheduled;
+	bool m_bOptionsMenuFullscreen;
 	bool m_bToggleRankingScreenScheduled;
 	bool m_bToggleVRTutorialScheduled;
 	bool m_bToggleChangelogScheduled;
@@ -296,6 +313,7 @@ private:
 	McFont *m_subTitleFont;
 	McFont *m_songBrowserFont;
 	McFont *m_songBrowserFontBold;
+	McFont *m_fontIcons;
 
 	// debugging
 	CWindowManager *m_windowManager;
@@ -303,6 +321,8 @@ private:
 	// custom
 	GAMEMODE m_gamemode;
 	bool m_bScheduleEndlessModNextBeatmap;
+	int m_iMultiplayerClientNumEscPresses;
+	bool m_bIsInVRDraw;
 };
 
 #endif

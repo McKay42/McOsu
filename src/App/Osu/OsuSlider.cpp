@@ -426,10 +426,10 @@ void OsuSlider::draw(Graphics *g)
 
 void OsuSlider::draw2(Graphics *g)
 {
-	draw2(g, true);
+	draw2(g, true, false);
 }
 
-void OsuSlider::draw2(Graphics *g, bool drawApproachCircle)
+void OsuSlider::draw2(Graphics *g, bool drawApproachCircle, bool drawOnlyApproachCircle)
 {
 	OsuSkin *skin = m_beatmap->getSkin();
 
@@ -459,6 +459,8 @@ void OsuSlider::draw2(Graphics *g, bool drawApproachCircle)
 			}
 		}
 	}
+
+	if (drawApproachCircle && drawOnlyApproachCircle) return;
 
 	// draw followcircle
 	// HACKHACK: this is not entirely correct (due to m_bHeldTillEnd, if held within 300 range but then released, will flash followcircle at the end)
@@ -710,7 +712,35 @@ void OsuSlider::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 
 	OsuHitObject::draw(g);
 
-	draw2(g, false);
+	draw2(g, false, false);
+
+	if (m_osu_vr_draw_approach_circles->getBool() && !m_osu_vr_approach_circles_on_top->getBool())
+	{
+		if (m_osu_vr_approach_circles_on_playfield->getBool())
+			vr->getShaderTexturedLegacyGeneric()->setUniformMatrix4fv("matrix", mvp);
+
+		draw2(g, true, true);
+	}
+}
+
+void OsuSlider::drawVR2(Graphics *g, Matrix4 &mvp, OsuVR *vr)
+{
+	// HACKHACK: code duplication aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+	if (m_points.size() <= 0) return;
+
+	// the approachscale for sliders will get negative (since they are hitobjects with a duration)
+	float clampedApproachScalePercent = m_fApproachScale - 1.0f; // goes from <m_osu_approach_scale_multiplier_ref> to 0
+	clampedApproachScalePercent = clamp<float>(clampedApproachScalePercent / m_osu_approach_scale_multiplier_ref->getFloat(), 0.0f, 1.0f); // goes from 1 to 0
+
+	if (m_osu_vr_approach_circles_on_playfield->getBool())
+		clampedApproachScalePercent = 0.0f;
+
+	Matrix4 translation;
+	translation.translate(0, 0, -clampedApproachScalePercent*vr->getApproachDistance());
+	Matrix4 finalMVP = mvp * translation;
+
+	vr->getShaderTexturedLegacyGeneric()->setUniformMatrix4fv("matrix", finalMVP);
+	draw2(g, true, true);
 }
 
 void OsuSlider::drawStartCircle(Graphics *g, float alpha)
@@ -1614,7 +1644,7 @@ OsuSliderCurveTypeBezier2::OsuSliderCurveTypeBezier2(const std::vector<Vector2> 
 	{
 		// opsu bezier (takes very long for certain aspire sliders)
 		float approxlength = 0;
-		for (int i=0; i<points.size()-1; i++)
+		for (int i=0; i<(int)(points.size()-1); i++)
 		{
 			approxlength += (points[i] - points[i + 1]).length();
 		}
@@ -2152,7 +2182,7 @@ BezierApproximator::BezierApproximator(std::vector<Vector2> controlPoints)
 
 bool BezierApproximator::isFlatEnough(std::vector<Vector2> controlPoints)
 {
-    for (int i=1; i<controlPoints.size() - 1; i++)
+    for (int i=1; i<(int)(controlPoints.size() - 1); i++)
     {
         if (std::pow((controlPoints[i - 1] - 2 * controlPoints[i] + controlPoints[i + 1]).length(), 2.0f) > TOLERANCE_SQ * 4)
             return false;

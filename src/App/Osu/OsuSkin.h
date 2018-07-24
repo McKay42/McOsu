@@ -83,6 +83,7 @@ public:
 	inline Image *getPlayWarningArrow() {return m_playWarningArrow;}
 	inline OsuSkinImage *getPlayWarningArrow2() {return m_playWarningArrow2;}
 	inline Image *getCircularmetre() {return m_circularmetre;}
+	inline OsuSkinImage *getScorebarBg() {return m_scorebarBg;}
 
 	inline OsuSkinImage *getHit0() {return m_hit0;}
 	inline OsuSkinImage *getHit50() {return m_hit50;}
@@ -178,6 +179,14 @@ public:
 	inline Image *getRankingSH() {return m_rankingSH;}
 	inline Image *getRankingX() {return m_rankingX;}
 	inline Image *getRankingXH() {return m_rankingXH;}
+	inline OsuSkinImage *getRankingAsmall() {return m_rankingAsmall;}
+	inline OsuSkinImage *getRankingBsmall() {return m_rankingBsmall;}
+	inline OsuSkinImage *getRankingCsmall() {return m_rankingCsmall;}
+	inline OsuSkinImage *getRankingDsmall() {return m_rankingDsmall;}
+	inline OsuSkinImage *getRankingSsmall() {return m_rankingSsmall;}
+	inline OsuSkinImage *getRankingSHsmall() {return m_rankingSHsmall;}
+	inline OsuSkinImage *getRankingXsmall() {return m_rankingXsmall;}
+	inline OsuSkinImage *getRankingXHsmall() {return m_rankingXHsmall;}
 
 	inline Image *getBeatmapImportSpinner() {return m_beatmapImportSpinner;}
 	inline Image *getLoadingSpinner() {return m_loadingSpinner;}
@@ -271,7 +280,7 @@ private:
 	bool parseSkinINI(UString filepath);
 	bool compareFilenameWithSkinElementName(UString filename, UString skinElementName);
 	OsuSkinImage *createOsuSkinImage(UString skinElementName, Vector2 baseSizeForScaling2x, float osuSize, bool ignoreDefaultSkin = false, UString animationSeparator = "-");
-	void checkLoadImage(Image **addressOfPointer, UString skinElementName, UString resourceName, bool ignoreDefaultSkin = false, UString fileExtension = "png");
+	void checkLoadImage(Image **addressOfPointer, UString skinElementName, UString resourceName, bool ignoreDefaultSkin = false, UString fileExtension = "png", bool forceLoadMipmaps = false);
 	void checkLoadSound(Sound **addressOfPointer, UString skinElementName, UString resourceName, bool isOverlayable = false, bool isSample = false, bool loop = false);
 
 	void onEffectVolumeChange(UString oldValue, UString newValue);
@@ -324,6 +333,7 @@ private:
 	Image *m_playWarningArrow;
 	OsuSkinImage *m_playWarningArrow2;
 	Image *m_circularmetre;
+	OsuSkinImage *m_scorebarBg;
 
 	OsuSkinImage *m_hit0;
 	OsuSkinImage *m_hit50;
@@ -419,6 +429,14 @@ private:
 	Image *m_rankingSH;
 	Image *m_rankingX;
 	Image *m_rankingXH;
+	OsuSkinImage *m_rankingAsmall;
+	OsuSkinImage *m_rankingBsmall;
+	OsuSkinImage *m_rankingCsmall;
+	OsuSkinImage *m_rankingDsmall;
+	OsuSkinImage *m_rankingSsmall;
+	OsuSkinImage *m_rankingSHsmall;
+	OsuSkinImage *m_rankingXsmall;
+	OsuSkinImage *m_rankingXHsmall;
 
 	Image *m_beatmapImportSpinner;
 	Image *m_loadingSpinner;

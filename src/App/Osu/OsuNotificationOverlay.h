@@ -24,7 +24,7 @@ class OsuNotificationOverlay : public OsuScreen
 {
 public:
 	OsuNotificationOverlay(Osu *osu);
-	virtual ~OsuNotificationOverlay(){;}
+	virtual ~OsuNotificationOverlay() {;}
 
 	void draw(Graphics *g);
 
@@ -32,7 +32,7 @@ public:
 	void onKeyUp(KeyboardEvent &e);
 	void onChar(KeyboardEvent &e);
 
-	void addNotification(UString text, Color textColor = 0xffffffff, bool waitForKey = false);
+	void addNotification(UString text, Color textColor = 0xffffffff, bool waitForKey = false, float duration = -1.0f);
 
 	void stopWaitingForKey();
 
@@ -55,12 +55,11 @@ private:
 	void drawNotificationText(Graphics *g, NOTIFICATION &n);
 	void drawNotificationBackground(Graphics *g, NOTIFICATION &n);
 
-	Osu *m_osu;
-
 	NOTIFICATION m_notification1;
 	NOTIFICATION m_notification2;
 
 	bool m_bWaitForKey;
+	bool m_bConsumeNextChar;
 	OsuNotificationOverlayKeyListener *m_keyListener;
 };
 

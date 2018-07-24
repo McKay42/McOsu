@@ -15,10 +15,8 @@
 OsuUICheckbox::OsuUICheckbox(Osu *osu, float xPos, float yPos, float xSize, float ySize, UString name, UString text) : CBaseUICheckbox(xPos, yPos, xSize, ySize, name, text)
 {
 	m_osu = osu;
-}
 
-OsuUICheckbox::~OsuUICheckbox()
-{
+	m_bFocusStolenDelay = false;
 }
 
 void OsuUICheckbox::update()
@@ -26,7 +24,7 @@ void OsuUICheckbox::update()
 	CBaseUICheckbox::update();
 	if (!m_bVisible) return;
 
-	if (isMouseInside() && m_tooltipTextLines.size() > 0)
+	if (isMouseInside() && m_tooltipTextLines.size() > 0 && !m_bFocusStolenDelay)
 	{
 		m_osu->getTooltipOverlay()->begin();
 		for (int i=0; i<m_tooltipTextLines.size(); i++)
@@ -35,6 +33,16 @@ void OsuUICheckbox::update()
 		}
 		m_osu->getTooltipOverlay()->end();
 	}
+
+	m_bFocusStolenDelay = false;
+}
+
+void OsuUICheckbox::onFocusStolen()
+{
+	CBaseUICheckbox::onFocusStolen();
+
+	m_bMouseInside = false;
+	m_bFocusStolenDelay = true;
 }
 
 void OsuUICheckbox::setTooltipText(UString text)

@@ -32,6 +32,7 @@ ConVar osu_circle_shake_strength("osu_circle_shake_strength", 8.0f);
 ConVar osu_approach_circle_alpha_multiplier("osu_approach_circle_alpha_multiplier", 0.9f);
 
 ConVar osu_draw_numbers("osu_draw_numbers", true);
+ConVar osu_draw_circles("osu_draw_circles", true);
 ConVar osu_draw_approach_circles("osu_draw_approach_circles", true);
 
 ConVar osu_slider_draw_endcircle("osu_slider_draw_endcircle", true);
@@ -57,7 +58,7 @@ void OsuCircle::drawApproachCircle(Graphics *g, OsuBeatmapStandard *beatmap, Vec
 
 void OsuCircle::drawCircle(Graphics *g, OsuSkin *skin, Vector2 pos, float hitcircleDiameter, float numberScale, float overlapScale, int number, int colorCounter, float approachScale, float alpha, float numberAlpha, bool drawNumber, bool overrideHDApproachCircle)
 {
-	if (alpha <= 0.0f)
+	if (alpha <= 0.0f || !osu_draw_circles.getBool())
 		return;
 
 	rainbowNumber = number;
@@ -108,7 +109,7 @@ void OsuCircle::drawSliderStartCircle(Graphics *g, OsuBeatmapStandard *beatmap, 
 
 void OsuCircle::drawSliderStartCircle(Graphics *g, OsuSkin *skin, Vector2 pos, float hitcircleDiameter, float numberScale, float hitcircleOverlapScale, int number, int colorCounter, float approachScale, float alpha, float numberAlpha, bool drawNumber, bool overrideHDApproachCircle)
 {
-	if (alpha <= 0.0f)
+	if (alpha <= 0.0f || !osu_draw_circles.getBool())
 		return;
 
 	// if no sliderstartcircle image is preset, fallback to default circle
@@ -157,7 +158,7 @@ void OsuCircle::drawSliderEndCircle(Graphics *g, OsuBeatmapStandard *beatmap, Ve
 
 void OsuCircle::drawSliderEndCircle(Graphics *g, OsuSkin *skin, Vector2 pos, float hitcircleDiameter, float numberScale, float overlapScale, int number, int colorCounter, float approachScale, float alpha, float numberAlpha, bool drawNumber, bool overrideHDApproachCircle)
 {
-	if (alpha <= 0.0f || !osu_slider_draw_endcircle.getBool())
+	if (alpha <= 0.0f || !osu_slider_draw_endcircle.getBool() || !osu_draw_circles.getBool())
 		return;
 
 	// if no sliderendcircle image is preset, fallback to default circle
@@ -468,6 +469,34 @@ void OsuCircle::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 
 		vr->getShaderTexturedLegacyGeneric()->setUniformMatrix4fv("matrix", finalMVP);
 		draw(g);
+
+		if (m_osu_vr_draw_approach_circles->getBool() && !m_osu_vr_approach_circles_on_top->getBool())
+		{
+			if (m_osu_vr_approach_circles_on_playfield->getBool())
+				vr->getShaderTexturedLegacyGeneric()->setUniformMatrix4fv("matrix", mvp);
+
+			draw2(g);
+		}
+	}
+}
+
+void OsuCircle::drawVR2(Graphics *g, Matrix4 &mvp, OsuVR *vr)
+{
+	// TODO: performance! if nothing of the circle is visible, then we don't have to calculate anything
+	///if (m_bVisible)
+	{
+		float clampedApproachScalePercent = m_fApproachScale - 1.0f; // goes from <m_osu_approach_scale_multiplier_ref> to 0
+		clampedApproachScalePercent = clamp<float>(clampedApproachScalePercent / m_osu_approach_scale_multiplier_ref->getFloat(), 0.0f, 1.0f); // goes from 1 to 0
+
+		if (m_osu_vr_approach_circles_on_playfield->getBool())
+			clampedApproachScalePercent = 0.0f;
+
+		Matrix4 translation;
+		translation.translate(0, 0, -clampedApproachScalePercent*vr->getApproachDistance());
+		Matrix4 finalMVP = mvp * translation;
+
+		vr->getShaderTexturedLegacyGeneric()->setUniformMatrix4fv("matrix", finalMVP);
+		draw2(g);
 	}
 }
 

@@ -9,6 +9,7 @@
 #define OSUUISONGBROWSERSONGBUTTON_H
 
 #include "OsuUISongBrowserButton.h"
+#include "OsuScore.h"
 
 class OsuSongBrowser2;
 class OsuBeatmap;
@@ -24,6 +25,7 @@ public:
 	virtual void update();
 
 	virtual void updateLayoutEx();
+	virtual void updateGrade() {;}
 
 	OsuUISongBrowserSongButton *setVisible(bool visible);
 	OsuUISongBrowserSongButton *setParent(OsuUISongBrowserSongButton *parent) {m_parent = parent; return this;}
@@ -31,18 +33,22 @@ public:
 	virtual OsuBeatmap *getBeatmap() const {return m_beatmap;}
 	virtual std::vector<OsuUISongBrowserButton*> getChildren();
 
-	inline OsuBeatmapDifficulty *getDiff() {return m_diff;}
-	inline OsuUISongBrowserSongButton *getParent() {return m_parent;}
+	inline OsuBeatmapDifficulty *getDiff() const {return m_diff;}
+	inline OsuUISongBrowserSongButton *getParent() const {return m_parent;}
 
 protected:
 	virtual void onSelected(bool wasSelected);
 	virtual void onDeselected();
 
 	void drawBeatmapBackgroundThumbnail(Graphics *g, Image *image);
+	void drawGrade(Graphics *g);
 	void drawTitle(Graphics *g, float deselectedAlpha = 1.0f);
 	void drawSubTitle(Graphics *g, float deselectedAlpha = 1.0f);
 
 	void checkLoadUnloadImage();
+
+	float calculateGradeScale();
+	float calculateGradeWidth();
 
 	UString buildTitleString()
 	{
@@ -63,12 +69,16 @@ protected:
 	UString m_sTitle;
 	UString m_sArtist;
 	UString m_sMapper;
+	OsuScore::GRADE m_grade;
+	bool m_bHasGrade;
 
 	float m_fTextOffset;
+	float m_fGradeOffset;
 	float m_fTextSpacingScale;
 	float m_fTextMarginScale;
 	float m_fTitleScale;
 	float m_fSubTitleScale;
+	float m_fGradeScale;
 
 private:
 	static float thumbnailYRatio;

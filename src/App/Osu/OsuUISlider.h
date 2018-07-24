@@ -16,7 +16,6 @@ class OsuUISlider : public CBaseUISlider
 {
 public:
 	OsuUISlider(Osu *osu, float xPos, float yPos, float xSize, float ySize, UString name);
-	virtual ~OsuUISlider() {;}
 
 	virtual void draw(Graphics *g);
 

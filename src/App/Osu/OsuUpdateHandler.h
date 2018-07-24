@@ -33,6 +33,7 @@ public:
 public:
 	OsuUpdateHandler();
 	virtual ~OsuUpdateHandler();
+
 	void stop(); // tells the update thread to stop at the next cancellation point
 	void wait(); // blocks until the update thread is finished
 

@@ -33,11 +33,14 @@ public:
 	Vector2 getSizeBase(); // default assumed size scaled to the current resolution. this is the base resolution which is used for all scaling calculations (to allow skins to overscale or underscale objects)
 	Vector2 getSizeBaseRaw(); // default assumed size UNSCALED. that means that e.g. hitcircles will return either 128x128 or 256x256 depending on the @2x flag in the filename
 
-	inline int getNumImages() {return m_images.size();}
-	inline float getFrameDuration() {return m_fFrameDuration;}
-	inline unsigned int getFrameNumber() {return m_iFrameCounter;}
+	inline int getNumImages() const {return m_images.size();}
+	inline float getFrameDuration() const {return m_fFrameDuration;}
+	inline unsigned int getFrameNumber() const {return m_iFrameCounter;}
+	inline bool isMissingTexture() const {return m_bIsMissingTexture;}
 
 private:
+	static ConVar *m_osu_skin_mipmaps_ref;
+
 	struct IMAGE
 	{
 		Image *img;
@@ -69,6 +72,7 @@ private:
 
 	// raw files
 	std::vector<IMAGE> m_images;
+	bool m_bIsMissingTexture;
 };
 
 #endif

@@ -17,10 +17,8 @@
 
 ConVar osu_tooltip_anim_duration("osu_tooltip_anim_duration", 0.4f);
 
-OsuTooltipOverlay::OsuTooltipOverlay(Osu *osu) : OsuScreen()
+OsuTooltipOverlay::OsuTooltipOverlay(Osu *osu) : OsuScreen(osu)
 {
-	m_osu = osu;
-
 	m_fAnim = 0.0f;
 	m_bDelayFadeout = false;
 }

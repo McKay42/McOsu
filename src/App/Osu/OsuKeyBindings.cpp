@@ -23,6 +23,7 @@ ConVar OsuKeyBindings::DECREASE_LOCAL_OFFSET("osu_key_decrease_local_offset", (i
 
 ConVar OsuKeyBindings::GAME_PAUSE("osu_key_game_pause", (int)KEY_ESCAPE);
 ConVar OsuKeyBindings::SKIP_CUTSCENE("osu_key_skip_cutscene", (int)KEY_SPACE);
+ConVar OsuKeyBindings::TOGGLE_SCOREBOARD("osu_key_toggle_scoreboard", (int)KEY_TAB);
 ConVar OsuKeyBindings::SEEK_TIME("osu_key_seek_time", (int)KEY_SHIFT);
 ConVar OsuKeyBindings::QUICK_RETRY("osu_key_quick_retry", (int)KEY_BACKSPACE);
 ConVar OsuKeyBindings::QUICK_SAVE("osu_key_quick_save", (int)KEY_F6);

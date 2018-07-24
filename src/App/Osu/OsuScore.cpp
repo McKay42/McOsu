@@ -11,6 +11,7 @@
 #include "ConVar.h"
 
 #include "Osu.h"
+#include "OsuMultiplayer.h"
 #include "OsuBeatmap.h"
 #include "OsuBeatmapStandard.h"
 #include "OsuBeatmapDifficulty.h"
@@ -34,11 +35,17 @@ OsuScore::OsuScore(Osu *osu)
 
 void OsuScore::reset()
 {
+	m_hitresults = std::vector<HIT>();
+	m_hitdeltas = std::vector<int>();
+
+	m_grade = OsuScore::GRADE::GRADE_N;
+
 	m_fStarsTomTotal = 0.0f;
 	m_fStarsTomAim = 0.0f;
 	m_fStarsTomSpeed = 0.0f;
 	m_fPPv2 = 0.0f;
-	m_grade = OsuScore::GRADE::GRADE_N;
+	m_iIndex = -1;
+
 	m_iScoreV1 = 0;
 	m_iScoreV2 = 0;
 	m_iScoreV2ComboPortion = 0;
@@ -50,6 +57,7 @@ void OsuScore::reset()
 	m_fHitErrorAvgMin = 0.0f;
 	m_fHitErrorAvgMax = 0.0f;
 	m_fUnstableRate = 0.0f;
+
 	m_iNumMisses = 0;
 	m_iNumSliderBreaks = 0;
 	m_iNum50s = 0;
@@ -57,8 +65,11 @@ void OsuScore::reset()
 	m_iNum100ks = 0;
 	m_iNum300s = 0;
 	m_iNum300gs = 0;
-	m_hitresults = std::vector<HIT>();
-	m_hitdeltas = std::vector<int>();
+
+	m_bDead = false;
+	m_bDied = false;
+
+	onScoreChange();
 }
 
 void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignoreOnHitErrorBar, bool hitErrorBarOnly, bool ignoreCombo, bool ignoreScore)
@@ -264,12 +275,16 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignor
 		else
 			m_fPPv2 = 0.0f;
 	}
+
+	onScoreChange();
 }
 
 void OsuScore::addSliderBreak()
 {
 	m_iCombo = 0;
 	m_iNumSliderBreaks++;
+
+	onScoreChange();
 }
 
 void OsuScore::addPoints(int points, bool isSpinner)
@@ -278,9 +293,66 @@ void OsuScore::addPoints(int points, bool isSpinner)
 
 	if (isSpinner)
 		m_iBonusPoints += points; // only used for scorev2 calculation currently
+
+	onScoreChange();
+}
+
+void OsuScore::setDead(bool dead)
+{
+	if (m_bDead == dead) return;
+
+	m_bDead = dead;
+
+	if (m_bDead)
+		m_bDied = true;
+
+	onScoreChange();
 }
 
 unsigned long long OsuScore::getScore()
 {
 	return m_osu->getModScorev2() ? m_iScoreV2 : m_iScoreV1;
+}
+
+void OsuScore::onScoreChange()
+{
+	if (m_osu->getMultiplayer() != NULL)
+		m_osu->getMultiplayer()->onClientScoreChange(getCombo(), getAccuracy(), getScore(), isDead());
+}
+
+float OsuScore::calculateAccuracy(int num300s, int num100s, int num50s, int numMisses)
+{
+	const float totalHitPoints = num50s*(1.0f/6.0f)+ num100s*(2.0f/6.0f) + num300s;
+	const float totalNumHits = numMisses + num50s + num100s + num300s;
+
+	if (totalNumHits > 0.0f)
+		return (totalHitPoints / totalNumHits);
+	return 0.0f;
+}
+
+OsuScore::GRADE OsuScore::calculateGrade(int num300s, int num100s, int num50s, int numMisses, bool modHidden, bool modFlashlight)
+{
+	const float totalNumHits = numMisses + num50s + num100s + num300s;
+
+	float percent300s = 0.0f;
+	float percent50s = 0.0f;
+	if (totalNumHits > 0.0f)
+	{
+		percent300s = num300s / totalNumHits;
+		percent50s = num50s / totalNumHits;
+	}
+
+	GRADE grade = OsuScore::GRADE::GRADE_D;
+	if (percent300s > 0.6f)
+		grade = OsuScore::GRADE::GRADE_C;
+	if ((percent300s > 0.7f && numMisses == 0) || (percent300s > 0.8f))
+		grade = OsuScore::GRADE::GRADE_B;
+	if ((percent300s > 0.8f && numMisses == 0) || (percent300s > 0.9f))
+		grade = OsuScore::GRADE::GRADE_A;
+	if (percent300s > 0.9f && percent50s <= 0.01f && numMisses == 0)
+		grade = ((modHidden || modFlashlight) ? OsuScore::GRADE::GRADE_SH : OsuScore::GRADE::GRADE_S);
+	if (numMisses == 0 && num50s == 0 && num100s == 0)
+		grade = ((modHidden || modFlashlight) ? OsuScore::GRADE::GRADE_XH : OsuScore::GRADE::GRADE_X);
+
+	return grade;
 }
