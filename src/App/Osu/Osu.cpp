@@ -41,6 +41,7 @@
 #include "OsuPauseMenu.h"
 #include "OsuScore.h"
 #include "OsuSkin.h"
+#include "OsuIcons.h"
 #include "OsuHUD.h"
 #include "OsuVRTutorial.h"
 #include "OsuChangelog.h"
@@ -61,7 +62,7 @@ void DUMMY_OSU_MODS(void) {;}
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 28.98f);
+ConVar osu_version("osu_version", 29.0f);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr");
 #else
@@ -98,6 +99,7 @@ ConVar osu_mod_endless("osu_mod_endless", false);
 ConVar osu_letterboxing("osu_letterboxing", true, DUMMY_OSU_LETTERBOXING);
 ConVar osu_resolution("osu_resolution", "1280x720", DUMMY_OSU_VOLUME_MUSIC_ARGS);
 ConVar osu_resolution_enabled("osu_resolution_enabled", false);
+ConVar osu_force_legacy_slider_renderer("osu_force_legacy_slider_renderer", false, "on some older machines, this may be faster than vertexbuffers");
 
 ConVar osu_draw_fps("osu_draw_fps", true);
 ConVar osu_hide_cursor_during_gameplay("osu_hide_cursor_during_gameplay", false);
@@ -114,6 +116,7 @@ Osu::Osu()
 	// convar refs
 	m_osu_folder_ref = convar->getConVarByName("osu_folder");
 	m_osu_draw_hud_ref = convar->getConVarByName("osu_draw_hud");
+	m_osu_draw_scoreboard = convar->getConVarByName("osu_draw_scoreboard");
 	m_osu_mod_fps_ref = convar->getConVarByName("osu_mod_fps");
 	m_osu_mod_minimize_ref = convar->getConVarByName("osu_mod_minimize");
 	m_osu_mod_wobble_ref = convar->getConVarByName("osu_mod_wobble");
@@ -124,20 +127,51 @@ Osu::Osu()
 	m_osu_draw_cursor_trail_ref = convar->getConVarByName("osu_draw_cursor_trail");
 	m_osu_volume_effects_ref = convar->getConVarByName("osu_volume_effects");
 	m_osu_mod_mafham_ref = convar->getConVarByName("osu_mod_mafham");
+	m_snd_change_check_interval_ref = convar->getConVarByName("snd_change_check_interval");
+
+	// experimental mods list
+	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_wobble"));
+	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_arwobble"));
+	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_timewarp"));
+	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_artimewarp"));
+	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_minimize"));
+	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_fadingcursor"));
+	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_fps"));
+	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_jigsaw1"));
+	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_jigsaw2"));
+	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_fullalternate"));
+	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_random"));
+	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_no50s"));
+	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_no100s"));
+	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_ming3012"));
+	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_millhioref"));
+	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_mafham"));
+	m_experimentalMods.push_back(convar->getConVarByName("osu_playfield_mirror_horizontal"));
+	m_experimentalMods.push_back(convar->getConVarByName("osu_playfield_mirror_vertical"));
+
+	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_wobble2"));
+	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_shirone"));
 
 	// engine settings/overrides
+	engine->getSound()->setOnOutputDeviceChange([this] {onAudioOutputDeviceChange();});
 	openvr->setDrawCallback( fastdelegate::MakeDelegate(this, &Osu::drawVR) );
 	if (openvr->isReady()) // automatically enable VR mode if it was compiled with OpenVR support and is available
 		osu_vr.setValue(1.0f);
+
 	env->setWindowTitle("McOsu");
 	env->setCursorVisible(false);
+
 	engine->getConsoleBox()->setRequireShiftToActivate(true);
 	engine->getSound()->setVolume(osu_volume_master.getFloat());
 	engine->getMouse()->addListener(this);
+
 	convar->getConVarByName("name")->setValue("Guest");
 	convar->getConVarByName("console_overlay")->setValue(0.0f);
 	convar->getConVarByName("vsync")->setValue(0.0f);
 	convar->getConVarByName("fps_max")->setValue(420.0f);
+	m_snd_change_check_interval_ref->setDefaultFloat(0.5f);
+	m_snd_change_check_interval_ref->setValue(m_snd_change_check_interval_ref->getDefaultFloat());
+
 	osu_resolution.setValue(UString::format("%ix%i", engine->getScreenWidth(), engine->getScreenHeight()));
 
 	// VR specific settings
@@ -196,6 +230,7 @@ Osu::Osu()
 
 	m_bF1 = false;
 	m_bUIToggleCheck = false;
+	m_bScoreboardToggleCheck = false;
 	m_bTab = false;
 	m_bEscape = false;
 	m_bKeyboardKey1Down = false;
@@ -212,6 +247,7 @@ Osu::Osu()
 	m_bToggleModSelectionScheduled = false;
 	m_bToggleSongBrowserScheduled = false;
 	m_bToggleOptionsMenuScheduled = false;
+	m_bOptionsMenuFullscreen = true;
 	m_bToggleRankingScreenScheduled = false;
 	m_bToggleVRTutorialScheduled = false;
 	m_bToggleChangelogScheduled = false;
@@ -240,6 +276,7 @@ Osu::Osu()
 	m_gamemode = GAMEMODE::STD;
 	m_bScheduleEndlessModNextBeatmap = false;
 	m_iMultiplayerClientNumEscPresses = 0;
+	m_bIsInVRDraw = false;
 
 	// debug
 	m_windowManager = new CWindowManager();
@@ -272,6 +309,16 @@ Osu::Osu()
 	m_subTitleFont = engine->getResourceManager()->loadFont("SourceSansPro-Semibold.otf", "FONT_OSU_SUBTITLE", 21.0f);
 	m_songBrowserFont = engine->getResourceManager()->loadFont("SourceSansPro-Regular.otf", "FONT_OSU_SONGBROWSER", 35.0f);
 	m_songBrowserFontBold = engine->getResourceManager()->loadFont("SourceSansPro-Bold.otf", "FONT_OSU_SONGBROWSER_BOLD", 30.0f);
+	m_fontIcons = engine->getResourceManager()->loadFont("fontawesome-webfont.ttf", "FONT_OSU_ICONS", OsuIcons::icons, 26.0f);
+
+	float averageIconHeight = 0.0f;
+	for (int i=0; i<OsuIcons::icons.size(); i++)
+	{
+		float height = m_fontIcons->getStringHeight(UString::format("%C", OsuIcons::icons[i]));
+		if (height > averageIconHeight)
+			averageIconHeight = height;
+	}
+	m_fontIcons->setHeight(averageIconHeight);
 
 	// load skin
 	UString skinFolder = m_osu_folder_ref->getString();
@@ -298,12 +345,12 @@ Osu::Osu()
 
 	// the order in this vector will define in which order events are handled/consumed
 	m_screens.push_back(m_notificationOverlay);
+	m_screens.push_back(m_optionsMenu);
 	m_screens.push_back(m_rankingScreen);
 	m_screens.push_back(m_modSelector);
 	m_screens.push_back(m_pauseMenu);
 	m_screens.push_back(m_hud);
 	m_screens.push_back(m_songBrowser2);
-	m_screens.push_back(m_optionsMenu);
 	m_screens.push_back(m_vrTutorial);
 	m_screens.push_back(m_changelog);
 	m_screens.push_back(m_editor);
@@ -319,12 +366,14 @@ Osu::Osu()
 	//m_changelog->setVisible(true);
 	//m_editor->setVisible(true);
 
+
 	if (isInVRMode() && osu_vr_tutorial.getBool())
 		m_vrTutorial->setVisible(true);
 	else
 		m_mainMenu->setVisible(true);
 
 	m_updateHandler->checkForUpdates();
+
 
 	/*
 	// DEBUG: immediately start diff of a beatmap
@@ -391,13 +440,14 @@ Osu::~Osu()
 
 	for (int i=0; i<m_screens.size(); i++)
 	{
+		debugLog("%i\n", i);
 		SAFE_DELETE(m_screens[i]);
 	}
 
-	SAFE_DELETE(m_skin);
 	SAFE_DELETE(m_score);
 	SAFE_DELETE(m_vr);
 	SAFE_DELETE(m_multiplayer);
+	SAFE_DELETE(m_skin);
 }
 
 void Osu::draw(Graphics *g)
@@ -443,6 +493,7 @@ void Osu::draw(Graphics *g)
 
 		m_pauseMenu->draw(g);
 		m_modSelector->draw(g);
+		m_optionsMenu->draw(g);
 
 		if (osu_draw_fps.getBool())
 			m_hud->drawFps(g);
@@ -454,17 +505,11 @@ void Osu::draw(Graphics *g)
 		if (!(m_bModAuto || m_bModAutopilot) && allowDrawCursor && (!isInVRMode() || (m_vr->isVirtualCursorOnScreen() || engine->hasFocus())))
 			m_hud->drawCursor(g, beatmapStd != NULL ? beatmapStd->getCursorPos() : engine->getMouse()->getPos(), osu_mod_fadingcursor.getBool() ? fadingCursorAlpha : 1.0f);
 
-		// draw VR cursors for spectators
+		// draw projected VR cursors for spectators
 		if (isInVRMode() && isInPlayMode() && !getSelectedBeatmap()->isPaused() && beatmapStd != NULL)
 		{
-			// HACKHACK: temp disable until i fix it
-			float prevValue = m_osu_draw_cursor_trail_ref->getFloat();
-			m_osu_draw_cursor_trail_ref->setValue(0.0f);
-
-			m_hud->drawCursor(g, beatmapStd->osuCoords2RawPixels(m_vr->getCursorPos1() + Vector2(OsuGameRules::OSU_COORD_WIDTH/2, OsuGameRules::OSU_COORD_HEIGHT/2)), 1.0f);
-			m_hud->drawCursor(g, beatmapStd->osuCoords2RawPixels(m_vr->getCursorPos2() + Vector2(OsuGameRules::OSU_COORD_WIDTH/2, OsuGameRules::OSU_COORD_HEIGHT/2)), 1.0f);
-
-			m_osu_draw_cursor_trail_ref->setValue(prevValue);
+			m_hud->drawCursorSpectator1(g, beatmapStd->osuCoords2RawPixels(m_vr->getCursorPos1() + Vector2(OsuGameRules::OSU_COORD_WIDTH/2, OsuGameRules::OSU_COORD_HEIGHT/2)), 1.0f);
+			m_hud->drawCursorSpectator2(g, beatmapStd->osuCoords2RawPixels(m_vr->getCursorPos2() + Vector2(OsuGameRules::OSU_COORD_WIDTH/2, OsuGameRules::OSU_COORD_HEIGHT/2)), 1.0f);
 		}
 	}
 	else // if we are not playing
@@ -477,10 +522,11 @@ void Osu::draw(Graphics *g)
 		m_vrTutorial->draw(g);
 		m_changelog->draw(g);
 		m_editor->draw(g);
-		m_optionsMenu->draw(g);
 		m_rankingScreen->draw(g);
+		m_optionsMenu->draw(g);
 
-		m_hud->drawPlayerList(g);
+		if (isInMultiplayer())
+			m_hud->drawScoreBoardMP(g);
 
 		if (osu_draw_fps.getBool())
 			m_hud->drawFps(g);
@@ -520,6 +566,8 @@ void Osu::draw(Graphics *g)
 
 void Osu::drawVR(Graphics *g)
 {
+	m_bIsInVRDraw = true;
+
 	Matrix4 mvp = openvr->getCurrentModelViewProjectionMatrix();
 
 	// draw virtual screen + environment
@@ -538,6 +586,8 @@ void Osu::drawVR(Graphics *g)
 
 		m_vr->drawVRPlayfieldDummy(g, mvp);
 	}
+
+	m_bIsInVRDraw = false;
 }
 
 void Osu::update()
@@ -563,7 +613,7 @@ void Osu::update()
 		getSelectedBeatmap()->update();
 
 		// scrubbing/seeking
-		if ((engine->getKeyboard()->isControlDown() && engine->getKeyboard()->isAltDown()) || m_bSeekKey)
+		if (m_bSeekKey)
 		{
 			if (!isInMultiplayer() || m_multiplayer->isServer())
 			{
@@ -639,6 +689,9 @@ void Osu::update()
 		if (m_songBrowser2 != NULL)
 			m_songBrowser2->setVisible(!m_songBrowser2->isVisible());
 
+		if (m_mainMenu->isVisible() && m_optionsMenu->isVisible())
+			m_optionsMenu->setVisible(false);
+
 		m_mainMenu->setVisible(!(m_songBrowser2 != NULL && m_songBrowser2->isVisible()));
 		updateConfineCursor();
 	}
@@ -646,8 +699,13 @@ void Osu::update()
 	{
 		m_bToggleOptionsMenuScheduled = false;
 
+		const bool fullscreen = (isInVRMode() ? m_bOptionsMenuFullscreen : false);
+		const bool wasFullscreen = m_optionsMenu->isFullscreen();
+
+		m_optionsMenu->setFullscreen(fullscreen);
 		m_optionsMenu->setVisible(!m_optionsMenu->isVisible());
-		m_mainMenu->setVisible(!m_optionsMenu->isVisible());
+		if (fullscreen || wasFullscreen)
+			m_mainMenu->setVisible(!m_optionsMenu->isVisible());
 	}
 	if (m_bToggleRankingScreenScheduled)
 	{
@@ -699,7 +757,7 @@ void Osu::update()
 
 	// handle mousewheel volume change
 	if ((m_songBrowser2 != NULL && (!m_songBrowser2->isVisible() || engine->getKeyboard()->isAltDown() || m_hud->isVolumeOverlayBusy()))
-			&& !m_optionsMenu->isVisible()
+			&& (!m_optionsMenu->isVisible() || !m_optionsMenu->isMouseInside() || engine->getKeyboard()->isAltDown())
 			&& !m_vrTutorial->isVisible()
 			&& !m_changelog->isVisible()
 			&& (!m_modSelector->isMouseInScrollView() || engine->getKeyboard()->isAltDown()))
@@ -798,7 +856,7 @@ void Osu::onKeyDown(KeyboardEvent &key)
 		key.consume();
 	}
 
-	// reload skin
+	// reload skin (alt)
 	if (engine->getKeyboard()->isAltDown() && engine->getKeyboard()->isControlDown() && key == KEY_S)
 	{
 		onSkinReload();
@@ -844,7 +902,7 @@ void Osu::onKeyDown(KeyboardEvent &key)
 	// local hotkeys
 
 	// while playing
-	if (isInPlayMode())
+	if (isInPlayMode() && !m_optionsMenu->isVisible())
 	{
 		// while playing and not paused
 		if (!getSelectedBeatmap()->isPaused())
@@ -890,6 +948,13 @@ void Osu::onKeyDown(KeyboardEvent &key)
 
 					key.consume();
 				}
+			}
+			if (key == (KEYCODE)OsuKeyBindings::TOGGLE_SCOREBOARD.getInt() && !m_bScoreboardToggleCheck)
+			{
+				m_bScoreboardToggleCheck = true;
+				m_osu_draw_scoreboard->setValue(!m_osu_draw_scoreboard->getBool());
+
+				key.consume();
 			}
 
 			// allow live mod changing while playing
@@ -1064,6 +1129,8 @@ void Osu::onKeyUp(KeyboardEvent &key)
 		m_bEscape = false;
 	if (key == KEY_SHIFT)
 		m_bUIToggleCheck = false;
+	if (key == (KEYCODE)OsuKeyBindings::TOGGLE_SCOREBOARD.getInt())
+		m_bScoreboardToggleCheck = false;
 	if (key == KEY_TAB)
 	{
 		m_bTab = false;
@@ -1134,6 +1201,7 @@ void Osu::toggleSongBrowser()
 void Osu::toggleOptionsMenu()
 {
 	m_bToggleOptionsMenuScheduled = true;
+	m_bOptionsMenuFullscreen = m_mainMenu->isVisible();
 }
 
 void Osu::toggleRankingScreen()
@@ -1175,6 +1243,17 @@ void Osu::onVolumeChange(int multiplier)
 	m_hud->animateVolumeChange();
 }
 
+void Osu::onAudioOutputDeviceChange()
+{
+	if (getSelectedBeatmap() != NULL && getSelectedBeatmap()->getMusic() != NULL)
+	{
+		getSelectedBeatmap()->getMusic()->reload();
+		getSelectedBeatmap()->select();
+	}
+
+	reloadSkin();
+}
+
 void Osu::saveScreenshot()
 {
 	engine->getSound()->play(m_skin->getShutter());
@@ -1211,6 +1290,8 @@ void Osu::onPlayStart()
 {
 	debugLog("Osu::onPlayStart()\n");
 
+	m_snd_change_check_interval_ref->setValue(0.0f);
+
 	if (m_bModAuto || m_bModAutopilot)
 	{
 		env->setCursorVisible(true);
@@ -1218,7 +1299,7 @@ void Osu::onPlayStart()
 	}
 
 	if (getSelectedBeatmap()->getSelectedDifficulty()->localoffset != 0)
-		m_notificationOverlay->addNotification(UString::format("Using local beatmap offset (%ld ms)", getSelectedBeatmap()->getSelectedDifficulty()->localoffset));
+		m_notificationOverlay->addNotification(UString::format("Using local beatmap offset (%ld ms)", getSelectedBeatmap()->getSelectedDifficulty()->localoffset), 0xffffffff, false, 0.75f);
 
 	m_fQuickSaveTime = 0.0f; // reset
 
@@ -1228,6 +1309,8 @@ void Osu::onPlayStart()
 void Osu::onPlayEnd(bool quit)
 {
 	debugLog("Osu::onPlayEnd()\n");
+
+	m_snd_change_check_interval_ref->setValue(m_snd_change_check_interval_ref->getDefaultFloat());
 
 	if (!quit)
 	{
@@ -1242,6 +1325,7 @@ void Osu::onPlayEnd(bool quit)
 
 			m_rankingScreen->setScore(m_score);
 			m_rankingScreen->setBeatmapInfo(getSelectedBeatmap(), getSelectedBeatmap()->getSelectedDifficulty());
+
 			engine->getSound()->play(m_skin->getApplause());
 		}
 		else
@@ -1377,7 +1461,7 @@ bool Osu::isNotInPlayModeOrPaused()
 
 bool Osu::isInVRMode()
 {
-	return osu_vr.getBool() && openvr->isReady();
+	return (osu_vr.getBool() && openvr->isReady());
 }
 
 bool Osu::isInMultiplayer()
@@ -1387,7 +1471,12 @@ bool Osu::isInMultiplayer()
 
 bool Osu::shouldFallBackToLegacySliderRenderer()
 {
-	return m_osu_mod_wobble_ref->getBool() || m_osu_mod_wobble2_ref->getBool() || m_osu_mod_minimize_ref->getBool() || m_modSelector->isCSOverrideSliderActive()/* || (m_osu_playfield_rotation->getFloat() < -0.01f || m_osu_playfield_rotation->getFloat() > 0.01f)*/;
+	return osu_force_legacy_slider_renderer.getBool()
+			|| m_osu_mod_wobble_ref->getBool()
+			|| m_osu_mod_wobble2_ref->getBool()
+			|| m_osu_mod_minimize_ref->getBool()
+			|| m_modSelector->isCSOverrideSliderActive()
+			/* || (m_osu_playfield_rotation->getFloat() < -0.01f || m_osu_playfield_rotation->getFloat() > 0.01f)*/;
 }
 
 
@@ -1538,7 +1627,10 @@ void Osu::onFocusLost()
 bool Osu::onShutdown()
 {
 	debugLog("Osu::onShutdown()\n");
+
+	// save everything
 	m_optionsMenu->save();
+	m_songBrowser2->getDatabase()->save();
 
 	// the only time where a shutdown could be problematic is while an update is being installed, so we block it here
 	return m_updateHandler == NULL || m_updateHandler->getStatus() != OsuUpdateHandler::STATUS::STATUS_INSTALLING_UPDATE;

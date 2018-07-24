@@ -39,8 +39,6 @@ public:
 	void unloadBackgroundImage();
 	void loadBackgroundImagePath();
 
-	void generateUUIDFromMetadata();
-
 	inline unsigned long long getSortHack() const {return m_iSortHack;}
 	inline bool shouldBackgroundImageBeLoaded() const {return m_bShouldBackgroundImageBeLoaded;}
 	bool isBackgroundLoaderActive();
@@ -123,7 +121,7 @@ public:
 	UString name; // difficulty name ("Version")
 	UString source;
 	UString tags;
-	UString md5hash;
+	std::string md5hash;
 	long beatmapId;
 
 	float AR;
@@ -157,7 +155,6 @@ public:
 	float starsNoMod;
 	int ID;
 	int setID;
-	unsigned char uuid[16];
 
 	// timing (points) + breaks
 	struct TIMING_INFO

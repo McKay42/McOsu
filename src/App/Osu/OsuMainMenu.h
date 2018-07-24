@@ -32,7 +32,7 @@ public:
 	friend class OsuMainMenuButton;
 
 	OsuMainMenu(Osu *osu);
-	~OsuMainMenu();
+	virtual ~OsuMainMenu();
 
 	void draw(Graphics *g);
 	void update();
@@ -75,8 +75,6 @@ private:
 	void onUpdatePressed();
 	void onGithubPressed();
 	void onVersionPressed();
-
-	Osu *m_osu;
 
 	float m_fUpdateStatusTime;
 	float m_fUpdateButtonTextTime;

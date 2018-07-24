@@ -27,8 +27,11 @@
 #include "OsuSkin.h"
 #include "OsuSkinImage.h"
 #include "OsuGameRules.h"
+#include "OsuDatabase.h"
+#include "OsuSongBrowser2.h"
 #include "OsuNotificationOverlay.h"
 #include "OsuBeatmapDifficulty.h"
+#include "OsuReplay.h"
 
 #include "OsuHitObject.h"
 #include "OsuCircle.h"
@@ -36,6 +39,8 @@
 #include "OsuSpinner.h"
 
 #include "OpenGLHeaders.h"
+
+#include <chrono>
 
 ConVar osu_draw_followpoints("osu_draw_followpoints", true);
 ConVar osu_draw_reverse_order("osu_draw_reverse_order", false);
@@ -211,6 +216,20 @@ void OsuBeatmapStandard::draw(Graphics *g)
 		g->translate((int)(m_osu->getScreenWidth()/2 - m_osu->getSubTitleFont()->getStringWidth(loadingMessage2)/2), m_osu->getScreenHeight() - 15);
 		g->drawString(m_osu->getSubTitleFont(), loadingMessage2);
 		g->popTransform();
+	}
+	else if (m_osu->isInMultiplayer() && m_osu->getMultiplayer()->isWaitingForPlayers())
+	{
+		if (!m_bIsPreLoading && !isLoadingStarCache()) // usability
+		{
+			g->setColor(0x44ffffff);
+			UString loadingMessage = "Waiting for players ...";
+			g->pushTransform();
+			{
+				g->translate((int)(m_osu->getScreenWidth()/2 - m_osu->getSubTitleFont()->getStringWidth(loadingMessage)/2), m_osu->getScreenHeight() - m_osu->getSubTitleFont()->getHeight() - 15);
+				g->drawString(m_osu->getSubTitleFont(), loadingMessage);
+			}
+			g->popTransform();
+		}
 	}
 
 	if (isLoading()) return; // only start drawing the rest of the playfield if everything has loaded
@@ -500,6 +519,22 @@ void OsuBeatmapStandard::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 							m_hitobjectsSortedByEndTime[i]->drawVR(g, mvp, vr);
 						}
 					}
+					if (OsuHitObject::m_osu_vr_draw_approach_circles->getBool() && OsuHitObject::m_osu_vr_approach_circles_on_top->getBool())
+					{
+						for (int i=0; i<m_hitobjectsSortedByEndTime.size(); i++)
+						{
+							// PVS optimization
+							if (usePVS)
+							{
+								if (m_hitobjectsSortedByEndTime[i]->isFinished() && (curPos - pvs > m_hitobjectsSortedByEndTime[i]->getTime() + m_hitobjectsSortedByEndTime[i]->getDuration())) // past objects
+									continue;
+								if (m_hitobjectsSortedByEndTime[i]->getTime() > curPos + pvs) // future objects
+									break;
+							}
+
+							m_hitobjectsSortedByEndTime[i]->drawVR2(g, mvp, vr);
+						}
+					}
 				}
 				vr->getShaderTexturedLegacyGeneric()->disable();
 				g->setDepthBuffer(true);
@@ -699,6 +734,16 @@ void OsuBeatmapStandard::update()
 		}
 	}
 
+	// notify all other players (including ourself) once we've finished loading
+	if (m_osu->isInMultiplayer())
+	{
+		if (!isLoadingInt()) // if local loading has finished
+		{
+			if (m_osu->getMultiplayer()->isWaitingForClient()) // if we are still in the waiting state
+				m_osu->getMultiplayer()->onClientStatusUpdate(false, false);
+		}
+	}
+
 	if (isLoading()) return; // only continue if we have loaded everything
 
 	// update auto (after having updated the hitobjects)
@@ -831,7 +876,7 @@ void OsuBeatmapStandard::onModUpdate(bool rebuildSliderVertexBuffers)
 
 bool OsuBeatmapStandard::isLoading()
 {
-	return OsuBeatmap::isLoading() || m_bIsPreLoading || isLoadingStarCache();
+	return (isLoadingInt() || (m_osu->isInMultiplayer() && m_osu->getMultiplayer()->isWaitingForPlayers()));
 }
 
 Vector2 OsuBeatmapStandard::osuCoords2Pixels(Vector2 coords)
@@ -1130,29 +1175,108 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 	// kill any running star cache loader
 	stopStarCacheLoader();
 
-	if (!quit) // only calculate pp if the ranking screen will be shown
+	if (!quit) // if the ranking screen is going to be shown
 	{
+		// calculate final pp
 		debugLog("OsuBeatmapStandard::onBeforeStop() calculating pp ...\n");
 		double aim = 0.0;
 		double speed = 0.0;
-		double totalStars = m_selectedDifficulty->calculateStarDiff(this, &aim, &speed);
+		const double totalStars = m_selectedDifficulty->calculateStarDiff(this, &aim, &speed);
 		m_fAimStars = (float)aim;
 		m_fSpeedStars = (float)speed;
 
-		int numHitObjects = m_hitobjects.size();
-		int numCircles = m_selectedDifficulty->hitcircles.size();
-		int maxPossibleCombo = m_selectedDifficulty->getMaxCombo();
-		int highestCombo = m_osu->getScore()->getComboMax();
-		int numMisses = m_osu->getScore()->getNumMisses();
-		int num300s = m_osu->getScore()->getNum300s();
-		int num100s = m_osu->getScore()->getNum100s();
-		int num50s = m_osu->getScore()->getNum50s();
-		float pp = m_selectedDifficulty->calculatePPv2(m_osu, this, aim, speed, numHitObjects, numCircles, maxPossibleCombo, highestCombo, numMisses, num300s, num100s, num50s);
+		const int numHitObjects = m_hitobjects.size();
+		const int numCircles = m_selectedDifficulty->hitcircles.size();
+		const int maxPossibleCombo = m_selectedDifficulty->getMaxCombo();
+		const int highestCombo = m_osu->getScore()->getComboMax();
+		const int numMisses = m_osu->getScore()->getNumMisses();
+		const int num300s = m_osu->getScore()->getNum300s();
+		const int num100s = m_osu->getScore()->getNum100s();
+		const int num50s = m_osu->getScore()->getNum50s();
+		const float pp = m_selectedDifficulty->calculatePPv2(m_osu, this, aim, speed, numHitObjects, numCircles, maxPossibleCombo, highestCombo, numMisses, num300s, num100s, num50s);
 		m_osu->getScore()->setStarsTomTotal(totalStars);
 		m_osu->getScore()->setStarsTomAim(m_fAimStars);
 		m_osu->getScore()->setStarsTomSpeed(m_fSpeedStars);
 		m_osu->getScore()->setPPv2(pp);
 		debugLog("OsuBeatmapStandard::onBeforeStop() done.\n");
+
+		// save local score, but only under certain conditions
+		const bool isComplete = (num300s + num100s + num50s + numMisses >= numHitObjects);
+		const bool isZero = (m_osu->getScore()->getScore() < 1);
+		const bool isUnranked = (m_osu->getModAuto() || (m_osu->getModAutopilot() && m_osu->getModRelax()));
+		int scoreIndex = -1;
+		if (isComplete && !isZero && !isUnranked && !m_osu->getScore()->hasDied())
+		{
+			const int scoreVersion = 20180722;
+
+			debugLog("OsuBeatmapStandard::onBeforeStop() saving score ...\n");
+			{
+				OsuDatabase::Score score;
+
+				score.isLegacyScore = false;
+				score.version = scoreVersion;
+				score.unixTimestamp = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
+				// default
+				score.playerName = convar->getConVarByName("name")->getString();
+
+				score.num300s = m_osu->getScore()->getNum300s();
+				score.num100s = m_osu->getScore()->getNum100s();
+				score.num50s = m_osu->getScore()->getNum50s();
+				score.numGekis = m_osu->getScore()->getNum300gs();
+				score.numKatus = m_osu->getScore()->getNum100ks();
+				score.numMisses = m_osu->getScore()->getNumMisses();
+				score.score = m_osu->getScore()->getScore();
+				score.comboMax = m_osu->getScore()->getComboMax();
+				score.modsLegacy = 0;
+				score.modsLegacy |= (m_osu->getModAuto() ? OsuReplay::Mods::Autoplay : 0);
+				score.modsLegacy |= (m_osu->getModAutopilot() ? OsuReplay::Mods::Relax2 : 0);
+				score.modsLegacy |= (m_osu->getModRelax() ? OsuReplay::Mods::Relax : 0);
+				score.modsLegacy |= (m_osu->getModSpunout() ? OsuReplay::Mods::SpunOut : 0);
+				score.modsLegacy |= (m_osu->getModTarget() ? OsuReplay::Mods::Target : 0);
+				score.modsLegacy |= (m_osu->getModScorev2() ? OsuReplay::Mods::ScoreV2 : 0);
+				score.modsLegacy |= (m_osu->getModDT() ? OsuReplay::Mods::DoubleTime : 0);
+				score.modsLegacy |= (m_osu->getModNC() ? OsuReplay::Mods::Nightcore : 0);
+				score.modsLegacy |= (m_osu->getModNF() ? OsuReplay::Mods::NoFail : 0);
+				score.modsLegacy |= (m_osu->getModHT() ? OsuReplay::Mods::HalfTime : 0);
+				score.modsLegacy |= (m_osu->getModDC() ? OsuReplay::Mods::HalfTime : 0);
+				score.modsLegacy |= (m_osu->getModHD() ? OsuReplay::Mods::Hidden : 0);
+				score.modsLegacy |= (m_osu->getModHR() ? OsuReplay::Mods::HardRock : 0);
+				score.modsLegacy |= (m_osu->getModEZ() ? OsuReplay::Mods::Easy : 0);
+				score.modsLegacy |= (m_osu->getModSD() ? OsuReplay::Mods::SuddenDeath : 0);
+				score.modsLegacy |= (m_osu->getModSS() ? OsuReplay::Mods::Perfect : 0);
+				score.modsLegacy |= (m_osu->getModNM() ? OsuReplay::Mods::Nightmare : 0);
+
+				// custom
+				score.numSliderBreaks = m_osu->getScore()->getNumSliderBreaks();
+				score.pp = pp;
+				score.unstableRate = m_osu->getScore()->getUnstableRate();
+				score.hitErrorAvgMin = m_osu->getScore()->getHitErrorAvgMin();
+				score.hitErrorAvgMax = m_osu->getScore()->getHitErrorAvgMax();
+				score.starsTomTotal = totalStars;
+				score.starsTomAim = aim;
+				score.starsTomSpeed = speed;
+				score.speedMultiplier = m_osu->getSpeedMultiplier();
+				score.CS = getCS();
+				score.AR = getAR();
+				score.OD = getOD();
+				score.HP = getHP();
+				std::vector<ConVar*> allExperimentalMods = m_osu->getExperimentalMods();
+				for (int i=0; i<allExperimentalMods.size(); i++)
+				{
+					if (allExperimentalMods[i]->getBool())
+					{
+						score.experimentalModsConVars.append(allExperimentalMods[i]->getName());
+						score.experimentalModsConVars.append(";");
+					}
+				}
+
+				// save it
+				scoreIndex = m_osu->getSongBrowser()->getDatabase()->addScore(m_selectedDifficulty->md5hash, score);
+			}
+			debugLog("OsuBeatmapStandard::onBeforeStop() done.\n");
+		}
+		m_osu->getScore()->setIndex(scoreIndex);
 	}
 }
 
@@ -1594,4 +1718,9 @@ void OsuBeatmapStandard::stopStarCacheLoader()
 bool OsuBeatmapStandard::isLoadingStarCache()
 {
 	return m_osu_draw_statistics_pp->getBool() && m_osu_pp_live_type->getInt() == 2 && !m_starCacheLoader->isReady();
+}
+
+bool OsuBeatmapStandard::isLoadingInt()
+{
+	return OsuBeatmap::isLoading() || m_bIsPreLoading || isLoadingStarCache();
 }

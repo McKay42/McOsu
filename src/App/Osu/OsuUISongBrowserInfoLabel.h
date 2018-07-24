@@ -8,7 +8,7 @@
 #ifndef OSUUISONGBROWSERINFOLABEL_H
 #define OSUUISONGBROWSERINFOLABEL_H
 
-#include "CBaseUIElement.h"
+#include "CBaseUIButton.h"
 
 class McFont;
 
@@ -16,7 +16,7 @@ class Osu;
 class OsuBeatmap;
 class OsuBeatmapDifficulty;
 
-class OsuUISongBrowserInfoLabel : public CBaseUIElement
+class OsuUISongBrowserInfoLabel : public CBaseUIButton
 {
 public:
 	OsuUISongBrowserInfoLabel(Osu *osu, float xPos, float yPos, float xSize, float ySize, UString name);
@@ -48,7 +48,7 @@ public:
 	float getMinimumHeight();
 
 private:
-	virtual void onMouseUpInside();
+	virtual void onClicked();
 
 	UString buildTitleString();
 	UString buildSubTitleString();

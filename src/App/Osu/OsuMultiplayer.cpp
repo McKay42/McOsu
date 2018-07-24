@@ -27,7 +27,8 @@ ConVar osu_mp_freemod("osu_mp_freemod", false);
 ConVar osu_mp_freemod_all("osu_mp_freemod_all", true, "allow everything, or only standard osu mods");
 ConVar osu_mp_win_condition_accuracy("osu_mp_win_condition_accuracy", false);
 ConVar osu_mp_allow_client_beatmap_select("osu_mp_sv_allow_client_beatmap_select", true);
-ConVar osu_mp_clientcommand("osu_mp_clientcommand");
+ConVar osu_mp_broadcastcommand("osu_mp_broadcastcommand");
+ConVar osu_mp_clientcastcommand("osu_mp_clientcastcommand");
 
 unsigned long long OsuMultiplayer::sortHackCounter = 0;
 
@@ -47,7 +48,8 @@ OsuMultiplayer::OsuMultiplayer(Osu *osu)
 	engine->getNetworkHandler()->setOnLocalServerStoppedListener( fastdelegate::MakeDelegate(this, &OsuMultiplayer::onLocalServerStopped) );
 
 	// convar callbacks
-	osu_mp_clientcommand.setCallback( fastdelegate::MakeDelegate(this, &OsuMultiplayer::onClientCommand) );
+	osu_mp_broadcastcommand.setCallback( fastdelegate::MakeDelegate(this, &OsuMultiplayer::onBroadcastCommand) );
+	osu_mp_clientcastcommand.setCallback( fastdelegate::MakeDelegate(this, &OsuMultiplayer::onClientcastCommand) );
 
 	/*
 	PLAYER ply;
@@ -99,7 +101,7 @@ bool OsuMultiplayer::onClientReceiveInt(unsigned int id, void *data, size_t size
 				if (m_clientPlayers[i].id == pp->id)
 				{
 					exists = true;
-					if (!pp->connected) // player connect
+					if (!pp->connected) // player disconnect
 					{
 						m_clientPlayers.erase(m_clientPlayers.begin() + i);
 
@@ -112,12 +114,13 @@ bool OsuMultiplayer::onClientReceiveInt(unsigned int id, void *data, size_t size
 				}
 			}
 
-			if (!exists) // player disconnect
+			if (!exists) // player connect
 			{
 				PLAYER ply;
 				ply.id = pp->id;
 				ply.name = UString(pp->name).substr(0, pp->size);
 				ply.missingBeatmap = false;
+				ply.waiting = true;
 				ply.combo = 0;
 				ply.accuracy = 0.0f;
 				ply.score = 0;
@@ -146,6 +149,7 @@ bool OsuMultiplayer::onClientReceiveInt(unsigned int id, void *data, size_t size
 				{
 					// player state update
 					m_clientPlayers[i].missingBeatmap = pp->missingBeatmap;
+					m_clientPlayers[i].waiting = pp->waiting;
 					break;
 				}
 			}
@@ -186,10 +190,10 @@ bool OsuMultiplayer::onClientReceiveInt(unsigned int id, void *data, size_t size
 					for (int d=0; d<beatmap->getDifficultiesPointer()->size(); d++)
 					{
 						OsuBeatmapDifficulty *diff = (*beatmap->getDifficultiesPointer())[d];
-						bool uuidMatches = true;
-						for (int u=0; u<16; u++)
+						bool uuidMatches = (diff->md5hash.length() > 0);
+						for (int u=0; u<32 && u<diff->md5hash.length(); u++)
 						{
-							if (diff->uuid[u] != pp->beatmapUUID[u])
+							if (diff->md5hash[u] != pp->beatmapMD5Hash[u])
 							{
 								uuidMatches = false;
 								break;
@@ -208,7 +212,7 @@ bool OsuMultiplayer::onClientReceiveInt(unsigned int id, void *data, size_t size
 
 				if (!found)
 				{
-					m_osu->getNotificationOverlay()->addNotification("Missing Beatmap!", 0xffff0000);
+					m_osu->getNotificationOverlay()->addNotification((pp->beatmapId > 0 ? "Missing beatmap! -> ^^^ Click top left corner ^^^" : "Missing Beatmap!"), 0xffff0000);
 					m_osu->getSongBrowser()->getInfoLabel()->setFromMissingBeatmap(pp->beatmapId);
 				}
 
@@ -226,10 +230,10 @@ bool OsuMultiplayer::onClientReceiveInt(unsigned int id, void *data, size_t size
 					OsuBeatmapDifficulty *diff = m_osu->getSelectedBeatmap()->getSelectedDifficulty();
 					if (diff != NULL)
 					{
-						bool uuidMatches = true;
-						for (int u=0; u<16; u++)
+						bool uuidMatches = (diff->md5hash.length() > 0);
+						for (int u=0; u<32 && u<diff->md5hash.length(); u++)
 						{
-							if (diff->uuid[u] != pp->beatmapUUID[u])
+							if (diff->md5hash[u] != pp->beatmapMD5Hash[u])
 							{
 								uuidMatches = false;
 								break;
@@ -432,6 +436,7 @@ void OsuMultiplayer::onServerClientChange(unsigned int id, UString name, bool co
 		ply.id = id;
 		ply.name = name;
 		ply.missingBeatmap = false;
+		ply.waiting = true;
 		ply.combo = 0;
 		ply.accuracy = 0.0f;
 		ply.score = 0;
@@ -454,13 +459,14 @@ void OsuMultiplayer::onLocalServerStopped()
 	m_osu->getNotificationOverlay()->addNotification("Server stopped.", 0xffcccccc);
 }
 
-void OsuMultiplayer::onClientStatusUpdate(bool missingBeatmap)
+void OsuMultiplayer::onClientStatusUpdate(bool missingBeatmap, bool waiting)
 {
 	if (!engine->getNetworkHandler()->isClient()) return;
 
 	PLAYER_STATE_PACKET pp;
 	pp.id = engine->getNetworkHandler()->getLocalClientID();
 	pp.missingBeatmap = missingBeatmap;
+	pp.waiting = (waiting && !missingBeatmap); // only wait if we actually have the beatmap
 	size_t size = sizeof(PLAYER_STATE_PACKET);
 
 	PACKET_TYPE wrap = PLAYER_STATE_TYPE;
@@ -511,9 +517,12 @@ bool OsuMultiplayer::onClientPlayStateChangeRequestBeatmap(OsuBeatmap *beatmap)
 	pp.state = SELECT;
 	pp.seekMS = 0;
 	pp.quickRestart = false;
-	for (int i=0; i<16; i++)
+	for (int i=0; i<32; i++)
 	{
-		pp.beatmapUUID[i] = beatmap->getSelectedDifficulty()->uuid[i];
+		if (i < beatmap->getSelectedDifficulty()->md5hash.length())
+			pp.beatmapMD5Hash[i] = beatmap->getSelectedDifficulty()->md5hash[i];
+		else
+			pp.beatmapMD5Hash[i] = 0;
 	}
 	pp.beatmapId = beatmap->getSelectedDifficulty()->beatmapId;
 	size_t size = sizeof(GAME_STATE_PACKET);
@@ -569,24 +578,11 @@ void OsuMultiplayer::onServerModUpdate()
 		simpleModConVars.push_back("osu_speed_override");
 
 		// experimental mods
-		simpleModConVars.push_back("osu_mod_wobble");
-		simpleModConVars.push_back("osu_mod_arwobble");
-		simpleModConVars.push_back("osu_mod_timewarp");
-		simpleModConVars.push_back("osu_mod_artimewarp");
-		simpleModConVars.push_back("osu_mod_minimize");
-		simpleModConVars.push_back("osu_mod_fadingcursor");
-		simpleModConVars.push_back("osu_mod_fps");
-		simpleModConVars.push_back("osu_mod_jigsaw1");
-		simpleModConVars.push_back("osu_mod_jigsaw2");
-		simpleModConVars.push_back("osu_mod_fullalternate");
-		simpleModConVars.push_back("osu_mod_random");
-		simpleModConVars.push_back("osu_mod_no50s");
-		simpleModConVars.push_back("osu_mod_no100s");
-		simpleModConVars.push_back("osu_mod_ming3012");
-		simpleModConVars.push_back("osu_mod_millhioref");
-		simpleModConVars.push_back("osu_mod_mafham");
-		simpleModConVars.push_back("osu_playfield_mirror_horizontal");
-		simpleModConVars.push_back("osu_playfield_mirror_vertical");
+		std::vector<ConVar*> experimentalMods = m_osu->getExperimentalMods();
+		for (int i=0; i<experimentalMods.size(); i++)
+		{
+			simpleModConVars.push_back(experimentalMods[i]->getName());
+		}
 
 		// drain
 		simpleModConVars.push_back("osu_drain_enabled");
@@ -608,7 +604,7 @@ void OsuMultiplayer::onServerModUpdate()
 		string.append(";");
 	}
 
-	onClientCommandInt(string, true);
+	onClientCommandInt(string, false);
 }
 
 void OsuMultiplayer::onServerPlayStateChange(OsuMultiplayer::STATE state, unsigned long seekMS, bool quickRestart, OsuBeatmap *beatmap)
@@ -624,9 +620,12 @@ void OsuMultiplayer::onServerPlayStateChange(OsuMultiplayer::STATE state, unsign
 	pp.state = state;
 	pp.seekMS = seekMS;
 	pp.quickRestart = quickRestart;
-	for (int i=0; i<16; i++)
+	for (int i=0; i<32; i++)
 	{
-		pp.beatmapUUID[i] = (isBeatmapAndDiffValid ? beatmap->getSelectedDifficulty()->uuid[i] : 0);
+		if (isBeatmapAndDiffValid && i < beatmap->getSelectedDifficulty()->md5hash.length())
+			pp.beatmapMD5Hash[i] = beatmap->getSelectedDifficulty()->md5hash[i];
+		else
+			pp.beatmapMD5Hash[i] = 0;
 	}
 	pp.beatmapId = (isBeatmapAndDiffValid ? beatmap->getSelectedDifficulty()->beatmapId : 0);
 	size_t size = sizeof(GAME_STATE_PACKET);
@@ -653,17 +652,42 @@ bool OsuMultiplayer::isInMultiplayer()
 	return engine->getNetworkHandler()->isClient() || engine->getNetworkHandler()->isServer();
 }
 
-void OsuMultiplayer::onClientCommand(UString command)
+bool OsuMultiplayer::isWaitingForPlayers()
+{
+	for (int i=0; i<m_clientPlayers.size(); i++)
+	{
+		if (m_clientPlayers[i].waiting)
+			return true;
+	}
+	return false;
+}
+
+bool OsuMultiplayer::isWaitingForClient()
+{
+	for (int i=0; i<m_clientPlayers.size(); i++)
+	{
+		if (m_clientPlayers[i].id == engine->getNetworkHandler()->getLocalClientID())
+			return m_clientPlayers[i].waiting;
+	}
+	return false;
+}
+
+void OsuMultiplayer::onBroadcastCommand(UString command)
 {
 	onClientCommandInt(command, false);
 }
 
-void OsuMultiplayer::onClientCommandInt(UString string, bool fromModUpdate)
+void OsuMultiplayer::onClientcastCommand(UString command)
+{
+	onClientCommandInt(command, true);
+}
+
+void OsuMultiplayer::onClientCommandInt(UString string, bool executeLocallyToo)
 {
 	if (!engine->getNetworkHandler()->isServer() || string.length() < 1) return;
 
 	// execute locally on server
-	if (!fromModUpdate)
+	if (executeLocallyToo)
 		Console::processCommand(string);
 
 	// WARNING: hardcoded max length (1024)

@@ -17,11 +17,10 @@
 
 ConVar osu_notification_duration("osu_notification_duration", 1.25f);
 
-OsuNotificationOverlay::OsuNotificationOverlay(Osu *osu) : OsuScreen()
+OsuNotificationOverlay::OsuNotificationOverlay(Osu *osu) : OsuScreen(osu)
 {
-	m_osu = osu;
-
 	m_bWaitForKey = false;
+	m_bConsumeNextChar = false;
 	m_keyListener = NULL;
 }
 
@@ -82,6 +81,7 @@ void OsuNotificationOverlay::onKeyDown(KeyboardEvent &e)
 	{
 		if (m_bWaitForKey)
 			e.consume();
+
 		stopWaitingForKey();
 	}
 
@@ -89,13 +89,13 @@ void OsuNotificationOverlay::onKeyDown(KeyboardEvent &e)
 	if (m_bWaitForKey)
 	{
 		/*
-		float prevDuration = osu_notification_duration.getFloat(); // this is a bit shitty
+		float prevDuration = osu_notification_duration.getFloat();
 		osu_notification_duration.setValue(0.85f);
 		addNotification(UString::format("The new key is (ASCII Keycode): %lu", e.getKeyCode()));
 		osu_notification_duration.setValue(prevDuration); // restore convar
 		*/
 
-		m_bWaitForKey = false;
+		stopWaitingForKey();
 
 		if (m_keyListener != NULL)
 			m_keyListener->onKey(e);
@@ -117,10 +117,10 @@ void OsuNotificationOverlay::onKeyUp(KeyboardEvent &e)
 
 void OsuNotificationOverlay::onChar(KeyboardEvent &e)
 {
-	if (!isVisible()) return;
-
-	if (m_bWaitForKey)
+	if (m_bWaitForKey || m_bConsumeNextChar)
 		e.consume();
+
+	m_bConsumeNextChar = false;
 }
 
 void OsuNotificationOverlay::addNotification(UString text, Color textColor, bool waitForKey, float duration)
@@ -146,6 +146,7 @@ void OsuNotificationOverlay::addNotification(UString text, Color textColor, bool
 
 	// build new notification
 	m_bWaitForKey = waitForKey;
+	m_bConsumeNextChar = m_bWaitForKey;
 
 	float fadeOutTime = 0.4f;
 

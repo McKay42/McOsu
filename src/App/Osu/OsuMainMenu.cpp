@@ -24,6 +24,7 @@
 #include "OsuBeatmap.h"
 #include "OsuBeatmapDifficulty.h"
 #include "OsuMainMenu.h"
+#include "OsuOptionsMenu.h"
 #include "OsuHUD.h"
 
 #include "OsuUIButton.h"
@@ -162,10 +163,8 @@ private:
 
 
 
-OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen()
+OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen(osu)
 {
-	m_osu = osu;
-
 	if (m_osu->isInVRMode())
 		MCOSU_MAIN_BUTTON_TEXT.append(" VR");
 	if (m_osu->isInVRMode())
@@ -220,7 +219,7 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen()
 
 	addMainMenuButton("Play")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuMainMenu::onPlayButtonPressed) );
 	//addMainMenuButton("Edit")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuMainMenu::onEditButtonPressed) );
-	addMainMenuButton("Options")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuMainMenu::onOptionsButtonPressed) );
+	addMainMenuButton((m_osu->isInVRMode() ? "Options" : "Options (CTRL + O)"))->setClickCallback( fastdelegate::MakeDelegate(this, &OsuMainMenu::onOptionsButtonPressed) );
 	addMainMenuButton("Exit")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuMainMenu::onExitButtonPressed) );
 
 	m_pauseButton = new OsuMainMenuPauseButton(0, 0, 0, 0, "", "");
@@ -265,10 +264,9 @@ OsuMainMenu::~OsuMainMenu()
 
 void OsuMainMenu::draw(Graphics *g)
 {
-	if (!m_bVisible)
-		return;
+	if (!m_bVisible) return;
 
-	McFont *smallFont = m_osu->getSubTitleFont() /*engine->getResourceManager()->getFont("FONT_DEFAULT")*/;
+	McFont *smallFont = m_osu->getSubTitleFont();
 	McFont *titleFont = m_osu->getTitleFont();
 
 	// main button stuff
@@ -515,17 +513,14 @@ void OsuMainMenu::draw(Graphics *g)
 
 void OsuMainMenu::update()
 {
-	if (!m_bVisible)
-		return;
+	if (!m_bVisible) return;
 
 	updateLayout();
 
 	if (m_osu->getHUD()->isVolumeOverlayBusy())
-	{
-		m_mainButton->stealFocus();
 		m_container->stealFocus();
-	}
 
+	// update and focus handling
 	// the main button always gets top focus
 	m_mainButton->update();
 	if (m_mainButton->isMouseInside())
@@ -533,6 +528,9 @@ void OsuMainMenu::update()
 
 	m_container->update();
 	m_updateAvailableButton->update();
+
+	if (m_osu->getOptionsMenu()->isMouseInside())
+		m_container->stealFocus();
 
 	// handle automatic menu closing
 	if (m_fMainMenuButtonCloseTime != 0.0f && engine->getTime() > m_fMainMenuButtonCloseTime)
@@ -619,8 +617,8 @@ void OsuMainMenu::update()
 
 void OsuMainMenu::onKeyDown(KeyboardEvent &e)
 {
-	if (!m_bVisible)
-		return;
+	OsuScreen::onKeyDown(e); // only used for options menu
+	if (!m_bVisible || e.isConsumed()) return;
 
 	if (!m_bMenuElementsVisible)
 	{
@@ -837,7 +835,8 @@ void OsuMainMenu::onEditButtonPressed()
 
 void OsuMainMenu::onOptionsButtonPressed()
 {
-	m_osu->toggleOptionsMenu();
+	if (!m_osu->getOptionsMenu()->isVisible())
+		m_osu->toggleOptionsMenu();
 }
 
 void OsuMainMenu::onExitButtonPressed()

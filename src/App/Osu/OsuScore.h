@@ -48,6 +48,9 @@ public:
 		GRADE_N
 	};
 
+	static float calculateAccuracy(int num300s, int num100s, int num50s, int numMisses);
+	static GRADE calculateGrade(int num300s, int num100s, int num50s, int numMisses, bool modHidden, bool modFlashlight);
+
 public:
 	OsuScore(Osu *osu);
 
@@ -62,11 +65,13 @@ public:
 	void setStarsTomAim(float starsTomAim) {m_fStarsTomAim = starsTomAim;}
 	void setStarsTomSpeed(float starsTomSpeed) {m_fStarsTomSpeed = starsTomSpeed;}
 	void setPPv2(float ppv2) {m_fPPv2 = ppv2;}
+	void setIndex(int index) {m_iIndex = index;}
 
 	inline float getStarsTomTotal() const {return m_fStarsTomTotal;}
 	inline float getStarsTomAim() const {return m_fStarsTomAim;}
 	inline float getStarsTomSpeed() const {return m_fStarsTomSpeed;}
 	inline float getPPv2() const {return m_fPPv2;}
+	inline int getIndex() const {return m_iIndex;}
 
 	unsigned long long getScore();
 	inline GRADE getGrade() const {return m_grade;}
@@ -103,6 +108,7 @@ private:
 	float m_fStarsTomAim;
 	float m_fStarsTomSpeed;
 	float m_fPPv2;
+	int m_iIndex;
 
 	unsigned long long m_iScoreV1;
 	unsigned long long m_iScoreV2;

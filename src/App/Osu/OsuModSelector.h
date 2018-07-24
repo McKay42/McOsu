@@ -91,8 +91,6 @@ private:
 	void resetMods();
 	void close();
 
-	Osu *m_osu;
-
 	float m_fAnimation;
 	float m_fExperimentalAnimation;
 	bool m_bScheduledHide;

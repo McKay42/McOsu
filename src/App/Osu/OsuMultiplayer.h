@@ -33,6 +33,7 @@ public:
 		unsigned int id;
 		UString name;
 		bool missingBeatmap;
+		bool waiting;
 		int combo;
 		float accuracy;
 		unsigned long long score;
@@ -59,7 +60,7 @@ public:
 	void onLocalServerStopped();
 
 	// clientside game events
-	void onClientStatusUpdate(bool missingBeatmap);
+	void onClientStatusUpdate(bool missingBeatmap, bool waiting = true);
 	void onClientScoreChange(int combo, float accuracy, unsigned long long score, bool dead, bool reliable = false);
 	bool onClientPlayStateChangeRequestBeatmap(OsuBeatmap *beatmap);
 
@@ -70,13 +71,17 @@ public:
 	bool isServer();
 	bool isInMultiplayer();
 
-	inline std::vector<PLAYER> &getPlayers() {return m_clientPlayers;}
+	bool isWaitingForPlayers();	// are we waiting for any player
+	bool isWaitingForClient();	// is the waiting state set for the local player
+
+	inline std::vector<PLAYER> *getPlayers() {return &m_clientPlayers;}
 
 private:
 	static unsigned long long sortHackCounter;
 
-	void onClientCommand(UString command);
-	void onClientCommandInt(UString string, bool fromModUpdate);
+	void onClientcastCommand(UString command);
+	void onBroadcastCommand(UString command);
+	void onClientCommandInt(UString string, bool executeLocallyToo);
 
 	enum PACKET_TYPE
 	{
@@ -98,7 +103,8 @@ private:
 	struct PLAYER_STATE_PACKET
 	{
 		unsigned int id;
-		bool missingBeatmap;
+		bool missingBeatmap;	// this is only used visually
+		bool waiting;			// this will block all players until everyone is ready
 	};
 
 	struct CONVAR_PACKET
@@ -112,7 +118,7 @@ private:
 		STATE state;
 		unsigned long seekMS;
 		bool quickRestart;
-		unsigned char beatmapUUID[16];
+		char beatmapMD5Hash[32];
 		long beatmapId;
 	};
 

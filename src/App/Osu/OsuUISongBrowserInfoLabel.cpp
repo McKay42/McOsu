@@ -16,7 +16,7 @@
 #include "OsuBeatmapDifficulty.h"
 #include "OsuNotificationOverlay.h"
 
-OsuUISongBrowserInfoLabel::OsuUISongBrowserInfoLabel(Osu *osu, float xPos, float yPos, float xSize, float ySize, UString name) : CBaseUIElement(xPos, yPos, xSize, ySize, name)
+OsuUISongBrowserInfoLabel::OsuUISongBrowserInfoLabel(Osu *osu, float xPos, float yPos, float xSize, float ySize, UString name) : CBaseUIButton(xPos, yPos, xSize, ySize, name, "")
 {
 	m_osu = osu;
 	m_font = m_osu->getSubTitleFont();
@@ -162,13 +162,14 @@ void OsuUISongBrowserInfoLabel::setFromMissingBeatmap(long beatmapId)
 	setOnlineOffset(0);
 }
 
-void OsuUISongBrowserInfoLabel::onMouseUpInside()
+void OsuUISongBrowserInfoLabel::onClicked()
 {
 	if (m_iBeatmapId > 0)
 	{
 		env->openURLInDefaultBrowser(UString::format("https://osu.ppy.sh/b/%ld", m_iBeatmapId));
 		m_osu->getNotificationOverlay()->addNotification("Opening browser, please wait ...", 0xffffffff, false, 0.75f);
 	}
+	CBaseUIButton::onClicked();
 }
 
 UString OsuUISongBrowserInfoLabel::buildTitleString()

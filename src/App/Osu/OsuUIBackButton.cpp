@@ -76,3 +76,9 @@ void OsuUIBackButton::updateLayout()
 	m_fImageScale = newSize.y / m_osu->getSkin()->getMenuBack2()->getSize().y;
 	setSize(newSize);
 }
+
+void OsuUIBackButton::resetAnimation()
+{
+	anim->deleteExistingAnimation(&m_fAnimation);
+	m_fAnimation = 0.0f;
+}

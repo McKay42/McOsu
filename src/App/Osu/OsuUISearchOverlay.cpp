@@ -45,8 +45,13 @@ void OsuUISearchOverlay::draw(Graphics *g)
 
 	bool hasSearchSubTextVisible = m_sSearchString.length() > 0 && m_bDrawNumResults;
 
+	const int textWidth = searchTextFont->getStringWidth(offsetText)*searchTextScale + (searchTextFont->getHeight()*searchTextScale) + m_iOffsetRight;
 	g->setColor(COLOR(m_sSearchString.length() > 0 ? 100 : 30, 0, 0, 0));
-	g->fillRect(m_vPos.x + m_vSize.x - searchTextFont->getStringWidth(offsetText)*searchTextScale - (searchTextFont->getHeight()*searchTextScale) - m_iOffsetRight, m_vPos.y, m_vSize.x, (searchTextFont->getHeight()*searchTextScale)*(hasSearchSubTextVisible ? 4.0f : 3.0f));
+	g->fillRect(m_vPos.x + m_vSize.x - textWidth, m_vPos.y, textWidth, (searchTextFont->getHeight()*searchTextScale)*(hasSearchSubTextVisible ? 4.0f : 3.0f));
+	/*
+	g->setColor(0xffffff00);
+	g->drawRect(m_vPos.x + m_vSize.x - textWidth, m_vPos.y, textWidth, (searchTextFont->getHeight()*searchTextScale)*(hasSearchSubTextVisible ? 4.0f : 3.0f));
+	*/
 	g->setColor(0xffffffff);
 	g->pushTransform();
 	{

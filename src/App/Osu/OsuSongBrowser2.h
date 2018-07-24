@@ -20,6 +20,7 @@ class OsuUIContextMenu;
 class OsuUISearchOverlay;
 class OsuUISelectionButton;
 class OsuUISongBrowserInfoLabel;
+class OsuUISongBrowserScoreButton;
 class OsuUISongBrowserButton;
 class OsuUISongBrowserSongButton;
 class OsuUISongBrowserCollectionButton;
@@ -35,7 +36,7 @@ class CBaseUILabel;
 class McFont;
 class ConVar;
 
-class OsuSongBrowser2 : public OsuScreenBackable, public MouseListener
+class OsuSongBrowser2 : public OsuScreenBackable
 {
 public:
 	static void drawSelectedBeatmapBackgroundImage(Graphics *g, Osu *osu);
@@ -56,13 +57,6 @@ public:
 	void onKeyUp(KeyboardEvent &e);
 	void onChar(KeyboardEvent &e);
 
-	void onLeftChange(bool down);
-	void onMiddleChange(bool down){;}
-	void onRightChange(bool down);
-
-	void onWheelVertical(int delta){;}
-	void onWheelHorizontal(int delta){;}
-
 	void onResolutionChange(Vector2 newResolution);
 
 	void onPlayEnd(bool quit = true);	// called when a beatmap is finished playing (or the player quit)
@@ -70,6 +64,8 @@ public:
 	void onDifficultySelected(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff, bool play = false, bool mp = false);
 	void onDifficultySelectedMP(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff, bool play = false);
 	void selectBeatmapMP(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff);
+
+	void onScoreContextMenu(OsuUISongBrowserScoreButton *scoreButton, UString text);
 
 	void playNextRandomBeatmap() {selectRandomBeatmap();playSelectedDifficulty();}
 
@@ -122,6 +118,9 @@ private:
 	virtual void updateLayout();
 	virtual void onBack();
 
+	void updateScoreBrowserLayout();
+
+	void rebuildScoreButtons();
 	void scheduleSearchUpdate(bool immediately = false);
 
 	OsuUISelectionButton *addBottombarNavButton();
@@ -144,6 +143,8 @@ private:
 	void onSelectionOptions();
 
 	void onModeChange(UString text);
+
+	void onScoreClicked(CBaseUIButton *button);
 
 	void selectSongButton(OsuUISongBrowserButton *songButton);
 	void selectRandomBeatmap();
@@ -180,6 +181,11 @@ private:
 	CBaseUIContainer *m_bottombar;
 	std::vector<OsuUISelectionButton*> m_bottombarNavButtons;
 
+	// score browser
+	std::vector<OsuUISongBrowserScoreButton*> m_scoreButtonCache;
+	CBaseUIScrollView *m_scoreBrowser;
+	CBaseUIElement *m_scoreBrowserNoRecordsYetElement;
+
 	// song browser
 	CBaseUIScrollView *m_songBrowser;
 
@@ -215,6 +221,7 @@ private:
 	bool m_bInSearch;
 
 	// background star calculation
+	float m_fBackgroundStarCalculationWorkNotificationTime;
 	int m_iBackgroundStarCalculationIndex;
 };
 

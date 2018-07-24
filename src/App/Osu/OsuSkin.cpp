@@ -28,7 +28,8 @@
 void DUMMY_OSU_VOLUME_EFFECTS_ARGS(UString oldValue, UString newValue) {;}
 
 ConVar osu_volume_effects("osu_volume_effects", 1.0f, DUMMY_OSU_VOLUME_EFFECTS_ARGS);
-ConVar osu_skin_hd("osu_skin_hd", true);
+ConVar osu_skin_hd("osu_skin_hd", true, "load and use @2x versions of skin images, if available");
+ConVar osu_skin_mipmaps("osu_skin_mipmaps", false, "generate mipmaps for every skin image (only useful on lower game resolutions, requires more vram)");
 ConVar osu_skin_color_index_add("osu_skin_color_index_add", 0);
 ConVar osu_skin_animation_force("osu_skin_animation_force", false);
 ConVar osu_skin_use_skin_hitsounds("osu_skin_use_skin_hitsounds", true, "If enabled: Use skin's sound samples. If disabled: Use default skin's sound samples. For hitsounds only.");
@@ -376,6 +377,7 @@ void OsuSkin::load()
 	checkLoadImage(&m_playWarningArrow, "play-warningarrow", "OSU_SKIN_PLAYWARNINGARROW");
 	m_playWarningArrow2 = createOsuSkinImage("play-warningarrow", Vector2(167, 129), 128);
 	checkLoadImage(&m_circularmetre, "circularmetre", "OSU_SKIN_CIRCULARMETRE");
+	m_scorebarBg = createOsuSkinImage("scorebar-bg", Vector2(695, 144), 90);
 
 	m_hit0 = createOsuSkinImage("hit0", Vector2(128, 128), 42);
 	m_hit0->setAnimationFramerate(60);
@@ -473,6 +475,7 @@ void OsuSkin::load()
 	checkLoadImage(&m_rankingTitle, "ranking-title", "OSU_SKIN_RANKING_TITLE");
 	checkLoadImage(&m_rankingMaxCombo, "ranking-maxcombo", "OSU_SKIN_RANKING_MAXCOMBO");
 	checkLoadImage(&m_rankingAccuracy, "ranking-accuracy", "OSU_SKIN_RANKING_ACCURACY");
+
 	checkLoadImage(&m_rankingA, "ranking-A", "OSU_SKIN_RANKING_A");
 	checkLoadImage(&m_rankingB, "ranking-B", "OSU_SKIN_RANKING_B");
 	checkLoadImage(&m_rankingC, "ranking-C", "OSU_SKIN_RANKING_C");
@@ -481,6 +484,15 @@ void OsuSkin::load()
 	checkLoadImage(&m_rankingSH, "ranking-SH", "OSU_SKIN_RANKING_SH");
 	checkLoadImage(&m_rankingX, "ranking-X", "OSU_SKIN_RANKING_X");
 	checkLoadImage(&m_rankingXH, "ranking-XH", "OSU_SKIN_RANKING_XH");
+
+	m_rankingAsmall = createOsuSkinImage("ranking-A-small", Vector2(34, 38), 128);
+	m_rankingBsmall = createOsuSkinImage("ranking-B-small", Vector2(33, 38), 128);
+	m_rankingCsmall = createOsuSkinImage("ranking-C-small", Vector2(30, 38), 128);
+	m_rankingDsmall = createOsuSkinImage("ranking-D-small", Vector2(33, 38), 128);
+	m_rankingSsmall = createOsuSkinImage("ranking-S-small", Vector2(31, 38), 128);
+	m_rankingSHsmall = createOsuSkinImage("ranking-SH-small", Vector2(31, 38), 128);
+	m_rankingXsmall = createOsuSkinImage("ranking-X-small", Vector2(34, 40), 128);
+	m_rankingXHsmall = createOsuSkinImage("ranking-XH-small", Vector2(34, 41), 128);
 
 	checkLoadImage(&m_beatmapImportSpinner, "beatmapimport-spinner", "OSU_SKIN_BEATMAP_IMPORT_SPINNER");
 	checkLoadImage(&m_loadingSpinner, "loading-spinner", "OSU_SKIN_LOADING_SPINNER");
@@ -632,7 +644,7 @@ void OsuSkin::load()
 void OsuSkin::loadBeatmapOverride(UString filepath)
 {
 	debugLog("OsuSkin::loadBeatmapOverride( %s )\n", filepath.toUtf8());
-	// TODO:
+	// TODO: beatmap skin support
 }
 
 bool OsuSkin::parseSkinINI(UString filepath)
@@ -875,7 +887,7 @@ OsuSkinImage *OsuSkin::createOsuSkinImage(UString skinElementName, Vector2 baseS
 	return skinImage;
 }
 
-void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, UString resourceName, bool ignoreDefaultSkin, UString fileExtension)
+void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, UString resourceName, bool ignoreDefaultSkin, UString fileExtension, bool forceLoadMipmaps)
 {
 	if (*addressOfPointer != m_missingTexture) return; // we are already loaded
 
@@ -894,7 +906,7 @@ void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, 
 			{
 				UString defaultResourceName = resourceName;
 				defaultResourceName.append("_DEFAULT"); // so we don't load the default skin twice
-				*addressOfPointer = engine->getResourceManager()->loadImageAbs(defaultFilePath, defaultResourceName);
+				*addressOfPointer = engine->getResourceManager()->loadImageAbs(defaultFilePath, defaultResourceName, osu_skin_mipmaps.getBool() || forceLoadMipmaps);
 				///m_resources.push_back(*addressOfPointer); // HACKHACK: also reload default skin
 			}
 		}
@@ -907,7 +919,7 @@ void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, 
 
 		if (env->fileExists(filepath1))
 		{
-			*addressOfPointer = engine->getResourceManager()->loadImageAbs(filepath1, resourceName);
+			*addressOfPointer = engine->getResourceManager()->loadImageAbs(filepath1, resourceName, osu_skin_mipmaps.getBool() || forceLoadMipmaps);
 			m_resources.push_back(*addressOfPointer);
 
 			return; // nothing more to do here
@@ -928,7 +940,7 @@ void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, 
 		{
 			UString defaultResourceName = resourceName;
 			defaultResourceName.append("_DEFAULT"); // so we don't load the default skin twice
-			*addressOfPointer = engine->getResourceManager()->loadImageAbs(defaultFilePath, defaultResourceName);
+			*addressOfPointer = engine->getResourceManager()->loadImageAbs(defaultFilePath, defaultResourceName, osu_skin_mipmaps.getBool() || forceLoadMipmaps);
 			///m_resources.push_back(*addressOfPointer); // HACKHACK: also reload default skin
 		}
 	}
@@ -941,7 +953,7 @@ void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, 
 
 	if (env->fileExists(filepath2))
 	{
-		*addressOfPointer = engine->getResourceManager()->loadImageAbs(filepath2, resourceName);
+		*addressOfPointer = engine->getResourceManager()->loadImageAbs(filepath2, resourceName, osu_skin_mipmaps.getBool() || forceLoadMipmaps);
 		m_resources.push_back(*addressOfPointer);
 	}
 }
