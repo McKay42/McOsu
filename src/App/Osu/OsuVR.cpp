@@ -405,8 +405,7 @@ void OsuVR::drawVR(Graphics *g, Matrix4 &mvp, RenderTarget *screen)
 
 void OsuVR::drawVRBeatmap(Graphics *g, Matrix4 &mvp, OsuBeatmap *beatmap)
 {
-	if (!osu_vr_draw_playfield.getBool())
-		return;
+	if (!osu_vr_draw_playfield.getBool()) return;
 
 	Matrix4 scale;
 	scale.scale(getDrawScale(), -getDrawScale(), getDrawScale());
@@ -421,8 +420,7 @@ void OsuVR::drawVRBeatmap(Graphics *g, Matrix4 &mvp, OsuBeatmap *beatmap)
 
 void OsuVR::drawVRHUD(Graphics *g, Matrix4 &mvp, OsuHUD *hud)
 {
-	if (!osu_vr_draw_playfield.getBool())
-		return;
+	if (!osu_vr_draw_playfield.getBool()) return;
 
 	Matrix4 scale;
 	scale.scale(getDrawScale()*osu_vr_hud_scale.getFloat(), -getDrawScale()*osu_vr_hud_scale.getFloat(), getDrawScale()*osu_vr_hud_scale.getFloat());
@@ -492,24 +490,20 @@ void OsuVR::drawVRPlayfieldDummy(Graphics *g, Matrix4 &mvp)
 
 void OsuVR::drawVRCursors(Graphics *g, Matrix4 &mvp)
 {
-	// HACKHACK: temp disable until i fix it
-	float prevValue = m_osu_draw_cursor_trail_ref->getFloat();
-	m_osu_draw_cursor_trail_ref->setValue(0.0f);
-
 	m_shaderTexturedLegacyGeneric->enable();
 	{
 		m_shaderTexturedLegacyGeneric->setUniformMatrix4fv("matrix", mvp);
 
 		g->pushTransform();
+		{
 			g->translate(0, 0, 0.8f); // to avoid z-fighting with the border and sliders (slider = 0.5, extra 0.3 for good measure, but can't go above 0.999f!)
-			m_osu->getHUD()->drawCursor(g, m_vPlayfieldCursorPos1, osu_vr_cursor_alpha.getFloat());
+			m_osu->getHUD()->drawCursorVR1(g, mvp, m_vPlayfieldCursorPos1, osu_vr_cursor_alpha.getFloat());
 			g->translate(0, 0, 0.9f); // to avoid z-fighting with the first cursor
-			m_osu->getHUD()->drawCursor(g, m_vPlayfieldCursorPos2, osu_vr_cursor_alpha.getFloat());
+			m_osu->getHUD()->drawCursorVR2(g, mvp, m_vPlayfieldCursorPos2, osu_vr_cursor_alpha.getFloat());
+		}
 		g->popTransform();
 	}
 	m_shaderTexturedLegacyGeneric->disable();
-
-	m_osu_draw_cursor_trail_ref->setValue(prevValue);
 }
 
 void OsuVR::update()
@@ -518,7 +512,7 @@ void OsuVR::update()
 	OpenVRController *rightController = openvr->getRightController();
 	OpenVRController *leftController = openvr->getLeftController();
 
-	// calculate virtual screen plane and cursor pos
+	// calculate virtual screen plane and cursor pos, and set it
 	float virtualScreenPlaneIntersectionDistance = 0.0f;
 	{
 		Vector4 topLeft = m_screenMatrix * Vector4(0, 0, 0, 1);
@@ -548,6 +542,8 @@ void OsuVR::update()
 			{
 				m_bDrawLaser = true;
 				m_bScreenIntersection = true;
+
+				// force new mouse pos
 				engine->getMouse()->onPosChange(newMousePos);
 			}
 			else
@@ -557,8 +553,8 @@ void OsuVR::update()
 				if (m_bScreenIntersection && engine->hasFocus() && env->isCursorInWindow())
 					engine->getMouse()->setPos(engine->getScreenSize() + Vector2(50,50));
 
-				m_bScreenIntersection = false;
 				m_bDrawLaser = false;
+				m_bScreenIntersection = false;
 			}
 		}
 		else

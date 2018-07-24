@@ -16,10 +16,8 @@
 
 #include "OsuUIBackButton.h"
 
-OsuScreenBackable::OsuScreenBackable(Osu *osu) : OsuScreen()
+OsuScreenBackable::OsuScreenBackable(Osu *osu) : OsuScreen(osu)
 {
-	m_osu = osu;
-
 	m_backButton = new OsuUIBackButton(m_osu, -1, 0, 0, 0, "");
 	m_backButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuScreenBackable::onBack) );
 
@@ -47,7 +45,8 @@ void OsuScreenBackable::update()
 
 void OsuScreenBackable::onKeyDown(KeyboardEvent &e)
 {
-	if (!m_bVisible) return;
+	OsuScreen::onKeyDown(e);
+	if (!m_bVisible || e.isConsumed()) return;
 
 	if (e == KEY_ESCAPE || e == (KEYCODE)OsuKeyBindings::GAME_PAUSE.getInt())
 		onBack();
@@ -69,9 +68,13 @@ void OsuScreenBackable::onChar(KeyboardEvent &e)
 	e.consume();
 }
 
+void OsuScreenBackable::stealFocus()
+{
+	m_backButton->stealFocus();
+}
+
 void OsuScreenBackable::updateLayout()
 {
-	// back button
 	m_backButton->updateLayout();
 	m_backButton->setPosY(m_osu->getScreenHeight() - m_backButton->getSize().y);
 }

@@ -24,6 +24,7 @@
 #include "OsuBeatmap.h"
 #include "OsuBeatmapDifficulty.h"
 #include "OsuTooltipOverlay.h"
+#include "OsuOptionsMenu.h"
 #include "OsuKeyBindings.h"
 #include "OsuGameRules.h"
 
@@ -39,10 +40,8 @@
 #include "OsuUICheckbox.h"
 #include "OsuUIModSelectorModButton.h"
 
-OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen()
+OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen(osu)
 {
-	m_osu = osu;
-
 	m_fAnimation = 0.0f;
 	m_fExperimentalAnimation = 0.0f;
 	m_bScheduledHide = false;
@@ -222,18 +221,22 @@ void OsuModSelector::draw(Graphics *g)
 
 		// draw mod grid buttons
 		g->pushTransform();
+		{
 			g->translate(0, (1.0f - m_fAnimation)*modGridButtonsSize.y);
 			g->setColor(backgroundColor);
 			g->fillRect(modGridButtonsStart.x - margin, modGridButtonsStart.y - margin, modGridButtonsSize.x + 2*margin, modGridButtonsSize.y + 2*margin);
 			m_container->draw(g);
+		}
 		g->popTransform();
 
 		// draw override sliders
 		g->pushTransform();
+		{
 			g->translate(0, -(1.0f - m_fAnimation)*overrideSlidersSize.y);
 			g->setColor(backgroundColor);
 			g->fillRect(overrideSlidersStart.x - margin, 0, overrideSlidersSize.x + 2*margin, overrideSlidersSize.y + margin);
 			m_overrideSliderContainer->draw(g);
+		}
 		g->popTransform();
 	}
 	else // normal mode, just draw everything
@@ -266,10 +269,12 @@ void OsuModSelector::draw(Graphics *g)
 
 	// draw experimental mods
 	g->pushTransform();
+	{
 		g->translate(-(m_experimentalContainer->getSize().x + 2.0f)*(1.0f - m_fExperimentalAnimation), 0);
 		g->setColor(backgroundColor);
 		g->fillRect(m_experimentalContainer->getPos().x - margin, m_experimentalContainer->getPos().y - margin, m_experimentalContainer->getSize().x + 2*margin*m_fExperimentalAnimation, m_experimentalContainer->getSize().y + 2*margin);
 		m_experimentalContainer->draw(g);
+	}
 	g->popTransform();
 }
 
@@ -293,6 +298,13 @@ void OsuModSelector::update()
 		return;
 	}
 
+	if (m_osu->getHUD()->isVolumeOverlayBusy() || m_osu->getOptionsMenu()->isMouseInside())
+	{
+		m_container->stealFocus();
+		m_overrideSliderContainer->stealFocus();
+		m_experimentalContainer->stealFocus();
+	}
+
 	// update experimental mods, they take focus precedence over everything else
 	if (m_bExperimentalVisible)
 	{
@@ -307,9 +319,6 @@ void OsuModSelector::update()
 	}
 	else
 		m_experimentalContainer->stealFocus();
-
-	if (m_osu->getHUD()->isVolumeOverlayBusy())
-		m_container->stealFocus();
 
 	// update
 	m_container->update();
@@ -368,8 +377,8 @@ void OsuModSelector::update()
 
 void OsuModSelector::onKeyDown(KeyboardEvent &key)
 {
-	if (!m_bVisible)
-		return;
+	OsuScreen::onKeyDown(key); // only used for options menu
+	if (!m_bVisible || key.isConsumed()) return;
 
 	m_overrideSliderContainer->onKeyDown(key);
 

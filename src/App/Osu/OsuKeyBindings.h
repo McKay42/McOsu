@@ -27,6 +27,7 @@ public:
 
 	static ConVar GAME_PAUSE;
 	static ConVar SKIP_CUTSCENE;
+	static ConVar TOGGLE_SCOREBOARD;
 	static ConVar SEEK_TIME;
 	static ConVar QUICK_RETRY;
 	static ConVar QUICK_SAVE;

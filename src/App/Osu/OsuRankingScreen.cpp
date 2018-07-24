@@ -18,16 +18,21 @@
 #include "CBaseUIContainer.h"
 #include "CBaseUIScrollView.h"
 #include "CBaseUIImage.h"
+#include "CBaseUILabel.h"
 
 #include "Osu.h"
 #include "OsuSkin.h"
 #include "OsuSkinImage.h"
+#include "OsuIcons.h"
 #include "OsuScore.h"
 #include "OsuBeatmap.h"
 #include "OsuBeatmapDifficulty.h"
+#include "OsuOptionsMenu.h"
 #include "OsuSongBrowser2.h"
 #include "OsuTooltipOverlay.h"
+#include "OsuModSelector.h"
 #include "OsuGameRules.h"
+#include "OsuReplay.h"
 
 #include "OsuUIRankingScreenInfoLabel.h"
 #include "OsuUIRankingScreenRankingPanel.h"
@@ -36,15 +41,149 @@ ConVar osu_rankingscreen_topbar_height_percent("osu_rankingscreen_topbar_height_
 ConVar osu_rankingscreen_pp("osu_rankingscreen_pp", true);
 ConVar osu_draw_rankingscreen_background_image("osu_draw_rankingscreen_background_image", true);
 
+
+
+class OsuRankingScreenIndexLabel : public CBaseUILabel
+{
+public:
+	OsuRankingScreenIndexLabel() : CBaseUILabel(-1, 0, 0, 0, "", "You achieved the #1 score on local rankings!")
+	{
+		m_bVisible2 = false;
+	}
+
+	virtual void draw(Graphics *g)
+	{
+		if (!m_bVisible || !m_bVisible2) return;
+
+		// draw background gradient
+		const Color topColor = 0xdd634e13;
+		const Color bottomColor = 0xdd785f15;
+		g->fillGradient(m_vPos.x, m_vPos.y, m_vSize.x, m_vSize.y, topColor, topColor, bottomColor, bottomColor);
+
+		// draw ranking index text
+		const float textScale = 0.45f;
+		g->pushTransform();
+		{
+			const float scale = (m_vSize.y / m_fStringHeight)*textScale;
+
+			g->scale(scale, scale);
+			g->translate((int)(m_vPos.x + m_vSize.x/2 - m_fStringWidth*scale/2), (int)(m_vPos.y + m_vSize.y/2 + m_font->getHeight()*scale/2));
+			g->translate(1, 1);
+			g->setColor(0xff000000);
+			g->drawString(m_font, m_sText);
+			g->translate(-1, -1);
+			g->setColor(m_textColor);
+			g->drawString(m_font, m_sText);
+		}
+		g->popTransform();
+	}
+
+	void setVisible2(bool visible2) {m_bVisible2 = visible2;}
+
+	inline bool isVisible2() const {return m_bVisible2;}
+
+private:
+	bool m_bVisible2;
+};
+
+class OsuRankingScreenBottomElement : public CBaseUILabel
+{
+public:
+	OsuRankingScreenBottomElement() : CBaseUILabel(-1, 0, 0, 0, "", "")
+	{
+		m_bVisible2 = false;
+	}
+
+	virtual void draw(Graphics *g)
+	{
+		if (!m_bVisible || !m_bVisible2) return;
+
+		// draw background gradient
+		const Color topColor = 0xdd3a2e0c;
+		const Color bottomColor = 0xdd493a0f;
+		g->fillGradient(m_vPos.x, m_vPos.y, m_vSize.x, m_vSize.y, topColor, topColor, bottomColor, bottomColor);
+	}
+
+	void setVisible2(bool visible2) {m_bVisible2 = visible2;}
+
+	inline bool isVisible2() const {return m_bVisible2;}
+
+private:
+	bool m_bVisible2;
+};
+
+class OsuRankingScreenScrollDownInfoButton : public CBaseUIButton
+{
+public:
+	OsuRankingScreenScrollDownInfoButton() : CBaseUIButton(0, 0, 0, 0, "")
+	{
+		m_bVisible2 = false;
+		m_fAlpha = 1.0f;
+	}
+
+	virtual void draw(Graphics *g)
+	{
+		if (!m_bVisible || !m_bVisible2) return;
+
+		const float textScale = 0.45f;
+		g->pushTransform();
+		{
+			const float scale = (m_vSize.y / m_fStringHeight)*textScale;
+
+			float animation = fmod((float)(engine->getTime()-0.0f)*3.2f, 2.0f);
+			if (animation > 1.0f)
+				animation = 2.0f - animation;
+
+			animation =  -animation*(animation-2); // quad out
+			const float offset = -m_fStringHeight*scale*0.25f + animation*m_fStringHeight*scale*0.25f;
+
+			g->scale(scale, scale);
+			g->translate((int)(m_vPos.x + m_vSize.x/2 - m_fStringWidth*scale/2), (int)(m_vPos.y + m_vSize.y/2 + m_fStringHeight*scale/2 - offset));
+			g->translate(2, 2);
+			g->setColor(0xff000000);
+			g->setAlpha(m_fAlpha);
+			g->drawString(m_font, m_sText);
+			g->translate(-2, -2);
+			g->setColor(0xffffffff);
+			g->setAlpha(m_fAlpha);
+			g->drawString(m_font, m_sText);
+		}
+		g->popTransform();
+
+		/*
+		g->setColor(0xffffffff);
+		g->drawRect(m_vPos.x, m_vPos.y, m_vSize.x, m_vSize.y);
+		*/
+	}
+
+	void setAlpha(float alpha) {m_fAlpha = alpha;}
+
+	void setVisible2(bool visible2) {m_bVisible2 = visible2;}
+
+	inline bool isVisible2() const {return m_bVisible2;}
+
+private:
+	virtual void onMouseDownInside()
+	{
+		CBaseUIButton::onMouseDownInside();
+		onClicked();
+	}
+
+	bool m_bVisible2;
+	float m_fAlpha;
+};
+
+
+
 OsuRankingScreen::OsuRankingScreen(Osu *osu) : OsuScreenBackable(osu)
 {
 	m_container = new CBaseUIContainer(0, 0, 0, 0, "");
-	m_rankings = new CBaseUIScrollView(0, 0, 0, 0, "");
+	m_rankings = new CBaseUIScrollView(-1, 0, 0, 0, "");
 	m_rankings->setHorizontalScrolling(false);
 	m_rankings->setVerticalScrolling(true);
 	m_rankings->setDrawFrame(false);
 	m_rankings->setDrawBackground(false);
-	m_rankings->setDrawScrollbars(false);
+	m_rankings->setDrawScrollbars(true);
 	m_container->addBaseUIElement(m_rankings);
 
 	m_songInfo = new OsuUIRankingScreenInfoLabel(m_osu, 5, 5, 0, 0, "");
@@ -65,7 +204,25 @@ OsuRankingScreen::OsuRankingScreen(Osu *osu) : OsuScreenBackable(osu)
 	m_rankingGrade->setDrawFrame(false);
 	m_rankings->getContainer()->addBaseUIElement(m_rankingGrade);
 
+	m_rankingBottom = new OsuRankingScreenBottomElement();
+	m_rankings->getContainer()->addBaseUIElement(m_rankingBottom);
+
+	m_rankingIndex = new OsuRankingScreenIndexLabel();
+	m_rankingIndex->setDrawFrame(false);
+	m_rankingIndex->setCenterText(true);
+	m_rankingIndex->setFont(m_osu->getSongBrowserFont());
+	m_rankingIndex->setTextColor(0xffffcb21);
+	m_rankings->getContainer()->addBaseUIElement(m_rankingIndex);
+
+	m_rankingScrollDownInfoButton = new OsuRankingScreenScrollDownInfoButton();
+	m_rankingScrollDownInfoButton->setFont(m_osu->getFontIcons());
+	m_rankingScrollDownInfoButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuRankingScreen::onScrollDownClicked) );
+	m_rankingScrollDownInfoButton->setText(UString::format("%C   %C   %C", OsuIcons::ARROW_DOWN, OsuIcons::ARROW_DOWN, OsuIcons::ARROW_DOWN));
+	m_container->addBaseUIElement(m_rankingScrollDownInfoButton);
+	m_fRankingScrollDownInfoButtonAlphaAnim = 1.0f;
+
 	setGrade(OsuScore::GRADE::GRADE_D);
+	setIndex(0); // TEMP
 
 	m_fUnstableRate = 0.0f;
 	m_fHitErrorAvgMin = 0.0f;
@@ -80,6 +237,25 @@ OsuRankingScreen::OsuRankingScreen(Osu *osu) : OsuScreenBackable(osu)
 	m_fAR = 0.0f;
 	m_fOD = 0.0f;
 	m_fHP = 0.0f;
+
+	m_bModSS = false;
+	m_bModSD = false;
+	m_bModEZ = false;
+	m_bModHD = false;
+	m_bModHR = false;
+	m_bModNC = false;
+	m_bModDT = false;
+	m_bModNM = false;
+	m_bModScorev2 = false;
+	m_bModTarget = false;
+	m_bModSpunout = false;
+	m_bModRelax = false;
+	m_bModNF = false;
+	m_bModHT = false;
+	m_bModAutopilot = false;
+	m_bModAuto = false;
+
+	m_bIsLegacyScore = false;
 }
 
 OsuRankingScreen::~OsuRankingScreen()
@@ -99,41 +275,90 @@ void OsuRankingScreen::draw(Graphics *g)
 
 	// draw active mods
 	Vector2 modPos = m_rankingGrade->getPos() + Vector2(m_rankingGrade->getSize().x*0.925f, m_rankingGrade->getSize().y*0.7f);
-	if (m_osu->getModSS())
-		drawModImage(g, m_osu->getSkin()->getSelectionModPerfect(), modPos);
-	else if (m_osu->getModSD())
-		drawModImage(g, m_osu->getSkin()->getSelectionModSuddenDeath(), modPos);
-	if (m_osu->getModEZ())
-		drawModImage(g, m_osu->getSkin()->getSelectionModEasy(), modPos);
-	if (m_osu->getModHD())
-		drawModImage(g, m_osu->getSkin()->getSelectionModHidden(), modPos);
-	if (m_osu->getModHR())
-		drawModImage(g, m_osu->getSkin()->getSelectionModHardRock(), modPos);
-	if (m_osu->getModNC())
-		drawModImage(g, m_osu->getSkin()->getSelectionModNightCore(), modPos);
-	else if (m_osu->getModDT())
-		drawModImage(g, m_osu->getSkin()->getSelectionModDoubleTime(), modPos);
-	if (m_osu->getModNM())
-		drawModImage(g, m_osu->getSkin()->getSelectionModNightmare(), modPos);
-	if (m_osu->getModScorev2())
-		drawModImage(g, m_osu->getSkin()->getSelectionModScorev2(), modPos);
-	if (m_osu->getModTarget())
-		drawModImage(g, m_osu->getSkin()->getSelectionModTarget(), modPos);
-	if (m_osu->getModSpunout())
-		drawModImage(g, m_osu->getSkin()->getSelectionModSpunOut(), modPos);
-	if (m_osu->getModRelax())
-		drawModImage(g, m_osu->getSkin()->getSelectionModRelax(), modPos);
-	if (m_osu->getModNF())
-		drawModImage(g, m_osu->getSkin()->getSelectionModNoFail(), modPos);
-	if (m_osu->getModHT())
-		drawModImage(g, m_osu->getSkin()->getSelectionModHalfTime(), modPos);
-	if (m_osu->getModAutopilot())
-		drawModImage(g, m_osu->getSkin()->getSelectionModAutopilot(), modPos);
-	if (m_osu->getModAuto())
-		drawModImage(g, m_osu->getSkin()->getSelectionModAutoplay(), modPos);
+	Vector2 modPosMax;
+	if (m_bModSS)
+		drawModImage(g, m_osu->getSkin()->getSelectionModPerfect(), modPos, modPosMax);
+	else if (m_bModSD)
+		drawModImage(g, m_osu->getSkin()->getSelectionModSuddenDeath(), modPos, modPosMax);
+	if (m_bModEZ)
+		drawModImage(g, m_osu->getSkin()->getSelectionModEasy(), modPos, modPosMax);
+	if (m_bModHD)
+		drawModImage(g, m_osu->getSkin()->getSelectionModHidden(), modPos, modPosMax);
+	if (m_bModHR)
+		drawModImage(g, m_osu->getSkin()->getSelectionModHardRock(), modPos, modPosMax);
+	if (m_bModNC)
+		drawModImage(g, m_osu->getSkin()->getSelectionModNightCore(), modPos, modPosMax);
+	else if (m_bModDT)
+		drawModImage(g, m_osu->getSkin()->getSelectionModDoubleTime(), modPos, modPosMax);
+	if (m_bModNM)
+		drawModImage(g, m_osu->getSkin()->getSelectionModNightmare(), modPos, modPosMax);
+	if (m_bModScorev2)
+		drawModImage(g, m_osu->getSkin()->getSelectionModScorev2(), modPos, modPosMax);
+	if (m_bModTarget)
+		drawModImage(g, m_osu->getSkin()->getSelectionModTarget(), modPos, modPosMax);
+	if (m_bModSpunout)
+		drawModImage(g, m_osu->getSkin()->getSelectionModSpunOut(), modPos, modPosMax);
+	if (m_bModRelax)
+		drawModImage(g, m_osu->getSkin()->getSelectionModRelax(), modPos, modPosMax);
+	if (m_bModNF)
+		drawModImage(g, m_osu->getSkin()->getSelectionModNoFail(), modPos, modPosMax);
+	if (m_bModHT)
+		drawModImage(g, m_osu->getSkin()->getSelectionModHalfTime(), modPos, modPosMax);
+	if (m_bModAutopilot)
+		drawModImage(g, m_osu->getSkin()->getSelectionModAutopilot(), modPos, modPosMax);
+	if (m_bModAuto)
+		drawModImage(g, m_osu->getSkin()->getSelectionModAutoplay(), modPos, modPosMax);
+
+	// draw experimental mods
+	if (m_enabledExperimentalMods.size() > 0)
+	{
+		McFont *experimentalModFont = m_osu->getSubTitleFont();
+		const UString prefix = "+ ";
+
+		float maxStringWidth = 0.0f;
+		for (int i=0; i<m_enabledExperimentalMods.size(); i++)
+		{
+			UString experimentalModName = m_enabledExperimentalMods[i]->getName();
+			experimentalModName.insert(0, prefix);
+			const float width = experimentalModFont->getStringWidth(experimentalModName);
+			if (width > maxStringWidth)
+				maxStringWidth = width;
+		}
+
+		const float heightMultiplier = 1.25f;
+		const int experimentalModHeight = (experimentalModFont->getHeight() * heightMultiplier);
+		const Vector2 experimentalModPos = Vector2(m_rankingGrade->getPos().x + m_rankingGrade->getSize().x*0.925f - maxStringWidth, std::max(m_rankingGrade->getPos().y + m_rankingGrade->getSize().y*0.85f, modPosMax.y + experimentalModFont->getHeight()*heightMultiplier));
+		const int backgroundMargin = 6;
+		const int backgroundWidth = maxStringWidth + 2*backgroundMargin;
+		const int backgroundHeight = experimentalModHeight*m_enabledExperimentalMods.size() + 2*backgroundMargin;
+
+		// draw background
+		g->setColor(0x77000000);
+		g->fillRect((int)experimentalModPos.x - backgroundMargin, (int)experimentalModPos.y - experimentalModFont->getHeight() - backgroundMargin, backgroundWidth, backgroundHeight);
+
+		// draw mods
+		g->pushTransform();
+		{
+			g->translate((int)experimentalModPos.x, (int)experimentalModPos.y);
+			for (int i=0; i<m_enabledExperimentalMods.size(); i++)
+			{
+				UString experimentalModName = m_enabledExperimentalMods[i]->getName();
+				experimentalModName.insert(0, prefix);
+
+				g->translate(1.5f, 1.5f);
+				g->setColor(0xff000000);
+				g->drawString(experimentalModFont, experimentalModName);
+				g->translate(-1.5f, -1.5f);
+				g->setColor(0xffffffff);
+				g->drawString(experimentalModFont, experimentalModName);
+				g->translate(0, experimentalModHeight);
+			}
+		}
+		g->popTransform();
+	}
 
 	// draw pp
-	if (osu_rankingscreen_pp.getBool())
+	if (osu_rankingscreen_pp.getBool() && !m_bIsLegacyScore)
 	{
 		UString ppString = getPPString();
 		Vector2 ppPos = getPPPosRaw() + m_vPPCursorMagnetAnimation;
@@ -147,6 +372,8 @@ void OsuRankingScreen::draw(Graphics *g)
 		g->popTransform();
 	}
 
+	m_rankingScrollDownInfoButton->draw(g);
+
 	// draw top black bar
 	g->setColor(0xff000000);
 	g->fillRect(0, 0, m_osu->getScreenWidth(), m_rankingTitle->getSize().y*osu_rankingscreen_topbar_height_percent.getFloat());
@@ -157,12 +384,15 @@ void OsuRankingScreen::draw(Graphics *g)
 	OsuScreenBackable::draw(g);
 }
 
-void OsuRankingScreen::drawModImage(Graphics *g, OsuSkinImage *image, Vector2 &pos)
+void OsuRankingScreen::drawModImage(Graphics *g, OsuSkinImage *image, Vector2 &pos, Vector2 &max)
 {
 	g->setColor(0xffffffff);
 	image->draw(g, Vector2(pos.x - image->getSize().x/2.0f, pos.y));
 
 	pos.x -= image->getSize().x/2.0f;
+
+	if (pos.y + image->getSize().y/2 > max.y)
+		max.y = pos.y + image->getSize().y/2;
 }
 
 void OsuRankingScreen::update()
@@ -170,10 +400,21 @@ void OsuRankingScreen::update()
 	OsuScreenBackable::update();
 	if (!m_bVisible) return;
 
+	// HACKHACK:
+	if (m_osu->getOptionsMenu()->isMouseInside())
+		engine->getMouse()->resetWheelDelta();
+
+	// update and focus handling
 	m_container->update();
 
+	if (m_osu->getOptionsMenu()->isMouseInside())
+		stealFocus();
+
+	if (m_osu->getOptionsMenu()->isBusy() || m_backButton->isActive())
+		m_container->stealFocus();
+
 	// tooltip (pp + accuracy + unstable rate)
-	if (m_rankingPanel->isMouseInside())
+	if (m_rankingPanel->isMouseInside() && !m_bIsLegacyScore)
 	{
 		m_osu->getTooltipOverlay()->begin();
 		m_osu->getTooltipOverlay()->addLine(UString::format("%.2fpp", m_fPPv2));
@@ -205,6 +446,13 @@ void OsuRankingScreen::update()
 	Vector2 target = norm*percent*percent*(dist + 50);
 	anim->moveQuadOut(&m_vPPCursorMagnetAnimation.x, target.x, 0.20f, true);
 	anim->moveQuadOut(&m_vPPCursorMagnetAnimation.y, target.y, 0.20f, true);
+
+	// button transparency
+	const float transparencyStart = m_container->getPos().y + m_container->getSize().y;
+	const float transparencyEnd = m_container->getPos().y + m_container->getSize().y + m_rankingIndex->getSize().y/2;
+	const float alpha = clamp<float>((m_rankingIndex->getPos().y + (transparencyEnd - transparencyStart) - transparencyStart)/(transparencyEnd - transparencyStart), 0.0f, 1.0f);
+	anim->moveLinear(&m_fRankingScrollDownInfoButtonAlphaAnim, alpha, 0.075*m_fRankingScrollDownInfoButtonAlphaAnim, true);
+	m_rankingScrollDownInfoButton->setAlpha(m_fRankingScrollDownInfoButtonAlphaAnim);
 }
 
 void OsuRankingScreen::setVisible(bool visible)
@@ -213,7 +461,9 @@ void OsuRankingScreen::setVisible(bool visible)
 
 	if (m_bVisible)
 	{
-		m_rankings->scrollToTop();
+		m_backButton->resetAnimation();
+		m_rankings->scrollToY(0, false);
+
 		updateLayout();
 	}
 }
@@ -222,6 +472,7 @@ void OsuRankingScreen::setScore(OsuScore *score)
 {
 	m_rankingPanel->setScore(score);
 	setGrade(score->getGrade());
+	setIndex(score->getIndex());
 
 	m_fUnstableRate = score->getUnstableRate();
 	m_fHitErrorAvgMin = score->getHitErrorAvgMin();
@@ -230,6 +481,91 @@ void OsuRankingScreen::setScore(OsuScore *score)
 	m_fStarsTomAim = score->getStarsTomAim();
 	m_fStarsTomSpeed = score->getStarsTomSpeed();
 	m_fPPv2 = score->getPPv2();
+
+	m_bModSS = m_osu->getModSS();
+	m_bModSD = m_osu->getModSD();
+	m_bModEZ = m_osu->getModEZ();
+	m_bModHD = m_osu->getModHD();
+	m_bModHR = m_osu->getModHR();
+	m_bModNC = m_osu->getModNC();
+	m_bModDT = m_osu->getModDT();
+	m_bModNM = m_osu->getModNM();
+	m_bModScorev2 = m_osu->getModScorev2();
+	m_bModTarget = m_osu->getModTarget();
+	m_bModSpunout = m_osu->getModSpunout();
+	m_bModRelax = m_osu->getModRelax();
+	m_bModNF = m_osu->getModNF();
+	m_bModHT = m_osu->getModHT();
+	m_bModAutopilot = m_osu->getModAutopilot();
+	m_bModAuto = m_osu->getModAuto();
+
+	m_enabledExperimentalMods.clear();
+	std::vector<ConVar*> allExperimentalMods = m_osu->getExperimentalMods();
+	for (int i=0; i<allExperimentalMods.size(); i++)
+	{
+		if (allExperimentalMods[i]->getBool())
+			m_enabledExperimentalMods.push_back(allExperimentalMods[i]);
+	}
+
+	m_bIsLegacyScore = false;
+}
+
+void OsuRankingScreen::setScore(OsuDatabase::Score score, UString dateTime)
+{
+	m_bIsLegacyScore = score.isLegacyScore;
+
+	m_songInfo->setDate(dateTime);
+	m_songInfo->setPlayer(score.playerName);
+
+	m_rankingPanel->setScore(score);
+	setGrade(OsuScore::calculateGrade(score.num300s, score.num100s, score.num50s, score.numMisses, score.modsLegacy & OsuReplay::Mods::Hidden, score.modsLegacy & OsuReplay::Mods::Flashlight));
+	setIndex(-1);
+
+	m_fUnstableRate = score.unstableRate;
+	m_fHitErrorAvgMin = score.hitErrorAvgMin;
+	m_fHitErrorAvgMax = score.hitErrorAvgMax;
+	m_fStarsTomTotal = score.starsTomTotal;
+	m_fStarsTomAim = score.starsTomAim;
+	m_fStarsTomSpeed = score.starsTomSpeed;
+	m_fPPv2 = score.pp;
+
+	m_fSpeedMultiplier = std::round(score.speedMultiplier * 100.0f) / 100.0f;
+	m_fCS = std::round(score.CS * 100.0f) / 100.0f;
+	m_fAR = std::round(score.AR * 100.0f) / 100.0f;
+	m_fOD = std::round(score.OD * 100.0f) / 100.0f;
+	m_fHP = std::round(score.HP * 100.0f) / 100.0f;
+
+	m_bModSS = score.modsLegacy & OsuReplay::Mods::Perfect;
+	m_bModSD = score.modsLegacy & OsuReplay::Mods::SuddenDeath;
+	m_bModEZ = score.modsLegacy & OsuReplay::Mods::Easy;
+	m_bModHD = score.modsLegacy & OsuReplay::Mods::Hidden;
+	m_bModHR = score.modsLegacy & OsuReplay::Mods::HardRock;
+	m_bModNC = score.modsLegacy & OsuReplay::Mods::Nightcore;
+	m_bModDT = score.modsLegacy & OsuReplay::Mods::DoubleTime;
+	m_bModNM = score.modsLegacy & OsuReplay::Mods::Nightmare;
+	m_bModScorev2 = score.modsLegacy & OsuReplay::Mods::ScoreV2;
+	m_bModTarget = score.modsLegacy & OsuReplay::Mods::Target;
+	m_bModSpunout = score.modsLegacy & OsuReplay::Mods::SpunOut;
+	m_bModRelax = score.modsLegacy & OsuReplay::Mods::Relax;
+	m_bModNF = score.modsLegacy & OsuReplay::Mods::NoFail;
+	m_bModHT = score.modsLegacy & OsuReplay::Mods::HalfTime;
+	m_bModAutopilot = score.modsLegacy & OsuReplay::Mods::Relax2;
+	m_bModAuto = score.modsLegacy & OsuReplay::Mods::Autoplay;
+
+	m_enabledExperimentalMods.clear();
+	if (score.experimentalModsConVars.length() > 0)
+	{
+		std::vector<UString> experimentalMods = score.experimentalModsConVars.split(";");
+		for (int i=0; i<experimentalMods.size(); i++)
+		{
+			if (experimentalMods[i].length() > 0)
+			{
+				ConVar *cvar = convar->getConVarByName(experimentalMods[i], false);
+				if (cvar != NULL)
+					m_enabledExperimentalMods.push_back(cvar);
+			}
+		}
+	}
 }
 
 void OsuRankingScreen::setBeatmapInfo(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff)
@@ -250,26 +586,38 @@ void OsuRankingScreen::updateLayout()
 	OsuScreenBackable::updateLayout();
 
 	m_container->setSize(m_osu->getScreenSize());
-	m_rankings->setSize(m_osu->getScreenSize());
-
-	m_songInfo->setSize(m_osu->getScreenWidth(), m_rankingTitle->getSize().y*osu_rankingscreen_topbar_height_percent.getFloat());
 
 	m_rankingTitle->setImage(m_osu->getSkin()->getRankingTitle());
 	m_rankingTitle->setScale(Osu::getImageScale(m_osu, m_rankingTitle->getImage(), 75.0f), Osu::getImageScale(m_osu, m_rankingTitle->getImage(), 75.0f));
 	m_rankingTitle->setSize(m_rankingTitle->getImage()->getWidth()*m_rankingTitle->getScale().x, m_rankingTitle->getImage()->getHeight()*m_rankingTitle->getScale().y);
 	m_rankingTitle->setRelPos(m_container->getSize().x - m_rankingTitle->getSize().x - m_osu->getUIScale(m_osu, 20.0f), 0);
 
+	m_songInfo->setSize(m_osu->getScreenWidth(), m_rankingTitle->getSize().y*osu_rankingscreen_topbar_height_percent.getFloat());
+
+	m_rankings->setSize(m_osu->getScreenSize().x + 2, m_osu->getScreenSize().y - m_songInfo->getSize().y + 3);
+	m_rankings->setRelPosY(m_songInfo->getSize().y - 1);
+	m_container->update_pos();
+
 	Vector2 hardcodedOsuRankingPanelImageSize = Vector2(622, 505) * (m_osu->getSkin()->isRankingPanel2x() ? 2.0f : 1.0f);
 	m_rankingPanel->setImage(m_osu->getSkin()->getRankingPanel());
 	m_rankingPanel->setScale(Osu::getImageScale(m_osu, hardcodedOsuRankingPanelImageSize, 317.0f), Osu::getImageScale(m_osu, hardcodedOsuRankingPanelImageSize, 317.0f));
 	m_rankingPanel->setSize(m_rankingPanel->getImage()->getWidth()*m_rankingPanel->getScale().x, m_rankingPanel->getImage()->getHeight()*m_rankingPanel->getScale().y);
-	m_rankingPanel->setRelPosY(m_rankingTitle->getSize().y*0.825f);
+
+	m_rankingIndex->setSize(m_rankings->getSize().x + 2, m_osu->getScreenHeight()*0.07f);
+	m_rankingIndex->setBackgroundColor(0xff745e13);
+	m_rankingIndex->setRelPosY(m_rankings->getSize().y + 1);
+
+	m_rankingBottom->setSize(m_rankings->getSize().x + 2, m_osu->getScreenHeight()*0.2f);
+	m_rankingBottom->setRelPosY(m_rankingIndex->getRelPos().y + m_rankingIndex->getSize().y);
+
+	m_rankingScrollDownInfoButton->setSize(m_container->getSize().x*0.2f, m_container->getSize().y*0.1f); // TODO: dynamic size
+	m_rankingScrollDownInfoButton->setRelPos(m_container->getPos().x + m_container->getSize().x/2 - m_rankingScrollDownInfoButton->getSize().x/2, m_container->getSize().y - m_rankingScrollDownInfoButton->getSize().y);
 
 	setGrade(m_grade);
 
 	m_container->update_pos();
 	m_rankings->getContainer()->update_pos();
-	m_rankings->setScrollSizeToContent();
+	m_rankings->setScrollSizeToContent(0);
 }
 
 void OsuRankingScreen::onBack()
@@ -281,6 +629,11 @@ void OsuRankingScreen::onBack()
 		engine->getSound()->stop(m_osu->getSkin()->getApplause());
 
 	m_osu->toggleRankingScreen();
+}
+
+void OsuRankingScreen::onScrollDownClicked()
+{
+	m_rankings->scrollToBottom();
 }
 
 void OsuRankingScreen::setGrade(OsuScore::GRADE grade)
@@ -326,6 +679,23 @@ void OsuRankingScreen::setGrade(OsuScore::GRADE grade)
 	m_rankingGrade->setScale(Osu::getImageScale(m_osu, hardcodedOsuRankingGradeImageSize, 230.0f), Osu::getImageScale(m_osu, hardcodedOsuRankingGradeImageSize, 230.0f));
 	m_rankingGrade->setSize(m_rankingGrade->getImage()->getWidth()*m_rankingGrade->getScale().x, m_rankingGrade->getImage()->getHeight()*m_rankingGrade->getScale().y);
 	m_rankingGrade->setRelPos(m_rankings->getSize().x - m_rankingGrade->getSize().x - m_osu->getUIScale(m_osu, 5), m_rankingPanel->getRelPos().y + m_osu->getUIScale(m_osu, 5));
+}
+
+void OsuRankingScreen::setIndex(int index)
+{
+	if (index > -1)
+	{
+		m_rankingIndex->setText(UString::format("You achieved the #%i score on local rankings!", (index+1)));
+		m_rankingIndex->setVisible2(true);
+		m_rankingBottom->setVisible2(true);
+		m_rankingScrollDownInfoButton->setVisible2(true);
+	}
+	else
+	{
+		m_rankingIndex->setVisible2(false);
+		m_rankingBottom->setVisible2(false);
+		m_rankingScrollDownInfoButton->setVisible2(false);
+	}
 }
 
 UString OsuRankingScreen::getPPString()

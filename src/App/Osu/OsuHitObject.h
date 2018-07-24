@@ -20,6 +20,13 @@ public:
 	static void drawHitResult(Graphics *g, OsuBeatmapStandard *beatmap, Vector2 rawPos, OsuScore::HIT result, float animPercent, float defaultAnimPercent);
 	static void drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiameter, float rawHitcircleDiameter, Vector2 rawPos, OsuScore::HIT result, float animPercent, float defaultAnimPercent);
 
+	static ConVar *m_osu_approach_scale_multiplier_ref;
+	static ConVar *m_osu_timingpoints_force;
+	static ConVar *m_osu_vr_approach_type;
+	static ConVar *m_osu_vr_draw_approach_circles;
+	static ConVar *m_osu_vr_approach_circles_on_playfield;
+	static ConVar *m_osu_vr_approach_circles_on_top;
+
 public:
 	OsuHitObject(long time, int sampleType, int comboNumber, int colorCounter, OsuBeatmap *beatmap);
 	virtual ~OsuHitObject() {;}
@@ -27,6 +34,7 @@ public:
 	virtual void draw(Graphics *g);
 	virtual void draw2(Graphics *g){;}
 	virtual void drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr){;}
+	virtual void drawVR2(Graphics *g, Matrix4 &mvp, OsuVR *vr){;}
 	virtual void update(long curPos);
 
 	virtual void updateStackPosition(float stackOffset) = 0;
@@ -61,9 +69,6 @@ public:
 	virtual void onReset(long curPos);
 
 protected:
-	static ConVar *m_osu_approach_scale_multiplier_ref;
-	static ConVar *m_osu_timingpoints_force;
-
 	OsuBeatmap *m_beatmap;
 
 	bool m_bVisible;

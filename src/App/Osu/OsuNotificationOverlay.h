@@ -24,7 +24,7 @@ class OsuNotificationOverlay : public OsuScreen
 {
 public:
 	OsuNotificationOverlay(Osu *osu);
-	virtual ~OsuNotificationOverlay(){;}
+	virtual ~OsuNotificationOverlay() {;}
 
 	void draw(Graphics *g);
 
@@ -55,12 +55,11 @@ private:
 	void drawNotificationText(Graphics *g, NOTIFICATION &n);
 	void drawNotificationBackground(Graphics *g, NOTIFICATION &n);
 
-	Osu *m_osu;
-
 	NOTIFICATION m_notification1;
 	NOTIFICATION m_notification2;
 
 	bool m_bWaitForKey;
+	bool m_bConsumeNextChar;
 	OsuNotificationOverlayKeyListener *m_keyListener;
 };
 

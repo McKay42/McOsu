@@ -44,6 +44,7 @@ void OsuScore::reset()
 	m_fStarsTomAim = 0.0f;
 	m_fStarsTomSpeed = 0.0f;
 	m_fPPv2 = 0.0f;
+	m_iIndex = -1;
 
 	m_iScoreV1 = 0;
 	m_iScoreV2 = 0;
@@ -317,4 +318,41 @@ void OsuScore::onScoreChange()
 {
 	if (m_osu->getMultiplayer() != NULL)
 		m_osu->getMultiplayer()->onClientScoreChange(getCombo(), getAccuracy(), getScore(), isDead());
+}
+
+float OsuScore::calculateAccuracy(int num300s, int num100s, int num50s, int numMisses)
+{
+	const float totalHitPoints = num50s*(1.0f/6.0f)+ num100s*(2.0f/6.0f) + num300s;
+	const float totalNumHits = numMisses + num50s + num100s + num300s;
+
+	if (totalNumHits > 0.0f)
+		return (totalHitPoints / totalNumHits);
+	return 0.0f;
+}
+
+OsuScore::GRADE OsuScore::calculateGrade(int num300s, int num100s, int num50s, int numMisses, bool modHidden, bool modFlashlight)
+{
+	const float totalNumHits = numMisses + num50s + num100s + num300s;
+
+	float percent300s = 0.0f;
+	float percent50s = 0.0f;
+	if (totalNumHits > 0.0f)
+	{
+		percent300s = num300s / totalNumHits;
+		percent50s = num50s / totalNumHits;
+	}
+
+	GRADE grade = OsuScore::GRADE::GRADE_D;
+	if (percent300s > 0.6f)
+		grade = OsuScore::GRADE::GRADE_C;
+	if ((percent300s > 0.7f && numMisses == 0) || (percent300s > 0.8f))
+		grade = OsuScore::GRADE::GRADE_B;
+	if ((percent300s > 0.8f && numMisses == 0) || (percent300s > 0.9f))
+		grade = OsuScore::GRADE::GRADE_A;
+	if (percent300s > 0.9f && percent50s <= 0.01f && numMisses == 0)
+		grade = ((modHidden || modFlashlight) ? OsuScore::GRADE::GRADE_SH : OsuScore::GRADE::GRADE_S);
+	if (numMisses == 0 && num50s == 0 && num100s == 0)
+		grade = ((modHidden || modFlashlight) ? OsuScore::GRADE::GRADE_XH : OsuScore::GRADE::GRADE_X);
+
+	return grade;
 }

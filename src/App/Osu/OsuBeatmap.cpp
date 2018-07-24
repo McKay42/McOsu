@@ -12,6 +12,7 @@
 #include "Environment.h"
 #include "SoundEngine.h"
 #include "AnimationHandler.h"
+#include "Keyboard.h"
 #include "Mouse.h"
 #include "ConVar.h"
 
@@ -25,6 +26,7 @@
 #include "OsuMultiplayer.h"
 #include "OsuHUD.h"
 #include "OsuSkin.h"
+#include "OsuSkinImage.h"
 #include "OsuPauseMenu.h"
 #include "OsuGameRules.h"
 #include "OsuNotificationOverlay.h"
@@ -37,6 +39,7 @@
 ConVar osu_pvs("osu_pvs", true, "optimizes all loops over all hitobjects by clamping the range to the Potentially Visible Set");
 ConVar osu_draw_hitobjects("osu_draw_hitobjects", true);
 ConVar osu_draw_beatmap_background_image("osu_draw_beatmap_background_image", true);
+ConVar osu_draw_scorebarbg("osu_draw_scorebarbg", true);
 ConVar osu_vr_draw_desktop_playfield("osu_vr_draw_desktop_playfield", true);
 
 ConVar osu_universal_offset("osu_universal_offset", 0.0f);
@@ -51,7 +54,7 @@ ConVar osu_hp_override("osu_hp_override", -1.0f);
 ConVar osu_od_override("osu_od_override", -1.0f);
 
 ConVar osu_background_dim("osu_background_dim", 0.9f);
-ConVar osu_background_fade_during_breaks("osu_background_fade_during_breaks", true);
+ConVar osu_background_dont_fade_during_breaks("osu_background_dont_fade_during_breaks", false);
 ConVar osu_background_fade_min_duration("osu_background_fade_min_duration", 1.4f, "Only fade if the break is longer than this (in seconds)");
 ConVar osu_background_fadein_duration("osu_background_fadein_duration", 0.85f);
 ConVar osu_background_fadeout_duration("osu_background_fadeout_duration", 0.25f);
@@ -127,6 +130,7 @@ OsuBeatmap::OsuBeatmap(Osu *osu)
 
 	m_music = NULL;
 
+	m_fMusicFrequencyBackup = 44100.0f;
 	m_iCurMusicPos = 0;
 	m_iCurMusicPosWithOffsets = 0;
 	m_bWasSeekFrame = false;
@@ -161,7 +165,7 @@ OsuBeatmap::OsuBeatmap(Osu *osu)
 OsuBeatmap::~OsuBeatmap()
 {
 	unloadHitObjects();
-	unloadMusic();
+	engine->getResourceManager()->destroyResource(engine->getResourceManager()->getSound("OSU_BEATMAP_MUSIC"));
 
 	for (int i=0; i<m_difficulties.size(); i++)
 	{
@@ -239,6 +243,14 @@ void OsuBeatmap::drawBackground(Graphics *g)
 		const short alpha = clamp<float>(1.0f - m_fBreakBackgroundFade, 0.0f, 1.0f)*255.0f;
 		g->setColor(COLOR(alpha, brightness, brightness, brightness));
 		g->fillRect(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight());
+	}
+
+	// draw scorebar-bg
+	if (osu_draw_scorebarbg.getBool() && !m_osu->getSkin()->getScorebarBg()->isMissingTexture() && !OsuGameRules::osu_mod_fps.getBool())
+	{
+		g->setColor(0xffffffff);
+		g->setAlpha(1.0f - m_fBreakBackgroundFade);
+		m_osu->getSkin()->getScorebarBg()->draw(g, m_osu->getSkin()->getScorebarBg()->getSize()/2);
 	}
 
 	if (Osu::debug->getBool())
@@ -608,7 +620,7 @@ void OsuBeatmap::update()
 	{
 		m_bInBreak = !m_bInBreak;
 
-		if (osu_background_fade_during_breaks.getBool())
+		if (!osu_background_dont_fade_during_breaks.getBool())
 		{
 			if (m_bInBreak)
 			{
@@ -640,8 +652,22 @@ void OsuBeatmap::update()
 			}
 		}
 		else
-			m_music->setFrequency(44100*failTimePercent > 100 ? 44100*failTimePercent : 100);
+			m_music->setFrequency(m_fMusicFrequencyBackup*failTimePercent > 100 ? m_fMusicFrequencyBackup*failTimePercent : 100);
 	}
+}
+
+void OsuBeatmap::onKeyDown(KeyboardEvent &e)
+{
+	if (e == KEY_O && engine->getKeyboard()->isControlDown())
+	{
+		m_osu->toggleOptionsMenu();
+		e.consume();
+	}
+}
+
+void OsuBeatmap::onKeyUp(KeyboardEvent &e)
+{
+	// nothing
 }
 
 void OsuBeatmap::skipEmptySection()
@@ -762,7 +788,6 @@ void OsuBeatmap::deselect(bool deleteImages)
 {
 	m_iContinueMusicPos = 0;
 
-	engine->getSound()->stop(m_music);
 	unloadMusic();
 	unloadHitObjects();
 	unloadDiffs();
@@ -1375,7 +1400,7 @@ void OsuBeatmap::updateTimingPoints(long curPos)
 
 bool OsuBeatmap::isLoading()
 {
-	return !m_music->isAsyncReady();
+	return (!m_music->isAsyncReady());
 }
 
 long OsuBeatmap::getPVS()
@@ -1416,12 +1441,17 @@ void OsuBeatmap::handlePreviewPlay()
 			m_iContinueMusicPos = 0;
 
 		engine->getSound()->stop(m_music);
+
 		if (engine->getSound()->play(m_music))
 		{
+			if (m_music->getFrequency() < m_fMusicFrequencyBackup) // player has died, reset frequency
+				m_music->setFrequency(m_fMusicFrequencyBackup);
+
 			if (m_iContinueMusicPos != 0)
 				m_music->setPositionMS(m_iContinueMusicPos);
 			else
 				m_music->setPositionMS(m_selectedDifficulty->previewTime);
+
 			m_music->setVolume(m_osu_volume_music_ref->getFloat());
 		}
 	}
@@ -1443,6 +1473,7 @@ void OsuBeatmap::loadMusic(bool stream, bool prescan)
 
 		m_music = engine->getResourceManager()->loadSoundAbs(m_selectedDifficulty->fullSoundFilePath, "OSU_BEATMAP_MUSIC", stream, false, false, m_bForceStreamPlayback && prescan); // m_bForceStreamPlayback = prescan necessary! otherwise big mp3s will go out of sync
 		m_music->setVolume(m_osu_volume_music_ref->getFloat());
+		m_fMusicFrequencyBackup = m_music->getFrequency();
 	}
 }
 

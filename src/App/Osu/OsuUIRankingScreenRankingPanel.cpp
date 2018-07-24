@@ -20,6 +20,7 @@
 OsuUIRankingScreenRankingPanel::OsuUIRankingScreenRankingPanel(Osu *osu) : CBaseUIImage("", 0, 0, 0, 0, "")
 {
 	m_osu = osu;
+
 	setImage(m_osu->getSkin()->getRankingPanel());
 	setDrawFrame(true);
 
@@ -34,10 +35,6 @@ OsuUIRankingScreenRankingPanel::OsuUIRankingScreenRankingPanel(Osu *osu) : CBase
 	m_fAccuracy = 0.0f;
 }
 
-OsuUIRankingScreenRankingPanel::~OsuUIRankingScreenRankingPanel()
-{
-}
-
 void OsuUIRankingScreenRankingPanel::draw(Graphics *g)
 {
 	CBaseUIImage::draw(g);
@@ -49,14 +46,14 @@ void OsuUIRankingScreenRankingPanel::draw(Graphics *g)
 	g->setColor(0xffffffff);
 	float scale = m_osu->getImageScale(m_osu, m_osu->getSkin()->getScore0(), 20.0f) * globalScoreScale;
 	g->pushTransform();
+	{
 		g->scale(scale, scale);
 		g->translate(m_vPos.x + m_osu->getUIScale(m_osu, 111.0f), m_vPos.y + (m_osu->getSkin()->getScore0()->getHeight()/2)*scale + m_osu->getUIScale(m_osu, 11.0f));
 		m_osu->getHUD()->drawScoreNumber(g, m_iScore, scale);
+	}
 	g->popTransform();
 
     // draw hit images
-    const Vector2 hardcodedOsuHit300ImageSize = Vector2(103, 60);
-    const float globalHitSize = 19;
     const Vector2 hitImageStartPos = Vector2(40, 100);
     const Vector2 hitGridOffsetX = Vector2(200, 0);
     const Vector2 hitGridOffsetY = Vector2(0, 60);
@@ -83,35 +80,43 @@ void OsuUIRankingScreenRankingPanel::draw(Graphics *g)
 	// draw combo
 	scale = m_osu->getImageScale(m_osu, m_osu->getSkin()->getScore0(), 17.0f) * globalScoreScale;
 	g->pushTransform();
+	{
 		g->scale(scale, scale);
 		g->translate(m_vPos.x + m_osu->getUIScale(m_osu, 15.0f), m_vPos.y + (m_osu->getSkin()->getScore0()->getHeight()/2)*scale + m_osu->getUIScale(m_osu, 269.0f));
 		m_osu->getHUD()->drawComboSimple(g, m_iCombo, scale);
+	}
 	g->popTransform();
 
 	// draw maxcombo label
 	Vector2 hardcodedOsuRankingMaxComboImageSize = Vector2(162, 50) * (m_osu->getSkin()->isRankingMaxCombo2x() ? 2.0f : 1.0f);
 	scale = m_osu->getImageScale(m_osu, hardcodedOsuRankingMaxComboImageSize, 32.0f);
 	g->pushTransform();
+	{
 		g->scale(scale, scale);
 		g->translate(m_vPos.x + m_osu->getSkin()->getRankingMaxCombo()->getWidth()*scale*0.5f + m_osu->getUIScale(m_osu, 4.0f), m_vPos.y + m_osu->getUIScale(m_osu, 254.0f));
 		g->drawImage(m_osu->getSkin()->getRankingMaxCombo());
+	}
 	g->popTransform();
 
 	// draw accuracy
 	scale = m_osu->getImageScale(m_osu, m_osu->getSkin()->getScore0(), 17.0f) * globalScoreScale;
 	g->pushTransform();
+	{
 		g->scale(scale, scale);
 		g->translate(m_vPos.x + m_osu->getUIScale(m_osu, 195.0f), m_vPos.y + (m_osu->getSkin()->getScore0()->getHeight()/2)*scale + m_osu->getUIScale(m_osu, 269.0f));
 		m_osu->getHUD()->drawAccuracySimple(g, m_fAccuracy*100.0f, scale);
+	}
 	g->popTransform();
 
 	// draw accuracy label
 	Vector2 hardcodedOsuRankingAccuracyImageSize = Vector2(192, 58) * (m_osu->getSkin()->isRankingAccuracy2x() ? 2.0f : 1.0f);
 	scale = m_osu->getImageScale(m_osu, hardcodedOsuRankingAccuracyImageSize, 36.0f);
 	g->pushTransform();
+	{
 		g->scale(scale, scale);
 		g->translate(m_vPos.x + m_osu->getSkin()->getRankingAccuracy()->getWidth()*scale*0.5f + m_osu->getUIScale(m_osu, 183.0f), m_vPos.y + m_osu->getUIScale(m_osu, 257.0f));
 		g->drawImage(m_osu->getSkin()->getRankingAccuracy());
+	}
 	g->popTransform();
 }
 
@@ -124,9 +129,11 @@ void OsuUIRankingScreenRankingPanel::drawHitImage(Graphics *g, OsuSkinImage *img
 void OsuUIRankingScreenRankingPanel::drawNumHits(Graphics *g, int numHits, float scale, Vector2 pos)
 {
 	g->pushTransform();
+	{
 		g->scale(scale, scale);
 		g->translate(m_vPos.x + m_osu->getUIScale(m_osu, pos.x), m_vPos.y + (m_osu->getSkin()->getScore0()->getHeight()/2)*scale + m_osu->getUIScale(m_osu, pos.y));
 		m_osu->getHUD()->drawComboSimple(g, numHits, scale);
+	}
 	g->popTransform();
 }
 
@@ -141,4 +148,21 @@ void OsuUIRankingScreenRankingPanel::setScore(OsuScore *score)
 	m_iNumMisses = score->getNumMisses();
 	m_iCombo = score->getComboMax();
 	m_fAccuracy = score->getAccuracy();
+}
+
+void OsuUIRankingScreenRankingPanel::setScore(OsuDatabase::Score score)
+{
+	m_iScore = score.score;
+	m_iNum300s = score.num300s;
+	m_iNum300gs = score.numGekis;
+	m_iNum100s = score.num100s;
+	m_iNum100ks = score.numKatus;
+	m_iNum50s = score.num50s;
+	m_iNumMisses = score.numMisses;
+	m_iCombo = score.comboMax;
+	m_fAccuracy = OsuScore::calculateAccuracy(score.num300s, score.num100s, score.num50s, score.numMisses);
+
+	// round acc up from two decimal places
+	if (m_fAccuracy > 0.0f)
+		m_fAccuracy = std::round(m_fAccuracy*10000.0f) / 10000.0f;
 }

@@ -32,6 +32,8 @@ OsuUIModSelectorModButton::OsuUIModSelectorModButton(Osu *osu, OsuModSelector *o
 	m_bOn = false;
 
 	getActiveImageFunc = NULL;
+
+	m_bFocusStolenDelay = false;
 }
 
 void OsuUIModSelectorModButton::draw(Graphics *g)
@@ -73,7 +75,7 @@ void OsuUIModSelectorModButton::update()
 	if (!m_bVisible) return;
 
 	// handle tooltips
-	if (isMouseInside() && m_bAvailable && m_states.size() > 0)
+	if (isMouseInside() && m_bAvailable && m_states.size() > 0 && !m_bFocusStolenDelay)
 	{
 		m_osu->getTooltipOverlay()->begin();
 		for (int i=0; i<m_states[m_iState].tooltipTextLines.size(); i++)
@@ -82,6 +84,8 @@ void OsuUIModSelectorModButton::update()
 		}
 		m_osu->getTooltipOverlay()->end();
 	}
+
+	m_bFocusStolenDelay = false;
 }
 
 void OsuUIModSelectorModButton::resetState()
@@ -112,6 +116,14 @@ void OsuUIModSelectorModButton::onMouseDownInside()
 
 	// set new state
 	setState(m_iState);
+}
+
+void OsuUIModSelectorModButton::onFocusStolen()
+{
+	CBaseUIButton::onFocusStolen();
+
+	m_bMouseInside = false;
+	m_bFocusStolenDelay = true;
 }
 
 void OsuUIModSelectorModButton::setBaseScale(float xScale, float yScale)

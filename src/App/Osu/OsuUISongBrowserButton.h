@@ -20,7 +20,7 @@ class OsuUISongBrowserButton : public CBaseUIButton
 {
 public:
 	OsuUISongBrowserButton(Osu *osu, OsuSongBrowser2 *songBrowser, CBaseUIScrollView *view, float xPos, float yPos, float xSize, float ySize, UString name);
-	~OsuUISongBrowserButton();
+	virtual ~OsuUISongBrowserButton();
 	void deleteAnimations();
 
 	virtual void draw(Graphics *g);

@@ -25,6 +25,8 @@ public:
 
 	virtual void updateLayout();
 
+	void resetAnimation();
+
 private:
 	Osu *m_osu;
 	float m_fAnimation;
