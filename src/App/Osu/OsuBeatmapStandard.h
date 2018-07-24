@@ -84,6 +84,7 @@ private:
 	void updateStarCache(); // incremental stars (used for live pp type 2)
 	void stopStarCacheLoader();
 	bool isLoadingStarCache();
+	bool isLoadingInt();
 
 	// beatmap
 	bool m_bIsSpinnerActive;

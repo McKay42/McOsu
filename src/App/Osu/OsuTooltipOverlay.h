@@ -26,8 +26,6 @@ public:
 	void end();
 
 private:
-	Osu *m_osu;
-
 	float m_fAnim;
 	std::vector<UString> m_lines;
 

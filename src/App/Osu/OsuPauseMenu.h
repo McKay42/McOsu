@@ -13,7 +13,7 @@
 class Osu;
 class OsuSongBrowser;
 class CBaseUIContainer;
-class OsuPauseMenuButton;
+class OsuUIPauseMenuButton;
 
 class OsuPauseMenu : public OsuScreen
 {
@@ -36,7 +36,7 @@ public:
 private:
 	void updateLayout();
 	void updateButtons();
-	OsuPauseMenuButton *addButton();
+	OsuUIPauseMenuButton *addButton();
 	void setButton(int i, Image *img);
 
 	void onContinueClicked();
@@ -47,14 +47,12 @@ private:
 
 	void scheduleVisibilityChange(bool visible);
 
-	Osu *m_osu;
-
 	CBaseUIContainer *m_container;
 	bool m_bScheduledVisibilityChange;
 	bool m_bScheduledVisibility;
 
-	std::vector<OsuPauseMenuButton*> m_buttons;
-	OsuPauseMenuButton *m_selectedButton;
+	std::vector<OsuUIPauseMenuButton*> m_buttons;
+	OsuUIPauseMenuButton *m_selectedButton;
 	float m_fWarningArrowsAnimStartTime;
 	float m_fWarningArrowsAnimAlpha;
 	float m_fWarningArrowsAnimX;

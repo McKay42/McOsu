@@ -13,11 +13,13 @@
 
 #include "Osu.h"
 #include "OsuSkin.h"
+#include "OsuSkinImage.h"
 #include "OsuBeatmap.h"
 #include "OsuBeatmapDifficulty.h"
 #include "OsuSongBrowser2.h"
 
 #include "OsuUISongBrowserSongDifficultyButton.h"
+#include "OsuUISongBrowserScoreButton.h"
 
 ConVar osu_draw_songbrowser_thumbnails("osu_draw_songbrowser_thumbnails", true);
 ConVar osu_songbrowser_thumbnail_delay("osu_songbrowser_thumbnail_delay", 0.1f);
@@ -30,6 +32,8 @@ OsuUISongBrowserSongButton::OsuUISongBrowserSongButton(Osu *osu, OsuSongBrowser2
 	m_beatmap = beatmap;
 	m_diff = NULL;
 	m_parent = NULL;
+	m_grade = OsuScore::GRADE::GRADE_D;
+	m_bHasGrade = false;
 
 	previousButton = NULL; // reset
 
@@ -45,49 +49,17 @@ OsuUISongBrowserSongButton::OsuUISongBrowserSongButton(Osu *osu, OsuSongBrowser2
 
 	m_fImageLoadScheduledTime = 0.0f;
 	m_fTextOffset = 0.0f;
+	m_fGradeOffset = 0.0f;
 	m_fTextSpacingScale = 0.075f;
 	m_fTextMarginScale = 0.075f;
 	m_fTitleScale = 0.22f;
 	m_fSubTitleScale = 0.14f;
+	m_fGradeScale = 0.45f;
 
 	// build children
 	if (m_beatmap != NULL)
 	{
 		std::vector<OsuBeatmapDifficulty*> difficulties = m_beatmap->getDifficulties();
-
-		// NOTE: sorting moved to onSelected()
-		/*
-		// sort difficulties by difficulty
-		struct SortComparator
-		{
-			bool operator() (OsuBeatmapDifficulty const *a, OsuBeatmapDifficulty const *b) const
-			{
-				const unsigned long diff1 = (a->AR+1)*(a->CS+1)*(a->HP+1)*(a->OD+1)*(a->maxBPM > 0 ? a->maxBPM : 1);
-				const unsigned long diff2 = (b->AR+1)*(b->CS+1)*(b->HP+1)*(b->OD+1)*(b->maxBPM > 0 ? b->maxBPM : 1);
-
-				const float stars1 = a->starsNoMod;
-				const float stars2 = b->starsNoMod;
-
-				if (stars1 > 0 && stars2 > 0)
-				{
-					// strict weak ordering!
-					if (stars1 == stars2)
-						return a->getSortHack() < b->getSortHack();
-					else
-						return stars1 < stars2;
-				}
-				else
-				{
-					// strict weak ordering!
-					if (diff1 == diff2)
-						return a->getSortHack() < b->getSortHack();
-					else
-						return diff1 < diff2;
-				}
-			}
-		};
-		std::sort(difficulties.begin(), difficulties.end(), SortComparator());
-		*/
 
 		// and add them
 		for (int i=0; i<difficulties.size(); i++)
@@ -148,11 +120,15 @@ void OsuUISongBrowserSongButton::drawBeatmapBackgroundThumbnail(Graphics *g, Ima
 
 	g->setColor(0xffffffff);
 	g->pushTransform();
+	{
 		g->scale(beatmapBackgroundScale, beatmapBackgroundScale);
 		g->translate(pos.x + (int)centerOffset.x, pos.y + (int)centerOffset.y);
 		g->pushClipRect(clipRect);
+		{
 			g->drawImage(image);
+		}
 		g->popClipRect();
+	}
 	g->popTransform();
 
 	// debug cliprect bounding box
@@ -169,6 +145,23 @@ void OsuUISongBrowserSongButton::drawBeatmapBackgroundThumbnail(Graphics *g, Ima
 	}
 }
 
+void OsuUISongBrowserSongButton::drawGrade(Graphics *g)
+{
+	// scaling
+	const Vector2 pos = getActualPos();
+	const Vector2 size = getActualSize();
+
+	OsuSkinImage *grade = OsuUISongBrowserScoreButton::getGradeImage(m_osu, m_grade);
+	g->pushTransform();
+	{
+		const float scale = calculateGradeScale();
+
+		g->setColor(0xffffffff);
+		grade->drawRaw(g, Vector2(pos.x + m_fGradeOffset + grade->getSizeBaseRaw().x*scale/2, pos.y + size.y/2), scale);
+	}
+	g->popTransform();
+}
+
 void OsuUISongBrowserSongButton::drawTitle(Graphics *g, float deselectedAlpha)
 {
 	// scaling
@@ -179,14 +172,16 @@ void OsuUISongBrowserSongButton::drawTitle(Graphics *g, float deselectedAlpha)
 	g->setColor(m_bSelected ? m_osu->getSkin()->getSongSelectActiveText() : m_osu->getSkin()->getSongSelectInactiveText());
 	if (!m_bSelected)
 		g->setAlpha(deselectedAlpha);
+
 	g->pushTransform();
+	{
 		g->scale(titleScale, titleScale);
 		g->translate(pos.x + m_fTextOffset, pos.y + size.y*m_fTextMarginScale + m_font->getHeight()*titleScale);
 		g->drawString(m_font, buildTitleString());
 
 		// debugging
 		//g->drawString(m_font, UString::format("%i, %i", m_diff->setID, m_diff->ID));
-
+	}
 	g->popTransform();
 }
 
@@ -201,7 +196,9 @@ void OsuUISongBrowserSongButton::drawSubTitle(Graphics *g, float deselectedAlpha
 	g->setColor(m_bSelected ? m_osu->getSkin()->getSongSelectActiveText() : m_osu->getSkin()->getSongSelectInactiveText());
 	if (!m_bSelected)
 		g->setAlpha(deselectedAlpha);
+
 	g->pushTransform();
+	{
 		g->scale(subTitleScale, subTitleScale);
 		g->translate(pos.x + m_fTextOffset, pos.y + size.y*m_fTextMarginScale + m_font->getHeight()*titleScale + size.y*m_fTextSpacingScale + m_font->getHeight()*subTitleScale*0.85f);
 		g->drawString(m_font, buildSubTitleString());
@@ -217,6 +214,7 @@ void OsuUISongBrowserSongButton::drawSubTitle(Graphics *g, float deselectedAlpha
 		}
 		g->drawString(m_font, UString::format("t = %I64d", oldestTime));
 		*/
+	}
 	g->popTransform();
 }
 
@@ -241,10 +239,23 @@ void OsuUISongBrowserSongButton::updateLayoutEx()
 	// scaling
 	const Vector2 size = getActualSize();
 
+	m_fTextOffset = 0.0f;
+	m_fGradeOffset = 0.0f;
+
+	if (m_bHasGrade)
+		m_fTextOffset += calculateGradeWidth();
+
 	if (m_osu->getSkin()->getVersion() < 2.2f)
-		m_fTextOffset = size.x*0.02f*2.0f;
+	{
+		m_fTextOffset += size.x*0.02f*2.0f;
+		if (m_bHasGrade)
+			m_fGradeOffset += calculateGradeWidth()/2;
+	}
 	else
-		m_fTextOffset = size.y*thumbnailYRatio  + size.x*0.02f;
+	{
+		m_fTextOffset += size.y*thumbnailYRatio + size.x*0.02f;
+		m_fGradeOffset += size.y*thumbnailYRatio + size.x*0.0125f;
+	}
 }
 
 OsuUISongBrowserSongButton *OsuUISongBrowserSongButton::setVisible(bool visible)
@@ -307,6 +318,13 @@ void OsuUISongBrowserSongButton::onSelected(bool wasSelected)
 		}
 	};
 	std::sort(m_children.begin(), m_children.end(), SortComparator());
+
+	// update grade on child
+	for (int c=0; c<m_children.size(); c++)
+	{
+		OsuUISongBrowserSongDifficultyButton *child = (OsuUISongBrowserSongDifficultyButton*)m_children[c];
+		child->updateGrade();
+	}
 
 	// automatically deselect previous selection if another beatmap is selected
 	if (previousButton != NULL && previousButton != this)
@@ -380,4 +398,20 @@ void OsuUISongBrowserSongButton::checkLoadUnloadImage()
 				m_diff->unloadBackgroundImage();
 		}
 	}
+}
+
+float OsuUISongBrowserSongButton::calculateGradeScale()
+{
+	const Vector2 size = getActualSize();
+
+	OsuSkinImage *grade = OsuUISongBrowserScoreButton::getGradeImage(m_osu, m_grade);
+
+	return Osu::getImageScaleToFitResolution(grade->getSizeBaseRaw(), Vector2(size.x, size.y*m_fGradeScale));
+}
+
+float OsuUISongBrowserSongButton::calculateGradeWidth()
+{
+	OsuSkinImage *grade = OsuUISongBrowserScoreButton::getGradeImage(m_osu, m_grade);
+
+	return grade->getSizeBaseRaw().x * calculateGradeScale();
 }

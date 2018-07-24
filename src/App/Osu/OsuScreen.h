@@ -11,16 +11,18 @@
 #include "cbase.h"
 #include "KeyboardListener.h"
 
+class Osu;
+
 class OsuScreen : public KeyboardListener
 {
 public:
-	OsuScreen();
+	OsuScreen(Osu *osu);
 	virtual ~OsuScreen() {;}
 
 	virtual void draw(Graphics *g) {;}
 	virtual void update() {;}
 
-	virtual void onKeyDown(KeyboardEvent &e) {;}
+	virtual void onKeyDown(KeyboardEvent &e);
 	virtual void onKeyUp(KeyboardEvent &e) {;}
 	virtual void onChar(KeyboardEvent &e) {;}
 
@@ -32,6 +34,8 @@ public:
 
 protected:
 	bool m_bVisible;
+
+	Osu *m_osu;
 };
 
 #endif

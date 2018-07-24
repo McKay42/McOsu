@@ -39,6 +39,7 @@ public:
 	virtual void draw(Graphics *g);
 	virtual void draw2(Graphics *g);
 	virtual void drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr);
+	virtual void drawVR2(Graphics *g, Matrix4 &mvp, OsuVR *vr);
 	virtual void update(long curPos);
 
 	virtual bool isCircle() {return true;}

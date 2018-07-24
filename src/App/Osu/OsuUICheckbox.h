@@ -16,15 +16,18 @@ class OsuUICheckbox : public CBaseUICheckbox
 {
 public:
 	OsuUICheckbox(Osu *osu, float xPos, float yPos, float xSize, float ySize, UString name, UString text);
-	virtual ~OsuUICheckbox();
 
 	virtual void update();
 
 	void setTooltipText(UString text);
 
 private:
+	virtual void onFocusStolen();
+
 	Osu *m_osu;
 	std::vector<UString> m_tooltipTextLines;
+
+	bool m_bFocusStolenDelay;
 };
 
 #endif

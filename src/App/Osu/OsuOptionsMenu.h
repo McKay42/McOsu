@@ -18,6 +18,9 @@ class OsuUISlider;
 class OsuUIContextMenu;
 class OsuUISearchOverlay;
 
+class OsuOptionsMenuSliderPreviewElement;
+class OsuOptionsMenuCategoryButton;
+
 class CBaseUIContainer;
 class CBaseUIImageButton;
 class CBaseUICheckbox;
@@ -49,11 +52,23 @@ public:
 	void save();
 
 	void setVisible(bool visible);
+	void setFullscreen(bool fullscreen) {m_bFullscreen = fullscreen;}
+
+	inline bool isFullscreen() const {return m_bFullscreen;}
+	bool isMouseInside();
+	bool isBusy();
 
 	bool shouldDrawVRDummyHUD();
 
 private:
 	static const char *OSU_CONFIG_FILE_NAME;
+
+	struct OPTIONS_ELEMENT
+	{
+		std::vector<CBaseUIElement*> elements;
+		ConVar *cvar;
+		int type;
+	};
 
 	virtual void updateLayout();
 	virtual void onBack();
@@ -64,6 +79,7 @@ private:
 	void updateName();
 	void updateVRRenderTargetResolutionLabel();
 
+	// options
 	void onFullscreenChange(CBaseUICheckbox *checkbox);
 	void onBorderlessWindowedChange(CBaseUICheckbox *checkbox);
 	void onSkinSelect();
@@ -74,6 +90,7 @@ private:
 	void onOutputDeviceSelect();
 	void onOutputDeviceSelect2(UString outputDeviceName);
 	void onDownloadOsuClicked();
+	void onManuallyManageBeatmapsClicked();
 
 	void onCheckboxChange(CBaseUICheckbox *checkbox);
 	void onSliderChange(CBaseUISlider *slider);
@@ -94,14 +111,10 @@ private:
 	void onHighQualitySlidersCheckboxChange(CBaseUICheckbox *checkbox);
 	void onHighQualitySlidersConVarChange(UString oldValue, UString newValue);
 
-	struct OPTIONS_ELEMENT
-	{
-		std::vector<CBaseUIElement*> elements;
-		ConVar *cvar;
-		int type;
-	};
-	std::vector<OPTIONS_ELEMENT> m_elements;
+	// categories
+	void onCategoryClicked(CBaseUIButton *button);
 
+	// options
 	void addSpacer();
 	CBaseUILabel *addSection(UString text);
 	CBaseUILabel *addSubSection(UString text);
@@ -116,15 +129,27 @@ private:
 	CBaseUIElement *addSkinPreview();
 	CBaseUIElement *addSliderPreview();
 
+	// categories
+	CBaseUIButton *addCategory(CBaseUIElement *section, wchar_t icon);
+
+	// vars
 	Osu *m_osu;
 	CBaseUIContainer *m_container;
+	CBaseUIScrollView *m_categories;
 	CBaseUIScrollView *m_options;
 	OsuUIContextMenu *m_contextMenu;
 	OsuUISearchOverlay *m_search;
 	CBaseUILabel *m_spacer;
 
+	std::vector<OsuOptionsMenuCategoryButton*> m_categoryButtons;
+	std::vector<OPTIONS_ELEMENT> m_elements;
+
 	// custom
+	bool m_bFullscreen;
+	float m_fAnimation;
+
 	CBaseUICheckbox *m_fullscreenCheckbox;
+	CBaseUISlider *m_backgroundDimSlider;
 	CBaseUISlider *m_backgroundBrightnessSlider;
 	CBaseUISlider *m_hudSizeSlider;
 	CBaseUISlider *m_hudComboScaleSlider;
@@ -132,6 +157,7 @@ private:
 	CBaseUISlider *m_hudAccuracyScaleSlider;
 	CBaseUISlider *m_hudHiterrorbarScaleSlider;
 	CBaseUISlider *m_hudProgressbarScaleSlider;
+	CBaseUISlider *m_hudScoreBoardScaleSlider;
 	CBaseUISlider *m_playfieldBorderSizeSlider;
 	CBaseUISlider *m_statisticsOverlayScaleSlider;
 	CBaseUISlider *m_cursorSizeSlider;
@@ -150,6 +176,7 @@ private:
 	CBaseUISlider *m_vrHudDistanceSlider;
 	CBaseUISlider *m_vrHudScaleSlider;
 	CBaseUISlider *m_sliderQualitySlider;
+	OsuOptionsMenuSliderPreviewElement *m_sliderPreviewElement;
 
 	ConVar *m_waitingKey;
 	ConVar *m_osu_slider_curve_points_separation;

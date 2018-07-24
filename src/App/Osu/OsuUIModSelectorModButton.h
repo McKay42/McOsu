@@ -36,6 +36,7 @@ public:
 
 private:
 	virtual void onMouseDownInside();
+	virtual void onFocusStolen();
 
 	void setOn(bool on);
 	void setState(int state);
@@ -61,6 +62,8 @@ private:
 	Vector2 m_vScale;
 	float m_fRot;
 	std::function<OsuSkinImage*()> getActiveImageFunc;
+
+	bool m_bFocusStolenDelay;
 };
 
 #endif
