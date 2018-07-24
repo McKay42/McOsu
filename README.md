@@ -11,6 +11,7 @@ An unofficial open-source client for [osu!](https://osu.ppy.sh) with the main fo
 Runs on McEngine: [https://github.com/McKay42/McEngine](https://github.com/McKay42/McEngine)
 
 Binaries are available for **Windows**, **Linux**, and **macOS**.
+
 Note that Linux and macOS support is not as polished as Windows, and some functions like raw input or mouse sensitivity may not work (correctly) there.
 
 ## Notable features which osu! doesn't have (yet) in comparison:
