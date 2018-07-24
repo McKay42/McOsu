@@ -33,8 +33,9 @@ public:
 
 	virtual void draw(Graphics *g);
 	virtual void draw2(Graphics *g);
-	void draw2(Graphics *g, bool drawApproachCircle);
+	void draw2(Graphics *g, bool drawApproachCircle, bool drawOnlyApproachCircle);
 	virtual void drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr);
+	virtual void drawVR2(Graphics *g, Matrix4 &mvp, OsuVR *vr);
 	virtual void update(long curPos);
 
 	virtual void updateStackPosition(float stackOffset);

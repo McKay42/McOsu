@@ -9,6 +9,7 @@
 #define OSUBEATMAP_H
 
 #include "cbase.h"
+
 #include "OsuScore.h"
 
 #include <mutex>
@@ -42,8 +43,8 @@ public:
 	void drawBackground(Graphics *g);
 	virtual void update();
 
-	virtual void onKeyDown(KeyboardEvent &e) {;}
-	virtual void onKeyUp(KeyboardEvent &e) {;}
+	virtual void onKeyDown(KeyboardEvent &e);
+	virtual void onKeyUp(KeyboardEvent &e);
 
 	virtual void onModUpdate() {;} // this should make all the necessary internal updates to hitobjects when legacy osu mods or static mods change live (but also on start)
 	virtual bool isLoading(); // allows subclasses to delay the playing start, e.g. to load something
@@ -160,7 +161,9 @@ protected:
 	virtual void onPlayStart() {;} // called when the player starts playing (everything has been loaded, including the music)
 	virtual void onBeforeStop(bool quit) {;} // called before hitobjects are unloaded (quit = don't display ranking screen)
 	virtual void onStop(bool quit) {;} // called after hitobjects have been unloaded, but before Osu::onPlayEnd() (quit = don't display ranking screen)
-	virtual void onPaused() {;}
+	virtual void onPaused(bool first) {;}
+	virtual void onUnpaused() {;}
+	virtual void onRestart(bool quick) {;}
 
 	bool canDraw();
 	bool canUpdate();
@@ -198,6 +201,7 @@ protected:
 	Sound *m_music;
 
 	// sound
+	float m_fMusicFrequencyBackup;
 	long m_iCurMusicPos;
 	long m_iCurMusicPosWithOffsets;
 	bool m_bWasSeekFrame;

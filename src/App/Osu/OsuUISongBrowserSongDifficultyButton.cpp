@@ -16,6 +16,10 @@
 #include "OsuBeatmap.h"
 #include "OsuBeatmapDifficulty.h"
 #include "OsuSongBrowser2.h"
+#include "OsuDatabase.h"
+#include "OsuReplay.h"
+
+#include "OsuUISongBrowserScoreButton.h"
 
 OsuUISongBrowserSongDifficultyButton *OsuUISongBrowserSongDifficultyButton::previousButton = NULL;
 
@@ -60,6 +64,10 @@ void OsuUISongBrowserSongDifficultyButton::draw(Graphics *g)
 	const Vector2 size = getActualSize();
 
 	drawBeatmapBackgroundThumbnail(g, m_diff->backgroundImage);
+
+	if (m_bHasGrade)
+		drawGrade(g);
+
 	drawTitle(g, 0.2f);
 	drawSubTitle(g, 0.2f);
 
@@ -69,9 +77,11 @@ void OsuUISongBrowserSongDifficultyButton::draw(Graphics *g)
 	const float diffScale = (size.y*m_fDiffScale) / m_fontBold->getHeight();
 	g->setColor(m_bSelected ? skin->getSongSelectActiveText() : skin->getSongSelectInactiveText());
 	g->pushTransform();
+	{
 		g->scale(diffScale, diffScale);
 		g->translate(pos.x + m_fTextOffset, pos.y + size.y*m_fTextMarginScale + m_font->getHeight()*titleScale + size.y*m_fTextSpacingScale + m_font->getHeight()*subTitleScale*0.85f + size.y*m_fTextSpacingScale + m_fontBold->getHeight()*diffScale*0.8f);
 		g->drawString(m_fontBold, buildDiffString());
+	}
 	g->popTransform();
 
 	// draw stars
@@ -87,15 +97,19 @@ void OsuUISongBrowserSongDifficultyButton::draw(Graphics *g)
 		for (int i=0; i<numFullStars; i++)
 		{
 			g->pushTransform();
+			{
 				g->scale(starScale, starScale);
 				g->translate(pos.x + m_fTextOffset + starWidth/2 + i*starWidth*1.5f, pos.y + starOffsetY);
 				g->drawImage(skin->getStar());
+			}
 			g->popTransform();
 		}
 		g->pushTransform();
+		{
 			g->scale(starScale*partialStarScale, starScale*partialStarScale);
 			g->translate(pos.x + m_fTextOffset + starWidth/2 + numFullStars*starWidth*1.5f, pos.y + starOffsetY);
 			g->drawImage(skin->getStar());
+		}
 		g->popTransform();
 	}
 }
@@ -104,12 +118,14 @@ void OsuUISongBrowserSongDifficultyButton::onSelected(bool wasSelected)
 {
 	if (!wasSelected)
 		m_beatmap->selectDifficulty(m_diff, false);
+
 	m_songBrowser->onDifficultySelected(m_beatmap, m_diff, wasSelected);
 	m_songBrowser->scrollToSongButton(this);
 
 	// automatically deselect previous selection
 	if (previousButton != NULL && previousButton != this)
 		previousButton->deselect();
+
 	previousButton = this;
 }
 
@@ -117,4 +133,32 @@ void OsuUISongBrowserSongDifficultyButton::onDeselected()
 {
 	// since unselected elements will NOT get a setVisible(false) event by the scrollview, we have to manually hide them if unselected
 	setVisible(false); // this also unloads the thumbnail
+}
+
+void OsuUISongBrowserSongDifficultyButton::updateGrade()
+{
+	bool hasGrade = false;
+	OsuScore::GRADE grade;
+	unsigned long long highestScore = 0;
+	for (int i=0; i<(*m_osu->getSongBrowser()->getDatabase()->getScores())[m_diff->md5hash].size(); i++)
+	{
+		const unsigned long long score = (*m_osu->getSongBrowser()->getDatabase()->getScores())[m_diff->md5hash][i].score;
+		const int num300s = (*m_osu->getSongBrowser()->getDatabase()->getScores())[m_diff->md5hash][i].num300s;
+		const int num100s = (*m_osu->getSongBrowser()->getDatabase()->getScores())[m_diff->md5hash][i].num100s;
+		const int num50s = (*m_osu->getSongBrowser()->getDatabase()->getScores())[m_diff->md5hash][i].num50s;
+		const int numMisses = (*m_osu->getSongBrowser()->getDatabase()->getScores())[m_diff->md5hash][i].numMisses;
+		const bool modHidden = (*m_osu->getSongBrowser()->getDatabase()->getScores())[m_diff->md5hash][i].modsLegacy & OsuReplay::Mods::Hidden;
+		const bool modFlashlight = (*m_osu->getSongBrowser()->getDatabase()->getScores())[m_diff->md5hash][i].modsLegacy & OsuReplay::Mods::Flashlight;
+
+		if (score > highestScore)
+		{
+			highestScore = score;
+			hasGrade = true;
+			grade = OsuScore::calculateGrade(num300s, num100s, num50s, numMisses, modHidden, modFlashlight);
+		}
+	}
+
+	m_bHasGrade = hasGrade;
+	if (m_bHasGrade)
+		m_grade = grade;
 }

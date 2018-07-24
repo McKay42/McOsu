@@ -17,17 +17,24 @@
 
 ConVar osu_skin_animation_fps_override("osu_skin_animation_fps_override", -1.0f);
 
+ConVar *OsuSkinImage::m_osu_skin_mipmaps_ref = NULL;
+
 OsuSkinImage::OsuSkinImage(OsuSkin *skin, UString skinElementName, Vector2 baseSizeForScaling2x, float osuSize, UString animationSeparator, bool ignoreDefaultSkin)
 {
 	m_skin = skin;
 	m_vBaseSizeForScaling2x = baseSizeForScaling2x;
 	m_fOsuSize = osuSize;
 
+	if (m_osu_skin_mipmaps_ref == NULL)
+		m_osu_skin_mipmaps_ref = convar->getConVarByName("osu_skin_mipmaps");
+
 	m_iCurMusicPos = 0;
 	m_iFrameCounter = 0;
 	m_iFrameCounterUnclamped = 0;
 	m_fLastFrameTime = 0.0f;
 	m_iBeatmapAnimationTimeStartOffset = 0;
+
+	m_bIsMissingTexture = false;
 
 	// logic: first load user skin (true), and if no image could be found then load the default skin (false)
 	// this is necessary so that all elements can be correctly overridden with a user skin (e.g. if the user skin only has sliderb.png, but the default skin has sliderb0.png!)
@@ -40,6 +47,8 @@ OsuSkinImage::OsuSkinImage(OsuSkin *skin, UString skinElementName, Vector2 baseS
 	// if we couldn't load ANYTHING at all, gracefully fallback to missing texture
 	if (m_images.size() < 1)
 	{
+		m_bIsMissingTexture = true;
+
 		IMAGE missingTexture;
 		missingTexture.img = m_skin->getMissingTexture();
 		missingTexture.scale = 2;
@@ -101,7 +110,7 @@ bool OsuSkinImage::loadImage(UString skinElementName, bool ignoreDefaultSkin)
 		if (env->fileExists(filepath1))
 		{
 			IMAGE image;
-			image.img = engine->getResourceManager()->loadImageAbsUnnamed(filepath1);
+			image.img = engine->getResourceManager()->loadImageAbsUnnamed(filepath1, m_osu_skin_mipmaps_ref->getBool());
 			image.scale = 2.0f;
 			m_images.push_back(image);
 			return true; // nothing more to do here
@@ -117,7 +126,7 @@ bool OsuSkinImage::loadImage(UString skinElementName, bool ignoreDefaultSkin)
 	if (env->fileExists(filepath2))
 	{
 		IMAGE image;
-		image.img = engine->getResourceManager()->loadImageAbsUnnamed(filepath2);
+		image.img = engine->getResourceManager()->loadImageAbsUnnamed(filepath2, m_osu_skin_mipmaps_ref->getBool());
 		image.scale = 1.0f;
 		m_images.push_back(image);
 		return true; // nothing more to do here
@@ -138,7 +147,7 @@ bool OsuSkinImage::loadImage(UString skinElementName, bool ignoreDefaultSkin)
 			if (env->fileExists(defaultFilePath))
 			{
 				IMAGE image;
-				image.img = engine->getResourceManager()->loadImageAbsUnnamed(defaultFilePath);
+				image.img = engine->getResourceManager()->loadImageAbsUnnamed(defaultFilePath, m_osu_skin_mipmaps_ref->getBool());
 				image.scale = 2.0f;
 				m_images.push_back(image);
 				return true; // nothing more to do here
@@ -155,7 +164,7 @@ bool OsuSkinImage::loadImage(UString skinElementName, bool ignoreDefaultSkin)
 		if (env->fileExists(defaultFilePath))
 		{
 			IMAGE image;
-			image.img = engine->getResourceManager()->loadImageAbsUnnamed(defaultFilePath);
+			image.img = engine->getResourceManager()->loadImageAbsUnnamed(defaultFilePath, m_osu_skin_mipmaps_ref->getBool());
 			image.scale = 1.0f;
 			m_images.push_back(image);
 			return true;

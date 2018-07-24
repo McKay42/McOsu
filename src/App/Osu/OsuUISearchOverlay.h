@@ -16,7 +16,6 @@ class OsuUISearchOverlay : public CBaseUIElement
 {
 public:
 	OsuUISearchOverlay(Osu *osu, float xPos, float yPos, float xSize, float ySize, UString name);
-	virtual ~OsuUISearchOverlay() {;}
 
 	virtual void draw(Graphics *g);
 

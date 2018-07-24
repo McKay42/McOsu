@@ -121,7 +121,7 @@ public:
 	UString name; // difficulty name ("Version")
 	UString source;
 	UString tags;
-	UString md5hash;
+	std::string md5hash;
 	long beatmapId;
 
 	float AR;

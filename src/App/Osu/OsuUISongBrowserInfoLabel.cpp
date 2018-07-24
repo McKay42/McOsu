@@ -9,12 +9,14 @@
 
 #include "Engine.h"
 #include "ResourceManager.h"
+#include "Environment.h"
 
 #include "Osu.h"
 #include "OsuBeatmap.h"
 #include "OsuBeatmapDifficulty.h"
+#include "OsuNotificationOverlay.h"
 
-OsuUISongBrowserInfoLabel::OsuUISongBrowserInfoLabel(Osu *osu, float xPos, float yPos, float xSize, float ySize, UString name) : CBaseUIElement(xPos, yPos, xSize, ySize, name)
+OsuUISongBrowserInfoLabel::OsuUISongBrowserInfoLabel(Osu *osu, float xPos, float yPos, float xSize, float ySize, UString name) : CBaseUIButton(xPos, yPos, xSize, ySize, name, "")
 {
 	m_osu = osu;
 	m_font = m_osu->getSubTitleFont();
@@ -45,6 +47,8 @@ OsuUISongBrowserInfoLabel::OsuUISongBrowserInfoLabel(Osu *osu, float xPos, float
 
 	m_iLocalOffset = 0;
 	m_iOnlineOffset = 0;
+
+	m_iBeatmapId = -1;
 }
 
 void OsuUISongBrowserInfoLabel::draw(Graphics *g)
@@ -85,6 +89,7 @@ void OsuUISongBrowserInfoLabel::draw(Graphics *g)
 	g->setColor(0xffffffff);
 	if (m_osu->getSpeedMultiplier() != 1.0f)
 		g->setColor(0xffff0000);
+
 	g->pushTransform();
 	g->translate((int)(-songInfoStringWidth/2), (int)(m_font->getHeight()/2));
 	g->scale(m_fSongInfoScale, m_fSongInfoScale);
@@ -113,6 +118,8 @@ void OsuUISongBrowserInfoLabel::draw(Graphics *g)
 
 void OsuUISongBrowserInfoLabel::setFromBeatmap(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff)
 {
+	m_iBeatmapId = diff->beatmapId;
+
 	setArtist(diff->artist);
 	setTitle(diff->title);
 	setDiff(diff->name);
@@ -130,6 +137,39 @@ void OsuUISongBrowserInfoLabel::setFromBeatmap(OsuBeatmap *beatmap, OsuBeatmapDi
 
 	setLocalOffset(diff->localoffset);
 	setOnlineOffset(diff->onlineOffset);
+}
+
+void OsuUISongBrowserInfoLabel::setFromMissingBeatmap(long beatmapId)
+{
+	m_iBeatmapId = beatmapId;
+
+	setArtist(m_iBeatmapId > 0 ? "CLICK HERE TO DOWNLOAD" : "MISSING BEATMAP!");
+	setTitle("");
+	setDiff("no map");
+	setMapper("MISSING BEATMAP!");
+
+	setLengthMS(0);
+	setBPM(0, 0);
+	setNumObjects(0);
+
+	setCS(0);
+	setAR(0);
+	setOD(0);
+	setHP(0);
+	setStars(0);
+
+	setLocalOffset(0);
+	setOnlineOffset(0);
+}
+
+void OsuUISongBrowserInfoLabel::onClicked()
+{
+	if (m_iBeatmapId > 0)
+	{
+		env->openURLInDefaultBrowser(UString::format("https://osu.ppy.sh/b/%ld", m_iBeatmapId));
+		m_osu->getNotificationOverlay()->addNotification("Opening browser, please wait ...", 0xffffffff, false, 0.75f);
+	}
+	CBaseUIButton::onClicked();
 }
 
 UString OsuUISongBrowserInfoLabel::buildTitleString()

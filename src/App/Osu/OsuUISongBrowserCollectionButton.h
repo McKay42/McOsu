@@ -14,7 +14,6 @@ class OsuUISongBrowserCollectionButton : public OsuUISongBrowserButton
 {
 public:
 	OsuUISongBrowserCollectionButton(Osu *osu, OsuSongBrowser2 *songBrowser, CBaseUIScrollView *view, float xPos, float yPos, float xSize, float ySize, UString name, UString collectionName, std::vector<OsuUISongBrowserButton*> children);
-	virtual ~OsuUISongBrowserCollectionButton() {;}
 
 	virtual void draw(Graphics *g);
 

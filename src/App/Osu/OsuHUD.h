@@ -12,6 +12,7 @@
 
 class Osu;
 class OsuVR;
+class OsuScore;
 
 class McFont;
 class ConVar;
@@ -36,6 +37,10 @@ public:
 	void update();
 
 	void drawCursor(Graphics *g, Vector2 pos, float alphaMultiplier = 1.0f);
+	void drawCursorSpectator1(Graphics *g, Vector2 pos, float alphaMultiplier = 1.0f);
+	void drawCursorSpectator2(Graphics *g, Vector2 pos, float alphaMultiplier = 1.0f);
+	void drawCursorVR1(Graphics *g, Matrix4 &mvp, Vector2 pos, float alphaMultiplier = 1.0f);
+	void drawCursorVR2(Graphics *g, Matrix4 &mvp, Vector2 pos, float alphaMultiplier = 1.0f);
 	void drawFps(Graphics *g) {drawFps(g, m_tempFont, m_fCurFps);}
 	void drawPlayfieldBorder(Graphics *g, Vector2 playfieldCenter, Vector2 playfieldSize, float hitcircleDiameter);
 	void drawPlayfieldBorder(Graphics *g, Vector2 playfieldCenter, Vector2 playfieldSize, float hitcircleDiameter, float borderSize);
@@ -46,6 +51,8 @@ public:
 	void drawComboSimple(Graphics *g, int combo, float scale = 1.0f); // used by OsuRankingScreen
 	void drawAccuracySimple(Graphics *g, float accuracy, float scale = 1.0f); // used by OsuRankingScreen
 	void drawWarningArrow(Graphics *g, Vector2 pos, bool flipVertically, bool originLeft = true);
+	void drawScoreBoard(Graphics *g, std::string &beatmapMD5Hash, OsuScore *currentScore);
+	void drawScoreBoardMP(Graphics *g);
 
 	void animateCombo();
 	void addHitError(long delta, bool miss = false, bool misaim = false);
@@ -54,7 +61,6 @@ public:
 	void animateVolumeChange();
 	void animateCursorExpand();
 	void animateCursorShrink();
-	void addCursorTrailPosition(Vector2 pos);
 
 	void selectVolumePrev();
 	void selectVolumeNext();
@@ -71,6 +77,45 @@ public:
 	void drawSkip(Graphics *g);
 
 private:
+	struct CURSORTRAIL
+	{
+		Vector2 pos;
+		float time;
+		float alpha;
+		float scale;
+	};
+
+	struct HITERROR
+	{
+		float time;
+		long delta;
+		bool miss;
+		bool misaim;
+	};
+
+	struct TARGET
+	{
+		float time;
+		float delta;
+		float angle;
+	};
+
+	struct SCORE_ENTRY
+	{
+		UString name;
+
+		int combo;
+		unsigned long long score;
+		float accuracy;
+
+		bool missingBeatmap;
+		bool dead;
+		bool highlight;
+	};
+
+	void addCursorTrailPosition(std::vector<CURSORTRAIL> &trail, Vector2 pos, bool empty = false);
+
+	void drawCursorInt(Graphics *g, Shader *trailShader, std::vector<CURSORTRAIL> &trail, Matrix4 &mvp, Vector2 pos, float alphaMultiplier = 1.0f, bool emptyTrailFrame = false);
 	void drawCursorRaw(Graphics *g, Vector2 pos, float alphaMultiplier = 1.0f);
 	void drawCursorTrailRaw(Graphics *g, float alpha, Vector2 pos);
 	void drawFps(Graphics *g, McFont *font, float fps);
@@ -78,6 +123,7 @@ private:
 	void drawCombo(Graphics *g, int combo);
 	void drawScore(Graphics *g, unsigned long long score);
 	void drawHP(Graphics *g, float health);
+	void drawScoreBoardInt(Graphics *g, std::vector<SCORE_ENTRY> &scoreEntries);
 
 	void drawWarningArrows(Graphics *g, float hitcircleDiameter = 0.0f);
 	void drawContinue(Graphics *g, Vector2 cursor, float hitcircleDiameter = 0.0f);
@@ -95,9 +141,9 @@ private:
 
 	void onVolumeOverlaySizeChange(UString oldValue, UString newValue);
 
-	Osu *m_osu;
 	McFont *m_tempFont;
 
+	ConVar *m_name_ref;
 	ConVar *m_host_timescale_ref;
 	ConVar *m_osu_volume_master_ref;
 	ConVar *m_osu_volume_effects_ref;
@@ -108,6 +154,8 @@ private:
 	ConVar *m_osu_mod_target_50_percent_ref;
 	ConVar *m_osu_playfield_stretch_x_ref;
 	ConVar *m_osu_playfield_stretch_y_ref;
+	ConVar *m_osu_mp_win_condition_accuracy_ref;
+	ConVar *m_osu_background_dim_ref;
 
 	// shit code
 	float m_fAccuracyXOffset;
@@ -124,13 +172,6 @@ private:
 	float m_fFpsFontHeight;
 
 	// hit error bar
-	struct HITERROR
-	{
-		float time;
-		long delta;
-		bool miss;
-		bool misaim;
-	};
 	std::vector<HITERROR> m_hiterrors;
 
 	// volume
@@ -144,23 +185,16 @@ private:
 
 	// cursor & trail
 	float m_fCursorExpandAnim;
-	struct CURSORTRAIL
-	{
-		Vector2 pos;
-		float time;
-		float alpha;
-	};
 	std::vector<CURSORTRAIL> m_cursorTrail;
+	std::vector<CURSORTRAIL> m_cursorTrailSpectator1;
+	std::vector<CURSORTRAIL> m_cursorTrailSpectator2;
+	std::vector<CURSORTRAIL> m_cursorTrailVR1;
+	std::vector<CURSORTRAIL> m_cursorTrailVR2;
 	Shader *m_cursorTrailShader;
+	Shader *m_cursorTrailShaderVR;
 	VertexArrayObject *m_cursorTrailVAO;
 
 	// target heatmap
-	struct TARGET
-	{
-		float time;
-		float delta;
-		float angle;
-	};
 	std::vector<TARGET> m_targets;
 };
 

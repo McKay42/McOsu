@@ -26,6 +26,10 @@ ConVar osu_hitresult_scale("osu_hitresult_scale", 1.0f);
 ConVar osu_hitresult_duration("osu_hitresult_duration", 1.25f);
 
 ConVar osu_approach_scale_multiplier("osu_approach_scale_multiplier", 3.0f);
+ConVar osu_vr_approach_type("osu_vr_approach_type", 0, "0 = linear (default), 1 = quadratic");
+ConVar osu_vr_draw_approach_circles("osu_vr_draw_approach_circles", false);
+ConVar osu_vr_approach_circles_on_playfield("osu_vr_approach_circles_on_playfield", false);
+ConVar osu_vr_approach_circles_on_top("osu_vr_approach_circles_on_top", false);
 
 ConVar osu_timingpoints_force("osu_timingpoints_force", true, "Forces the correct sample type and volume to be used, by getting the active timingpoint through iteration EVERY TIME a hitsound is played (performance!)");
 
@@ -35,6 +39,10 @@ ConVar osu_mod_target_50_percent("osu_mod_target_50_percent", 0.95f);
 
 ConVar *OsuHitObject::m_osu_approach_scale_multiplier_ref = &osu_approach_scale_multiplier;
 ConVar *OsuHitObject::m_osu_timingpoints_force = &osu_timingpoints_force;
+ConVar *OsuHitObject::m_osu_vr_approach_type = &osu_vr_approach_type;
+ConVar *OsuHitObject::m_osu_vr_draw_approach_circles = &osu_vr_draw_approach_circles;
+ConVar *OsuHitObject::m_osu_vr_approach_circles_on_playfield = &osu_vr_approach_circles_on_playfield;
+ConVar *OsuHitObject::m_osu_vr_approach_circles_on_top = &osu_vr_approach_circles_on_top;
 unsigned long long OsuHitObject::sortHackCounter = 0;
 
 void OsuHitObject::drawHitResult(Graphics *g, OsuBeatmapStandard *beatmap, Vector2 rawPos, OsuScore::HIT result, float animPercent, float defaultAnimPercent)

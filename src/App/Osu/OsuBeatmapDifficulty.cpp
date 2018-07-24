@@ -11,6 +11,7 @@
 #include "ResourceManager.h"
 #include "ConVar.h"
 #include "File.h"
+#include "MD5.h"
 
 #include "Osu.h"
 #include "OsuSkin.h"
@@ -204,12 +205,41 @@ void OsuBeatmapDifficulty::unload()
 
 bool OsuBeatmapDifficulty::loadMetadataRaw(bool calculateStars)
 {
+	bool forceCalculateStars = false; // to avoid double access/calculation by the background image loader and the songbrowser
+	if (calculateStars && starsNoMod == 0.0f)
+	{
+		starsNoMod = 0.0000001f;
+		forceCalculateStars = true;
+	}
+	else
+		calculateStars = false;
+
 	unload();
 
 	if (Osu::debug->getBool())
 		debugLog("OsuBeatmapDifficulty::loadMetadata() : %s\n", m_sFilePath.toUtf8());
 
-	// open osu file
+	// generate MD5 hash (loads entire file)
+	if (md5hash.length() < 1)
+	{
+		File file(m_sFilePath);
+		const char *beatmapFile = file.readFile();
+
+		const char hexDigits[17] = "0123456789abcdef";
+		const unsigned char *input = (unsigned char*)beatmapFile;
+		MD5 hasher;
+		hasher.update(input, file.getFileSize());
+		hasher.finalize();
+		unsigned char *rawMD5Hash = hasher.getDigest();
+
+		for (int i=0; i<16; i++)
+		{
+			md5hash += hexDigits[(rawMD5Hash[i] >> 4) & 0xf];	// md5hash[i] / 16
+			md5hash += hexDigits[rawMD5Hash[i] & 0xf];			// md5hash[i] % 16
+		}
+	}
+
+	// open osu file for parsing
 	File file(m_sFilePath);
 	if (!file.canRead())
 	{
@@ -228,7 +258,8 @@ bool OsuBeatmapDifficulty::loadMetadataRaw(bool calculateStars)
 		const char *curLineChar = uCurLine.toUtf8();
 		std::string curLine(curLineChar);
 
-		if (curLine.find("//") == std::string::npos) // ignore comments
+		const int commentIndex = curLine.find("//");
+		if (commentIndex == std::string::npos || commentIndex != 0) // ignore comments, but only if at the beginning of a line (e.g. allow Artist:DJ'TEKINA//SOMETHING)
 		{
 			if (curLine.find("[General]") != std::string::npos)
 				curBlock = 0;
@@ -314,9 +345,7 @@ bool OsuBeatmapDifficulty::loadMetadataRaw(bool calculateStars)
 					memset(stringBuffer, '\0', 1024);
 					if (sscanf(curLineChar, " BeatmapID :%1023[^\n]", stringBuffer) == 1)
 					{
-						// FUCK stol(), causing crashes in e.g. std::stol("--123456");
-						//beatmapId = std::stol(stringBuffer);
-						beatmapId = 0;
+						sscanf(stringBuffer, " %ld ", &beatmapId);
 					}
 				}
 				break;
@@ -325,6 +354,7 @@ bool OsuBeatmapDifficulty::loadMetadataRaw(bool calculateStars)
 				sscanf(curLineChar, " CircleSize : %f \n", &CS);
 				if (sscanf(curLineChar, " ApproachRate : %f \n", &AR) == 1)
 					foundAR = true;
+
 				sscanf(curLineChar, " HPDrainRate : %f \n", &HP);
 				sscanf(curLineChar, " OverallDifficulty : %f \n", &OD);
 				sscanf(curLineChar, " SliderMultiplier : %f \n", &sliderMultiplier);
@@ -395,7 +425,17 @@ bool OsuBeatmapDifficulty::loadMetadataRaw(bool calculateStars)
 				int hitSound;
 
 				// minimalist hitobject loading, this only loads the parts necessary for the star calculation
-				if (sscanf(curLineChar, " %i , %i , %li , %i , %i", &x, &y, &time, &type, &hitSound) == 5)
+				const bool intScan = (sscanf(curLineChar, " %i , %i , %li , %i , %i", &x, &y, &time, &type, &hitSound) == 5);
+				bool floatScan = false;
+				if (!intScan)
+				{
+					float fX,fY;
+					floatScan = (sscanf(curLineChar, " %f , %f , %li , %i , %i", &fX, &fY, &time, &type, &hitSound) == 5);
+					x = (int)fX;
+					y = (int)fY;
+				}
+
+				if (intScan || floatScan)
 				{
 					if (type & 0x1) // circle
 					{
@@ -488,7 +528,7 @@ bool OsuBeatmapDifficulty::loadMetadataRaw(bool calculateStars)
 	// calculate default nomod standard stars, and immediately unload everything unnecessary after that
 	if (calculateStars && m_osu_database_dynamic_star_calculation->getBool())
 	{
-		if (starsNoMod == 0.0f)
+		if (starsNoMod == 0.0f || forceCalculateStars)
 		{
 			double aimStars = 0.0;
 			double speedStars = 0.0;
@@ -496,7 +536,7 @@ bool OsuBeatmapDifficulty::loadMetadataRaw(bool calculateStars)
 			unload();
 
 			if (starsNoMod == 0.0f)
-				starsNoMod = -0.0000001f; // to avoid reloading endlessly on beatmaps which simply have zero stars (or where the calculation fails)
+				starsNoMod = 0.0000001f; // to avoid reloading endlessly on beatmaps which simply have zero stars (or where the calculation fails)
 		}
 	}
 
@@ -510,7 +550,7 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 	loadMetadataRaw();
 	timingpoints = std::vector<TIMINGPOINT>(); // delete basic timingpoints which just got loaded by loadMetadataRaw(), just so we have a clean start
 
-	// open osu file
+	// open osu file for parsing
 	File file(m_sFilePath);
 	if (!file.canRead())
 	{
@@ -536,7 +576,8 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 		const char *curLineChar = uCurLine.toUtf8();
 		std::string curLine(curLineChar);
 
-		if (curLine.find("//") == std::string::npos) // ignore comments
+		const int commentIndex = curLine.find("//");
+		if (commentIndex == std::string::npos || commentIndex != 0) // ignore comments, but only if at the beginning of a line (e.g. allow Artist:DJ'TEKINA//SOMETHING)
 		{
 			if (curLine.find("[Events]") != std::string::npos)
 				curBlock = 1;
@@ -616,7 +657,17 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 				int type;
 				int hitSound;
 
-				if (sscanf(curLineChar, " %i , %i , %li , %i , %i", &x, &y, &time, &type, &hitSound) == 5)
+				const bool intScan = (sscanf(curLineChar, " %i , %i , %li , %i , %i", &x, &y, &time, &type, &hitSound) == 5);
+				bool floatScan = false;
+				if (!intScan)
+				{
+					float fX,fY;
+					floatScan = (sscanf(curLineChar, " %f , %f , %li , %i , %i", &fX, &fY, &time, &type, &hitSound) == 5);
+					x = (int)fX;
+					y = (int)fY;
+				}
+
+				if (intScan || floatScan)
 				{
 					if (type & 0x4) // new combo
 					{
@@ -954,7 +1005,8 @@ void OsuBeatmapDifficulty::loadBackgroundImagePath()
 		const char *curLineChar = uCurLine.toUtf8();
 		std::string curLine(curLineChar);
 
-		if (curLine.find("//") == std::string::npos) // ignore comments
+		const int commentIndex = curLine.find("//");
+		if (commentIndex == std::string::npos || commentIndex != 0) // ignore comments, but only if at the beginning of a line (e.g. allow Artist:DJ'TEKINA//SOMETHING)
 		{
 			if (curLine.find("[Events]") != std::string::npos)
 				curBlock = 0;
@@ -1508,7 +1560,7 @@ double OsuBeatmapDifficulty::calculateStarDiffForHitObjects(std::vector<PPHitObj
 			double weight = 1.0;
 
 			// sort strains from greatest to lowest
-			std::sort(highestStrains.begin(), highestStrains.end(), std::greater<double>()); // TODO: get rid of std::greater (y tho)
+			std::sort(highestStrains.begin(), highestStrains.end(), std::greater<double>());
 
 			// weigh the top strains
 			for (size_t i=0; i<highestStrains.size(); i++)
@@ -1655,7 +1707,7 @@ double OsuBeatmapDifficulty::calculatePPv2(Osu *osu, OsuBeatmap *beatmap, double
 
 	// hidden
 	if (osu->getModHD())
-		aim_value *= 1.18;
+		aim_value *= (1.02 + std::max(11.0 - ar, 0.0) / 50.0); // https://github.com/ppy/osu-performance/pull/47
 
 	// flashlight
 	// TODO: not yet implemented
@@ -1679,6 +1731,11 @@ double OsuBeatmapDifficulty::calculatePPv2(Osu *osu, OsuBeatmap *beatmap, double
 	speed_value *= length_bonus;
 	speed_value *= miss_penality;
 	speed_value *= combo_break;
+
+	// hidden
+	if (osu->getModHD())
+		speed_value *= 1.18; // https://github.com/ppy/osu-performance/pull/42
+
 	speed_value *= acc_bonus;
 	speed_value *= od_bonus;
 

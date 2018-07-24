@@ -14,9 +14,10 @@ class OsuUISongBrowserSongDifficultyButton : public OsuUISongBrowserSongButton
 {
 public:
 	OsuUISongBrowserSongDifficultyButton(Osu *osu, OsuSongBrowser2 *songBrowser, CBaseUIScrollView *view, float xPos, float yPos, float xSize, float ySize, UString name, OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff);
-	virtual ~OsuUISongBrowserSongDifficultyButton() {;}
 
 	virtual void draw(Graphics *g);
+
+	virtual void updateGrade();
 
 private:
 	static OsuUISongBrowserSongDifficultyButton *previousButton;
@@ -24,10 +25,7 @@ private:
 	virtual void onSelected(bool wasSelected);
 	virtual void onDeselected();
 
-	UString buildDiffString()
-	{
-		return m_sDiff;
-	}
+	UString buildDiffString() {return m_sDiff;}
 
 	OsuBeatmap *m_beatmap;
 
