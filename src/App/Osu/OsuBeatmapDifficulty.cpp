@@ -223,19 +223,24 @@ bool OsuBeatmapDifficulty::loadMetadataRaw(bool calculateStars)
 	if (md5hash.length() < 1)
 	{
 		File file(m_sFilePath);
-		const char *beatmapFile = file.readFile();
-
-		const char hexDigits[17] = "0123456789abcdef";
-		const unsigned char *input = (unsigned char*)beatmapFile;
-		MD5 hasher;
-		hasher.update(input, file.getFileSize());
-		hasher.finalize();
-		unsigned char *rawMD5Hash = hasher.getDigest();
-
-		for (int i=0; i<16; i++)
+		if (file.canRead())
 		{
-			md5hash += hexDigits[(rawMD5Hash[i] >> 4) & 0xf];	// md5hash[i] / 16
-			md5hash += hexDigits[rawMD5Hash[i] & 0xf];			// md5hash[i] % 16
+			const char *beatmapFile = file.readFile();
+			if (beatmapFile != NULL)
+			{
+				const char hexDigits[17] = "0123456789abcdef";
+				const unsigned char *input = (unsigned char*)beatmapFile;
+				MD5 hasher;
+				hasher.update(input, file.getFileSize());
+				hasher.finalize();
+				unsigned char *rawMD5Hash = hasher.getDigest();
+
+				for (int i=0; i<16; i++)
+				{
+					md5hash += hexDigits[(rawMD5Hash[i] >> 4) & 0xf];	// md5hash[i] / 16
+					md5hash += hexDigits[rawMD5Hash[i] & 0xf];			// md5hash[i] % 16
+				}
+			}
 		}
 	}
 

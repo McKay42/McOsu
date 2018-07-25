@@ -1163,6 +1163,8 @@ void OsuHUD::drawScoreBoard(Graphics *g, std::string &beatmapMD5Hash, OsuScore *
 	std::vector<SCORE_ENTRY> scoreEntries;
 	scoreEntries.reserve(numScores);
 
+	const bool isUnranked = (m_osu->getModAuto() || (m_osu->getModAutopilot() && m_osu->getModRelax()));
+
 	bool injectCurrentScore = true;
 	for (int i=0; i<numScores && i<maxVisibleDatabaseScores; i++)
 	{
@@ -1170,6 +1172,7 @@ void OsuHUD::drawScoreBoard(Graphics *g, std::string &beatmapMD5Hash, OsuScore *
 
 		scoreEntry.name = (*scores)[i].playerName;
 
+		scoreEntry.index = -1;
 		scoreEntry.combo = (*scores)[i].comboMax;
 		scoreEntry.score = (*scores)[i].score;
 		scoreEntry.accuracy = OsuScore::calculateAccuracy((*scores)[i].num300s, (*scores)[i].num100s, (*scores)[i].num50s, (*scores)[i].numMisses);
@@ -1187,11 +1190,23 @@ void OsuHUD::drawScoreBoard(Graphics *g, std::string &beatmapMD5Hash, OsuScore *
 
 			SCORE_ENTRY currentScoreEntry;
 
-			currentScoreEntry.name = m_name_ref->getString();
+			currentScoreEntry.name = (isUnranked ? "McOsu" : m_name_ref->getString());
 
 			currentScoreEntry.combo = currentScore->getComboMax();
 			currentScoreEntry.score = currentScore->getScore();
 			currentScoreEntry.accuracy = currentScore->getAccuracy();
+
+			currentScoreEntry.index = i;
+			if (!isCurrentScoreMore)
+			{
+				for (int j=i; j<numScores; j++)
+				{
+					if (currentScoreEntry.score > (*scores)[j].score)
+						break;
+					else
+						currentScoreEntry.index = j+1;
+				}
+			}
 
 			currentScoreEntry.missingBeatmap = false;
 			currentScoreEntry.dead = currentScore->isDead();
@@ -1232,6 +1247,7 @@ void OsuHUD::drawScoreBoardMP(Graphics *g)
 
 		scoreEntry.name = (*m_osu->getMultiplayer()->getPlayers())[i].name;
 
+		scoreEntry.index = -1;
 		scoreEntry.combo = (*m_osu->getMultiplayer()->getPlayers())[i].combo;
 		scoreEntry.score = (*m_osu->getMultiplayer()->getPlayers())[i].score;
 		scoreEntry.accuracy = (*m_osu->getMultiplayer()->getPlayers())[i].accuracy;
@@ -1312,7 +1328,7 @@ void OsuHUD::drawScoreBoardInt(Graphics *g, std::vector<OsuHUD::SCORE_ENTRY> &sc
 		{
 			const float scale = (height / indexFont->getHeight())*indexScale;
 
-			UString indexString = UString::format("%i", (i+1));
+			UString indexString = UString::format("%i", (scoreEntries[i].index > -1 ? scoreEntries[i].index : i) + 1);
 			const float stringWidth = indexFont->getStringWidth(indexString);
 
 			g->scale(scale, scale);
