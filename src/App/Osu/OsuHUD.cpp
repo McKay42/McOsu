@@ -1163,6 +1163,8 @@ void OsuHUD::drawScoreBoard(Graphics *g, std::string &beatmapMD5Hash, OsuScore *
 	std::vector<SCORE_ENTRY> scoreEntries;
 	scoreEntries.reserve(numScores);
 
+	const bool isUnranked = (m_osu->getModAuto() || (m_osu->getModAutopilot() && m_osu->getModRelax()));
+
 	bool injectCurrentScore = true;
 	for (int i=0; i<numScores && i<maxVisibleDatabaseScores; i++)
 	{
@@ -1187,7 +1189,7 @@ void OsuHUD::drawScoreBoard(Graphics *g, std::string &beatmapMD5Hash, OsuScore *
 
 			SCORE_ENTRY currentScoreEntry;
 
-			currentScoreEntry.name = m_name_ref->getString();
+			currentScoreEntry.name = (isUnranked ? "McOsu" : m_name_ref->getString());
 
 			currentScoreEntry.combo = currentScore->getComboMax();
 			currentScoreEntry.score = currentScore->getScore();
