@@ -233,7 +233,8 @@ bool OsuFile::readBool()
 
 UString OsuFile::readString()
 {
-	UString value = "";
+	UString value;
+
 	const unsigned char flag = readByte();
 	if (flag > 0)
 	{
