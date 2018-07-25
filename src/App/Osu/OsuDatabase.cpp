@@ -247,6 +247,12 @@ void OsuDatabase::save()
 
 int OsuDatabase::addScore(std::string beatmapMD5Hash, OsuDatabase::Score score)
 {
+	if (beatmapMD5Hash.length() != 32)
+	{
+		debugLog("ERROR: OsuDatabase::addScore() has invalid md5hash.length() = %i!\n", beatmapMD5Hash.length());
+		return -1;
+	}
+
 	m_scores[beatmapMD5Hash].push_back(score);
 	sortScores(beatmapMD5Hash);
 	m_bDidScoresChange = true;
@@ -266,6 +272,12 @@ int OsuDatabase::addScore(std::string beatmapMD5Hash, OsuDatabase::Score score)
 
 void OsuDatabase::deleteScore(std::string beatmapMD5Hash, uint64_t scoreUnixTimestamp)
 {
+	if (beatmapMD5Hash.length() != 32)
+	{
+		debugLog("WARNING: OsuDatabase::deleteScore() called with invalid md5hash.length() = %i\n", beatmapMD5Hash.length());
+		return;
+	}
+
 	for (int i=0; i<m_scores[beatmapMD5Hash].size(); i++)
 	{
 		if (m_scores[beatmapMD5Hash][i].unixTimestamp == scoreUnixTimestamp)
@@ -279,7 +291,7 @@ void OsuDatabase::deleteScore(std::string beatmapMD5Hash, uint64_t scoreUnixTime
 
 void OsuDatabase::sortScores(std::string beatmapMD5Hash)
 {
-	if (beatmapMD5Hash.length() < 1 || m_scores[beatmapMD5Hash].size() < 1) return;
+	if (beatmapMD5Hash.length() != 32 || m_scores[beatmapMD5Hash].size() < 2) return;
 
 	struct OSU_SCORE_SORTING_COMPARATOR
 	{
@@ -1013,14 +1025,27 @@ void OsuDatabase::loadScores()
 			const int dbVersion = db.readInt();
 			const int numBeatmaps = db.readInt();
 
-			debugLog("Scores: version = %i, numBeatmaps = %i\n", dbVersion, numBeatmaps);
+			debugLog("Legacy scores: version = %i, numBeatmaps = %i\n", dbVersion, numBeatmaps);
 
 			for (int b=0; b<numBeatmaps; b++)
 			{
 				const std::string md5hash = db.readStdString();
+
+				if (md5hash.length() < 32)
+				{
+					debugLog("WARNING: Invalid score with md5hash.length() = %i!\n", md5hash.length());
+					continue;
+				}
+				else if (md5hash.length() > 32)
+				{
+					debugLog("ERROR: Corrupt score database/entry detected, stopping.\n");
+					break;
+				}
+
 				const int numScores = db.readInt();
 
-				//debugLog("Beatmap[%i]: md5hash = %s, numScores = %i\n", b, md5hash.c_str(), numScores);
+				if (Osu::debug->getBool())
+					debugLog("Beatmap[%i]: md5hash = %s, numScores = %i\n", b, md5hash.c_str(), numScores);
 
 				for (int s=0; s<numScores; s++)
 				{
@@ -1113,14 +1138,26 @@ void OsuDatabase::loadScores()
 			const int dbVersion = db.readInt();
 			const int numBeatmaps = db.readInt();
 
-			debugLog("Scores: version = %i, numBeatmaps = %i\n", dbVersion, numBeatmaps);
+			debugLog("Custom scores: version = %i, numBeatmaps = %i\n", dbVersion, numBeatmaps);
 
 			for (int b=0; b<numBeatmaps; b++)
 			{
 				const std::string md5hash = db.readStdString();
 				const int numScores = db.readInt();
 
-				debugLog("Beatmap[%i]: md5hash = %s, numScores = %i\n", b, md5hash.c_str(), numScores);
+				if (md5hash.length() < 32)
+				{
+					debugLog("WARNING: Invalid score with md5hash.length() = %i!\n", md5hash.length());
+					continue;
+				}
+				else if (md5hash.length() > 32)
+				{
+					debugLog("ERROR: Corrupt score database/entry detected, stopping.\n");
+					break;
+				}
+
+				if (Osu::debug->getBool())
+					debugLog("Beatmap[%i]: md5hash = %s, numScores = %i\n", b, md5hash.c_str(), numScores);
 
 				for (int s=0; s<numScores; s++)
 				{
@@ -1206,7 +1243,8 @@ void OsuDatabase::loadScores()
 			debugLog("No custom scores found.\n");
 	}
 
-	m_bScoresLoaded = true;
+	if (m_scores.size() > 0)
+		m_bScoresLoaded = true;
 }
 
 void OsuDatabase::saveScores()
