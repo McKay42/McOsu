@@ -104,6 +104,7 @@ private:
 	{
 		UString name;
 
+		int index;
 		int combo;
 		unsigned long long score;
 		float accuracy;

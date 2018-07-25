@@ -1273,6 +1273,8 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 
 				// save it
 				scoreIndex = m_osu->getSongBrowser()->getDatabase()->addScore(m_selectedDifficulty->md5hash, score);
+				if (scoreIndex == -1)
+					m_osu->getNotificationOverlay()->addNotification(UString::format("Failed saving score! md5hash.length() = %i", m_selectedDifficulty->md5hash.length()), 0xffff0000, false, 3.0f);
 			}
 			debugLog("OsuBeatmapStandard::onBeforeStop() done.\n");
 		}
