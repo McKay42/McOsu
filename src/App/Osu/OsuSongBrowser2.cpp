@@ -57,6 +57,7 @@ ConVar osu_songbrowser_topbar_middle_width_percent("osu_songbrowser_topbar_middl
 ConVar osu_songbrowser_topbar_right_height_percent("osu_songbrowser_topbar_right_height_percent", 0.5f);
 ConVar osu_songbrowser_topbar_right_percent("osu_songbrowser_topbar_right_percent", 0.378f);
 ConVar osu_songbrowser_bottombar_percent("osu_songbrowser_bottombar_percent", 0.116f);
+
 ConVar osu_draw_songbrowser_background_image("osu_draw_songbrowser_background_image", true);
 
 
@@ -381,6 +382,7 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	// convar refs
 	m_fps_max_ref = convar->getConVarByName("fps_max");
 	m_osu_database_dynamic_star_calculation_ref = convar->getConVarByName("osu_database_dynamic_star_calculation");
+	m_osu_scores_enabled = convar->getConVarByName("osu_scores_enabled");
 
 	// convar callbacks
 	osu_gamemode.setCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onModeChange) );
@@ -1789,6 +1791,9 @@ void OsuSongBrowser2::onBack()
 
 void OsuSongBrowser2::updateScoreBrowserLayout()
 {
+	if (m_osu_scores_enabled->getBool() != m_scoreBrowser->isVisible())
+		m_scoreBrowser->setVisible(m_osu_scores_enabled->getBool());
+
 	const int scoreBrowserExtraPaddingRight = 5; // duplication, see above
 	const int scoreButtonWidthMax = m_topbarLeft->getSize().x + 2;
 	m_scoreBrowser->setPos(m_topbarLeft->getPos().x - 2, m_topbarLeft->getPos().y + m_topbarLeft->getSize().y);

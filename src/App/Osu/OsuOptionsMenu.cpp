@@ -625,7 +625,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Draw Background in Ranking/Results Screen", convar->getConVarByName("osu_draw_rankingscreen_background_image"));
 	addSpacer();
 	addCheckbox("Note Blocking/Locking", "osu! has this always enabled, so leave it enabled for practicing.\n\"Protects\" you by only allowing circles to be clicked in order.", convar->getConVarByName("osu_note_blocking"));
-	addCheckbox("Show pp on ranking screen", convar->getConVarByName("osu_rankingscreen_pp"));
+	//addCheckbox("Show pp on ranking screen", convar->getConVarByName("osu_rankingscreen_pp"));
 
 	addSubSection("HUD");
 	addCheckbox("Draw HUD", convar->getConVarByName("osu_draw_hud"));
@@ -1073,14 +1073,27 @@ void OsuOptionsMenu::onKey(KeyboardEvent &e)
 
 void OsuOptionsMenu::setVisible(bool visible)
 {
+	setVisibleInt(visible, false);
+}
+
+void OsuOptionsMenu::setVisibleInt(bool visible, bool fromOnBack)
+{
 	if (visible != m_bVisible)
 	{
+		// open/close animation
 		if (!m_bFullscreen)
 		{
 			if (!m_bVisible)
 				anim->moveQuartOut(&m_fAnimation, 1.0f, 0.30f*(1.0f - m_fAnimation), true);
 			else
 				anim->moveQuadOut(&m_fAnimation, 0.0f, 0.25f*m_fAnimation, true);
+		}
+
+		// save even if not closed via onBack(), e.g. if closed via setVisible(false) from outside
+		if (!visible && !fromOnBack)
+		{
+			m_osu->getNotificationOverlay()->stopWaitingForKey();
+			save();
 		}
 	}
 
@@ -1461,7 +1474,7 @@ void OsuOptionsMenu::onBack()
 	if (m_bFullscreen)
 		m_osu->toggleOptionsMenu();
 	else
-		setVisible(false);
+		setVisibleInt(false, true);
 }
 
 void OsuOptionsMenu::scheduleSearchUpdate()
@@ -2295,7 +2308,7 @@ void OsuOptionsMenu::save()
 {
 	if (!osu_options_save_on_back.getBool())
 	{
-		debugLog("DEACTIVATED SAVE!!!!\n");
+		debugLog("DEACTIVATED SAVE!!!! @ %f\n", engine->getTime());
 		return;
 	}
 

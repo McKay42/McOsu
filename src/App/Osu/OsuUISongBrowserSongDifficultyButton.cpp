@@ -21,12 +21,16 @@
 
 #include "OsuUISongBrowserScoreButton.h"
 
+ConVar *OsuUISongBrowserSongDifficultyButton::m_osu_scores_enabled = NULL;
 OsuUISongBrowserSongDifficultyButton *OsuUISongBrowserSongDifficultyButton::previousButton = NULL;
 
 OsuUISongBrowserSongDifficultyButton::OsuUISongBrowserSongDifficultyButton(Osu *osu, OsuSongBrowser2 *songBrowser, CBaseUIScrollView *view, float xPos, float yPos, float xSize, float ySize, UString name, OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff) : OsuUISongBrowserSongButton(osu, songBrowser, view, xPos, yPos, xSize, ySize, name, NULL)
 {
 	m_beatmap = beatmap;
 	m_diff = diff;
+
+	if (m_osu_scores_enabled == NULL)
+		m_osu_scores_enabled = convar->getConVarByName("osu_scores_enabled");
 
 	previousButton = NULL; // reset
 
@@ -88,18 +92,20 @@ void OsuUISongBrowserSongDifficultyButton::draw(Graphics *g)
 	if (m_diff->starsNoMod > 0)
 	{
 		const float starOffsetY = (size.y*0.85);
-		const float starWidth = (size.y*0.20);
+		const float starWidth = (size.y*0.2);
 		const float starScale = starWidth / skin->getStar()->getHeight();
 		const int numFullStars = std::min((int)m_diff->starsNoMod, 25);
-		const float partialStarScale = clamp<float>(m_diff->starsNoMod - numFullStars, 0.0f, 1.0f);
+		const float partialStarScale = std::max(0.5f, clamp<float>(m_diff->starsNoMod - numFullStars, 0.0f, 1.0f)); // at least 0.5x
 
 		g->setColor(m_bSelected ? skin->getSongSelectActiveText() : skin->getSongSelectInactiveText());
 		for (int i=0; i<numFullStars; i++)
 		{
+			const float scale = std::min(starScale*1.175f, starScale + i*0.015f); // more stars = getting bigger, up to a limit
+
 			g->pushTransform();
 			{
-				g->scale(starScale, starScale);
-				g->translate(pos.x + m_fTextOffset + starWidth/2 + i*starWidth*1.5f, pos.y + starOffsetY);
+				g->scale(scale, scale);
+				g->translate(pos.x + m_fTextOffset + starWidth/2 + i*starWidth*1.75f, pos.y + starOffsetY);
 				g->drawImage(skin->getStar());
 			}
 			g->popTransform();
@@ -107,7 +113,7 @@ void OsuUISongBrowserSongDifficultyButton::draw(Graphics *g)
 		g->pushTransform();
 		{
 			g->scale(starScale*partialStarScale, starScale*partialStarScale);
-			g->translate(pos.x + m_fTextOffset + starWidth/2 + numFullStars*starWidth*1.5f, pos.y + starOffsetY);
+			g->translate(pos.x + m_fTextOffset + starWidth/2 + numFullStars*starWidth*1.75f, pos.y + starOffsetY);
 			g->drawImage(skin->getStar());
 		}
 		g->popTransform();
@@ -137,6 +143,12 @@ void OsuUISongBrowserSongDifficultyButton::onDeselected()
 
 void OsuUISongBrowserSongDifficultyButton::updateGrade()
 {
+	if (!m_osu_scores_enabled->getBool())
+	{
+		m_bHasGrade = false;
+		return;
+	}
+
 	bool hasGrade = false;
 	OsuScore::GRADE grade;
 	unsigned long long highestScore = 0;
