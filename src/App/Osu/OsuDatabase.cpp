@@ -43,10 +43,11 @@ ConVar osu_folder("osu_folder", "/osu!/");
 
 ConVar osu_database_enabled("osu_database_enabled", true);
 ConVar osu_database_dynamic_star_calculation("osu_database_dynamic_star_calculation", true, "dynamically calculate star ratings in the background");
+ConVar osu_scores_enabled("osu_scores_enabled", true);
 ConVar osu_scores_legacy_enabled("osu_scores_legacy_enabled", true, "load osu!'s scores.db");
 ConVar osu_scores_custom_enabled("osu_scores_custom_enabled", true, "load custom scores.db");
 ConVar osu_scores_save_immediately("osu_scores_save_immediately", true, "write scores.db as soon as a new score is added");
-ConVar osu_scores_sort_by_pp("osu_scores_sort_by_pp", false);
+ConVar osu_scores_sort_by_pp("osu_scores_sort_by_pp", false, "display pp in score browser instead of score");
 
 class OsuDatabaseLoader : public Resource
 {

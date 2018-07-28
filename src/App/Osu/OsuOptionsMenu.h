@@ -73,6 +73,7 @@ private:
 	virtual void updateLayout();
 	virtual void onBack();
 
+	void setVisibleInt(bool visible, bool fromOnBack = false);
 	void scheduleSearchUpdate();
 
 	void updateOsuFolder();
