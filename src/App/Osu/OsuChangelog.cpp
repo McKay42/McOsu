@@ -10,6 +10,7 @@
 #include "Engine.h"
 #include "ResourceManager.h"
 #include "SoundEngine.h"
+#include "Mouse.h"
 
 #include "CBaseUIContainer.h"
 #include "CBaseUIScrollView.h"
@@ -17,6 +18,8 @@
 
 #include "Osu.h"
 #include "OsuSkin.h"
+#include "OsuOptionsMenu.h"
+#include "OsuHUD.h"
 
 OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 {
@@ -367,7 +370,17 @@ void OsuChangelog::update()
 	OsuScreenBackable::update();
 	if (!m_bVisible) return;
 
+	// HACKHACK:
+	if (m_osu->getHUD()->isVolumeOverlayBusy() || m_osu->getOptionsMenu()->isMouseInside())
+		engine->getMouse()->resetWheelDelta();
+
 	m_container->update();
+
+	if (m_osu->getHUD()->isVolumeOverlayBusy() || m_osu->getOptionsMenu()->isMouseInside())
+	{
+		stealFocus();
+		m_container->stealFocus();
+	}
 }
 
 void OsuChangelog::setVisible(bool visible)

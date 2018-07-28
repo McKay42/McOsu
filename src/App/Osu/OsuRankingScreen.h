@@ -28,6 +28,8 @@ class OsuRankingScreenIndexLabel;
 class OsuRankingScreenBottomElement;
 class OsuRankingScreenScrollDownInfoButton;
 
+class ConVar;
+
 class OsuRankingScreen : public OsuScreenBackable
 {
 public:
@@ -56,6 +58,8 @@ private:
 	UString getPPString();
 	Vector2 getPPPosRaw();
 	Vector2 getPPPosCenterRaw();
+
+	ConVar *m_osu_scores_enabled;
 
 	CBaseUIContainer *m_container;
 	CBaseUIScrollView *m_rankings;
