@@ -76,6 +76,7 @@ ConVar osu_hud_statistics_offset_y("osu_hud_statistics_offset_y", 0.0f);
 ConVar osu_hud_volume_duration("osu_hud_volume_duration", 1.0f);
 ConVar osu_hud_volume_size_multiplier("osu_hud_volume_size_multiplier", 1.5f);
 ConVar osu_hud_scoreboard_scale("osu_hud_scoreboard_scale", 1.0f);
+ConVar osu_hud_scoreboard_offset_y_percent("osu_hud_scoreboard_offset_y_percent", 0.11f);
 
 ConVar osu_draw_cursor_trail("osu_draw_cursor_trail", true);
 ConVar osu_draw_hud("osu_draw_hud", true);
@@ -1270,6 +1271,7 @@ void OsuHUD::drawScoreBoardInt(Graphics *g, std::vector<OsuHUD::SCORE_ENTRY> &sc
 	McFont *nameFont = m_osu->getSongBrowserFont();
 	McFont *scoreFont = m_osu->getSongBrowserFont();
 	McFont *comboFont = scoreFont;
+	McFont *accFont = comboFont;
 
 	const Color backgroundColor = 0x55114459;
 	const Color backgroundColorHighlight = 0x55777777;
@@ -1298,8 +1300,10 @@ void OsuHUD::drawScoreBoardInt(Graphics *g, std::vector<OsuHUD::SCORE_ENTRY> &sc
 	const float margin = height*0.1f;
 	const float padding = height*0.05f;
 
+	const float minStartPosY = m_osu->getScreenHeight() - (scoreEntries.size()*height + (scoreEntries.size()-1)*margin);
+
 	const float startPosX = 0;
-	const float startPosY = m_osu->getScreenHeight()/2 - (scoreEntries.size()*height + (scoreEntries.size()-1)*margin)/2;
+	const float startPosY = clamp<float>(m_osu->getScreenHeight()/2 - (scoreEntries.size()*height + (scoreEntries.size()-1)*margin)/2 + osu_hud_scoreboard_offset_y_percent.getFloat()*m_osu->getScreenHeight(), 0.0f, minStartPosY);
 	for (int i=0; i<scoreEntries.size(); i++)
 	{
 		const float x = startPosX;
@@ -1414,6 +1418,32 @@ void OsuHUD::drawScoreBoardInt(Graphics *g, std::vector<OsuHUD::SCORE_ENTRY> &sc
 			g->drawString(scoreFont, comboString);
 		}
 		g->popTransform();
+
+		// draw accuracy
+		if (m_osu->isInMultiplayer() && (!m_osu->isInPlayMode() || m_osu_mp_win_condition_accuracy_ref->getBool()))
+		{
+			const float accScale = comboScale;
+			g->pushTransform();
+			{
+				const float scale = (height / accFont->getHeight())*accScale;
+
+				UString accString = UString::format("%.2f%%", scoreEntries[i].accuracy*100.0f);
+				const float stringWidth = accFont->getStringWidth(accString);
+
+				g->scale(scale, scale);
+				g->translate(x + width - stringWidth*scale - padding*1.35f, y + accFont->getHeight()*scale + 2*padding);
+				//if (drawTextShadow)
+				{
+					g->translate(1, 1);
+					g->setColor(textShadowColor);
+					g->drawString(accFont, accString);
+					g->translate(-1, -1);
+				}
+				g->setColor((scoreEntries[i].highlight ? comboAccuracyColorHighlight : (i == 0 ? comboAccuracyColorTop : comboAccuracyColor)));
+				g->drawString(accFont, accString);
+			}
+			g->popTransform();
+		}
 
 		if (m_osu->isInVRDraw())
 		{

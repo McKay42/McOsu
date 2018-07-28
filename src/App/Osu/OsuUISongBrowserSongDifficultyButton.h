@@ -10,6 +10,8 @@
 
 #include "OsuUISongBrowserSongButton.h"
 
+class ConVar;
+
 class OsuUISongBrowserSongDifficultyButton : public OsuUISongBrowserSongButton
 {
 public:
@@ -20,6 +22,7 @@ public:
 	virtual void updateGrade();
 
 private:
+	static ConVar *m_osu_scores_enabled;
 	static OsuUISongBrowserSongDifficultyButton *previousButton;
 
 	virtual void onSelected(bool wasSelected);

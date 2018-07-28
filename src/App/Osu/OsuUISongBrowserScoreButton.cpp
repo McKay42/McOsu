@@ -455,7 +455,12 @@ void OsuUISongBrowserScoreButton::setScore(OsuDatabase::Score score, int index)
 	// tooltip
 	m_tooltipLines.clear();
 	m_tooltipLines.push_back(achievedOn);
-	m_tooltipLines.push_back(UString::format("300:%i 100:%i 50:%i Miss:%i", score.num300s, score.num100s, score.num50s, score.numMisses));
+
+	if (m_score.isLegacyScore)
+		m_tooltipLines.push_back(UString::format("300:%i 100:%i 50:%i Miss:%i", score.num300s, score.num100s, score.num50s, score.numMisses));
+	else
+		m_tooltipLines.push_back(UString::format("300:%i 100:%i 50:%i Miss:%i SBreak:%i", score.num300s, score.num100s, score.num50s, score.numMisses, score.numSliderBreaks));
+
 	m_tooltipLines.push_back(UString::format("Accuracy: %.2f%%", accuracy));
 
 	UString tooltipMods = "Mods: ";

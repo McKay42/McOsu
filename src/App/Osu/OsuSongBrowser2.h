@@ -153,6 +153,7 @@ private:
 
 	ConVar *m_fps_max_ref;
 	ConVar *m_osu_database_dynamic_star_calculation_ref;
+	ConVar *m_osu_scores_enabled;
 
 	Osu *m_osu;
 	std::mt19937 m_rngalg;
