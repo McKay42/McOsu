@@ -177,6 +177,8 @@ private:
 
 OsuRankingScreen::OsuRankingScreen(Osu *osu) : OsuScreenBackable(osu)
 {
+	m_osu_scores_enabled = convar->getConVarByName("osu_scores_enabled");
+
 	m_container = new CBaseUIContainer(0, 0, 0, 0, "");
 	m_rankings = new CBaseUIScrollView(-1, 0, 0, 0, "");
 	m_rankings->setHorizontalScrolling(false);
@@ -372,7 +374,8 @@ void OsuRankingScreen::draw(Graphics *g)
 		g->popTransform();
 	}
 
-	m_rankingScrollDownInfoButton->draw(g);
+	if (m_osu_scores_enabled->getBool())
+		m_rankingScrollDownInfoButton->draw(g);
 
 	// draw top black bar
 	g->setColor(0xff000000);
@@ -683,6 +686,9 @@ void OsuRankingScreen::setGrade(OsuScore::GRADE grade)
 
 void OsuRankingScreen::setIndex(int index)
 {
+	if (!m_osu_scores_enabled->getBool())
+		index = -1;
+
 	if (index > -1)
 	{
 		m_rankingIndex->setText(UString::format("You achieved the #%i score on local rankings!", (index+1)));

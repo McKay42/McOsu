@@ -759,7 +759,7 @@ void Osu::update()
 	if ((m_songBrowser2 != NULL && (!m_songBrowser2->isVisible() || engine->getKeyboard()->isAltDown() || m_hud->isVolumeOverlayBusy()))
 			&& (!m_optionsMenu->isVisible() || !m_optionsMenu->isMouseInside() || engine->getKeyboard()->isAltDown())
 			&& !m_vrTutorial->isVisible()
-			&& !m_changelog->isVisible()
+			&& (!m_changelog->isVisible() || engine->getKeyboard()->isAltDown())
 			&& (!m_modSelector->isMouseInScrollView() || engine->getKeyboard()->isAltDown()))
 	{
 		if ((!(isInPlayMode() && !m_pauseMenu->isVisible()) && !m_rankingScreen->isVisible()) || (isInPlayMode() && !osu_disable_mousewheel.getBool()) || engine->getKeyboard()->isAltDown())
@@ -1729,7 +1729,7 @@ void Osu::onConfineCursorFullscreenChange(UString oldValue, UString newValue)
 
 void Osu::onKey1Change(bool pressed, bool mouse)
 {
-	if (isInPlayMode() && !getSelectedBeatmap()->isPaused())
+	if (isInPlayMode()/* && !getSelectedBeatmap()->isPaused()*/) // NOTE: allow keyup even while beatmap is paused, to correctly not-continue immediately due to pressed keys
 	{
 		if (!(mouse && osu_disable_mousebuttons.getBool()))
 		{
@@ -1758,7 +1758,7 @@ void Osu::onKey1Change(bool pressed, bool mouse)
 
 void Osu::onKey2Change(bool pressed, bool mouse)
 {
-	if (isInPlayMode() && !getSelectedBeatmap()->isPaused())
+	if (isInPlayMode()/* && !getSelectedBeatmap()->isPaused()*/) // NOTE: allow keyup even while beatmap is paused, to correctly not-continue immediately due to pressed keys
 	{
 		if (!(mouse && osu_disable_mousebuttons.getBool()))
 		{
