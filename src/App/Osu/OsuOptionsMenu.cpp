@@ -2293,7 +2293,8 @@ CBaseUIElement *OsuOptionsMenu::addSliderPreview()
 
 CBaseUIButton *OsuOptionsMenu::addCategory(CBaseUIElement *section, wchar_t icon)
 {
-	OsuOptionsMenuCategoryButton *button = new OsuOptionsMenuCategoryButton(section, 0, 0, 50, 50, "", UString::format("%C", icon));
+	UString iconString; iconString.insert(0, icon);
+	OsuOptionsMenuCategoryButton *button = new OsuOptionsMenuCategoryButton(section, 0, 0, 50, 50, "", iconString);
 	button->setFont(m_osu->getFontIcons());
 	button->setDrawBackground(false);
 	button->setDrawFrame(false);
