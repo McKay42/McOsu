@@ -112,7 +112,7 @@ void OsuBeatmapExample::onStop(bool quit)
 	debugLog("OsuBeatmapExample::onStop()\n");
 }
 
-void OsuBeatmapExample::onPaused()
+void OsuBeatmapExample::onPaused(bool first)
 {
 	// called when the player pauses the game
 	debugLog("OsuBeatmapExample::onPaused()\n");

@@ -94,7 +94,7 @@ public:
 	OsuUISongBrowserNoRecordsSetElement(Osu *osu, UString text) : CBaseUILabel(0, 0, 0, 0, "", text)
 	{
 		m_osu = osu;
-		m_sIconString = UString::format("%C", OsuIcons::TROPHY);
+		m_sIconString.insert(0, OsuIcons::TROPHY);
 	}
 
 	virtual void drawText(Graphics *g)

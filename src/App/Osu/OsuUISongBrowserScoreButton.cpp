@@ -42,7 +42,7 @@ OsuUISongBrowserScoreButton::OsuUISongBrowserScoreButton(Osu *osu, OsuUIContextM
 		m_osu_scores_sort_by_pp = convar->getConVarByName("osu_scores_sort_by_pp");
 
 	if (recentScoreIconString.length() < 1)
-		recentScoreIconString = UString::format("%C", OsuIcons::ARROW_CIRCLE_UP);
+		recentScoreIconString.insert(0, OsuIcons::ARROW_CIRCLE_UP);
 
 	m_fIndexNumberAnim = 0.0f;
 
