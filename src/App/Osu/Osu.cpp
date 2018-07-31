@@ -314,7 +314,8 @@ Osu::Osu()
 	float averageIconHeight = 0.0f;
 	for (int i=0; i<OsuIcons::icons.size(); i++)
 	{
-		float height = m_fontIcons->getStringHeight(UString::format("%C", OsuIcons::icons[i]));
+		UString iconString; iconString.insert(0, OsuIcons::icons[i]);
+		const float height = m_fontIcons->getStringHeight(iconString);
 		if (height > averageIconHeight)
 			averageIconHeight = height;
 	}

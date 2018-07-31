@@ -219,7 +219,13 @@ OsuRankingScreen::OsuRankingScreen(Osu *osu) : OsuScreenBackable(osu)
 	m_rankingScrollDownInfoButton = new OsuRankingScreenScrollDownInfoButton();
 	m_rankingScrollDownInfoButton->setFont(m_osu->getFontIcons());
 	m_rankingScrollDownInfoButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuRankingScreen::onScrollDownClicked) );
-	m_rankingScrollDownInfoButton->setText(UString::format("%C   %C   %C", OsuIcons::ARROW_DOWN, OsuIcons::ARROW_DOWN, OsuIcons::ARROW_DOWN));
+	UString iconString;
+	iconString.insert(0, OsuIcons::ARROW_DOWN);
+	iconString.append("   ");
+	iconString.insert(iconString.length(), OsuIcons::ARROW_DOWN);
+	iconString.append("   ");
+	iconString.insert(iconString.length(), OsuIcons::ARROW_DOWN);
+	m_rankingScrollDownInfoButton->setText(iconString);
 	m_container->addBaseUIElement(m_rankingScrollDownInfoButton);
 	m_fRankingScrollDownInfoButtonAlphaAnim = 1.0f;
 
