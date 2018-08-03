@@ -39,6 +39,8 @@
 #include "OsuSpinner.h"
 
 #include "OpenGLHeaders.h"
+#include "OpenGLLegacyInterface.h"
+#include "OpenGL3Interface.h"
 
 #include <chrono>
 
@@ -313,6 +315,8 @@ void OsuBeatmapStandard::draw(Graphics *g)
 		}
 		else
 		{
+			const bool isOpenGLRendererHack = (dynamic_cast<OpenGLLegacyInterface*>(g) != NULL || dynamic_cast<OpenGL3Interface*>(g) != NULL);
+
 			if (m_mafhamActiveRenderTarget == NULL)
 				m_mafhamActiveRenderTarget = m_osu->getFrameBuffer();
 
@@ -330,37 +334,45 @@ void OsuBeatmapStandard::draw(Graphics *g)
 				m_mafhamActiveRenderTarget->setClearDepthOnDraw(m_iMafhamHitObjectRenderIndex == 0);
 
 				m_mafhamActiveRenderTarget->enable();
-				glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA); // HACKHACK: OpenGL hardcoded
-				int chunkCounter = 0;
-				for (int i=m_hitobjectsSortedByEndTime.size()-1 - m_iMafhamHitObjectRenderIndex; i>=0; i--, m_iMafhamHitObjectRenderIndex++)
 				{
-					chunkCounter++;
-					if (chunkCounter > osu_mod_mafham_render_chunksize.getInt())
-						break; // continue chunk render in next frame
-
-					if (i <= m_iCurrentHitObjectIndex + OsuGameRules::osu_mod_mafham_render_livesize.getInt()) // skip live objects
+					if (isOpenGLRendererHack)
 					{
-						m_iMafhamHitObjectRenderIndex = m_hitobjectsSortedByEndTime.size(); // stop chunk render
-						break;
+						glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA); // HACKHACK: OpenGL hardcoded
 					}
-
-					// PVS optimization (reversed)
-					if (usePVS)
+					int chunkCounter = 0;
+					for (int i=m_hitobjectsSortedByEndTime.size()-1 - m_iMafhamHitObjectRenderIndex; i>=0; i--, m_iMafhamHitObjectRenderIndex++)
 					{
-						if (m_hitobjectsSortedByEndTime[i]->isFinished() && (curPos - pvs > m_hitobjectsSortedByEndTime[i]->getTime() + m_hitobjectsSortedByEndTime[i]->getDuration())) // past objects
+						chunkCounter++;
+						if (chunkCounter > osu_mod_mafham_render_chunksize.getInt())
+							break; // continue chunk render in next frame
+
+						if (i <= m_iCurrentHitObjectIndex + OsuGameRules::osu_mod_mafham_render_livesize.getInt()) // skip live objects
 						{
 							m_iMafhamHitObjectRenderIndex = m_hitobjectsSortedByEndTime.size(); // stop chunk render
 							break;
 						}
-						if (m_hitobjectsSortedByEndTime[i]->getTime() > curPos + pvs) // future objects
-							continue;
+
+						// PVS optimization (reversed)
+						if (usePVS)
+						{
+							if (m_hitobjectsSortedByEndTime[i]->isFinished() && (curPos - pvs > m_hitobjectsSortedByEndTime[i]->getTime() + m_hitobjectsSortedByEndTime[i]->getDuration())) // past objects
+							{
+								m_iMafhamHitObjectRenderIndex = m_hitobjectsSortedByEndTime.size(); // stop chunk render
+								break;
+							}
+							if (m_hitobjectsSortedByEndTime[i]->getTime() > curPos + pvs) // future objects
+								continue;
+						}
+
+						m_hitobjectsSortedByEndTime[i]->draw(g);
+
+						m_iMafhamActiveRenderHitObjectIndex = i;
 					}
-
-					m_hitobjectsSortedByEndTime[i]->draw(g);
-
-					m_iMafhamActiveRenderHitObjectIndex = i;
+					if (isOpenGLRendererHack)
+					{
+						glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // HACKHACK: OpenGL hardcoded
+					}
 				}
-				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // HACKHACK: OpenGL hardcoded
 				m_mafhamActiveRenderTarget->disable();
 
 				m_bInMafhamRenderChunk = false;
@@ -382,9 +394,13 @@ void OsuBeatmapStandard::draw(Graphics *g)
 			// draw scene buffer
 			if (shouldDrawBuffer)
 			{
-				glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA); // HACKHACK: OpenGL hardcoded
+				if (isOpenGLRendererHack)
+					glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA); // HACKHACK: OpenGL hardcoded
+
 				m_mafhamFinishedRenderTarget->draw(g, 0, 0);
-				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // HACKHACK: OpenGL hardcoded
+
+				if (isOpenGLRendererHack)
+					glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // HACKHACK: OpenGL hardcoded
 			}
 
 			// draw followpoints

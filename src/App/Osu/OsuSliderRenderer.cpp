@@ -20,6 +20,8 @@
 #include "OsuGameRules.h"
 
 #include "OpenGLHeaders.h"
+#include "OpenGLLegacyInterface.h"
+#include "OpenGL3Interface.h"
 
 Shader *OsuSliderRenderer::BLEND_SHADER = NULL;
 Shader *OsuSliderRenderer::BLEND_SHADER_VR = NULL;
@@ -282,6 +284,8 @@ void OsuSliderRenderer::drawVR(Graphics *g, Osu *osu, OsuVR *vr, Matrix4 &mvp, f
 	if (osu_slider_alpha_multiplier.getFloat() <= 0.0f || alpha <= 0.0f)
 		return;
 
+	const bool isOpenGLRendererHack = (dynamic_cast<OpenGLLegacyInterface*>(g) != NULL || dynamic_cast<OpenGL3Interface*>(g) != NULL);
+
 	checkUpdateVars(osu, hitcircleDiameter);
 
 	const int drawFromIndex = clamp<int>((int)std::round(points.size() * from), 0, points.size());
@@ -326,7 +330,8 @@ void OsuSliderRenderer::drawVR(Graphics *g, Osu *osu, OsuVR *vr, Matrix4 &mvp, f
 		g->setColor(0xffffffff);
 		osu->getSkin()->getSliderGradient()->bind();
 
-		glBlendEquation(GL_MAX); // HACKHACK: OpenGL hardcoded
+		if (isOpenGLRendererHack)
+			glBlendEquation(GL_MAX); // HACKHACK: OpenGL hardcoded
 
 		// draw curve mesh
 		{
@@ -343,7 +348,8 @@ void OsuSliderRenderer::drawVR(Graphics *g, Osu *osu, OsuVR *vr, Matrix4 &mvp, f
 				drawFillSliderBodyPeppyVR(g, osu, vr, mvp, alwaysPoints, UNIT_CIRCLE_VAO_BAKED, hitcircleDiameter/2.0f, 0, alwaysPoints.size());
 		}
 
-		glBlendEquation(GL_FUNC_ADD); // HACKHACK: OpenGL hardcoded
+		if (isOpenGLRendererHack)
+			glBlendEquation(GL_FUNC_ADD); // HACKHACK: OpenGL hardcoded
 
 		///if (!osu_slider_use_gradient_image.getBool())
 			BLEND_SHADER_VR->disable();
@@ -358,6 +364,8 @@ void OsuSliderRenderer::drawVR(Graphics *g, Osu *osu, OsuVR *vr, Matrix4 &mvp, f
 {
 	if (osu_slider_alpha_multiplier.getFloat() <= 0.0f || alpha <= 0.0f || vao1 == NULL || vao2 == NULL)
 		return;
+
+	const bool isOpenGLRendererHack = (dynamic_cast<OpenGLLegacyInterface*>(g) != NULL || dynamic_cast<OpenGL3Interface*>(g) != NULL);
 
 	checkUpdateVars(osu, hitcircleDiameter);
 
@@ -400,7 +408,8 @@ void OsuSliderRenderer::drawVR(Graphics *g, Osu *osu, OsuVR *vr, Matrix4 &mvp, f
 		g->setColor(0xffffffff);
 		osu->getSkin()->getSliderGradient()->bind();
 
-		glBlendEquation(GL_MAX); // HACKHACK: OpenGL hardcoded
+		if (isOpenGLRendererHack)
+			glBlendEquation(GL_MAX); // HACKHACK: OpenGL hardcoded
 
 		// draw curve mesh
 		{
@@ -419,7 +428,8 @@ void OsuSliderRenderer::drawVR(Graphics *g, Osu *osu, OsuVR *vr, Matrix4 &mvp, f
 				drawFillSliderBodyPeppyVR(g, osu, vr, mvp, alwaysPoints, UNIT_CIRCLE_VAO_BAKED, hitcircleDiameter/2.0f, 0, alwaysPoints.size());
 		}
 
-		glBlendEquation(GL_FUNC_ADD); // HACKHACK: OpenGL hardcoded
+		if (isOpenGLRendererHack)
+			glBlendEquation(GL_FUNC_ADD); // HACKHACK: OpenGL hardcoded
 
 		///if (!osu_slider_use_gradient_image.getBool())
 			BLEND_SHADER_VR->disable();

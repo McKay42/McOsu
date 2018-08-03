@@ -65,6 +65,7 @@ OsuUISongBrowserSongButton::OsuUISongBrowserSongButton(Osu *osu, OsuSongBrowser2
 		for (int i=0; i<difficulties.size(); i++)
 		{
 			OsuUISongBrowserSongButton *songButton = new OsuUISongBrowserSongDifficultyButton(m_osu, m_songBrowser, m_view, 0, 0, 0, 0, "", m_beatmap, difficulties[i]);
+			songButton->setParent(this);
 			m_children.push_back(songButton);
 		}
 	}

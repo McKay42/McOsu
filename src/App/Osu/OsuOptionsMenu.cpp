@@ -47,6 +47,8 @@
 #include <fstream>
 
 #include "OpenGLHeaders.h"
+#include "OpenGLLegacyInterface.h"
+#include "OpenGL3Interface.h"
 
 ConVar osu_options_save_on_back("osu_options_save_on_back", true);
 ConVar osu_options_high_quality_sliders("osu_options_high_quality_sliders", false);
@@ -411,6 +413,8 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 		aaSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeVRAntiAliasing) );
 		aaSlider->setKeyDelta(2.0f);
 		aaSlider->setAnimated(false);
+		addLabel("");
+		addCheckbox("LIV Support (Manual Capture, no SDK!)", "Use Effect: Legacy: Normal", convar->getConVarByName("vr_liv"));
 
 		addSpacer();
 		addSubSection("Play Area / Playfield");
@@ -735,12 +739,16 @@ void OsuOptionsMenu::draw(Graphics *g)
 	const bool isAnimating = anim->isAnimating(&m_fAnimation);
 	if (!m_bVisible && !isAnimating) return;
 
+	const bool isOpenGLRendererHack = (dynamic_cast<OpenGLLegacyInterface*>(g) != NULL || dynamic_cast<OpenGL3Interface*>(g) != NULL);
+
 	m_sliderPreviewElement->setDrawSliderHack(!isAnimating);
 
 	if (isAnimating)
 	{
 		m_osu->getSliderFrameBuffer()->enable();
-		glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA); // HACKHACK: OpenGL hardcoded
+
+		if (isOpenGLRendererHack)
+			glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA); // HACKHACK: OpenGL hardcoded
 	}
 
 	const bool isPlayingBeatmap = m_osu->isInPlayMode();
@@ -834,7 +842,9 @@ void OsuOptionsMenu::draw(Graphics *g)
 		if (!m_bVisible)
 			m_backButton->draw(g);
 
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // HACKHACK: OpenGL hardcoded
+		if (isOpenGLRendererHack)
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // HACKHACK: OpenGL hardcoded
+
 		m_osu->getSliderFrameBuffer()->disable();
 
 		g->push3DScene(McRect(0, 0, m_options->getSize().x, m_options->getSize().y));
