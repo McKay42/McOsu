@@ -44,6 +44,8 @@
 #include "OsuUIVolumeSlider.h"
 
 #include "OpenGLHeaders.h"
+#include "OpenGLLegacyInterface.h"
+#include "OpenGL3Interface.h"
 
 ConVar osu_cursor_alpha("osu_cursor_alpha", 1.0f);
 ConVar osu_cursor_scale("osu_cursor_scale", 1.5f);
@@ -570,6 +572,8 @@ void OsuHUD::drawCursorInt(Graphics *g, Shader *trailShader, std::vector<CURSORT
 		// draw new style continuous smooth trail
 		if (smoothCursorTrail)
 		{
+			const bool isOpenGLRendererHack = (dynamic_cast<OpenGLLegacyInterface*>(g) != NULL || dynamic_cast<OpenGL3Interface*>(g) != NULL);
+
 			trailShader->enable();
 			{
 				if (trailShader == m_cursorTrailShaderVR)
@@ -581,11 +585,13 @@ void OsuHUD::drawCursorInt(Graphics *g, Shader *trailShader, std::vector<CURSORT
 
 				trailImage->bind();
 				{
-					glBlendFunc(GL_SRC_ALPHA, GL_ONE); // HACKHACK: OpenGL hardcoded
-					{
-						g->drawVAO(m_cursorTrailVAO);
-					}
-					glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // HACKHACK: OpenGL hardcoded
+					if (isOpenGLRendererHack)
+						glBlendFunc(GL_SRC_ALPHA, GL_ONE); // HACKHACK: OpenGL hardcoded
+
+					g->drawVAO(m_cursorTrailVAO);
+
+					if (isOpenGLRendererHack)
+						glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // HACKHACK: OpenGL hardcoded
 				}
 				trailImage->unbind();
 			}
