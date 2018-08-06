@@ -36,7 +36,11 @@ ConVar OsuGameRules::osu_mod_mafham("osu_mod_mafham", false);
 ConVar OsuGameRules::osu_mod_mafham_render_livesize("osu_mod_mafham_render_livesize", 25, "render this many hitobjects without any scene buffering, higher = more lag but more up-to-date scene");
 ConVar OsuGameRules::osu_stacking_ar_override("osu_stacking_ar_override", -1, "allows overriding the approach time used for the stacking calculations. behaves as if disabled if the value is less than 0.");
 
-// all hitwindow values here are in milliseconds
+// all values here are in milliseconds
+ConVar OsuGameRules::osu_approachtime_min("osu_approachtime_min", 1800);
+ConVar OsuGameRules::osu_approachtime_mid("osu_approachtime_mid", 1200);
+ConVar OsuGameRules::osu_approachtime_max("osu_approachtime_max", 450);
+
 ConVar OsuGameRules::osu_hitwindow_300_min("osu_hitwindow_300_min", 80);
 ConVar OsuGameRules::osu_hitwindow_300_mid("osu_hitwindow_300_mid", 50);
 ConVar OsuGameRules::osu_hitwindow_300_max("osu_hitwindow_300_max", 20);
