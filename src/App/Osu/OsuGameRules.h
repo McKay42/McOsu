@@ -37,7 +37,7 @@ public:
 
 	static float getFadeOutTime(OsuBeatmap *beatmap) // this scales the fadeout duration with the current speed multiplier
 	{
-		return osu_hitobject_fade_out_time.getFloat()*(1.0f/std::max(beatmap->getSpeedMultiplier(), osu_hitobject_fade_out_time_speed_multiplier_min.getFloat()));
+		return osu_hitobject_fade_out_time.getFloat() * (1.0f / std::max(beatmap->getSpeedMultiplier(), osu_hitobject_fade_out_time_speed_multiplier_min.getFloat()));
 	}
 
 
@@ -62,6 +62,10 @@ public:
 	//	Hitobject Timing  //
 	//********************//
 
+	static ConVar osu_approachtime_min;
+	static ConVar osu_approachtime_mid;
+	static ConVar osu_approachtime_max;
+
 	static ConVar osu_hitwindow_300_min;
 	static ConVar osu_hitwindow_300_mid;
 	static ConVar osu_hitwindow_300_max;
@@ -73,19 +77,32 @@ public:
 	static ConVar osu_hitwindow_50_max;
 	static ConVar osu_hitwindow_miss;
 
+	// ignore all mods and overrides
+	static inline float getRawMinApproachTime()
+	{
+		return osu_approachtime_min.getFloat();
+	}
+	static inline float getRawMidApproachTime()
+	{
+		return osu_approachtime_mid.getFloat();
+	}
+	static inline float getRawMaxApproachTime()
+	{
+		return osu_approachtime_max.getFloat();
+	}
+
+	// respect mods and overrides
 	static inline float getMinApproachTime()
 	{
-		return 1800.0f * (osu_mod_millhioref.getBool() ? osu_mod_millhioref_multiplier.getFloat() : 1.0f);
+		return getRawMinApproachTime() * (osu_mod_millhioref.getBool() ? osu_mod_millhioref_multiplier.getFloat() : 1.0f);
 	}
-
 	static inline float getMidApproachTime()
 	{
-		return 1200.0f * (osu_mod_millhioref.getBool() ? osu_mod_millhioref_multiplier.getFloat() : 1.0f);
+		return getRawMidApproachTime() * (osu_mod_millhioref.getBool() ? osu_mod_millhioref_multiplier.getFloat() : 1.0f);
 	}
-
 	static inline float getMaxApproachTime()
 	{
-		return 450.0f * (osu_mod_millhioref.getBool() ? osu_mod_millhioref_multiplier.getFloat() : 1.0f);
+		return getRawMaxApproachTime() * (osu_mod_millhioref.getBool() ? osu_mod_millhioref_multiplier.getFloat() : 1.0f);
 	}
 
 	static inline float getMinHitWindow300() {return osu_hitwindow_300_min.getFloat();}
@@ -125,6 +142,10 @@ public:
 	}
 
 	// 1200 ms -> AR 5
+	static float getRawApproachRateForSpeedMultiplier(float approachTime, float speedMultiplier) // ignore all mods and overrides
+	{
+		return mapDifficultyRangeInv(approachTime * (1.0f / speedMultiplier), getRawMinApproachTime(), getRawMidApproachTime(), getRawMaxApproachTime());
+	}
 	static float getApproachRateForSpeedMultiplier(OsuBeatmap *beatmap, float speedMultiplier)
 	{
 		return mapDifficultyRangeInv((float)getApproachTime(beatmap) * (1.0f / speedMultiplier), getMinApproachTime(), getMidApproachTime(), getMaxApproachTime());
@@ -143,6 +164,10 @@ public:
 	}
 
 	// 50 ms -> OD 5
+	static float getRawOverallDifficultyForSpeedMultiplier(float hitWindow300, float speedMultiplier) // ignore all mods and overrides
+	{
+		return mapDifficultyRangeInv(hitWindow300 * (1.0f / speedMultiplier), getMinHitWindow300(), getMidHitWindow300(), getMaxHitWindow300());
+	}
 	static float getOverallDifficultyForSpeedMultiplier(OsuBeatmap *beatmap, float speedMultiplier) // respect all mods and overrides
 	{
 		return mapDifficultyRangeInv((float)getHitWindow300(beatmap) * (1.0f / speedMultiplier), getMinHitWindow300(), getMidHitWindow300(), getMaxHitWindow300());
@@ -160,6 +185,10 @@ public:
 		return mapDifficultyRangeInv((float)getRawHitWindow300(beatmap) * beatmap->getOsu()->getSpeedMultiplier(), getMinHitWindow300(), getMidHitWindow300(), getMaxHitWindow300());
 	}
 
+	static float getRawApproachTime(float AR) // ignore all mods and overrides
+	{
+		return mapDifficultyRange(AR, getRawMinApproachTime(), getRawMidApproachTime(), getRawMaxApproachTime());
+	}
 	static float getApproachTime(OsuBeatmap *beatmap)
 	{
 		return osu_mod_mafham.getBool() ? beatmap->getLength()*2 : mapDifficultyRange(beatmap->getAR(), getMinApproachTime(), getMidApproachTime(), getMaxApproachTime());
@@ -175,6 +204,10 @@ public:
 
 	static inline long getFadeInTime() {return 400;}
 
+	static float getRawHitWindow300(float OD) // ignore all mods and overrides
+	{
+		return mapDifficultyRange(OD, getMinHitWindow300(), getMidHitWindow300(), getMaxHitWindow300());
+	}
 	static float getHitWindow300(OsuBeatmap *beatmap)
 	{
 		return mapDifficultyRange(beatmap->getOD(), getMinHitWindow300(), getMidHitWindow300(), getMaxHitWindow300());
