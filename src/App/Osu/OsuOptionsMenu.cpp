@@ -759,9 +759,12 @@ void OsuOptionsMenu::draw(Graphics *g)
 	{
 		if (!isPlayingBeatmap)
 		{
-			short brightness = clamp<float>(m_backgroundBrightnessSlider->getFloat(), 0.0f, 1.0f)*255.0f;
-			g->setColor(COLOR(255, brightness, brightness, brightness));
-			g->fillRect(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight());
+			const short brightness = clamp<float>(m_backgroundBrightnessSlider->getFloat(), 0.0f, 1.0f)*255.0f;
+			if (brightness > 0)
+			{
+				g->setColor(COLOR(255, brightness, brightness, brightness));
+				g->fillRect(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight());
+			}
 		}
 	}
 
@@ -769,7 +772,7 @@ void OsuOptionsMenu::draw(Graphics *g)
 	{
 		if (!isPlayingBeatmap)
 		{
-			short dim = clamp<float>(m_backgroundDimSlider->getFloat(), 0.0f, 1.0f)*255.0f;
+			const short dim = clamp<float>(m_backgroundDimSlider->getFloat(), 0.0f, 1.0f)*255.0f;
 			g->setColor(COLOR(dim, 0, 0, 0));
 			g->fillRect(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight());
 		}

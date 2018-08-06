@@ -540,8 +540,8 @@ void OsuRankingScreen::setScore(OsuDatabase::Score score, UString dateTime)
 
 	m_fSpeedMultiplier = std::round(score.speedMultiplier * 100.0f) / 100.0f;
 	m_fCS = std::round(score.CS * 100.0f) / 100.0f;
-	m_fAR = std::round(score.AR * 100.0f) / 100.0f;
-	m_fOD = std::round(score.OD * 100.0f) / 100.0f;
+	m_fAR = std::round(OsuGameRules::getRawApproachRateForSpeedMultiplier(OsuGameRules::getRawApproachTime(score.AR), score.speedMultiplier) * 100.0f) / 100.0f;
+	m_fOD = std::round(OsuGameRules::getRawOverallDifficultyForSpeedMultiplier(OsuGameRules::getRawHitWindow300(score.OD), score.speedMultiplier) * 100.0f) / 100.0f;
 	m_fHP = std::round(score.HP * 100.0f) / 100.0f;
 
 	m_bModSS = score.modsLegacy & OsuReplay::Mods::Perfect;
