@@ -17,6 +17,17 @@ class OsuGameRules
 {
 public:
 
+	//********************//
+	//  Positional Audio  //
+	//********************//
+
+	static float osuCoords2Pan(float x)
+	{
+		return (x / (float)OsuGameRules::OSU_COORD_WIDTH - 0.5f) * 0.8f;
+	}
+
+
+
 	//************************//
 	//	Hitobject Animations  //
 	//************************//

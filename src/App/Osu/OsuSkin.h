@@ -38,8 +38,8 @@ public:
 	void setSampleSet(int sampleSet);
 	void setSampleVolume(float volume, bool force = false);
 
-	void playHitCircleSound(int sampleType);
-	void playSliderTickSound();
+	void playHitCircleSound(int sampleType, float pan = 0.0f);
+	void playSliderTickSound(float pan = 0.0f);
 
 	// drawable helpers
 	inline UString getFilePath() {return m_sFilePath;}
@@ -277,22 +277,30 @@ public:
 	inline bool isDefaultSkin() {return m_bIsDefaultSkin;}
 
 private:
+	static ConVar *m_osu_skin_ref;
+
+	struct SOUND_SAMPLE
+	{
+		Sound *sound;
+		float hardcodedVolumeMultiplier; // some samples in osu have hardcoded multipliers which can not be modified (i.e. you can NEVER reach 100% volume with them)
+	};
+
 	bool parseSkinINI(UString filepath);
+
 	bool compareFilenameWithSkinElementName(UString filename, UString skinElementName);
+
 	OsuSkinImage *createOsuSkinImage(UString skinElementName, Vector2 baseSizeForScaling2x, float osuSize, bool ignoreDefaultSkin = false, UString animationSeparator = "-");
 	void checkLoadImage(Image **addressOfPointer, UString skinElementName, UString resourceName, bool ignoreDefaultSkin = false, UString fileExtension = "png", bool forceLoadMipmaps = false);
-	void checkLoadSound(Sound **addressOfPointer, UString skinElementName, UString resourceName, bool isOverlayable = false, bool isSample = false, bool loop = false);
+	void checkLoadSound(Sound **addressOfPointer, UString skinElementName, UString resourceName, bool isOverlayable = false, bool isSample = false, bool loop = false, float hardcodedVolumeMultiplier = -1.0f);
 
 	void onEffectVolumeChange(UString oldValue, UString newValue);
-
-	static ConVar *m_osu_skin_ref;
 
 	Osu *m_osu;
 	bool m_bIsDefaultSkin;
 	UString m_sFilePath;
 	std::vector<Resource*> m_resources;
 	std::vector<Sound*> m_sounds;
-	std::vector<Sound*> m_soundSamples;
+	std::vector<SOUND_SAMPLE> m_soundSamples;
 
 	std::vector<OsuSkinImage*> m_images;
 
