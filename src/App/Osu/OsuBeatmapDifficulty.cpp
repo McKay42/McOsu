@@ -571,7 +571,9 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 	beatmap->getOsu()->getSkin()->loadBeatmapOverride(m_sFolder);
 
 	// load the actual beatmap
+	int hitobjectsWithoutSpinnerCounter = 0;
 	int colorCounter = 1;
+	int colorOffset = 0;
 	int comboNumber = 1;
 	int curBlock = -1;
 	unsigned long long timingPointSortHack = 0;
@@ -674,10 +676,19 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 
 				if (intScan || floatScan)
 				{
+					if (!(type & 0x8))
+						hitobjectsWithoutSpinnerCounter++;
+
 					if (type & 0x4) // new combo
 					{
 						comboNumber = 1;
-						colorCounter++;
+
+						// special case 1: if the current object is a spinner, then the raw color counter is not increased (but the offset still is!)
+						// special case 2: the first (non-spinner) hitobject in a beatmap is always a new combo, therefore the raw color counter is not increased for it (but the offset still is!)
+						if (!(type & 0x8) && hitobjectsWithoutSpinnerCounter > 1)
+							colorCounter++;
+
+						colorOffset += (type >> 4) & 7; // special case 3: "Bits 4-6 (16, 32, 64) form a 3-bit number (0-7) that chooses how many combo colours to skip."
 					}
 
 					if (type & 0x1) // circle
@@ -690,6 +701,7 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 						c.sampleType = hitSound;
 						c.number = comboNumber++;
 						c.colorCounter = colorCounter;
+						c.colorOffset = colorOffset;
 						c.clicked = false;
 						c.maniaEndTime = 0;
 
@@ -747,6 +759,7 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 						s.sampleType = hitSound;
 						s.number = comboNumber++;
 						s.colorCounter = colorCounter;
+						s.colorOffset = colorOffset;
 						s.points = points;
 
 						if (tokens.size() > 8)
@@ -807,6 +820,7 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 						c.sampleType = hitSound;
 						c.number = comboNumber++;
 						c.colorCounter = colorCounter;
+						c.colorOffset = colorOffset;
 						c.clicked = false;
 						c.maniaEndTime = holdNoteTokens[0].toLong();
 
@@ -1061,7 +1075,7 @@ void OsuBeatmapDifficulty::buildStandardHitObjects(OsuBeatmapStandard *beatmap, 
 			c->y = clamp<int>(c->y - (rand() & OsuGameRules::OSU_COORD_HEIGHT) / 8, 0, OsuGameRules::OSU_COORD_HEIGHT);
 		}
 
-		hitobjects->push_back(new OsuCircle(c->x, c->y, c->time, c->sampleType, c->number, c->colorCounter, beatmap));
+		hitobjects->push_back(new OsuCircle(c->x, c->y, c->time, c->sampleType, c->number, c->colorCounter, c->colorOffset, beatmap));
 	}
 	m_iMaxCombo += hitcircles.size();
 
@@ -1081,7 +1095,7 @@ void OsuBeatmapDifficulty::buildStandardHitObjects(OsuBeatmapStandard *beatmap, 
 			}
 		}
 
-		hitobjects->push_back(new OsuSlider(s->type, s->repeat, s->pixelLength, s->points, s->hitSounds, s->ticks, s->sliderTime, s->sliderTimeWithoutRepeats, s->time, s->sampleType, s->number, s->colorCounter, beatmap));
+		hitobjects->push_back(new OsuSlider(s->type, s->repeat, s->pixelLength, s->points, s->hitSounds, s->ticks, s->sliderTime, s->sliderTimeWithoutRepeats, s->time, s->sampleType, s->number, s->colorCounter, s->colorOffset, beatmap));
 	}
 
 	for (int i=0; i<spinners.size(); i++)

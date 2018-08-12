@@ -895,6 +895,24 @@ bool OsuBeatmapStandard::isLoading()
 	return (isLoadingInt() || (m_osu->isInMultiplayer() && m_osu->getMultiplayer()->isWaitingForPlayers()));
 }
 
+Vector2 OsuBeatmapStandard::pixels2OsuCoords(Vector2 pixelCoords)
+{
+	// un-first-person
+	if (OsuGameRules::osu_mod_fps.getBool())
+	{
+		// this is the worst hack possible (engine->isDrawing()), but it works
+		// the problem is that this same function is called while draw()ing and update()ing
+		if (!((engine->isDrawing() && (m_osu->getModAuto() || m_osu->getModAutopilot())) || !(m_osu->getModAuto() || m_osu->getModAutopilot())))
+			pixelCoords += getFirstPersonCursorDelta();
+	}
+
+	// un-offset and un-scale, reverse order
+	pixelCoords -= m_vPlayfieldOffset;
+	pixelCoords /= m_fScaleFactor;
+
+	return pixelCoords;
+}
+
 Vector2 OsuBeatmapStandard::osuCoords2Pixels(Vector2 coords)
 {
 	if (m_bIsVRDraw)
