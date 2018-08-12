@@ -243,7 +243,7 @@ public:
 	// skin.ini
 	inline float getVersion() {return m_fVersion;}
 	inline float getAnimationFramerate() {return m_fAnimationFramerate;}
-	Color getComboColorForCounter(int i);
+	Color getComboColorForCounter(int i, int offset);
 	void setBeatmapComboColors(std::vector<Color> colors);
 	inline Color getSpinnerApproachCircleColor() {return m_spinnerApproachCircleColor;}
 	inline Color getSliderBorderColor() {return m_sliderBorderColor;}

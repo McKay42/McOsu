@@ -48,6 +48,7 @@ public:
 	static ConVar MOD_AUTOPILOT;
 	static ConVar MOD_SPUNOUT;
 	static ConVar MOD_AUTO;
+	static ConVar MOD_SCOREV2;
 
 	static std::vector<std::vector<ConVar*>> MANIA;
 

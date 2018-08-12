@@ -806,11 +806,13 @@ void OsuSkin::setSampleVolume(float volume, bool force)
 	}
 }
 
-Color OsuSkin::getComboColorForCounter(int i)
+Color OsuSkin::getComboColorForCounter(int i, int offset)
 {
 	i += osu_skin_color_index_add.getInt();
+	i = std::max(i, 0);
+
 	if (m_beatmapComboColors.size() > 0 && !osu_ignore_beatmap_combo_colors.getBool())
-		return m_beatmapComboColors[i % m_beatmapComboColors.size()];
+		return m_beatmapComboColors[(i + offset) % m_beatmapComboColors.size()];
 	else if (m_comboColors.size() > 0)
 		return m_comboColors[i % m_comboColors.size()];
 	else
