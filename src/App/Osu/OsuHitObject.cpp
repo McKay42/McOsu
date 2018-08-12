@@ -121,12 +121,13 @@ void OsuHitObject::drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiam
 
 
 
-OsuHitObject::OsuHitObject(long time, int sampleType, int comboNumber, int colorCounter, OsuBeatmap *beatmap)
+OsuHitObject::OsuHitObject(long time, int sampleType, int comboNumber, int colorCounter, int colorOffset, OsuBeatmap *beatmap)
 {
 	m_iTime = time;
 	m_iSampleType = sampleType;
 	m_iComboNumber = comboNumber;
 	m_iColorCounter = colorCounter;
+	m_iColorOffset = colorOffset;
 	m_beatmap = beatmap;
 
 	m_fAlpha = 0.0f;

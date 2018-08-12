@@ -160,7 +160,7 @@ void OsuModSelector::updateButtons()
 	m_modButtonSpunout = setModButtonOnGrid(2, 2, 0, "spunout", "Spinners will be automatically completed.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModSpunOut();});
 	m_modButtonAuto = setModButtonOnGrid(3, 2, 0, "auto", "Watch a perfect automated play through the song.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModAutoplay();});
 	setModButtonOnGrid(4, 2, 0, "practicetarget", "Accuracy is based on the distance to the center of all hitobjects.\n300s still require at least being in the hit window of a 100 in addition to the rule above.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModTarget();});
-	setModButtonOnGrid(5, 2, 0, "v2", "Try the future scoring system.\n** UNRANKED **", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModScorev2();});
+	m_modButtonScoreV2 = setModButtonOnGrid(5, 2, 0, "v2", "Try the future scoring system.\n** UNRANKED **", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModScorev2();});
 }
 
 OsuModSelector::~OsuModSelector()
@@ -413,6 +413,8 @@ void OsuModSelector::onKeyDown(KeyboardEvent &key)
 		m_modButtonSpunout->click();
 	if (key == (KEYCODE)OsuKeyBindings::MOD_AUTO.getInt())
 		m_modButtonAuto->click();
+	if (key == (KEYCODE)OsuKeyBindings::MOD_SCOREV2.getInt())
+		m_modButtonScoreV2->click();
 
 	key.consume();
 }
