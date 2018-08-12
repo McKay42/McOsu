@@ -571,7 +571,7 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 	beatmap->getOsu()->getSkin()->loadBeatmapOverride(m_sFolder);
 
 	// load the actual beatmap
-	int hitobjectCounter = 0;
+	int hitobjectsWithoutSpinnerCounter = 0;
 	int colorCounter = 1;
 	int colorOffset = 0;
 	int comboNumber = 1;
@@ -676,15 +676,16 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 
 				if (intScan || floatScan)
 				{
-					hitobjectCounter++;
+					if (!(type & 0x8))
+						hitobjectsWithoutSpinnerCounter++;
 
 					if (type & 0x4) // new combo
 					{
 						comboNumber = 1;
 
 						// special case 1: if the current object is a spinner, then the raw color counter is not increased (but the offset still is!)
-						// special case 2: the first hitobject in a beatmap is always a new combo, therefore the raw color counter is not increased for it (but the offset still is!)
-						if (!(type & 0x8) && hitobjectCounter > 1)
+						// special case 2: the first (non-spinner) hitobject in a beatmap is always a new combo, therefore the raw color counter is not increased for it (but the offset still is!)
+						if (!(type & 0x8) && hitobjectsWithoutSpinnerCounter > 1)
 							colorCounter++;
 
 						colorOffset += (type >> 4) & 7; // special case 3: "Bits 4-6 (16, 32, 64) form a 3-bit number (0-7) that chooses how many combo colours to skip."
