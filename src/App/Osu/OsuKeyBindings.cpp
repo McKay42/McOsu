@@ -44,6 +44,7 @@ ConVar OsuKeyBindings::MOD_RELAX("osu_key_mod_relax", (int)KEY_Z);
 ConVar OsuKeyBindings::MOD_AUTOPILOT("osu_key_mod_autopilot", (int)KEY_X);
 ConVar OsuKeyBindings::MOD_SPUNOUT("osu_key_mod_spunout", (int)KEY_C);
 ConVar OsuKeyBindings::MOD_AUTO("osu_key_mod_auto", (int)KEY_V);
+ConVar OsuKeyBindings::MOD_SCOREV2("osu_key_mod_scorev2", (int)KEY_B);
 
 std::vector<std::vector<ConVar*>> OsuKeyBindings::MANIA = OsuKeyBindings::createManiaConVarSets();
 

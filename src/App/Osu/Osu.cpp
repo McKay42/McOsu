@@ -193,7 +193,7 @@ Osu::Osu()
 	if (userDataPath.length() > 1)
 	{
 		UString defaultOsuFolder = userDataPath;
-		defaultOsuFolder.append("\\osu!\\");
+		defaultOsuFolder.append(env->getOS() == Environment::OS::OS_WINDOWS ? "\\osu!\\" : "/osu!/");
 		m_osu_folder_ref->setValue(defaultOsuFolder);
 	}
 

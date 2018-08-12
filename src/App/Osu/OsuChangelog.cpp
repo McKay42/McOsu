@@ -36,6 +36,12 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 
 	CHANGELOG alpha29Steam;
 	alpha29Steam.title = UString::format("29 (Steam VR Version, %s, %s)", __DATE__, __TIME__);
+	alpha29Steam.changes.push_back("- Added positional audio for hitsounds");
+	alpha29Steam.changes.push_back("- Added Score V2 keybind (defaults to 'B')");
+	alpha29Steam.changes.push_back("- Updated combo color handling to match osu!");
+	alpha29Steam.changes.push_back("- Added ConVars: osu_sound_panning, osu_sound_panning_multiplier, osu_approachtime_min, osu_approachtime_mid, osu_approachtime_max");
+	alpha29Steam.changes.push_back("- Fixed local score tooltips not applying speed multiplier to AR/OD");
+	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("- Added local scores");
 	alpha29Steam.changes.push_back("- Added osu! scores.db support (read-only)");
 	alpha29Steam.changes.push_back("- Allow options menu anywhere (CTRL + O)");

@@ -28,7 +28,7 @@ public:
 	static ConVar *m_osu_vr_approach_circles_on_top;
 
 public:
-	OsuHitObject(long time, int sampleType, int comboNumber, int colorCounter, OsuBeatmap *beatmap);
+	OsuHitObject(long time, int sampleType, int comboNumber, int colorCounter, int colorOffset, OsuBeatmap *beatmap);
 	virtual ~OsuHitObject() {;}
 
 	virtual void draw(Graphics *g);
@@ -78,6 +78,7 @@ protected:
 	int m_iSampleType;
 	int m_iComboNumber;
 	int m_iColorCounter;
+	int m_iColorOffset;
 
 	float m_fAlpha;
 	float m_fAlphaWithoutHidden;

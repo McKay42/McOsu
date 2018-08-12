@@ -26,6 +26,7 @@ public:
 	void onModUpdate(bool rebuildSliderVertexBuffers = true); // this seems very dangerous compiler-wise, but it works
 	virtual bool isLoading();
 
+	Vector2 pixels2OsuCoords(Vector2 pixelCoords); // only used for positional audio atm
 	Vector2 osuCoords2Pixels(Vector2 coords); // hitobjects should use this one (includes lots of special behaviour)
 	Vector2 osuCoords2RawPixels(Vector2 coords); // raw transform from osu!pixels to absolute screen pixels (without any mods whatsoever)
 	Vector2 osuCoords2VRPixels(Vector2 coords); // this gets called by osuCoords2Pixels() during a VR draw(), for easier backwards compatibility
@@ -44,6 +45,7 @@ public:
 	// hitobjects
 	float getHitcircleDiameter(); // in actual scaled pixels to the current resolution
 	inline float getRawHitcircleDiameter() {return m_fRawHitcircleDiameter;} // in osu!pixels
+	inline float getHitcircleXMultiplier() {return m_fXMultiplier;} // multiply osu!pixels with this to get screen pixels
 	inline float getNumberScale() {return m_fNumberScale;}
 	inline float getHitcircleOverlapScale() {return m_fHitcircleOverlapScale;}
 	inline float getSliderFollowCircleDiameter() {return m_fSliderFollowCircleDiameter;}

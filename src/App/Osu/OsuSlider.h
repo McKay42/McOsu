@@ -28,7 +28,7 @@ public:
 	};
 
 public:
-	OsuSlider(char type, int repeat, float pixelLength, std::vector<Vector2> points, std::vector<int> hitSounds, std::vector<float> ticks, float sliderTime, float sliderTimeWithoutRepeats, long time, int sampleType, int comboNumber, int colorCounter, OsuBeatmapStandard *beatmap);
+	OsuSlider(char type, int repeat, float pixelLength, std::vector<Vector2> points, std::vector<int> hitSounds, std::vector<float> ticks, float sliderTime, float sliderTimeWithoutRepeats, long time, int sampleType, int comboNumber, int colorCounter, int colorOffset, OsuBeatmapStandard *beatmap);
 	virtual ~OsuSlider();
 
 	virtual void draw(Graphics *g);

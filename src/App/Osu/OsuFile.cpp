@@ -52,14 +52,12 @@ void OsuFile::write()
 void OsuFile::writeByte(unsigned char val)
 {
 	m_writeBuffer.push_back(val);
-	//m_file->write((const char *)&val, 1);
 }
 
 void OsuFile::writeShort(int16_t val)
 {
 	m_writeBuffer.push_back(((const char *)&val)[0]);
 	m_writeBuffer.push_back(((const char *)&val)[1]);
-	//m_file->write((const char *)&val, 2);
 }
 
 void OsuFile::writeInt(int32_t val)
@@ -68,7 +66,6 @@ void OsuFile::writeInt(int32_t val)
 	m_writeBuffer.push_back(((const char *)&val)[1]);
 	m_writeBuffer.push_back(((const char *)&val)[2]);
 	m_writeBuffer.push_back(((const char *)&val)[3]);
-	//m_file->write((const char *)&val, 4);
 }
 
 void OsuFile::writeLongLong(int64_t val)
@@ -81,7 +78,6 @@ void OsuFile::writeLongLong(int64_t val)
 	m_writeBuffer.push_back(((const char *)&val)[5]);
 	m_writeBuffer.push_back(((const char *)&val)[6]);
 	m_writeBuffer.push_back(((const char *)&val)[7]);
-	//m_file->write((const char *)&val, 8);
 }
 
 void OsuFile::writeULEB128(uint64_t val)
@@ -100,7 +96,6 @@ void OsuFile::writeULEB128(uint64_t val)
 	while (val != 0);
 
 	m_writeBuffer.insert(m_writeBuffer.end(), bytes.begin(), bytes.end());
-	//m_file->write((const char *)&bytes[0], bytes.size());
 }
 
 void OsuFile::writeFloat(float val)
@@ -109,7 +104,6 @@ void OsuFile::writeFloat(float val)
 	m_writeBuffer.push_back(((const char *)&val)[1]);
 	m_writeBuffer.push_back(((const char *)&val)[2]);
 	m_writeBuffer.push_back(((const char *)&val)[3]);
-	//m_file->write((const char *)&val, 4);
 }
 
 void OsuFile::writeDouble(double val)
@@ -122,7 +116,6 @@ void OsuFile::writeDouble(double val)
 	m_writeBuffer.push_back(((const char *)&val)[5]);
 	m_writeBuffer.push_back(((const char *)&val)[6]);
 	m_writeBuffer.push_back(((const char *)&val)[7]);
-	//m_file->write((const char *)&val, 8);
 }
 
 void OsuFile::writeBool(bool val)
@@ -141,7 +134,6 @@ void OsuFile::writeString(UString &str)
 		{
 			m_writeBuffer.push_back(str.toUtf8()[i]);
 		}
-		//m_file->write(str.toUtf8(), str.length());
 	}
 }
 
@@ -156,7 +148,6 @@ void OsuFile::writeStdString(std::string str)
 		{
 			m_writeBuffer.push_back(str[i]);
 		}
-		//m_file->write(str.c_str(), str.length());
 	}
 }
 

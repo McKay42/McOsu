@@ -33,6 +33,8 @@ ConVar osu_skin_mipmaps("osu_skin_mipmaps", false, "generate mipmaps for every s
 ConVar osu_skin_color_index_add("osu_skin_color_index_add", 0);
 ConVar osu_skin_animation_force("osu_skin_animation_force", false);
 ConVar osu_skin_use_skin_hitsounds("osu_skin_use_skin_hitsounds", true, "If enabled: Use skin's sound samples. If disabled: Use default skin's sound samples. For hitsounds only.");
+ConVar osu_sound_panning("osu_sound_panning", true, "positional hitsound audio depending on the playfield position");
+ConVar osu_sound_panning_multiplier("osu_sound_panning_multiplier", 1.0f, "the final panning value is multiplied with this, e.g. if you want to reduce or increase the effect strength by a percentage");
 
 ConVar osu_ignore_beatmap_combo_colors("osu_ignore_beatmap_combo_colors", false);
 ConVar osu_ignore_beatmap_sample_volume("osu_ignore_beatmap_sample_volume", false);
@@ -503,20 +505,20 @@ void OsuSkin::load()
 	// sounds
 
 	// samples
-	checkLoadSound(&m_normalHitNormal, "normal-hitnormal", "OSU_SKIN_NORMALHITNORMAL_SND", true, true);
-	checkLoadSound(&m_normalHitWhistle, "normal-hitwhistle", "OSU_SKIN_NORMALHITWHISTLE_SND", true, true);
+	checkLoadSound(&m_normalHitNormal, "normal-hitnormal", "OSU_SKIN_NORMALHITNORMAL_SND", true, true, false, 0.8f);
+	checkLoadSound(&m_normalHitWhistle, "normal-hitwhistle", "OSU_SKIN_NORMALHITWHISTLE_SND", true, true, false, 0.85f);
 	checkLoadSound(&m_normalHitFinish, "normal-hitfinish", "OSU_SKIN_NORMALHITFINISH_SND", true, true);
-	checkLoadSound(&m_normalHitClap, "normal-hitclap", "OSU_SKIN_NORMALHITCLAP_SND", true, true);
+	checkLoadSound(&m_normalHitClap, "normal-hitclap", "OSU_SKIN_NORMALHITCLAP_SND", true, true, false, 0.85f);
 	checkLoadSound(&m_normalSliderTick, "normal-slidertick", "OSU_SKIN_NORMALSLIDERTICK_SND", true, true);
-	checkLoadSound(&m_softHitNormal, "soft-hitnormal", "OSU_SKIN_SOFTHITNORMAL_SND", true, true);
-	checkLoadSound(&m_softHitWhistle, "soft-hitwhistle", "OSU_SKIN_SOFTHITWHISTLE_SND", true, true);
+	checkLoadSound(&m_softHitNormal, "soft-hitnormal", "OSU_SKIN_SOFTHITNORMAL_SND", true, true, false, 0.8f);
+	checkLoadSound(&m_softHitWhistle, "soft-hitwhistle", "OSU_SKIN_SOFTHITWHISTLE_SND", true, true, false, 0.85f);
 	checkLoadSound(&m_softHitFinish, "soft-hitfinish", "OSU_SKIN_SOFTHITFINISH_SND", true, true);
-	checkLoadSound(&m_softHitClap, "soft-hitclap", "OSU_SKIN_SOFTHITCLAP_SND", true, true);
+	checkLoadSound(&m_softHitClap, "soft-hitclap", "OSU_SKIN_SOFTHITCLAP_SND", true, true, false, 0.85f);
 	checkLoadSound(&m_softSliderTick, "soft-slidertick", "OSU_SKIN_SOFTSLIDERTICK_SND", true, true);
-	checkLoadSound(&m_drumHitNormal, "drum-hitnormal", "OSU_SKIN_DRUMHITNORMAL_SND", true, true);
-	checkLoadSound(&m_drumHitWhistle, "drum-hitwhistle", "OSU_SKIN_DRUMHITWHISTLE_SND", true, true);
+	checkLoadSound(&m_drumHitNormal, "drum-hitnormal", "OSU_SKIN_DRUMHITNORMAL_SND", true, true, false, 0.8f);
+	checkLoadSound(&m_drumHitWhistle, "drum-hitwhistle", "OSU_SKIN_DRUMHITWHISTLE_SND", true, true, false, 0.85f);
 	checkLoadSound(&m_drumHitFinish, "drum-hitfinish", "OSU_SKIN_DRUMHITFINISH_SND", true, true);
-	checkLoadSound(&m_drumHitClap, "drum-hitclap", "OSU_SKIN_DRUMHITCLAP_SND", true, true);
+	checkLoadSound(&m_drumHitClap, "drum-hitclap", "OSU_SKIN_DRUMHITCLAP_SND", true, true, false, 0.85f);
 	checkLoadSound(&m_drumSliderTick, "drum-slidertick", "OSU_SKIN_DRUMSLIDERTICK_SND", true, true);
 	checkLoadSound(&m_spinnerBonus, "spinnerbonus", "OSU_SKIN_SPINNERBONUS_SND", true, true);
 	checkLoadSound(&m_spinnerSpinSound, "spinnerspin", "OSU_SKIN_SPINNERSPIN_SND", false, true, true);
@@ -782,8 +784,7 @@ void OsuSkin::onEffectVolumeChange(UString oldValue, UString newValue)
 
 void OsuSkin::setSampleSet(int sampleSet)
 {
-	if (m_iSampleSet == sampleSet)
-		return;
+	if (m_iSampleSet == sampleSet) return;
 
 	///debugLog("sample set = %i\n", sampleSet);
 	m_iSampleSet = sampleSet;
@@ -801,15 +802,17 @@ void OsuSkin::setSampleVolume(float volume, bool force)
 	///debugLog("sample volume = %f\n", sampleVolume);
 	for (int i=0; i<m_soundSamples.size(); i++)
 	{
-		m_soundSamples[i]->setVolume(sampleVolume);
+		m_soundSamples[i].sound->setVolume(sampleVolume * m_soundSamples[i].hardcodedVolumeMultiplier);
 	}
 }
 
-Color OsuSkin::getComboColorForCounter(int i)
+Color OsuSkin::getComboColorForCounter(int i, int offset)
 {
 	i += osu_skin_color_index_add.getInt();
+	i = std::max(i, 0);
+
 	if (m_beatmapComboColors.size() > 0 && !osu_ignore_beatmap_combo_colors.getBool())
-		return m_beatmapComboColors[i % m_beatmapComboColors.size()];
+		return m_beatmapComboColors[(i + offset) % m_beatmapComboColors.size()];
 	else if (m_comboColors.size() > 0)
 		return m_comboColors[i % m_comboColors.size()];
 	else
@@ -821,61 +824,69 @@ void OsuSkin::setBeatmapComboColors(std::vector<Color> colors)
 	m_beatmapComboColors = colors;
 }
 
-void OsuSkin::playHitCircleSound(int sampleType)
+void OsuSkin::playHitCircleSound(int sampleType, float pan)
 {
-	if (m_iSampleVolume <= 0)
-		return;
+	if (m_iSampleVolume <= 0) return;
+
+	if (!osu_sound_panning.getBool())
+		pan = 0.0f;
+	else
+		pan *= osu_sound_panning_multiplier.getFloat();
 
 	switch (m_iSampleSet)
 	{
 	case 3:
-		engine->getSound()->play(m_drumHitNormal);
+		engine->getSound()->play(m_drumHitNormal, pan);
 
 		if (sampleType & OSU_BITMASK_HITWHISTLE)
-			engine->getSound()->play(m_drumHitWhistle);
+			engine->getSound()->play(m_drumHitWhistle, pan);
 		if (sampleType & OSU_BITMASK_HITFINISH)
-			engine->getSound()->play(m_drumHitFinish);
+			engine->getSound()->play(m_drumHitFinish, pan);
 		if (sampleType & OSU_BITMASK_HITCLAP)
-			engine->getSound()->play(m_drumHitClap);
+			engine->getSound()->play(m_drumHitClap, pan);
 		break;
 	case 2:
-		engine->getSound()->play(m_softHitNormal);
+		engine->getSound()->play(m_softHitNormal, pan);
 
 		if (sampleType & OSU_BITMASK_HITWHISTLE)
-			engine->getSound()->play(m_softHitWhistle);
+			engine->getSound()->play(m_softHitWhistle, pan);
 		if (sampleType & OSU_BITMASK_HITFINISH)
-			engine->getSound()->play(m_softHitFinish);
+			engine->getSound()->play(m_softHitFinish, pan);
 		if (sampleType & OSU_BITMASK_HITCLAP)
-			engine->getSound()->play(m_softHitClap);
+			engine->getSound()->play(m_softHitClap, pan);
 		break;
 	default:
-		engine->getSound()->play(m_normalHitNormal);
+		engine->getSound()->play(m_normalHitNormal, pan);
 
 		if (sampleType & OSU_BITMASK_HITWHISTLE)
-			engine->getSound()->play(m_normalHitWhistle);
+			engine->getSound()->play(m_normalHitWhistle, pan);
 		if (sampleType & OSU_BITMASK_HITFINISH)
-			engine->getSound()->play(m_normalHitFinish);
+			engine->getSound()->play(m_normalHitFinish, pan);
 		if (sampleType & OSU_BITMASK_HITCLAP)
-			engine->getSound()->play(m_normalHitClap);
+			engine->getSound()->play(m_normalHitClap, pan);
 		break;
 	}
 }
 
-void OsuSkin::playSliderTickSound()
+void OsuSkin::playSliderTickSound(float pan)
 {
-	if (m_iSampleVolume <= 0)
-		return;
+	if (m_iSampleVolume <= 0) return;
+
+	if (!osu_sound_panning.getBool())
+		pan = 0.0f;
+	else
+		pan *= osu_sound_panning_multiplier.getFloat();
 
 	switch (m_iSampleSet)
 	{
 	case 3:
-		engine->getSound()->play(m_drumSliderTick);
+		engine->getSound()->play(m_drumSliderTick, pan);
 		break;
 	case 2:
-		engine->getSound()->play(m_softSliderTick);
+		engine->getSound()->play(m_softSliderTick, pan);
 		break;
 	default:
-		engine->getSound()->play(m_normalSliderTick);
+		engine->getSound()->play(m_normalSliderTick, pan);
 		break;
 	}
 }
@@ -958,7 +969,7 @@ void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, 
 	}
 }
 
-void OsuSkin::checkLoadSound(Sound **addressOfPointer, UString skinElementName, UString resourceName, bool isOverlayable, bool isSample, bool loop)
+void OsuSkin::checkLoadSound(Sound **addressOfPointer, UString skinElementName, UString resourceName, bool isOverlayable, bool isSample, bool loop, float hardcodedVolumeMultiplier)
 {
 	if (*addressOfPointer != NULL) return; // we are already loaded
 
@@ -1003,12 +1014,19 @@ void OsuSkin::checkLoadSound(Sound **addressOfPointer, UString skinElementName, 
 
 	if ((*addressOfPointer) != NULL)
 	{
-		m_resources.push_back(*addressOfPointer);
-		m_sounds.push_back(*addressOfPointer);
-		if (isSample)
-			m_soundSamples.push_back(*addressOfPointer);
 		if (isOverlayable)
 			(*addressOfPointer)->setOverlayable(true);
+
+		m_resources.push_back(*addressOfPointer);
+		m_sounds.push_back(*addressOfPointer);
+
+		if (isSample)
+		{
+			SOUND_SAMPLE sample;
+			sample.sound = *addressOfPointer;
+			sample.hardcodedVolumeMultiplier = (hardcodedVolumeMultiplier >= 0.0f ? hardcodedVolumeMultiplier : 1.0f);
+			m_soundSamples.push_back(sample);
+		}
 	}
 	else
 		debugLog("OsuSkin Warning: NULL sound %s\n", skinElementName.toUtf8());
