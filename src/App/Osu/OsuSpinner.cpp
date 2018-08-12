@@ -21,7 +21,7 @@
 #include "OsuGameRules.h"
 #include "OsuBeatmapStandard.h"
 
-OsuSpinner::OsuSpinner(int x, int y, long time, int sampleType, long endTime, OsuBeatmapStandard *beatmap) : OsuHitObject(time, sampleType, -1, -1, beatmap)
+OsuSpinner::OsuSpinner(int x, int y, long time, int sampleType, long endTime, OsuBeatmapStandard *beatmap) : OsuHitObject(time, sampleType, -1, -1, -1, beatmap)
 {
 	m_vOriginalRawPos = Vector2(x,y);
 	m_vRawPos = m_vOriginalRawPos;

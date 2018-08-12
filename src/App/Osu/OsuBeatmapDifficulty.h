@@ -50,6 +50,7 @@ public:
 		int sampleType;
 		int number;
 		int colorCounter;
+		int colorOffset;
 		bool clicked;
 		long maniaEndTime;
 	};
@@ -70,6 +71,7 @@ public:
 		int sampleType;
 		int number;
 		int colorCounter;
+		int colorOffset;
 		std::vector<Vector2> points;
 		std::vector<int> hitSounds;
 

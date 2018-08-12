@@ -19,7 +19,7 @@
 ConVar osu_mania_note_height("osu_mania_note_height", 20.0f);
 ConVar osu_mania_speed("osu_mania_speed", 1.0f);
 
-OsuManiaNote::OsuManiaNote(int column, long sliderTime, long time, int sampleType, int comboNumber, int colorCounter, OsuBeatmapMania *beatmap) : OsuHitObject(time, sampleType, comboNumber, colorCounter, beatmap)
+OsuManiaNote::OsuManiaNote(int column, long sliderTime, long time, int sampleType, int comboNumber, int colorCounter, OsuBeatmapMania *beatmap) : OsuHitObject(time, sampleType, comboNumber, colorCounter, -1, beatmap)
 {
 	m_iColumn = column;
 	m_beatmap = beatmap;
