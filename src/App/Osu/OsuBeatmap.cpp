@@ -152,6 +152,7 @@ OsuBeatmap::OsuBeatmap(Osu *osu)
 
 	m_bClick1Held = false;
 	m_bClick2Held = false;
+	m_bClickedContinue = false;
 	m_bPrevKeyWasKey1 = false;
 
 	m_iNPS = 0;
@@ -289,8 +290,9 @@ void OsuBeatmap::update()
 	if (m_bContinueScheduled)
 	{
 		bool isEarlyNoteContinue = (!m_bIsPaused && m_bIsWaiting); // if we paused while m_bIsWaiting (green progressbar), then we have to let the 'if (m_bIsWaiting)' block handle the sound play() call
-		if (m_bClick1Held || m_bClick2Held || isEarlyNoteContinue)
+		if (m_bClickedContinue || isEarlyNoteContinue) // originally was (m_bClick1Held || m_bClick2Held || isEarlyNoteContinue), replaced first two m_bClickedContinue
 		{
+			m_bClickedContinue = false;
 			m_bContinueScheduled = false;
 			m_bIsPaused = false;
 
@@ -502,16 +504,19 @@ void OsuBeatmap::update()
 			// note blocking
 			if (osu_note_blocking.getBool())
 			{
-				m_hitobjects[i]->setBlocked(false);
-				if (blockNextNotes)
-					m_hitobjects[i]->setBlocked(true);
+				m_hitobjects[i]->setBlocked(blockNextNotes);
+
 				if (!m_hitobjects[i]->isFinished())
 				{
 					blockNextNotes = true;
-					if (dynamic_cast<OsuSlider*>(m_hitobjects[i]) != NULL) // sliders break the blocking chain (until the next circle)
+
+					OsuSlider *sliderPointer = dynamic_cast<OsuSlider*>(m_hitobjects[i]);
+					if (sliderPointer != NULL && sliderPointer->isStartCircleFinished()) // sliders with finished startcircles do not block
 						blockNextNotes = false;
 				}
 			}
+			else
+				m_hitobjects[i]->setBlocked(false);
 
 			// click events (this also handles hitsounds!)
 			if (m_clicks.size() > 0)
@@ -694,6 +699,9 @@ void OsuBeatmap::keyPressed1()
 	m_bPrevKeyWasKey1 = true;
 	m_bClick1Held = true;
 
+	if (m_bContinueScheduled)
+		m_bClickedContinue = true;
+
 	//debugLog("async music pos = %lu, curMusicPos = %lu\n", m_music->getPositionMS(), m_iCurMusicPos);
 	//long curMusicPos = getMusicPositionMSInterpolated(); // this would only be useful if we also played hitsounds async! combined with checking which musicPos is bigger
 
@@ -717,6 +725,9 @@ void OsuBeatmap::keyPressed2()
 
 	m_bPrevKeyWasKey1 = false;
 	m_bClick2Held = true;
+
+	if (m_bContinueScheduled)
+		m_bClickedContinue = true;
 
 	//debugLog("async music pos = %lu, curMusicPos = %lu\n", m_music->getPositionMS(), m_iCurMusicPos);
 	//long curMusicPos = getMusicPositionMSInterpolated(); // this would only be useful if we also played hitsounds async! combined with checking which musicPos is bigger

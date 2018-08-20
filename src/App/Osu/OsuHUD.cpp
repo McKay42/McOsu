@@ -981,7 +981,7 @@ void OsuHUD::drawCombo(Graphics *g, int combo)
 		g->setAlpha(m_fComboAnim2*0.65f);
 		g->pushTransform();
 			g->scale(scale, scale);
-			g->translate(offset, m_osu->getScreenHeight() - m_osu->getSkin()->getScore0()->getHeight()*scale/2.0f, m_osu->isInVRMode() ? 0.15f : 0.0f);
+			g->translate(offset, m_osu->getScreenHeight() - m_osu->getSkin()->getScore0()->getHeight()*scale/2.0f, m_osu->isInVRMode() ? 0.25f : 0.0f);
 			drawScoreNumber(g, combo, scale);
 
 			// draw 'x' at the end
@@ -1160,7 +1160,7 @@ void OsuHUD::drawWarningArrows(Graphics *g, float hitcircleDiameter)
 
 void OsuHUD::drawScoreBoard(Graphics *g, std::string &beatmapMD5Hash, OsuScore *currentScore)
 {
-	const int maxVisibleDatabaseScores = 4;
+	const int maxVisibleDatabaseScores = m_osu->isInVRDraw() ? 3 : 4;
 
 	const std::vector<OsuDatabase::Score> *scores = &((*m_osu->getSongBrowser()->getDatabase()->getScores())[beatmapMD5Hash]);
 	const int numScores = scores->size();
@@ -1329,7 +1329,7 @@ void OsuHUD::drawScoreBoardInt(Graphics *g, std::vector<OsuHUD::SCORE_ENTRY> &sc
 			g->setBlending(true);
 
 			g->pushTransform();
-			g->translate(0, 0, 0.5f);
+			g->translate(0, 0, 0.1f);
 		}
 
 		// draw index
