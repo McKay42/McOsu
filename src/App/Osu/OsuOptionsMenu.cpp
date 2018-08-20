@@ -413,8 +413,12 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 		aaSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeVRAntiAliasing) );
 		aaSlider->setKeyDelta(2.0f);
 		aaSlider->setAnimated(false);
+
+		addSpacer();
+		addSubSection("LIV SDK");
+		addCheckbox("LIV SDK Support", "Copy your externalcamera.cfg file into /<Steam>/steamapps/common/McOsu/\nUse the button below or \"vr_liv_reload_calibration\" to reload it during runtime.", convar->getConVarByName("vr_liv"));
 		addLabel("");
-		addCheckbox("LIV Support (Manual Capture, no SDK!)", "Use Effect: Legacy: Normal", convar->getConVarByName("vr_liv"));
+		addButton("Reload externalcamera.cfg or liv-camera.cfg")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onLIVReloadCalibrationClicked) );
 
 		addSpacer();
 		addSubSection("Play Area / Playfield");
@@ -452,17 +456,17 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 		addSpacer();
 		addSubSection("Miscellaneous");
 		addSpacer();
-		addCheckbox("Spectator Camera (ALT + C)", "Needs \"Draw HMD to Window\" to be enabled to work.\nToggle camera-control-mode with ALT + C.\nUse mouse + keyboard (WASD) to rotate/position the camera.", convar->getConVarByName("vr_spectator_mode"));
+		addCheckbox("Spectator Camera (ALT + C)", "Needs \"Draw HMD to Window\" enabled to work.\nToggle camera-control-mode with ALT + C.\nUse mouse + keyboard (WASD) to rotate/position the camera.", convar->getConVarByName("vr_spectator_mode"));
 		addCheckbox("Auto Switch Primary Controller", convar->getConVarByName("vr_auto_switch_primary_controller"));
 		addSpacer();
-		addCheckbox("Draw HMD to Window", convar->getConVarByName("vr_draw_hmd_to_window"));
-		addCheckbox("Draw Both Eyes to Window", convar->getConVarByName("vr_draw_hmd_to_window_draw_both_eyes"));
+		addCheckbox("Draw HMD to Window (!)", "If this is disabled, then nothing will be drawn to the window.", convar->getConVarByName("vr_draw_hmd_to_window"));
+		addCheckbox("Draw Both Eyes to Window", "Only applies if \"Draw HMD to Window\" is enabled, see above.", convar->getConVarByName("vr_draw_hmd_to_window_draw_both_eyes"));
 		addCheckbox("Draw Floor", convar->getConVarByName("osu_vr_draw_floor"));
 		addCheckbox("Draw Controller Models", convar->getConVarByName("vr_draw_controller_models"));
 		addCheckbox("Draw Lighthouse Models", convar->getConVarByName("vr_draw_lighthouse_models"));
 		addSpacer();
-		addCheckbox("Draw VR Playfield", convar->getConVarByName("osu_vr_draw_playfield"));
-		addCheckbox("Draw Desktop Playfield", convar->getConVarByName("osu_vr_draw_desktop_playfield"));
+		addCheckbox("Draw VR Game (3D)", "Only disable this if you want to play the flat version in VR.\nThat is, on the virtual flat screen with the mouse cursor.", convar->getConVarByName("osu_vr_draw_playfield"));
+		addCheckbox("Draw Desktop Game (2D)", "Disable this to increase VR performance (by not drawing the flat/desktop game additionally).", convar->getConVarByName("osu_vr_draw_desktop_playfield"));
 		addSpacer();
 		addCheckbox("Controller Distance Color Warning", convar->getConVarByName("osu_vr_controller_warning_distance_enabled"));
 		addCheckbox("Show Tutorial on Startup", convar->getConVarByName("osu_vr_tutorial"));
@@ -1724,6 +1728,11 @@ void OsuOptionsMenu::onManuallyManageBeatmapsClicked()
 {
 	m_osu->getNotificationOverlay()->addNotification("Opening browser, please wait ...", 0xffffffff, false, 0.75f);
 	env->openURLInDefaultBrowser("https://steamcommunity.com/sharedfiles/filedetails/?id=880768265");
+}
+
+void OsuOptionsMenu::onLIVReloadCalibrationClicked()
+{
+	convar->getConVarByName("vr_liv_reload_calibration")->exec();
 }
 
 void OsuOptionsMenu::onCheckboxChange(CBaseUICheckbox *checkbox)

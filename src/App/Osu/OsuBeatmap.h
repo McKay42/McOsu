@@ -224,6 +224,7 @@ protected:
 
 	bool m_bClick1Held;
 	bool m_bClick2Held;
+	bool m_bClickedContinue;
 	bool m_bPrevKeyWasKey1;
 	std::vector<CLICK> m_clicks;
 	std::vector<CLICK> m_keyUps;

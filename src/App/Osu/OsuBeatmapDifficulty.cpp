@@ -659,6 +659,9 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 				// spinners:
 				// x,y,time,type,hitSound,endTime,addition
 
+				// TODO: calculating combo numbers and color offsets based on the parsing order is dangerous.
+				// maybe the hitobjects are not sorted by time in the file; these values should be calculated after sorting just to be sure
+
 				int x,y;
 				long time;
 				int type;

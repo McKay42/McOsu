@@ -50,6 +50,7 @@ public:
 
 	void rebuildVertexBuffer();
 
+	inline bool isStartCircleFinished() const {return m_bStartFinished;}
 	inline int getRepeat() const {return m_iRepeat;}
 	inline std::vector<Vector2> getRawPoints() const {return m_points;}
 	inline float getPixelLength() const {return m_fPixelLength;}
