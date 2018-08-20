@@ -92,6 +92,7 @@ private:
 	void onOutputDeviceSelect2(UString outputDeviceName);
 	void onDownloadOsuClicked();
 	void onManuallyManageBeatmapsClicked();
+	void onLIVReloadCalibrationClicked();
 
 	void onCheckboxChange(CBaseUICheckbox *checkbox);
 	void onSliderChange(CBaseUISlider *slider);

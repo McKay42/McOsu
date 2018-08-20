@@ -1730,6 +1730,7 @@ void Osu::onConfineCursorFullscreenChange(UString oldValue, UString newValue)
 
 void Osu::onKey1Change(bool pressed, bool mouse)
 {
+	// WARNING: if paused, keyReleased*() will be called out of sequence every time due to the fix. do not put actions in it
 	if (isInPlayMode()/* && !getSelectedBeatmap()->isPaused()*/) // NOTE: allow keyup even while beatmap is paused, to correctly not-continue immediately due to pressed keys
 	{
 		if (!(mouse && osu_disable_mousebuttons.getBool()))
@@ -1738,7 +1739,7 @@ void Osu::onKey1Change(bool pressed, bool mouse)
 			if (osu_disable_mousebuttons.getBool())
 				m_bMouseKey1Down = false;
 
-			if (pressed && !(m_bKeyboardKey1Down && m_bMouseKey1Down))
+			if (pressed && !(m_bKeyboardKey1Down && m_bMouseKey1Down) && !getSelectedBeatmap()->isPaused()) // see above note
 				getSelectedBeatmap()->keyPressed1();
 			else if (!m_bKeyboardKey1Down && !m_bMouseKey1Down)
 				getSelectedBeatmap()->keyReleased1();
@@ -1759,6 +1760,7 @@ void Osu::onKey1Change(bool pressed, bool mouse)
 
 void Osu::onKey2Change(bool pressed, bool mouse)
 {
+	// WARNING: if paused, keyReleased*() will be called out of sequence every time due to the fix. do not put actions in it
 	if (isInPlayMode()/* && !getSelectedBeatmap()->isPaused()*/) // NOTE: allow keyup even while beatmap is paused, to correctly not-continue immediately due to pressed keys
 	{
 		if (!(mouse && osu_disable_mousebuttons.getBool()))
@@ -1767,7 +1769,7 @@ void Osu::onKey2Change(bool pressed, bool mouse)
 			if (osu_disable_mousebuttons.getBool())
 				m_bMouseKey2Down = false;
 
-			if (pressed && !(m_bKeyboardKey2Down && m_bMouseKey2Down))
+			if (pressed && !(m_bKeyboardKey2Down && m_bMouseKey2Down) && !getSelectedBeatmap()->isPaused()) // see above note
 				getSelectedBeatmap()->keyPressed2();
 			else if (!m_bKeyboardKey2Down && !m_bMouseKey2Down)
 				getSelectedBeatmap()->keyReleased2();
