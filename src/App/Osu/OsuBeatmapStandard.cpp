@@ -1357,10 +1357,8 @@ void OsuBeatmapStandard::updateAutoCursorPos()
 {
 	m_vAutoCursorPos = m_vPlayfieldCenter;
 
-	if (!m_bIsPlaying && !m_bIsPaused)
-		return;
-	if (m_hitobjects.size() == 0)
-		return;
+	if (!m_bIsPlaying && !m_bIsPaused) return;
+	if (m_hitobjects.size() == 0) return;
 
 	long prevTime = 0;
 	long nextTime = m_hitobjects[0]->getTime();
