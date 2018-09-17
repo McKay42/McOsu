@@ -34,6 +34,7 @@ ConVar osu_snaking_sliders("osu_snaking_sliders", true);
 ConVar osu_mod_hd_slider_fade_percent("osu_mod_hd_slider_fade_percent", 1.0f);
 ConVar osu_mod_hd_slider_fast_fade("osu_mod_hd_slider_fast_fade", false);
 
+ConVar osu_slider_end_inside_check_offset("osu_slider_end_inside_check_offset", 36, "offset in milliseconds going backwards from the end point, at which \"being inside the slider\" is checked. (osu bullshit behavior)");
 ConVar osu_slider_break_epilepsy("osu_slider_break_epilepsy", false);
 ConVar osu_slider_scorev2("osu_slider_scorev2", false);
 ConVar osu_slider_use_tom94_bezier("osu_slider_use_tom94_bezier", true);
@@ -173,6 +174,8 @@ OsuSlider::OsuSlider(char type, int repeat, float pixelLength, std::vector<Vecto
 	m_bCursorLeft = true;
 	m_bCursorInside = false;
 	m_bHeldTillEnd = false;
+	m_bHeldTillEndForLenienceHack = false;
+	m_bHeldTillEndForLenienceHackCheck = false;
 	m_fFollowCircleTickAnimationScale = 0.0f;
 	m_fFollowCircleAnimationScale = 0.0f;
 	m_fFollowCircleAnimationAlpha = 0.0f;
@@ -427,6 +430,26 @@ void OsuSlider::draw(Graphics *g)
 void OsuSlider::draw2(Graphics *g)
 {
 	draw2(g, true, false);
+
+	// TEMP: DEBUG:
+	/*
+	if (m_bVisible)
+	{
+		const long lenienceHackEndTime = std::max(m_iTime + m_iObjectDuration / 2, (m_iTime + m_iObjectDuration) - (long)osu_slider_end_inside_check_offset.getInt());
+		Vector2 pos = m_beatmap->osuCoords2Pixels(getRawPosAt(lenienceHackEndTime));
+
+		const int size = 30;
+		g->setColor(!m_bHeldTillEndForLenienceHackCheck ? 0xff00ff00 : 0xffff0000);
+		g->drawLine(pos.x - size, pos.y - size, pos.x + size, pos.y + size);
+		g->drawLine(pos.x + size, pos.y - size, pos.x - size, pos.y + size);
+
+		const long lenience300EndTime = m_iTime + m_iObjectDuration - (long)OsuGameRules::getHitWindow300(m_beatmap);
+		pos = m_beatmap->osuCoords2Pixels(getRawPosAt(lenience300EndTime));
+		g->setColor(0xff0000ff);
+		g->drawLine(pos.x - size, pos.y - size, pos.x + size, pos.y + size);
+		g->drawLine(pos.x + size, pos.y - size, pos.x - size, pos.y + size);
+	}
+	*/
 }
 
 void OsuSlider::draw2(Graphics *g, bool drawApproachCircle, bool drawOnlyApproachCircle)
@@ -877,6 +900,7 @@ void OsuSlider::update(long curPos)
 	m_fSlidePercent = 0.0f;
 	if (curPos > m_iTime)
 		m_fSlidePercent = clamp<float>(clamp<long>((curPos - (m_iTime)), 0, (long)m_fSliderTime) / m_fSliderTime, 0.0f, 1.0f);
+
 	m_fActualSlidePercent = m_fSlidePercent;
 
 	m_fSliderSnakePercent = std::min(1.0f, (curPos - (m_iTime - m_iApproachTime)) / (m_iApproachTime / 3.0f));
@@ -946,14 +970,9 @@ void OsuSlider::update(long curPos)
 	}
 
 	// handle dynamic followradius
-	float followRadius = m_beatmap->getSliderFollowCircleDiameter()/2.0f;
-	if (m_bCursorLeft) // need to go within the circle radius to be valid again
-		followRadius = m_beatmap->getHitcircleDiameter()/2.0f;
+	float followRadius = m_bCursorLeft ? m_beatmap->getHitcircleDiameter() / 2.0f : m_beatmap->getSliderFollowCircleDiameter() / 2.0f;
 	m_bCursorInside = (m_beatmap->getOsu()->getModAuto() && (!m_osu_auto_cursordance->getBool() || ((m_beatmap->getCursorPos() - m_vCurPoint).length() < followRadius))) || ((m_beatmap->getCursorPos() - m_vCurPoint).length() < followRadius);
-	if (m_bCursorInside)
-		m_bCursorLeft = false;
-	else
-		m_bCursorLeft = true;
+	m_bCursorLeft = !m_bCursorInside;
 
 	if (m_beatmap->getOsu()->isInVRMode())
 	{
@@ -1066,10 +1085,28 @@ void OsuSlider::update(long curPos)
 	// handle slider end, repeats, ticks, and constant VR controller vibration while sliding
 	if (!m_bEndFinished)
 	{
+		// slider tail lenience bullshit: see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Objects/Slider.cs#L123
+		// being "inside the slider" (for the end of the slider) is NOT checked at the exact end of the slider, but somewhere random before, because fuck you
+		const long lenienceHackEndTime = std::max(m_iTime + m_iObjectDuration / 2, (m_iTime + m_iObjectDuration) - (long)osu_slider_end_inside_check_offset.getInt());
 		if ((m_beatmap->isClickHeld() || m_beatmap->getOsu()->getModRelax()) && m_bCursorInside)
-			m_iLastClickHeld = curPos;
+		{
+			// only check it at the exact point in time ...
+			if (curPos >= lenienceHackEndTime)
+			{
+				// ... once (like a tick)
+				if (!m_bHeldTillEndForLenienceHackCheck)
+				{
+					m_bHeldTillEndForLenienceHackCheck = true;
+					m_bHeldTillEndForLenienceHack = true; // player was correctly clicking/holding inside slider at lenienceHackEndTime
+				}
+			}
+		}
 		else
 			m_bCursorLeft = true; // do not allow empty clicks outside of the circle radius to prevent the m_bCursorInside flag from resetting
+
+		// can't be "inside the slider" after lenienceHackEndTime (even though the slider is still going, which is madness)
+		if (curPos >= lenienceHackEndTime)
+			m_bHeldTillEndForLenienceHackCheck = true;
 	
 		// handle repeats and ticks
 		for (int i=0; i<m_clicks.size(); i++)
@@ -1100,23 +1137,12 @@ void OsuSlider::update(long curPos)
 			if (curPos >= m_iTime + m_iObjectDuration)
 			{
 				// handle endcircle
-				long holdDelta = (long)m_iLastClickHeld - (long)curPos;
-				m_endResult = OsuGameRules::getHitResult(holdDelta, m_beatmap);
 
-				// slider lenience: only allow HIT_300 delta
-				if (m_endResult != OsuScore::HIT::HIT_300)
-					m_endResult = OsuScore::HIT::HIT_MISS;
-				else
-					m_bHeldTillEnd = true;
-
-				if ((m_beatmap->isClickHeld() || m_beatmap->getOsu()->getModRelax()) && m_bCursorInside)
-					m_endResult = OsuScore::HIT::HIT_300;
+				m_bHeldTillEnd = m_bHeldTillEndForLenienceHack;
+				m_endResult = m_bHeldTillEnd ? OsuScore::HIT::HIT_300 : OsuScore::HIT::HIT_MISS;
 
 
-				if (m_endResult == OsuScore::HIT::HIT_NULL) // this may happen
-					m_endResult = OsuScore::HIT::HIT_MISS;
-
-				if (m_startResult == OsuScore::HIT::HIT_NULL) // this may also happen (if the slider time is shorter than the miss window of the startcircle)
+				if (m_startResult == OsuScore::HIT::HIT_NULL) // this may happen (if the slider time is shorter than the miss window of the startcircle)
 				{
 					// we still want to cause a sliderbreak in this case!
 					onSliderBreak();
@@ -1467,6 +1493,8 @@ void OsuSlider::onReset(long curPos)
 	m_iLastClickHeld = 0;
 	m_bCursorLeft = true;
 	m_bHeldTillEnd = false;
+	m_bHeldTillEndForLenienceHack = false;
+	m_bHeldTillEndForLenienceHackCheck = false;
 	m_startResult = OsuScore::HIT::HIT_NULL;
 	m_endResult = OsuScore::HIT::HIT_NULL;
 
