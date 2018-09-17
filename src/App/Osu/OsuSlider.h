@@ -132,6 +132,8 @@ private:
 	bool m_bCursorLeft;
 	bool m_bCursorInside;
 	bool m_bHeldTillEnd;
+	bool m_bHeldTillEndForLenienceHack;
+	bool m_bHeldTillEndForLenienceHackCheck;
 	float m_fFollowCircleTickAnimationScale;
 	float m_fFollowCircleAnimationScale;
 	float m_fFollowCircleAnimationAlpha;

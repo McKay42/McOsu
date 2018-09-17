@@ -36,6 +36,9 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 
 	CHANGELOG alpha29Steam;
 	alpha29Steam.title = UString::format("29 (Steam VR Version, %s, %s)", __DATE__, __TIME__);
+	alpha29Steam.changes.push_back("- Fixed slider end/tail judgements being too strict and not matching osu! exactly");
+	alpha29Steam.changes.push_back("- Added ConVar: osu_slider_end_inside_check_offset");
+	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("- Added positional audio for hitsounds");
 	alpha29Steam.changes.push_back("- Added Score V2 keybind (defaults to 'B')");
 	alpha29Steam.changes.push_back("- Updated combo color handling to match osu!");
