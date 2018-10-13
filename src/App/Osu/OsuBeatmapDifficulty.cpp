@@ -27,6 +27,7 @@
 #include "OsuManiaNote.h"
 
 ConVar osu_mod_random("osu_mod_random", false);
+ConVar osu_mod_reverse_sliders("osu_mod_reverse_sliders", false);
 ConVar osu_show_approach_circle_on_first_hidden_object("osu_show_approach_circle_on_first_hidden_object", true);
 ConVar osu_load_beatmap_background_images("osu_load_beatmap_background_images", true);
 
@@ -205,7 +206,8 @@ void OsuBeatmapDifficulty::unload()
 
 bool OsuBeatmapDifficulty::loadMetadataRaw(bool calculateStars)
 {
-	bool forceCalculateStars = false; // to avoid double access/calculation by the background image loader and the songbrowser
+	// to avoid double access/calculation by the background image loader and the songbrowser
+	bool forceCalculateStars = false;
 	if (calculateStars && starsNoMod == 0.0f)
 	{
 		starsNoMod = 0.0000001f;
@@ -214,12 +216,14 @@ bool OsuBeatmapDifficulty::loadMetadataRaw(bool calculateStars)
 	else
 		calculateStars = false;
 
+	// reset
 	unload();
 
 	if (Osu::debug->getBool())
 		debugLog("OsuBeatmapDifficulty::loadMetadata() : %s\n", m_sFilePath.toUtf8());
 
 	// generate MD5 hash (loads entire file)
+	// TODO: performance improvements
 	if (md5hash.length() < 1)
 	{
 		File file(m_sFilePath);
@@ -244,240 +248,242 @@ bool OsuBeatmapDifficulty::loadMetadataRaw(bool calculateStars)
 		}
 	}
 
-	// open osu file for parsing
-	File file(m_sFilePath);
-	if (!file.canRead())
-	{
-		debugLog("Osu Error: Couldn't fopen() file %s\n", m_sFilePath.toUtf8());
-		return false;
-	}
-
-	// load metadata only
-	int curBlock = -1;
+	// open osu file again, but this time for parsing
 	bool foundAR = false;
-	unsigned long long timingPointSortHack = 0;
-	char stringBuffer[1024];
-	while (file.canRead())
 	{
-		UString uCurLine = file.readLine();
-		const char *curLineChar = uCurLine.toUtf8();
-		std::string curLine(curLineChar);
-
-		const int commentIndex = curLine.find("//");
-		if (commentIndex == std::string::npos || commentIndex != 0) // ignore comments, but only if at the beginning of a line (e.g. allow Artist:DJ'TEKINA//SOMETHING)
+		File file(m_sFilePath);
+		if (!file.canRead())
 		{
-			if (curLine.find("[General]") != std::string::npos)
-				curBlock = 0;
-			else if (curLine.find("[Metadata]") != std::string::npos)
-				curBlock = 1;
-			else if (curLine.find("[Difficulty]") != std::string::npos)
-				curBlock = 2;
-			else if (curLine.find("[Events]") != std::string::npos)
-				curBlock = 3;
-			else if (curLine.find("[Colours]") != std::string::npos)
-				curBlock = 4;
-			else if (curLine.find("[TimingPoints]") != std::string::npos)
-				curBlock = 5;
-			else if (curLine.find("[HitObjects]") != std::string::npos)
+			debugLog("Osu Error: Couldn't fopen() file %s\n", m_sFilePath.toUtf8());
+			return false;
+		}
+
+		// load metadata only
+		int curBlock = -1;
+		unsigned long long timingPointSortHack = 0;
+		char stringBuffer[1024];
+		while (file.canRead())
+		{
+			UString uCurLine = file.readLine();
+			const char *curLineChar = uCurLine.toUtf8();
+			std::string curLine(curLineChar);
+
+			const int commentIndex = curLine.find("//");
+			if (commentIndex == std::string::npos || commentIndex != 0) // ignore comments, but only if at the beginning of a line (e.g. allow Artist:DJ'TEKINA//SOMETHING)
 			{
-				if (calculateStars)
-					curBlock = 6; // star calculation needs hitobjects
-				else
-					break; // stop early otherwise
-			}
-
-			switch (curBlock)
-			{
-			case 0: // General
+				if (curLine.find("[General]") != std::string::npos)
+					curBlock = 0;
+				else if (curLine.find("[Metadata]") != std::string::npos)
+					curBlock = 1;
+				else if (curLine.find("[Difficulty]") != std::string::npos)
+					curBlock = 2;
+				else if (curLine.find("[Events]") != std::string::npos)
+					curBlock = 3;
+				else if (curLine.find("[Colours]") != std::string::npos)
+					curBlock = 4;
+				else if (curLine.find("[TimingPoints]") != std::string::npos)
+					curBlock = 5;
+				else if (curLine.find("[HitObjects]") != std::string::npos)
 				{
-					memset(stringBuffer, '\0', 1024);
-					if (sscanf(curLineChar, " AudioFilename : %1023[^\n]", stringBuffer) == 1)
-					{
-						audioFileName = UString(stringBuffer);
-						audioFileName = audioFileName.trim();
-					}
-
-					sscanf(curLineChar, " StackLeniency : %f \n", &stackLeniency);
-					sscanf(curLineChar, " PreviewTime : %lu \n", &previewTime);
-					sscanf(curLineChar, " Mode : %i \n", &mode);
-				}
-				break;
-
-			case 1: // Metadata
-				{
-					memset(stringBuffer, '\0', 1024);
-					if (sscanf(curLineChar, " Title :%1023[^\n]", stringBuffer) == 1)
-					{
-						title = UString(stringBuffer);
-						title = title.trim();
-					}
-
-					memset(stringBuffer, '\0', 1024);
-					if (sscanf(curLineChar, " Artist :%1023[^\n]", stringBuffer) == 1)
-					{
-						artist = UString(stringBuffer);
-						artist = artist.trim();
-					}
-
-					memset(stringBuffer, '\0', 1024);
-					if (sscanf(curLineChar, " Creator :%1023[^\n]", stringBuffer) == 1)
-					{
-						creator = UString(stringBuffer);
-						creator = creator.trim();
-					}
-
-					memset(stringBuffer, '\0', 1024);
-					if (sscanf(curLineChar, " Version :%1023[^\n]", stringBuffer) == 1)
-					{
-						name = UString(stringBuffer);
-						name = name.trim();
-					}
-
-					memset(stringBuffer, '\0', 1024);
-					if (sscanf(curLineChar, " Source :%1023[^\n]", stringBuffer) == 1)
-					{
-						source = UString(stringBuffer);
-						source = source.trim();
-					}
-
-					memset(stringBuffer, '\0', 1024);
-					if (sscanf(curLineChar, " Tags :%1023[^\n]", stringBuffer) == 1)
-					{
-						tags = UString(stringBuffer);
-						tags = tags.trim();
-					}
-
-					memset(stringBuffer, '\0', 1024);
-					if (sscanf(curLineChar, " BeatmapID :%1023[^\n]", stringBuffer) == 1)
-					{
-						sscanf(stringBuffer, " %ld ", &beatmapId);
-					}
-				}
-				break;
-
-			case 2: // Difficulty
-				sscanf(curLineChar, " CircleSize : %f \n", &CS);
-				if (sscanf(curLineChar, " ApproachRate : %f \n", &AR) == 1)
-					foundAR = true;
-
-				sscanf(curLineChar, " HPDrainRate : %f \n", &HP);
-				sscanf(curLineChar, " OverallDifficulty : %f \n", &OD);
-				sscanf(curLineChar, " SliderMultiplier : %f \n", &sliderMultiplier);
-				sscanf(curLineChar, " SliderTickRate : %f \n", &sliderTickRate);
-				break;
-			case 3: // Events
-				{
-					memset(stringBuffer, '\0', 1024);
-					int type, startTime;
-					if (sscanf(curLineChar, " %i , %i , \"%1023[^\"]\"", &type, &startTime, stringBuffer) == 3)
-					{
-						if (type == 0)
-							backgroundImageName = UString(stringBuffer);
-					}
-				}
-				break;
-			case 4: // Colours
-				{
-					int comboNum;
-					int r,g,b;
-					if (sscanf(curLineChar, " Combo %i : %i , %i , %i \n", &comboNum, &r, &g, &b) == 4)
-						combocolors.push_back(COLOR(255, r, g, b));
-				}
-				break;
-			case 5: // TimingPoints
-
-				// old beatmaps: Offset, Milliseconds per Beat
-				// new beatmaps: Offset, Milliseconds per Beat, Meter, Sample Type, Sample Set, Volume, Inherited, Kiai Mode
-
-				double tpOffset;
-				float tpMSPerBeat;
-				int tpMeter;
-				int tpSampleType,tpSampleSet;
-				int tpVolume;
-				int tpKiai;
-				if (sscanf(curLineChar, " %lf , %f , %i , %i , %i , %i , %i", &tpOffset, &tpMSPerBeat, &tpMeter, &tpSampleType, &tpSampleSet, &tpVolume, &tpKiai) == 7)
-				{
-					TIMINGPOINT t;
-					t.offset = (long)std::round(tpOffset);
-					t.msPerBeat = tpMSPerBeat;
-					t.sampleType = tpSampleType;
-					t.sampleSet = tpSampleSet;
-					t.volume = tpVolume;
-					t.kiai = tpKiai > 0;
-					t.sortHack = timingPointSortHack++;
-
-					timingpoints.push_back(t);
-				}
-				else if (sscanf(curLineChar, " %lf , %f", &tpOffset, &tpMSPerBeat) == 2)
-				{
-					TIMINGPOINT t;
-					t.offset = (long)std::round(tpOffset);
-					t.msPerBeat = tpMSPerBeat;
-
-					t.sampleType = 0;
-					t.sampleSet = 0;
-					t.volume = 100;
-					t.sortHack = timingPointSortHack++;
-
-					timingpoints.push_back(t);
-				}
-				break;
-			case 6: // HitObjects
-
-				int x,y;
-				long time;
-				int type;
-				int hitSound;
-
-				// minimalist hitobject loading, this only loads the parts necessary for the star calculation
-				const bool intScan = (sscanf(curLineChar, " %i , %i , %li , %i , %i", &x, &y, &time, &type, &hitSound) == 5);
-				bool floatScan = false;
-				if (!intScan)
-				{
-					float fX,fY;
-					floatScan = (sscanf(curLineChar, " %f , %f , %li , %i , %i", &fX, &fY, &time, &type, &hitSound) == 5);
-					x = (int)fX;
-					y = (int)fY;
+					if (calculateStars)
+						curBlock = 6; // star calculation needs hitobjects
+					else
+						break; // stop early otherwise
 				}
 
-				if (intScan || floatScan)
+				switch (curBlock)
 				{
-					if (type & 0x1) // circle
+				case 0: // General
 					{
-						HITCIRCLE c;
+						memset(stringBuffer, '\0', 1024);
+						if (sscanf(curLineChar, " AudioFilename : %1023[^\n]", stringBuffer) == 1)
+						{
+							audioFileName = UString(stringBuffer);
+							audioFileName = audioFileName.trim();
+						}
 
-						c.x = x;
-						c.y = y;
-						c.time = time;
-
-						hitcircles.push_back(c);
+						sscanf(curLineChar, " StackLeniency : %f \n", &stackLeniency);
+						sscanf(curLineChar, " PreviewTime : %lu \n", &previewTime);
+						sscanf(curLineChar, " Mode : %i \n", &mode);
 					}
-					else if (type & 0x2) // slider
+					break;
+
+				case 1: // Metadata
 					{
-						SLIDER s;
+						memset(stringBuffer, '\0', 1024);
+						if (sscanf(curLineChar, " Title :%1023[^\n]", stringBuffer) == 1)
+						{
+							title = UString(stringBuffer);
+							title = title.trim();
+						}
 
-						s.x = x;
-						s.y = y;
-						s.time = time;
-						s.repeat = 0; // unused for star calculation
-						s.sliderTime = 0.0f; // unused for star calculation
-						s.sliderTimeWithoutRepeats = 0.0f; // unused for star calculation
+						memset(stringBuffer, '\0', 1024);
+						if (sscanf(curLineChar, " Artist :%1023[^\n]", stringBuffer) == 1)
+						{
+							artist = UString(stringBuffer);
+							artist = artist.trim();
+						}
 
-						sliders.push_back(s);
+						memset(stringBuffer, '\0', 1024);
+						if (sscanf(curLineChar, " Creator :%1023[^\n]", stringBuffer) == 1)
+						{
+							creator = UString(stringBuffer);
+							creator = creator.trim();
+						}
+
+						memset(stringBuffer, '\0', 1024);
+						if (sscanf(curLineChar, " Version :%1023[^\n]", stringBuffer) == 1)
+						{
+							name = UString(stringBuffer);
+							name = name.trim();
+						}
+
+						memset(stringBuffer, '\0', 1024);
+						if (sscanf(curLineChar, " Source :%1023[^\n]", stringBuffer) == 1)
+						{
+							source = UString(stringBuffer);
+							source = source.trim();
+						}
+
+						memset(stringBuffer, '\0', 1024);
+						if (sscanf(curLineChar, " Tags :%1023[^\n]", stringBuffer) == 1)
+						{
+							tags = UString(stringBuffer);
+							tags = tags.trim();
+						}
+
+						memset(stringBuffer, '\0', 1024);
+						if (sscanf(curLineChar, " BeatmapID :%1023[^\n]", stringBuffer) == 1)
+						{
+							sscanf(stringBuffer, " %ld ", &beatmapId);
+						}
 					}
-					else if (type & 0x8) // spinner
+					break;
+
+				case 2: // Difficulty
+					sscanf(curLineChar, " CircleSize : %f \n", &CS);
+					if (sscanf(curLineChar, " ApproachRate : %f \n", &AR) == 1)
+						foundAR = true;
+
+					sscanf(curLineChar, " HPDrainRate : %f \n", &HP);
+					sscanf(curLineChar, " OverallDifficulty : %f \n", &OD);
+					sscanf(curLineChar, " SliderMultiplier : %f \n", &sliderMultiplier);
+					sscanf(curLineChar, " SliderTickRate : %f \n", &sliderTickRate);
+					break;
+				case 3: // Events
 					{
-						SPINNER s;
-
-						s.x = x;
-						s.y = y;
-						s.time = time;
-						s.endTime = 0; // unused for star calculation
-
-						spinners.push_back(s);
+						memset(stringBuffer, '\0', 1024);
+						int type, startTime;
+						if (sscanf(curLineChar, " %i , %i , \"%1023[^\"]\"", &type, &startTime, stringBuffer) == 3)
+						{
+							if (type == 0)
+								backgroundImageName = UString(stringBuffer);
+						}
 					}
+					break;
+				case 4: // Colours
+					{
+						int comboNum;
+						int r,g,b;
+						if (sscanf(curLineChar, " Combo %i : %i , %i , %i \n", &comboNum, &r, &g, &b) == 4)
+							combocolors.push_back(COLOR(255, r, g, b));
+					}
+					break;
+				case 5: // TimingPoints
+
+					// old beatmaps: Offset, Milliseconds per Beat
+					// new beatmaps: Offset, Milliseconds per Beat, Meter, Sample Type, Sample Set, Volume, Inherited, Kiai Mode
+
+					double tpOffset;
+					float tpMSPerBeat;
+					int tpMeter;
+					int tpSampleType,tpSampleSet;
+					int tpVolume;
+					int tpKiai;
+					if (sscanf(curLineChar, " %lf , %f , %i , %i , %i , %i , %i", &tpOffset, &tpMSPerBeat, &tpMeter, &tpSampleType, &tpSampleSet, &tpVolume, &tpKiai) == 7)
+					{
+						TIMINGPOINT t;
+						t.offset = (long)std::round(tpOffset);
+						t.msPerBeat = tpMSPerBeat;
+						t.sampleType = tpSampleType;
+						t.sampleSet = tpSampleSet;
+						t.volume = tpVolume;
+						t.kiai = tpKiai > 0;
+						t.sortHack = timingPointSortHack++;
+
+						timingpoints.push_back(t);
+					}
+					else if (sscanf(curLineChar, " %lf , %f", &tpOffset, &tpMSPerBeat) == 2)
+					{
+						TIMINGPOINT t;
+						t.offset = (long)std::round(tpOffset);
+						t.msPerBeat = tpMSPerBeat;
+
+						t.sampleType = 0;
+						t.sampleSet = 0;
+						t.volume = 100;
+						t.sortHack = timingPointSortHack++;
+
+						timingpoints.push_back(t);
+					}
+					break;
+				case 6: // HitObjects
+
+					int x,y;
+					long time;
+					int type;
+					int hitSound;
+
+					// minimalist hitobject loading, this only loads the parts necessary for the star calculation
+					const bool intScan = (sscanf(curLineChar, " %i , %i , %li , %i , %i", &x, &y, &time, &type, &hitSound) == 5);
+					bool floatScan = false;
+					if (!intScan)
+					{
+						float fX,fY;
+						floatScan = (sscanf(curLineChar, " %f , %f , %li , %i , %i", &fX, &fY, &time, &type, &hitSound) == 5);
+						x = (int)fX;
+						y = (int)fY;
+					}
+
+					if (intScan || floatScan)
+					{
+						if (type & 0x1) // circle
+						{
+							HITCIRCLE c;
+
+							c.x = x;
+							c.y = y;
+							c.time = time;
+
+							hitcircles.push_back(c);
+						}
+						else if (type & 0x2) // slider
+						{
+							SLIDER s;
+
+							s.x = x;
+							s.y = y;
+							s.time = time;
+							s.repeat = 0; // unused for star calculation
+							s.sliderTime = 0.0f; // unused for star calculation
+							s.sliderTimeWithoutRepeats = 0.0f; // unused for star calculation
+
+							sliders.push_back(s);
+						}
+						else if (type & 0x8) // spinner
+						{
+							SPINNER s;
+
+							s.x = x;
+							s.y = y;
+							s.time = time;
+							s.endTime = 0; // unused for star calculation
+
+							spinners.push_back(s);
+						}
+					}
+					break;
 				}
-				break;
 			}
 		}
 	}
@@ -531,17 +537,21 @@ bool OsuBeatmapDifficulty::loadMetadataRaw(bool calculateStars)
 		AR = OD;
 
 	// calculate default nomod standard stars, and immediately unload everything unnecessary after that
+	// also, update numObjects in that case since we have them loaded for the star calculation anyway
 	if (calculateStars && m_osu_database_dynamic_star_calculation->getBool())
 	{
 		if (starsNoMod == 0.0f || forceCalculateStars)
 		{
+			numObjects = hitcircles.size() + sliders.size() + spinners.size();
+
 			double aimStars = 0.0;
 			double speedStars = 0.0;
 			starsNoMod = calculateStarDiff(NULL, &aimStars, &speedStars);
+
 			unload();
 
 			if (starsNoMod == 0.0f)
-				starsNoMod = 0.0000001f; // to avoid reloading endlessly on beatmaps which simply have zero stars (or where the calculation fails)
+				starsNoMod = 0.0000001f; // quick hack to avoid reloading endlessly on beatmaps which simply have zero stars (or where the calculation fails)
 		}
 	}
 
@@ -550,287 +560,295 @@ bool OsuBeatmapDifficulty::loadMetadataRaw(bool calculateStars)
 
 bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject*> *hitobjects)
 {
+	// reset
 	unload();
 	combocolors = std::vector<Color>();
+
+	// reload metadata
 	loadMetadataRaw();
-	timingpoints = std::vector<TIMINGPOINT>(); // delete basic timingpoints which just got loaded by loadMetadataRaw(), just so we have a clean start
+	timingpoints = std::vector<TIMINGPOINT>(); // delete "basic" timingpoints which just got loaded by loadMetadataRaw(), just so we have a clean start
 
 	// open osu file for parsing
-	File file(m_sFilePath);
-	if (!file.canRead())
 	{
-		UString errorMessage = "Error: Couldn't load beatmap file :(";
-		debugLog("Osu Error: Couldn't load beatmap file (%s)!\n", m_sFilePath.toUtf8());
-		if (m_osu != NULL)
-			m_osu->getNotificationOverlay()->addNotification(errorMessage, 0xffff0000);
-		return false;
-	}
-
-	// load beatmap skin
-	beatmap->getOsu()->getSkin()->setBeatmapComboColors(combocolors);
-	beatmap->getOsu()->getSkin()->loadBeatmapOverride(m_sFolder);
-
-	// load the actual beatmap
-	int hitobjectsWithoutSpinnerCounter = 0;
-	int colorCounter = 1;
-	int colorOffset = 0;
-	int comboNumber = 1;
-	int curBlock = -1;
-	unsigned long long timingPointSortHack = 0;
-	while (file.canRead())
-	{
-		UString uCurLine = file.readLine();
-		const char *curLineChar = uCurLine.toUtf8();
-		std::string curLine(curLineChar);
-
-		const int commentIndex = curLine.find("//");
-		if (commentIndex == std::string::npos || commentIndex != 0) // ignore comments, but only if at the beginning of a line (e.g. allow Artist:DJ'TEKINA//SOMETHING)
+		File file(m_sFilePath);
+		if (!file.canRead())
 		{
-			if (curLine.find("[Events]") != std::string::npos)
-				curBlock = 1;
-			else if (curLine.find("[TimingPoints]") != std::string::npos)
-				curBlock = 2;
-			else if (curLine.find("[HitObjects]") != std::string::npos)
-				curBlock = 3;
+			UString errorMessage = "Error: Couldn't load beatmap file :(";
+			debugLog("Osu Error: Couldn't load beatmap file (%s)!\n", m_sFilePath.toUtf8());
+			if (m_osu != NULL)
+				m_osu->getNotificationOverlay()->addNotification(errorMessage, 0xffff0000);
 
-			switch (curBlock)
+			return false;
+		}
+
+		// load beatmap skin
+		beatmap->getOsu()->getSkin()->setBeatmapComboColors(combocolors);
+		beatmap->getOsu()->getSkin()->loadBeatmapOverride(m_sFolder);
+
+		// load the actual beatmap
+		int hitobjectsWithoutSpinnerCounter = 0;
+		int colorCounter = 1;
+		int colorOffset = 0;
+		int comboNumber = 1;
+		int curBlock = -1;
+		unsigned long long timingPointSortHack = 0;
+		while (file.canRead())
+		{
+			UString uCurLine = file.readLine();
+			const char *curLineChar = uCurLine.toUtf8();
+			std::string curLine(curLineChar);
+
+			const int commentIndex = curLine.find("//");
+			if (commentIndex == std::string::npos || commentIndex != 0) // ignore comments, but only if at the beginning of a line (e.g. allow Artist:DJ'TEKINA//SOMETHING)
 			{
-			case 1: // Events
+				if (curLine.find("[Events]") != std::string::npos)
+					curBlock = 1;
+				else if (curLine.find("[TimingPoints]") != std::string::npos)
+					curBlock = 2;
+				else if (curLine.find("[HitObjects]") != std::string::npos)
+					curBlock = 3;
+
+				switch (curBlock)
 				{
-					int type, startTime, endTime;
-					if (sscanf(curLineChar, " %i , %i , %i \n", &type, &startTime, &endTime) == 3)
+				case 1: // Events
 					{
-						if (type == 2)
+						int type, startTime, endTime;
+						if (sscanf(curLineChar, " %i , %i , %i \n", &type, &startTime, &endTime) == 3)
 						{
-							BREAK b;
-							b.startTime = startTime;
-							b.endTime = endTime;
-							breaks.push_back(b);
-						}
-					}
-				}
-				break;
-			case 2: // TimingPoints
-
-				// old beatmaps: Offset, Milliseconds per Beat
-				// new beatmaps: Offset, Milliseconds per Beat, Meter, Sample Type, Sample Set, Volume, Inherited, Kiai Mode
-
-				double tpOffset;
-				float tpMSPerBeat;
-				int tpMeter;
-				int tpSampleType,tpSampleSet;
-				int tpVolume;
-				int tpKiai;
-				if (sscanf(curLineChar, " %lf , %f , %i , %i , %i , %i , %i", &tpOffset, &tpMSPerBeat, &tpMeter, &tpSampleType, &tpSampleSet, &tpVolume, &tpKiai) == 7)
-				{
-					TIMINGPOINT t;
-					t.offset = (long)std::round(tpOffset);
-					t.msPerBeat = tpMSPerBeat;
-					t.sampleType = tpSampleType;
-					t.sampleSet = tpSampleSet;
-					t.volume = tpVolume;
-					t.kiai = tpKiai > 0;
-					t.sortHack = timingPointSortHack++;
-
-					timingpoints.push_back(t);
-				}
-				else if (sscanf(curLineChar, " %lf , %f", &tpOffset, &tpMSPerBeat) == 2)
-				{
-					TIMINGPOINT t;
-					t.offset = (long)std::round(tpOffset);
-					t.msPerBeat = tpMSPerBeat;
-
-					t.sampleType = 0;
-					t.sampleSet = 0;
-					t.volume = 100;
-					t.kiai = false;
-					t.sortHack = timingPointSortHack++;
-
-					timingpoints.push_back(t);
-				}
-				break;
-
-			case 3: // HitObjects
-
-				// circles:
-				// x,y,time,type,hitSound,addition
-				// sliders:
-				// x,y,time,type,hitSound,sliderType|curveX:curveY|...,repeat,pixelLength,edgeHitsound,edgeAddition,addition
-				// spinners:
-				// x,y,time,type,hitSound,endTime,addition
-
-				// TODO: calculating combo numbers and color offsets based on the parsing order is dangerous.
-				// maybe the hitobjects are not sorted by time in the file; these values should be calculated after sorting just to be sure
-
-				int x,y;
-				long time;
-				int type;
-				int hitSound;
-
-				const bool intScan = (sscanf(curLineChar, " %i , %i , %li , %i , %i", &x, &y, &time, &type, &hitSound) == 5);
-				bool floatScan = false;
-				if (!intScan)
-				{
-					float fX,fY;
-					floatScan = (sscanf(curLineChar, " %f , %f , %li , %i , %i", &fX, &fY, &time, &type, &hitSound) == 5);
-					x = (int)fX;
-					y = (int)fY;
-				}
-
-				if (intScan || floatScan)
-				{
-					if (!(type & 0x8))
-						hitobjectsWithoutSpinnerCounter++;
-
-					if (type & 0x4) // new combo
-					{
-						comboNumber = 1;
-
-						// special case 1: if the current object is a spinner, then the raw color counter is not increased (but the offset still is!)
-						// special case 2: the first (non-spinner) hitobject in a beatmap is always a new combo, therefore the raw color counter is not increased for it (but the offset still is!)
-						if (!(type & 0x8) && hitobjectsWithoutSpinnerCounter > 1)
-							colorCounter++;
-
-						colorOffset += (type >> 4) & 7; // special case 3: "Bits 4-6 (16, 32, 64) form a 3-bit number (0-7) that chooses how many combo colours to skip."
-					}
-
-					if (type & 0x1) // circle
-					{
-						HITCIRCLE c;
-
-						c.x = x;
-						c.y = y;
-						c.time = time;
-						c.sampleType = hitSound;
-						c.number = comboNumber++;
-						c.colorCounter = colorCounter;
-						c.colorOffset = colorOffset;
-						c.clicked = false;
-						c.maniaEndTime = 0;
-
-						hitcircles.push_back(c);
-					}
-					else if (type & 0x2) // slider
-					{
-						UString curLineString = UString(curLineChar);
-						std::vector<UString> tokens = curLineString.split(",");
-						if (tokens.size() < 8)
-						{
-							debugLog("Invalid slider in beatmap: %s\n\ncurLine = %s\n", m_sFilePath.toUtf8(), curLineChar);
-							continue;
-							//engine->showMessageError("Error", UString::format("Invalid slider in beatmap: %s\n\ncurLine = %s", m_sFilePath.toUtf8(), curLine));
-							//return false;
-						}
-
-						std::vector<UString> sliderTokens = tokens[5].split("|");
-						if (sliderTokens.size() < 2)
-						{
-							debugLog("Invalid slider tokens: %s\n\nIn beatmap: %s\n", curLineChar, m_sFilePath.toUtf8());
-							continue;
-							//engine->showMessageError("Error", UString::format("Invalid slider tokens: %s\n\nIn beatmap: %s", curLineChar, m_sFilePath.toUtf8()));
-							//return false;
-						}
-
-						const float sanityRange = 65536/2; // infinity sanity check, same as before
-						std::vector<Vector2> points;
-						points.push_back(Vector2(clamp<float>(x, -sanityRange, sanityRange), clamp<float>(y, -sanityRange, sanityRange)));
-						for (int i=1; i<sliderTokens.size(); i++)
-						{
-							std::vector<UString> sliderXY = sliderTokens[i].split(":");
-
-							// array size check
-							// infinity sanity check (this only exists because of https://osu.ppy.sh/b/1029976)
-							// not a very elegant check, but it does the job
-							if (sliderXY.size() != 2 || sliderXY[0].find("E") != -1 || sliderXY[0].find("e") != -1 || sliderXY[1].find("E") != -1 || sliderXY[1].find("e") != -1)
+							if (type == 2)
 							{
-								debugLog("Invalid slider positions: %s\n\nIn Beatmap: %s\n", curLineChar, m_sFilePath.toUtf8());
+								BREAK b;
+								b.startTime = startTime;
+								b.endTime = endTime;
+								breaks.push_back(b);
+							}
+						}
+					}
+					break;
+				case 2: // TimingPoints
+
+					// old beatmaps: Offset, Milliseconds per Beat
+					// new beatmaps: Offset, Milliseconds per Beat, Meter, Sample Type, Sample Set, Volume, Inherited, Kiai Mode
+
+					double tpOffset;
+					float tpMSPerBeat;
+					int tpMeter;
+					int tpSampleType,tpSampleSet;
+					int tpVolume;
+					int tpKiai;
+					if (sscanf(curLineChar, " %lf , %f , %i , %i , %i , %i , %i", &tpOffset, &tpMSPerBeat, &tpMeter, &tpSampleType, &tpSampleSet, &tpVolume, &tpKiai) == 7)
+					{
+						TIMINGPOINT t;
+						t.offset = (long)std::round(tpOffset);
+						t.msPerBeat = tpMSPerBeat;
+						t.sampleType = tpSampleType;
+						t.sampleSet = tpSampleSet;
+						t.volume = tpVolume;
+						t.kiai = tpKiai > 0;
+						t.sortHack = timingPointSortHack++;
+
+						timingpoints.push_back(t);
+					}
+					else if (sscanf(curLineChar, " %lf , %f", &tpOffset, &tpMSPerBeat) == 2)
+					{
+						TIMINGPOINT t;
+						t.offset = (long)std::round(tpOffset);
+						t.msPerBeat = tpMSPerBeat;
+
+						t.sampleType = 0;
+						t.sampleSet = 0;
+						t.volume = 100;
+						t.kiai = false;
+						t.sortHack = timingPointSortHack++;
+
+						timingpoints.push_back(t);
+					}
+					break;
+
+				case 3: // HitObjects
+
+					// circles:
+					// x,y,time,type,hitSound,addition
+					// sliders:
+					// x,y,time,type,hitSound,sliderType|curveX:curveY|...,repeat,pixelLength,edgeHitsound,edgeAddition,addition
+					// spinners:
+					// x,y,time,type,hitSound,endTime,addition
+
+					// TODO: calculating combo numbers and color offsets based on the parsing order is dangerous.
+					// maybe the hitobjects are not sorted by time in the file; these values should be calculated after sorting just to be sure
+
+					int x,y;
+					long time;
+					int type;
+					int hitSound;
+
+					const bool intScan = (sscanf(curLineChar, " %i , %i , %li , %i , %i", &x, &y, &time, &type, &hitSound) == 5);
+					bool floatScan = false;
+					if (!intScan)
+					{
+						float fX,fY;
+						floatScan = (sscanf(curLineChar, " %f , %f , %li , %i , %i", &fX, &fY, &time, &type, &hitSound) == 5);
+						x = (int)fX;
+						y = (int)fY;
+					}
+
+					if (intScan || floatScan)
+					{
+						if (!(type & 0x8))
+							hitobjectsWithoutSpinnerCounter++;
+
+						if (type & 0x4) // new combo
+						{
+							comboNumber = 1;
+
+							// special case 1: if the current object is a spinner, then the raw color counter is not increased (but the offset still is!)
+							// special case 2: the first (non-spinner) hitobject in a beatmap is always a new combo, therefore the raw color counter is not increased for it (but the offset still is!)
+							if (!(type & 0x8) && hitobjectsWithoutSpinnerCounter > 1)
+								colorCounter++;
+
+							colorOffset += (type >> 4) & 7; // special case 3: "Bits 4-6 (16, 32, 64) form a 3-bit number (0-7) that chooses how many combo colours to skip."
+						}
+
+						if (type & 0x1) // circle
+						{
+							HITCIRCLE c;
+
+							c.x = x;
+							c.y = y;
+							c.time = time;
+							c.sampleType = hitSound;
+							c.number = comboNumber++;
+							c.colorCounter = colorCounter;
+							c.colorOffset = colorOffset;
+							c.clicked = false;
+							c.maniaEndTime = 0;
+
+							hitcircles.push_back(c);
+						}
+						else if (type & 0x2) // slider
+						{
+							UString curLineString = UString(curLineChar);
+							std::vector<UString> tokens = curLineString.split(",");
+							if (tokens.size() < 8)
+							{
+								debugLog("Invalid slider in beatmap: %s\n\ncurLine = %s\n", m_sFilePath.toUtf8(), curLineChar);
 								continue;
-								//engine->showMessageError("Error", UString::format("Invalid slider positions: %s\n\nIn beatmap: %s", curLine, m_sFilePath.toUtf8()));
+								//engine->showMessageError("Error", UString::format("Invalid slider in beatmap: %s\n\ncurLine = %s", m_sFilePath.toUtf8(), curLine));
 								//return false;
 							}
-							points.push_back(Vector2((int)clamp<float>(sliderXY[0].toFloat(), -sanityRange, sanityRange), (int)clamp<float>(sliderXY[1].toFloat(), -sanityRange, sanityRange)));
-						}
 
-						SLIDER s;
-						s.x = x;
-						s.y = y;
-						s.type = sliderTokens[0][0];
-						s.repeat = (int)tokens[6].toFloat();
-						s.repeat = s.repeat >= 0 ? s.repeat : 0; // sanity check
-						s.pixelLength = clamp<float>(tokens[7].toFloat(), -sanityRange, sanityRange);
-						s.time = time;
-						s.sampleType = hitSound;
-						s.number = comboNumber++;
-						s.colorCounter = colorCounter;
-						s.colorOffset = colorOffset;
-						s.points = points;
-
-						if (tokens.size() > 8)
-						{
-							std::vector<UString> hitSoundTokens = tokens[8].split("|");
-							for (int i=0; i<hitSoundTokens.size(); i++)
+							std::vector<UString> sliderTokens = tokens[5].split("|");
+							if (sliderTokens.size() < 2)
 							{
-								s.hitSounds.push_back(hitSoundTokens[i].toInt());
+								debugLog("Invalid slider tokens: %s\n\nIn beatmap: %s\n", curLineChar, m_sFilePath.toUtf8());
+								continue;
+								//engine->showMessageError("Error", UString::format("Invalid slider tokens: %s\n\nIn beatmap: %s", curLineChar, m_sFilePath.toUtf8()));
+								//return false;
 							}
-						}
 
-						sliders.push_back(s);
-					}
-					else if (type & 0x8) // spinner
-					{
-						UString curLineString = UString(curLineChar);
-						std::vector<UString> tokens = curLineString.split(",");
-						if (tokens.size() < 6)
+							const float sanityRange = 65536/2; // infinity sanity check, same as before
+							std::vector<Vector2> points;
+							points.push_back(Vector2(clamp<float>(x, -sanityRange, sanityRange), clamp<float>(y, -sanityRange, sanityRange)));
+							for (int i=1; i<sliderTokens.size(); i++)
+							{
+								std::vector<UString> sliderXY = sliderTokens[i].split(":");
+
+								// array size check
+								// infinity sanity check (this only exists because of https://osu.ppy.sh/b/1029976)
+								// not a very elegant check, but it does the job
+								if (sliderXY.size() != 2 || sliderXY[0].find("E") != -1 || sliderXY[0].find("e") != -1 || sliderXY[1].find("E") != -1 || sliderXY[1].find("e") != -1)
+								{
+									debugLog("Invalid slider positions: %s\n\nIn Beatmap: %s\n", curLineChar, m_sFilePath.toUtf8());
+									continue;
+									//engine->showMessageError("Error", UString::format("Invalid slider positions: %s\n\nIn beatmap: %s", curLine, m_sFilePath.toUtf8()));
+									//return false;
+								}
+
+								points.push_back(Vector2((int)clamp<float>(sliderXY[0].toFloat(), -sanityRange, sanityRange), (int)clamp<float>(sliderXY[1].toFloat(), -sanityRange, sanityRange)));
+							}
+
+							SLIDER s;
+							s.x = x;
+							s.y = y;
+							s.type = sliderTokens[0][0];
+							s.repeat = (int)tokens[6].toFloat();
+							s.repeat = s.repeat >= 0 ? s.repeat : 0; // sanity check
+							s.pixelLength = clamp<float>(tokens[7].toFloat(), -sanityRange, sanityRange);
+							s.time = time;
+							s.sampleType = hitSound;
+							s.number = comboNumber++;
+							s.colorCounter = colorCounter;
+							s.colorOffset = colorOffset;
+							s.points = points;
+
+							// new beatmaps: slider hitsounds
+							if (tokens.size() > 8)
+							{
+								std::vector<UString> hitSoundTokens = tokens[8].split("|");
+								for (int i=0; i<hitSoundTokens.size(); i++)
+								{
+									s.hitSounds.push_back(hitSoundTokens[i].toInt());
+								}
+							}
+
+							sliders.push_back(s);
+						}
+						else if (type & 0x8) // spinner
 						{
-							debugLog("Invalid spinner in beatmap: %s\n\ncurLine = %s\n", m_sFilePath.toUtf8(), curLineChar);
-							continue;
-							//engine->showMessageError("Error", UString::format("Invalid spinner in beatmap: %s\n\ncurLine = %s", m_sFilePath.toUtf8(), curLine));
-							//return false;
+							UString curLineString = UString(curLineChar);
+							std::vector<UString> tokens = curLineString.split(",");
+							if (tokens.size() < 6)
+							{
+								debugLog("Invalid spinner in beatmap: %s\n\ncurLine = %s\n", m_sFilePath.toUtf8(), curLineChar);
+								continue;
+								//engine->showMessageError("Error", UString::format("Invalid spinner in beatmap: %s\n\ncurLine = %s", m_sFilePath.toUtf8(), curLine));
+								//return false;
+							}
+
+							SPINNER s;
+							s.x = x;
+							s.y = y;
+							s.time = time;
+							s.sampleType = hitSound;
+							s.endTime = tokens[5].toFloat();
+
+							spinners.push_back(s);
 						}
-
-						SPINNER s;
-						s.x = x;
-						s.y = y;
-						s.time = time;
-						s.sampleType = hitSound;
-						s.endTime = tokens[5].toFloat();
-
-						spinners.push_back(s);
-					}
-					else if (m_osu->getGamemode() == Osu::GAMEMODE::MANIA && (type & 0x80)) // osu!mania hold note, gamemode check for sanity
-					{
-						UString curLineString = UString(curLineChar);
-						std::vector<UString> tokens = curLineString.split(",");
-
-						if (tokens.size() < 6)
+						else if (m_osu->getGamemode() == Osu::GAMEMODE::MANIA && (type & 0x80)) // osu!mania hold note, gamemode check for sanity
 						{
-							debugLog("Invalid hold note in beatmap: %s\n\ncurLine = %s\n", m_sFilePath.toUtf8(), curLineChar);
-							continue;
+							UString curLineString = UString(curLineChar);
+							std::vector<UString> tokens = curLineString.split(",");
+
+							if (tokens.size() < 6)
+							{
+								debugLog("Invalid hold note in beatmap: %s\n\ncurLine = %s\n", m_sFilePath.toUtf8(), curLineChar);
+								continue;
+							}
+
+							std::vector<UString> holdNoteTokens = tokens[5].split(":");
+							if (holdNoteTokens.size() < 1)
+							{
+								debugLog("Invalid hold note in beatmap: %s\n\ncurLine = %s\n", m_sFilePath.toUtf8(), curLineChar);
+								continue;
+							}
+
+							HITCIRCLE c;
+
+							c.x = x;
+							c.y = y;
+							c.time = time;
+							c.sampleType = hitSound;
+							c.number = comboNumber++;
+							c.colorCounter = colorCounter;
+							c.colorOffset = colorOffset;
+							c.clicked = false;
+							c.maniaEndTime = holdNoteTokens[0].toLong();
+
+							hitcircles.push_back(c);
 						}
-
-						std::vector<UString> holdNoteTokens = tokens[5].split(":");
-						if (holdNoteTokens.size() < 1)
-						{
-							debugLog("Invalid hold note in beatmap: %s\n\ncurLine = %s\n", m_sFilePath.toUtf8(), curLineChar);
-							continue;
-						}
-
-						HITCIRCLE c;
-
-						c.x = x;
-						c.y = y;
-						c.time = time;
-						c.sampleType = hitSound;
-						c.number = comboNumber++;
-						c.colorCounter = colorCounter;
-						c.colorOffset = colorOffset;
-						c.clicked = false;
-						c.maniaEndTime = holdNoteTokens[0].toLong();
-
-						hitcircles.push_back(c);
 					}
+					break;
 				}
-				break;
 			}
 		}
 	}
@@ -842,13 +860,18 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 		debugLog("Osu Error: No timingpoints in beatmap (%s)!\n", m_sFilePath.toUtf8());
 		if (m_osu != NULL)
 			m_osu->getNotificationOverlay()->addNotification(errorMessage, 0xffff0000);
+
 		return false;
 	}
+
+	// update numObjects
+	if (numObjects == 0)
+		numObjects = hitcircles.size() + sliders.size() + spinners.size();
 
 	// sort timingpoints by time
 	std::sort(timingpoints.begin(), timingpoints.end(), TimingPointSortComparator());
 
-	// calculate sliderTimes, and build clicks and ticks
+	// calculate sliderTimes, and build slider clicks and ticks
 	for (int i=0; i<sliders.size(); i++)
 	{
 		SLIDER *s = &sliders[i];
@@ -1050,6 +1073,7 @@ void OsuBeatmapDifficulty::loadBackgroundImagePath()
 				}
 				break;
 			}
+
 			if (found)
 				break;
 		}
@@ -1079,6 +1103,47 @@ void OsuBeatmapDifficulty::buildStandardHitObjects(OsuBeatmapStandard *beatmap, 
 		}
 
 		hitobjects->push_back(new OsuCircle(c->x, c->y, c->time, c->sampleType, c->number, c->colorCounter, c->colorOffset, beatmap));
+
+		// potential convert-all-circles-to-sliders mod, have to play around more with this
+		/*
+		if (i+1 < hitcircles.size())
+		{
+			std::vector<Vector2> points;
+			Vector2 p1 = Vector2(hitcircles[i].x, hitcircles[i].y);
+			Vector2 p2 = Vector2(hitcircles[i+1].x, hitcircles[i+1].y);
+			points.push_back(p1);
+			points.push_back(p2 - (p2 - p1).normalize()*35);
+			const float pixelLength = (p2 - p1).length();
+			const unsigned long time = hitcircles[i].time;
+			const unsigned long timeEnd = hitcircles[i+1].time;
+			const unsigned long sliderTime = timeEnd - time;
+
+			bool blocked = false;
+			for (int s=0; s<sliders.size(); s++)
+			{
+				if (sliders[s].time > time && sliders[s].time < timeEnd)
+				{
+					blocked = true;
+					break;
+				}
+			}
+			for (int s=0; s<spinners.size(); s++)
+			{
+				if (spinners[s].time > time && spinners[s].time < timeEnd)
+				{
+					blocked = true;
+					break;
+				}
+			}
+
+			blocked |= pixelLength < 45;
+
+			if (!blocked)
+				hitobjects->push_back(new OsuSlider(OsuSlider::SLIDERTYPE::SLIDER_LINEAR, 1, pixelLength, points, std::vector<int>(), std::vector<float>(), sliderTime, sliderTime, time, c->sampleType, c->number, c->colorCounter, c->colorOffset, beatmap));
+			else
+				hitobjects->push_back(new OsuCircle(c->x, c->y, c->time, c->sampleType, c->number, c->colorCounter, c->colorOffset, beatmap));
+		}
+		*/
 	}
 	m_iMaxCombo += hitcircles.size();
 
@@ -1098,6 +1163,11 @@ void OsuBeatmapDifficulty::buildStandardHitObjects(OsuBeatmapStandard *beatmap, 
 			}
 		}
 
+		if (osu_mod_reverse_sliders.getBool())
+		{
+			std::reverse(s->points.begin(), s->points.end());
+		}
+
 		hitobjects->push_back(new OsuSlider(s->type, s->repeat, s->pixelLength, s->points, s->hitSounds, s->ticks, s->sliderTime, s->sliderTimeWithoutRepeats, s->time, s->sampleType, s->number, s->colorCounter, s->colorOffset, beatmap));
 	}
 
@@ -1115,7 +1185,7 @@ void OsuBeatmapDifficulty::buildStandardHitObjects(OsuBeatmapStandard *beatmap, 
 	}
 	m_iMaxCombo += spinners.size();
 
-	// debugging
+	// debug
 	if (m_osu_debug_pp->getBool())
 	{
 		double aim = 0.0;
@@ -1247,6 +1317,16 @@ unsigned long OsuBeatmapDifficulty::getBreakDuration(unsigned long positionMS)
 	return 0;
 }
 
+unsigned long OsuBeatmapDifficulty::getBreakDurationTotal()
+{
+	unsigned long breakDurationTotal = 0;
+	for (int i=0; i<breaks.size(); i++)
+	{
+		breakDurationTotal += (unsigned long)(breaks[i].endTime - breaks[i].startTime);
+	}
+	return breakDurationTotal;
+}
+
 bool OsuBeatmapDifficulty::isInBreak(unsigned long positionMS)
 {
 	for (int i=0; i<breaks.size(); i++)
@@ -1371,12 +1451,11 @@ std::vector<OsuBeatmapDifficulty::PPHitObject> OsuBeatmapDifficulty::generatePPH
 
 double OsuBeatmapDifficulty::calculateStarDiffForHitObjects(std::vector<PPHitObject> &hitObjects, float CS, double *aim, double *speed, int upToObjectIndex)
 {
-	// depends on speed multiplier + CS
+	// NOTE: depends on speed multiplier + CS
 
 	// NOTE: upToObjectIndex is applied way below, during the construction of the 'dobjects'
 
-	if (hitObjects.size() < 1)
-		return 0.0;
+	if (hitObjects.size() < 1) return 0.0;
 
 	// ****************************************************************************************************************************************** //
 
@@ -1597,7 +1676,7 @@ double OsuBeatmapDifficulty::calculateStarDiffForHitObjects(std::vector<PPHitObj
 
 	// ****************************************************************************************************************************************** //
 
-	float circleRadiusInOsuPixels = OsuGameRules::getRawHitCircleDiameter(CS) / 2.0f;
+	const float circleRadiusInOsuPixels = OsuGameRules::getRawHitCircleDiameter(CS) / 2.0f;
 
 	// initialize dobjects
 	std::vector<DiffObject> diffObjects;
@@ -1636,7 +1715,7 @@ double OsuBeatmapDifficulty::calculateStarDiff(OsuBeatmap *beatmap, double *aim,
 
 double OsuBeatmapDifficulty::calculatePPv2(Osu *osu, OsuBeatmap *beatmap, double aim, double speed, int numHitObjects, int numCircles, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50/*, SCORE_VERSION scoreVersion*/)
 {
-	// depends on active mods + OD + AR
+	// NOTE: depends on active mods + OD + AR
 
 	SCORE_VERSION scoreVersion = (m_osu_slider_scorev2->getBool() || osu->getModScorev2()) ? SCORE_VERSION::SCORE_V2 : SCORE_VERSION::SCORE_V1;
 
