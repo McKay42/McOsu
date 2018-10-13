@@ -15,6 +15,10 @@
 #include "OsuBeatmap.h"
 #include "OsuBeatmapDifficulty.h"
 #include "OsuNotificationOverlay.h"
+#include "OsuTooltipOverlay.h"
+#include "OsuGameRules.h"
+
+#include "OsuOptionsMenu.h"
 
 OsuUISongBrowserInfoLabel::OsuUISongBrowserInfoLabel(Osu *osu, float xPos, float yPos, float xSize, float ySize, UString name) : CBaseUIButton(xPos, yPos, xSize, ySize, name, "")
 {
@@ -72,48 +76,92 @@ void OsuUISongBrowserInfoLabel::draw(Graphics *g)
 	// draw
 	g->setColor(0xffffffff);
 	g->pushTransform();
-	g->translate(m_vPos.x, m_vPos.y + m_font->getHeight());
-	g->drawString(m_font, titleText);
+	{
+		g->translate(m_vPos.x, m_vPos.y + m_font->getHeight());
+		g->drawString(m_font, titleText);
+	}
 	g->popTransform();
 
-	float subTitleStringWidth = m_font->getStringWidth(subTitleText);
+	const float subTitleStringWidth = m_font->getStringWidth(subTitleText);
 	g->setColor(0xffffffff);
 	g->pushTransform();
-	g->translate((int)(-subTitleStringWidth/2), (int)(m_font->getHeight()/2));
-	g->scale(m_fSubTitleScale, m_fSubTitleScale);
-	g->translate((int)(m_vPos.x + (subTitleStringWidth/2)*m_fSubTitleScale), (int)(m_vPos.y + m_font->getHeight() + (m_font->getHeight()/2)*m_fSubTitleScale + m_iMargin));
-	g->drawString(m_font, subTitleText);
+	{
+		g->translate((int)(-subTitleStringWidth/2), (int)(m_font->getHeight()/2));
+		g->scale(m_fSubTitleScale, m_fSubTitleScale);
+		g->translate((int)(m_vPos.x + (subTitleStringWidth/2)*m_fSubTitleScale), (int)(m_vPos.y + m_font->getHeight() + (m_font->getHeight()/2)*m_fSubTitleScale + m_iMargin));
+		g->drawString(m_font, subTitleText);
+	}
 	g->popTransform();
 
-	float songInfoStringWidth = m_font->getStringWidth(songInfoText);
+	const float songInfoStringWidth = m_font->getStringWidth(songInfoText);
 	g->setColor(0xffffffff);
 	if (m_osu->getSpeedMultiplier() != 1.0f)
-		g->setColor(0xffff0000);
+		g->setColor(m_osu->getSpeedMultiplier() > 1.0f ? 0xffff7f7f : 0xffadd8e6);
 
 	g->pushTransform();
-	g->translate((int)(-songInfoStringWidth/2), (int)(m_font->getHeight()/2));
-	g->scale(m_fSongInfoScale, m_fSongInfoScale);
-	g->translate((int)(m_vPos.x + (songInfoStringWidth/2)*m_fSongInfoScale), (int)(m_vPos.y + m_font->getHeight() + m_font->getHeight()*m_fSubTitleScale + (m_font->getHeight()/2)*m_fSongInfoScale + m_iMargin*2));
-	g->drawString(m_font, songInfoText);
+	{
+		g->translate((int)(-songInfoStringWidth/2), (int)(m_font->getHeight()/2));
+		g->scale(m_fSongInfoScale, m_fSongInfoScale);
+		g->translate((int)(m_vPos.x + (songInfoStringWidth/2)*m_fSongInfoScale), (int)(m_vPos.y + m_font->getHeight() + m_font->getHeight()*m_fSubTitleScale + (m_font->getHeight()/2)*m_fSongInfoScale + m_iMargin*2));
+		g->drawString(m_font, songInfoText);
+	}
 	g->popTransform();
 
-	float diffInfoStringWidth = m_font->getStringWidth(diffInfoText);
-	g->setColor(0xffffffff);
+	const float diffInfoStringWidth = m_font->getStringWidth(diffInfoText);
+	g->setColor(m_osu->getModEZ() ? 0xffadd8e6 : (m_osu->getModHR() ? 0xffff7f7f : 0xffffffff));
 	g->pushTransform();
-	g->translate((int)(-diffInfoStringWidth/2), (int)(m_font->getHeight()/2));
-	g->scale(m_fDiffInfoScale, m_fDiffInfoScale);
-	g->translate((int)(m_vPos.x + (diffInfoStringWidth/2)*m_fDiffInfoScale), (int)(m_vPos.y + m_font->getHeight() + m_font->getHeight()*m_fSubTitleScale + m_font->getHeight()*m_fSongInfoScale + (m_font->getHeight()/2)*m_fDiffInfoScale + m_iMargin*3));
-	g->drawString(m_font, diffInfoText);
+	{
+		g->translate((int)(-diffInfoStringWidth/2), (int)(m_font->getHeight()/2));
+		g->scale(m_fDiffInfoScale, m_fDiffInfoScale);
+		g->translate((int)(m_vPos.x + (diffInfoStringWidth/2)*m_fDiffInfoScale), (int)(m_vPos.y + m_font->getHeight() + m_font->getHeight()*m_fSubTitleScale + m_font->getHeight()*m_fSongInfoScale + (m_font->getHeight()/2)*m_fDiffInfoScale + m_iMargin*3));
+		g->drawString(m_font, diffInfoText);
+	}
 	g->popTransform();
 
-	float offsetInfoStringWidth = m_font->getStringWidth(offsetInfoText);
-	g->setColor(0xffffffff);
-	g->pushTransform();
-	g->translate((int)(-offsetInfoStringWidth/2), (int)(m_font->getHeight()/2));
-	g->scale(m_fOffsetInfoScale, m_fOffsetInfoScale);
-	g->translate((int)(m_vPos.x + (offsetInfoStringWidth/2)*m_fOffsetInfoScale), (int)(m_vPos.y + m_font->getHeight() + m_font->getHeight()*m_fSubTitleScale + m_font->getHeight()*m_fSongInfoScale + (m_font->getHeight()/2)*m_fDiffInfoScale + (m_font->getHeight()/2)*m_fOffsetInfoScale + m_iMargin*5));
-	g->drawString(m_font, offsetInfoText);
-	g->popTransform();
+	if (m_iLocalOffset != 0 || m_iOnlineOffset != 0)
+	{
+		float offsetInfoStringWidth = m_font->getStringWidth(offsetInfoText);
+		g->setColor(0xffffffff);
+		g->pushTransform();
+		{
+			g->translate((int)(-offsetInfoStringWidth/2), (int)(m_font->getHeight()/2));
+			g->scale(m_fOffsetInfoScale, m_fOffsetInfoScale);
+			g->translate((int)(m_vPos.x + (offsetInfoStringWidth/2)*m_fOffsetInfoScale), (int)(m_vPos.y + m_font->getHeight() + m_font->getHeight()*m_fSubTitleScale + m_font->getHeight()*m_fSongInfoScale + (m_font->getHeight()/2)*m_fDiffInfoScale + (m_font->getHeight()/2)*m_fOffsetInfoScale + m_iMargin*5));
+			g->drawString(m_font, offsetInfoText);
+		}
+		g->popTransform();
+	}
+}
+
+void OsuUISongBrowserInfoLabel::update()
+{
+	CBaseUIButton::update();
+	if (!m_bVisible) return;
+
+	// detail info tooltip when hovering over diff info
+	if (isMouseInside() && !m_osu->getOptionsMenu()->isMouseInside())
+	{
+		OsuBeatmap *beatmap = m_osu->getSelectedBeatmap();
+		if (beatmap != NULL)
+		{
+			const float speedMultiplierInv = (1.0f / m_osu->getSpeedMultiplier());
+
+			const float approachTimeRoundedCompensated = ((int)OsuGameRules::getApproachTime(beatmap)) * speedMultiplierInv;
+			const float hitWindow300RoundedCompensated = ((int)OsuGameRules::getHitWindow300(beatmap) - 0.5f) * speedMultiplierInv;
+			const float hitWindow100RoundedCompensated = ((int)OsuGameRules::getHitWindow100(beatmap) - 0.5f) * speedMultiplierInv;
+			const float hitWindow50RoundedCompensated  = ((int)OsuGameRules::getHitWindow50(beatmap)  - 0.5f) * speedMultiplierInv;
+			const float hitobjectRadiusRoundedCompensated = (OsuGameRules::getRawHitCircleDiameter(beatmap->getCS()) / 2.0f);
+
+			m_osu->getTooltipOverlay()->begin();
+			m_osu->getTooltipOverlay()->addLine(UString::format("Approach time: %.2fms", approachTimeRoundedCompensated));
+			m_osu->getTooltipOverlay()->addLine(UString::format("300: +-%.2fms", hitWindow300RoundedCompensated));
+			m_osu->getTooltipOverlay()->addLine(UString::format("100: +-%.2fms", hitWindow100RoundedCompensated));
+			m_osu->getTooltipOverlay()->addLine(UString::format(" 50: +-%.2fms", hitWindow50RoundedCompensated));
+			m_osu->getTooltipOverlay()->addLine(UString::format("Spinner difficulty: %.2f", OsuGameRules::getSpinnerSpins(beatmap)));
+			m_osu->getTooltipOverlay()->addLine(UString::format("Hit object radius: %.2f", hitobjectRadiusRoundedCompensated));
+			m_osu->getTooltipOverlay()->end();
+		}
+	}
 }
 
 void OsuUISongBrowserInfoLabel::setFromBeatmap(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff)
@@ -194,7 +242,13 @@ UString OsuUISongBrowserInfoLabel::buildSubTitleString()
 
 UString OsuUISongBrowserInfoLabel::buildSongInfoString()
 {
-	const unsigned long fullSeconds = (m_iLengthMS*(1.0 / m_osu->getSpeedMultiplier())) / 1000.0;
+	unsigned long lengthMS = m_iLengthMS;
+
+	OsuBeatmap *beatmap = m_osu->getSelectedBeatmap();
+	if (beatmap != NULL && beatmap->getSelectedDifficulty() != NULL)
+		lengthMS -= clamp<unsigned long>(beatmap->getSelectedDifficulty()->getBreakDurationTotal(), 0, m_iLengthMS);
+
+	const unsigned long fullSeconds = (lengthMS*(1.0 / m_osu->getSpeedMultiplier())) / 1000.0;
 	const int minutes = fullSeconds / 60;
 	const int seconds = fullSeconds % 60;
 
@@ -209,7 +263,24 @@ UString OsuUISongBrowserInfoLabel::buildSongInfoString()
 
 UString OsuUISongBrowserInfoLabel::buildDiffInfoString()
 {
-	return UString::format("CS:%.2g AR:%.2g OD:%.2g HP:%.2g Stars:%.3g", m_fCS, m_fAR, m_fOD, m_fHP, m_fStars);
+	float CS = m_fCS;
+	float AR = m_fAR;
+	float OD = m_fOD;
+	float HP = m_fHP;
+	float stars = m_fStars;
+
+	bool areStarsInaccurate = false;
+	OsuBeatmap *beatmap = m_osu->getSelectedBeatmap();
+	if (beatmap != NULL)
+	{
+		CS = beatmap->getCS();
+		AR = OsuGameRules::getApproachRateForSpeedMultiplier(beatmap);
+		OD = OsuGameRules::getOverallDifficultyForSpeedMultiplier(beatmap);
+
+		areStarsInaccurate = beatmap->getSpeedMultiplier() != 1.0f || CS != m_fCS || AR != m_fAR || OD != m_fOD;
+	}
+
+	return UString::format(areStarsInaccurate ? "CS:%.3g AR:%.3g OD:%.3g HP:%.3g Stars:? (%.3g)" : "CS:%.3g AR:%.3g OD:%.3g HP:%.3g Stars:%.3g", CS, AR, OD, HP, stars);
 }
 
 UString OsuUISongBrowserInfoLabel::buildOffsetInfoString()

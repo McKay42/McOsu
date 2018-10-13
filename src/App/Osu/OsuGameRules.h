@@ -312,9 +312,14 @@ public:
 
 	static ConVar osu_slider_followcircle_size_multiplier;
 
+	// "Builds of osu! up to 2013-05-04 had the gamefield being rounded down, which caused incorrect radius calculations
+	// in widescreen cases. This ratio adjusts to allow for old replays to work post-fix, which in turn increases the lenience
+	// for all plays, but by an amount so small it should only be effective in replays."
+	static constexpr float broken_gamefield_rounding_allowance = 1.00041f;
+
 	static float getRawHitCircleDiameter(float CS)
 	{
-		return ((1.0f - 0.7f*(CS - 5.0f) / 5.0f) / 2.0f) * 128.0f; // gives the circle diameter in osu!pixels, goes negative above CS 12.1429
+		return ((1.0f - 0.7f*(CS - 5.0f) / 5.0f) / 2.0f) * 128.0f * broken_gamefield_rounding_allowance; // gives the circle diameter in osu!pixels, goes negative above CS 12.1429
 	}
 
 	static float getHitCircleXMultiplier(Osu *osu)
