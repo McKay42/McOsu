@@ -438,7 +438,7 @@ void OsuUISongBrowserScoreButton::setScore(OsuDatabase::Score score, int index)
 		for (int i=0; i<experimentalMods.size(); i++)
 		{
 			if (experimentalMods[i].length() > 0)
-				m_sScoreMods.append("+");
+				m_sScoreMods.append("++");
 		}
 	}
 

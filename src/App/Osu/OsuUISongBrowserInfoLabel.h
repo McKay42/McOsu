@@ -22,6 +22,7 @@ public:
 	OsuUISongBrowserInfoLabel(Osu *osu, float xPos, float yPos, float xSize, float ySize, UString name);
 
 	void draw(Graphics *g);
+	void update();
 
 	void setFromBeatmap(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff);
 	void setFromMissingBeatmap(long beatmapId);

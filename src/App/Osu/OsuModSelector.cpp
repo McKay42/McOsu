@@ -116,7 +116,8 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen(osu)
 	addExperimentalCheckbox("Jigsaw 1", "Unnecessary clicks count as misses.", convar->getConVarByName("osu_mod_jigsaw1"));
 	addExperimentalCheckbox("Jigsaw 2", "Massively reduced slider follow circle radius.", convar->getConVarByName("osu_mod_jigsaw2"));
 	addExperimentalCheckbox("Full Alternate", "You can never use the same key twice in a row.", convar->getConVarByName("osu_mod_fullalternate"));
-	addExperimentalCheckbox("Random", "Random hitobject positions. (VERY experimental!)", convar->getConVarByName("osu_mod_random"));
+	addExperimentalCheckbox("Random", "Randomizes hitobject positions. (VERY experimental!)", convar->getConVarByName("osu_mod_random"));
+	addExperimentalCheckbox("Reverse Sliders", "Reverses the direction of all sliders (reload beatmap to apply!).", convar->getConVarByName("osu_mod_reverse_sliders"));
 	addExperimentalCheckbox("No 50s", "Only 300s or 100s. Try harder.", convar->getConVarByName("osu_mod_no50s"));
 	addExperimentalCheckbox("No 100s no 50s", "300 or miss. PF \"lite\"", convar->getConVarByName("osu_mod_no100s"));
 	addExperimentalCheckbox("MinG3012", "No 100s. Only 300s or 50s. Git gud.", convar->getConVarByName("osu_mod_ming3012"));
