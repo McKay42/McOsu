@@ -171,6 +171,7 @@ public:
 
 	TIMING_INFO getTimingInfoForTime(unsigned long positionMS);
 	unsigned long getBreakDuration(unsigned long positionMS);
+	unsigned long getBreakDurationTotal();
 
 	bool isInBreak(unsigned long positionMS);
 
