@@ -84,6 +84,8 @@ public:
 	inline OsuSkinImage *getPlayWarningArrow2() {return m_playWarningArrow2;}
 	inline Image *getCircularmetre() {return m_circularmetre;}
 	inline OsuSkinImage *getScorebarBg() {return m_scorebarBg;}
+	inline OsuSkinImage *getInputoverlayBackground() {return m_inputoverlayBackground;}
+	inline OsuSkinImage *getInputoverlayKey() {return m_inputoverlayKey;}
 
 	inline OsuSkinImage *getHit0() {return m_hit0;}
 	inline OsuSkinImage *getHit50() {return m_hit50;}
@@ -165,6 +167,7 @@ public:
 	inline Image *getSongSelectTop() {return m_songSelectTop;}
 	inline Image *getSongSelectBottom() {return m_songSelectBottom;}
 	inline Image *getMenuButtonBackground() {return m_menuButtonBackground;}
+	inline OsuSkinImage *getMenuButtonBackground2() {return m_menuButtonBackground2;}
 	inline Image *getStar() {return m_star;}
 	inline Image *getRankingPanel() {return m_rankingPanel;}
 	inline Image *getRankingGraph() {return m_rankingGraph;}
@@ -252,6 +255,8 @@ public:
 
 	inline Color getSongSelectActiveText() {return m_songSelectActiveText;}
 	inline Color getSongSelectInactiveText() {return m_songSelectInactiveText;}
+
+	inline Color getInputOverlayText() {return m_inputOverlayText;}
 
 	inline bool getCursorCenter() {return m_bCursorCenter;}
 	inline bool getCursorRotate() {return m_bCursorRotate;}
@@ -342,6 +347,8 @@ private:
 	OsuSkinImage *m_playWarningArrow2;
 	Image *m_circularmetre;
 	OsuSkinImage *m_scorebarBg;
+	OsuSkinImage *m_inputoverlayBackground;
+	OsuSkinImage *m_inputoverlayKey;
 
 	OsuSkinImage *m_hit0;
 	OsuSkinImage *m_hit50;
@@ -423,6 +430,7 @@ private:
 	Image *m_songSelectTop;
 	Image *m_songSelectBottom;
 	Image *m_menuButtonBackground;
+	OsuSkinImage *m_menuButtonBackground2;
 	Image *m_star;
 	Image *m_rankingPanel;
 	Image *m_rankingGraph;
@@ -488,6 +496,8 @@ private:
 
 	Color m_songSelectInactiveText;
 	Color m_songSelectActiveText;
+
+	Color m_inputOverlayText;
 
 
 	// scaling

@@ -160,6 +160,7 @@ private:
 	CBaseUISlider *m_hudHiterrorbarScaleSlider;
 	CBaseUISlider *m_hudProgressbarScaleSlider;
 	CBaseUISlider *m_hudScoreBoardScaleSlider;
+	CBaseUISlider *m_hudInputoverlayScaleSlider;
 	CBaseUISlider *m_playfieldBorderSizeSlider;
 	CBaseUISlider *m_statisticsOverlayScaleSlider;
 	CBaseUISlider *m_cursorSizeSlider;
