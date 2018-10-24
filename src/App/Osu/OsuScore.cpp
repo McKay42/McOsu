@@ -69,6 +69,11 @@ void OsuScore::reset()
 	m_bDead = false;
 	m_bDied = false;
 
+	m_iNumK1 = 0;
+	m_iNumK2 = 0;
+	m_iNumM1 = 0;
+	m_iNumM2 = 0;
+
 	onScoreChange();
 }
 
@@ -307,6 +312,42 @@ void OsuScore::setDead(bool dead)
 		m_bDied = true;
 
 	onScoreChange();
+}
+
+void OsuScore::addKeyCount(int key)
+{
+	switch (key)
+	{
+	case 1:
+		m_iNumK1++;
+		break;
+	case 2:
+		m_iNumK2++;
+		break;
+	case 3:
+		m_iNumM1++;
+		break;
+	case 4:
+		m_iNumM2++;
+		break;
+	}
+}
+
+int OsuScore::getKeyCount(int key)
+{
+	switch (key)
+	{
+	case 1:
+		return m_iNumK1;
+	case 2:
+		return m_iNumK2;
+	case 3:
+		return m_iNumM1;
+	case 4:
+		return m_iNumM2;
+	}
+
+	return 0;
 }
 
 unsigned long long OsuScore::getScore()

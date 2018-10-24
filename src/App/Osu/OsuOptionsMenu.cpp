@@ -370,7 +370,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 
 	CBaseUISlider *fpsSlider = addSlider("FPS Limiter:", 60.0f, 1000.0f, convar->getConVarByName("fps_max"));
 	fpsSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeInt) );
-	fpsSlider->setKeyDelta(60);
+	fpsSlider->setKeyDelta(1);
 
 	addSubSection("Layout");
 	OPTIONS_ELEMENT resolutionSelect = addButton("Select Resolution", UString::format("%ix%i", m_osu->getScreenWidth(), m_osu->getScreenHeight()));
@@ -656,6 +656,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Draw ProgressBar", convar->getConVarByName("osu_draw_progressbar"));
 	addCheckbox("Draw HitErrorBar", convar->getConVarByName("osu_draw_hiterrorbar"));
 	addCheckbox("Draw ScoreBoard", convar->getConVarByName("osu_draw_scoreboard"));
+	addCheckbox("Draw Key Overlay", convar->getConVarByName("osu_draw_inputoverlay"));
 	addCheckbox("Draw Scrubbing Timeline", convar->getConVarByName("osu_draw_scrubbing_timeline"));
 	addCheckbox("Draw Miss Window on HitErrorBar", convar->getConVarByName("osu_hud_hiterrorbar_showmisswindow"));
 	addSpacer();
@@ -692,6 +693,9 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_hudScoreBoardScaleSlider = addSlider("ScoreBoard Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_hud_scoreboard_scale"), 165.0f);
 	m_hudScoreBoardScaleSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
 	m_hudScoreBoardScaleSlider->setKeyDelta(0.01f);
+	m_hudInputoverlayScaleSlider = addSlider("Key Overlay Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_hud_inputoverlay_scale"), 165.0f);
+	m_hudInputoverlayScaleSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
+	m_hudInputoverlayScaleSlider->setKeyDelta(0.01f);
 	m_statisticsOverlayScaleSlider = addSlider("Statistics Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_hud_statistics_scale"), 165.0f);
 	m_statisticsOverlayScaleSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
 	m_statisticsOverlayScaleSlider->setKeyDelta(0.01f);
@@ -798,7 +802,7 @@ void OsuOptionsMenu::draw(Graphics *g)
 
 	m_container->draw(g);
 
-	if (m_hudSizeSlider->isActive() || m_hudComboScaleSlider->isActive() || m_hudScoreScaleSlider->isActive() || m_hudAccuracyScaleSlider->isActive() || m_hudHiterrorbarScaleSlider->isActive() || m_hudProgressbarScaleSlider->isActive() || m_hudScoreBoardScaleSlider->isActive() || m_statisticsOverlayScaleSlider->isActive())
+	if (m_hudSizeSlider->isActive() || m_hudComboScaleSlider->isActive() || m_hudScoreScaleSlider->isActive() || m_hudAccuracyScaleSlider->isActive() || m_hudHiterrorbarScaleSlider->isActive() || m_hudProgressbarScaleSlider->isActive() || m_hudScoreBoardScaleSlider->isActive() || m_hudInputoverlayScaleSlider->isActive() || m_statisticsOverlayScaleSlider->isActive())
 	{
 		if (!isPlayingBeatmap)
 			m_osu->getHUD()->drawDummy(g);

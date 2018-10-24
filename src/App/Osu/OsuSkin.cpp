@@ -195,6 +195,7 @@ OsuSkin::OsuSkin(Osu *osu, UString filepath, bool isDefaultSkin)
 
 	m_songSelectActiveText = 0xff000000;
 	m_songSelectInactiveText = 0xffffffff;
+	m_inputOverlayText = 0xff000000;
 
 	// scaling
 	m_bCursor2x = false;
@@ -380,6 +381,8 @@ void OsuSkin::load()
 	m_playWarningArrow2 = createOsuSkinImage("play-warningarrow", Vector2(167, 129), 128);
 	checkLoadImage(&m_circularmetre, "circularmetre", "OSU_SKIN_CIRCULARMETRE");
 	m_scorebarBg = createOsuSkinImage("scorebar-bg", Vector2(695, 144), 90);
+	m_inputoverlayBackground = createOsuSkinImage("inputoverlay-background", Vector2(193, 55), 34.25f);
+	m_inputoverlayKey = createOsuSkinImage("inputoverlay-key", Vector2(43, 46), 26.75f);
 
 	m_hit0 = createOsuSkinImage("hit0", Vector2(128, 128), 42);
 	m_hit0->setAnimationFramerate(60);
@@ -471,6 +474,7 @@ void OsuSkin::load()
 	checkLoadImage(&m_songSelectTop, "songselect-top", "OSU_SKIN_SONGSELECT_TOP");
 	checkLoadImage(&m_songSelectBottom, "songselect-bottom", "OSU_SKIN_SONGSELECT_BOTTOM");
 	checkLoadImage(&m_menuButtonBackground, "menu-button-background", "OSU_SKIN_MENU_BUTTON_BACKGROUND");
+	m_menuButtonBackground2 = createOsuSkinImage("menu-button-background", Vector2(699, 103), 64.0f);
 	checkLoadImage(&m_star, "star", "OSU_SKIN_STAR");
 	checkLoadImage(&m_rankingPanel, "ranking-panel", "OSU_SKIN_RANKING_PANEL");
 	checkLoadImage(&m_rankingGraph, "ranking-graph", "OSU_SKIN_RANKING_GRAPH");
@@ -738,6 +742,8 @@ bool OsuSkin::parseSkinINI(UString filepath)
 						m_songSelectActiveText = COLOR(255, r, g, b);
 					if (sscanf(curLineChar, " SongSelectInactiveText : %i , %i , %i \n", &r, &g, &b) == 3)
 						m_songSelectInactiveText = COLOR(255, r, g, b);
+					if (sscanf(curLineChar, " InputOverlayText : %i , %i , %i \n", &r, &g, &b) == 3)
+						m_inputOverlayText = COLOR(255, r, g, b);
 				}
 				break;
 			case 2: // Fonts
