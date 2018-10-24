@@ -1156,8 +1156,7 @@ void Osu::onChar(KeyboardEvent &e)
 
 void Osu::onLeftChange(bool down)
 {
-	if (isInPlayMode() && !getSelectedBeatmap()->isPaused() && osu_disable_mousebuttons.getBool())
-		return;
+	if (isInPlayMode() && !getSelectedBeatmap()->isPaused() && osu_disable_mousebuttons.getBool()) return;
 
 	if (!m_bMouseKey1Down && down)
 	{
@@ -1173,8 +1172,7 @@ void Osu::onLeftChange(bool down)
 
 void Osu::onRightChange(bool down)
 {
-	if (isInPlayMode() && !getSelectedBeatmap()->isPaused() && osu_disable_mousebuttons.getBool())
-		return;
+	if (isInPlayMode() && !getSelectedBeatmap()->isPaused() && osu_disable_mousebuttons.getBool()) return;
 
 	if (!m_bMouseKey2Down && down)
 	{
@@ -1362,6 +1360,7 @@ OsuBeatmap *Osu::getSelectedBeatmap()
 {
 	if (m_songBrowser2 != NULL)
 		return m_songBrowser2->getSelectedBeatmap();
+
 	return NULL;
 }
 
@@ -1484,8 +1483,7 @@ bool Osu::shouldFallBackToLegacySliderRenderer()
 
 void Osu::onResolutionChanged(Vector2 newResolution)
 {
-	if (engine->isMinimized()) // ignore if minimized
-		return;
+	if (engine->isMinimized()) return; // ignore if minimized
 
 	if (!osu_resolution_enabled.getBool())
 		g_vInternalResolution = newResolution;
@@ -1566,8 +1564,7 @@ void Osu::rebuildRenderTargets()
 
 void Osu::onInternalResolutionChanged(UString oldValue, UString args)
 {
-	if (args.length() < 7)
-		return;
+	if (args.length() < 7) return;
 
 	std::vector<UString> resolution = args.split("x");
 	if (resolution.size() != 2)
@@ -1709,8 +1706,7 @@ void Osu::onLetterboxingChange(UString oldValue, UString newValue)
 
 void Osu::updateConfineCursor()
 {
-	if (isInVRMode())
-		return;
+	if (isInVRMode()) return;
 
 	if ((osu_confine_cursor_fullscreen.getBool() && env->isFullscreen()) || (osu_confine_cursor_windowed.getBool() && !env->isFullscreen()) || (isInPlayMode() && !getSelectedBeatmap()->isPaused() && !getModAuto() && !getModAutopilot()))
 		env->setCursorClip(true, McRect());
@@ -1740,15 +1736,14 @@ void Osu::onKey1Change(bool pressed, bool mouse)
 				m_bMouseKey1Down = false;
 
 			if (pressed && !(m_bKeyboardKey1Down && m_bMouseKey1Down) && !getSelectedBeatmap()->isPaused()) // see above note
-				getSelectedBeatmap()->keyPressed1();
+				getSelectedBeatmap()->keyPressed1(mouse);
 			else if (!m_bKeyboardKey1Down && !m_bMouseKey1Down)
-				getSelectedBeatmap()->keyReleased1();
+				getSelectedBeatmap()->keyReleased1(mouse);
 		}
 	}
 
-	// TODO: put the animations inside OsuBeatmap::keyPressed/released
-	bool doAnimate = !(isInPlayMode() && !getSelectedBeatmap()->isPaused() && mouse && osu_disable_mousebuttons.getBool());
-
+	// cursor anim
+	const bool doAnimate = !(isInPlayMode() && !getSelectedBeatmap()->isPaused() && mouse && osu_disable_mousebuttons.getBool());
 	if (doAnimate)
 	{
 		if (pressed && !(m_bKeyboardKey1Down && m_bMouseKey1Down))
@@ -1770,15 +1765,14 @@ void Osu::onKey2Change(bool pressed, bool mouse)
 				m_bMouseKey2Down = false;
 
 			if (pressed && !(m_bKeyboardKey2Down && m_bMouseKey2Down) && !getSelectedBeatmap()->isPaused()) // see above note
-				getSelectedBeatmap()->keyPressed2();
+				getSelectedBeatmap()->keyPressed2(mouse);
 			else if (!m_bKeyboardKey2Down && !m_bMouseKey2Down)
-				getSelectedBeatmap()->keyReleased2();
+				getSelectedBeatmap()->keyReleased2(mouse);
 		}
 	}
 
-	// TODO: put the animations inside OsuBeatmap::keyPressed/released
-	bool doAnimate = !(isInPlayMode() && !getSelectedBeatmap()->isPaused() && mouse && osu_disable_mousebuttons.getBool());
-
+	// cursor anim
+	const bool doAnimate = !(isInPlayMode() && !getSelectedBeatmap()->isPaused() && mouse && osu_disable_mousebuttons.getBool());
 	if (doAnimate)
 	{
 		if (pressed && !(m_bKeyboardKey2Down && m_bMouseKey2Down))
