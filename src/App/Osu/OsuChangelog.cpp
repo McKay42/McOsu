@@ -36,6 +36,8 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 
 	CHANGELOG alpha29Steam;
 	alpha29Steam.title = UString::format("29 (Steam VR Version, %s, %s)", __DATE__, __TIME__);
+	alpha29Steam.changes.push_back("- Added key overlay");
+	alpha29Steam.changes.push_back("- Improved frame pacing");
 	alpha29Steam.changes.push_back("- Added new experimental mod \"Reverse Sliders\"");
 	alpha29Steam.changes.push_back("- Added mouse sidebutton support (mouse4, mouse5)");
 	alpha29Steam.changes.push_back("- Added detail info tooltip (approach time, hit timings, etc.) when hovering over diff info label in songbrowser (CS AR etc.)");

@@ -61,6 +61,8 @@ public:
 	void addPoints(int points, bool isSpinner);
 	void setDead(bool dead);
 
+	void addKeyCount(int key);
+
 	void setStarsTomTotal(float starsTomTotal) {m_fStarsTomTotal = starsTomTotal;}
 	void setStarsTomAim(float starsTomAim) {m_fStarsTomAim = starsTomAim;}
 	void setStarsTomSpeed(float starsTomSpeed) {m_fStarsTomSpeed = starsTomSpeed;}
@@ -91,6 +93,8 @@ public:
 
 	inline bool isDead() const {return m_bDead;}
 	inline bool hasDied() const {return m_bDied;}
+
+	int getKeyCount(int key);
 
 private:
 	static ConVar *m_osu_draw_statistics_pp;
@@ -132,6 +136,11 @@ private:
 
 	bool m_bDead;
 	bool m_bDied;
+
+	int m_iNumK1;
+	int m_iNumK2;
+	int m_iNumM1;
+	int m_iNumM2;
 };
 
 #endif
