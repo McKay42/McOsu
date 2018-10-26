@@ -57,6 +57,7 @@ public:
 	void animateCombo();
 	void addHitError(long delta, bool miss = false, bool misaim = false);
 	void addTarget(float delta, float angle);
+	void animateInputoverlay(int key, bool down);
 
 	void animateVolumeChange();
 	void animateCursorExpand();
@@ -134,6 +135,7 @@ private:
 	void drawStatistics(Graphics *g, int misses, int sliderbreaks, int bpm, float ar, float cs, float od, int nps, int nd, int ur, int pp);
 	void drawTargetHeatmap(Graphics *g, float hitcircleDiameter);
 	void drawScrubbingTimeline(Graphics *g, unsigned long beatmapTime, unsigned long beatmapLength, unsigned long beatmapLengthPlayable, unsigned long beatmapStartTimePlayable, float beatmapPercentFinishedPlayable);
+	void drawInputOverlay(Graphics *g, int numK1, int numK2, int numM1, int numM2);
 
 	void drawStatisticText(Graphics *g, const UString text);
 
@@ -174,6 +176,17 @@ private:
 
 	// hit error bar
 	std::vector<HITERROR> m_hiterrors;
+
+	// inputoverlay / key overlay
+	float m_fInputoverlayK1AnimScale;
+	float m_fInputoverlayK2AnimScale;
+	float m_fInputoverlayM1AnimScale;
+	float m_fInputoverlayM2AnimScale;
+
+	float m_fInputoverlayK1AnimColor;
+	float m_fInputoverlayK2AnimColor;
+	float m_fInputoverlayM1AnimColor;
+	float m_fInputoverlayM2AnimColor;
 
 	// volume
 	float m_fLastVolume;
