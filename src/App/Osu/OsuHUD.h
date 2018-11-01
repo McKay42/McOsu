@@ -142,6 +142,8 @@ private:
 	float getCursorScaleFactor();
 	float getCursorTrailScaleFactor();
 
+	float getScoreScale();
+
 	void onVolumeOverlaySizeChange(UString oldValue, UString newValue);
 
 	McFont *m_tempFont;

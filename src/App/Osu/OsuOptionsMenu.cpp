@@ -651,6 +651,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 
 	addSubSection("HUD");
 	addCheckbox("Draw HUD", convar->getConVarByName("osu_draw_hud"));
+	addCheckbox("Draw Score", convar->getConVarByName("osu_draw_score"));
 	addCheckbox("Draw Combo", convar->getConVarByName("osu_draw_combo"));
 	addCheckbox("Draw Accuracy", convar->getConVarByName("osu_draw_accuracy"));
 	addCheckbox("Draw ProgressBar", convar->getConVarByName("osu_draw_progressbar"));
@@ -675,12 +676,12 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_hudSizeSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
 	m_hudSizeSlider->setKeyDelta(0.01f);
 	addSpacer();
-	m_hudComboScaleSlider = addSlider("Combo Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_hud_combo_scale"), 165.0f);
-	m_hudComboScaleSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
-	m_hudComboScaleSlider->setKeyDelta(0.01f);
 	m_hudScoreScaleSlider = addSlider("Score Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_hud_score_scale"), 165.0f);
 	m_hudScoreScaleSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
 	m_hudScoreScaleSlider->setKeyDelta(0.01f);
+	m_hudComboScaleSlider = addSlider("Combo Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_hud_combo_scale"), 165.0f);
+	m_hudComboScaleSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
+	m_hudComboScaleSlider->setKeyDelta(0.01f);
 	m_hudAccuracyScaleSlider = addSlider("Accuracy Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_hud_accuracy_scale"), 165.0f);
 	m_hudAccuracyScaleSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
 	m_hudAccuracyScaleSlider->setKeyDelta(0.01f);
