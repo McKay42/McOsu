@@ -127,7 +127,10 @@ public:
 	inline bool isWaiting() {return m_bIsWaiting;}
 	inline bool isInSkippableSection() {return m_bIsInSkippableSection;}
 	inline bool shouldFlashWarningArrows() {return m_bShouldFlashWarningArrows;}
-	bool isClickHeld();
+	bool isClickHeld(); // is any key currently being held down
+	inline bool isKey1Down() {return m_bClick1Held;}
+	inline bool isKey2Down() {return m_bClick2Held;}
+	inline bool isLastKeyDownKey1() {return m_bPrevKeyWasKey1;}
 
 	UString getTitle();
 	UString getArtist();

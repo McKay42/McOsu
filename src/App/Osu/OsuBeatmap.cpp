@@ -76,9 +76,11 @@ ConVar osu_mod_arwobble_interval("osu_mod_arwobble_interval", 7.0f);
 ConVar osu_mod_fullalternate("osu_mod_fullalternate", false);
 
 ConVar osu_early_note_time("osu_early_note_time", 1000.0f, "Timeframe in ms at the beginning of a beatmap which triggers a starting delay for easier reading");
+ConVar osu_end_delay_time("osu_end_delay_time", 1100.0f, "Duration in ms which is added at the end of a beatmap after the last hitobject is finished but before the ranking screen is automatically shown");
+ConVar osu_end_skip_time("osu_end_skip_time", 400.0f, "Duration in ms which is added to the endTime of the last hitobject, after which pausing the game will immediately jump to the ranking screen");
 ConVar osu_skip_time("osu_skip_time", 5000.0f, "Timeframe in ms within a beatmap which allows skipping if it doesn't contain any hitobjects");
 ConVar osu_fail_time("osu_fail_time", 2.25f, "Timeframe in s for the slowdown effect after failing, before the pause menu is shown");
-ConVar osu_note_blocking("osu_note_blocking", true, "Whether to use not blocking or not");
+ConVar osu_note_blocking("osu_note_blocking", true, "Whether to use note blocking or not");
 
 ConVar osu_drain_enabled("osu_drain_enabled", false);
 ConVar osu_drain_duration("osu_drain_duration", 0.35f);
@@ -280,6 +282,20 @@ void OsuBeatmap::drawBackground(Graphics *g)
 			g->setColor(0xffff0000);
 			g->fillRect(50, y, 50, 50);
 		}
+
+		y += 100;
+
+		if (m_hitobjectsSortedByEndTime.size() > 0)
+		{
+			OsuHitObject *lastHitObject = m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size() - 1];
+			if (lastHitObject->isFinished() && m_iCurMusicPos > lastHitObject->getTime() + lastHitObject->getDuration() + (long)osu_end_skip_time.getInt())
+			{
+				g->setColor(0xff00ffff);
+				g->fillRect(50, y, 50, 50);
+			}
+
+			y += 100;
+		}
 	}
 }
 
@@ -409,7 +425,7 @@ void OsuBeatmap::update()
 	}
 
 	// detect and handle music end
-	if (!m_bIsWaiting && m_music->isReady() && (m_music->isFinished() || (m_hitobjects.size() > 0 && m_iCurMusicPos > (m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size()-1]->getTime() + m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size()-1]->getDuration() + 1250))))
+	if (!m_bIsWaiting && m_music->isReady() && (m_music->isFinished() || (m_hitobjects.size() > 0 && m_iCurMusicPos > (m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size()-1]->getTime() + m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size()-1]->getDuration() + (long)osu_end_delay_time.getInt()))))
 	{
 		stop(false);
 		return;
@@ -953,8 +969,7 @@ void OsuBeatmap::actualRestart()
 
 void OsuBeatmap::pause(bool quitIfWaiting)
 {
-	if (m_selectedDifficulty == NULL)
-		return;
+	if (m_selectedDifficulty == NULL) return;
 
 	const bool isFirstPause = !m_bContinueScheduled;
 	const bool forceContinueWithoutSchedule = m_osu->isInMultiplayer();
@@ -966,9 +981,17 @@ void OsuBeatmap::pause(bool quitIfWaiting)
 		else
 		{
 			// first time pause pauses the music
-			engine->getSound()->pause(m_music);
-			m_bIsPlaying = false;
-			m_bIsPaused = true;
+			// case 1: the beatmap is already "finished", jump to the ranking screen if some small amount of time past the last objects endTime
+			// case 2: in the middle somewhere, pause as usual
+			OsuHitObject *lastHitObject = m_hitobjectsSortedByEndTime.size() > 0 ? m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size()-1] : NULL;
+			if (lastHitObject != NULL && lastHitObject->isFinished() && (m_iCurMusicPos > lastHitObject->getTime() + lastHitObject->getDuration() + (long)osu_end_skip_time.getInt()))
+				stop(false);
+			else
+			{
+				engine->getSound()->pause(m_music);
+				m_bIsPlaying = false;
+				m_bIsPaused = true;
+			}
 		}
 	}
 	else if (m_bIsPaused && !m_bContinueScheduled) // if this is the first time unpausing

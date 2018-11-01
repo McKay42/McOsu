@@ -46,6 +46,8 @@ public:
 	static ConVar osu_slider_followcircle_tick_pulse_time;
 	static ConVar osu_slider_followcircle_tick_pulse_scale;
 
+	static ConVar osu_spinner_fade_out_time_multiplier;
+
 	static float getFadeOutTime(OsuBeatmap *beatmap) // this scales the fadeout duration with the current speed multiplier
 	{
 		return osu_hitobject_fade_out_time.getFloat() * (1.0f / std::max(beatmap->getSpeedMultiplier(), osu_hitobject_fade_out_time_speed_multiplier_min.getFloat()));
@@ -249,9 +251,8 @@ public:
 	}
 	static float getSpinnerRotationsForSpeedMultiplier(OsuBeatmap *beatmap, long spinnerDuration, float speedMultiplier)
 	{
-		// HACKHACK: added 0.75 multiplier until i fix the rotation logic frametime bullshit code from opsu
-		// this is also incorrect as fuck, but who cares about spinners anyway
-		return (int)(((float)spinnerDuration / 1000.0f * getSpinnerSpins(beatmap))*0.75f) * (std::min(1.0f / speedMultiplier, 1.0f));
+		// HACKHACK: added 0.5 multiplier until i fix the rotation logic frametime bullshit code from opsu
+		return (int)(((float)spinnerDuration / 1000.0f * getSpinnerSpins(beatmap))*0.5f) * (std::min(1.0f / speedMultiplier, 1.0f));
 	}
 	static float getSpinnerRotationsForSpeedMultiplier(OsuBeatmap *beatmap, long spinnerDuration) // spinner length compensated rotations // respect all mods and overrides
 	{

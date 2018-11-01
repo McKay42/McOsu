@@ -171,6 +171,7 @@ OsuSlider::OsuSlider(char type, int repeat, float pixelLength, std::vector<Vecto
 	m_fEndHitAnimation = 0.0f;
 	m_fEndSliderBodyFadeAnimation = 0.0f;
 	m_iLastClickHeld = 0;
+	m_iDownKey = 0;
 	m_bCursorLeft = true;
 	m_bCursorInside = false;
 	m_bHeldTillEnd = false;
@@ -487,7 +488,7 @@ void OsuSlider::draw2(Graphics *g, bool drawApproachCircle, bool drawOnlyApproac
 
 	// draw followcircle
 	// HACKHACK: this is not entirely correct (due to m_bHeldTillEnd, if held within 300 range but then released, will flash followcircle at the end)
-	if ((m_bVisible && m_bCursorInside && (m_beatmap->isClickHeld() || m_beatmap->getOsu()->getModAuto() || m_beatmap->getOsu()->getModRelax())) || (m_bFinished && m_fFollowCircleAnimationAlpha > 0.0f && m_bHeldTillEnd))
+	if ((m_bVisible && m_bCursorInside && (isClickHeldSlider() || m_beatmap->getOsu()->getModAuto() || m_beatmap->getOsu()->getModRelax())) || (m_bFinished && m_fFollowCircleAnimationAlpha > 0.0f && m_bHeldTillEnd))
 	{
 		Vector2 point = m_beatmap->osuCoords2Pixels(m_vCurPointRaw);
 
@@ -969,6 +970,13 @@ void OsuSlider::update(long curPos)
 		m_vCurPoint = m_beatmap->osuCoords2Pixels(m_vCurPointRaw);
 	}
 
+	// reset sliding key (opposite), see isClickHeldSlider()
+	if (m_iDownKey > 0)
+	{
+		if ((m_iDownKey == 2 && !m_beatmap->isKey1Down()) || (m_iDownKey == 1 && !m_beatmap->isKey2Down())) // opposite key!
+			m_iDownKey = 0;
+	}
+
 	// handle dynamic followradius
 	float followRadius = m_bCursorLeft ? m_beatmap->getHitcircleDiameter() / 2.0f : m_beatmap->getSliderFollowCircleDiameter() / 2.0f;
 	m_bCursorInside = (m_beatmap->getOsu()->getModAuto() && (!m_osu_auto_cursordance->getBool() || ((m_beatmap->getCursorPos() - m_vCurPoint).length() < followRadius))) || ((m_beatmap->getCursorPos() - m_vCurPoint).length() < followRadius);
@@ -1088,7 +1096,7 @@ void OsuSlider::update(long curPos)
 		// slider tail lenience bullshit: see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Objects/Slider.cs#L123
 		// being "inside the slider" (for the end of the slider) is NOT checked at the exact end of the slider, but somewhere random before, because fuck you
 		const long lenienceHackEndTime = std::max(m_iTime + m_iObjectDuration / 2, (m_iTime + m_iObjectDuration) - (long)osu_slider_end_inside_check_offset.getInt());
-		if ((m_beatmap->isClickHeld() || m_beatmap->getOsu()->getModRelax()) && m_bCursorInside)
+		if ((isClickHeldSlider() || m_beatmap->getOsu()->getModRelax()) && m_bCursorInside)
 		{
 			// only check it at the exact point in time ...
 			if (curPos >= lenienceHackEndTime)
@@ -1114,7 +1122,7 @@ void OsuSlider::update(long curPos)
 			if (!m_clicks[i].finished && curPos >= m_clicks[i].time)
 			{
 				m_clicks[i].finished = true;
-				m_clicks[i].successful = (m_beatmap->isClickHeld() && m_bCursorInside) || m_beatmap->getOsu()->getModAuto() || (m_beatmap->getOsu()->getModRelax() && m_bCursorInside);
+				m_clicks[i].successful = (isClickHeldSlider() && m_bCursorInside) || m_beatmap->getOsu()->getModAuto() || (m_beatmap->getOsu()->getModRelax() && m_bCursorInside);
 
 				if (m_clicks[i].type == 0)
 					onRepeatHit(m_clicks[i].successful, m_clicks[i].sliderend);
@@ -1233,8 +1241,7 @@ void OsuSlider::updateStackPosition(float stackOffset)
 
 Vector2 OsuSlider::getRawPosAt(long pos)
 {
-	if (m_curve == NULL)
-		return Vector2(0, 0);
+	if (m_curve == NULL) return Vector2(0, 0);
 
 	if (pos <= m_iTime)
 		return m_curve->pointAt(0.0f);
@@ -1251,8 +1258,7 @@ Vector2 OsuSlider::getRawPosAt(long pos)
 
 Vector2 OsuSlider::getOriginalRawPosAt(long pos)
 {
-	if (m_curve == NULL)
-		return Vector2(0, 0);
+	if (m_curve == NULL) return Vector2(0, 0);
 
 	if (pos <= m_iTime)
 		return m_curve->originalPointAt(0.0f);
@@ -1281,8 +1287,7 @@ float OsuSlider::getT(long pos, bool raw)
 
 void OsuSlider::onClickEvent(std::vector<OsuBeatmap::CLICK> &clicks)
 {
-	if (m_points.size() == 0 || m_bBlocked) // also handle note blocking here (doesn't need fancy shake logic, since sliders don't shake)
-		return;
+	if (m_points.size() == 0 || m_bBlocked) return; // also handle note blocking here (doesn't need fancy shake logic, since sliders don't shake)
 
 	if (!m_bStartFinished)
 	{
@@ -1311,8 +1316,7 @@ void OsuSlider::onClickEvent(std::vector<OsuBeatmap::CLICK> &clicks)
 
 void OsuSlider::onHit(OsuScore::HIT result, long delta, bool startOrEnd, float targetDelta, float targetAngle)
 {
-	if (m_points.size() == 0)
-		return;
+	if (m_points.size() == 0) return;
 
 	// start + end of a slider add +30 points, if successful
 
@@ -1366,6 +1370,12 @@ void OsuSlider::onHit(OsuScore::HIT result, long delta, bool startOrEnd, float t
 	{
 		m_bStartFinished = true;
 
+		// remember which key this slider was started with
+		if (m_beatmap->isKey2Down() && !m_beatmap->isLastKeyDownKey1())
+			m_iDownKey = 2;
+		else if (m_beatmap->isKey1Down() && m_beatmap->isLastKeyDownKey1())
+			m_iDownKey = 1;
+
 		if (!m_beatmap->getOsu()->getModTarget())
 			m_beatmap->addHitResult(result, delta, false, true);
 		else
@@ -1387,8 +1397,7 @@ void OsuSlider::onHit(OsuScore::HIT result, long delta, bool startOrEnd, float t
 
 void OsuSlider::onRepeatHit(bool successful, bool sliderend)
 {
-	if (m_points.size() == 0)
-		return;
+	if (m_points.size() == 0) return;
 
 	// repeat hit of a slider adds +30 points, if successful
 
@@ -1437,8 +1446,7 @@ void OsuSlider::onRepeatHit(bool successful, bool sliderend)
 
 void OsuSlider::onTickHit(bool successful, int tickIndex)
 {
-	if (m_points.size() == 0)
-		return;
+	if (m_points.size() == 0) return;
 
 	// tick hit of a slider adds +10 points, if successful
 
@@ -1491,6 +1499,7 @@ void OsuSlider::onReset(long curPos)
 	OsuHitObject::onReset(curPos);
 
 	m_iLastClickHeld = 0;
+	m_iDownKey = 0;
 	m_bCursorLeft = true;
 	m_bHeldTillEnd = false;
 	m_bHeldTillEndForLenienceHack = false;
@@ -1586,6 +1595,16 @@ void OsuSlider::rebuildVertexBuffer()
 		SAFE_DELETE(m_vaoVR2);
 		m_vaoVR2 = OsuSliderRenderer::generateVAO(m_beatmap->getOsu(), osuCoordPoints, m_beatmap->getRawHitcircleDiameter()*scale, Vector3(0, 0, 0.25f)); // push 0.25f outwards
 	}
+}
+
+bool OsuSlider::isClickHeldSlider()
+{
+	// m_iDownKey contains the key the sliderstartcircle was clicked with (if it was clicked at all, if not then it is 0)
+	// it is reset back to 0 automatically in update() once the opposite key has been released at least once
+	// if m_iDownKey is less than 1, then any key being held is enough to slide (either the startcircle was missed, or the opposite key it was clicked with has been released at least once already)
+	// otherwise, that specific key is the only one which counts for sliding
+	const bool mouseDownAcceptable = (m_iDownKey == 1 ? m_beatmap->isKey1Down() : m_beatmap->isKey2Down());
+	return (m_iDownKey < 1 ? m_beatmap->isClickHeld() : mouseDownAcceptable) || (m_beatmap->getOsu()->isInVRMode() && !m_beatmap->getOsu()->getVR()->isVirtualCursorOnScreen()); // a bit shit, but whatever. see OsuBeatmap::isClickHeld()
 }
 
 
@@ -1703,19 +1722,22 @@ Vector2 OsuSliderCurveTypeBezier2::pointAt(float t)
 		c.x += m_points2[i].x * b;
 		c.y += m_points2[i].y * b;
 	}
+
 	return c;
 }
 
 long OsuSliderCurveTypeBezier2::binomialCoefficient(int n, int k)
 {
-	if (k < 0 || k > n)
-		return 0;
-	if (k == 0 || k == n)
-		return 1;
-	k = std::min(k, n - k);  // take advantage of symmetry
+	if (k < 0 || k > n) return 0;
+	if (k == 0 || k == n) return 1;
+
+	k = std::min(k, n - k); // take advantage of symmetry
 	long c = 1;
 	for (int i = 0; i < k; i++)
+	{
 		c = c * (n - i) / (i + 1);
+	}
+
 	return c;
 }
 
@@ -2162,36 +2184,34 @@ void OsuSliderCurveEqualDistanceMulti::init(std::vector<OsuSliderCurveType*> cur
 
 Vector2 OsuSliderCurveEqualDistanceMulti::pointAt(float t)
 {
-	if (m_curvePoints.size() < 1) // this might happen
-		return Vector2(0,0);
+	if (m_curvePoints.size() < 1) return Vector2(0,0);
 
-	float indexF = t * m_iNCurve;
-	int index = (int) indexF;
+	const float indexF = t * m_iNCurve;
+	const int index = (int) indexF;
 	if (index >= m_iNCurve)
 		return m_curvePoints[m_iNCurve];
 	else
 	{
-		Vector2 poi = m_curvePoints[index];
-		Vector2 poi2 = m_curvePoints[index + 1];
-		float t2 = indexF - index;
+		const Vector2 poi = m_curvePoints[index];
+		const Vector2 poi2 = m_curvePoints[index + 1];
+		const float t2 = indexF - index;
 		return Vector2(lerp(poi.x, poi2.x, t2), lerp(poi.y, poi2.y, t2));
 	}
 }
 
 Vector2 OsuSliderCurveEqualDistanceMulti::originalPointAt(float t)
 {
-	if (m_originalCurvePoints.size() < 1) // this might happen
-		return Vector2(0,0);
+	if (m_originalCurvePoints.size() < 1) return Vector2(0,0);
 
-	float indexF = t * m_iNCurve;
-	int index = (int) indexF;
+	const float indexF = t * m_iNCurve;
+	const int index = (int) indexF;
 	if (index >= m_iNCurve)
 		return m_originalCurvePoints[m_iNCurve];
 	else
 	{
-		Vector2 poi = m_originalCurvePoints[index];
-		Vector2 poi2 = m_originalCurvePoints[index + 1];
-		float t2 = indexF - index;
+		const Vector2 poi = m_originalCurvePoints[index];
+		const Vector2 poi2 = m_originalCurvePoints[index + 1];
+		const float t2 = indexF - index;
 		return Vector2(lerp(poi.x, poi2.x, t2), lerp(poi.y, poi2.y, t2));
 	}
 }
@@ -2254,12 +2274,14 @@ void BezierApproximator::approximate(std::vector<Vector2> &controlPoints, std::v
     subdivide(controlPoints, l, r);
 
     for (int i=0; i<m_iCount-1; ++i)
+    {
         l[m_iCount + i] = r[i + 1];
+    }
 
     output.push_back(controlPoints[0]);
     for (int i=1; i<m_iCount-1; ++i)
     {
-        int index = 2 * i;
+        const int index = 2 * i;
         Vector2 p = 0.25f * (l[index - 1] + 2 * l[index] + l[index + 1]);
         output.push_back(p);
     }
@@ -2268,9 +2290,7 @@ void BezierApproximator::approximate(std::vector<Vector2> &controlPoints, std::v
 std::vector<Vector2> BezierApproximator::createBezier()
 {
 	std::vector<Vector2> output;
-
-	if (m_iCount == 0)
-		return output;
+	if (m_iCount == 0) return output;
 
 	std::stack<std::vector<Vector2>> toFlatten;
 	std::stack<std::vector<Vector2>> freeBuffers;
@@ -2299,6 +2319,7 @@ std::vector<Vector2> BezierApproximator::createBezier()
 		}
 		else
 			rightChild.resize(m_iCount);
+
         subdivide(parent, leftChild, rightChild);
 
         for (int i=0; i<m_iCount; ++i)

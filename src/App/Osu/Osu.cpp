@@ -1018,6 +1018,7 @@ void Osu::onKeyDown(KeyboardEvent &key)
 						if (!getSelectedBeatmap()->hasFailed() || !m_pauseMenu->isVisible()) // you can open the pause menu while the failing animation is happening, but never close it then
 						{
 							m_bEscape = true;
+
 							getSelectedBeatmap()->pause();
 							m_pauseMenu->setVisible(getSelectedBeatmap()->isPaused());
 

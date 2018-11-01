@@ -29,7 +29,6 @@ OsuSpinner::OsuSpinner(int x, int y, long time, int sampleType, long endTime, Os
 	m_beatmap = beatmap;
 
 	m_iObjectDuration = endTime - time;
-	m_bDrawRPM = false;
 	m_bClickedOnce = false;
 	m_fRotationsNeeded = -1.0f;
 
@@ -74,12 +73,14 @@ OsuSpinner::~OsuSpinner()
 void OsuSpinner::draw(Graphics *g)
 {
 	OsuHitObject::draw(g);
-
-	if (m_bFinished || !m_bVisible)
-		return;
+	const long fadeOutTimeMS = (long)(OsuGameRules::getFadeOutTime(m_beatmap) * 1000.0f * OsuGameRules::osu_spinner_fade_out_time_multiplier.getFloat());
+	const long deltaEnd = m_iDelta + m_iObjectDuration;
+	if ((m_bFinished || !m_bVisible) && (deltaEnd > 0 || (deltaEnd < -fadeOutTimeMS))) return;
 
 	OsuSkin *skin = m_beatmap->getSkin();
 	Vector2 center = m_beatmap->osuCoords2Pixels(m_vRawPos);
+
+	const float alphaMultiplier = clamp<float>((deltaEnd < 0 ? 1.0f - ((float)std::abs(deltaEnd) / (float)fadeOutTimeMS) : 1.0f), 0.0f, 1.0f); // only used for fade out anim atm
 
 	const float globalScale = 1.0f; // adjustments
 	const float globalBaseSkinSize = 667; // the width of spinner-bottom.png in the default skin
@@ -87,7 +88,7 @@ void OsuSpinner::draw(Graphics *g)
 
 	const float clampedRatio = clamp<float>(m_fRatio, 0.0f, 1.0f);
 	float finishScaleRatio = clampedRatio;
-	finishScaleRatio =  -finishScaleRatio*(finishScaleRatio-2);
+	finishScaleRatio = -finishScaleRatio * (finishScaleRatio - 2);
 	const float finishScale = 0.80f + finishScaleRatio*0.20f; // the spinner grows until reaching 100% during spinning, depending on how many spins are left
 
 	if (skin->getSpinnerBackground() != skin->getMissingTexture() || skin->getVersion() < 2.0f) // old style
@@ -95,29 +96,33 @@ void OsuSpinner::draw(Graphics *g)
 		// draw spinner circle
 		if (skin->getSpinnerCircle() != skin->getMissingTexture())
 		{
-			float spinnerCircleScale = globalBaseSize / (globalBaseSkinSize * (skin->isSpinnerCircle2x() ? 2.0f : 1.0f));
+			const float spinnerCircleScale = globalBaseSize / (globalBaseSkinSize * (skin->isSpinnerCircle2x() ? 2.0f : 1.0f));
 
 			g->setColor(0xffffffff);
-			g->setAlpha(m_fAlphaWithoutHidden);
+			g->setAlpha(m_fAlphaWithoutHidden * alphaMultiplier);
 			g->pushTransform();
+			{
 				g->rotate(m_fDrawRot);
 				g->scale(spinnerCircleScale*globalScale, spinnerCircleScale*globalScale);
 				g->translate(center.x, center.y);
 				g->drawImage(skin->getSpinnerCircle());
+			}
 			g->popTransform();
 		}
 
 		// draw approach circle
 		if (!m_beatmap->getOsu()->getModHD() && m_fPercent > 0.0f)
 		{
-			float spinnerApproachCircleImageScale = globalBaseSize / ((globalBaseSkinSize/2) * (skin->isSpinnerApproachCircle2x() ? 2.0f : 1.0f));
+			const float spinnerApproachCircleImageScale = globalBaseSize / ((globalBaseSkinSize/2) * (skin->isSpinnerApproachCircle2x() ? 2.0f : 1.0f));
 
 			g->setColor(skin->getSpinnerApproachCircleColor());
-			g->setAlpha(m_fAlphaWithoutHidden);
+			g->setAlpha(m_fAlphaWithoutHidden * alphaMultiplier);
 			g->pushTransform();
+			{
 				g->scale(spinnerApproachCircleImageScale*m_fPercent*globalScale, spinnerApproachCircleImageScale*m_fPercent*globalScale);
 				g->translate(center.x, center.y);
 				g->drawImage(skin->getSpinnerApproachCircle());
+			}
 			g->popTransform();
 		}
 	}
@@ -129,12 +134,14 @@ void OsuSpinner::draw(Graphics *g)
 			const float spinnerBottomImageScale = globalBaseSize / (globalBaseSkinSize * (skin->isSpinnerBottom2x() ? 2.0f : 1.0f));
 
 			g->setColor(0xffffffff);
-			g->setAlpha(m_fAlphaWithoutHidden);
+			g->setAlpha(m_fAlphaWithoutHidden * alphaMultiplier);
 			g->pushTransform();
+			{
 				g->rotate(m_fDrawRot/7.0f);
 				g->scale(spinnerBottomImageScale*finishScale*globalScale, spinnerBottomImageScale*finishScale*globalScale);
 				g->translate(center.x, center.y);
 				g->drawImage(skin->getSpinnerBottom());
+			}
 			g->popTransform();
 		}
 
@@ -144,12 +151,14 @@ void OsuSpinner::draw(Graphics *g)
 			const float spinnerTopImageScale = globalBaseSize / (globalBaseSkinSize * (skin->isSpinnerTop2x() ? 2.0f : 1.0f));
 
 			g->setColor(0xffffffff);
-			g->setAlpha(m_fAlphaWithoutHidden);
+			g->setAlpha(m_fAlphaWithoutHidden * alphaMultiplier);
 			g->pushTransform();
+			{
 				g->rotate(m_fDrawRot/2.0f);
 				g->scale(spinnerTopImageScale*finishScale*globalScale, spinnerTopImageScale*finishScale*globalScale);
 				g->translate(center.x, center.y);
 				g->drawImage(skin->getSpinnerTop());
+			}
 			g->popTransform();
 		}
 
@@ -159,12 +168,14 @@ void OsuSpinner::draw(Graphics *g)
 			const float spinnerMiddle2ImageScale = globalBaseSize / (globalBaseSkinSize * (skin->isSpinnerMiddle22x() ? 2.0f : 1.0f));
 
 			g->setColor(0xffffffff);
-			g->setAlpha(m_fAlphaWithoutHidden);
+			g->setAlpha(m_fAlphaWithoutHidden * alphaMultiplier);
 			g->pushTransform();
+			{
 				g->rotate(m_fDrawRot);
 				g->scale(spinnerMiddle2ImageScale*finishScale*globalScale, spinnerMiddle2ImageScale*finishScale*globalScale);
 				g->translate(center.x, center.y);
 				g->drawImage(skin->getSpinnerMiddle2());
+			}
 			g->popTransform();
 		}
 		if (skin->getSpinnerMiddle() != skin->getMissingTexture())
@@ -172,66 +183,78 @@ void OsuSpinner::draw(Graphics *g)
 			const float spinnerMiddleImageScale = globalBaseSize / (globalBaseSkinSize * (skin->isSpinnerMiddle2x() ? 2.0f : 1.0f));
 
 			g->setColor(COLOR(255, 255, (int)(255*m_fPercent), (int)(255*m_fPercent)));
-			g->setAlpha(m_fAlphaWithoutHidden);
+			g->setAlpha(m_fAlphaWithoutHidden * alphaMultiplier);
 			g->pushTransform();
+			{
 				g->rotate(m_fDrawRot/2.0f); // apparently does not rotate in osu
 				g->scale(spinnerMiddleImageScale*finishScale*globalScale, spinnerMiddleImageScale*finishScale*globalScale);
 				g->translate(center.x, center.y);
 				g->drawImage(skin->getSpinnerMiddle());
+			}
 			g->popTransform();
 		}
 
-		// draw approach circle
+		// approach circle
 		if (!m_beatmap->getOsu()->getModHD() && m_fPercent > 0.0f)
 		{
 			const float spinnerApproachCircleImageScale = globalBaseSize / ((globalBaseSkinSize/2) * (skin->isSpinnerApproachCircle2x() ? 2.0f : 1.0f));
 
 			g->setColor(skin->getSpinnerApproachCircleColor());
-			g->setAlpha(m_fAlphaWithoutHidden);
+			g->setAlpha(m_fAlphaWithoutHidden * alphaMultiplier);
 			g->pushTransform();
+			{
 				g->scale(spinnerApproachCircleImageScale*m_fPercent*globalScale, spinnerApproachCircleImageScale*m_fPercent*globalScale);
 				g->translate(center.x, center.y);
 				g->drawImage(skin->getSpinnerApproachCircle());
+			}
 			g->popTransform();
 		}
 	}
 
-	// draw "CLEAR!"
+	// "CLEAR!"
 	if (m_fRatio >= 1.0f)
 	{
-		float spinnerClearImageScale = Osu::getImageScale(m_beatmap->getOsu(), skin->getSpinnerClear(), 80);
+		const float spinnerClearImageScale = Osu::getImageScale(m_beatmap->getOsu(), skin->getSpinnerClear(), 80);
 
 		g->setColor(0xffffffff);
+		g->setAlpha(alphaMultiplier);
 		g->pushTransform();
-		g->scale(spinnerClearImageScale, spinnerClearImageScale);
-		g->translate(center.x, center.y - m_beatmap->getPlayfieldSize().y*0.25f);
-		g->drawImage(skin->getSpinnerClear());
+		{
+			g->scale(spinnerClearImageScale, spinnerClearImageScale);
+			g->translate(center.x, center.y - m_beatmap->getPlayfieldSize().y*0.25f);
+			g->drawImage(skin->getSpinnerClear());
+		}
 		g->popTransform();
 	}
 
-	// draw "SPIN!"
+	// "SPIN!"
 	if (clampedRatio < 0.03f)
 	{
-		float spinerSpinImageScale = Osu::getImageScale(m_beatmap->getOsu(), skin->getSpinnerSpin(), 80);
+		const float spinerSpinImageScale = Osu::getImageScale(m_beatmap->getOsu(), skin->getSpinnerSpin(), 80);
 
 		g->setColor(0xffffffff);
-		g->setAlpha(m_fAlphaWithoutHidden);
+		g->setAlpha(m_fAlphaWithoutHidden * alphaMultiplier);
 		g->pushTransform();
-		g->scale(spinerSpinImageScale, spinerSpinImageScale);
-		g->translate(center.x, center.y + m_beatmap->getPlayfieldSize().y*0.30f);
-		g->drawImage(skin->getSpinnerSpin());
+		{
+			g->scale(spinerSpinImageScale, spinerSpinImageScale);
+			g->translate(center.x, center.y + m_beatmap->getPlayfieldSize().y*0.30f);
+			g->drawImage(skin->getSpinnerSpin());
+		}
 		g->popTransform();
 	}
 
 	// draw RPM
-	if (m_bDrawRPM)
+	if (m_iDelta < 0)
 	{
 		McFont *rpmFont = engine->getResourceManager()->getFont("FONT_DEFAULT");
-		float stringWidth = rpmFont->getStringWidth("RPM: 477");
+		const float stringWidth = rpmFont->getStringWidth("RPM: 477");
 		g->setColor(0xffffffff);
+		g->setAlpha(m_fAlphaWithoutHidden * m_fAlphaWithoutHidden * m_fAlphaWithoutHidden * alphaMultiplier);
 		g->pushTransform();
-		g->translate(m_beatmap->getOsu()->getScreenWidth()/2 - stringWidth/2, m_beatmap->getOsu()->getScreenHeight() - 5);
-		g->drawString(rpmFont, UString::format("RPM: %i", (int)m_fRPM));
+		{
+			g->translate((int)(m_beatmap->getOsu()->getScreenWidth()/2 - stringWidth/2), (int)(m_beatmap->getOsu()->getScreenHeight() - 5 + (5 + rpmFont->getHeight())*(1.0f - m_fAlphaWithoutHidden)));
+			g->drawString(rpmFont, UString::format("RPM: %i", (int)(m_fRPM + 0.4f)));
+		}
 		g->popTransform();
 	}
 }
@@ -261,6 +284,7 @@ void OsuSpinner::update(long curPos)
 	{
 		if (m_beatmap->getSkin()->getSpinnerSpinSound()->isPlaying())
 			engine->getSound()->stop(m_beatmap->getSkin()->getSpinnerSpinSound());
+
 		return;
 	}
 
@@ -276,7 +300,7 @@ void OsuSpinner::update(long curPos)
 
 		m_fRotationsNeeded = OsuGameRules::getSpinnerRotationsForSpeedMultiplier(m_beatmap, m_iObjectDuration);
 
-		float fixedRate = /*(1.0f / convar->getConVarByName("fps_max")->getFloat())*/engine->getFrameTime();
+		const float fixedRate = /*(1.0f / convar->getConVarByName("fps_max")->getFloat())*/engine->getFrameTime();
 
 		const float DELTA_UPDATE_TIME = (fixedRate * 1000.0f);
 		const float AUTO_MULTIPLIER = (1.0f / 20.0f);
@@ -320,12 +344,6 @@ void OsuSpinner::update(long curPos)
 				angleDiff = 0;
 		}
 
-		// handle RPM visibility
-		if (curPos >= m_iTime)
-			m_bDrawRPM = true;
-		else
-			m_bDrawRPM = false;
-
 		// handle spinning
 		// HACKHACK: rewrite this
 		if (delta <= 0)
@@ -365,9 +383,16 @@ void OsuSpinner::update(long curPos)
 				float rotationPerSec = rotationAngle * (1000.0f / DELTA_UPDATE_TIME) / (2.0f*PI);
 
 				///m_fRPM = std::abs(rotationPerSec*60.0f);
+
+				const float decay = std::pow(0.01f, (float)engine->getFrameTime());
+				m_fRPM = m_fRPM * decay + (1.0 - decay) * std::abs(rotationPerSec) * 60;
+				m_fRPM = std::min(m_fRPM, 477.0f);
+
+				/*
 				m_fRPM += std::abs(rotationPerSec*60.0f);
 				m_fRPM /= 2.0;
 				m_fRPM = std::min(m_fRPM, 477.0f);
+				*/
 
 				if (std::abs(rotationAngle) > 0.0001f)
 					rotate(rotationAngle);
@@ -384,8 +409,7 @@ void OsuSpinner::update(long curPos)
 
 void OsuSpinner::onClickEvent(std::vector<OsuBeatmap::CLICK> &clicks)
 {
-	if (m_bFinished)
-		return;
+	if (m_bFinished) return;
 
 	// needed for nightmare mod
 	if (m_bVisible && !m_bClickedOnce)
@@ -430,7 +454,7 @@ void OsuSpinner::onReset(long curPos)
 void OsuSpinner::onHit()
 {
 	///debugLog("ratio = %f\n", m_fRatio);
-	m_bDrawRPM = false;
+	//m_bDrawRPM = false;
 
 	// calculate hit result
 	OsuScore::HIT result = OsuScore::HIT::HIT_NULL;
