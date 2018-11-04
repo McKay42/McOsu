@@ -1120,7 +1120,7 @@ void OsuOptionsMenu::setVisibleInt(bool visible, bool fromOnBack)
 		if (!m_bFullscreen)
 		{
 			if (!m_bVisible)
-				anim->moveQuartOut(&m_fAnimation, 1.0f, 0.30f*(1.0f - m_fAnimation), true);
+				anim->moveQuartOut(&m_fAnimation, 1.0f, 0.25f*(1.0f - m_fAnimation), true);
 			else
 				anim->moveQuadOut(&m_fAnimation, 0.0f, 0.25f*m_fAnimation, true);
 		}
