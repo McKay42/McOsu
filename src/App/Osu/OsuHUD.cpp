@@ -436,6 +436,9 @@ void OsuHUD::drawVRDummy(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 
 void OsuHUD::update()
 {
+	// dynamic hud scaling updates
+	m_fScoreHeight = m_osu->getSkin()->getScore0()->getHeight() * getScoreScale();
+
 	// fps string update
 	if (osu_hud_fps_smoothing.getBool())
 	{
@@ -1081,8 +1084,7 @@ void OsuHUD::drawScore(Graphics *g, unsigned long long score)
 		numDigits++;
 	}
 
-	const float scale = m_osu->getImageScale(m_osu, m_osu->getSkin()->getScore0(), 13*1.5f) * osu_hud_scale.getFloat() * osu_hud_score_scale.getFloat();
-	m_fScoreHeight = m_osu->getSkin()->getScore0()->getHeight()*scale;
+	const float scale = getScoreScale();
 	const int offset = 2;
 	g->pushTransform();
 	{
@@ -2211,6 +2213,11 @@ float OsuHUD::getCursorScaleFactor()
 float OsuHUD::getCursorTrailScaleFactor()
 {
 	return getCursorScaleFactor() * (m_osu->getSkin()->isCursor2x() ? 0.5f : 1.0f); // use scale from cursor, not from trail, because fuck you
+}
+
+float OsuHUD::getScoreScale()
+{
+	return m_osu->getImageScale(m_osu, m_osu->getSkin()->getScore0(), 13*1.5f) * osu_hud_scale.getFloat() * osu_hud_score_scale.getFloat();
 }
 
 void OsuHUD::onVolumeOverlaySizeChange(UString oldValue, UString newValue)

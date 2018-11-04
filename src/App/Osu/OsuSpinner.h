@@ -39,7 +39,6 @@ private:
 	Vector2 m_vOriginalRawPos;
 
 	bool m_bClickedOnce;
-	bool m_bDrawRPM;
 	float m_fPercent;
 
 	float m_fDrawRot;

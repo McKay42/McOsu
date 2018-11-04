@@ -90,6 +90,8 @@ private:
 
 	float getT(long pos, bool raw);
 
+	bool isClickHeldSlider(); // special logic to disallow hold tapping
+
 	OsuBeatmapStandard *m_beatmap;
 
 	OsuSliderCurve *m_curve;
@@ -129,6 +131,7 @@ private:
 	float m_fEndHitAnimation;
 	float m_fEndSliderBodyFadeAnimation;
 	long m_iLastClickHeld;
+	int m_iDownKey;
 	bool m_bCursorLeft;
 	bool m_bCursorInside;
 	bool m_bHeldTillEnd;

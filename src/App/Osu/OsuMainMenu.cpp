@@ -509,6 +509,15 @@ void OsuMainMenu::draw(Graphics *g)
 	g->setCulling(false);
 	g->setDepthBuffer(false);
 	*/
+
+	/*
+	if (m_fShutdownScheduledTime != 0.0f)
+	{
+		g->setColor(0xff000000);
+		g->setAlpha(1.0f - clamp<float>((m_fShutdownScheduledTime - engine->getTime()) / 0.3f, 0.0f, 1.0f));
+		g->fillRect(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight());
+	}
+	*/
 }
 
 void OsuMainMenu::update()
@@ -549,7 +558,7 @@ void OsuMainMenu::update()
 	}
 
 	// handle delayed shutdown
-	if (m_fShutdownScheduledTime != 0.0f && engine->getTime() > m_fShutdownScheduledTime)
+	if (m_fShutdownScheduledTime != 0.0f && (engine->getTime() > m_fShutdownScheduledTime || !anim->isAnimating(&m_fCenterOffsetAnim)))
 	{
 		engine->shutdown();
 		m_fShutdownScheduledTime = 0.0f;
@@ -754,7 +763,7 @@ void OsuMainMenu::setMenuElementsVisible(bool visible, bool animate)
 			m_fCenterOffsetAnim = m_vSize.x/2.0f;
 
 		if (animate)
-			anim->moveQuadInOut(&m_fCenterOffsetAnim, m_vSize.x/2.0f, 0.5f, 0.0f, true);
+			anim->moveQuadInOut(&m_fCenterOffsetAnim, m_vSize.x/2.0f, 0.35f, 0.0f, true);
 		else
 		{
 			anim->deleteExistingAnimation(&m_fCenterOffsetAnim);
@@ -772,7 +781,7 @@ void OsuMainMenu::setMenuElementsVisible(bool visible, bool animate)
 	else
 	{
 		if (animate)
-			anim->moveQuadInOut(&m_fCenterOffsetAnim, 0.0f, 0.5f*(m_fCenterOffsetAnim/(m_vSize.x/2.0f)), 0.0f, true);
+			anim->moveQuadOut(&m_fCenterOffsetAnim, 0.0f, 0.5f*(m_fCenterOffsetAnim/(m_vSize.x/2.0f)) * (m_fShutdownScheduledTime != 0.0f ? 0.4f : 1.0f), 0.0f, true);
 		else
 		{
 			anim->deleteExistingAnimation(&m_fCenterOffsetAnim);
@@ -841,7 +850,7 @@ void OsuMainMenu::onOptionsButtonPressed()
 
 void OsuMainMenu::onExitButtonPressed()
 {
-	m_fShutdownScheduledTime = engine->getTime() + 0.5f;
+	m_fShutdownScheduledTime = engine->getTime() + 0.3f;
 	m_bWasCleanShutdown = true;
 	setMenuElementsVisible(false);
 }

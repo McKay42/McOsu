@@ -700,7 +700,7 @@ void OsuRankingScreen::setIndex(int index)
 		m_rankingIndex->setText(UString::format("You achieved the #%i score on local rankings!", (index+1)));
 		m_rankingIndex->setVisible2(true);
 		m_rankingBottom->setVisible2(true);
-		m_rankingScrollDownInfoButton->setVisible2(true);
+		m_rankingScrollDownInfoButton->setVisible2(index < 1); // only show button if we made a new highscore
 	}
 	else
 	{
