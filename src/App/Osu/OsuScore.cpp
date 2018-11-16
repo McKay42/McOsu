@@ -134,17 +134,10 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignor
 		}
 	}
 
-	// add hitValue to score, recalculate scoreV1
-	const float sumDifficultyPoints = beatmap->getSelectedDifficulty()->CS + beatmap->getSelectedDifficulty()->HP + beatmap->getSelectedDifficulty()->OD;
-	int difficultyMultiplier = 2;
-	if (sumDifficultyPoints > 5.0f)
-		difficultyMultiplier = 3;
-	if (sumDifficultyPoints > 12.0f)
-		difficultyMultiplier = 4;
-	if (sumDifficultyPoints > 17.0f)
-		difficultyMultiplier = 5;
-	if (sumDifficultyPoints > 24.0f)
-		difficultyMultiplier = 6;
+	// add hitValue to score, recalculate score v1
+	const unsigned long breakTimeMS = beatmap->getSelectedDifficulty()->getBreakDurationTotal();
+	const unsigned long drainLength = std::max(beatmap->getLengthPlayable() - std::min(breakTimeMS, beatmap->getLengthPlayable()), (unsigned long)1000) / 1000;
+	const int difficultyMultiplier = (int)std::round((beatmap->getSelectedDifficulty()->CS + beatmap->getSelectedDifficulty()->HP + beatmap->getSelectedDifficulty()->OD + clamp<float>((float)beatmap->getSelectedDifficulty()->numObjects / (float)drainLength * 8.0f, 0.0f, 16.0f)) / 38.0f * 5.0f);
 	if (!ignoreScore)
 		m_iScoreV1 += hitValue + ((hitValue * (unsigned long long)((double)scoreComboMultiplier * (double)difficultyMultiplier * (double)m_osu->getScoreMultiplier())) / (unsigned long long)25);
 
@@ -160,7 +153,7 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignor
 	else
 		m_fAccuracy = totalHitPoints / totalNumHits;
 
-	// recalculate scoreV2
+	// recalculate score v2
 	m_iScoreV2ComboPortion += (unsigned long long)((double)hitValue * (1.0 + (double)scoreComboMultiplier / 10.0));
 	if (m_osu->getModScorev2())
 	{

@@ -42,6 +42,7 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha29Steam.changes.push_back("- Added mouse sidebutton support (mouse4, mouse5)");
 	alpha29Steam.changes.push_back("- Added detail info tooltip (approach time, hit timings, etc.) when hovering over diff info label in songbrowser (CS AR etc.)");
 	alpha29Steam.changes.push_back("- Updated diff info label in songbrowser to respect mods/overrides");
+	alpha29Steam.changes.push_back("- Updated Score v1 calculation to be more accurate");
 	alpha29Steam.changes.push_back("- Fixed object count always being 0 without osu! database");
 	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("- Fixed slider end/tail judgements being too strict and not matching osu! exactly");
