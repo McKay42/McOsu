@@ -8,24 +8,31 @@
 #ifndef OSUUISELECTIONBUTTON_H
 #define OSUUISELECTIONBUTTON_H
 
-#include "CBaseUIImageButton.h"
+#include "CBaseUIButton.h"
 
-class OsuUISelectionButton : public CBaseUIImageButton
+class OsuUISelectionButton : public CBaseUIButton
 {
 public:
-	OsuUISelectionButton(UString imageResourceName, float xPos, float yPos, float xSize, float ySize, UString name);
+	OsuUISelectionButton(std::function<Image*()> getImageFunc, std::function<Image*()> getImageOverFunc, float xPos, float yPos, float xSize, float ySize, UString name);
 
 	void draw(Graphics *g);
 
 	virtual void onMouseInside();
 	virtual void onMouseOutside();
 
+	virtual void onResized();
+
 	void keyboardPulse();
 
-	void setImageResourceNameOver(UString imageResourceName) {m_sImageOver = imageResourceName;}
 private:
 	float m_fAnimation;
-	UString m_sImageOver;
+
+	Vector2 m_vScale;
+	bool m_bScaleToFit;
+	bool m_bKeepAspectRatio;
+
+	std::function<Image*()> getImageFunc;
+	std::function<Image*()> getImageOverFunc;
 };
 
 #endif

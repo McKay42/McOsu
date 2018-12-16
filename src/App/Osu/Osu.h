@@ -13,6 +13,7 @@
 
 class CWindowManager;
 
+class Osu2;
 class OsuVR;
 class OsuMultiplayer;
 class OsuMainMenu;
@@ -64,7 +65,7 @@ public:
 	};
 
 public:
-	Osu();
+	Osu(Osu2 *osu2 = NULL, int instanceID = 0);
 	virtual ~Osu();
 
 	virtual void draw(Graphics *g);
@@ -104,10 +105,12 @@ public:
 
 	void saveScreenshot();
 
+	void setSkin(UString skin) {onSkinChange("", skin);}
 	void reloadSkin() {onSkinReload();}
 
 	void setGamemode(GAMEMODE gamemode) {m_gamemode = gamemode;}
 
+	inline int getInstanceID() const {return m_iInstanceID;}
 	inline GAMEMODE getGamemode() const {return m_gamemode;}
 
 	inline Vector2 getScreenSize() const {return g_vInternalResolution;}
@@ -212,6 +215,8 @@ private:
 
 	void onModMafhamChange(UString oldValue, UString newValue);
 
+	void onNotification(UString args);
+
 	// convar refs
 	ConVar *m_osu_folder_ref;
 	ConVar *m_osu_draw_hud_ref;
@@ -229,6 +234,7 @@ private:
 	ConVar *m_snd_change_check_interval_ref;
 
 	// interfaces
+	Osu2 *m_osu2;
 	OsuVR *m_vr;
 	OsuMultiplayer *m_multiplayer;
 	OsuMainMenu *m_mainMenu;
@@ -323,6 +329,7 @@ private:
 	bool m_bScheduleEndlessModNextBeatmap;
 	int m_iMultiplayerClientNumEscPresses;
 	bool m_bIsInVRDraw;
+	int m_iInstanceID;
 };
 
 #endif

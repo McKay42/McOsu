@@ -834,6 +834,8 @@ void OsuMainMenu::onMainMenuButtonPressed()
 
 void OsuMainMenu::onPlayButtonPressed()
 {
+	if (m_osu->getInstanceID() > 1) return;
+
 	m_osu->toggleSongBrowser();
 }
 
@@ -857,12 +859,16 @@ void OsuMainMenu::onExitButtonPressed()
 
 void OsuMainMenu::onPausePressed()
 {
+	if (m_osu->getInstanceID() > 1) return;
+
 	if (m_osu->getSelectedBeatmap() != NULL)
 		m_osu->getSelectedBeatmap()->pausePreviewMusic();
 }
 
 void OsuMainMenu::onUpdatePressed()
 {
+	if (m_osu->getInstanceID() > 1) return;
+
 	if (m_osu->getUpdateHandler()->getStatus() == OsuUpdateHandler::STATUS::STATUS_SUCCESS_INSTALLATION)
 		engine->restart();
 	else if (m_osu->getUpdateHandler()->getStatus() == OsuUpdateHandler::STATUS::STATUS_ERROR)
@@ -871,11 +877,15 @@ void OsuMainMenu::onUpdatePressed()
 
 void OsuMainMenu::onGithubPressed()
 {
+	if (m_osu->getInstanceID() > 1) return;
+
 	env->openURLInDefaultBrowser("https://github.com/McKay42/McOsu/");
 }
 
 void OsuMainMenu::onVersionPressed()
 {
+	if (m_osu->getInstanceID() > 1) return;
+
 	m_bDrawVersionNotificationArrow = false;
 	writeVersionFile();
 	m_osu->toggleChangelog();

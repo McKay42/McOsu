@@ -46,6 +46,7 @@
 #include "OpenGLLegacyInterface.h"
 #include "OpenGL3Interface.h"
 
+ConVar osu_automatic_cursor_size("osu_automatic_cursor_size", false);
 ConVar osu_cursor_alpha("osu_cursor_alpha", 1.0f);
 ConVar osu_cursor_scale("osu_cursor_scale", 1.5f);
 ConVar osu_cursor_expand_scale_multiplier("osu_cursor_expand_scale_multiplier", 1.3f);
@@ -2206,13 +2207,18 @@ void OsuHUD::drawInputOverlay(Graphics *g, int numK1, int numK2, int numM1, int 
 float OsuHUD::getCursorScaleFactor()
 {
 	// FUCK OSU hardcoded piece of shit code
-	const float spriteRes = 768;
-	return (float)m_osu->getScreenHeight() / spriteRes;
+	const float spriteRes = 768.0f;
+
+	float mapScale = 1.0f;
+	if (osu_automatic_cursor_size.getBool() && m_osu->isInPlayMode())
+		mapScale = 1.0f - 0.7f * (float)(m_osu->getSelectedBeatmap()->getCS() - 4.0f) / 5.0f;
+
+	return ((float)m_osu->getScreenHeight() / spriteRes) * mapScale;
 }
 
 float OsuHUD::getCursorTrailScaleFactor()
 {
-	return getCursorScaleFactor() * (m_osu->getSkin()->isCursor2x() ? 0.5f : 1.0f); // use scale from cursor, not from trail, because fuck you
+	return getCursorScaleFactor() * (m_osu->getSkin()->isCursorTrail2x() ? 0.5f : 1.0f);
 }
 
 float OsuHUD::getScoreScale()

@@ -327,12 +327,15 @@ void OsuUISongBrowserSongButton::onSelected(bool wasSelected)
 	}
 
 	// automatically deselect previous selection if another beatmap is selected
-	if (previousButton != NULL && previousButton != this)
-		previousButton->deselect();
-	else
-		m_songBrowser->rebuildSongButtons(false); // this is in the else-branch to avoid double execution (since it is already executed in deselect())
+	if (m_osu->getInstanceID() < 2) // TODO: this leaks memory on slaves
+	{
+		if (previousButton != NULL && previousButton != this)
+			previousButton->deselect();
+		else
+			m_songBrowser->rebuildSongButtons(false); // this is in the else-branch to avoid double execution (since it is already executed in deselect())
 
-	previousButton = this;
+		previousButton = this;
+	}
 
 	// now, automatically select the bottom child
 	if (m_children.size() > 0)
