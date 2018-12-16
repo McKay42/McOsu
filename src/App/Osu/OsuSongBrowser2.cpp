@@ -440,13 +440,13 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 
 	///addBottombarNavButton();
 	/*
-	CBaseUIButton *modeButton = addBottombarNavButton();
+	CBaseUIButton *modeButton = addBottombarNavButton([this]() -> Image *{return m_osu->getSkin()->getSelectionMode();}, [this]() -> Image *{return m_osu->getSkin()->getSelectionModeOver();});
 	modeButton->setText("std");
 	modeButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onSelectionMode) );
 	*/
-	addBottombarNavButton()->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onSelectionMods) );
-	addBottombarNavButton()->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onSelectionRandom) );
-	///addBottombarNavButton()->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser::onSelectionOptions) );
+	addBottombarNavButton([this]() -> Image *{return m_osu->getSkin()->getSelectionMods();}, [this]() -> Image *{return m_osu->getSkin()->getSelectionModsOver();})->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onSelectionMods) );
+	addBottombarNavButton([this]() -> Image *{return m_osu->getSkin()->getSelectionRandom();}, [this]() -> Image *{return m_osu->getSkin()->getSelectionRandomOver();})->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onSelectionRandom) );
+	///addBottombarNavButton([this]() -> Image *{return m_osu->getSkin()->getSelectionOptions();}, [this]() -> Image *{return m_osu->getSkin()->getSelectionOptionsOver();})->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser::onSelectionOptions) );
 
 	// build scorebrowser
 	m_scoreBrowser = new CBaseUIScrollView(0, 0, 0, 0, "");
@@ -1685,25 +1685,6 @@ bool OsuSongBrowser2::findSubstringInDifficulty(OsuBeatmapDifficulty *diff, UStr
 
 void OsuSongBrowser2::updateLayout()
 {
-	if (m_bottombarNavButtons.size() == 3)
-	{
-		m_bottombarNavButtons[0]->setImageResourceName(m_osu->getSkin()->getSelectionMode()->getName());
-		m_bottombarNavButtons[0]->setImageResourceNameOver(m_osu->getSkin()->getSelectionModeOver()->getName());
-		m_bottombarNavButtons[1]->setImageResourceName(m_osu->getSkin()->getSelectionMods()->getName());
-		m_bottombarNavButtons[1]->setImageResourceNameOver(m_osu->getSkin()->getSelectionModsOver()->getName());
-		m_bottombarNavButtons[2]->setImageResourceName(m_osu->getSkin()->getSelectionRandom()->getName());
-		m_bottombarNavButtons[2]->setImageResourceNameOver(m_osu->getSkin()->getSelectionRandomOver()->getName());
-	}
-	else if (m_bottombarNavButtons.size() == 2)
-	{
-		m_bottombarNavButtons[0]->setImageResourceName(m_osu->getSkin()->getSelectionMods()->getName());
-		m_bottombarNavButtons[0]->setImageResourceNameOver(m_osu->getSkin()->getSelectionModsOver()->getName());
-		m_bottombarNavButtons[1]->setImageResourceName(m_osu->getSkin()->getSelectionRandom()->getName());
-		m_bottombarNavButtons[1]->setImageResourceNameOver(m_osu->getSkin()->getSelectionRandomOver()->getName());
-	}
-
-	//************************************************************************************************************************************//
-
 	OsuScreenBackable::updateLayout();
 
 	const int margin = 5;
@@ -1881,10 +1862,9 @@ void OsuSongBrowser2::scheduleSearchUpdate(bool immediately)
 	m_fSearchWaitTime = engine->getTime() + (immediately ? 0.0f : 0.5f);
 }
 
-OsuUISelectionButton *OsuSongBrowser2::addBottombarNavButton()
+OsuUISelectionButton *OsuSongBrowser2::addBottombarNavButton(std::function<Image*()> getImageFunc, std::function<Image*()> getImageOverFunc)
 {
-	OsuUISelectionButton *btn = new OsuUISelectionButton("MISSING_TEXTURE", 0, 0, 0, 0, "");
-	btn->setScaleToFit(true);
+	OsuUISelectionButton *btn = new OsuUISelectionButton(getImageFunc, getImageOverFunc, 0, 0, 0, 0, "");
 	m_bottombar->addBaseUIElement(btn);
 	m_bottombarNavButtons.push_back(btn);
 	return btn;

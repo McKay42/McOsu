@@ -123,7 +123,7 @@ private:
 	void rebuildScoreButtons();
 	void scheduleSearchUpdate(bool immediately = false);
 
-	OsuUISelectionButton *addBottombarNavButton();
+	OsuUISelectionButton *addBottombarNavButton(std::function<Image*()> getImageFunc, std::function<Image*()> getImageOverFunc);
 	CBaseUIButton *addTopBarRightTabButton(UString text);
 	CBaseUIButton *addTopBarRightSortButton(UString text);
 

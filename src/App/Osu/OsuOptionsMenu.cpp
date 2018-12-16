@@ -537,6 +537,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_cursorSizeSlider = addSlider("Cursor Size:", 0.01f, 5.0f, convar->getConVarByName("osu_cursor_scale"));
 	m_cursorSizeSlider->setAnimated(false);
 	m_cursorSizeSlider->setKeyDelta(0.01f);
+	addCheckbox("Automatic Cursor Size", "Cursor size will adjust based on the CS of the current beatmap.", convar->getConVarByName("osu_automatic_cursor_size"));
 	addSpacer();
 	m_sliderPreviewElement = (OsuOptionsMenuSliderPreviewElement*)addSliderPreview();
 	addCheckbox("Use slidergradient.png", convar->getConVarByName("osu_slider_use_gradient_image"));
@@ -1608,7 +1609,11 @@ void OsuOptionsMenu::onSkinSelect()
 
 void OsuOptionsMenu::onSkinSelect2(UString skinName)
 {
-	convar->getConVarByName("osu_skin")->setValue(skinName);
+	if (m_osu->getInstanceID() < 1)
+		convar->getConVarByName("osu_skin")->setValue(skinName);
+	else
+		m_osu->setSkin(skinName);
+
 	m_skinLabel->setText(skinName);
 }
 

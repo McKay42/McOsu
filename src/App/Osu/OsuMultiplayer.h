@@ -28,16 +28,35 @@ public:
 		STOP
 	};
 
+	struct PLAYER_INPUT
+	{
+		long time;
+		Vector2 cursorPos;
+		bool mouse1down;
+		bool mouse2down;
+		bool key1down;
+		bool key2down;
+	};
+
 	struct PLAYER
 	{
 		unsigned int id;
 		UString name;
+
+		// state
 		bool missingBeatmap;
 		bool waiting;
+
+		// score
 		int combo;
 		float accuracy;
 		unsigned long long score;
 		bool dead;
+
+		// input
+		PLAYER_INPUT input;
+		std::vector<PLAYER_INPUT> inputBuffer;
+
 		unsigned long long sortHack;
 	};
 
@@ -45,21 +64,24 @@ public:
 	OsuMultiplayer(Osu *osu);
 	~OsuMultiplayer();
 
+	void update();
+
 	// receive
-	bool onClientReceive(unsigned int id, void *data, size_t size);
-	bool onClientReceiveInt(unsigned int id, void *data, size_t size, bool forceAcceptOnServer = false);
-	bool onServerReceive(unsigned int id, void *data, size_t size);
+	bool onClientReceive(uint32_t id, void *data, uint32_t size);
+	bool onClientReceiveInt(uint32_t id, void *data, uint32_t size, bool forceAcceptOnServer = false);
+	bool onServerReceive(uint32_t id, void *data, uint32_t size);
 
 	// client events
 	void onClientConnectedToServer();
 	void onClientDisconnectedFromServer();
 
 	// server events
-	void onServerClientChange(unsigned int id, UString name, bool connected);
+	void onServerClientChange(uint32_t id, UString name, bool connected);
 	void onLocalServerStarted();
 	void onLocalServerStopped();
 
 	// clientside game events
+	void onClientCmd();
 	void onClientStatusUpdate(bool missingBeatmap, bool waiting = true);
 	void onClientScoreChange(int combo, float accuracy, unsigned long long score, bool dead, bool reliable = false);
 	bool onClientPlayStateChangeRequestBeatmap(OsuBeatmap *beatmap);
@@ -68,6 +90,9 @@ public:
 	void onServerModUpdate();
 	void onServerPlayStateChange(STATE state, unsigned long seekMS = 0, bool quickRestart = false, OsuBeatmap *beatmap = NULL);
 
+	// tourney events
+	void setBeatmap(OsuBeatmap *beatmap);
+
 	bool isServer();
 	bool isInMultiplayer();
 
@@ -75,9 +100,11 @@ public:
 	bool isWaitingForClient();	// is the waiting state set for the local player
 
 	inline std::vector<PLAYER> *getPlayers() {return &m_clientPlayers;}
+	inline std::vector<PLAYER> *getServerPlayers() {return &m_serverPlayers;}
 
 private:
 	static unsigned long long sortHackCounter;
+	static ConVar *m_cl_cmdrate;
 
 	void onClientcastCommand(UString command);
 	void onBroadcastCommand(UString command);
@@ -87,14 +114,17 @@ private:
 	{
 		PLAYER_CHANGE_TYPE,
 		PLAYER_STATE_TYPE,
+		PLAYER_CMD_TYPE,
 		CONVAR_TYPE,
 		STATE_TYPE,
 		SCORE_TYPE
 	};
 
+#pragma pack(1)
+
 	struct PLAYER_CHANGE_PACKET
 	{
-		unsigned int id;
+		uint32_t id;
 		bool connected;
 		size_t size;
 		wchar_t name[255];
@@ -102,9 +132,17 @@ private:
 
 	struct PLAYER_STATE_PACKET
 	{
-		unsigned int id;
+		uint32_t id;
 		bool missingBeatmap;	// this is only used visually
 		bool waiting;			// this will block all players until everyone is ready
+	};
+
+	struct PLAYER_INPUT_PACKET
+	{
+		int32_t time;			// 32 bits
+		int16_t cursorPosX;		// 16 bits
+		int16_t cursorPosY;		// 16 bits
+		unsigned char keys;		//  8 bits
 	};
 
 	struct CONVAR_PACKET
@@ -124,16 +162,21 @@ private:
 
 	struct SCORE_PACKET
 	{
-		unsigned int id;
-		int combo;
+		uint32_t id;
+		int32_t combo;
 		float accuracy;
-		unsigned long long score;
+		uint64_t score;
 		bool dead;
 	};
+
+#pragma pack()
 
 	Osu *m_osu;
 	std::vector<PLAYER> m_serverPlayers;
 	std::vector<PLAYER> m_clientPlayers;
+
+	float m_fNextPlayerCmd;
+	std::vector<PLAYER_INPUT_PACKET> m_playerInputBuffer;
 };
 
 #endif

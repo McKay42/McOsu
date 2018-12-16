@@ -36,6 +36,10 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 
 	CHANGELOG alpha29Steam;
 	alpha29Steam.title = UString::format("29 (Steam VR Version, %s, %s)", __DATE__, __TIME__);
+	alpha29Steam.changes.push_back("- Added option \"Automatic Cursor Size\" (Options > Skin > Skin)");
+	alpha29Steam.changes.push_back("- Fixed cursortrail being too small in some skins (for cursor@2x with non-@2x cursortrail)");
+	alpha29Steam.changes.push_back("- Fixed missing 24 ms offset for beatmaps version < 5");
+	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("- Added key overlay");
 	alpha29Steam.changes.push_back("- Improved frame pacing");
 	alpha29Steam.changes.push_back("- Added new experimental mod \"Reverse Sliders\"");

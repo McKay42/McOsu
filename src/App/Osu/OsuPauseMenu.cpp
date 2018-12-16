@@ -48,15 +48,14 @@ OsuPauseMenu::OsuPauseMenu(Osu *osu) : OsuScreen(osu)
 
 	m_container = new CBaseUIContainer(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight(), "");
 
-	OsuUIPauseMenuButton *continueButton = addButton();
-	OsuUIPauseMenuButton *retryButton = addButton();
-	OsuUIPauseMenuButton *backButton = addButton();
+	OsuUIPauseMenuButton *continueButton = addButton([this]() -> Image *{return m_osu->getSkin()->getPauseContinue();});
+	OsuUIPauseMenuButton *retryButton = addButton([this]() -> Image *{return m_osu->getSkin()->getPauseRetry();});
+	OsuUIPauseMenuButton *backButton = addButton([this]() -> Image *{return m_osu->getSkin()->getPauseBack();});
 
 	continueButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuPauseMenu::onContinueClicked) );
 	retryButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuPauseMenu::onRetryClicked) );
 	backButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuPauseMenu::onBackClicked) );
 
-	updateButtons();
 	updateLayout();
 }
 
@@ -330,13 +329,6 @@ void OsuPauseMenu::scheduleVisibilityChange(bool visible)
 		setContinueEnabled(true);
 }
 
-void OsuPauseMenu::updateButtons()
-{
-	setButton(0, m_osu->getSkin()->getPauseContinue());
-	setButton(1, m_osu->getSkin()->getPauseRetry());
-	setButton(2, m_osu->getSkin()->getPauseBack());
-}
-
 void OsuPauseMenu::updateLayout()
 {
 	const float height = (m_osu->getScreenHeight()/(float)m_buttons.size());
@@ -346,9 +338,9 @@ void OsuPauseMenu::updateLayout()
 	float maxHeight = 0.0f;
 	for (int i=0; i<m_buttons.size(); i++)
 	{
-		Image *img = engine->getResourceManager()->getImage(m_buttons[i]->getImageResourceName());
+		Image *img = m_buttons[i]->getImage();
 		if (img == NULL)
-			img = engine->getResourceManager()->getImage("MISSING_TEXTURE");
+			img = m_osu->getSkin()->getMissingTexture();
 
 		const float scale = m_osu->getUIScale(m_osu, 256) / (411.0f * (m_osu->getSkin()->isPauseContinue2x() ? 2.0f : 1.0f));
 
@@ -404,10 +396,7 @@ void OsuPauseMenu::setVisible(bool visible)
 	m_bScheduledVisibilityChange = false;
 
 	if (m_bVisible)
-	{
-		updateButtons();
 		updateLayout();
-	}
 
 	m_osu->updateConfineCursor();
 }
@@ -419,18 +408,10 @@ void OsuPauseMenu::setContinueEnabled(bool continueEnabled)
 		m_buttons[0]->setVisible(m_bContinueEnabled);
 }
 
-OsuUIPauseMenuButton *OsuPauseMenu::addButton()
+OsuUIPauseMenuButton *OsuPauseMenu::addButton(std::function<Image*()> getImageFunc)
 {
-	OsuUIPauseMenuButton *button = new OsuUIPauseMenuButton(m_osu, "MISSING_TEXTURE", 0, 0, 0, 0, "");
+	OsuUIPauseMenuButton *button = new OsuUIPauseMenuButton(m_osu, getImageFunc, 0, 0, 0, 0, "");
 	m_container->addBaseUIElement(button);
 	m_buttons.push_back(button);
 	return button;
-}
-
-void OsuPauseMenu::setButton(int i, Image *img)
-{
-	if (i > -1 && i < m_buttons.size())
-	{
-		m_buttons[i]->setImageResourceName(img == NULL ? "MISSING_TEXTURE" : img->getName());
-	}
 }

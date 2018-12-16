@@ -27,6 +27,8 @@
 
 void DUMMY_OSU_VOLUME_EFFECTS_ARGS(UString oldValue, UString newValue) {;}
 
+ConVar osu2_sound_source_id("osu2_sound_source_id", 1, "which instance/player/client should play hitsounds (e.g. master top left is always 1)");
+
 ConVar osu_volume_effects("osu_volume_effects", 1.0f, DUMMY_OSU_VOLUME_EFFECTS_ARGS);
 ConVar osu_skin_hd("osu_skin_hd", true, "load and use @2x versions of skin images, if available");
 ConVar osu_skin_mipmaps("osu_skin_mipmaps", false, "generate mipmaps for every skin image (only useful on lower game resolutions, requires more vram)");
@@ -199,6 +201,7 @@ OsuSkin::OsuSkin(Osu *osu, UString filepath, bool isDefaultSkin)
 
 	// scaling
 	m_bCursor2x = false;
+	m_bCursorTrail2x = false;
 	m_bApproachCircle2x = false;
 	m_bReverseArrow2x = false;
 	m_bHitCircle2x = false;
@@ -283,8 +286,7 @@ OsuSkin::~OsuSkin()
 void OsuSkin::update()
 {
 	// shitty check to not animate while paused with hitobjects in background
-	if (m_osu->isInPlayMode() && m_osu->getSelectedBeatmap() != NULL && !m_osu->getSelectedBeatmap()->isPlaying() && !osu_skin_animation_force.getBool())
-		return;
+	if (m_osu->isInPlayMode() && m_osu->getSelectedBeatmap() != NULL && !m_osu->getSelectedBeatmap()->isPlaying() && !osu_skin_animation_force.getBool()) return;
 
 	const bool useEngineTimeForAnimations = !m_osu->isInPlayMode();
 	const long curMusicPos = m_osu->getSelectedBeatmap() != NULL ? m_osu->getSelectedBeatmap()->getCurMusicPosWithOffsets() : 0;
@@ -541,6 +543,8 @@ void OsuSkin::load()
 	// HACKHACK: this is pure cancer
 	if (m_cursor != NULL && m_cursor->getFilePath().find("@2x") != -1)
 		m_bCursor2x = true;
+	if (m_cursorTrail != NULL && m_cursorTrail->getFilePath().find("@2x") != -1)
+		m_bCursorTrail2x = true;
 	if (m_approachCircle != NULL && m_approachCircle->getFilePath().find("@2x") != -1)
 		m_bApproachCircle2x = true;
 	if (m_reverseArrow != NULL && m_reverseArrow->getFilePath().find("@2x") != -1)
@@ -607,30 +611,28 @@ void OsuSkin::load()
 
 	// custom
 	Image *defaultCursor = engine->getResourceManager()->getImage("OSU_SKIN_CURSOR_DEFAULT");
-	Image *defaultCursor2 = engine->getResourceManager()->getImage("OSU_SKIN_CURSOR_DEFAULT");
+	Image *defaultCursor2 = m_cursor;
 	if (defaultCursor != NULL)
 		m_defaultCursor = defaultCursor;
 	else if (defaultCursor2 != NULL)
 		m_defaultCursor = defaultCursor2;
-	else
-		m_defaultCursor = m_cursor;
 
 	Image *defaultButtonLeft = engine->getResourceManager()->getImage("OSU_SKIN_BUTTON_LEFT_DEFAULT");
-	Image *defaultButtonLeft2 = engine->getResourceManager()->getImage("OSU_SKIN_BUTTON_LEFT");
+	Image *defaultButtonLeft2 = m_buttonLeft;
 	if (defaultButtonLeft != NULL)
 		m_defaultButtonLeft = defaultButtonLeft;
 	else if (defaultButtonLeft2 != NULL)
 		m_defaultButtonLeft = defaultButtonLeft2;
 
 	Image *defaultButtonMiddle = engine->getResourceManager()->getImage("OSU_SKIN_BUTTON_MIDDLE_DEFAULT");
-	Image *defaultButtonMiddle2 = engine->getResourceManager()->getImage("OSU_SKIN_BUTTON_MIDDLE");
+	Image *defaultButtonMiddle2 = m_buttonMiddle;
 	if (defaultButtonMiddle != NULL)
 		m_defaultButtonMiddle = defaultButtonMiddle;
 	else if (defaultButtonMiddle2 != NULL)
 		m_defaultButtonMiddle = defaultButtonMiddle2;
 
 	Image *defaultButtonRight = engine->getResourceManager()->getImage("OSU_SKIN_BUTTON_RIGHT_DEFAULT");
-	Image *defaultButtonRight2 = engine->getResourceManager()->getImage("OSU_SKIN_BUTTON_RIGHT");
+	Image *defaultButtonRight2 = m_buttonRight;
 	if (defaultButtonRight != NULL)
 		m_defaultButtonRight = defaultButtonRight;
 	else if (defaultButtonRight2 != NULL)
@@ -832,7 +834,7 @@ void OsuSkin::setBeatmapComboColors(std::vector<Color> colors)
 
 void OsuSkin::playHitCircleSound(int sampleType, float pan)
 {
-	if (m_iSampleVolume <= 0) return;
+	if (m_iSampleVolume <= 0 || (m_osu->getInstanceID() > 0 && m_osu->getInstanceID() != osu2_sound_source_id.getInt())) return;
 
 	if (!osu_sound_panning.getBool())
 		pan = 0.0f;
@@ -876,7 +878,7 @@ void OsuSkin::playHitCircleSound(int sampleType, float pan)
 
 void OsuSkin::playSliderTickSound(float pan)
 {
-	if (m_iSampleVolume <= 0) return;
+	if (m_iSampleVolume <= 0 || (m_osu->getInstanceID() > 0 && m_osu->getInstanceID() != osu2_sound_source_id.getInt())) return;
 
 	if (!osu_sound_panning.getBool())
 		pan = 0.0f;
@@ -897,6 +899,20 @@ void OsuSkin::playSliderTickSound(float pan)
 	}
 }
 
+void OsuSkin::playSpinnerSpinSound()
+{
+	if ((m_osu->getInstanceID() > 0 && m_osu->getInstanceID() != osu2_sound_source_id.getInt())) return;
+
+	engine->getSound()->play(m_spinnerSpinSound);
+}
+
+void OsuSkin::playSpinnerBonusSound()
+{
+	if (m_iSampleVolume <= 0 || (m_osu->getInstanceID() > 0 && m_osu->getInstanceID() != osu2_sound_source_id.getInt())) return;
+
+	engine->getSound()->play(m_spinnerBonus);
+}
+
 OsuSkinImage *OsuSkin::createOsuSkinImage(UString skinElementName, Vector2 baseSizeForScaling2x, float osuSize, bool ignoreDefaultSkin, UString animationSeparator)
 {
 	OsuSkinImage *skinImage = new OsuSkinImage(this, skinElementName, baseSizeForScaling2x, osuSize, animationSeparator, ignoreDefaultSkin);
@@ -907,6 +923,8 @@ OsuSkinImage *OsuSkin::createOsuSkinImage(UString skinElementName, Vector2 baseS
 void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, UString resourceName, bool ignoreDefaultSkin, UString fileExtension, bool forceLoadMipmaps)
 {
 	if (*addressOfPointer != m_missingTexture) return; // we are already loaded
+
+	// NOTE: only the default skin is loaded with a resource name (it must never be unloaded by other instances), and it is NOT added to the resources vector
 
 	// check if an @2x version of this image exists
 	if (osu_skin_hd.getBool())
@@ -936,7 +954,7 @@ void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, 
 
 		if (env->fileExists(filepath1))
 		{
-			*addressOfPointer = engine->getResourceManager()->loadImageAbs(filepath1, resourceName, osu_skin_mipmaps.getBool() || forceLoadMipmaps);
+			*addressOfPointer = engine->getResourceManager()->loadImageAbs(filepath1, "", osu_skin_mipmaps.getBool() || forceLoadMipmaps);
 			m_resources.push_back(*addressOfPointer);
 
 			return; // nothing more to do here
@@ -970,7 +988,7 @@ void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, 
 
 	if (env->fileExists(filepath2))
 	{
-		*addressOfPointer = engine->getResourceManager()->loadImageAbs(filepath2, resourceName, osu_skin_mipmaps.getBool() || forceLoadMipmaps);
+		*addressOfPointer = engine->getResourceManager()->loadImageAbs(filepath2, "", osu_skin_mipmaps.getBool() || forceLoadMipmaps);
 		m_resources.push_back(*addressOfPointer);
 	}
 }
@@ -978,6 +996,8 @@ void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, 
 void OsuSkin::checkLoadSound(Sound **addressOfPointer, UString skinElementName, UString resourceName, bool isOverlayable, bool isSample, bool loop, float hardcodedVolumeMultiplier)
 {
 	if (*addressOfPointer != NULL) return; // we are already loaded
+
+	// NOTE: only the default skin is loaded with a resource name (it must never be unloaded by other instances), and it is NOT added to the resources vector
 
 	// load default
 
@@ -999,7 +1019,7 @@ void OsuSkin::checkLoadSound(Sound **addressOfPointer, UString skinElementName, 
 		*addressOfPointer = engine->getResourceManager()->loadSoundAbs(defaultpath2, defaultResourceName, false, false, loop);
 
 	// and then the actual specified skin
-
+	bool isDefaultSkin = true;
 	if (!isSample || osu_skin_use_skin_hitsounds.getBool())
 	{
 		// check if mp3 or wav exist
@@ -1013,9 +1033,15 @@ void OsuSkin::checkLoadSound(Sound **addressOfPointer, UString skinElementName, 
 
 		// load it
 		if (env->fileExists(filepath1))
-			*addressOfPointer = engine->getResourceManager()->loadSoundAbs(filepath1, resourceName, false, false, loop);
+		{
+			*addressOfPointer = engine->getResourceManager()->loadSoundAbs(filepath1, "", false, false, loop);
+			isDefaultSkin = false;
+		}
 		else if (env->fileExists(filepath2))
-			*addressOfPointer = engine->getResourceManager()->loadSoundAbs(filepath2, resourceName, false, false, loop);
+		{
+			*addressOfPointer = engine->getResourceManager()->loadSoundAbs(filepath2, "", false, false, loop);
+			isDefaultSkin = false;
+		}
 	}
 
 	if ((*addressOfPointer) != NULL)
@@ -1023,7 +1049,9 @@ void OsuSkin::checkLoadSound(Sound **addressOfPointer, UString skinElementName, 
 		if (isOverlayable)
 			(*addressOfPointer)->setOverlayable(true);
 
-		m_resources.push_back(*addressOfPointer);
+		if (!isDefaultSkin)
+			m_resources.push_back(*addressOfPointer);
+
 		m_sounds.push_back(*addressOfPointer);
 
 		if (isSample)
@@ -1035,13 +1063,12 @@ void OsuSkin::checkLoadSound(Sound **addressOfPointer, UString skinElementName, 
 		}
 	}
 	else
-		debugLog("OsuSkin Warning: NULL sound %s\n", skinElementName.toUtf8());
+		debugLog("OsuSkin Warning: NULL sound %s!\n", skinElementName.toUtf8());
 }
 
 bool OsuSkin::compareFilenameWithSkinElementName(UString filename, UString skinElementName)
 {
-	if (filename.length() == 0 || skinElementName.length() == 0)
-		return false;
+	if (filename.length() == 0 || skinElementName.length() == 0) return false;
 
 	return filename.substr(0, filename.findLast(".")) == skinElementName;
 }
