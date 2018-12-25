@@ -59,6 +59,7 @@ ConVar osu_songbrowser_topbar_right_percent("osu_songbrowser_topbar_right_percen
 ConVar osu_songbrowser_bottombar_percent("osu_songbrowser_bottombar_percent", 0.116f);
 
 ConVar osu_draw_songbrowser_background_image("osu_draw_songbrowser_background_image", true);
+ConVar osu_songbrowser_background_fade_in_duration("osu_songbrowser_background_fade_in_duration", 0.1f);
 
 
 
@@ -473,6 +474,7 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	m_bHasSelectedAndIsPlaying = false;
 	m_selectedBeatmap = NULL;
 	m_fPulseAnimation = 0.0f;
+	m_fBackgroundFadeInTime = 0.0f;
 
 	// search
 	m_search = new OsuUISearchOverlay(m_osu, 0, 0, 0, 0, "");
@@ -552,7 +554,26 @@ void OsuSongBrowser2::draw(Graphics *g)
 
 	// draw background image
 	if (osu_draw_songbrowser_background_image.getBool())
-		drawSelectedBeatmapBackgroundImage(g, m_osu);
+	{
+		float alpha = 1.0f;
+		if (osu_songbrowser_background_fade_in_duration.getFloat() > 0.0f)
+		{
+			const bool ready = m_osu->getSelectedBeatmap() != NULL
+					&& m_osu->getSelectedBeatmap()->getSelectedDifficulty() != NULL
+					&& m_osu->getSelectedBeatmap()->getSelectedDifficulty()->backgroundImage != NULL
+					&& m_osu->getSelectedBeatmap()->getSelectedDifficulty()->backgroundImage->isReady();
+
+			if (!ready)
+				m_fBackgroundFadeInTime = engine->getTime();
+			else if (m_fBackgroundFadeInTime > 0.0f && engine->getTime() > m_fBackgroundFadeInTime)
+			{
+				alpha = clamp<float>((engine->getTime() - m_fBackgroundFadeInTime)/osu_songbrowser_background_fade_in_duration.getFloat(), 0.0f, 1.0f);
+				alpha = 1.0f - (1.0f - alpha)*(1.0f - alpha);
+			}
+		}
+
+		drawSelectedBeatmapBackgroundImage(g, m_osu, alpha);
+	}
 
 	// draw score browser
 	m_scoreBrowser->draw(g);
@@ -695,20 +716,23 @@ void OsuSongBrowser2::draw(Graphics *g)
 	*/
 }
 
-void OsuSongBrowser2::drawSelectedBeatmapBackgroundImage(Graphics *g, Osu *osu)
+void OsuSongBrowser2::drawSelectedBeatmapBackgroundImage(Graphics *g, Osu *osu, float alpha)
 {
 	if (osu->getSelectedBeatmap() != NULL && osu->getSelectedBeatmap()->getSelectedDifficulty() != NULL)
 	{
 		Image *backgroundImage = osu->getSelectedBeatmap()->getSelectedDifficulty()->backgroundImage;
-		if (backgroundImage != NULL)
+		if (backgroundImage != NULL && backgroundImage->isReady())
 		{
-			float scale = Osu::getImageScaleToFillResolution(backgroundImage, osu->getScreenSize());
+			const float scale = Osu::getImageScaleToFillResolution(backgroundImage, osu->getScreenSize());
 
 			g->setColor(0xff999999);
+			g->setAlpha(alpha);
 			g->pushTransform();
-			g->scale(scale, scale);
-			g->translate(osu->getScreenWidth()/2, osu->getScreenHeight()/2);
-			g->drawImage(backgroundImage);
+			{
+				g->scale(scale, scale);
+				g->translate(osu->getScreenWidth()/2, osu->getScreenHeight()/2);
+				g->drawImage(backgroundImage);
+			}
 			g->popTransform();
 		}
 	}
@@ -1373,6 +1397,7 @@ void OsuSongBrowser2::updateSongButtonLayout()
 			// give selected items & diffs a bit more spacing, to make them stand out
 			if (((songButton->isSelected() && !isCollectionButton) || isSelected || isDiffButton) && !wasCollectionButton)
 				yCounter += songButton->getSize().y*0.1f;
+
 			isSelected = songButton->isSelected() || isDiffButton;
 
 			// give collections a bit more spacing at start & end
@@ -1955,7 +1980,8 @@ void OsuSongBrowser2::onDatabaseLoadingFinished()
 		//m_visibleSongButtons.push_back(collectionButton); // for debugging only
 	}
 
-	// TODO:
+	// TODO: this would require all stars to already be calculated, i.e. a complete database.
+	// would also need support for diff buttons without a parent, but thumbnail loading is a complete clusterfuck atm, as are the song button classes
 	/*
 	for (int i=0; i<12; i++)
 	{
@@ -1966,14 +1992,9 @@ void OsuSongBrowser2::onDatabaseLoadingFinished()
 			difficultyCollectionName = "Above 10 stars";
 
 		std::vector<OsuUISongBrowserButton*> children;
+
 		OsuUISongBrowserDifficultyCollectionButton *b = new OsuUISongBrowserDifficultyCollectionButton(m_osu, this, m_songBrowser, 250, 250, 200, 50, "", difficultyCollectionName, children);
 		m_difficultyCollectionButtons.push_back(b);
-	}
-	*/
-	/*
-	for (int i=0; i<tempDifficultyCollectionSongButtons.size(); i++)
-	{
-
 	}
 	*/
 
@@ -2068,6 +2089,15 @@ void OsuSongBrowser2::onGroupCollections(CBaseUIButton *b)
 	m_group = GROUP::GROUP_COLLECTIONS;
 
 	m_visibleSongButtons = std::vector<OsuUISongBrowserButton*>(m_collectionButtons.begin(), m_collectionButtons.end());
+	rebuildSongButtons();
+	onAfterSortingOrGroupChange(b);
+}
+
+void OsuSongBrowser2::onGroupDifficulty(CBaseUIButton *b)
+{
+	m_group = GROUP::GROUP_DIFFICULTY;
+
+	m_visibleSongButtons = std::vector<OsuUISongBrowserButton*>(m_difficultyCollectionButtons.begin(), m_difficultyCollectionButtons.end());
 	rebuildSongButtons();
 	onAfterSortingOrGroupChange(b);
 }

@@ -100,6 +100,8 @@ ConVar osu_mod_endless("osu_mod_endless", false);
 ConVar osu_notification("osu_notification");
 
 ConVar osu_letterboxing("osu_letterboxing", true, DUMMY_OSU_LETTERBOXING);
+ConVar osu_letterboxing_offset_x("osu_letterboxing_offset_x", 0.0f);
+ConVar osu_letterboxing_offset_y("osu_letterboxing_offset_y", 0.0f);
 ConVar osu_resolution("osu_resolution", "1280x720", DUMMY_OSU_VOLUME_MUSIC_ARGS);
 ConVar osu_resolution_enabled("osu_resolution_enabled", false);
 ConVar osu_force_legacy_slider_renderer("osu_force_legacy_slider_renderer", false, "on some older machines, this may be faster than vertexbuffers");
@@ -221,6 +223,8 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 
 	osu_resolution.setCallback( fastdelegate::MakeDelegate(this, &Osu::onInternalResolutionChanged) );
 	osu_letterboxing.setCallback( fastdelegate::MakeDelegate(this, &Osu::onLetterboxingChange) );
+	osu_letterboxing_offset_x.setCallback( fastdelegate::MakeDelegate(this, &Osu::onLetterboxingOffsetChange) );
+	osu_letterboxing_offset_y.setCallback( fastdelegate::MakeDelegate(this, &Osu::onLetterboxingOffsetChange) );
 
 	osu_confine_cursor_windowed.setCallback( fastdelegate::MakeDelegate(this, &Osu::onConfineCursorWindowedChange) );
 	osu_confine_cursor_fullscreen.setCallback( fastdelegate::MakeDelegate(this, &Osu::onConfineCursorFullscreenChange) );
@@ -621,7 +625,7 @@ void Osu::draw(Graphics *g)
 		g->setBlending(false);
 		{
 			if (osu_letterboxing.getBool())
-				m_backBuffer->draw(g, offset.x, offset.y, g_vInternalResolution.x, g_vInternalResolution.y);
+				m_backBuffer->draw(g, offset.x*(1.0f + osu_letterboxing_offset_x.getFloat()), offset.y*(1.0f + osu_letterboxing_offset_y.getFloat()), g_vInternalResolution.x, g_vInternalResolution.y);
 			else
 				m_backBuffer->draw(g, 0, 0, engine->getGraphics()->getResolution().x, engine->getGraphics()->getResolution().y);
 		}
@@ -1600,26 +1604,8 @@ void Osu::onResolutionChanged(Vector2 newResolution)
 	// rendertargets
 	rebuildRenderTargets();
 
-	// mouse scaling & offset
-	// TODO: rethink scale logic
-	if (osu_resolution_enabled.getBool())
-	{
-		if (osu_letterboxing.getBool())
-		{
-			engine->getMouse()->setOffset(-Vector2(engine->getScreenWidth()/2 - g_vInternalResolution.x/2, engine->getScreenHeight()/2 - g_vInternalResolution.y/2));
-			engine->getMouse()->setScale(Vector2(g_vInternalResolution.x / engine->getScreenWidth(), g_vInternalResolution.y / engine->getScreenHeight()));
-		}
-		else
-		{
-			engine->getMouse()->setOffset(Vector2(0,0));
-			engine->getMouse()->setScale(Vector2(1,1));
-		}
-	}
-	else
-	{
-		engine->getMouse()->setOffset(Vector2(0,0));
-		engine->getMouse()->setScale(Vector2(1,1));
-	}
+	// mouse scale/offset
+	updateMouseSettings();
 
 	// cursor clipping
 	updateConfineCursor();
@@ -1642,6 +1628,24 @@ void Osu::rebuildRenderTargets()
 		m_frameBuffer->rebuild(0, 0, 64, 64);
 		m_frameBuffer2->rebuild(0, 0, 64, 64);
 	}
+}
+
+void Osu::updateMouseSettings()
+{
+	// mouse scaling & offset
+	Vector2 offset = Vector2(0, 0);
+	Vector2 scale = Vector2(1, 1);
+	if (osu_resolution_enabled.getBool())
+	{
+		if (osu_letterboxing.getBool())
+		{
+			offset = -Vector2((engine->getScreenWidth()/2 - g_vInternalResolution.x/2)*(1.0f + osu_letterboxing_offset_x.getFloat()), (engine->getScreenHeight()/2 - g_vInternalResolution.y/2)*(1.0f + osu_letterboxing_offset_y.getFloat()));
+			scale = Vector2(g_vInternalResolution.x / engine->getScreenWidth(), g_vInternalResolution.y / engine->getScreenHeight());
+		}
+	}
+
+	engine->getMouse()->setOffset(offset);
+	engine->getMouse()->setScale(scale);
 }
 
 void Osu::onInternalResolutionChanged(UString oldValue, UString args)
@@ -1867,6 +1871,11 @@ void Osu::onKey2Change(bool pressed, bool mouse)
 void Osu::onModMafhamChange(UString oldValue, UString newValue)
 {
 	rebuildRenderTargets();
+}
+
+void Osu::onLetterboxingOffsetChange(UString oldValue, UString newValue)
+{
+	updateMouseSettings();
 }
 
 void Osu::onNotification(UString args)
