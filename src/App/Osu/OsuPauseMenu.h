@@ -35,9 +35,6 @@ public:
 
 private:
 	void updateLayout();
-	void updateButtons();
-	OsuUIPauseMenuButton *addButton();
-	void setButton(int i, Image *img);
 
 	void onContinueClicked();
 	void onRetryClicked();
@@ -46,6 +43,8 @@ private:
 	void onSelectionChange();
 
 	void scheduleVisibilityChange(bool visible);
+
+	OsuUIPauseMenuButton *addButton(std::function<Image*()> getImageFunc);
 
 	CBaseUIContainer *m_container;
 	bool m_bScheduledVisibilityChange;

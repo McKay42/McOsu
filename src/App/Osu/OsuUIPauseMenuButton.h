@@ -8,25 +8,34 @@
 #ifndef OSUUIPAUSEMENUBUTTON_H
 #define OSUUIPAUSEMENUBUTTON_H
 
-#include "CBaseUIImageButton.h"
+#include "CBaseUIButton.h"
 
 class Osu;
 
-class OsuUIPauseMenuButton : public CBaseUIImageButton
+class Image;
+
+class OsuUIPauseMenuButton : public CBaseUIButton
 {
 public:
-	OsuUIPauseMenuButton(Osu *osu, UString imageResourceName, float xPos, float yPos, float xSize, float ySize, UString name);
+	OsuUIPauseMenuButton(Osu *osu, std::function<Image*()> getImageFunc, float xPos, float yPos, float xSize, float ySize, UString name);
 
-	void onMouseInside();
-	void onMouseOutside();
+	virtual void draw(Graphics *g);
+
+	virtual void onMouseInside();
+	virtual void onMouseOutside();
 
 	void setBaseScale(float xScale, float yScale);
+
+	Image *getImage() {return getImageFunc != NULL ? getImageFunc() : NULL;}
 
 private:
 	Osu *m_osu;
 
+	Vector2 m_vScale;
 	Vector2 m_vBaseScale;
 	float m_fScaleMultiplier;
+
+	std::function<Image*()> getImageFunc;
 };
 
 #endif

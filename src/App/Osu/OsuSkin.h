@@ -40,6 +40,8 @@ public:
 
 	void playHitCircleSound(int sampleType, float pan = 0.0f);
 	void playSliderTickSound(float pan = 0.0f);
+	void playSpinnerSpinSound();
+	void playSpinnerBonusSound();
 
 	// drawable helpers
 	inline UString getFilePath() {return m_sFilePath;}
@@ -210,6 +212,7 @@ public:
 	inline Sound *getShutter() {return m_shutter;}
 
 	inline bool isCursor2x() {return m_bCursor2x;}
+	inline bool isCursorTrail2x() {return m_bCursorTrail2x;}
 	inline bool isApproachCircle2x() {return m_bApproachCircle2x;}
 	inline bool isReverseArrow2x() {return m_bReverseArrow2x;}
 	inline bool isHitCircle2x() {return m_bHitCircle2x;}
@@ -502,6 +505,7 @@ private:
 
 	// scaling
 	bool m_bCursor2x;
+	bool m_bCursorTrail2x;
 	bool m_bApproachCircle2x;
 	bool m_bReverseArrow2x;
 	bool m_bHitCircle2x;

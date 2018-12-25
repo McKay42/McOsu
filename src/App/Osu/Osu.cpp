@@ -26,6 +26,7 @@
 #include "CWindowManager.h"
 //#include "DebugMonitor.h"
 
+#include "Osu2.h"
 #include "OsuVR.h"
 #include "OsuMultiplayer.h"
 #include "OsuMainMenu.h"
@@ -96,7 +97,11 @@ ConVar osu_mod_fadingcursor("osu_mod_fadingcursor", false);
 ConVar osu_mod_fadingcursor_combo("osu_mod_fadingcursor_combo", 50.0f);
 ConVar osu_mod_endless("osu_mod_endless", false);
 
+ConVar osu_notification("osu_notification");
+
 ConVar osu_letterboxing("osu_letterboxing", true, DUMMY_OSU_LETTERBOXING);
+ConVar osu_letterboxing_offset_x("osu_letterboxing_offset_x", 0.0f);
+ConVar osu_letterboxing_offset_y("osu_letterboxing_offset_y", 0.0f);
 ConVar osu_resolution("osu_resolution", "1280x720", DUMMY_OSU_VOLUME_MUSIC_ARGS);
 ConVar osu_resolution_enabled("osu_resolution_enabled", false);
 ConVar osu_force_legacy_slider_renderer("osu_force_legacy_slider_renderer", false, "on some older machines, this may be faster than vertexbuffers");
@@ -109,9 +114,12 @@ ConVar *Osu::debug = &osu_debug;
 Vector2 Osu::g_vInternalResolution;
 Vector2 Osu::osuBaseResolution = Vector2(640.0f, 480.0f);
 
-Osu::Osu()
+Osu::Osu(Osu2 *osu2, int instanceID)
 {
 	srand(time(NULL));
+
+	m_osu2 = osu2;
+	m_iInstanceID = instanceID;
 
 	// convar refs
 	m_osu_folder_ref = convar->getConVarByName("osu_folder");
@@ -163,7 +171,8 @@ Osu::Osu()
 
 	engine->getConsoleBox()->setRequireShiftToActivate(true);
 	engine->getSound()->setVolume(osu_volume_master.getFloat());
-	engine->getMouse()->addListener(this);
+	if (m_iInstanceID < 2)
+		engine->getMouse()->addListener(this);
 
 	convar->getConVarByName("name")->setValue("Guest");
 	convar->getConVarByName("console_overlay")->setValue(0.0f);
@@ -214,12 +223,16 @@ Osu::Osu()
 
 	osu_resolution.setCallback( fastdelegate::MakeDelegate(this, &Osu::onInternalResolutionChanged) );
 	osu_letterboxing.setCallback( fastdelegate::MakeDelegate(this, &Osu::onLetterboxingChange) );
+	osu_letterboxing_offset_x.setCallback( fastdelegate::MakeDelegate(this, &Osu::onLetterboxingOffsetChange) );
+	osu_letterboxing_offset_y.setCallback( fastdelegate::MakeDelegate(this, &Osu::onLetterboxingOffsetChange) );
 
 	osu_confine_cursor_windowed.setCallback( fastdelegate::MakeDelegate(this, &Osu::onConfineCursorWindowedChange) );
 	osu_confine_cursor_fullscreen.setCallback( fastdelegate::MakeDelegate(this, &Osu::onConfineCursorFullscreenChange) );
 
 	convar->getConVarByName("osu_playfield_mirror_horizontal")->setCallback( fastdelegate::MakeDelegate(this, &Osu::updateModsForConVarTemplate) ); // force a mod update on OsuBeatmap if changed
 	convar->getConVarByName("osu_playfield_mirror_vertical")->setCallback( fastdelegate::MakeDelegate(this, &Osu::updateModsForConVarTemplate) ); // force a mod update on OsuBeatmap if changed
+
+	osu_notification.setCallback( fastdelegate::MakeDelegate(this, &Osu::onNotification) );
 
   	// vars
 	m_skin = NULL;
@@ -299,7 +312,8 @@ Osu::Osu()
 	m_updateHandler = new OsuUpdateHandler();
 
 	// exec the main config file (this must be right here!)
-	Console::execConfigFile(isInVRMode() ? "osuvr" : "osu");
+	if (m_iInstanceID < 2)
+		Console::execConfigFile(isInVRMode() ? "osuvr" : "osu");
 
 	// update mod settings
 	updateMods();
@@ -426,7 +440,7 @@ Osu::Osu()
 
 
 
-	// HACKHACK: memory/performance optimization; if osu_mod_mafham is not enabled, reduce the two rendertarget sizes to 64x64
+	// memory/performance optimization; if osu_mod_mafham is not enabled, reduce the two rendertarget sizes to 64x64
 	m_osu_mod_mafham_ref->setCallback( fastdelegate::MakeDelegate(this, &Osu::onModMafhamChange) );
 }
 
@@ -460,8 +474,10 @@ void Osu::draw(Graphics *g)
 		return;
 	}
 
-	// if we are not using the native window resolution or in vr mode, draw into the buffer
-	if (osu_resolution_enabled.getBool() || isInVRMode())
+	// if we are not using the native window resolution, or in vr mode, or multiple instances are active, draw into the buffer
+	const bool isBufferedDraw = osu_resolution_enabled.getBool() || isInVRMode() || m_iInstanceID > 0;
+
+	if (isBufferedDraw)
 		m_backBuffer->enable();
 
 	// draw everything in the correct order
@@ -482,6 +498,7 @@ void Osu::draw(Graphics *g)
 		}
 
 		// special cursor handling (fading cursor + invisible cursor mods)
+		const bool isAuto = (m_bModAuto || m_bModAutopilot);
 		const bool allowDrawCursor = !osu_hide_cursor_during_gameplay.getBool() || getSelectedBeatmap()->isPaused();
 		float fadingCursorAlpha = 1.0f - clamp<float>((float)m_score->getCombo()/osu_mod_fadingcursor_combo.getFloat(), 0.0f, 1.0f);
 		if (m_pauseMenu->isVisible() || getSelectedBeatmap()->isContinueScheduled())
@@ -489,7 +506,8 @@ void Osu::draw(Graphics *g)
 
 		OsuBeatmapStandard *beatmapStd = dynamic_cast<OsuBeatmapStandard*>(getSelectedBeatmap());
 
-		if ((m_bModAuto || m_bModAutopilot) && allowDrawCursor && beatmapStd != NULL)
+		// draw auto cursor
+		if (isAuto && allowDrawCursor && beatmapStd != NULL)
 			m_hud->drawCursor(g, m_osu_mod_fps_ref->getBool() ? OsuGameRules::getPlayfieldCenter(this) : beatmapStd->getCursorPos(), osu_mod_fadingcursor.getBool() ? fadingCursorAlpha : 1.0f);
 
 		m_pauseMenu->draw(g);
@@ -503,8 +521,11 @@ void Osu::draw(Graphics *g)
 
 		m_windowManager->draw(g);
 
-		if (!(m_bModAuto || m_bModAutopilot) && allowDrawCursor && (!isInVRMode() || (m_vr->isVirtualCursorOnScreen() || engine->hasFocus())))
+		// draw player cursor
+		if (!isAuto && allowDrawCursor && (!isInVRMode() || (m_vr->isVirtualCursorOnScreen() || engine->hasFocus())))
+		{
 			m_hud->drawCursor(g, beatmapStd != NULL ? beatmapStd->getCursorPos() : engine->getMouse()->getPos(), osu_mod_fadingcursor.getBool() ? fadingCursorAlpha : 1.0f);
+		}
 
 		// draw projected VR cursors for spectators
 		if (isInVRMode() && isInPlayMode() && !getSelectedBeatmap()->isPaused() && beatmapStd != NULL)
@@ -540,20 +561,71 @@ void Osu::draw(Graphics *g)
 			m_hud->drawCursor(g, engine->getMouse()->getPos());
 	}
 
+	// TODO: TEMP:
+	/*
+	if (m_multiplayer->isInMultiplayer() && m_multiplayer->isServer())
+	{
+		for (int i=0; i<m_multiplayer->getServerPlayers()->size(); i++)
+		{
+			OsuMultiplayer::PLAYER *ply = &(*m_multiplayer->getServerPlayers())[i];
+			m_hud->drawCursor(g, ply->input.cursorPos, 0.5f);
+		}
+	}
+	*/
+
 	m_tooltipOverlay->draw(g);
 	m_notificationOverlay->draw(g);
 
 	// if we are not using the native window resolution;
 	// we must also do this if we are in VR mode, since we only draw once and the buffer is used to draw the virtual screen later. otherwise we wouldn't see anything on the desktop window
-	if (osu_resolution_enabled.getBool() || isInVRMode())
+	if (isBufferedDraw)
 	{
 		// draw a scaled version from the buffer to the screen
 		m_backBuffer->disable();
 
+		// TODO: move this shit to Osu2
+		Vector2 offset = Vector2(engine->getGraphics()->getResolution().x/2 - g_vInternalResolution.x/2, engine->getGraphics()->getResolution().y/2 - g_vInternalResolution.y/2);
+		if (m_iInstanceID > 0)
+		{
+			const int numHorizontalInstances = 2 + (m_osu2->getNumInstances() > 4 ? 1 : 0);
+			const int numVerticalInstances = 1 + (m_osu2->getNumInstances() > 2 ? 1 : 0) + (m_osu2->getNumInstances() > 8 ? 1 : 0);
+
+			float emptySpaceX = engine->getGraphics()->getResolution().x - numHorizontalInstances*g_vInternalResolution.x;
+			float emptySpaceY = engine->getGraphics()->getResolution().y - numVerticalInstances*g_vInternalResolution.y;
+
+			switch (m_iInstanceID)
+			{
+			case 1:
+				offset.x = emptySpaceX/2.0f/numHorizontalInstances;
+				offset.y = emptySpaceY/2.0f/numVerticalInstances;
+				break;
+			case 2:
+				offset.x = emptySpaceX/2.0f/numHorizontalInstances;
+				offset.y = emptySpaceY/2.0f/numVerticalInstances + engine->getGraphics()->getResolution().y/2;
+				break;
+			case 3:
+				offset.x = emptySpaceX/2.0f/numHorizontalInstances + engine->getGraphics()->getResolution().x/2;
+				offset.y = emptySpaceY/2.0f/numVerticalInstances;
+				break;
+			case 4:
+				offset.x = emptySpaceX/2.0f/numHorizontalInstances + engine->getGraphics()->getResolution().x/2;
+				offset.y = emptySpaceY/2.0f/numVerticalInstances + engine->getGraphics()->getResolution().y/2;
+				break;
+			case 5:
+				offset.x = emptySpaceX/2.0f/numHorizontalInstances + engine->getGraphics()->getResolution().x/2;
+				offset.y = emptySpaceY/2.0f/numVerticalInstances + engine->getGraphics()->getResolution().y/2;
+				break;
+			case 6:
+				offset.x = emptySpaceX/2.0f/numHorizontalInstances + engine->getGraphics()->getResolution().x/2;
+				offset.y = emptySpaceY/2.0f/numVerticalInstances + engine->getGraphics()->getResolution().y/2;
+				break;
+			}
+		}
+
 		g->setBlending(false);
 		{
 			if (osu_letterboxing.getBool())
-				m_backBuffer->draw(g, engine->getGraphics()->getResolution().x/2 - g_vInternalResolution.x/2, engine->getGraphics()->getResolution().y/2 - g_vInternalResolution.y/2, g_vInternalResolution.x, g_vInternalResolution.y);
+				m_backBuffer->draw(g, offset.x*(1.0f + osu_letterboxing_offset_x.getFloat()), offset.y*(1.0f + osu_letterboxing_offset_y.getFloat()), g_vInternalResolution.x, g_vInternalResolution.y);
 			else
 				m_backBuffer->draw(g, 0, 0, engine->getGraphics()->getResolution().x, engine->getGraphics()->getResolution().y);
 		}
@@ -713,7 +785,7 @@ void Osu::update()
 		m_bToggleRankingScreenScheduled = false;
 
 		m_rankingScreen->setVisible(!m_rankingScreen->isVisible());
-		if (m_songBrowser2 != NULL)
+		if (m_songBrowser2 != NULL && m_iInstanceID < 2)
 			m_songBrowser2->setVisible(!m_rankingScreen->isVisible());
 	}
 	if (m_bToggleVRTutorialScheduled)
@@ -740,7 +812,7 @@ void Osu::update()
 
 	// handle cursor visibility if outside of internal resolution
 	// TODO: not a critical bug, but the real cursor gets visible way too early if sensitivity is > 1.0f, due to this using scaled/offset getMouse()->getPos()
-	if (osu_resolution_enabled.getBool())
+	if (osu_resolution_enabled.getBool() && m_iInstanceID < 1)
 	{
 		McRect internalWindow = McRect(0, 0, g_vInternalResolution.x, g_vInternalResolution.y);
 		bool cursorVisible = env->isCursorVisible();
@@ -788,6 +860,9 @@ void Osu::update()
 		m_bScheduleEndlessModNextBeatmap = false;
 		m_songBrowser2->playNextRandomBeatmap();
 	}
+
+	// multiplayer update
+	m_multiplayer->update();
 }
 
 void Osu::updateMods()
@@ -1348,7 +1423,12 @@ void Osu::onPlayEnd(bool quit)
 		m_songBrowser2->onPlayEnd(quit);
 
 	if (quit)
-		toggleSongBrowser();
+	{
+		if (m_iInstanceID < 2)
+			toggleSongBrowser();
+		else
+			m_mainMenu->setVisible(true);
+	}
 	else
 		toggleRankingScreen();
 
@@ -1486,29 +1566,32 @@ void Osu::onResolutionChanged(Vector2 newResolution)
 {
 	if (engine->isMinimized()) return; // ignore if minimized
 
-	if (!osu_resolution_enabled.getBool())
-		g_vInternalResolution = newResolution;
-	else if (!engine->isMinimized()) // if we just got minimized, ignore the resolution change (for the internal stuff)
+	if (m_iInstanceID < 1)
 	{
-		// clamp upwards to internal resolution (osu_resolution)
-		if (g_vInternalResolution.x < m_vInternalResolution.x)
-			g_vInternalResolution.x = m_vInternalResolution.x;
-		if (g_vInternalResolution.y < m_vInternalResolution.y)
-			g_vInternalResolution.y = m_vInternalResolution.y;
-
-		// clamp downwards to engine resolution
-		if (newResolution.x < g_vInternalResolution.x)
-			g_vInternalResolution.x = newResolution.x;
-		if (newResolution.y < g_vInternalResolution.y)
-			g_vInternalResolution.y = newResolution.y;
-
-		// disable internal resolution on specific conditions
-		bool windowsBorderlessHackCondition = (env->getOS() == Environment::OS::OS_WINDOWS && env->isFullscreen() && env->isFullscreenWindowedBorderless() && (int)g_vInternalResolution.y == (int)env->getNativeScreenSize().y); // HACKHACK
-		if (((int)g_vInternalResolution.x == engine->getScreenWidth() && (int)g_vInternalResolution.y == engine->getScreenHeight()) || !env->isFullscreen() || windowsBorderlessHackCondition)
+		if (!osu_resolution_enabled.getBool())
+			g_vInternalResolution = newResolution;
+		else if (!engine->isMinimized()) // if we just got minimized, ignore the resolution change (for the internal stuff)
 		{
-			debugLog("Internal resolution == Engine resolution || !Fullscreen, disabling resampler (%i, %i)\n", (int)(g_vInternalResolution == engine->getScreenSize()), (int)(!env->isFullscreen()));
-			osu_resolution_enabled.setValue(0.0f);
-			g_vInternalResolution = engine->getScreenSize();
+			// clamp upwards to internal resolution (osu_resolution)
+			if (g_vInternalResolution.x < m_vInternalResolution.x)
+				g_vInternalResolution.x = m_vInternalResolution.x;
+			if (g_vInternalResolution.y < m_vInternalResolution.y)
+				g_vInternalResolution.y = m_vInternalResolution.y;
+
+			// clamp downwards to engine resolution
+			if (newResolution.x < g_vInternalResolution.x)
+				g_vInternalResolution.x = newResolution.x;
+			if (newResolution.y < g_vInternalResolution.y)
+				g_vInternalResolution.y = newResolution.y;
+
+			// disable internal resolution on specific conditions
+			bool windowsBorderlessHackCondition = (env->getOS() == Environment::OS::OS_WINDOWS && env->isFullscreen() && env->isFullscreenWindowedBorderless() && (int)g_vInternalResolution.y == (int)env->getNativeScreenSize().y); // HACKHACK
+			if (((int)g_vInternalResolution.x == engine->getScreenWidth() && (int)g_vInternalResolution.y == engine->getScreenHeight()) || !env->isFullscreen() || windowsBorderlessHackCondition)
+			{
+				debugLog("Internal resolution == Engine resolution || !Fullscreen, disabling resampler (%i, %i)\n", (int)(g_vInternalResolution == engine->getScreenSize()), (int)(!env->isFullscreen()));
+				osu_resolution_enabled.setValue(0.0f);
+				g_vInternalResolution = engine->getScreenSize();
+			}
 		}
 	}
 
@@ -1521,26 +1604,8 @@ void Osu::onResolutionChanged(Vector2 newResolution)
 	// rendertargets
 	rebuildRenderTargets();
 
-	// mouse scaling & offset
-	// TODO: rethink scale logic
-	if (osu_resolution_enabled.getBool())
-	{
-		if (osu_letterboxing.getBool())
-		{
-			engine->getMouse()->setOffset(-Vector2(engine->getScreenWidth()/2 - g_vInternalResolution.x/2, engine->getScreenHeight()/2 - g_vInternalResolution.y/2));
-			engine->getMouse()->setScale(Vector2(g_vInternalResolution.x / engine->getScreenWidth(), g_vInternalResolution.y / engine->getScreenHeight()));
-		}
-		else
-		{
-			engine->getMouse()->setOffset(Vector2(0,0));
-			engine->getMouse()->setScale(Vector2(1,1));
-		}
-	}
-	else
-	{
-		engine->getMouse()->setOffset(Vector2(0,0));
-		engine->getMouse()->setScale(Vector2(1,1));
-	}
+	// mouse scale/offset
+	updateMouseSettings();
 
 	// cursor clipping
 	updateConfineCursor();
@@ -1548,6 +1613,8 @@ void Osu::onResolutionChanged(Vector2 newResolution)
 
 void Osu::rebuildRenderTargets()
 {
+	debugLog("Osu(%i)::rebuildRenderTargets: %fx%f\n", m_iInstanceID, g_vInternalResolution.x, g_vInternalResolution.y);
+
 	m_backBuffer->rebuild(0, 0, g_vInternalResolution.x, g_vInternalResolution.y);
 	m_sliderFrameBuffer->rebuild(0, 0, g_vInternalResolution.x, g_vInternalResolution.y);
 
@@ -1561,6 +1628,24 @@ void Osu::rebuildRenderTargets()
 		m_frameBuffer->rebuild(0, 0, 64, 64);
 		m_frameBuffer2->rebuild(0, 0, 64, 64);
 	}
+}
+
+void Osu::updateMouseSettings()
+{
+	// mouse scaling & offset
+	Vector2 offset = Vector2(0, 0);
+	Vector2 scale = Vector2(1, 1);
+	if (osu_resolution_enabled.getBool())
+	{
+		if (osu_letterboxing.getBool())
+		{
+			offset = -Vector2((engine->getScreenWidth()/2 - g_vInternalResolution.x/2)*(1.0f + osu_letterboxing_offset_x.getFloat()), (engine->getScreenHeight()/2 - g_vInternalResolution.y/2)*(1.0f + osu_letterboxing_offset_y.getFloat()));
+			scale = Vector2(g_vInternalResolution.x / engine->getScreenWidth(), g_vInternalResolution.y / engine->getScreenHeight());
+		}
+	}
+
+	engine->getMouse()->setOffset(offset);
+	engine->getMouse()->setScale(scale);
 }
 
 void Osu::onInternalResolutionChanged(UString oldValue, UString args)
@@ -1707,7 +1792,7 @@ void Osu::onLetterboxingChange(UString oldValue, UString newValue)
 
 void Osu::updateConfineCursor()
 {
-	if (isInVRMode()) return;
+	if (isInVRMode() || m_iInstanceID > 0) return;
 
 	if ((osu_confine_cursor_fullscreen.getBool() && env->isFullscreen()) || (osu_confine_cursor_windowed.getBool() && !env->isFullscreen()) || (isInPlayMode() && !getSelectedBeatmap()->isPaused() && !getModAuto() && !getModAutopilot()))
 		env->setCursorClip(true, McRect());
@@ -1786,6 +1871,16 @@ void Osu::onKey2Change(bool pressed, bool mouse)
 void Osu::onModMafhamChange(UString oldValue, UString newValue)
 {
 	rebuildRenderTargets();
+}
+
+void Osu::onLetterboxingOffsetChange(UString oldValue, UString newValue)
+{
+	updateMouseSettings();
+}
+
+void Osu::onNotification(UString args)
+{
+	m_notificationOverlay->addNotification(args);
 }
 
 

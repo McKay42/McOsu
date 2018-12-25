@@ -88,6 +88,7 @@ private:
 	OsuUISongBrowserSongButton *m_parent;
 
 	float m_fImageLoadScheduledTime;
+	float m_fThumbnailFadeInTime;
 };
 
 #endif

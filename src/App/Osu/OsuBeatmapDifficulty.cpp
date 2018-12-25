@@ -145,6 +145,7 @@ OsuBeatmapDifficulty::OsuBeatmapDifficulty(Osu *osu, UString filepath, UString f
 		m_osu_database_dynamic_star_calculation = convar->getConVarByName("osu_database_dynamic_star_calculation");
 
 	// default values
+	version = 14;
 	stackLeniency = 0.7f;
 
 	beatmapId = -1;
@@ -223,7 +224,7 @@ bool OsuBeatmapDifficulty::loadMetadataRaw(bool calculateStars)
 		debugLog("OsuBeatmapDifficulty::loadMetadata() : %s\n", m_sFilePath.toUtf8());
 
 	// generate MD5 hash (loads entire file)
-	// TODO: performance improvements
+	// TODO: performance improvements :(
 	if (md5hash.length() < 1)
 	{
 		File file(m_sFilePath);
@@ -293,6 +294,11 @@ bool OsuBeatmapDifficulty::loadMetadataRaw(bool calculateStars)
 
 				switch (curBlock)
 				{
+				case -1: // header (e.g. "osu file format v12")
+					{
+						sscanf(curLineChar, " osu file format v %i \n", &version);
+					}
+					break;
 				case 0: // General
 					{
 						memset(stringBuffer, '\0', 1024);
@@ -856,7 +862,7 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 	// check if we have any timingpoints at all
 	if (timingpoints.size() == 0)
 	{
-		UString errorMessage = "Error: No timingpoints in beatmap";
+		UString errorMessage = "Error: No timingpoints in beatmap!";
 		debugLog("Osu Error: No timingpoints in beatmap (%s)!\n", m_sFilePath.toUtf8());
 		if (m_osu != NULL)
 			m_osu->getNotificationOverlay()->addNotification(errorMessage, 0xffff0000);
@@ -1811,7 +1817,7 @@ double OsuBeatmapDifficulty::calculatePPv2(Osu *osu, OsuBeatmap *beatmap, double
 		aim_value *= (1.02 + std::max(11.0 - ar, 0.0) / 50.0); // https://github.com/ppy/osu-performance/pull/47
 
 	// flashlight
-	// TODO: not yet implemented
+	// TODO: not yet implemented // TODO: https://github.com/ppy/osu-performance/pull/71/
 	/*
 	if (osu->getModFL())
 		aim_value *= 1.45 * length_bonus;

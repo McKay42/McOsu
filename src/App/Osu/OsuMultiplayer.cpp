@@ -10,6 +10,7 @@
 #include "Engine.h"
 #include "ConVar.h"
 #include "Console.h"
+#include "Mouse.h"
 #include "NetworkHandler.h"
 #include "ResourceManager.h"
 #include "Environment.h"
@@ -31,10 +32,14 @@ ConVar osu_mp_broadcastcommand("osu_mp_broadcastcommand");
 ConVar osu_mp_clientcastcommand("osu_mp_clientcastcommand");
 
 unsigned long long OsuMultiplayer::sortHackCounter = 0;
+ConVar *OsuMultiplayer::m_cl_cmdrate = NULL;
 
 OsuMultiplayer::OsuMultiplayer(Osu *osu)
 {
 	m_osu = osu;
+
+	if (m_cl_cmdrate == NULL)
+		m_cl_cmdrate = convar->getConVarByName("cl_cmdrate");
 
 	// engine callbacks
 	engine->getNetworkHandler()->setOnClientReceiveServerPacketListener( fastdelegate::MakeDelegate(this, &OsuMultiplayer::onClientReceive) );
@@ -50,6 +55,8 @@ OsuMultiplayer::OsuMultiplayer(Osu *osu)
 	// convar callbacks
 	osu_mp_broadcastcommand.setCallback( fastdelegate::MakeDelegate(this, &OsuMultiplayer::onBroadcastCommand) );
 	osu_mp_clientcastcommand.setCallback( fastdelegate::MakeDelegate(this, &OsuMultiplayer::onClientcastCommand) );
+
+	m_fNextPlayerCmd = 0.0f;
 
 	/*
 	PLAYER ply;
@@ -76,23 +83,75 @@ OsuMultiplayer::~OsuMultiplayer()
 {
 }
 
-bool OsuMultiplayer::onClientReceive(unsigned int id, void *data, size_t size)
+void OsuMultiplayer::update()
+{
+	if (!isInMultiplayer()) return;
+
+	/*
+	if (!isServer())
+	{
+		// clientside update
+		// TODO: only generate input cmd in fixed time steps, not for every frame
+
+		PLAYER_INPUT_PACKET input;
+		input.time = m_osu->getSongBrowser()->hasSelectedAndIsPlaying() ? m_osu->getSelectedBeatmap()->getCurMusicPosWithOffsets() : 0;
+		// TODO: convert to resolution independent (osu?) coordinates
+		input.cursorPosX = (short)engine->getMouse()->getPos().x;
+		input.cursorPosY = (short)engine->getMouse()->getPos().y;
+		input.keys = 0; // TODO:
+		m_playerInputBuffer.push_back(input);
+
+		if (engine->getTime() >= m_fNextPlayerCmd)
+		{
+			m_fNextPlayerCmd = engine->getTime() + 1.0f/m_cl_cmdrate->getFloat();
+			onClientCmd();
+			m_playerInputBuffer.clear();
+		}
+	}
+	else
+	{
+		// serverside update
+
+		// TODO: define reasonable max inputBuffer length (this also indirectly defines the max waiting delay for other players)
+		// TODO: always keep most recent full packet to be able to jump around
+		for (int i=0; i<m_serverPlayers.size(); i++)
+		{
+			debugLog("inputBuffer size = %i\n", m_serverPlayers[i].inputBuffer.size());
+			if (m_serverPlayers[i].inputBuffer.size() > 2048)
+			{
+				const int overflow = m_serverPlayers[i].inputBuffer.size() - 2048;
+				m_serverPlayers[i].inputBuffer.erase(m_serverPlayers[i].inputBuffer.begin(), m_serverPlayers[i].inputBuffer.begin() + overflow);
+			}
+
+			// TEMP:
+			if (m_serverPlayers[i].inputBuffer.size() > 0)
+				m_serverPlayers[i].input.cursorPos = m_serverPlayers[i].inputBuffer[m_serverPlayers[i].inputBuffer.size()-1].cursorPos;
+		}
+	}
+	*/
+}
+
+bool OsuMultiplayer::onClientReceive(uint32_t id, void *data, uint32_t size)
 {
 	return onClientReceiveInt(id, data, size);
 }
 
-bool OsuMultiplayer::onClientReceiveInt(unsigned int id, void *data, size_t size, bool forceAcceptOnServer)
+bool OsuMultiplayer::onClientReceiveInt(uint32_t id, void *data, uint32_t size, bool forceAcceptOnServer)
 {
-	PACKET_TYPE type = (*(PACKET_TYPE*)data);
+	const int wrapperSize = sizeof(PACKET_TYPE);
+	if (size <= wrapperSize) return false;
+
+	// unwrap the packet
+	char *unwrappedPacket = (char*)data;
+	unwrappedPacket += wrapperSize;
+	const uint32_t unwrappedSize = (size - wrapperSize);
+
+	const PACKET_TYPE type = (*(PACKET_TYPE*)data);
 	switch (type)
 	{
 	case PLAYER_CHANGE_TYPE:
+		if (unwrappedSize >= sizeof(PLAYER_CHANGE_PACKET))
 		{
-			// unwrap the packet
-			char *unwrappedPacket = (char*)data;
-			const int wrapperSize = sizeof(PACKET_TYPE);
-			unwrappedPacket += wrapperSize;
-
 			// execute
 			PLAYER_CHANGE_PACKET *pp = (struct PLAYER_CHANGE_PACKET*)unwrappedPacket;
 			bool exists = false;
@@ -119,12 +178,20 @@ bool OsuMultiplayer::onClientReceiveInt(unsigned int id, void *data, size_t size
 				PLAYER ply;
 				ply.id = pp->id;
 				ply.name = UString(pp->name).substr(0, pp->size);
+
 				ply.missingBeatmap = false;
 				ply.waiting = true;
+
 				ply.combo = 0;
 				ply.accuracy = 0.0f;
 				ply.score = 0;
 				ply.dead = false;
+
+				ply.input.mouse1down = false;
+				ply.input.mouse2down = false;
+				ply.input.key1down = false;
+				ply.input.key2down = false;
+
 				ply.sortHack = sortHackCounter++;
 
 				m_clientPlayers.push_back(ply);
@@ -135,12 +202,8 @@ bool OsuMultiplayer::onClientReceiveInt(unsigned int id, void *data, size_t size
 		return true;
 
 	case PLAYER_STATE_TYPE:
+		if (unwrappedSize >= sizeof(PLAYER_STATE_PACKET))
 		{
-			// unwrap the packet
-			char *unwrappedPacket = (char*)data;
-			const int wrapperSize = sizeof(PACKET_TYPE);
-			unwrappedPacket += wrapperSize;
-
 			// execute
 			PLAYER_STATE_PACKET *pp = (struct PLAYER_STATE_PACKET*)unwrappedPacket;
 			for (int i=0; i<m_clientPlayers.size(); i++)
@@ -157,119 +220,111 @@ bool OsuMultiplayer::onClientReceiveInt(unsigned int id, void *data, size_t size
 		return true;
 
 	case CONVAR_TYPE:
-		if (!engine->getNetworkHandler()->isServer() || forceAcceptOnServer)
+		if (unwrappedSize >= sizeof(CONVAR_PACKET))
 		{
-			// unwrap the packet
-			char *unwrappedPacket = (char*)data;
-			const int wrapperSize = sizeof(PACKET_TYPE);
-			unwrappedPacket += wrapperSize;
-
-			// execute
-			CONVAR_PACKET *pp = (struct CONVAR_PACKET*)unwrappedPacket;
-			Console::processCommand(UString(pp->str).substr(0, pp->len));
+			if (!engine->getNetworkHandler()->isServer() || forceAcceptOnServer)
+			{
+				// execute
+				CONVAR_PACKET *pp = (struct CONVAR_PACKET*)unwrappedPacket;
+				Console::processCommand(UString(pp->str).substr(0, pp->len));
+			}
 		}
 		return true;
 
 	case STATE_TYPE:
-		if (!engine->getNetworkHandler()->isServer() || forceAcceptOnServer)
+		if (unwrappedSize >= sizeof(GAME_STATE_PACKET))
 		{
-			// unwrap the packet
-			char *unwrappedPacket = (char*)data;
-			const int wrapperSize = sizeof(PACKET_TYPE);
-			unwrappedPacket += wrapperSize;
-
-			// execute
-			GAME_STATE_PACKET *pp = (struct GAME_STATE_PACKET*)unwrappedPacket;
-			if (pp->state == SELECT)
+			if (!engine->getNetworkHandler()->isServer() || forceAcceptOnServer)
 			{
-				bool found = false;
-				std::vector<OsuBeatmap*> beatmaps = m_osu->getSongBrowser()->getDatabase()->getBeatmaps();
-				for (int i=0; i<beatmaps.size(); i++)
+				// execute
+				GAME_STATE_PACKET *pp = (struct GAME_STATE_PACKET*)unwrappedPacket;
+				if (pp->state == SELECT)
 				{
-					OsuBeatmap *beatmap = beatmaps[i];
-					for (int d=0; d<beatmap->getDifficultiesPointer()->size(); d++)
+					bool found = false;
+					std::vector<OsuBeatmap*> beatmaps = m_osu->getSongBrowser()->getDatabase()->getBeatmaps();
+					for (int i=0; i<beatmaps.size(); i++)
 					{
-						OsuBeatmapDifficulty *diff = (*beatmap->getDifficultiesPointer())[d];
-						bool uuidMatches = (diff->md5hash.length() > 0);
-						for (int u=0; u<32 && u<diff->md5hash.length(); u++)
+						OsuBeatmap *beatmap = beatmaps[i];
+						for (int d=0; d<beatmap->getDifficultiesPointer()->size(); d++)
 						{
-							if (diff->md5hash[u] != pp->beatmapMD5Hash[u])
+							OsuBeatmapDifficulty *diff = (*beatmap->getDifficultiesPointer())[d];
+							bool uuidMatches = (diff->md5hash.length() > 0);
+							for (int u=0; u<32 && u<diff->md5hash.length(); u++)
 							{
-								uuidMatches = false;
+								if (diff->md5hash[u] != pp->beatmapMD5Hash[u])
+								{
+									uuidMatches = false;
+									break;
+								}
+							}
+							if (uuidMatches)
+							{
+								found = true;
+								m_osu->getSongBrowser()->selectBeatmapMP(beatmap, diff);
 								break;
 							}
 						}
-						if (uuidMatches)
-						{
-							found = true;
-							m_osu->getSongBrowser()->selectBeatmapMP(beatmap, diff);
+						if (found)
 							break;
-						}
 					}
-					if (found)
-						break;
-				}
 
-				if (!found)
-				{
-					m_osu->getNotificationOverlay()->addNotification((pp->beatmapId > 0 ? "Missing beatmap! -> ^^^ Click top left corner ^^^" : "Missing Beatmap!"), 0xffff0000);
-					m_osu->getSongBrowser()->getInfoLabel()->setFromMissingBeatmap(pp->beatmapId);
-				}
-
-				// send status update to everyone
-				onClientStatusUpdate(!found);
-			}
-			else if (m_osu->getSelectedBeatmap() != NULL)
-			{
-				if (pp->state == START)
-				{
-					if (m_osu->isInPlayMode())
-						m_osu->getSelectedBeatmap()->stop(true);
-
-					// only start if we actually have the correct beatmap
-					OsuBeatmapDifficulty *diff = m_osu->getSelectedBeatmap()->getSelectedDifficulty();
-					if (diff != NULL)
+					if (!found)
 					{
-						bool uuidMatches = (diff->md5hash.length() > 0);
-						for (int u=0; u<32 && u<diff->md5hash.length(); u++)
-						{
-							if (diff->md5hash[u] != pp->beatmapMD5Hash[u])
-							{
-								uuidMatches = false;
-								break;
-							}
-						}
-
-						if (uuidMatches)
-							m_osu->getSongBrowser()->onDifficultySelectedMP(m_osu->getSelectedBeatmap(), m_osu->getSelectedBeatmap()->getSelectedDifficulty(), true);
+						m_osu->getNotificationOverlay()->addNotification((pp->beatmapId > 0 ? "Missing beatmap! -> ^^^ Click top left corner ^^^" : "Missing Beatmap!"), 0xffff0000);
+						m_osu->getSongBrowser()->getInfoLabel()->setFromMissingBeatmap(pp->beatmapId);
 					}
+
+					// send status update to everyone
+					onClientStatusUpdate(!found);
 				}
-				else if (m_osu->isInPlayMode())
+				else if (m_osu->getSelectedBeatmap() != NULL)
 				{
-					if (pp->state == SEEK)
-						m_osu->getSelectedBeatmap()->seekMS(pp->seekMS);
-					else if (pp->state == SKIP)
-						m_osu->getSelectedBeatmap()->skipEmptySection();
-					else if (pp->state == PAUSE)
-						m_osu->getSelectedBeatmap()->pause(false);
-					else if (pp->state == UNPAUSE)
-						m_osu->getSelectedBeatmap()->pause(false);
-					else if (pp->state == RESTART)
-						m_osu->getSelectedBeatmap()->restart(pp->quickRestart);
-					else if (pp->state == STOP)
-						m_osu->getSelectedBeatmap()->stop();
+					if (pp->state == START)
+					{
+						if (m_osu->isInPlayMode())
+							m_osu->getSelectedBeatmap()->stop(true);
+
+						// only start if we actually have the correct beatmap
+						OsuBeatmapDifficulty *diff = m_osu->getSelectedBeatmap()->getSelectedDifficulty();
+						if (diff != NULL)
+						{
+							bool uuidMatches = (diff->md5hash.length() > 0);
+							for (int u=0; u<32 && u<diff->md5hash.length(); u++)
+							{
+								if (diff->md5hash[u] != pp->beatmapMD5Hash[u])
+								{
+									uuidMatches = false;
+									break;
+								}
+							}
+
+							if (uuidMatches)
+								m_osu->getSongBrowser()->onDifficultySelectedMP(m_osu->getSelectedBeatmap(), m_osu->getSelectedBeatmap()->getSelectedDifficulty(), true);
+						}
+					}
+					else if (m_osu->isInPlayMode())
+					{
+						if (pp->state == SEEK)
+							m_osu->getSelectedBeatmap()->seekMS(pp->seekMS);
+						else if (pp->state == SKIP)
+							m_osu->getSelectedBeatmap()->skipEmptySection();
+						else if (pp->state == PAUSE)
+							m_osu->getSelectedBeatmap()->pause(false);
+						else if (pp->state == UNPAUSE)
+							m_osu->getSelectedBeatmap()->pause(false);
+						else if (pp->state == RESTART)
+							m_osu->getSelectedBeatmap()->restart(pp->quickRestart);
+						else if (pp->state == STOP)
+							m_osu->getSelectedBeatmap()->stop();
+					}
 				}
 			}
 		}
 		return true;
 
 	case SCORE_TYPE:
+		if (unwrappedSize >= sizeof(SCORE_PACKET))
 		{
-			// unwrap the packet
-			char *unwrappedPacket = (char*)data;
-			const int wrapperSize = sizeof(PACKET_TYPE);
-			unwrappedPacket += wrapperSize;
-
 			// execute
 			SCORE_PACKET *pp = (struct SCORE_PACKET*)unwrappedPacket;
 			for (int i=0; i<m_clientPlayers.size(); i++)
@@ -335,18 +390,22 @@ bool OsuMultiplayer::onClientReceiveInt(unsigned int id, void *data, size_t size
 	}
 }
 
-bool OsuMultiplayer::onServerReceive(unsigned int id, void *data, size_t size)
+bool OsuMultiplayer::onServerReceive(uint32_t id, void *data, uint32_t size)
 {
-	PACKET_TYPE type = (*(PACKET_TYPE*)data);
+	const int wrapperSize = sizeof(PACKET_TYPE);
+	if (size <= wrapperSize) return false;
+
+	// unwrap the packet
+	char *unwrappedPacket = (char*)data;
+	unwrappedPacket += wrapperSize;
+	const uint32_t unwrappedSize = (size - wrapperSize);
+
+	const PACKET_TYPE type = (*(PACKET_TYPE*)data);
 	switch (type)
 	{
 	case STATE_TYPE:
+		if (unwrappedSize >= sizeof(GAME_STATE_PACKET))
 		{
-			// unwrap the packet
-			char *unwrappedPacket = (char*)data;
-			const int wrapperSize = sizeof(PACKET_TYPE);
-			unwrappedPacket += wrapperSize;
-
 			// execute
 			GAME_STATE_PACKET *pp = (struct GAME_STATE_PACKET*)unwrappedPacket;
 			if (pp->state == SELECT && !m_osu->isInPlayMode() && osu_mp_allow_client_beatmap_select.getBool())
@@ -357,23 +416,58 @@ bool OsuMultiplayer::onServerReceive(unsigned int id, void *data, size_t size)
 	case PLAYER_STATE_TYPE:
 		return onClientReceiveInt(id, data, size, true);
 
+	case PLAYER_CMD_TYPE:
+		// TODO: only the server is interested in this for now, also unfinished
+		if (unwrappedSize >= sizeof(PLAYER_INPUT_PACKET))
+		{
+			if (unwrappedSize % sizeof(PLAYER_INPUT_PACKET) == 0)
+			{
+				const uint32_t numPlayerInputs = (unwrappedSize / sizeof(PLAYER_INPUT_PACKET));
+				const PLAYER_INPUT_PACKET *inputs = (PLAYER_INPUT_PACKET*)unwrappedPacket;
+				for (int i=0; i<m_serverPlayers.size(); i++)
+				{
+					if (m_serverPlayers[i].id == id)
+					{
+						for (int c=0; c<numPlayerInputs; c++)
+						{
+							PLAYER_INPUT input;
+							input.time = inputs[c].time;
+							input.cursorPos.x = inputs[c].cursorPosX;
+							input.cursorPos.y = inputs[c].cursorPosY;
+							input.mouse1down = inputs[c].keys; // TODO
+							input.mouse2down = inputs[c].keys; // TODO
+							input.key1down = inputs[c].keys; // TODO
+							input.key2down = inputs[c].keys; // TODO
+							m_serverPlayers[i].inputBuffer.push_back(input);
+						}
+						break;
+					}
+				}
+			}
+		}
+		return true;
+
 	default:
-		return true;// HACKHACK: TODO: dangerous, forwarding all broadcasts!
+		return true; // HACKHACK: TODO: dangerous, forwarding all broadcasts!
 	}
 }
 
 void OsuMultiplayer::onClientConnectedToServer()
 {
 	m_osu->getNotificationOverlay()->addNotification("Connected.", 0xff00ff00);
+
+	// force send current score state to server (e.g. if the server died, or client connection died, this can recover a match result)
+	onClientScoreChange(m_osu->getScore()->getComboMax(), m_osu->getScore()->getAccuracy(), m_osu->getScore()->getScore(), m_osu->getScore()->isDead(), true);
 }
 
 void OsuMultiplayer::onClientDisconnectedFromServer()
 {
-	m_clientPlayers.clear();
 	m_osu->getNotificationOverlay()->addNotification("Disconnected.", 0xffff0000);
+
+	m_clientPlayers.clear();
 }
 
-void OsuMultiplayer::onServerClientChange(unsigned int id, UString name, bool connected)
+void OsuMultiplayer::onServerClientChange(uint32_t id, UString name, bool connected)
 {
 	debugLog("OsuMultiplayer::onServerClientChange(%i, %s, %i)\n", id, name.toUtf8(), (int)connected);
 
@@ -432,15 +526,28 @@ void OsuMultiplayer::onServerClientChange(unsigned int id, UString name, bool co
 			}
 		}
 
+		// send gamestate to new client
+		// TODO: optimization, only send stuff like this to the current client (and not everyone)
+		onServerModUpdate();
+
 		PLAYER ply;
 		ply.id = id;
 		ply.name = name;
+
 		ply.missingBeatmap = false;
 		ply.waiting = true;
+
 		ply.combo = 0;
 		ply.accuracy = 0.0f;
 		ply.score = 0;
 		ply.dead = false;
+
+		ply.input.mouse1down = false;
+		ply.input.mouse2down = false;
+		ply.input.key1down = false;
+		ply.input.key2down = false;
+
+		ply.sortHack = sortHackCounter++;
 
 		m_serverPlayers.push_back(ply);
 	}
@@ -454,9 +561,25 @@ void OsuMultiplayer::onLocalServerStarted()
 
 void OsuMultiplayer::onLocalServerStopped()
 {
-	m_serverPlayers.clear();
 	debugLog("OsuMultiplayer::onLocalServerStopped()\n");
 	m_osu->getNotificationOverlay()->addNotification("Server stopped.", 0xffcccccc);
+
+	m_serverPlayers.clear();
+}
+
+void OsuMultiplayer::onClientCmd()
+{
+	if (!engine->getNetworkHandler()->isClient() || m_playerInputBuffer.size() < 1) return;
+
+	size_t size = sizeof(PLAYER_INPUT_PACKET) * m_playerInputBuffer.size();
+
+	PACKET_TYPE wrap = PLAYER_CMD_TYPE;
+	const int wrapperSize = sizeof(PACKET_TYPE);
+	char wrappedPacket[(sizeof(PACKET_TYPE) + size)];
+	memcpy(&wrappedPacket, &wrap, wrapperSize);
+	memcpy((void*)(((char*)&wrappedPacket) + wrapperSize), &m_playerInputBuffer[0], size);
+
+	engine->getNetworkHandler()->servercast(wrappedPacket, size + wrapperSize, false);
 }
 
 void OsuMultiplayer::onClientStatusUpdate(bool missingBeatmap, bool waiting)
@@ -640,6 +763,30 @@ void OsuMultiplayer::onServerPlayStateChange(OsuMultiplayer::STATE state, unsign
 
 	if (isBeatmapAndDiffValid)
 		onClientStatusUpdate(false);
+}
+
+void OsuMultiplayer::setBeatmap(OsuBeatmap *beatmap)
+{
+	if (beatmap == NULL || beatmap->getSelectedDifficulty() == NULL || beatmap->getSelectedDifficulty()->md5hash.length() < 32) return;
+
+	GAME_STATE_PACKET pp;
+	pp.state = STATE::SELECT;
+	pp.seekMS = 0;
+	pp.quickRestart = false;
+	for (int i=0; i<32 && i<beatmap->getSelectedDifficulty()->md5hash.length(); i++)
+	{
+		pp.beatmapMD5Hash[i] = beatmap->getSelectedDifficulty()->md5hash[i];
+	}
+	pp.beatmapId = /*beatmap->getSelectedDifficulty()->beatmapId*/0;
+	size_t size = sizeof(GAME_STATE_PACKET);
+
+	PACKET_TYPE wrap = STATE_TYPE;
+	const int wrapperSize = sizeof(PACKET_TYPE);
+	char wrappedPacket[(sizeof(PACKET_TYPE) + size)];
+	memcpy(&wrappedPacket, &wrap, wrapperSize);
+	memcpy((void*)(((char*)&wrappedPacket) + wrapperSize), &pp, size);
+
+	onClientReceiveInt(0, wrappedPacket, size + wrapperSize);
 }
 
 bool OsuMultiplayer::isServer()

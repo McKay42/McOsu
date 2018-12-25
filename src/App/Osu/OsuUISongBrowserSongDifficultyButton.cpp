@@ -129,10 +129,13 @@ void OsuUISongBrowserSongDifficultyButton::onSelected(bool wasSelected)
 	m_songBrowser->scrollToSongButton(this);
 
 	// automatically deselect previous selection
-	if (previousButton != NULL && previousButton != this)
-		previousButton->deselect();
+	if (m_osu->getInstanceID() < 2) // TODO: this leaks memory on slaves
+	{
+		if (previousButton != NULL && previousButton != this)
+			previousButton->deselect();
 
-	previousButton = this;
+		previousButton = this;
+	}
 }
 
 void OsuUISongBrowserSongDifficultyButton::onDeselected()

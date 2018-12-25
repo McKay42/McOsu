@@ -110,6 +110,7 @@ public:
 	bool loaded;
 
 	// metadata
+	int version; // e.g. "osu file format v12" -> 12
 	int mode; // 0 = osu!standard, 1 = Taiko, 2 = Catch the Beat, 3 = osu!mania
 
 	UString title;

@@ -39,7 +39,7 @@ class ConVar;
 class OsuSongBrowser2 : public OsuScreenBackable
 {
 public:
-	static void drawSelectedBeatmapBackgroundImage(Graphics *g, Osu *osu);
+	static void drawSelectedBeatmapBackgroundImage(Graphics *g, Osu *osu, float alpha = 1.0f);
 
 	struct SORTING_COMPARATOR
 	{
@@ -92,7 +92,8 @@ private:
 	enum class GROUP
 	{
 		GROUP_NO_GROUPING,
-		GROUP_COLLECTIONS
+		GROUP_COLLECTIONS,
+		GROUP_DIFFICULTY
 		// incomplete
 	};
 
@@ -123,7 +124,7 @@ private:
 	void rebuildScoreButtons();
 	void scheduleSearchUpdate(bool immediately = false);
 
-	OsuUISelectionButton *addBottombarNavButton();
+	OsuUISelectionButton *addBottombarNavButton(std::function<Image*()> getImageFunc, std::function<Image*()> getImageOverFunc);
 	CBaseUIButton *addTopBarRightTabButton(UString text);
 	CBaseUIButton *addTopBarRightSortButton(UString text);
 
@@ -134,6 +135,7 @@ private:
 
 	void onGroupNoGrouping(CBaseUIButton *b);
 	void onGroupCollections(CBaseUIButton *b);
+	void onGroupDifficulty(CBaseUIButton *b);
 
 	void onAfterSortingOrGroupChange(CBaseUIButton *b);
 
@@ -213,6 +215,7 @@ private:
 	OsuBeatmap *m_selectedBeatmap;
 	bool m_bHasSelectedAndIsPlaying;
 	float m_fPulseAnimation;
+	float m_fBackgroundFadeInTime;
 	std::vector<OsuBeatmap*> m_previousRandomBeatmaps;
 
 	// search
