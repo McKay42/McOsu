@@ -191,6 +191,7 @@ private:
 	void onAudioOutputDeviceChange();
 
 	void rebuildRenderTargets();
+	void updateMouseSettings();
 
 	// callbacks
 	void onInternalResolutionChanged(UString oldValue, UString args);
@@ -214,6 +215,8 @@ private:
 	void onKey2Change(bool pressed, bool mouse);
 
 	void onModMafhamChange(UString oldValue, UString newValue);
+
+	void onLetterboxingOffsetChange(UString oldValue, UString newValue);
 
 	void onNotification(UString args);
 

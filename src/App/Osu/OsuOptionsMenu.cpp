@@ -268,6 +268,8 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 
 	// convar refs
 	m_osu_slider_curve_points_separation = convar->getConVarByName("osu_slider_curve_points_separation");
+	m_osu_letterboxing_offset_x = convar->getConVarByName("osu_letterboxing_offset_x");
+	m_osu_letterboxing_offset_y = convar->getConVarByName("osu_letterboxing_offset_y");
 
 	// convar callbacks
 	convar->getConVarByName("osu_skin_use_skin_hitsounds")->setCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onUseSkinsSoundSamplesChange) );
@@ -291,6 +293,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 
 	m_fOsuFolderTextboxInvalidAnim = 0.0f;
 	m_fVibrationStrengthExampleTimer = 0.0f;
+	m_bLetterboxingOffsetUpdateScheduled = false;
 
 	m_iManiaK = 0;
 	m_iManiaKey = 0;
@@ -380,7 +383,9 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_fullscreenCheckbox = addCheckbox("Fullscreen");
 	m_fullscreenCheckbox->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onFullscreenChange) );
 	addCheckbox("Borderless Windowed Fullscreen", "If enabled: plz enjoy input lag.", convar->getConVarByName("fullscreen_windowed_borderless"))->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onBorderlessWindowedChange) );
-	addCheckbox("Letterboxing", convar->getConVarByName("osu_letterboxing"));
+	addCheckbox("Letterboxing", "Useful to get the low latency of fullscreen with a smaller game resolution.\nUse the two position sliders below to move the viewport around.", convar->getConVarByName("osu_letterboxing"));
+	m_letterboxingOffsetXSlider = addSlider("Horizontal position", -1.0f, 1.0f, convar->getConVarByName("osu_letterboxing_offset_x"), 170)->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeLetterboxingOffset) )->setKeyDelta(0.01f);
+	m_letterboxingOffsetYSlider = addSlider("Vertical position", -1.0f, 1.0f, convar->getConVarByName("osu_letterboxing_offset_y"), 170)->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeLetterboxingOffset) )->setKeyDelta(0.01f);
 
 	addSubSection("Detail Settings");
 	addCheckbox("Mipmaps", "Reload your skin to apply! (CTRL + ALT + SHIFT + S)\nGenerate mipmaps for each skin element, at the cost of VRAM.\nProvides smoother visuals on lower resolutions for @2x-only skins.", convar->getConVarByName("osu_skin_mipmaps"));
@@ -953,6 +958,18 @@ void OsuOptionsMenu::update()
 		}
 		if (activeCategoryButton != NULL)
 			activeCategoryButton->setTextColor(0xffffffff);
+	}
+
+	// delayed update letterboxing mouse scale/offset settings
+	if (m_bLetterboxingOffsetUpdateScheduled)
+	{
+		if (!m_letterboxingOffsetXSlider->isActive() && !m_letterboxingOffsetYSlider->isActive())
+		{
+			m_bLetterboxingOffsetUpdateScheduled = false;
+
+			m_osu_letterboxing_offset_x->setValue(m_letterboxingOffsetXSlider->getFloat());
+			m_osu_letterboxing_offset_y->setValue(m_letterboxingOffsetYSlider->getFloat());
+		}
 	}
 }
 
@@ -2027,6 +2044,31 @@ void OsuOptionsMenu::onSliderChangeSliderQuality(CBaseUISlider *slider)
 					int percent = std::round((slider->getPercent()) * 100.0f);
 					UString text = UString::format(percent > 49 ? "%i !" : "%i", percent);
 					labelPointer->setText(text);
+				}
+				break;
+			}
+		}
+	}
+}
+
+void OsuOptionsMenu::onSliderChangeLetterboxingOffset(CBaseUISlider *slider)
+{
+	m_bLetterboxingOffsetUpdateScheduled = true;
+
+	for (int i=0; i<m_elements.size(); i++)
+	{
+		for (int e=0; e<m_elements[i].elements.size(); e++)
+		{
+			if (m_elements[i].elements[e] == slider)
+			{
+				const float newValue = std::round(slider->getFloat()*100.0f)/100.0f;
+
+				if (m_elements[i].elements.size() == 3)
+				{
+					const int percent = std::round(newValue*100.0f);
+
+					CBaseUILabel *labelPointer = dynamic_cast<CBaseUILabel*>(m_elements[i].elements[2]);
+					labelPointer->setText(UString::format("%i%%", percent));
 				}
 				break;
 			}

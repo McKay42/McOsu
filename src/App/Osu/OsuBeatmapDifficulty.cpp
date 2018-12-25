@@ -1817,7 +1817,7 @@ double OsuBeatmapDifficulty::calculatePPv2(Osu *osu, OsuBeatmap *beatmap, double
 		aim_value *= (1.02 + std::max(11.0 - ar, 0.0) / 50.0); // https://github.com/ppy/osu-performance/pull/47
 
 	// flashlight
-	// TODO: not yet implemented
+	// TODO: not yet implemented // TODO: https://github.com/ppy/osu-performance/pull/71/
 	/*
 	if (osu->getModFL())
 		aim_value *= 1.45 * length_bonus;

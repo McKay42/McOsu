@@ -43,6 +43,7 @@ ConVar osu_draw_scorebarbg("osu_draw_scorebarbg", true);
 ConVar osu_vr_draw_desktop_playfield("osu_vr_draw_desktop_playfield", true);
 
 ConVar osu_universal_offset("osu_universal_offset", 0.0f);
+ConVar osu_old_beatmap_offset("osu_old_beatmap_offset", 24.0f, "offset in ms which is added to beatmap versions < 5 (default value is hardcoded 24 ms in stable)");
 ConVar osu_timingpoints_offset("osu_timingpoints_offset", 50.0f, "Offset in ms which is added before determining the active timingpoint for the sample type and sample volume (hitsounds) of the current frame");
 ConVar osu_interpolate_music_pos("osu_interpolate_music_pos", true, "Interpolate song position with engine time if the audio library reports the same position more than once");
 ConVar osu_compensate_music_speed("osu_compensate_music_speed", true, "compensates speeds slower than 1x a little bit, by adding an offset depending on the slowness");
@@ -54,10 +55,11 @@ ConVar osu_hp_override("osu_hp_override", -1.0f);
 ConVar osu_od_override("osu_od_override", -1.0f);
 
 ConVar osu_background_dim("osu_background_dim", 0.9f);
+ConVar osu_background_fade_after_load("osu_background_fade_after_load", true);
 ConVar osu_background_dont_fade_during_breaks("osu_background_dont_fade_during_breaks", false);
 ConVar osu_background_fade_min_duration("osu_background_fade_min_duration", 1.4f, "Only fade if the break is longer than this (in seconds)");
-ConVar osu_background_fadein_duration("osu_background_fadein_duration", 0.85f);
-ConVar osu_background_fadeout_duration("osu_background_fadeout_duration", 0.25f);
+ConVar osu_background_fade_in_duration("osu_background_fade_in_duration", 0.85f);
+ConVar osu_background_fade_out_duration("osu_background_fade_out_duration", 0.25f);
 ConVar osu_background_brightness("osu_background_brightness", 0.0f);
 ConVar osu_hiterrorbar_misaims("osu_hiterrorbar_misaims", true);
 
@@ -439,7 +441,7 @@ void OsuBeatmap::update()
 	}
 
 	// update timing (points)
-	m_iCurMusicPosWithOffsets = m_iCurMusicPos + (long)osu_universal_offset.getInt() - m_selectedDifficulty->localoffset - m_selectedDifficulty->onlineOffset - (m_selectedDifficulty->version < 5 ? 24 : 0);
+	m_iCurMusicPosWithOffsets = m_iCurMusicPos + (long)osu_universal_offset.getInt() - m_selectedDifficulty->localoffset - m_selectedDifficulty->onlineOffset - (m_selectedDifficulty->version < 5 ? osu_old_beatmap_offset.getInt() : 0);
 	updateTimingPoints(m_iCurMusicPosWithOffsets);
 
 	// for performance reasons, a lot of operations are crammed into 1 loop over all hitobjects:
@@ -649,15 +651,15 @@ void OsuBeatmap::update()
 	{
 		m_bInBreak = !m_bInBreak;
 
-		if (!osu_background_dont_fade_during_breaks.getBool())
+		if (!osu_background_dont_fade_during_breaks.getBool() || m_fBreakBackgroundFade != 0.0f)
 		{
-			if (m_bInBreak)
+			if (m_bInBreak && !osu_background_dont_fade_during_breaks.getBool())
 			{
 				if (m_selectedDifficulty->getBreakDuration(m_iCurMusicPos) > (unsigned long)(osu_background_fade_min_duration.getFloat()*1000.0f))
-					anim->moveLinear(&m_fBreakBackgroundFade, 1.0f, osu_background_fadein_duration.getFloat(), true);
+					anim->moveLinear(&m_fBreakBackgroundFade, 1.0f, osu_background_fade_in_duration.getFloat(), true);
 			}
 			else
-				anim->moveLinear(&m_fBreakBackgroundFade, 0.0f, osu_background_fadeout_duration.getFloat(), true);
+				anim->moveLinear(&m_fBreakBackgroundFade, 0.0f, osu_background_fade_out_duration.getFloat(), true);
 		}
 	}
 
@@ -899,9 +901,9 @@ bool OsuBeatmap::play()
 	m_bIsPaused = false;
 	m_bContinueScheduled = false;
 
-	m_bInBreak = false;
+	m_bInBreak = osu_background_fade_after_load.getBool();
 	anim->deleteExistingAnimation(&m_fBreakBackgroundFade);
-	m_fBreakBackgroundFade = 0.0f;
+	m_fBreakBackgroundFade = osu_background_fade_after_load.getBool() ? 1.0f : 0.0f;
 
 	m_music->setPosition(0.0);
 	m_iCurMusicPos = 0;
@@ -1598,6 +1600,8 @@ unsigned long OsuBeatmap::getMusicPositionMSInterpolated()
 		return m_music->getPositionMS();
 	else
 	{
+		// TODO: fix snapping at beginning for maps with instant start
+
 		unsigned long returnPos = 0;
 		const double curPos = (double)m_music->getPositionMS();
 		const float speed = m_osu->getSpeedMultiplier();

@@ -108,6 +108,7 @@ private:
 	void onSliderChangeVRSuperSampling(CBaseUISlider *slider);
 	void onSliderChangeVRAntiAliasing(CBaseUISlider *slider);
 	void onSliderChangeSliderQuality(CBaseUISlider *slider);
+	void onSliderChangeLetterboxingOffset(CBaseUISlider *slider);
 
 	void onUseSkinsSoundSamplesChange(UString oldValue, UString newValue);
 	void onHighQualitySlidersCheckboxChange(CBaseUICheckbox *checkbox);
@@ -179,13 +180,18 @@ private:
 	CBaseUISlider *m_vrHudDistanceSlider;
 	CBaseUISlider *m_vrHudScaleSlider;
 	CBaseUISlider *m_sliderQualitySlider;
+	CBaseUISlider *m_letterboxingOffsetXSlider;
+	CBaseUISlider *m_letterboxingOffsetYSlider;
 	OsuOptionsMenuSliderPreviewElement *m_sliderPreviewElement;
 
 	ConVar *m_waitingKey;
 	ConVar *m_osu_slider_curve_points_separation;
+	ConVar *m_osu_letterboxing_offset_x;
+	ConVar *m_osu_letterboxing_offset_y;
 
 	float m_fOsuFolderTextboxInvalidAnim;
 	float m_fVibrationStrengthExampleTimer;
+	bool m_bLetterboxingOffsetUpdateScheduled;
 
 	// mania layout
 	int m_iManiaK;

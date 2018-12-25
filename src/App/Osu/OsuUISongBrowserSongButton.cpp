@@ -23,6 +23,7 @@
 
 ConVar osu_draw_songbrowser_thumbnails("osu_draw_songbrowser_thumbnails", true);
 ConVar osu_songbrowser_thumbnail_delay("osu_songbrowser_thumbnail_delay", 0.1f);
+ConVar osu_songbrowser_thumbnail_fade_in_duration("osu_songbrowser_thumbnail_fade_in_duration", 0.1f);
 
 float OsuUISongBrowserSongButton::thumbnailYRatio = 1.333333f;
 OsuUISongBrowserSongButton *OsuUISongBrowserSongButton::previousButton = NULL;
@@ -48,6 +49,7 @@ OsuUISongBrowserSongButton::OsuUISongBrowserSongButton(Osu *osu, OsuSongBrowser2
 	*/
 
 	m_fImageLoadScheduledTime = 0.0f;
+	m_fThumbnailFadeInTime = 0.0f;
 	m_fTextOffset = 0.0f;
 	m_fGradeOffset = 0.0f;
 	m_fTextSpacingScale = 0.075f;
@@ -107,7 +109,21 @@ void OsuUISongBrowserSongButton::draw(Graphics *g)
 
 void OsuUISongBrowserSongButton::drawBeatmapBackgroundThumbnail(Graphics *g, Image *image)
 {
-	if (!osu_draw_songbrowser_thumbnails.getBool() || image == NULL || m_osu->getSkin()->getVersion() < 2.2f) return;
+	if (!osu_draw_songbrowser_thumbnails.getBool() || m_osu->getSkin()->getVersion() < 2.2f) return;
+
+	float alpha = 1.0f;
+	if (osu_songbrowser_thumbnail_fade_in_duration.getFloat() > 0.0f)
+	{
+		if (image == NULL || !image->isReady())
+			m_fThumbnailFadeInTime = engine->getTime();
+		else if (m_fThumbnailFadeInTime > 0.0f && engine->getTime() > m_fThumbnailFadeInTime)
+		{
+			alpha = clamp<float>((engine->getTime() - m_fThumbnailFadeInTime)/osu_songbrowser_thumbnail_fade_in_duration.getFloat(), 0.0f, 1.0f);
+			alpha = 1.0f - (1.0f - alpha)*(1.0f - alpha);
+		}
+	}
+
+	if (image == NULL || !image->isReady()) return;
 
 	// scaling
 	const Vector2 pos = getActualPos();
@@ -119,6 +135,7 @@ void OsuUISongBrowserSongButton::drawBeatmapBackgroundThumbnail(Graphics *g, Ima
 	McRect clipRect = McRect(pos.x-2, pos.y+1, (int)(size.y*thumbnailYRatio)+5, size.y+2);
 
 	g->setColor(0xffffffff);
+	g->setAlpha(alpha);
 	g->pushTransform();
 	{
 		g->scale(beatmapBackgroundScale, beatmapBackgroundScale);
