@@ -899,6 +899,7 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 		}
 
 		// ticks
+		// TODO: validate https://github.com/ppy/osu/pull/3595/files
 		float minTickPixelDistanceFromEnd = 0.01f * getSliderVelocity(s);
 		float tickPixelLength = getSliderTickDistance() / getTimingPointMultiplierForSlider(s);
 		float tickDurationPercentOfSliderLength = tickPixelLength / (s->pixelLength == 0.0f ? 1.0f : s->pixelLength);

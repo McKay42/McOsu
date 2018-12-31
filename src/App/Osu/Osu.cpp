@@ -23,6 +23,12 @@
 #include "RenderTarget.h"
 #include "Shader.h"
 
+#ifdef MCENGINE_FEATURE_STEAMWORKS
+
+#include "SteamworksInterface.h"
+
+#endif
+
 #include "CWindowManager.h"
 //#include "DebugMonitor.h"
 
@@ -47,6 +53,7 @@
 #include "OsuVRTutorial.h"
 #include "OsuChangelog.h"
 #include "OsuEditor.h"
+#include "OsuRichPresence.h"
 
 #include "OsuBeatmap.h"
 #include "OsuBeatmapDifficulty.h"
@@ -63,7 +70,7 @@ void DUMMY_OSU_MODS(void) {;}
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 29.0f);
+ConVar osu_version("osu_version", 29.1f);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr");
 #else
@@ -182,6 +189,14 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_snd_change_check_interval_ref->setValue(m_snd_change_check_interval_ref->getDefaultFloat());
 
 	osu_resolution.setValue(UString::format("%ix%i", engine->getScreenWidth(), engine->getScreenHeight()));
+
+#ifdef MCENGINE_FEATURE_STEAMWORKS
+
+	// init steam rich presence localization
+	steam->setRichPresence("steam_display", "#Status");
+	steam->setRichPresence("status", "...");
+
+#endif
 
 	// VR specific settings
 	if (isInVRMode())
@@ -759,11 +774,11 @@ void Osu::update()
 	{
 		m_bToggleSongBrowserScheduled = false;
 
-		if (m_songBrowser2 != NULL)
-			m_songBrowser2->setVisible(!m_songBrowser2->isVisible());
-
 		if (m_mainMenu->isVisible() && m_optionsMenu->isVisible())
 			m_optionsMenu->setVisible(false);
+
+		if (m_songBrowser2 != NULL)
+			m_songBrowser2->setVisible(!m_songBrowser2->isVisible());
 
 		m_mainMenu->setVisible(!(m_songBrowser2 != NULL && m_songBrowser2->isVisible()));
 		updateConfineCursor();
@@ -1379,11 +1394,15 @@ void Osu::onPlayStart()
 	m_fQuickSaveTime = 0.0f; // reset
 
 	updateConfineCursor();
+
+	OsuRichPresence::onPlayStart(this);
 }
 
 void Osu::onPlayEnd(bool quit)
 {
 	debugLog("Osu::onPlayEnd()\n");
+
+	OsuRichPresence::onPlayEnd(this, quit);
 
 	m_snd_change_check_interval_ref->setValue(m_snd_change_check_interval_ref->getDefaultFloat());
 

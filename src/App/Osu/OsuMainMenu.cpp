@@ -26,6 +26,7 @@
 #include "OsuMainMenu.h"
 #include "OsuOptionsMenu.h"
 #include "OsuHUD.h"
+#include "OsuRichPresence.h"
 
 #include "OsuUIButton.h"
 
@@ -679,7 +680,10 @@ void OsuMainMenu::setVisible(bool visible)
 	}
 	else
 	{
+		OsuRichPresence::onMainMenu(m_osu);
+
 		updateLayout();
+
 		m_fMainMenuAnimTime = engine->getTime() + 15.0f;
 	}
 }

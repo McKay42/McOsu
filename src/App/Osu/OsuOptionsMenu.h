@@ -54,6 +54,8 @@ public:
 	void setVisible(bool visible);
 	void setFullscreen(bool fullscreen) {m_bFullscreen = fullscreen;}
 
+	void setUsername(UString username);
+
 	inline bool isFullscreen() const {return m_bFullscreen;}
 	bool isMouseInside();
 	bool isBusy();

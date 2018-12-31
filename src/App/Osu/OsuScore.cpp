@@ -343,6 +343,46 @@ int OsuScore::getKeyCount(int key)
 	return 0;
 }
 
+UString OsuScore::getModsString()
+{
+	UString modsString;
+
+	if (m_osu->getModNF())
+		modsString.append("NF");
+	if (m_osu->getModEZ())
+		modsString.append("EZ");
+	if (m_osu->getModHD())
+		modsString.append("HD");
+	if (m_osu->getModHR())
+		modsString.append("HR");
+	if (m_osu->getModSD())
+		modsString.append("SD");
+	if (m_osu->getModDT())
+		modsString.append("DT");
+	if (m_osu->getModRelax())
+		modsString.append("RX");
+	if (m_osu->getModHT())
+		modsString.append("HT");
+	if (m_osu->getModNC())
+		modsString.append("NC");
+	if (m_osu->getModAuto())
+		modsString.append("AT");
+	if (m_osu->getModSpunout())
+		modsString.append("SO");
+	if (m_osu->getModAutopilot())
+		modsString.append("AP");
+	if (m_osu->getModSS())
+		modsString.append("PF");
+	if (m_osu->getModScorev2())
+		modsString.append("v2");
+	if (m_osu->getModTarget())
+		modsString.append("TP");
+	if (m_osu->getModNM())
+		modsString.append("NM");
+
+	return modsString;
+}
+
 unsigned long long OsuScore::getScore()
 {
 	return m_osu->getModScorev2() ? m_iScoreV2 : m_iScoreV1;
