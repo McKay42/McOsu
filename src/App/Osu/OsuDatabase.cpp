@@ -486,7 +486,8 @@ OsuDatabase::PlayerStats OsuDatabase::calculatePlayerStats(UString playerName)
 		acc += pss[i].acc * weight;
 	}
 
-	acc /= (20.0f * (1.0f - std::pow(0.95f, (float)pss.size()))); // normalize accuracy
+	if (pss.size() > 0)
+		acc /= (20.0f * (1.0f - std::pow(0.95f, (float)pss.size()))); // normalize accuracy
 
 	// fill stats
 	m_prevPlayerStats.name = playerName;
