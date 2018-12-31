@@ -38,6 +38,8 @@ public:
 	static wchar_t TROPHY;
 	static wchar_t CARET_DOWN;
 	static wchar_t ARROW_DOWN;
+	static wchar_t GLOBE;
+	static wchar_t USER;
 };
 
 #endif

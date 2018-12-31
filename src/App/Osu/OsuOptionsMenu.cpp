@@ -722,6 +722,13 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 
 	//**************************************************************************************************************************//
 
+	CBaseUIElement *sectionOnline = addSection("Online");
+
+	addSubSection("Integration");
+	addCheckbox("Rich Presence (Discord + Steam)", "Shows your current game state in your friends' friendslists.\ne.g.: Playing Gavin G - Reach Out [Cherry Blossom's Insane]", convar->getConVarByName("osu_rich_presence"));
+
+	//**************************************************************************************************************************//
+
 	addSection("Bullshit");
 
 	addSubSection("Why");
@@ -748,6 +755,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCategory(sectionSkin, OsuIcons::PAINTBRUSH);
 	addCategory(sectionInput, OsuIcons::GAMEPAD);
 	addCategory(sectionGameplay, OsuIcons::CIRCLE);
+	addCategory(sectionOnline, OsuIcons::GLOBE);
 
 	//**************************************************************************************************************************//
 
@@ -1162,6 +1170,11 @@ void OsuOptionsMenu::setVisibleInt(bool visible, bool fromOnBack)
 		//anim->deleteExistingAnimation(&m_fAnimation);
 		//m_fAnimation = 0.0f;
 	}
+}
+
+void OsuOptionsMenu::setUsername(UString username)
+{
+	m_nameTextbox->setText(username);
 }
 
 bool OsuOptionsMenu::isMouseInside()

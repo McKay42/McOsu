@@ -39,7 +39,7 @@ OsuMultiplayer::OsuMultiplayer(Osu *osu)
 	m_osu = osu;
 
 	if (m_cl_cmdrate == NULL)
-		m_cl_cmdrate = convar->getConVarByName("cl_cmdrate");
+		m_cl_cmdrate = convar->getConVarByName("cl_cmdrate", false);
 
 	// engine callbacks
 	engine->getNetworkHandler()->setOnClientReceiveServerPacketListener( fastdelegate::MakeDelegate(this, &OsuMultiplayer::onClientReceive) );

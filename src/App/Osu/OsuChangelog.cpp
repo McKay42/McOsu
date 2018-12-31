@@ -35,7 +35,11 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	std::vector<CHANGELOG> changelogs;
 
 	CHANGELOG alpha29Steam;
-	alpha29Steam.title = UString::format("29 (Steam VR Version, %s, %s)", __DATE__, __TIME__);
+	alpha29Steam.title = UString::format("29.1 (Steam VR Version, %s, %s)", __DATE__, __TIME__);
+	alpha29Steam.changes.push_back("- Added rich presence support (Discord + Steam)");
+	alpha29Steam.changes.push_back("- Added user profile info + switcher to songbrowser (total weighted pp/acc/lv)");
+	alpha29Steam.changes.push_back("- Added option \"Rich Presence\" (Options > Online > Integration)");
+	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("- Added option \"Automatic Cursor Size\" (Options > Skin > Skin)");
 	alpha29Steam.changes.push_back("- Added letterboxing option \"Horizontal position\" (Options > Graphics > Layout)");
 	alpha29Steam.changes.push_back("- Added letterboxing option \"Vertical position\" (Options > Graphics > Layout)");
@@ -63,6 +67,11 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha29Steam.changes.push_back("- Updated combo color handling to match osu!");
 	alpha29Steam.changes.push_back("- Added ConVars: osu_sound_panning, osu_sound_panning_multiplier, osu_approachtime_min, osu_approachtime_mid, osu_approachtime_max");
 	alpha29Steam.changes.push_back("- Fixed local score tooltips not applying speed multiplier to AR/OD");
+	alpha29Steam.changes.push_back("");
+	alpha29Steam.changes.push_back("");
+	alpha29Steam.changes.push_back("");
+	alpha29Steam.changes.push_back("");
+	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("- Added local scores");
 	alpha29Steam.changes.push_back("- Added osu! scores.db support (read-only)");

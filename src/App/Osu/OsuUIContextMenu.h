@@ -33,9 +33,9 @@ public:
 	void onMouseDownOutside();
 	void onFocusStolen();
 
-	void begin();
+	void begin(int minWidth = 0);
 	CBaseUIButton *addButton(UString text);
-	void end();
+	void end(bool invertAnimation = false);
 
 	void setVisible2(bool visible2);
 
@@ -55,6 +55,7 @@ private:
 
 	bool m_bVisible2;
 	float m_fAnimation;
+	bool m_bInvertAnimation;
 };
 
 #endif

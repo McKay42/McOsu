@@ -20,6 +20,7 @@ class OsuUIContextMenu;
 class OsuUISearchOverlay;
 class OsuUISelectionButton;
 class OsuUISongBrowserInfoLabel;
+class OsuUISongBrowserUserButton;
 class OsuUISongBrowserScoreButton;
 class OsuUISongBrowserButton;
 class OsuUISongBrowserSongButton;
@@ -146,6 +147,9 @@ private:
 
 	void onModeChange(UString text);
 
+	void onUserButtonClicked();
+	void onUserButtonChange(UString text);
+
 	void onScoreClicked(CBaseUIButton *button);
 
 	void selectSongButton(OsuUISongBrowserButton *songButton);
@@ -156,6 +160,7 @@ private:
 	ConVar *m_fps_max_ref;
 	ConVar *m_osu_database_dynamic_star_calculation_ref;
 	ConVar *m_osu_scores_enabled;
+	ConVar *m_name_ref;
 
 	Osu *m_osu;
 	std::mt19937 m_rngalg;
@@ -183,6 +188,7 @@ private:
 	// bottom bar
 	CBaseUIContainer *m_bottombar;
 	std::vector<OsuUISelectionButton*> m_bottombarNavButtons;
+	OsuUISongBrowserUserButton *m_userButton;
 
 	// score browser
 	std::vector<OsuUISongBrowserScoreButton*> m_scoreButtonCache;

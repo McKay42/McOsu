@@ -163,6 +163,7 @@ OsuSkin::OsuSkin(Osu *osu, UString filepath, bool isDefaultSkin)
 	m_circleEmpty = m_missingTexture;
 	m_circleFull = m_missingTexture;
 	m_seekTriangle = m_missingTexture;
+	m_userIcon = m_missingTexture;
 
 	m_normalHitNormal = NULL;
 	m_normalHitWhistle = NULL;
@@ -507,6 +508,7 @@ void OsuSkin::load()
 	checkLoadImage(&m_circleEmpty, "circle-empty", "OSU_SKIN_CIRCLE_EMPTY");
 	checkLoadImage(&m_circleFull, "circle-full", "OSU_SKIN_CIRCLE_FULL");
 	checkLoadImage(&m_seekTriangle, "seektriangle", "OSU_SKIN_SEEKTRIANGLE");
+	checkLoadImage(&m_userIcon, "user-icon", "OSU_SKIN_USER_ICON");
 
 	// sounds
 
