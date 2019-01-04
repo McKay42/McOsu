@@ -20,12 +20,12 @@ public:
 	OsuVRTutorial(Osu *osu);
 	virtual ~OsuVRTutorial();
 
-	void draw(Graphics *g);
-	void update();
+	virtual void draw(Graphics *g);
+	virtual void update();
 
-	void onKeyDown(KeyboardEvent &e);
+	virtual void onKeyDown(KeyboardEvent &e);
 
-	void setVisible(bool visible);
+	virtual void setVisible(bool visible);
 
 private:
 	virtual void updateLayout();

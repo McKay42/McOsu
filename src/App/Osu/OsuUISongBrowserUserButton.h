@@ -10,6 +10,8 @@
 
 #include "CBaseUIButton.h"
 
+class ConVar;
+
 class Osu;
 
 class OsuUISongBrowserUserButton : public CBaseUIButton
@@ -22,9 +24,13 @@ public:
 
 	void updateUserStats();
 
+	void addTooltipLine(UString text) {m_vTooltipLines.push_back(text);}
+
 private:
 	virtual void onMouseInside();
 	virtual void onMouseOutside();
+
+	ConVar *m_osu_scores_enabled_ref;
 
 	Osu *m_osu;
 
@@ -36,6 +42,7 @@ private:
 	int m_iPPIncrease;
 
 	float m_fHoverAnim;
+	std::vector<UString> m_vTooltipLines;
 };
 
 #endif

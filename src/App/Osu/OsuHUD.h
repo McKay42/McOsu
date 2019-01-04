@@ -30,11 +30,11 @@ public:
 	OsuHUD(Osu *osu);
 	virtual ~OsuHUD();
 
-	void draw(Graphics *g);
+	virtual void draw(Graphics *g);
 	void drawDummy(Graphics *g);
 	void drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr);
 	void drawVRDummy(Graphics *g, Matrix4 &mvp, OsuVR *vr);
-	void update();
+	virtual void update();
 
 	void drawCursor(Graphics *g, Vector2 pos, float alphaMultiplier = 1.0f);
 	void drawCursorSpectator1(Graphics *g, Vector2 pos, float alphaMultiplier = 1.0f);

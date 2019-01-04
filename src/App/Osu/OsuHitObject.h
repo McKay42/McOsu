@@ -21,11 +21,15 @@ public:
 	static void drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiameter, float rawHitcircleDiameter, Vector2 rawPos, OsuScore::HIT result, float animPercent, float defaultAnimPercent);
 
 	static ConVar *m_osu_approach_scale_multiplier_ref;
+
 	static ConVar *m_osu_timingpoints_force;
+
 	static ConVar *m_osu_vr_approach_type;
 	static ConVar *m_osu_vr_draw_approach_circles;
 	static ConVar *m_osu_vr_approach_circles_on_playfield;
 	static ConVar *m_osu_vr_approach_circles_on_top;
+
+	static ConVar *m_osu_relax_offset_ref;
 
 public:
 	OsuHitObject(long time, int sampleType, int comboNumber, int colorCounter, int colorOffset, OsuBeatmap *beatmap);

@@ -767,15 +767,21 @@ void OsuMultiplayer::onServerPlayStateChange(OsuMultiplayer::STATE state, unsign
 
 void OsuMultiplayer::setBeatmap(OsuBeatmap *beatmap)
 {
-	if (beatmap == NULL || beatmap->getSelectedDifficulty() == NULL || beatmap->getSelectedDifficulty()->md5hash.length() < 32) return;
+	if (beatmap == NULL || beatmap->getSelectedDifficulty() == NULL) return;
+	setBeatmap(beatmap->getSelectedDifficulty()->md5hash);
+}
+
+void OsuMultiplayer::setBeatmap(std::string md5hash)
+{
+	if (md5hash.length() < 32) return;
 
 	GAME_STATE_PACKET pp;
 	pp.state = STATE::SELECT;
 	pp.seekMS = 0;
 	pp.quickRestart = false;
-	for (int i=0; i<32 && i<beatmap->getSelectedDifficulty()->md5hash.length(); i++)
+	for (int i=0; i<32 && i<md5hash.length(); i++)
 	{
-		pp.beatmapMD5Hash[i] = beatmap->getSelectedDifficulty()->md5hash[i];
+		pp.beatmapMD5Hash[i] = md5hash[i];
 	}
 	pp.beatmapId = /*beatmap->getSelectedDifficulty()->beatmapId*/0;
 	size_t size = sizeof(GAME_STATE_PACKET);

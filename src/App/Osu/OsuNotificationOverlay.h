@@ -26,11 +26,11 @@ public:
 	OsuNotificationOverlay(Osu *osu);
 	virtual ~OsuNotificationOverlay() {;}
 
-	void draw(Graphics *g);
+	virtual void draw(Graphics *g);
 
-	void onKeyDown(KeyboardEvent &e);
-	void onKeyUp(KeyboardEvent &e);
-	void onChar(KeyboardEvent &e);
+	virtual void onKeyDown(KeyboardEvent &e);
+	virtual void onKeyUp(KeyboardEvent &e);
+	virtual void onChar(KeyboardEvent &e);
 
 	void addNotification(UString text, Color textColor = 0xffffffff, bool waitForKey = false, float duration = -1.0f);
 
@@ -38,7 +38,7 @@ public:
 
 	void addKeyListener(OsuNotificationOverlayKeyListener *keyListener) {m_keyListener = keyListener;}
 
-	bool isVisible();
+	virtual bool isVisible();
 
 private:
 	struct NOTIFICATION

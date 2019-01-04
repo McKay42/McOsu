@@ -15,6 +15,7 @@
 
 #include "Osu.h"
 #include "OsuFile.h"
+#include "OsuReplay.h"
 #include "OsuNotificationOverlay.h"
 
 #include "OsuBeatmap.h"
@@ -47,7 +48,8 @@ ConVar osu_scores_enabled("osu_scores_enabled", true);
 ConVar osu_scores_legacy_enabled("osu_scores_legacy_enabled", true, "load osu!'s scores.db");
 ConVar osu_scores_custom_enabled("osu_scores_custom_enabled", true, "load custom scores.db");
 ConVar osu_scores_save_immediately("osu_scores_save_immediately", true, "write scores.db as soon as a new score is added");
-ConVar osu_scores_sort_by_pp("osu_scores_sort_by_pp", false, "display pp in score browser instead of score");
+ConVar osu_scores_sort_by_pp("osu_scores_sort_by_pp", true, "display pp in score browser instead of score");
+ConVar osu_user_include_relax_and_autopilot_for_stats("osu_user_include_relax_and_autopilot_for_stats", false);
 
 class OsuDatabaseLoader : public Resource
 {
@@ -336,52 +338,12 @@ void OsuDatabase::sortScores(std::string beatmapMD5Hash)
 			// strict weak ordering!
 			if (score1 == score2)
 				return a.sortHack > b.sortHack;
+
 			return score1 > score2;
 		}
 	};
 
-	struct SortByPP : public OSU_SCORE_SORTING_COMPARATOR
-	{
-		virtual ~SortByPP() {;}
-		bool operator() (OsuDatabase::Score const &a, OsuDatabase::Score const &b) const
-		{
-			// first: pp
-			unsigned long long pp1 = (unsigned long long)(a.pp * 1000.0f);
-			unsigned long long pp2 = (unsigned long long)(a.pp * 1000.0f);
-
-			// second: score
-			if (pp1 == pp2)
-			{
-				pp1 = a.score;
-				pp2 = b.score;
-
-				if (pp1 == pp2) // third: time
-				{
-					pp1 = a.unixTimestamp;
-					pp2 = b.unixTimestamp;
-				}
-			}
-
-			// strict weak ordering!
-			if (pp1 == pp2)
-				return a.sortHack > b.sortHack;
-			return pp1 > pp2;
-		}
-	};
-
-	struct COMPARATOR_WRAPPER
-	{
-		OSU_SCORE_SORTING_COMPARATOR *comp;
-		bool operator() (OsuDatabase::Score const &a, OsuDatabase::Score const &b) const
-		{
-			return comp->operator()(a, b);
-		}
-	};
-	COMPARATOR_WRAPPER comparatorWrapper;
-	SortByPP comparator1 = SortByPP();
-	SortByScore comparator2 = SortByScore();
-	comparatorWrapper.comp = (osu_scores_sort_by_pp.getBool() ? (OSU_SCORE_SORTING_COMPARATOR*)&comparator1 : (OSU_SCORE_SORTING_COMPARATOR*)&comparator2);
-	std::sort(m_scores[beatmapMD5Hash].begin(), m_scores[beatmapMD5Hash].end(), comparatorWrapper);
+	std::sort(m_scores[beatmapMD5Hash].begin(), m_scores[beatmapMD5Hash].end(), SortByScore());
 }
 
 std::vector<UString> OsuDatabase::getPlayerNamesWithPPScores()
@@ -419,10 +381,11 @@ std::vector<UString> OsuDatabase::getPlayerNamesWithPPScores()
 	return names;
 }
 
-OsuDatabase::PlayerStats OsuDatabase::calculatePlayerStats(UString playerName)
+std::vector<OsuDatabase::Score*> OsuDatabase::getPlayerPPScores(UString playerName)
 {
-	if (!m_bDidScoresChangeForStats && playerName == m_prevPlayerStats.name) return m_prevPlayerStats;
+	std::vector<Score*> scores;
 
+	// collect all scores with pp data
 	std::vector<std::string> keys;
 	keys.reserve(m_scores.size());
 
@@ -431,40 +394,61 @@ OsuDatabase::PlayerStats OsuDatabase::calculatePlayerStats(UString playerName)
 		keys.push_back(kv.first);
 	}
 
-	struct Stat
+	struct ScoreSortComparator
 	{
-		float pp;
-		float acc;
-		unsigned long long sortHack;
-	};
-
-	struct StatSortComparator
-	{
-	    bool operator() (Stat const &a, Stat const &b) const
+	    bool operator() (Score const *a, Score const *b) const
 	    {
+	    	// sort by pp
 	    	// strict weak ordering!
-	    	if (a.pp == b.pp)
-	    		return a.sortHack < b.sortHack;
+	    	if (a->pp == b->pp)
+	    		return a->sortHack < b->sortHack;
 	    	else
-	    		return a.pp < b.pp;
+	    		return a->pp < b->pp;
 	    }
 	};
 
-	std::vector<Stat> pss;
-	unsigned long long totalScore = 0;
 	for (auto &key : keys)
 	{
-		for (Score &score : m_scores[key])
+		if (m_scores[key].size() > 0)
 		{
-			if (!score.isLegacyScore && score.playerName == playerName)
+			Score &tempScore = m_scores[key][0];
+
+			// only add highest pp score per diff
+			bool foundValidScore = false;
+			float prevPP = -1.0f;
+			for (Score &score : m_scores[key])
 			{
-				totalScore += score.score;
-				pss.push_back({score.pp, OsuScore::calculateAccuracy(score.num300s, score.num100s, score.num50s, score.numMisses), m_iSortHackCounter++});
+				if (!score.isLegacyScore && (osu_user_include_relax_and_autopilot_for_stats.getBool() ? true : !((score.modsLegacy & OsuReplay::Mods::Relax) || (score.modsLegacy & OsuReplay::Mods::Relax2))) && score.playerName == playerName)
+				{
+					foundValidScore = true;
+
+					score.sortHack = m_iSortHackCounter++;
+					score.md5hash = key;
+
+					if (score.pp > prevPP || prevPP < 0.0f)
+					{
+						prevPP = score.pp;
+						tempScore = score;
+					}
+				}
 			}
+
+			if (foundValidScore)
+				scores.push_back(&tempScore);
 		}
 	}
 
-	std::sort(pss.begin(), pss.end(), StatSortComparator());
+	// sort by pp
+	std::sort(scores.begin(), scores.end(), ScoreSortComparator());
+
+	return scores;
+}
+
+OsuDatabase::PlayerStats OsuDatabase::calculatePlayerStats(UString playerName)
+{
+	if (!m_bDidScoresChangeForStats && playerName == m_prevPlayerStats.name) return m_prevPlayerStats;
+
+	std::vector<Score*> pss = getPlayerPPScores(playerName);
 
 	// delay caching until we actually have scores loaded
 	if (pss.size() > 0)
@@ -478,16 +462,18 @@ OsuDatabase::PlayerStats OsuDatabase::calculatePlayerStats(UString playerName)
 
 	float pp = 0.0f;
 	float acc = 0.0f;
+	unsigned long long totalScore = 0;
 	for (int i=0; i<pss.size(); i++)
 	{
-		const float weight = std::pow(0.95f, (pss.size()-1-i));
+		const float weight = getWeightForIndex(pss.size()-1-i);
 
-		pp += pss[i].pp * weight;
-		acc += pss[i].acc * weight;
+		pp += pss[i]->pp * weight;
+		acc += OsuScore::calculateAccuracy(pss[i]->num300s, pss[i]->num100s, pss[i]->num50s, pss[i]->numMisses) * weight;
+		totalScore += pss[i]->score;
 	}
 
 	if (pss.size() > 0)
-		acc /= (20.0f * (1.0f - std::pow(0.95f, (float)pss.size()))); // normalize accuracy
+		acc /= (20.0f * (1.0f - getWeightForIndex(pss.size()))); // normalize accuracy
 
 	// fill stats
 	m_prevPlayerStats.name = playerName;
@@ -511,10 +497,24 @@ OsuDatabase::PlayerStats OsuDatabase::calculatePlayerStats(UString playerName)
 	return m_prevPlayerStats;
 }
 
-// https://zxq.co/ripple/ocl/src/branch/master/level.go
+void OsuDatabase::recalculatePPForAllScores()
+{
+	// TODO: recalculate 20180722 scores for https://github.com/ppy/osu-performance/pull/76/ and https://github.com/ppy/osu-performance/pull/72/
+
+	// TODO: before being able to recalculate scoreVersion 20180722 scores, we have to fetch/calculate these values from the beatmap db:
+	// maxPossibleCombo, numHitObjects, numCircles
+	// therefore: we have to ensure everything is loaded, or dynamically load these values from the osu files (which will be expensive)
+	// (however, if and when star rating changes come in, everything will have to be recalculated completely anyway)
+}
+
+float OsuDatabase::getWeightForIndex(int i)
+{
+	return std::pow(0.95f, (float)i);
+}
 
 unsigned long long OsuDatabase::getRequiredScoreForLevel(int level)
 {
+	// https://zxq.co/ripple/ocl/src/branch/master/level.go
 	if (level <= 100)
 	{
 		if (level > 1)
@@ -528,6 +528,7 @@ unsigned long long OsuDatabase::getRequiredScoreForLevel(int level)
 
 int OsuDatabase::getLevelForScore(unsigned long long score, int maxLevel)
 {
+	// https://zxq.co/ripple/ocl/src/branch/master/level.go
 	int i = 0;
 	while (true)
 	{
@@ -541,6 +542,60 @@ int OsuDatabase::getLevelForScore(unsigned long long score, int maxLevel)
 
 		i++;
 	}
+}
+
+OsuBeatmap *OsuDatabase::getBeatmap(std::string md5hash)
+{
+	for (int i=0; i<m_beatmaps.size(); i++)
+	{
+		OsuBeatmap *beatmap = m_beatmaps[i];
+		for (int d=0; d<beatmap->getDifficultiesPointer()->size(); d++)
+		{
+			OsuBeatmapDifficulty *diff = (*beatmap->getDifficultiesPointer())[d];
+
+			bool uuidMatches = (diff->md5hash.length() > 0);
+			for (int u=0; u<32 && u<diff->md5hash.length(); u++)
+			{
+				if (diff->md5hash[u] != md5hash[u])
+				{
+					uuidMatches = false;
+					break;
+				}
+			}
+
+			if (uuidMatches)
+				return beatmap;
+		}
+	}
+
+	return NULL;
+}
+
+OsuBeatmapDifficulty *OsuDatabase::getBeatmapDifficulty(std::string md5hash)
+{
+	for (int i=0; i<m_beatmaps.size(); i++)
+	{
+		OsuBeatmap *beatmap = m_beatmaps[i];
+		for (int d=0; d<beatmap->getDifficultiesPointer()->size(); d++)
+		{
+			OsuBeatmapDifficulty *diff = (*beatmap->getDifficultiesPointer())[d];
+
+			bool uuidMatches = (diff->md5hash.length() > 0);
+			for (int u=0; u<32 && u<diff->md5hash.length(); u++)
+			{
+				if (diff->md5hash[u] != md5hash[u])
+				{
+					uuidMatches = false;
+					break;
+				}
+			}
+
+			if (uuidMatches)
+				return diff;
+		}
+	}
+
+	return NULL;
 }
 
 void OsuDatabase::loadRaw()
@@ -1288,6 +1343,9 @@ void OsuDatabase::loadScores()
 						sc.starsTomSpeed = 0.0f;
 						sc.speedMultiplier = 1.0f;
 						sc.CS = 0.0f; sc.AR = 0.0f; sc.OD = 0.0f; sc.HP = 0.0f;
+						sc.maxPossibleCombo = -1;
+						sc.numHitObjects = -1;
+						sc.numCircles = -1;
 						//sc.experimentalModsConVars = "";
 
 						// temp
@@ -1370,6 +1428,17 @@ void OsuDatabase::loadScores()
 					const float AR = db.readFloat();
 					const float OD = db.readFloat();
 					const float HP = db.readFloat();
+
+					int maxPossibleCombo = -1;
+					int numHitObjects = -1;
+					int numCircles = -1;
+					if (scoreVersion > 20180722)
+					{
+						maxPossibleCombo = db.readInt();
+						numHitObjects = db.readInt();
+						numCircles = db.readInt();
+					}
+
 					const UString experimentalMods = db.readString();
 
 		            if (gamemode == 0x0) // gamemode filter (osu!standard)
@@ -1404,6 +1473,9 @@ void OsuDatabase::loadScores()
 						sc.starsTomSpeed = starsTomSpeed;
 						sc.speedMultiplier = speedMultiplier;
 						sc.CS = CS; sc.AR = AR; sc.OD = OD; sc.HP = HP;
+						sc.maxPossibleCombo = maxPossibleCombo;
+						sc.numHitObjects = numHitObjects;
+						sc.numCircles = numCircles;
 						sc.experimentalModsConVars = experimentalMods;
 
 						// temp
@@ -1429,7 +1501,7 @@ void OsuDatabase::saveScores()
 	if (!m_bDidScoresChangeForSave) return;
 	m_bDidScoresChangeForSave = false;
 
-	const int dbVersion = 20180722;
+	const int dbVersion = 20190103;
 
 	if (m_scores.size() > 0)
 	{
@@ -1509,6 +1581,14 @@ void OsuDatabase::saveScores()
 							db.writeFloat(it->second[i].AR);
 							db.writeFloat(it->second[i].OD);
 							db.writeFloat(it->second[i].HP);
+
+							if (it->second[i].version > 20180722)
+							{
+								db.writeInt(it->second[i].maxPossibleCombo);
+								db.writeInt(it->second[i].numHitObjects);
+								db.writeInt(it->second[i].numCircles);
+							}
+
 							db.writeString(it->second[i].experimentalModsConVars);
 						}
 					}

@@ -37,12 +37,15 @@ ConVar osu_mod_target_300_percent("osu_mod_target_300_percent", 0.5f);
 ConVar osu_mod_target_100_percent("osu_mod_target_100_percent", 0.7f);
 ConVar osu_mod_target_50_percent("osu_mod_target_50_percent", 0.95f);
 
+ConVar osu_relax_offset("osu_relax_offset", 0, "osu!relax always hits -12 ms too early, so set this to -12 (note the negative) if you want it to be the same");
+
 ConVar *OsuHitObject::m_osu_approach_scale_multiplier_ref = &osu_approach_scale_multiplier;
 ConVar *OsuHitObject::m_osu_timingpoints_force = &osu_timingpoints_force;
 ConVar *OsuHitObject::m_osu_vr_approach_type = &osu_vr_approach_type;
 ConVar *OsuHitObject::m_osu_vr_draw_approach_circles = &osu_vr_draw_approach_circles;
 ConVar *OsuHitObject::m_osu_vr_approach_circles_on_playfield = &osu_vr_approach_circles_on_playfield;
 ConVar *OsuHitObject::m_osu_vr_approach_circles_on_top = &osu_vr_approach_circles_on_top;
+ConVar *OsuHitObject::m_osu_relax_offset_ref = &osu_relax_offset;
 unsigned long long OsuHitObject::sortHackCounter = 0;
 
 void OsuHitObject::drawHitResult(Graphics *g, OsuBeatmapStandard *beatmap, Vector2 rawPos, OsuScore::HIT result, float animPercent, float defaultAnimPercent)

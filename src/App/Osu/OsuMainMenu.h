@@ -34,21 +34,21 @@ public:
 	OsuMainMenu(Osu *osu);
 	virtual ~OsuMainMenu();
 
-	void draw(Graphics *g);
-	void update();
+	virtual void draw(Graphics *g);
+	virtual void update();
 
-	void onKeyDown(KeyboardEvent &e);
+	virtual void onKeyDown(KeyboardEvent &e);
 
-	void onLeftChange(bool down){;}
-	void onMiddleChange(bool down);
-	void onRightChange(bool down){;}
+	virtual void onLeftChange(bool down){;}
+	virtual void onMiddleChange(bool down);
+	virtual void onRightChange(bool down){;}
 
-	void onWheelVertical(int delta){;}
-	void onWheelHorizontal(int delta){;}
+	virtual void onWheelVertical(int delta){;}
+	virtual void onWheelHorizontal(int delta){;}
 
-	void onResolutionChange(Vector2 newResolution);
+	virtual void onResolutionChange(Vector2 newResolution);
 
-	void setVisible(bool visible);
+	virtual void setVisible(bool visible);
 
 	inline Osu* getOsu() const {return m_osu;}
 
