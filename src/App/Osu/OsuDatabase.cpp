@@ -411,7 +411,7 @@ std::vector<OsuDatabase::Score*> OsuDatabase::getPlayerPPScores(UString playerNa
 	{
 		if (m_scores[key].size() > 0)
 		{
-			Score &tempScore = m_scores[key][0];
+			Score *tempScore = &m_scores[key][0];
 
 			// only add highest pp score per diff
 			bool foundValidScore = false;
@@ -428,13 +428,13 @@ std::vector<OsuDatabase::Score*> OsuDatabase::getPlayerPPScores(UString playerNa
 					if (score.pp > prevPP || prevPP < 0.0f)
 					{
 						prevPP = score.pp;
-						tempScore = score;
+						tempScore = &score;
 					}
 				}
 			}
 
 			if (foundValidScore)
-				scores.push_back(&tempScore);
+				scores.push_back(tempScore);
 		}
 	}
 
