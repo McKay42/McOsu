@@ -60,10 +60,14 @@ public:
 		float starsTomSpeed;
 		float speedMultiplier;
 		float CS, AR, OD, HP;
+		int maxPossibleCombo;
+		int numHitObjects;
+		int numCircles;
 		UString experimentalModsConVars;
 
 		// temp
 		unsigned long long sortHack;
+		std::string md5hash;
 	};
 
 	struct PlayerStats
@@ -94,7 +98,10 @@ public:
 	void sortScores(std::string beatmapMD5Hash);
 
 	std::vector<UString> getPlayerNamesWithPPScores();
+	std::vector<Score*> getPlayerPPScores(UString playerName);
 	PlayerStats calculatePlayerStats(UString playerName);
+	void recalculatePPForAllScores();
+	static float getWeightForIndex(int i);
 	unsigned long long getRequiredScoreForLevel(int level);
 	int getLevelForScore(unsigned long long score, int maxLevel = 120);
 
@@ -104,6 +111,8 @@ public:
 
 	inline int getNumBeatmaps() const {return m_beatmaps.size();} // valid beatmaps
 	inline const std::vector<OsuBeatmap*> getBeatmaps() const {return m_beatmaps;}
+	OsuBeatmap *getBeatmap(std::string md5hash);
+	OsuBeatmapDifficulty *getBeatmapDifficulty(std::string md5hash);
 	inline int getNumCollections() const {return m_collections.size();}
 	inline const std::vector<Collection> getCollections() const {return m_collections;}
 

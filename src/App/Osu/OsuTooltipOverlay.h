@@ -18,8 +18,8 @@ public:
 	OsuTooltipOverlay(Osu *osu);
 	virtual ~OsuTooltipOverlay();
 
-	void draw(Graphics *g);
-	void update();
+	virtual void draw(Graphics *g);
+	virtual void update();
 
 	void begin();
 	void addLine(UString text);

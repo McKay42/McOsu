@@ -20,10 +20,10 @@ public:
 	OsuChangelog(Osu *osu);
 	virtual ~OsuChangelog();
 
-	void draw(Graphics *g);
-	void update();
+	virtual void draw(Graphics *g);
+	virtual void update();
 
-	void setVisible(bool visible);
+	virtual void setVisible(bool visible);
 
 private:
 	virtual void updateLayout();

@@ -40,6 +40,7 @@
 #include "OsuSongBrowser2.h"
 #include "OsuModSelector.h"
 #include "OsuRankingScreen.h"
+#include "OsuUserStatsScreen.h"
 #include "OsuKeyBindings.h"
 #include "OsuUpdateHandler.h"
 #include "OsuNotificationOverlay.h"
@@ -70,7 +71,7 @@ void DUMMY_OSU_MODS(void) {;}
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 29.1f);
+ConVar osu_version("osu_version", 29.2f);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr");
 #else
@@ -277,6 +278,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_bToggleOptionsMenuScheduled = false;
 	m_bOptionsMenuFullscreen = true;
 	m_bToggleRankingScreenScheduled = false;
+	m_bToggleUserStatsScreenScheduled = false;
 	m_bToggleVRTutorialScheduled = false;
 	m_bToggleChangelogScheduled = false;
 	m_bToggleEditorScheduled = false;
@@ -367,6 +369,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_songBrowser2 = new OsuSongBrowser2(this);
 	m_modSelector = new OsuModSelector(this);
 	m_rankingScreen = new OsuRankingScreen(this);
+	m_userStatsScreen = new OsuUserStatsScreen(this);
 	m_pauseMenu = new OsuPauseMenu(this);
 	m_hud = new OsuHUD(this);
 	m_vrTutorial = new OsuVRTutorial(this);
@@ -376,6 +379,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	// the order in this vector will define in which order events are handled/consumed
 	m_screens.push_back(m_notificationOverlay);
 	m_screens.push_back(m_optionsMenu);
+	m_screens.push_back(m_userStatsScreen);
 	m_screens.push_back(m_rankingScreen);
 	m_screens.push_back(m_modSelector);
 	m_screens.push_back(m_pauseMenu);
@@ -395,7 +399,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	//m_rankingScreen->setVisible(true);
 	//m_changelog->setVisible(true);
 	//m_editor->setVisible(true);
-
+	//m_userStatsScreen->setVisible(true);
 
 	if (isInVRMode() && osu_vr_tutorial.getBool())
 		m_vrTutorial->setVisible(true);
@@ -403,7 +407,6 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 		m_mainMenu->setVisible(true);
 
 	m_updateHandler->checkForUpdates();
-
 
 	/*
 	// DEBUG: immediately start diff of a beatmap
@@ -559,6 +562,7 @@ void Osu::draw(Graphics *g)
 		m_vrTutorial->draw(g);
 		m_changelog->draw(g);
 		m_editor->draw(g);
+		m_userStatsScreen->draw(g);
 		m_rankingScreen->draw(g);
 		m_optionsMenu->draw(g);
 
@@ -774,6 +778,9 @@ void Osu::update()
 	{
 		m_bToggleSongBrowserScheduled = false;
 
+		if (m_userStatsScreen->isVisible())
+			m_userStatsScreen->setVisible(false);
+
 		if (m_mainMenu->isVisible() && m_optionsMenu->isVisible())
 			m_optionsMenu->setVisible(false);
 
@@ -802,6 +809,18 @@ void Osu::update()
 		m_rankingScreen->setVisible(!m_rankingScreen->isVisible());
 		if (m_songBrowser2 != NULL && m_iInstanceID < 2)
 			m_songBrowser2->setVisible(!m_rankingScreen->isVisible());
+	}
+	if (m_bToggleUserStatsScreenScheduled)
+	{
+		m_bToggleUserStatsScreenScheduled = false;
+
+		if (m_iInstanceID < 2)
+		{
+			m_userStatsScreen->setVisible(true);
+
+			if (m_songBrowser2 != NULL && m_songBrowser2->isVisible())
+				m_songBrowser2->setVisible(false);
+		}
 	}
 	if (m_bToggleVRTutorialScheduled)
 	{
@@ -847,6 +866,7 @@ void Osu::update()
 	if ((m_songBrowser2 != NULL && (!m_songBrowser2->isVisible() || engine->getKeyboard()->isAltDown() || m_hud->isVolumeOverlayBusy()))
 			&& (!m_optionsMenu->isVisible() || !m_optionsMenu->isMouseInside() || engine->getKeyboard()->isAltDown())
 			&& !m_vrTutorial->isVisible()
+			&& (!m_userStatsScreen->isVisible() || engine->getKeyboard()->isAltDown() || m_hud->isVolumeOverlayBusy())
 			&& (!m_changelog->isVisible() || engine->getKeyboard()->isAltDown())
 			&& (!m_modSelector->isMouseInScrollView() || engine->getKeyboard()->isAltDown()))
 	{
@@ -1297,6 +1317,11 @@ void Osu::toggleOptionsMenu()
 void Osu::toggleRankingScreen()
 {
 	m_bToggleRankingScreenScheduled = true;
+}
+
+void Osu::toggleUserStatsScreen()
+{
+	m_bToggleUserStatsScreenScheduled = true;
 }
 
 void Osu::toggleVRTutorial()

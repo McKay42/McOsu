@@ -22,6 +22,7 @@ class OsuOptionsMenu;
 class OsuModSelector;
 class OsuSongBrowser2;
 class OsuRankingScreen;
+class OsuUserStatsScreen;
 class OsuUpdateHandler;
 class OsuNotificationOverlay;
 class OsuTooltipOverlay;
@@ -96,6 +97,7 @@ public:
 	void toggleSongBrowser();
 	void toggleOptionsMenu();
 	void toggleRankingScreen();
+	void toggleUserStatsScreen();
 	void toggleVRTutorial();
 	void toggleChangelog();
 	void toggleEditor();
@@ -245,6 +247,7 @@ private:
 	OsuSongBrowser2 *m_songBrowser2;
 	OsuModSelector *m_modSelector;
 	OsuRankingScreen *m_rankingScreen;
+	OsuUserStatsScreen *m_userStatsScreen;
 	OsuPauseMenu *m_pauseMenu;
 	OsuSkin *m_skin;
 	OsuHUD *m_hud;
@@ -310,6 +313,7 @@ private:
 	bool m_bToggleOptionsMenuScheduled;
 	bool m_bOptionsMenuFullscreen;
 	bool m_bToggleRankingScreenScheduled;
+	bool m_bToggleUserStatsScreenScheduled;
 	bool m_bToggleVRTutorialScheduled;
 	bool m_bToggleChangelogScheduled;
 	bool m_bToggleEditorScheduled;

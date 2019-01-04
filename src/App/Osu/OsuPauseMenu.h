@@ -21,16 +21,17 @@ public:
 	OsuPauseMenu(Osu *osu);
 	virtual ~OsuPauseMenu();
 
-	void draw(Graphics *g);
-	void update();
+	virtual void draw(Graphics *g);
+	virtual void update();
 
-	void onKeyDown(KeyboardEvent &e);
-	void onKeyUp(KeyboardEvent &e);
-	void onChar(KeyboardEvent &e);
+	virtual void onKeyDown(KeyboardEvent &e);
+	virtual void onKeyUp(KeyboardEvent &e);
+	virtual void onChar(KeyboardEvent &e);
 
-	void onResolutionChange(Vector2 newResolution);
+	virtual void onResolutionChange(Vector2 newResolution);
 
-	void setVisible(bool visible);
+	virtual void setVisible(bool visible);
+
 	void setContinueEnabled(bool continueEnabled);
 
 private:

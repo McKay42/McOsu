@@ -57,10 +57,13 @@ private:
 	UString buildDiffInfoString();
 	UString buildOffsetInfoString();
 
+	ConVar *m_osu_debug_ref;
+
 	Osu *m_osu;
 	McFont *m_font;
 
 	int m_iMargin;
+	float m_fTitleScale;
 	float m_fSubTitleScale;
 	float m_fSongInfoScale;
 	float m_fDiffInfoScale;

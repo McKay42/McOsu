@@ -10,6 +10,7 @@
 #include "Engine.h"
 #include "AnimationHandler.h"
 #include "ResourceManager.h"
+#include "ConVar.h"
 #include "Mouse.h"
 
 #include "Osu.h"
@@ -21,9 +22,16 @@
 
 // NOTE: selected username is stored in m_sText
 
+ConVar osu_user_draw_pp("osu_user_draw_pp", true);
+ConVar osu_user_draw_accuracy("osu_user_draw_accuracy", true);
+ConVar osu_user_draw_level("osu_user_draw_level", true);
+ConVar osu_user_draw_level_bar("osu_user_draw_level_bar", true);
+
 OsuUISongBrowserUserButton::OsuUISongBrowserUserButton(Osu *osu) : CBaseUIButton()
 {
 	m_osu = osu;
+
+	m_osu_scores_enabled_ref = convar->getConVarByName("osu_scores_enabled");
 
 	m_fPP = 0.0f;
 	m_fAcc = 0.0f;
@@ -108,63 +116,72 @@ void OsuUISongBrowserUserButton::draw(Graphics *g)
 	g->popTransform();
 	g->popClipRect();
 
-	// draw performance (pp), and accuracy
-	McFont *performanceFont = m_osu->getSubTitleFont();
-	const float performanceScale = 0.3f;
-	g->pushTransform();
+	if (m_osu_scores_enabled_ref->getBool())
 	{
-		UString performanceString = UString::format("Performance: %ipp", (int)std::round(m_fPP));
-		UString accuracyString = UString::format("Accuracy: %.2f%%", m_fAcc*100.0f);
+		// draw performance (pp), and accuracy
+		McFont *performanceFont = m_osu->getSubTitleFont();
+		const float performanceScale = 0.3f;
+		g->pushTransform();
+		{
+			UString performanceString = UString::format("Performance: %ipp", (int)std::round(m_fPP));
+			UString accuracyString = UString::format("Accuracy: %.2f%%", m_fAcc*100.0f);
 
-		const float height = m_vSize.y*0.5f;
-		const float paddingTopPercent = (1.0f - performanceScale)*0.25f;
-		const float paddingTop = height*paddingTopPercent;
-		const float paddingMiddlePercent = (1.0f - performanceScale)*0.15f;
-		const float paddingMiddle = height*paddingMiddlePercent;
-		const float scale = (height / performanceFont->getHeight())*performanceScale;
+			const float height = m_vSize.y*0.5f;
+			const float paddingTopPercent = (1.0f - performanceScale)*0.25f;
+			const float paddingTop = height*paddingTopPercent;
+			const float paddingMiddlePercent = (1.0f - performanceScale)*0.15f;
+			const float paddingMiddle = height*paddingMiddlePercent;
+			const float scale = (height / performanceFont->getHeight())*performanceScale;
 
-		yCounter += performanceFont->getHeight()*scale + paddingTop;
+			yCounter += performanceFont->getHeight()*scale + paddingTop;
 
-		g->scale(scale, scale);
-		g->translate((int)(m_vPos.x + iconWidth + usernamePaddingLeft), yCounter);
-		g->setColor(0xffffffff);
-		g->drawString(performanceFont, performanceString);
+			g->scale(scale, scale);
+			g->translate((int)(m_vPos.x + iconWidth + usernamePaddingLeft), yCounter);
+			g->setColor(0xffffffff);
+			if (osu_user_draw_pp.getBool())
+				g->drawString(performanceFont, performanceString);
 
-		yCounter += performanceFont->getHeight()*scale + paddingMiddle;
+			yCounter += performanceFont->getHeight()*scale + paddingMiddle;
 
-		g->translate(0, performanceFont->getHeight()*scale + paddingMiddle);
-		g->drawString(performanceFont, accuracyString);
+			g->translate(0, performanceFont->getHeight()*scale + paddingMiddle);
+			if (osu_user_draw_accuracy.getBool())
+				g->drawString(performanceFont, accuracyString);
+		}
+		g->popTransform();
+
+		// draw level
+		McFont *scoreFont = m_osu->getSubTitleFont();
+		const float scoreScale = 0.3f;
+		g->pushTransform();
+		{
+			UString scoreString = UString::format("LV%i", m_iLevel);
+
+			const float height = m_vSize.y*0.5f;
+			const float paddingTopPercent = (1.0f - scoreScale)*0.25f;
+			const float paddingTop = height*paddingTopPercent;
+			const float scale = (height / scoreFont->getHeight())*scoreScale;
+
+			yCounter += scoreFont->getHeight()*scale + paddingTop;
+
+			g->scale(scale, scale);
+			g->translate((int)(m_vPos.x + iconWidth + usernamePaddingLeft), yCounter);
+			g->setColor(0xffffffff);
+			if (osu_user_draw_level.getBool())
+				g->drawString(scoreFont, scoreString);
+		}
+		g->popTransform();
+
+		// draw level percentage bar (to next level)
+		if (osu_user_draw_level_bar.getBool())
+		{
+			const float barBorder = (int)(iconBorder);
+			const float barHeight = (int)(m_vSize.y - 2*barBorder)*0.1f;
+			const float barWidth = (int)((m_vSize.x - 2*barBorder)*0.55f);
+			g->setColor(0xffaaaaaa);
+			g->drawRect(m_vPos.x + m_vSize.x - barWidth - barBorder - 1, m_vPos.y + m_vSize.y - barHeight - barBorder, barWidth, barHeight);
+			g->fillRect(m_vPos.x + m_vSize.x - barWidth - barBorder - 1, m_vPos.y + m_vSize.y - barHeight - barBorder, barWidth*clamp<float>(m_fPercentToNextLevel, 0.0f, 1.0f), barHeight);
+		}
 	}
-	g->popTransform();
-
-	// draw level
-	McFont *scoreFont = m_osu->getSubTitleFont();
-	const float scoreScale = 0.3f;
-	g->pushTransform();
-	{
-		UString scoreString = UString::format("LV%i", m_iLevel);
-
-		const float height = m_vSize.y*0.5f;
-		const float paddingTopPercent = (1.0f - scoreScale)*0.25f;
-		const float paddingTop = height*paddingTopPercent;
-		const float scale = (height / scoreFont->getHeight())*scoreScale;
-
-		yCounter += scoreFont->getHeight()*scale + paddingTop;
-
-		g->scale(scale, scale);
-		g->translate((int)(m_vPos.x + iconWidth + usernamePaddingLeft), yCounter);
-		g->setColor(0xffffffff);
-		g->drawString(scoreFont, scoreString);
-	}
-	g->popTransform();
-
-	// draw level percentage bar (to next level)
-	const float barBorder = (int)(iconBorder);
-	const float barHeight = (int)(m_vSize.y - 2*barBorder)*0.1f;
-	const float barWidth = (int)((m_vSize.x - 2*barBorder)*0.55f);
-	g->setColor(0xffaaaaaa);
-	g->drawRect(m_vPos.x + m_vSize.x - barWidth - barBorder - 1, m_vPos.y + m_vSize.y - barHeight - barBorder, barWidth, barHeight);
-	g->fillRect(m_vPos.x + m_vSize.x - barWidth - barBorder - 1, m_vPos.y + m_vSize.y - barHeight - barBorder, barWidth*clamp<float>(m_fPercentToNextLevel, 0.0f, 1.0f), barHeight);
 }
 
 void OsuUISongBrowserUserButton::update()
@@ -172,15 +189,15 @@ void OsuUISongBrowserUserButton::update()
 	CBaseUIButton::update();
 	if (!m_bVisible) return;
 
-	/*
-	if (isMouseInside())
+	if (isMouseInside() && m_vTooltipLines.size() > 0)
 	{
 		m_osu->getTooltipOverlay()->begin();
-		m_osu->getTooltipOverlay()->addLine("Click to change user.");
-		m_osu->getTooltipOverlay()->addLine("(McOsu scores only!)");
+		for (int i=0; i<m_vTooltipLines.size(); i++)
+		{
+			m_osu->getTooltipOverlay()->addLine(m_vTooltipLines[i]);
+		}
 		m_osu->getTooltipOverlay()->end();
 	}
-	*/
 }
 
 void OsuUISongBrowserUserButton::updateUserStats()

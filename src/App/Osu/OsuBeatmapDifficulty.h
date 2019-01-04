@@ -203,6 +203,7 @@ public:
 	static double calculateStarDiffForHitObjects(std::vector<PPHitObject> &hitObjects, float CS, double *aim, double *speed, int upToObjectIndex = -1);
 	double calculateStarDiff(OsuBeatmap *beatmap, double *aim, double *speed, int upToObjectIndex = -1);
 	static double calculatePPv2(Osu *osu, OsuBeatmap *beatmap, double aim, double speed, int numHitObjects, int numCircles, int maxPossibleCombo, int combo = -1, int misses = 0, int c300 = -1, int c100 = 0, int c50 = 0/*, SCORE_VERSION scoreVersion = SCORE_VERSION::SCORE_V1*/);
+	static double calculatePPv2(int modsLegacy, double timescale, double ar, double od, double aim, double speed, int numHitObjects, int numCircles, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50, SCORE_VERSION scoreVersion);
 	static double calculatePPv2Acc(Osu *osu, OsuBeatmap *beatmap, double aim, double speed, double acc, int numHitObjects, int numCircles, int maxPossibleCombo, int combo = -1, int misses = 0/*, SCORE_VERSION scoreVersion = SCORE_VERSION::SCORE_V1*/);
 	static double calculateAcc(int c300, int c100, int c50, int misses);
 	static double calculateBaseStrain(double strain);

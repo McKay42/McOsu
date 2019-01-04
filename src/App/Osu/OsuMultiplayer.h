@@ -92,6 +92,7 @@ public:
 
 	// tourney events
 	void setBeatmap(OsuBeatmap *beatmap);
+	void setBeatmap(std::string md5hash);
 
 	bool isServer();
 	bool isInMultiplayer();

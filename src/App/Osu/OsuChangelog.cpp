@@ -35,7 +35,18 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	std::vector<CHANGELOG> changelogs;
 
 	CHANGELOG alpha29Steam;
-	alpha29Steam.title = UString::format("29.1 (Steam VR Version, %s, %s)", __DATE__, __TIME__);
+	alpha29Steam.title = UString::format("29.2 (Steam VR Version, %s, %s)", __DATE__, __TIME__);
+	alpha29Steam.changes.push_back("- Added \"Top Ranks\"/\"Best Performance\" screen showing all weighted scores (Songbrowser > User > Top Ranks)");
+	alpha29Steam.changes.push_back("- Added option \"Include Relax/Autopilot for total weighted pp/acc\" (Options > General > Player (Name))");
+	alpha29Steam.changes.push_back("- Added option \"Show pp instead of score in scorebrowser\" (Options > General > Player (Name))");
+	alpha29Steam.changes.push_back("- Added option \"SuddenDeath restart on miss\" (Options > Gameplay > General)");
+	alpha29Steam.changes.push_back("- Added ConVars: osu_relax_offset, osu_user_draw_pp, osu_user_draw_accuracy, osu_user_draw_level, osu_user_draw_level_bar");
+	alpha29Steam.changes.push_back("- Scale top left info label in songbrowser to screen resolution");
+	alpha29Steam.changes.push_back("- McOsu scores will now show pp instead of score by default (Options > General > Player (Name))");
+	alpha29Steam.changes.push_back("- Updated pp algorithm (4), see https://github.com/ppy/osu-performance/pull/76/");
+	alpha29Steam.changes.push_back("- Updated pp algorithm (3), see https://github.com/ppy/osu-performance/pull/72/");
+	alpha29Steam.changes.push_back("- Fixed total weighted pp counting multiple scores on the same diff");
+	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("- Added rich presence support (Discord + Steam)");
 	alpha29Steam.changes.push_back("- Added user profile info + switcher to songbrowser (total weighted pp/acc/lv)");
 	alpha29Steam.changes.push_back("- Added option \"Rich Presence\" (Options > Online > Integration)");
