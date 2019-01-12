@@ -353,8 +353,11 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Use osu!.db database (read-only)", "If you have an existing osu! installation,\nthen this will speed up the initial loading process.", convar->getConVarByName("osu_database_enabled"));
 	addCheckbox("Load osu! scores.db (read-only)", "If you have an existing osu! installation,\nalso load and display your achieved scores from there.", convar->getConVarByName("osu_scores_legacy_enabled"));
 
-	addSubSection("Player Name");
+	addSubSection("Player (Name)");
 	m_nameTextbox = addTextbox(convar->getConVarByName("name")->getString(), convar->getConVarByName("name"));
+	addSpacer();
+	addCheckbox("Include Relax/Autopilot for total weighted pp/acc", "NOTE: osu! does not allow this (since these mods are unranked).\nShould relax/autopilot scores be included in the weighted pp/acc calculation?", convar->getConVarByName("osu_user_include_relax_and_autopilot_for_stats"));
+	addCheckbox("Show pp instead of score in scorebrowser", "Only McOsu scores will show pp.", convar->getConVarByName("osu_scores_sort_by_pp"));
 
 	addSubSection("Window");
 	addCheckbox("Pause on Focus Loss", "Should the game pause when you switch to another application?", convar->getConVarByName("osu_pause_on_focus_loss"));
@@ -645,18 +648,20 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSpacer();
 	addCheckbox("Don't change dim level during breaks", "Makes the background basically impossible to see during breaks.\nNot recommended.", convar->getConVarByName("osu_background_dont_fade_during_breaks"));
 	addCheckbox("Show approach circle on first \"Hidden\" object", convar->getConVarByName("osu_show_approach_circle_on_first_hidden_object"));
+	addCheckbox("SuddenDeath restart on miss", "Skips the failing animation, and instantly restarts like SS/PF.", convar->getConVarByName("osu_mod_suddendeath_restart"));
 	addSpacer();
-	addCheckbox("Load Background Images (!)", convar->getConVarByName("osu_load_beatmap_background_images"));
+	addCheckbox("Load Background Images (!)", "NOTE: Disabling this will disable ALL beatmap images everywhere!", convar->getConVarByName("osu_load_beatmap_background_images"));
 	addCheckbox("Draw Background in Beatmap", convar->getConVarByName("osu_draw_beatmap_background_image"));
 	addCheckbox("Draw Background in SongBrowser", convar->getConVarByName("osu_draw_songbrowser_background_image"));
 	addCheckbox("Draw Background Thumbnails in SongBrowser", convar->getConVarByName("osu_draw_songbrowser_thumbnails"));
 	addCheckbox("Draw Background in Ranking/Results Screen", convar->getConVarByName("osu_draw_rankingscreen_background_image"));
 	addSpacer();
-	addCheckbox("Note Blocking/Locking", "osu! has this always enabled, so leave it enabled for practicing.\n\"Protects\" you by only allowing circles to be clicked in order.", convar->getConVarByName("osu_note_blocking"));
+	addCheckbox("Note Blocking/Locking", "NOTE: osu! has this always enabled, so leave it enabled for practicing.\n\"Protects\" you by only allowing circles to be clicked in order.", convar->getConVarByName("osu_note_blocking"));
 	//addCheckbox("Show pp on ranking screen", convar->getConVarByName("osu_rankingscreen_pp"));
 
 	addSubSection("HUD");
-	addCheckbox("Draw HUD", convar->getConVarByName("osu_draw_hud"));
+	addCheckbox("Draw HUD", "NOTE: You can also press SHIFT + TAB while playing to toggle this.", convar->getConVarByName("osu_draw_hud"));
+	addSpacer();
 	addCheckbox("Draw Score", convar->getConVarByName("osu_draw_score"));
 	addCheckbox("Draw Combo", convar->getConVarByName("osu_draw_combo"));
 	addCheckbox("Draw Accuracy", convar->getConVarByName("osu_draw_accuracy"));
@@ -667,15 +672,15 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Draw Scrubbing Timeline", convar->getConVarByName("osu_draw_scrubbing_timeline"));
 	addCheckbox("Draw Miss Window on HitErrorBar", convar->getConVarByName("osu_hud_hiterrorbar_showmisswindow"));
 	addSpacer();
-	addCheckbox("Draw Stats: pp (Performance Points)", convar->getConVarByName("osu_draw_statistics_pp"));
+	addCheckbox("Draw Stats: pp", "Realtime pp counter.\nDynamically calculates currently earned pp by incrementally updating the star rating.", convar->getConVarByName("osu_draw_statistics_pp"));
 	addCheckbox("Draw Stats: Misses", convar->getConVarByName("osu_draw_statistics_misses"));
 	addCheckbox("Draw Stats: SliderBreaks", convar->getConVarByName("osu_draw_statistics_sliderbreaks"));
 	addCheckbox("Draw Stats: BPM", convar->getConVarByName("osu_draw_statistics_bpm"));
 	addCheckbox("Draw Stats: AR", convar->getConVarByName("osu_draw_statistics_ar"));
 	addCheckbox("Draw Stats: CS", convar->getConVarByName("osu_draw_statistics_cs"));
 	addCheckbox("Draw Stats: OD", convar->getConVarByName("osu_draw_statistics_od"));
-	addCheckbox("Draw Stats: Notes Per Second", convar->getConVarByName("osu_draw_statistics_nps"));
-	addCheckbox("Draw Stats: Note Density", convar->getConVarByName("osu_draw_statistics_nd"));
+	addCheckbox("Draw Stats: Notes Per Second", "How many clicks per second are currently required.", convar->getConVarByName("osu_draw_statistics_nps"));
+	addCheckbox("Draw Stats: Note Density", "How many objects are visible at the same time.", convar->getConVarByName("osu_draw_statistics_nd"));
 	addCheckbox("Draw Stats: Unstable Rate", convar->getConVarByName("osu_draw_statistics_ur"));
 	addSpacer();
 	m_hudSizeSlider = addSlider("HUD Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_hud_scale"), 165.0f);
@@ -710,15 +715,22 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSubSection("Playfield");
 	addCheckbox("Draw FollowPoints", convar->getConVarByName("osu_draw_followpoints"));
 	addCheckbox("Draw scorebar-bg", "Some skins abuse this as the playfield background image.\nIf not, then disable it (otherwise you see an empty health bar all the time).", convar->getConVarByName("osu_draw_scorebarbg"));
-	addCheckbox("Draw Playfield Border", convar->getConVarByName("osu_draw_playfield_border"));
+	addCheckbox("Draw Playfield Border", "Compared to the scorebar-bg hack above, this will draw the correct border relative to the current CS.", convar->getConVarByName("osu_draw_playfield_border"));
 	addSpacer();
 	m_playfieldBorderSizeSlider = addSlider("Playfield Border Size:", 0.0f, 500.0f, convar->getConVarByName("osu_hud_playfield_border_size"));
 	m_playfieldBorderSizeSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeInt) );
 	m_playfieldBorderSizeSlider->setKeyDelta(1.0f);
 
 	addSubSection("Hitobjects");
-	addCheckbox("Use Fast Hidden Fading Sliders (!)", "If enabled: Fade out sliders with the same speed as circles.\nosu! doesn't do this, so don't enable it for serious practicing.", convar->getConVarByName("osu_mod_hd_slider_fast_fade"));
-	addCheckbox("Use Score v2 slider accuracy", convar->getConVarByName("osu_slider_scorev2"));
+	addCheckbox("Use Fast Hidden Fading Sliders (!)", "NOTE: osu! doesn't do this, so don't enable it for serious practicing.\nIf enabled: Fade out sliders with the same speed as circles.", convar->getConVarByName("osu_mod_hd_slider_fast_fade"));
+	addCheckbox("Use Score v2 Slider Accuracy", "Affects pp and accuracy calculations, but does not affect score.\nUse the score v2 mod if you want the 1000000 max score cap/calculation.", convar->getConVarByName("osu_slider_scorev2"));
+
+	//**************************************************************************************************************************//
+
+	CBaseUIElement *sectionOnline = addSection("Online");
+
+	addSubSection("Integration");
+	addCheckbox("Rich Presence (Discord + Steam)", "Shows your current game state in your friends' friendslists.\ne.g.: Playing Gavin G - Reach Out [Cherry Blossom's Insane]", convar->getConVarByName("osu_rich_presence"));
 
 	//**************************************************************************************************************************//
 
@@ -748,6 +760,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCategory(sectionSkin, OsuIcons::PAINTBRUSH);
 	addCategory(sectionInput, OsuIcons::GAMEPAD);
 	addCategory(sectionGameplay, OsuIcons::CIRCLE);
+	addCategory(sectionOnline, OsuIcons::GLOBE);
 
 	//**************************************************************************************************************************//
 
@@ -1162,6 +1175,11 @@ void OsuOptionsMenu::setVisibleInt(bool visible, bool fromOnBack)
 		//anim->deleteExistingAnimation(&m_fAnimation);
 		//m_fAnimation = 0.0f;
 	}
+}
+
+void OsuOptionsMenu::setUsername(UString username)
+{
+	m_nameTextbox->setText(username);
 }
 
 bool OsuOptionsMenu::isMouseInside()
@@ -1624,7 +1642,7 @@ void OsuOptionsMenu::onSkinSelect()
 	}
 }
 
-void OsuOptionsMenu::onSkinSelect2(UString skinName)
+void OsuOptionsMenu::onSkinSelect2(UString skinName, int id)
 {
 	if (m_osu->getInstanceID() < 1)
 		convar->getConVarByName("osu_skin")->setValue(skinName);
@@ -1727,7 +1745,7 @@ void OsuOptionsMenu::onResolutionSelect()
 	m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onResolutionSelect2) );
 }
 
-void OsuOptionsMenu::onResolutionSelect2(UString resolution)
+void OsuOptionsMenu::onResolutionSelect2(UString resolution, int id)
 {
 	if (env->isFullscreen())
 		convar->getConVarByName("osu_resolution")->setValue(resolution);
@@ -1751,7 +1769,7 @@ void OsuOptionsMenu::onOutputDeviceSelect()
 	m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onOutputDeviceSelect2) );
 }
 
-void OsuOptionsMenu::onOutputDeviceSelect2(UString outputDeviceName)
+void OsuOptionsMenu::onOutputDeviceSelect2(UString outputDeviceName, int id)
 {
 	engine->getSound()->setOutputDevice(outputDeviceName);
 	m_outputDeviceLabel->setText(engine->getSound()->getOutputDevice());

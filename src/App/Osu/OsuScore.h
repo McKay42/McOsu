@@ -96,6 +96,8 @@ public:
 
 	int getKeyCount(int key);
 
+	UString getModsString();
+
 private:
 	static ConVar *m_osu_draw_statistics_pp;
 

@@ -20,6 +20,7 @@ class OsuUIContextMenu;
 class OsuUISearchOverlay;
 class OsuUISelectionButton;
 class OsuUISongBrowserInfoLabel;
+class OsuUISongBrowserUserButton;
 class OsuUISongBrowserScoreButton;
 class OsuUISongBrowserButton;
 class OsuUISongBrowserSongButton;
@@ -50,14 +51,14 @@ public:
 	OsuSongBrowser2(Osu *osu);
 	virtual ~OsuSongBrowser2();
 
-	void draw(Graphics *g);
-	void update();
+	virtual void draw(Graphics *g);
+	virtual void update();
 
-	void onKeyDown(KeyboardEvent &e);
-	void onKeyUp(KeyboardEvent &e);
-	void onChar(KeyboardEvent &e);
+	virtual void onKeyDown(KeyboardEvent &e);
+	virtual void onKeyUp(KeyboardEvent &e);
+	virtual void onChar(KeyboardEvent &e);
 
-	void onResolutionChange(Vector2 newResolution);
+	virtual void onResolutionChange(Vector2 newResolution);
 
 	void onPlayEnd(bool quit = true);	// called when a beatmap is finished playing (or the player quit)
 
@@ -67,6 +68,7 @@ public:
 
 	void onScoreContextMenu(OsuUISongBrowserScoreButton *scoreButton, UString text);
 
+	void highlightScore(uint64_t unixTimestamp);
 	void playNextRandomBeatmap() {selectRandomBeatmap();playSelectedDifficulty();}
 
 	void refreshBeatmaps();
@@ -77,7 +79,7 @@ public:
 
 	OsuUISongBrowserButton* findCurrentlySelectedSongButton() const;
 
-	void setVisible(bool visible);
+	virtual void setVisible(bool visible);
 
 	inline bool hasSelectedAndIsPlaying() {return m_bHasSelectedAndIsPlaying;}
 	inline OsuDatabase *getDatabase() {return m_db;}
@@ -131,7 +133,7 @@ private:
 	void onDatabaseLoadingFinished();
 
 	void onSortClicked(CBaseUIButton *button);
-	void onSortChange(UString text);
+	void onSortChange(UString text, int id = -1);
 
 	void onGroupNoGrouping(CBaseUIButton *b);
 	void onGroupCollections(CBaseUIButton *b);
@@ -145,6 +147,10 @@ private:
 	void onSelectionOptions();
 
 	void onModeChange(UString text);
+	void onModeChange2(UString text, int id = -1);
+
+	void onUserButtonClicked();
+	void onUserButtonChange(UString text, int id);
 
 	void onScoreClicked(CBaseUIButton *button);
 
@@ -156,6 +162,7 @@ private:
 	ConVar *m_fps_max_ref;
 	ConVar *m_osu_database_dynamic_star_calculation_ref;
 	ConVar *m_osu_scores_enabled;
+	ConVar *m_name_ref;
 
 	Osu *m_osu;
 	std::mt19937 m_rngalg;
@@ -183,6 +190,7 @@ private:
 	// bottom bar
 	CBaseUIContainer *m_bottombar;
 	std::vector<OsuUISelectionButton*> m_bottombarNavButtons;
+	OsuUISongBrowserUserButton *m_userButton;
 
 	// score browser
 	std::vector<OsuUISongBrowserScoreButton*> m_scoreButtonCache;

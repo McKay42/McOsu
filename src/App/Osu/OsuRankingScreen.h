@@ -36,10 +36,11 @@ public:
 	OsuRankingScreen(Osu *osu);
 	virtual ~OsuRankingScreen();
 
-	void draw(Graphics *g);
-	void update();
+	virtual void draw(Graphics *g);
+	virtual void update();
 
-	void setVisible(bool visible);
+	virtual void setVisible(bool visible);
+
 	void setScore(OsuScore *score);
 	void setScore(OsuDatabase::Score score, UString dateTime);
 	void setBeatmapInfo(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff);

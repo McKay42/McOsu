@@ -28,3 +28,5 @@ wchar_t OsuIcons::ARROW_CIRCLE_UP = OsuIcons::addIcon(0xf01b);
 wchar_t OsuIcons::TROPHY = OsuIcons::addIcon(0xf091);
 wchar_t OsuIcons::CARET_DOWN = OsuIcons::addIcon(0xf0d7);
 wchar_t OsuIcons::ARROW_DOWN = OsuIcons::addIcon(0xf063);
+wchar_t OsuIcons::GLOBE = OsuIcons::addIcon(0xf0ac);
+wchar_t OsuIcons::USER = OsuIcons::addIcon(0xf2be);

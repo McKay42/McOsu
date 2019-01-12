@@ -1024,7 +1024,7 @@ void OsuSlider::update(long curPos)
 
 			if (m_beatmap->getOsu()->getModRelax() || m_beatmap->getOsu()->isInVRMode())
 			{
-				if (curPos >= m_iTime) // TODO: there was an && m_bCursorInside there, why?
+				if (curPos >= m_iTime + (long)m_osu_relax_offset_ref->getInt()) // TODO: there was an && m_bCursorInside there, why?
 				{
 					const Vector2 pos = m_beatmap->osuCoords2Pixels(m_curve->pointAt(0.0f));
 					const float cursorDelta = (m_beatmap->getCursorPos() - pos).length();

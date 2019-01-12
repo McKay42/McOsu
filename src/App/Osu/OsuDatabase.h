@@ -11,6 +11,7 @@
 #include "cbase.h"
 
 class Timer;
+class ConVar;
 
 class Osu;
 class OsuFile;
@@ -59,10 +60,25 @@ public:
 		float starsTomSpeed;
 		float speedMultiplier;
 		float CS, AR, OD, HP;
+		int maxPossibleCombo;
+		int numHitObjects;
+		int numCircles;
 		UString experimentalModsConVars;
 
 		// temp
 		unsigned long long sortHack;
+		std::string md5hash;
+	};
+
+	struct PlayerStats
+	{
+		UString name;
+		float pp;
+		float accuracy;
+		int numScoresWithPP;
+		int level;
+		float percentToNextLevel;
+		unsigned long long totalScore;
 	};
 
 public:
@@ -81,12 +97,22 @@ public:
 	void deleteScore(std::string beatmapMD5Hash, uint64_t scoreUnixTimestamp);
 	void sortScores(std::string beatmapMD5Hash);
 
+	std::vector<UString> getPlayerNamesWithPPScores();
+	std::vector<Score*> getPlayerPPScores(UString playerName);
+	PlayerStats calculatePlayerStats(UString playerName);
+	void recalculatePPForAllScores();
+	static float getWeightForIndex(int i);
+	unsigned long long getRequiredScoreForLevel(int level);
+	int getLevelForScore(unsigned long long score, int maxLevel = 120);
+
 	inline float getProgress() const {return m_fLoadingProgress.load();}
 	bool isFinished() const {return getProgress() >= 1.0f;}
 	inline bool foundChanges() const {return m_bFoundChanges;}
 
 	inline int getNumBeatmaps() const {return m_beatmaps.size();} // valid beatmaps
 	inline const std::vector<OsuBeatmap*> getBeatmaps() const {return m_beatmaps;}
+	OsuBeatmap *getBeatmap(std::string md5hash);
+	OsuBeatmapDifficulty *getBeatmapDifficulty(std::string md5hash);
 	inline int getNumCollections() const {return m_collections.size();}
 	inline const std::vector<Collection> getCollections() const {return m_collections;}
 
@@ -94,6 +120,8 @@ public:
 
 private:
 	friend class OsuDatabaseLoader;
+
+	static ConVar *m_name_ref;
 
 	void loadRaw();
 	void loadDB(OsuFile *db);
@@ -126,8 +154,10 @@ private:
 	// scores.db (legacy and custom)
 	bool m_bScoresLoaded;
 	std::unordered_map<std::string, std::vector<Score>> m_scores;
-	bool m_bDidScoresChange;
+	bool m_bDidScoresChangeForSave;
+	bool m_bDidScoresChangeForStats;
 	unsigned long long m_iSortHackCounter;
+	PlayerStats m_prevPlayerStats;
 
 	// raw load
 	bool m_bRawBeatmapLoadScheduled;

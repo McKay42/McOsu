@@ -83,6 +83,7 @@ ConVar osu_end_skip_time("osu_end_skip_time", 400.0f, "Duration in ms which is a
 ConVar osu_skip_time("osu_skip_time", 5000.0f, "Timeframe in ms within a beatmap which allows skipping if it doesn't contain any hitobjects");
 ConVar osu_fail_time("osu_fail_time", 2.25f, "Timeframe in s for the slowdown effect after failing, before the pause menu is shown");
 ConVar osu_note_blocking("osu_note_blocking", true, "Whether to use note blocking or not");
+ConVar osu_mod_suddendeath_restart("osu_mod_suddendeath_restart", false, "osu! has this set to false (i.e. you fail after missing). if set to true, then behave like SS/PF, instantly restarting the map");
 
 ConVar osu_drain_enabled("osu_drain_enabled", false);
 ConVar osu_drain_duration("osu_drain_duration", 0.35f);
@@ -1364,7 +1365,11 @@ void OsuBeatmap::addHitResult(OsuScore::HIT hit, long delta, bool ignoreOnHitErr
 	{
 		if (hit == OsuScore::HIT::HIT_MISS)
 		{
-			fail();
+			if (osu_mod_suddendeath_restart.getBool())
+				restart();
+			else
+				fail();
+
 			return;
 		}
 	}
@@ -1401,7 +1406,11 @@ void OsuBeatmap::addSliderBreak()
 	}
 	else if (m_osu->getModSD())
 	{
-		fail();
+		if (osu_mod_suddendeath_restart.getBool())
+			restart();
+		else
+			fail();
+
 		return;
 	}
 

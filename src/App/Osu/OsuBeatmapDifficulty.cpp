@@ -15,6 +15,7 @@
 
 #include "Osu.h"
 #include "OsuSkin.h"
+#include "OsuReplay.h"
 #include "OsuGameRules.h"
 #include "OsuBeatmapStandard.h"
 #include "OsuBeatmapMania.h"
@@ -899,6 +900,7 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 		}
 
 		// ticks
+		// TODO: validate https://github.com/ppy/osu/pull/3595/files
 		float minTickPixelDistanceFromEnd = 0.01f * getSliderVelocity(s);
 		float tickPixelLength = getSliderTickDistance() / getTimingPointMultiplierForSlider(s);
 		float tickDurationPercentOfSliderLength = tickPixelLength / (s->pixelLength == 0.0f ? 1.0f : s->pixelLength);
@@ -1723,7 +1725,27 @@ double OsuBeatmapDifficulty::calculatePPv2(Osu *osu, OsuBeatmap *beatmap, double
 {
 	// NOTE: depends on active mods + OD + AR
 
-	SCORE_VERSION scoreVersion = (m_osu_slider_scorev2->getBool() || osu->getModScorev2()) ? SCORE_VERSION::SCORE_V2 : SCORE_VERSION::SCORE_V1;
+	// get runtime score version
+	const SCORE_VERSION scoreVersion = (m_osu_slider_scorev2->getBool() || osu->getModScorev2()) ? SCORE_VERSION::SCORE_V2 : SCORE_VERSION::SCORE_V1;
+
+	// get runtime mods
+	int modsLegacy = 0;
+	modsLegacy |= (osu->getModEZ() ? OsuReplay::Mods::Easy : 0);
+	modsLegacy |= (osu->getModHD() ? OsuReplay::Mods::Hidden : 0);
+	modsLegacy |= (osu->getModHR() ? OsuReplay::Mods::HardRock : 0);
+	modsLegacy |= (osu->getModDT() ? OsuReplay::Mods::DoubleTime : 0);
+	modsLegacy |= (osu->getModNC() ? OsuReplay::Mods::Nightcore : 0);
+	modsLegacy |= (osu->getModHT() || osu->getModDC() ? OsuReplay::Mods::HalfTime : 0);
+	modsLegacy |= (osu->getModNF() ? OsuReplay::Mods::NoFail : 0);
+	modsLegacy |= (osu->getModSpunout() ? OsuReplay::Mods::SpunOut : 0);
+	///modsLegacy |= (osu->getModFL() ? OsuReplay::Mods::Flashlight : 0);
+
+	return calculatePPv2(modsLegacy, osu->getSpeedMultiplier(), beatmap->getAR(), beatmap->getOD(), aim, speed, numHitObjects, numCircles, maxPossibleCombo, combo, misses, c300, c100, c50, scoreVersion);
+}
+
+double OsuBeatmapDifficulty::calculatePPv2(int modsLegacy, double timescale, double ar, double od, double aim, double speed, int numHitObjects, int numCircles, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50, SCORE_VERSION scoreVersion)
+{
+	// NOTE: depends on active mods + OD + AR
 
 	// not sure what's going on here, but osu is using some strange incorrect rounding (e.g. 13.5 ms for OD 11.08333 (for OD 10 with DT), which is incorrect because the 13.5 should get rounded down to 13 ms)
 	/*
@@ -1733,9 +1755,12 @@ double OsuBeatmapDifficulty::calculatePPv2(Osu *osu, OsuBeatmap *beatmap, double
 	*/
 	// so to get the correct pp values that players expect, with certain mods we use the incorrect method of calculating ar/od so that the final pp value will be """correct"""
 	// thankfully this was already included in the oppai code. note that these incorrect values are only used while map-changing mods are active!
-	double od = beatmap->getOD();
-	double ar = beatmap->getAR();
-	if (osu->getSpeedMultiplier() != 1.0f || osu->getModEZ() || osu->getModHR() || osu->getModDT() || osu->getModNC() || osu->getModHT() || osu->getModDC()) // if map-changing mods are active, use incorrect calculations
+	if (timescale != 1.0f
+			|| (modsLegacy & OsuReplay::Mods::Easy)
+			|| (modsLegacy & OsuReplay::Mods::HardRock)
+			|| (modsLegacy & OsuReplay::Mods::DoubleTime)
+			|| (modsLegacy & OsuReplay::Mods::Nightcore)
+			|| (modsLegacy & OsuReplay::Mods::HalfTime)) // if map-changing mods are active, use incorrect calculations
 	{
 		const float	od0_ms = OsuGameRules::getMinHitWindow300() - 0.5f,
 					od10_ms = OsuGameRules::getMaxHitWindow300() - 0.5f,
@@ -1748,14 +1773,14 @@ double OsuBeatmapDifficulty::calculatePPv2(Osu *osu, OsuBeatmap *beatmap, double
 					ar_ms_step2 = (ar5_ms-ar10_ms)/5.0f;
 
 		// stats must be capped to 0-10 before HT/DT which bring them to a range of -4.42 to 11.08 for OD and -5 to 11 for AR
-		float odms = od0_ms - std::ceil(od_ms_step * beatmap->getOD());
-		float arms = beatmap->getAR() <= 5 ? (ar0_ms - ar_ms_step1 *  beatmap->getAR()) : (ar5_ms - ar_ms_step2 * (beatmap->getAR() - 5));
+		float odms = od0_ms - std::ceil(od_ms_step * od);
+		float arms = ar <= 5 ? (ar0_ms - ar_ms_step1 *  ar) : (ar5_ms - ar_ms_step2 * (ar - 5));
 		odms = std::min(od0_ms, std::max(od10_ms, odms));
 		arms = std::min(ar0_ms, std::max(ar10_ms, arms));
 
 		// apply speed-changing mods
-		odms /= osu->getSpeedMultiplier();
-		arms /= osu->getSpeedMultiplier();
+		odms /= timescale;
+		arms /= timescale;
 
 		// convert OD and AR back into their stat form
 		od = (od0_ms - odms) / od_ms_step;
@@ -1789,7 +1814,7 @@ double OsuBeatmapDifficulty::calculatePPv2(Osu *osu, OsuBeatmap *beatmap, double
 	double miss_penality = std::pow(0.97, misses);
 
 	// combo break penalty (reused in speed pp)
-	double combo_break = std::pow((double)combo, 0.8) / std::pow((double)maxPossibleCombo, 0.8);
+	double combo_break = std::min(std::pow((double)combo, 0.8) / std::pow((double)maxPossibleCombo, 0.8), 1.0);
 
 	aim_value *= length_bonus;
 	aim_value *= miss_penality;
@@ -1799,27 +1824,46 @@ double OsuBeatmapDifficulty::calculatePPv2(Osu *osu, OsuBeatmap *beatmap, double
 
 	// high AR bonus
 	if (ar > 10.33)
+	{
+		// https://github.com/ppy/osu-performance/pull/76/
+
+		/*
 		ar_bonus += 0.45 * (ar - 10.33);
+		*/
+
+		ar_bonus += 0.3 * (ar - 10.33);
+	}
 	else if (ar < 8.0) // low ar bonus
 	{
-		double low_ar_bonus = 0.01 * (8.0 - ar);
+		// https://github.com/ppy/osu-performance/pull/72/
 
-		if (osu->getModHD())
+		/*
+		if (modsLegacy & OsuReplay::Mods::Hidden)
 			low_ar_bonus *= 2.0;
+		*/
 
-		ar_bonus += low_ar_bonus;
+		ar_bonus += 0.01 * (8.0 - ar);
 	}
 
 	aim_value *= ar_bonus;
 
 	// hidden
-	if (osu->getModHD())
-		aim_value *= (1.02 + std::max(11.0 - ar, 0.0) / 50.0); // https://github.com/ppy/osu-performance/pull/47
+	if (modsLegacy & OsuReplay::Mods::Hidden)
+	{
+		// https://github.com/ppy/osu-performance/pull/47/
+		// https://github.com/ppy/osu-performance/pull/72/
+
+		/*
+		aim_value *= (1.02 + std::max(11.0 - ar, 0.0) / 50.0);
+		*/
+
+		aim_value *= 1.0 + 0.04 * (std::max(12.0 - ar, 0.0));
+	}
 
 	// flashlight
 	// TODO: not yet implemented // TODO: https://github.com/ppy/osu-performance/pull/71/
 	/*
-	if (osu->getModFL())
+	if (modsLegacy & OsuReplay::Mods::Flashlight)
 		aim_value *= 1.45 * length_bonus;
 	*/
 
@@ -1839,9 +1883,28 @@ double OsuBeatmapDifficulty::calculatePPv2(Osu *osu, OsuBeatmap *beatmap, double
 	speed_value *= miss_penality;
 	speed_value *= combo_break;
 
+	ar_bonus = 1.0; // reset
+
+	// https://github.com/ppy/osu-performance/pull/76/
+	// high AR bonus
+	if (ar > 10.33)
+		ar_bonus += 0.3 * (ar - 10.33);
+
+	speed_value *= ar_bonus;
+
 	// hidden
-	if (osu->getModHD())
-		speed_value *= 1.18; // https://github.com/ppy/osu-performance/pull/42
+	if (modsLegacy & OsuReplay::Mods::Hidden)
+	{
+		// https://github.com/ppy/osu-performance/pull/42/
+		// https://github.com/ppy/osu-performance/pull/72/
+
+		/*
+		speed_value *= 1.18;
+		*/
+
+		// "We want to give more reward for lower AR when it comes to speed and HD. This nerfs high AR and buffs lower AR."
+		speed_value *= 1.0 + 0.04 * (std::max(12.0 - ar, 0.0));
+	}
 
 	speed_value *= acc_bonus;
 	speed_value *= od_bonus;
@@ -1878,13 +1941,21 @@ double OsuBeatmapDifficulty::calculatePPv2(Osu *osu, OsuBeatmap *beatmap, double
 	acc_value *= std::min(1.15, std::pow(numCircles / 1000.0, 0.3));
 
 	// hidden bonus
-	if (osu->getModHD())
+	if (modsLegacy & OsuReplay::Mods::Hidden)
+	{
+		// https://github.com/ppy/osu-performance/pull/72/
+
+		/*
 		acc_value *= 1.02;
+		*/
+
+		acc_value *= 1.08;
+	}
 
 	// flashlight bonus
 	// TODO: not yet implemented
 	/*
-	if (osu->getModFL())
+	if (modsLegacy & OsuReplay::Mods::Flashlight)
 		acc_value *= 1.02;
 	*/
 
@@ -1892,11 +1963,11 @@ double OsuBeatmapDifficulty::calculatePPv2(Osu *osu, OsuBeatmap *beatmap, double
 	double final_multiplier = 1.12;
 
 	// nofail
-	if (osu->getModNF())
+	if (modsLegacy & OsuReplay::Mods::NoFail)
 		final_multiplier *= 0.90;
 
 	// spunout
-	if (osu->getModSpunout())
+	if (modsLegacy & OsuReplay::Mods::SpunOut)
 		final_multiplier *= 0.95;
 
 	return	std::pow(

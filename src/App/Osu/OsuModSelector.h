@@ -34,17 +34,18 @@ public:
 	OsuModSelector(Osu *osu);
 	virtual ~OsuModSelector();
 
-	void draw(Graphics *g);
-	void update();
+	virtual void draw(Graphics *g);
+	virtual void update();
 
-	void onKeyDown(KeyboardEvent &key);
-	void onKeyUp(KeyboardEvent &key);
+	virtual void onKeyDown(KeyboardEvent &key);
+	virtual void onKeyUp(KeyboardEvent &key);
 
-	void onResolutionChange(Vector2 newResolution);
+	virtual void onResolutionChange(Vector2 newResolution);
+
+	virtual void setVisible(bool visible);
 
 	void checkUpdateBPMSliderSlaves();
 
-	void setVisible(bool visible);
 	void setWaitForF1KeyUp(bool waitForF1KeyUp) {m_bWaitForF1KeyUp = waitForF1KeyUp;}
 
 	bool isInCompactMode();

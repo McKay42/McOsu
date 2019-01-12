@@ -1241,7 +1241,7 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 		int scoreIndex = -1;
 		if (isComplete && !isZero && !isUnranked && !m_osu->getScore()->hasDied())
 		{
-			const int scoreVersion = 20180722;
+			const int scoreVersion = 20190103;
 
 			debugLog("OsuBeatmapStandard::onBeforeStop() saving score ...\n");
 			{
@@ -1295,6 +1295,14 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 				score.AR = getAR();
 				score.OD = getOD();
 				score.HP = getHP();
+
+				if (scoreVersion > 20180722)
+				{
+					score.maxPossibleCombo = maxPossibleCombo;
+					score.numHitObjects = numHitObjects;
+					score.numCircles = numCircles;
+				}
+
 				std::vector<ConVar*> allExperimentalMods = m_osu->getExperimentalMods();
 				for (int i=0; i<allExperimentalMods.size(); i++)
 				{

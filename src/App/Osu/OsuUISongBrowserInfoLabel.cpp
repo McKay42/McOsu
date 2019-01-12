@@ -10,6 +10,8 @@
 #include "Engine.h"
 #include "ResourceManager.h"
 #include "Environment.h"
+#include "ConVar.h"
+#include "Mouse.h"
 
 #include "Osu.h"
 #include "OsuBeatmap.h"
@@ -25,9 +27,13 @@ OsuUISongBrowserInfoLabel::OsuUISongBrowserInfoLabel(Osu *osu, float xPos, float
 	m_osu = osu;
 	m_font = m_osu->getSubTitleFont();
 
+	m_osu_debug_ref = convar->getConVarByName("osu_debug");
+
 	m_iMargin = 10;
 
-	float globalScaler = 1.3f;
+	const float scaleToOldHardcodedFontSize = 23.0f/m_font->getHeight();
+	const float globalScaler = 1.3f*scaleToOldHardcodedFontSize;
+	m_fTitleScale = 0.77f*globalScaler;
 	m_fSubTitleScale = 0.6f*globalScaler;
 	m_fSongInfoScale = 0.7f*globalScaler;
 	m_fDiffInfoScale = 0.65f*globalScaler;
@@ -58,13 +64,14 @@ OsuUISongBrowserInfoLabel::OsuUISongBrowserInfoLabel(Osu *osu, float xPos, float
 void OsuUISongBrowserInfoLabel::draw(Graphics *g)
 {
 	// debug bounding box
-	/*
-	g->setColor(0xffffffff);
-	g->drawLine(m_vPos.x, m_vPos.y, m_vPos.x+m_vSize.x, m_vPos.y);
-	g->drawLine(m_vPos.x, m_vPos.y, m_vPos.x, m_vPos.y+m_vSize.y);
-	g->drawLine(m_vPos.x, m_vPos.y+m_vSize.y, m_vPos.x+m_vSize.x, m_vPos.y+m_vSize.y);
-	g->drawLine(m_vPos.x+m_vSize.x, m_vPos.y, m_vPos.x+m_vSize.x, m_vPos.y+m_vSize.y);
-	*/
+	if (m_osu_debug_ref->getBool())
+	{
+		g->setColor(0xffff0000);
+		g->drawLine(m_vPos.x, m_vPos.y, m_vPos.x+m_vSize.x, m_vPos.y);
+		g->drawLine(m_vPos.x, m_vPos.y, m_vPos.x, m_vPos.y+m_vSize.y);
+		g->drawLine(m_vPos.x, m_vPos.y+m_vSize.y, m_vPos.x+m_vSize.x, m_vPos.y+m_vSize.y);
+		g->drawLine(m_vPos.x+m_vSize.x, m_vPos.y, m_vPos.x+m_vSize.x, m_vPos.y+m_vSize.y);
+	}
 
 	// build strings
 	const UString titleText = buildTitleString();
@@ -73,60 +80,81 @@ void OsuUISongBrowserInfoLabel::draw(Graphics *g)
 	const UString diffInfoText = buildDiffInfoString();
 	const UString offsetInfoText = buildOffsetInfoString();
 
-	// draw
+	const float globalScale = std::max((m_vSize.y / getMinimumHeight())*0.7f, 1.0f);
+
+	int yCounter = m_vPos.y;
+
+	// draw title
 	g->setColor(0xffffffff);
 	g->pushTransform();
 	{
-		g->translate(m_vPos.x, m_vPos.y + m_font->getHeight());
+		const float scale = m_fTitleScale*globalScale;
+
+		yCounter += m_font->getHeight()*scale;
+
+		g->scale(scale, scale);
+		g->translate((int)(m_vPos.x), yCounter);
 		g->drawString(m_font, titleText);
 	}
 	g->popTransform();
 
-	const float subTitleStringWidth = m_font->getStringWidth(subTitleText);
+	// draw subtitle (mapped by)
 	g->setColor(0xffffffff);
 	g->pushTransform();
 	{
-		g->translate((int)(-subTitleStringWidth/2), (int)(m_font->getHeight()/2));
-		g->scale(m_fSubTitleScale, m_fSubTitleScale);
-		g->translate((int)(m_vPos.x + (subTitleStringWidth/2)*m_fSubTitleScale), (int)(m_vPos.y + m_font->getHeight() + (m_font->getHeight()/2)*m_fSubTitleScale + m_iMargin));
+		const float scale = m_fSubTitleScale*globalScale;
+
+		yCounter += m_font->getHeight()*scale + m_iMargin*globalScale*1.0f;
+
+		g->scale(scale, scale);
+		g->translate((int)(m_vPos.x), yCounter);
 		g->drawString(m_font, subTitleText);
 	}
 	g->popTransform();
 
-	const float songInfoStringWidth = m_font->getStringWidth(songInfoText);
+	// draw song info (length, bpm, objects)
 	g->setColor(0xffffffff);
 	if (m_osu->getSpeedMultiplier() != 1.0f)
 		g->setColor(m_osu->getSpeedMultiplier() > 1.0f ? 0xffff7f7f : 0xffadd8e6);
 
 	g->pushTransform();
 	{
-		g->translate((int)(-songInfoStringWidth/2), (int)(m_font->getHeight()/2));
-		g->scale(m_fSongInfoScale, m_fSongInfoScale);
-		g->translate((int)(m_vPos.x + (songInfoStringWidth/2)*m_fSongInfoScale), (int)(m_vPos.y + m_font->getHeight() + m_font->getHeight()*m_fSubTitleScale + (m_font->getHeight()/2)*m_fSongInfoScale + m_iMargin*2));
+		const float scale = m_fSongInfoScale*globalScale*0.9f;
+
+		yCounter += m_font->getHeight()*scale + m_iMargin*globalScale*1.0f;
+
+		g->scale(scale, scale);
+		g->translate((int)(m_vPos.x), yCounter);
 		g->drawString(m_font, songInfoText);
 	}
 	g->popTransform();
 
-	const float diffInfoStringWidth = m_font->getStringWidth(diffInfoText);
+	// draw diff info (CS, AR, OD, HP, Stars)
 	g->setColor(m_osu->getModEZ() ? 0xffadd8e6 : (m_osu->getModHR() ? 0xffff7f7f : 0xffffffff));
 	g->pushTransform();
 	{
-		g->translate((int)(-diffInfoStringWidth/2), (int)(m_font->getHeight()/2));
-		g->scale(m_fDiffInfoScale, m_fDiffInfoScale);
-		g->translate((int)(m_vPos.x + (diffInfoStringWidth/2)*m_fDiffInfoScale), (int)(m_vPos.y + m_font->getHeight() + m_font->getHeight()*m_fSubTitleScale + m_font->getHeight()*m_fSongInfoScale + (m_font->getHeight()/2)*m_fDiffInfoScale + m_iMargin*3));
+		const float scale = m_fDiffInfoScale*globalScale*0.9f;
+
+		yCounter += m_font->getHeight()*scale + m_iMargin*globalScale*0.85f;
+
+		g->scale(scale, scale);
+		g->translate((int)(m_vPos.x), yCounter);
 		g->drawString(m_font, diffInfoText);
 	}
 	g->popTransform();
 
+	// draw offset (local, online)
 	if (m_iLocalOffset != 0 || m_iOnlineOffset != 0)
 	{
-		float offsetInfoStringWidth = m_font->getStringWidth(offsetInfoText);
 		g->setColor(0xffffffff);
 		g->pushTransform();
 		{
-			g->translate((int)(-offsetInfoStringWidth/2), (int)(m_font->getHeight()/2));
-			g->scale(m_fOffsetInfoScale, m_fOffsetInfoScale);
-			g->translate((int)(m_vPos.x + (offsetInfoStringWidth/2)*m_fOffsetInfoScale), (int)(m_vPos.y + m_font->getHeight() + m_font->getHeight()*m_fSubTitleScale + m_font->getHeight()*m_fSongInfoScale + (m_font->getHeight()/2)*m_fDiffInfoScale + (m_font->getHeight()/2)*m_fOffsetInfoScale + m_iMargin*5));
+			const float scale = m_fOffsetInfoScale*globalScale*0.8f;
+
+			yCounter += m_font->getHeight()*scale + m_iMargin*globalScale*0.85f;
+
+			g->scale(scale, scale);
+			g->translate((int)(m_vPos.x), yCounter);
 			g->drawString(m_font, offsetInfoText);
 		}
 		g->popTransform();
@@ -305,7 +333,7 @@ float OsuUISongBrowserInfoLabel::getMinimumWidth()
 
 float OsuUISongBrowserInfoLabel::getMinimumHeight()
 {
-	float titleHeight = m_font->getHeight();
+	float titleHeight = m_font->getHeight() * m_fTitleScale;
 	float subTitleHeight = m_font->getHeight() * m_fSubTitleScale;
 	float songInfoHeight = m_font->getHeight() * m_fSongInfoScale;
 	float diffInfoHeight = m_font->getHeight() * m_fDiffInfoScale;

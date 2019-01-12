@@ -38,21 +38,24 @@ public:
 	OsuOptionsMenu(Osu *osu);
 	virtual ~OsuOptionsMenu();
 
-	void draw(Graphics *g);
-	void update();
+	virtual void draw(Graphics *g);
+	virtual void update();
 
-	void onKeyDown(KeyboardEvent &e);
-	void onKeyUp(KeyboardEvent &e);
-	void onChar(KeyboardEvent &e);
+	virtual void onKeyDown(KeyboardEvent &e);
+	virtual void onKeyUp(KeyboardEvent &e);
+	virtual void onChar(KeyboardEvent &e);
 
-	void onResolutionChange(Vector2 newResolution);
+	virtual void onResolutionChange(Vector2 newResolution);
 
 	virtual void onKey(KeyboardEvent &e);
 
+	virtual void setVisible(bool visible);
+
 	void save();
 
-	void setVisible(bool visible);
 	void setFullscreen(bool fullscreen) {m_bFullscreen = fullscreen;}
+
+	void setUsername(UString username);
 
 	inline bool isFullscreen() const {return m_bFullscreen;}
 	bool isMouseInside();
@@ -84,12 +87,12 @@ private:
 	void onFullscreenChange(CBaseUICheckbox *checkbox);
 	void onBorderlessWindowedChange(CBaseUICheckbox *checkbox);
 	void onSkinSelect();
-	void onSkinSelect2(UString skinName);
+	void onSkinSelect2(UString skinName, int id = -1);
 	void onSkinReload();
 	void onResolutionSelect();
-	void onResolutionSelect2(UString resolution);
+	void onResolutionSelect2(UString resolution, int id = -1);
 	void onOutputDeviceSelect();
-	void onOutputDeviceSelect2(UString outputDeviceName);
+	void onOutputDeviceSelect2(UString outputDeviceName, int id = -1);
 	void onDownloadOsuClicked();
 	void onManuallyManageBeatmapsClicked();
 	void onLIVReloadCalibrationClicked();

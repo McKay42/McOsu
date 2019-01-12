@@ -36,11 +36,13 @@
 #include "OsuModSelector.h"
 #include "OsuOptionsMenu.h"
 #include "OsuKeyBindings.h"
+#include "OsuRichPresence.h"
 
 #include "OsuUIBackButton.h"
 #include "OsuUIContextMenu.h"
 #include "OsuUISearchOverlay.h"
 #include "OsuUISelectionButton.h"
+#include "OsuUISongBrowserUserButton.h"
 #include "OsuUISongBrowserInfoLabel.h"
 #include "OsuUISongBrowserSongButton.h"
 #include "OsuUISongBrowserSongDifficultyButton.h"
@@ -60,6 +62,8 @@ ConVar osu_songbrowser_bottombar_percent("osu_songbrowser_bottombar_percent", 0.
 
 ConVar osu_draw_songbrowser_background_image("osu_draw_songbrowser_background_image", true);
 ConVar osu_songbrowser_background_fade_in_duration("osu_songbrowser_background_fade_in_duration", 0.1f);
+
+ConVar osu_songbrowser_draw_top_ranks_available_info_message("osu_songbrowser_draw_top_ranks_available_info_message", true);
 
 
 
@@ -384,6 +388,7 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	m_fps_max_ref = convar->getConVarByName("fps_max");
 	m_osu_database_dynamic_star_calculation_ref = convar->getConVarByName("osu_database_dynamic_star_calculation");
 	m_osu_scores_enabled = convar->getConVarByName("osu_scores_enabled");
+	m_name_ref = convar->getConVarByName("name");
 
 	// convar callbacks
 	osu_gamemode.setCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onModeChange) );
@@ -448,6 +453,12 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	addBottombarNavButton([this]() -> Image *{return m_osu->getSkin()->getSelectionMods();}, [this]() -> Image *{return m_osu->getSkin()->getSelectionModsOver();})->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onSelectionMods) );
 	addBottombarNavButton([this]() -> Image *{return m_osu->getSkin()->getSelectionRandom();}, [this]() -> Image *{return m_osu->getSkin()->getSelectionRandomOver();})->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onSelectionRandom) );
 	///addBottombarNavButton([this]() -> Image *{return m_osu->getSkin()->getSelectionOptions();}, [this]() -> Image *{return m_osu->getSkin()->getSelectionOptionsOver();})->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser::onSelectionOptions) );
+
+	m_userButton = new OsuUISongBrowserUserButton(m_osu);
+	m_userButton->addTooltipLine("Click to change [User] or view [Top Ranks]");
+	m_userButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onUserButtonClicked) );
+	m_userButton->setText(m_name_ref->getString());
+	m_bottombar->addBaseUIElement(m_userButton);
 
 	// build scorebrowser
 	m_scoreBrowser = new CBaseUIScrollView(0, 0, 0, 0, "");
@@ -639,8 +650,22 @@ void OsuSongBrowser2::draw(Graphics *g)
 		g->setColor(0xff333333);
 		g->pushTransform();
 		{
-			g->translate((int)(m_bottombar->getPos().x + m_bottombar->getSize().x/2 - font->getStringWidth(busyMessage)/2), (int)(m_bottombar->getPos().y + m_bottombar->getSize().y/2 + font->getHeight()/2));
+			g->translate((int)(m_bottombar->getPos().x + m_bottombar->getSize().x - font->getStringWidth(busyMessage) - 20), (int)(m_bottombar->getPos().y + m_bottombar->getSize().y/2 - font->getHeight()/2));
 			g->drawString(font, busyMessage);
+		}
+		g->popTransform();
+	}
+
+	// top ranks available info
+	if (osu_songbrowser_draw_top_ranks_available_info_message.getBool())
+	{
+		UString topRanksInfoMessage = "<<< Top Ranks";
+		McFont *font = engine->getResourceManager()->getFont("FONT_DEFAULT");
+		g->setColor(0xff444444);
+		g->pushTransform();
+		{
+			g->translate((int)(m_userButton->getPos().x + m_userButton->getSize().x + 10), (int)(m_userButton->getPos().y + m_userButton->getSize().y/2 + font->getHeight()/2));
+			g->drawString(font, topRanksInfoMessage);
 		}
 		g->popTransform();
 	}
@@ -1430,6 +1455,8 @@ void OsuSongBrowser2::setVisible(bool visible)
 
 	if (m_bVisible)
 	{
+		OsuRichPresence::onSongBrowser(m_osu);
+
 		updateLayout();
 
 		// we have to re-select the current beatmap to start playing music again
@@ -1441,6 +1468,9 @@ void OsuSongBrowser2::setVisible(bool visible)
 		// try another refresh, maybe the osu!folder has changed
 		if (m_beatmaps.size() == 0)
 			refreshBeatmaps();
+
+		// update user name/stats
+		onUserButtonChange(m_name_ref->getString(), -1);
 	}
 }
 
@@ -1722,7 +1752,7 @@ void OsuSongBrowser2::updateLayout()
 	// topbar left (NOTE: the right side of the std::max() width is commented to keep the scorebrowser width consistent, and because it's not really needed anyway)
 	m_topbarLeft->setSize(std::max(m_osu->getSkin()->getSongSelectTop()->getWidth()*m_fSongSelectTopScale*osu_songbrowser_topbar_left_width_percent.getFloat() + margin, /*m_songInfo->getMinimumWidth() + margin*/0.0f), std::max(m_osu->getSkin()->getSongSelectTop()->getHeight()*m_fSongSelectTopScale*osu_songbrowser_topbar_left_percent.getFloat(), m_songInfo->getMinimumHeight() + margin));
 	m_songInfo->setRelPos(margin, margin);
-	m_songInfo->setSize(m_topbarLeft->getSize().x - margin, std::max(m_topbarLeft->getSize().y*0.65f - margin, m_songInfo->getMinimumHeight()));
+	m_songInfo->setSize(m_topbarLeft->getSize().x - margin, std::max(m_topbarLeft->getSize().y - margin, m_songInfo->getMinimumHeight()));
 
 	// topbar right
 	m_topbarRight->setPosX(m_osu->getSkin()->getSongSelectTop()->getWidth()*m_fSongSelectTopScale*osu_songbrowser_topbar_right_percent.getFloat());
@@ -1774,6 +1804,11 @@ void OsuSongBrowser2::updateLayout()
 	{
 		m_bottombarNavButtons[i]->setRelPosX((i == 0 ? navBarStart : 0) + (i > 0 ? m_bottombarNavButtons[i-1]->getRelPos().x + m_bottombarNavButtons[i-1]->getSize().x : 0));
 	}
+
+	const int userButtonHeight = m_bottombar->getSize().y*0.9f;
+	m_userButton->setSize(userButtonHeight*3.5f, userButtonHeight);
+	m_userButton->setRelPos(std::max(m_bottombar->getSize().x/2 - m_userButton->getSize().x/2, m_bottombarNavButtons[m_bottombarNavButtons.size()-1]->getRelPos().x + m_bottombarNavButtons[m_bottombarNavButtons.size()-1]->getSize().x + 10), m_bottombar->getSize().y - m_userButton->getSize().y - 1);
+
 	m_bottombar->update_pos();
 
 	// score browser
@@ -1999,6 +2034,12 @@ void OsuSongBrowser2::onDatabaseLoadingFinished()
 	*/
 
 	onSortChange(osu_songbrowser_sortingtype.getString());
+
+	// update rich presence (discord total pp)
+	OsuRichPresence::onSongBrowser(m_osu);
+
+	// update user name/stats
+	onUserButtonChange(m_name_ref->getString(), -1);
 }
 
 void OsuSongBrowser2::onSortClicked(CBaseUIButton *button)
@@ -2024,7 +2065,7 @@ void OsuSongBrowser2::onSortClicked(CBaseUIButton *button)
 	}
 }
 
-void OsuSongBrowser2::onSortChange(UString text)
+void OsuSongBrowser2::onSortChange(UString text, int id)
 {
 	SORTING_METHOD *sortingMethod = (m_sortingMethods.size() > 3 ? &m_sortingMethods[3] : NULL);
 	for (int i=0; i<m_sortingMethods.size(); i++)
@@ -2147,7 +2188,7 @@ void OsuSongBrowser2::onSelectionMode()
 	m_contextMenu->setPos(m_contextMenu->getPos() - Vector2(0, m_contextMenu->getSize().y));
 	m_contextMenu->setRelPos(m_contextMenu->getRelPos() - Vector2(0, m_contextMenu->getSize().y));
 	m_contextMenu->end();
-	m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onModeChange) );
+	m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onModeChange2) );
 }
 
 void OsuSongBrowser2::onSelectionMods()
@@ -2172,6 +2213,11 @@ void OsuSongBrowser2::onSelectionOptions()
 
 void OsuSongBrowser2::onModeChange(UString text)
 {
+	onModeChange2(text);
+}
+
+void OsuSongBrowser2::onModeChange2(UString text, int id)
+{
 	if (m_bottombarNavButtons.size() > 2)
 		m_bottombarNavButtons[0]->setText(text);
 
@@ -2193,6 +2239,52 @@ void OsuSongBrowser2::onModeChange(UString text)
 	}
 }
 
+void OsuSongBrowser2::onUserButtonClicked()
+{
+	engine->getSound()->play(m_osu->getSkin()->getMenuClick());
+
+	std::vector<UString> names = m_db->getPlayerNamesWithPPScores();
+	if (names.size() > 0)
+	{
+		m_contextMenu->setPos(m_userButton->getPos());
+		m_contextMenu->setRelPos(m_userButton->getPos());
+		m_contextMenu->begin(m_userButton->getSize().x);
+		m_contextMenu->addButton("Switch User", 0)->setTextColor(0xff888888)->setTextLeft(false)->setEnabled(false);
+		//m_contextMenu->addButton("", 0)->setEnabled(false);
+		for (int i=0; i<names.size(); i++)
+		{
+			CBaseUIButton *button = m_contextMenu->addButton(names[i]);
+			if (names[i] == m_name_ref->getString())
+				button->setTextBrightColor(0xff00ff00);
+		}
+		m_contextMenu->addButton("", 0)->setEnabled(false);
+		m_contextMenu->addButton(">>> Top Ranks <<<", 1)->setTextLeft(false);
+		m_contextMenu->addButton("", 0)->setEnabled(false);
+		m_contextMenu->setPos(m_contextMenu->getPos() - Vector2(0, m_contextMenu->getSize().y));
+		m_contextMenu->setRelPos(m_contextMenu->getRelPos() - Vector2(0, m_contextMenu->getSize().y));
+		m_contextMenu->end(true);
+		m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onUserButtonChange) );
+	}
+}
+
+void OsuSongBrowser2::onUserButtonChange(UString text, int id)
+{
+	if (id == 0) return;
+
+	if (id == 1)
+	{
+		osu_songbrowser_draw_top_ranks_available_info_message.setValue(0.0f);
+		m_osu->toggleUserStatsScreen();
+		return;
+	}
+
+	m_name_ref->setValue(text);
+	m_osu->getOptionsMenu()->setUsername(text); // force update textbox to avoid shutdown inconsistency
+	m_userButton->setText(text);
+
+	m_userButton->updateUserStats();
+}
+
 void OsuSongBrowser2::onScoreClicked(CBaseUIButton *button)
 {
 	OsuUISongBrowserScoreButton *scoreButton = (OsuUISongBrowserScoreButton*)button;
@@ -2210,6 +2302,20 @@ void OsuSongBrowser2::onScoreContextMenu(OsuUISongBrowserScoreButton *scoreButto
 		m_db->deleteScore(getSelectedBeatmap()->getSelectedDifficulty()->md5hash, scoreButton->getScoreUnixTimestamp());
 
 		rebuildScoreButtons();
+		m_userButton->updateUserStats();
+	}
+}
+
+void OsuSongBrowser2::highlightScore(uint64_t unixTimestamp)
+{
+	for (int i=0; i<m_scoreButtonCache.size(); i++)
+	{
+		if (m_scoreButtonCache[i]->getScore().unixTimestamp == unixTimestamp)
+		{
+			m_scoreBrowser->scrollToElement(m_scoreButtonCache[i], 0, 10);
+			m_scoreButtonCache[i]->highlight();
+			break;
+		}
 	}
 }
 

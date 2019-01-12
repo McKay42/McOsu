@@ -15,6 +15,20 @@
 
 #include "Osu.h"
 
+class OsuUIContextMenuButton : public CBaseUIButton
+{
+public:
+	OsuUIContextMenuButton(float xPos, float yPos, float xSize, float ySize, UString name, UString text, int id) : CBaseUIButton(xPos, yPos, xSize, ySize, name, text)
+	{
+		m_iID = id;
+	}
+
+	inline int getID() const {return m_iID;}
+
+private:
+	int m_iID;
+};
+
 OsuUIContextMenu::OsuUIContextMenu(Osu *osu, float xPos, float yPos, float xSize, float ySize, UString name, CBaseUIScrollView *parent) : CBaseUIElement(xPos, yPos, xSize, ySize, name)
 {
 	m_osu = osu;
@@ -28,6 +42,7 @@ OsuUIContextMenu::OsuUIContextMenu(Osu *osu, float xPos, float yPos, float xSize
 	m_clickCallback = NULL;
 
 	m_fAnimation = 0.0f;
+	m_bInvertAnimation = false;
 }
 
 OsuUIContextMenu::~OsuUIContextMenu()
@@ -41,8 +56,8 @@ void OsuUIContextMenu::draw(Graphics *g)
 
 	if (m_fAnimation > 0.0f && m_fAnimation < 1.0f)
 	{
-		g->push3DScene(McRect(m_vPos.x, m_vPos.y - m_vSize.y/2.0f, m_vSize.x, m_vSize.y));
-		g->rotate3DScene(-(1.0f - m_fAnimation)*90.0f, 0, 0);
+		g->push3DScene(McRect(m_vPos.x, m_vPos.y + ((m_vSize.y/2.0f) * (m_bInvertAnimation ? 1.0f : -1.0f)), m_vSize.x, m_vSize.y));
+		g->rotate3DScene((1.0f - m_fAnimation)*90.0f * (m_bInvertAnimation ? 1.0f : -1.0f), 0, 0);
 	}
 
 	// draw background
@@ -69,40 +84,21 @@ void OsuUIContextMenu::update()
 	m_container->update();
 }
 
-void OsuUIContextMenu::onResized()
-{
-	m_container->setSize(m_vSize);
-}
-
-void OsuUIContextMenu::onMoved()
-{
-	m_container->setPos(m_vPos);
-}
-
-void OsuUIContextMenu::onMouseDownOutside()
-{
-	setVisible2(false);
-}
-
-void OsuUIContextMenu::onFocusStolen()
-{
-	m_container->stealFocus();
-}
-
-void OsuUIContextMenu::begin()
+void OsuUIContextMenu::begin(int minWidth)
 {
 	m_clickCallback = NULL;
 	m_iYCounter = 0;
-	m_iWidthCounter = 0;
+	m_iWidthCounter = minWidth;
+	setSizeX(m_iWidthCounter);
 	m_container->clear();
 }
 
-CBaseUIButton *OsuUIContextMenu::addButton(UString text)
+CBaseUIButton *OsuUIContextMenu::addButton(UString text, int id)
 {
 	int buttonHeight = 30;
 	int margin = 9;
 
-	CBaseUIButton *button = new CBaseUIButton(margin, m_iYCounter + margin, 0, buttonHeight, text, text);
+	OsuUIContextMenuButton *button = new OsuUIContextMenuButton(margin, m_iYCounter + margin, 0, buttonHeight, text, text, id);
 	button->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUIContextMenu::onClick) );
 	button->setWidthToContent(3);
 	button->setTextLeft(true);
@@ -122,8 +118,10 @@ CBaseUIButton *OsuUIContextMenu::addButton(UString text)
 	return button;
 }
 
-void OsuUIContextMenu::end()
+void OsuUIContextMenu::end(bool invertAnimation)
 {
+	m_bInvertAnimation = invertAnimation;
+
 	int margin = 9;
 
 	std::vector<CBaseUIElement*> *elements = m_container->getAllBaseUIElementsPointer();
@@ -149,11 +147,31 @@ void OsuUIContextMenu::setVisible2(bool visible2)
 		m_parent->setScrollSizeToContent(); // and update parent scroll size
 }
 
+void OsuUIContextMenu::onResized()
+{
+	m_container->setSize(m_vSize);
+}
+
+void OsuUIContextMenu::onMoved()
+{
+	m_container->setPos(m_vPos);
+}
+
+void OsuUIContextMenu::onMouseDownOutside()
+{
+	setVisible2(false);
+}
+
+void OsuUIContextMenu::onFocusStolen()
+{
+	m_container->stealFocus();
+}
+
 void OsuUIContextMenu::onClick(CBaseUIButton *button)
 {
 	setVisible2(false);
 
 	if (m_clickCallback != NULL)
-		m_clickCallback(button->getName());
+		m_clickCallback(button->getName(), ((OsuUIContextMenuButton*)button)->getID());
 }
 
