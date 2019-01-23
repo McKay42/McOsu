@@ -10,9 +10,6 @@
 
 #include "OsuBeatmap.h"
 
-#include <mutex>
-#include "WinMinGW.Mutex.h" // necessary due to incomplete implementation in mingw-w64
-
 class OsuBeatmapMania : public OsuBeatmap
 {
 public:

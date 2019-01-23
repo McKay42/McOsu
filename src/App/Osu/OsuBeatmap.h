@@ -12,9 +12,6 @@
 
 #include "OsuScore.h"
 
-#include <mutex>
-#include "WinMinGW.Mutex.h" // necessary due to incomplete implementation in mingw-w64
-
 class Sound;
 class ConVar;
 
@@ -231,7 +228,6 @@ protected:
 	bool m_bPrevKeyWasKey1;
 	std::vector<CLICK> m_clicks;
 	std::vector<CLICK> m_keyUps;
-	std::mutex m_clicksMutex;
 
 	std::vector<OsuHitObject*> m_hitobjects;
 	std::vector<OsuHitObject*> m_hitobjectsSortedByEndTime;

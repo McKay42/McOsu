@@ -8,11 +8,13 @@
 #include "OsuPauseMenu.h"
 
 #include "Engine.h"
+#include "Environment.h"
 #include "SoundEngine.h"
 #include "ResourceManager.h"
 #include "AnimationHandler.h"
 #include "Keyboard.h"
 #include "ConVar.h"
+#include "Mouse.h"
 
 #include "CBaseUIContainer.h"
 
@@ -134,6 +136,16 @@ void OsuPauseMenu::update()
 
 	if (anim->isAnimating(&m_fWarningArrowsAnimX))
 		m_fWarningArrowsAnimStartTime = engine->getTime();
+
+	// HACKHACK: handle joystick mouse select, inject enter keydown
+	if (env->getOS() == Environment::OS::OS_HORIZON)
+	{
+		if (engine->getMouse()->isLeftDown())
+		{
+			KeyboardEvent e(KEY_ENTER);
+			onKeyDown(e);
+		}
+	}
 }
 
 void OsuPauseMenu::onContinueClicked()

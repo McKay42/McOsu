@@ -135,7 +135,7 @@ void OsuUserStatsScreen::rebuildScoreButtons(UString playerName)
 
 	// TODO: optimize db accesses by caching a hashmap from md5hash -> OsuBeatmap*, currently it just does a loop over all diffs of all beatmaps (for every score here)
 	OsuDatabase *db = m_osu->getSongBrowser()->getDatabase();
-	std::vector<OsuDatabase::Score*> scores = db->getPlayerPPScores(playerName);
+	std::vector<OsuDatabase::Score*> scores = db->getPlayerPPScores(playerName).ppScores;
 	for (int i=scores.size()-1; i>=0; i--)
 	{
 		const float weight = OsuDatabase::getWeightForIndex(scores.size()-1-i);

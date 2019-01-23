@@ -36,6 +36,14 @@
 #include <cctype>
 #include <algorithm>
 
+#ifdef MCENGINE_FEATURE_MULTITHREADING
+
+#include <mutex>
+#include "WinMinGW.Mutex.h" // necessary due to incomplete implementation in mingw-w64
+#include "Horizon.Mutex.h"
+
+#endif
+
 ConVar osu_pvs("osu_pvs", true, "optimizes all loops over all hitobjects by clamping the range to the Potentially Visible Set");
 ConVar osu_draw_hitobjects("osu_draw_hitobjects", true);
 ConVar osu_draw_beatmap_background_image("osu_draw_beatmap_background_image", true);
@@ -43,6 +51,7 @@ ConVar osu_draw_scorebarbg("osu_draw_scorebarbg", true);
 ConVar osu_vr_draw_desktop_playfield("osu_vr_draw_desktop_playfield", true);
 
 ConVar osu_universal_offset("osu_universal_offset", 0.0f);
+ConVar osu_universal_offset_hardcoded("osu_universal_offset_hardcoded", 0.0f);
 ConVar osu_old_beatmap_offset("osu_old_beatmap_offset", 24.0f, "offset in ms which is added to beatmap versions < 5 (default value is hardcoded 24 ms in stable)");
 ConVar osu_timingpoints_offset("osu_timingpoints_offset", 50.0f, "Offset in ms which is added before determining the active timingpoint for the sample type and sample volume (hitsounds) of the current frame");
 ConVar osu_interpolate_music_pos("osu_interpolate_music_pos", true, "Interpolate song position with engine time if the audio library reports the same position more than once");
@@ -106,6 +115,12 @@ ConVar *OsuBeatmap::m_osu_fail_time_ref = &osu_fail_time;
 ConVar *OsuBeatmap::m_osu_volume_music_ref = NULL;
 ConVar *OsuBeatmap::m_osu_speed_override_ref = NULL;
 ConVar *OsuBeatmap::m_osu_pitch_override_ref = NULL;
+
+#ifdef MCENGINE_FEATURE_MULTITHREADING
+
+//static std::mutex g_clicksMutex;
+
+#endif
 
 OsuBeatmap::OsuBeatmap(Osu *osu)
 {
@@ -326,7 +341,11 @@ void OsuBeatmap::update()
 
 			// for nightmare mod, to avoid a miss because of the continue click
 			{
-				//std::lock_guard<std::mutex> lk(m_clicksMutex);
+#ifdef MCENGINE_FEATURE_MULTITHREADING
+
+				//std::lock_guard<std::mutex> lk(g_clicksMutex);
+
+#endif
 
 				m_clicks.clear();
 				m_keyUps.clear();
@@ -400,7 +419,7 @@ void OsuBeatmap::update()
 		}
 
 		// ugh. force update all hitobjects while waiting (necessary because of pvs optimization)
-		long curPos = m_iCurMusicPos + (long)osu_universal_offset.getInt() - m_selectedDifficulty->localoffset - m_selectedDifficulty->onlineOffset;
+		long curPos = m_iCurMusicPos + (long)osu_universal_offset.getInt() + (long)osu_universal_offset_hardcoded.getInt() - m_selectedDifficulty->localoffset - m_selectedDifficulty->onlineOffset - (m_selectedDifficulty->version < 5 ? osu_old_beatmap_offset.getInt() : 0);
 		if (curPos > -1) // otherwise auto would already click elements that start at exactly 0 (while the map has not even started)
 			curPos = -1;
 
@@ -437,12 +456,13 @@ void OsuBeatmap::update()
 	// detect and handle music end
 	if (!m_bIsWaiting && m_music->isReady() && (m_music->isFinished() || (m_hitobjects.size() > 0 && m_iCurMusicPos > (m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size()-1]->getTime() + m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size()-1]->getDuration() + (long)osu_end_delay_time.getInt()))))
 	{
+		debugLog("finished. finished = %i, hitobjects = %i, pos = %i\n", (int)m_music->isFinished(), m_hitobjects.size(), (int)m_iCurMusicPos);
 		stop(false);
 		return;
 	}
 
 	// update timing (points)
-	m_iCurMusicPosWithOffsets = m_iCurMusicPos + (long)osu_universal_offset.getInt() - m_selectedDifficulty->localoffset - m_selectedDifficulty->onlineOffset - (m_selectedDifficulty->version < 5 ? osu_old_beatmap_offset.getInt() : 0);
+	m_iCurMusicPosWithOffsets = m_iCurMusicPos + (long)osu_universal_offset.getInt() + (long)osu_universal_offset_hardcoded.getInt() - m_selectedDifficulty->localoffset - m_selectedDifficulty->onlineOffset - (m_selectedDifficulty->version < 5 ? osu_old_beatmap_offset.getInt() : 0);
 	updateTimingPoints(m_iCurMusicPosWithOffsets);
 
 	// for performance reasons, a lot of operations are crammed into 1 loop over all hitobjects:
@@ -461,7 +481,11 @@ void OsuBeatmap::update()
 	m_iND = 0;
 	m_iCurrentNumCircles = 0;
 	{
-		//std::lock_guard<std::mutex> lk(m_clicksMutex); // we need to lock this up here, else it would be possible to insert a click just before calling m_clicks.clear(), thus missing it
+#ifdef MCENGINE_FEATURE_MULTITHREADING
+
+		//std::lock_guard<std::mutex> lk(g_clicksMutex); // we need to lock this up here, else it would be possible to insert a click just before calling m_clicks.clear(), thus missing it
+
+#endif
 
 		bool blockNextNotes = false;
 		const long pvs = !OsuGameRules::osu_mod_mafham.getBool() ? getPVS() : (m_hitobjects.size() > 0 ? (m_hitobjects[clamp<int>(m_iCurrentHitObjectIndex + OsuGameRules::osu_mod_mafham_render_livesize.getInt() + 1, 0, m_hitobjects.size()-1)]->getTime() - m_iCurMusicPosWithOffsets + 1500) : getPVS());
@@ -726,7 +750,11 @@ void OsuBeatmap::keyPressed1(bool mouse)
 		m_osu->getScore()->addKeyCount(mouse ? 3 : 1);
 
 	// lock asap
-	//std::lock_guard<std::mutex> lk(m_clicksMutex);
+#ifdef MCENGINE_FEATURE_MULTITHREADING
+
+	//std::lock_guard<std::mutex> lk(g_clicksMutex);
+
+#endif
 
 	m_bPrevKeyWasKey1 = true;
 	m_bClick1Held = true;
@@ -758,7 +786,11 @@ void OsuBeatmap::keyPressed2(bool mouse)
 		m_osu->getScore()->addKeyCount(mouse ? 4 : 2);
 
 	// lock asap
-	//std::lock_guard<std::mutex> lk(m_clicksMutex);
+#ifdef MCENGINE_FEATURE_MULTITHREADING
+
+	//std::lock_guard<std::mutex> lk(g_clicksMutex);
+
+#endif
 
 	m_bPrevKeyWasKey1 = false;
 	m_bClick2Held = true;
@@ -1609,6 +1641,16 @@ unsigned long OsuBeatmap::getMusicPositionMSInterpolated()
 		return m_music->getPositionMS();
 	else
 	{
+#ifdef MCENGINE_FEATURE_SDL_MIXER
+
+		const double interpolationMultiplier = 2.0;
+
+#else
+
+		const double interpolationMultiplier = 1.0;
+
+#endif
+
 		// TODO: fix snapping at beginning for maps with instant start
 
 		unsigned long returnPos = 0;
@@ -1619,15 +1661,17 @@ unsigned long OsuBeatmap::getMusicPositionMSInterpolated()
 
 		const double realTime = engine->getTimeReal();
 		const double interpolationDelta = (realTime - m_fLastRealTimeForInterpolationDelta) * 1000.0 * speed;
-		const double interpolationDeltaLimit = ((realTime - m_fLastAudioTimeAccurateSet)*1000.0 < 1500 || speed < 1.0f ? 11 : 33);
+		const double interpolationDeltaLimit = ((realTime - m_fLastAudioTimeAccurateSet)*1000.0 < 1500 || speed < 1.0f ? 11 : 33) * interpolationMultiplier;
 
 		if (m_music->isPlaying() && !m_bWasSeekFrame)
 		{
 			double newInterpolatedPos = m_fInterpolatedMusicPos + interpolationDelta;
 			double delta = newInterpolatedPos - curPos;
 
+			//debugLog("delta = %ld\n", (long)delta);
+
 			// approach and recalculate delta
-			newInterpolatedPos -= delta / 8.0;
+			newInterpolatedPos -= delta / 8.0 / interpolationMultiplier;
 			delta = newInterpolatedPos - curPos;
 
             if (std::abs(delta) > interpolationDeltaLimit*2) // we're fucked, snap back to curPos
@@ -1667,6 +1711,7 @@ unsigned long OsuBeatmap::getMusicPositionMSInterpolated()
 
 		//debugLog("returning %lu \n", returnPos);
 		//debugLog("delta = %lu\n", (long)returnPos - m_iCurMusicPos);
+		//debugLog("raw delta = %ld\n", (long)returnPos - (long)curPos);
 
 		return returnPos;
 	}
