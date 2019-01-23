@@ -140,7 +140,7 @@ bool OsuSkinImage::loadImage(UString skinElementName, bool ignoreDefaultSkin)
 	if (OsuSkin::m_osu_skin_hd->getBool())
 	{
 		{
-			UString defaultFilePath = UString("./materials/");
+			UString defaultFilePath = UString(env->getOS() == Environment::OS::OS_HORIZON ? "romfs:/materials/" : "./materials/");
 			defaultFilePath.append(OsuSkin::OSUSKIN_DEFAULT_SKIN_PATH);
 			defaultFilePath.append(skinElementName);
 			defaultFilePath.append("@2x.png");
@@ -157,7 +157,7 @@ bool OsuSkinImage::loadImage(UString skinElementName, bool ignoreDefaultSkin)
 	// else load the normal version
 
 	{
-		UString defaultFilePath = UString("./materials/");
+		UString defaultFilePath = UString(env->getOS() == Environment::OS::OS_HORIZON ? "romfs:/materials/" : "./materials/");
 		defaultFilePath.append(OsuSkin::OSUSKIN_DEFAULT_SKIN_PATH);
 		defaultFilePath.append(skinElementName);
 		defaultFilePath.append(".png");

@@ -301,7 +301,7 @@ void OsuSkin::load()
 {
 	// skin ini
 	UString skinIniFilePath = m_sFilePath;
-	UString defaultSkinIniFilePath = UString("./materials/");
+	UString defaultSkinIniFilePath = UString(env->getOS() == Environment::OS::OS_HORIZON ? "romfs:/materials/" : "./materials/");
 	defaultSkinIniFilePath.append(OSUSKIN_DEFAULT_SKIN_PATH);
 	defaultSkinIniFilePath.append("skin.ini");
 	skinIniFilePath.append("skin.ini");
@@ -934,7 +934,7 @@ void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, 
 		// load default first
 		if (!ignoreDefaultSkin)
 		{
-			UString defaultFilePath = UString("./materials/");
+			UString defaultFilePath = UString(env->getOS() == Environment::OS::OS_HORIZON ? "romfs:/materials/" : "./materials/");
 			defaultFilePath.append(OSUSKIN_DEFAULT_SKIN_PATH);
 			defaultFilePath.append(skinElementName);
 			defaultFilePath.append("@2x.");
@@ -968,7 +968,7 @@ void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, 
 	// load default first
 	if (!ignoreDefaultSkin)
 	{
-		UString defaultFilePath = UString("./materials/");
+		UString defaultFilePath = UString(env->getOS() == Environment::OS::OS_HORIZON ? "romfs:/materials/" : "./materials/");
 		defaultFilePath.append(OSUSKIN_DEFAULT_SKIN_PATH);
 		defaultFilePath.append(skinElementName);
 		defaultFilePath.append(".");
@@ -1003,12 +1003,12 @@ void OsuSkin::checkLoadSound(Sound **addressOfPointer, UString skinElementName, 
 
 	// load default
 
-	UString defaultpath1 = UString("./materials/");
+	UString defaultpath1 = UString(env->getOS() == Environment::OS::OS_HORIZON ? "romfs:/materials/" : "./materials/");
 	defaultpath1.append(OSUSKIN_DEFAULT_SKIN_PATH);
 	defaultpath1.append(skinElementName);
 	defaultpath1.append(".wav");
 
-	UString defaultpath2 = UString("./materials/");
+	UString defaultpath2 = UString(env->getOS() == Environment::OS::OS_HORIZON ? "romfs:/materials/" : "./materials/");
 	defaultpath2.append(OSUSKIN_DEFAULT_SKIN_PATH);
 	defaultpath2.append(skinElementName);
 	defaultpath2.append(".mp3");

@@ -46,6 +46,8 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha29Steam.changes.push_back("- Updated pp algorithm (4), see https://github.com/ppy/osu-performance/pull/76/");
 	alpha29Steam.changes.push_back("- Updated pp algorithm (3), see https://github.com/ppy/osu-performance/pull/72/");
 	alpha29Steam.changes.push_back("- Fixed total weighted pp counting multiple scores on the same diff");
+	alpha29Steam.changes.push_back("- Fixed rare override slider reset crash temporarily by disabling reset animation");
+	alpha29Steam.changes.push_back("- Fixed lv only counting top pp scores");
 	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("- Added rich presence support (Discord + Steam)");
 	alpha29Steam.changes.push_back("- Added user profile info + switcher to songbrowser (total weighted pp/acc/lv)");

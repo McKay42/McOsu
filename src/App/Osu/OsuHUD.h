@@ -36,7 +36,7 @@ public:
 	void drawVRDummy(Graphics *g, Matrix4 &mvp, OsuVR *vr);
 	virtual void update();
 
-	void drawCursor(Graphics *g, Vector2 pos, float alphaMultiplier = 1.0f);
+	void drawCursor(Graphics *g, Vector2 pos, float alphaMultiplier = 1.0f, bool secondTrail = false);
 	void drawCursorSpectator1(Graphics *g, Vector2 pos, float alphaMultiplier = 1.0f);
 	void drawCursorSpectator2(Graphics *g, Vector2 pos, float alphaMultiplier = 1.0f);
 	void drawCursorVR1(Graphics *g, Matrix4 &mvp, Vector2 pos, float alphaMultiplier = 1.0f);
@@ -202,6 +202,7 @@ private:
 	// cursor & trail
 	float m_fCursorExpandAnim;
 	std::vector<CURSORTRAIL> m_cursorTrail;
+	std::vector<CURSORTRAIL> m_cursorTrail2;
 	std::vector<CURSORTRAIL> m_cursorTrailSpectator1;
 	std::vector<CURSORTRAIL> m_cursorTrailSpectator2;
 	std::vector<CURSORTRAIL> m_cursorTrailVR1;

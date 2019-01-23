@@ -45,6 +45,7 @@
 #include "OpenGLHeaders.h"
 #include "OpenGLLegacyInterface.h"
 #include "OpenGL3Interface.h"
+#include "OpenGLES2Interface.h"
 
 ConVar osu_automatic_cursor_size("osu_automatic_cursor_size", false);
 ConVar osu_cursor_alpha("osu_cursor_alpha", 1.0f);
@@ -142,6 +143,9 @@ OsuHUD::OsuHUD(Osu *osu) : OsuScreen(osu)
 	m_tempFont = engine->getResourceManager()->getFont("FONT_DEFAULT");
 	m_cursorTrailShader = engine->getResourceManager()->loadShader("cursortrail.vsh", "cursortrail.fsh", "cursortrail");
 	m_cursorTrail.reserve(osu_cursor_trail_max_size.getInt()*2);
+	if (env->getOS() == Environment::OS::OS_HORIZON)
+		m_cursorTrail2.reserve(osu_cursor_trail_max_size.getInt()*2);
+
 	m_cursorTrailShaderVR = NULL;
 	if (m_osu->isInVRMode())
 	{
@@ -515,12 +519,12 @@ void OsuHUD::update()
 	}
 }
 
-void OsuHUD::drawCursor(Graphics *g, Vector2 pos, float alphaMultiplier)
+void OsuHUD::drawCursor(Graphics *g, Vector2 pos, float alphaMultiplier, bool secondTrail)
 {
 	const bool vrTrailJumpFix = (m_osu->isInVRMode() && !m_osu->getVR()->isVirtualCursorOnScreen());
 
 	Matrix4 mvp;
-	drawCursorInt(g, m_cursorTrailShader, m_cursorTrail, mvp, pos, alphaMultiplier, vrTrailJumpFix);
+	drawCursorInt(g, m_cursorTrailShader, secondTrail ? m_cursorTrail2 : m_cursorTrail, mvp, pos, alphaMultiplier, vrTrailJumpFix);
 }
 
 void OsuHUD::drawCursorSpectator1(Graphics *g, Vector2 pos, float alphaMultiplier)
@@ -608,7 +612,15 @@ void OsuHUD::drawCursorInt(Graphics *g, Shader *trailShader, std::vector<CURSORT
 		// draw new style continuous smooth trail
 		if (smoothCursorTrail)
 		{
+#if defined(MCENGINE_FEATURE_OPENGL)
+
 			const bool isOpenGLRendererHack = (dynamic_cast<OpenGLLegacyInterface*>(g) != NULL || dynamic_cast<OpenGL3Interface*>(g) != NULL);
+
+#elif defined(MCENGINE_FEATURE_OPENGLES)
+
+			const bool isOpenGLRendererHack = (dynamic_cast<OpenGLES2Interface*>(g) != NULL);
+
+#endif
 
 			trailShader->enable();
 			{
@@ -619,15 +631,35 @@ void OsuHUD::drawCursorInt(Graphics *g, Shader *trailShader, std::vector<CURSORT
 
 				trailShader->setUniform1f("time", engine->getTime());
 
+#ifdef MCENGINE_FEATURE_OPENGLES
+
+				OpenGLES2Interface *gles2 = dynamic_cast<OpenGLES2Interface*>(g);
+				if (gles2 != NULL)
+				{
+					gles2->forceUpdateTransform();
+					Matrix4 mvp = gles2->getMVP();
+					trailShader->setUniformMatrix4fv("mvp", mvp);
+				}
+
+#endif
+
 				trailImage->bind();
 				{
+#if defined(MCENGINE_FEATURE_OPENGL) || defined(MCENGINE_FEATURE_OPENGLES)
+
 					if (isOpenGLRendererHack)
 						glBlendFunc(GL_SRC_ALPHA, GL_ONE); // HACKHACK: OpenGL hardcoded
 
+#endif
+
 					g->drawVAO(m_cursorTrailVAO);
+
+#if defined(MCENGINE_FEATURE_OPENGL) || defined(MCENGINE_FEATURE_OPENGLES)
 
 					if (isOpenGLRendererHack)
 						glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // HACKHACK: OpenGL hardcoded
+
+#endif
 				}
 				trailImage->unbind();
 			}
@@ -731,9 +763,9 @@ void OsuHUD::drawFps(Graphics *g, McFont *font, float fps)
 	g->popTransform();
 
 	// top
-	if (fps >= 200 || (m_osu->isInVRMode() && fps >= 80))
+	if (fps >= 200 || (m_osu->isInVRMode() && fps >= 80) || (env->getOS() == Environment::OS::OS_HORIZON && fps >= 50))
 		g->setColor(0xffffffff);
-	else if (fps >= 120 || (m_osu->isInVRMode() && fps >= 60))
+	else if (fps >= 120 || (m_osu->isInVRMode() && fps >= 60) || (env->getOS() == Environment::OS::OS_HORIZON && fps >= 40))
 		g->setColor(0xffdddd00);
 	else
 	{

@@ -48,7 +48,6 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen(osu)
 	m_bExperimentalVisible = false;
 	m_container = new CBaseUIContainer(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight(), "");
 	m_overrideSliderContainer = new CBaseUIContainer(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight(), "");
-	///m_experimentalContainer = new CBaseUIContainer(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight(), "");
 	m_experimentalContainer = new CBaseUIScrollView(-1, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight(), "");
 	m_experimentalContainer->setHorizontalScrolling(false);
 	m_experimentalContainer->setVerticalScrolling(true);
@@ -60,6 +59,8 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen(osu)
 	m_bWaitForCSChangeFinished = false;
 	m_bWaitForSpeedChangeFinished = false;
 
+	m_BPMSlider = NULL;
+	m_speedSlider = NULL;
 	m_previousDifficulty = NULL;
 
 	// build mod grid buttons
@@ -84,31 +85,41 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen(osu)
 	OVERRIDE_SLIDER overrideAR = addOverrideSlider("AR Override", "AR:", convar->getConVarByName("osu_ar_override"));
 	OVERRIDE_SLIDER overrideOD = addOverrideSlider("OD Override", "OD:", convar->getConVarByName("osu_od_override"));
 	OVERRIDE_SLIDER overrideHP = addOverrideSlider("HP Override", "HP:", convar->getConVarByName("osu_hp_override"));
-	OVERRIDE_SLIDER overrideBPM = addOverrideSlider("BPM Override", "BPM:", convar->getConVarByName("osu_speed_override"), 0.0f, 2.5f);
-	OVERRIDE_SLIDER overrideSpeed = addOverrideSlider("Speed Multiplier", "x", convar->getConVarByName("osu_speed_override"), 0.0f, 2.5f);
+
 	overrideCS.slider->setAnimated(false); // quick fix for otherwise possible inconsistencies due to slider vertex buffers and animated CS changes
 	overrideCS.slider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
 	overrideAR.slider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
 	overrideOD.slider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
 	overrideHP.slider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
-	overrideBPM.slider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
-	overrideBPM.slider->setValue(-1.0f, false);
-	overrideBPM.slider->setAnimated(false); // same quick fix as above
-	overrideSpeed.slider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
-	overrideSpeed.slider->setValue(-1.0f, false);
-	overrideSpeed.slider->setAnimated(false); // same quick fix as above
 
 	m_CSSlider = overrideCS.slider;
 	m_ARSlider = overrideAR.slider;
 	m_ODSlider = overrideOD.slider;
-	m_BPMSlider = overrideBPM.slider;
-	m_speedSlider = overrideSpeed.slider;
+
+	if (env->getOS() != Environment::OS::OS_HORIZON)
+	{
+		OVERRIDE_SLIDER overrideBPM = addOverrideSlider("BPM Override", "BPM:", convar->getConVarByName("osu_speed_override"), 0.0f, 2.5f);
+		OVERRIDE_SLIDER overrideSpeed = addOverrideSlider("Speed Multiplier", "x", convar->getConVarByName("osu_speed_override"), 0.0f, 2.5f);
+
+		overrideBPM.slider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
+		overrideBPM.slider->setValue(-1.0f, false);
+		overrideBPM.slider->setAnimated(false); // same quick fix as above
+		overrideSpeed.slider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
+		overrideSpeed.slider->setValue(-1.0f, false);
+		overrideSpeed.slider->setAnimated(false); // same quick fix as above
+
+		m_BPMSlider = overrideBPM.slider;
+		m_speedSlider = overrideSpeed.slider;
+	}
 
 	// build experimental buttons
 	addExperimentalLabel(" Experimental Mods");
 	addExperimentalCheckbox("Wobble", "Playfield rotates and moves.", convar->getConVarByName("osu_mod_wobble"));
 	addExperimentalCheckbox("AR Wobble", "Approach rate oscillates between -1 and +1.", convar->getConVarByName("osu_mod_arwobble"));
-	addExperimentalCheckbox("Timewarp", "Speed increases from 100% to 150% over the course of the beatmap.", convar->getConVarByName("osu_mod_timewarp"));
+
+	if (env->getOS() != Environment::OS::OS_HORIZON)
+		addExperimentalCheckbox("Timewarp", "Speed increases from 100% to 150% over the course of the beatmap.", convar->getConVarByName("osu_mod_timewarp"));
+
 	addExperimentalCheckbox("AR Timewarp", "Approach rate decreases from 100% to 50% over the course of the beatmap.", convar->getConVarByName("osu_mod_artimewarp"));
 	addExperimentalCheckbox("Minimize", "Circle size decreases from 100% to 50% over the course of the beatmap.", convar->getConVarByName("osu_mod_minimize"));
 	addExperimentalCheckbox("Fading Cursor", "The cursor fades the higher the combo, becoming invisible at 50.", convar->getConVarByName("osu_mod_fadingcursor"));
@@ -162,6 +173,12 @@ void OsuModSelector::updateButtons()
 	m_modButtonAuto = setModButtonOnGrid(3, 2, 0, "auto", "Watch a perfect automated play through the song.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModAutoplay();});
 	setModButtonOnGrid(4, 2, 0, "practicetarget", "Accuracy is based on the distance to the center of all hitobjects.\n300s still require at least being in the hit window of a 100 in addition to the rule above.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModTarget();});
 	m_modButtonScoreV2 = setModButtonOnGrid(5, 2, 0, "v2", "Try the future scoring system.\n** UNRANKED **", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModScorev2();});
+
+	if (env->getOS() == Environment::OS::OS_HORIZON)
+	{
+		getModButtonOnGrid(2, 1)->setAvailable(false);
+		getModButtonOnGrid(2, 0)->setAvailable(false);
+	}
 }
 
 OsuModSelector::~OsuModSelector()
@@ -364,7 +381,7 @@ void OsuModSelector::update()
 	}
 
 	// handle dynamic live pp calculation updates (when CS or Speed/BPM changes)
-	if (m_speedSlider->isActive() || m_BPMSlider->isActive())
+	if ((m_speedSlider != NULL && m_speedSlider->isActive()) || (m_BPMSlider != NULL && m_BPMSlider->isActive()))
 	{
 		m_bWaitForSpeedChangeFinished = true;
 	}
@@ -793,9 +810,10 @@ void OsuModSelector::resetMods()
 		m_modButtons[i]->resetState();
 	}
 
+	// TODO: animation disabled since it causes random crashes while animating down at exactly 0.05x multiplier, investigate why this happens
 	for (int i=0; i<m_overrideSliders.size(); i++)
 	{
-		m_overrideSliders[i].slider->setValue(m_overrideSliders[i].slider->getMin(), true);
+		m_overrideSliders[i].slider->setValue(m_overrideSliders[i].slider->getMin(), false);
 	}
 
 	for (int i=0; i<m_experimentalMods.size(); i++)

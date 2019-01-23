@@ -41,6 +41,7 @@
 #include "OpenGLHeaders.h"
 #include "OpenGLLegacyInterface.h"
 #include "OpenGL3Interface.h"
+#include "OpenGLES2Interface.h"
 
 #include <chrono>
 
@@ -315,7 +316,15 @@ void OsuBeatmapStandard::draw(Graphics *g)
 		}
 		else
 		{
+#if defined(MCENGINE_FEATURE_OPENGL)
+
 			const bool isOpenGLRendererHack = (dynamic_cast<OpenGLLegacyInterface*>(g) != NULL || dynamic_cast<OpenGL3Interface*>(g) != NULL);
+
+#elif defined(MCENGINE_FEATURE_OPENGLES)
+
+			const bool isOpenGLRendererHack = (dynamic_cast<OpenGLES2Interface*>(g) != NULL);
+
+#endif
 
 			if (m_mafhamActiveRenderTarget == NULL)
 				m_mafhamActiveRenderTarget = m_osu->getFrameBuffer();
@@ -335,10 +344,13 @@ void OsuBeatmapStandard::draw(Graphics *g)
 
 				m_mafhamActiveRenderTarget->enable();
 				{
+#if defined(MCENGINE_FEATURE_OPENGL) || defined(MCENGINE_FEATURE_OPENGLES)
+
 					if (isOpenGLRendererHack)
-					{
 						glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA); // HACKHACK: OpenGL hardcoded
-					}
+
+#endif
+
 					int chunkCounter = 0;
 					for (int i=m_hitobjectsSortedByEndTime.size()-1 - m_iMafhamHitObjectRenderIndex; i>=0; i--, m_iMafhamHitObjectRenderIndex++)
 					{
@@ -368,10 +380,13 @@ void OsuBeatmapStandard::draw(Graphics *g)
 
 						m_iMafhamActiveRenderHitObjectIndex = i;
 					}
+
+#if defined(MCENGINE_FEATURE_OPENGL) || defined(MCENGINE_FEATURE_OPENGLES)
+
 					if (isOpenGLRendererHack)
-					{
 						glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // HACKHACK: OpenGL hardcoded
-					}
+
+#endif
 				}
 				m_mafhamActiveRenderTarget->disable();
 
@@ -394,13 +409,21 @@ void OsuBeatmapStandard::draw(Graphics *g)
 			// draw scene buffer
 			if (shouldDrawBuffer)
 			{
+#if defined(MCENGINE_FEATURE_OPENGL) || defined(MCENGINE_FEATURE_OPENGLES)
+
 				if (isOpenGLRendererHack)
 					glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA); // HACKHACK: OpenGL hardcoded
 
+#endif
+
 				m_mafhamFinishedRenderTarget->draw(g, 0, 0);
+
+#if defined(MCENGINE_FEATURE_OPENGL) || defined(MCENGINE_FEATURE_OPENGLES)
 
 				if (isOpenGLRendererHack)
 					glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // HACKHACK: OpenGL hardcoded
+
+#endif
 			}
 
 			// draw followpoints
