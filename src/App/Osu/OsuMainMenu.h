@@ -21,6 +21,8 @@ class OsuUIButton;
 class CBaseUIButton;
 class CBaseUIContainer;
 
+class ConVar;
+
 class OsuMainMenu : public OsuScreen, public MouseListener
 {
 public:
@@ -53,6 +55,9 @@ public:
 	inline Osu* getOsu() const {return m_osu;}
 
 private:
+	static ConVar *m_osu_universal_offset_ref;
+	static ConVar *m_osu_universal_offset_hardcoded_ref;
+
 	void drawVersionInfo(Graphics *g);
 	void updateLayout();
 

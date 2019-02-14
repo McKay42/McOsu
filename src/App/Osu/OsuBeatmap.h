@@ -142,6 +142,9 @@ public:
 	void playMissSound();
 	void updateTimingPoints(long curPos);
 
+	// ILLEGAL:
+	inline std::vector<OsuHitObject*> *getHitObjectsPointer() {return &m_hitobjects;}
+
 protected:
 	static ConVar *m_osu_pvs;
 	static ConVar *m_osu_draw_hitobjects_ref;

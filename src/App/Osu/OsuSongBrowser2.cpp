@@ -898,9 +898,13 @@ void OsuSongBrowser2::update()
 					OsuBeatmapDifficulty *diff = (*m_beatmaps[m_iBackgroundStarCalculationIndex]->getDifficultiesPointer())[i];
 					if (!diff->isBackgroundLoaderActive() && diff->starsNoMod == 0.0f)
 					{
-						m_fBackgroundStarCalculationWorkNotificationTime = engine->getTime() + 0.1f;
+						diff->semaphore = true; // NOTE: this is used by the BackgroundImagePathLoader to wait until the main thread is done, and then recalculate accurately
+						{
+							diff->loadMetadataRaw(true, true); // NOTE: calculateStarsInaccurately = true
+						}
+						diff->semaphore = false;
 
-						diff->loadMetadataRaw(true);
+						m_fBackgroundStarCalculationWorkNotificationTime = engine->getTime() + 0.1f;
 
 						// only one diff per beatmap per update
 						canMoveToNextBeatmap = false;
@@ -918,6 +922,15 @@ void OsuSongBrowser2::update()
 				m_iBackgroundStarCalculationIndex = clamp<int>(m_iBackgroundStarCalculationIndex, 0, m_beatmaps.size());
 			}
 		}
+	}
+
+	// HACKHACK: handle delayed star calculation UI update for song info label
+	if (getSelectedBeatmap() != NULL && getSelectedBeatmap()->getSelectedDifficulty() != NULL)
+	{
+		if (!getSelectedBeatmap()->getSelectedDifficulty()->isBackgroundLoaderActive() || getSelectedBeatmap()->getSelectedDifficulty()->starsWereCalculatedAccurately)
+			m_songInfo->setStars(getSelectedBeatmap()->getSelectedDifficulty()->starsNoMod);
+
+		m_songInfo->setStarsRecalculating(!getSelectedBeatmap()->getSelectedDifficulty()->starsWereCalculatedAccurately);
 	}
 }
 
@@ -1145,6 +1158,10 @@ void OsuSongBrowser2::onKeyDown(KeyboardEvent &key)
 	if (key == KEY_ENTER)
 		playSelectedDifficulty();
 
+	// toggle auto
+	if (key == KEY_A && engine->getKeyboard()->isControlDown())
+		m_osu->getModSelector()->toggleAuto();
+
 	key.consume();
 }
 
@@ -1222,6 +1239,10 @@ void OsuSongBrowser2::onDifficultySelected(OsuBeatmap *beatmap, OsuBeatmapDiffic
 
 		if (!clientPlayStateChangeRequestBeatmapSent)
 		{
+			// CTRL + click = auto
+			if (!m_osu->isInMultiplayer() && engine->getKeyboard()->isControlDown())
+				m_osu->getModSelector()->enableAuto();
+
 			m_osu->onBeforePlayStart();
 			if (beatmap->play())
 			{
@@ -1674,22 +1695,30 @@ bool OsuSongBrowser2::searchMatcher(OsuBeatmap *beatmap, UString searchString)
 			literalSearchString.append(" ");
 	}
 
-	// if we have a valid literal string to search, do that, else just return the expression match
+	// early return here for literal match/contains
 	if (literalSearchString.length() > 0)
 	{
-		//debugLog("literalSearchString = %s\n", literalSearchString.toUtf8());
+		bool atLeastOneFullMatch = true;
 		for (int i=0; i<diffs.size(); i++)
 		{
-			if (findSubstringInDifficulty(diffs[i], literalSearchString))
+			for (int s=0; s<literalSearchStrings.size(); s++)
+			{
+				if (!findSubstringInDifficulty(diffs[i], literalSearchStrings[s]))
+					atLeastOneFullMatch = false;
+			}
+
+			// as soon as one diff matches all strings, we are done
+			if (atLeastOneFullMatch)
 				return true;
 		}
-		return false; // can't be matched anymore
+
+		return atLeastOneFullMatch;
 	}
-	else
-		return expressionMatches;
+
+	return expressionMatches;
 }
 
-bool OsuSongBrowser2::findSubstringInDifficulty(OsuBeatmapDifficulty *diff, UString searchString)
+bool OsuSongBrowser2::findSubstringInDifficulty(OsuBeatmapDifficulty *diff, UString &searchString)
 {
 	std::string stdSearchString = searchString.toUtf8();
 
@@ -1910,6 +1939,12 @@ void OsuSongBrowser2::rebuildScoreButtons()
 		{
 			scoreButtons[i]->setIndex(i+1);
 			m_scoreBrowser->getContainer()->addBaseUIElement(scoreButtons[i]);
+		}
+
+		// reset
+		for (int i=0; i<scoreButtons.size(); i++)
+		{
+			scoreButtons[i]->resetHighlight();
 		}
 	}
 

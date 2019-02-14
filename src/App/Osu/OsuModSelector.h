@@ -45,6 +45,8 @@ public:
 	virtual void setVisible(bool visible);
 
 	void checkUpdateBPMSliderSlaves();
+	void enableAuto();
+	void toggleAuto();
 
 	void setWaitForF1KeyUp(bool waitForF1KeyUp) {m_bWaitForF1KeyUp = waitForF1KeyUp;}
 

@@ -48,6 +48,7 @@ ConVar osu_folder("osu_folder", "sdmc:/switch/McOsu/");
 
 ConVar osu_database_enabled("osu_database_enabled", true);
 ConVar osu_database_dynamic_star_calculation("osu_database_dynamic_star_calculation", true, "dynamically calculate star ratings in the background");
+ConVar osu_database_ignore_version_warnings("osu_database_ignore_version_warnings", false);
 ConVar osu_scores_enabled("osu_scores_enabled", true);
 ConVar osu_scores_legacy_enabled("osu_scores_legacy_enabled", true, "load osu!'s scores.db");
 ConVar osu_scores_custom_enabled("osu_scores_custom_enabled", true, "load custom scores.db");
@@ -752,6 +753,7 @@ void OsuDatabase::loadDB(OsuFile *db)
 	m_iNumBeatmapsToLoad = db->readInt();
 
 	debugLog("Database: version = %i, folderCount = %i, playerName = %s, numDiffs = %i\n", m_iVersion, m_iFolderCount, m_sPlayerName.toUtf8(), m_iNumBeatmapsToLoad);
+
 	if (m_iVersion < 20140609)
 	{
 		debugLog("Database: Version is below 20140609, not supported.\n");
@@ -765,6 +767,14 @@ void OsuDatabase::loadDB(OsuFile *db)
 		m_osu->getNotificationOverlay()->addNotification("osu!.db version too old, update osu! and try again!", 0xffff0000);
 		m_fLoadingProgress = 1.0f;
 		return;
+	}
+
+	if (!osu_database_ignore_version_warnings.getBool())
+	{
+		if (m_iVersion < 20190207) // xexxar angles star recalc
+		{
+			m_osu->getNotificationOverlay()->addNotification("osu!.db version is old,  let osu! update when convenient.", 0xffffff00, false, 3.0f);
+		}
 	}
 
 	// read beatmapInfos
@@ -952,6 +962,7 @@ void OsuDatabase::loadDB(OsuFile *db)
 			diff->starsNoMod = numOsuStandardStars;
 			diff->ID = beatmapID;
 			diff->setID = beatmapSetID;
+			diff->starsWereCalculatedAccurately = (diff->starsNoMod > 0.0f); // NOTE: important
 
 			// calculate bpm range
 			float minBeatLength = 0;

@@ -9,6 +9,7 @@
 
 #include "Engine.h"
 #include "ConVar.h"
+#include "Environment.h"
 
 #ifdef MCENGINE_FEATURE_STEAMWORKS
 
@@ -48,6 +49,9 @@ void OsuRichPresence::onMainMenu(Osu *osu)
 void OsuRichPresence::onSongBrowser(Osu *osu)
 {
 	setStatus(osu, "Song Selection");
+
+	// also update window title
+	env->setWindowTitle("McOsu");
 }
 
 void OsuRichPresence::onPlayStart(Osu *osu)
@@ -61,6 +65,11 @@ void OsuRichPresence::onPlayStart(Osu *osu)
 	playingInfo.append("]");
 
 	setStatus(osu, playingInfo);
+
+	// also update window title
+	UString windowTitle = UString(playingInfo);
+	windowTitle.insert(0, "McOsu - ");
+	env->setWindowTitle(windowTitle);
 }
 
 void OsuRichPresence::onPlayEnd(Osu *osu, bool quit)
