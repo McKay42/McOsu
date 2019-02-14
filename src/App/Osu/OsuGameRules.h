@@ -210,6 +210,10 @@ public:
 	{
 		return osu_mod_mafham.getBool() ? beatmap->getLength()*2 : mapDifficultyRange(beatmap->getRawAR(), getMinApproachTime(), getMidApproachTime(), getMaxApproachTime());
 	}
+	static float getApproachTimeForStacking(float AR)
+	{
+		return mapDifficultyRange(osu_stacking_ar_override.getFloat() < 0.0f ? AR : osu_stacking_ar_override.getFloat(), getMinApproachTime(), getMidApproachTime(), getMaxApproachTime());
+	}
 	static float getApproachTimeForStacking(OsuBeatmap *beatmap)
 	{
 		return mapDifficultyRange(osu_stacking_ar_override.getFloat() < 0.0f ? beatmap->getAR() : osu_stacking_ar_override.getFloat(), getMinApproachTime(), getMidApproachTime(), getMaxApproachTime());

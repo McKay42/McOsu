@@ -31,6 +31,7 @@
 #include "OsuSongBrowser2.h"
 #include "OsuNotificationOverlay.h"
 #include "OsuBeatmapDifficulty.h"
+#include "OsuDifficultyCalculator.h"
 #include "OsuReplay.h"
 
 #include "OsuHitObject.h"
@@ -82,6 +83,8 @@ ConVar osu_debug_hiterrorbar_misaims("osu_debug_hiterrorbar_misaims", false);
 
 ConVar osu_pp_live_timeout("osu_pp_live_timeout", 1.0f, "show message that we're still calculating stars after this many seconds, on the first start of the beatmap");
 
+ConVar osu_stars_discrepancy_warning_delta("osu_stars_discrepancy_warning_delta", 0.1f, "if the star rating differs more than this, notify the user upon score submission");
+
 
 
 class StarCacheLoader : public Resource
@@ -117,8 +120,9 @@ protected:
 			return;
 		}
 
-		if (m_beatmap->getSelectedDifficulty() != NULL)
-			m_beatmap->getSelectedDifficulty()->rebuildStarCacheForUpToHitObjectIndex(m_beatmap, m_bDead, m_iProgress);
+		OsuBeatmapDifficulty *diff = m_beatmap->getSelectedDifficulty();
+		if (diff != NULL)
+			diff->rebuildStarCacheForUpToHitObjectIndex(m_beatmap, m_bDead, m_iProgress);
 
 		m_bAsyncReady = true;
 	}
@@ -134,7 +138,6 @@ private:
 
 
 ConVar *OsuBeatmapStandard::m_osu_draw_statistics_pp = NULL;
-ConVar *OsuBeatmapStandard::m_osu_pp_live_type = NULL;
 
 OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 {
@@ -174,6 +177,7 @@ OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 
 	m_bIsPreLoading = true;
 	m_iPreLoadingIndex = 0;
+	m_bWasStarDiffWarningIssued = false;
 
 	m_mafhamActiveRenderTarget = NULL;
 	m_mafhamFinishedRenderTarget = NULL;
@@ -187,8 +191,6 @@ OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 	// convar refs
 	if (m_osu_draw_statistics_pp == NULL)
 		m_osu_draw_statistics_pp = convar->getConVarByName("osu_draw_statistics_pp");
-	if (m_osu_pp_live_type == NULL)
-		m_osu_pp_live_type = convar->getConVarByName("osu_pp_live_type");
 }
 
 OsuBeatmapStandard::~OsuBeatmapStandard()
@@ -809,6 +811,25 @@ void OsuBeatmapStandard::update()
 			m_bMafhamRenderScheduled = true;
 		}
 	}
+
+	// star diff warning (after star cache loader has finished)
+	if (m_osu_draw_statistics_pp->getBool())
+	{
+		if (m_selectedDifficulty->starsWereCalculatedAccurately)
+		{
+			if (!m_bWasStarDiffWarningIssued)
+			{
+				m_bWasStarDiffWarningIssued = true;
+
+				const double aim = m_selectedDifficulty->getAimStarsForUpToHitObjectIndex(m_selectedDifficulty->numObjects);
+				const double speed = m_selectedDifficulty->getSpeedStarsForUpToHitObjectIndex(m_selectedDifficulty->numObjects);
+
+				const float stars = OsuDifficultyCalculator::calculateTotalStarsFromSkills(aim, speed);
+
+				checkHandleStarDiscrepancy(m_selectedDifficulty->starsNoMod, stars);
+			}
+		}
+	}
 }
 
 void OsuBeatmapStandard::onModUpdate(bool rebuildSliderVertexBuffers)
@@ -905,10 +926,7 @@ void OsuBeatmapStandard::onModUpdate(bool rebuildSliderVertexBuffers)
 		if (didCSChange || didSpeedChange)
 		{
 			if (m_selectedDifficulty != NULL)
-			{
 				updateStarCache();
-				updateStars();
-			}
 		}
 	}
 }
@@ -1215,7 +1233,8 @@ void OsuBeatmapStandard::onLoad()
 	// build stars
 	m_fStarCacheTime = engine->getTime() + osu_pp_live_timeout.getFloat(); // first time delay only. subsequent updates should immediately show the loading spinner
 	updateStarCache();
-	updateStars();
+
+	m_bWasStarDiffWarningIssued = false; // reset
 }
 
 void OsuBeatmapStandard::onPlayStart()
@@ -1242,6 +1261,10 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 		m_fAimStars = (float)aim;
 		m_fSpeedStars = (float)speed;
 
+		// warn the user if osu stars differ too much from mcosu stars
+		if (m_selectedDifficulty->starsWereCalculatedAccurately)
+			checkHandleStarDiscrepancy(m_selectedDifficulty->starsNoMod, totalStars);
+
 		const int numHitObjects = m_hitobjects.size();
 		const int numCircles = m_selectedDifficulty->hitcircles.size();
 		const int maxPossibleCombo = m_selectedDifficulty->getMaxCombo();
@@ -1250,7 +1273,7 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 		const int num300s = m_osu->getScore()->getNum300s();
 		const int num100s = m_osu->getScore()->getNum100s();
 		const int num50s = m_osu->getScore()->getNum50s();
-		const float pp = m_selectedDifficulty->calculatePPv2(m_osu, this, aim, speed, numHitObjects, numCircles, maxPossibleCombo, highestCombo, numMisses, num300s, num100s, num50s);
+		const float pp = OsuDifficultyCalculator::calculatePPv2(m_osu, this, aim, speed, numHitObjects, numCircles, maxPossibleCombo, highestCombo, numMisses, num300s, num100s, num50s);
 		m_osu->getScore()->setStarsTomTotal(totalStars);
 		m_osu->getScore()->setStarsTomAim(m_fAimStars);
 		m_osu->getScore()->setStarsTomSpeed(m_fSpeedStars);
@@ -1344,6 +1367,10 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 			debugLog("OsuBeatmapStandard::onBeforeStop() done.\n");
 		}
 		m_osu->getScore()->setIndex(scoreIndex);
+
+		// special case: incomplete scores should NEVER show pp, even if auto
+		if (!isComplete)
+			m_osu->getScore()->setPPv2(0.0f);
 	}
 }
 
@@ -1736,7 +1763,7 @@ void OsuBeatmapStandard::calculateStacks()
 
 void OsuBeatmapStandard::updateStarCache()
 {
-	if (m_osu_draw_statistics_pp->getBool() && m_osu_pp_live_type->getInt() == 2)
+	if (m_osu_draw_statistics_pp->getBool())
 	{
 		// so we don't get a useless double load inside onModUpdate()
 		m_fPrevHitCircleDiameterForStarCache = getHitcircleDiameter();
@@ -1751,18 +1778,6 @@ void OsuBeatmapStandard::updateStarCache()
 		m_starCacheLoader->revive(); // activate it
 		engine->getResourceManager()->requestNextLoadAsync();
 		engine->getResourceManager()->loadResource(m_starCacheLoader);
-	}
-}
-
-void OsuBeatmapStandard::updateStars()
-{
-	if (m_osu_draw_statistics_pp->getBool() && m_osu_pp_live_type->getInt() != 2)
-	{
-		double aim = 0.0;
-		double speed = 0.0;
-		m_selectedDifficulty->calculateStarDiff(this, &aim, &speed);
-		m_fAimStars = (float)aim;
-		m_fSpeedStars = (float)speed;
 	}
 }
 
@@ -1782,10 +1797,16 @@ void OsuBeatmapStandard::stopStarCacheLoader()
 
 bool OsuBeatmapStandard::isLoadingStarCache()
 {
-	return m_osu_draw_statistics_pp->getBool() && m_osu_pp_live_type->getInt() == 2 && !m_starCacheLoader->isReady();
+	return m_osu_draw_statistics_pp->getBool() && !m_starCacheLoader->isReady();
 }
 
 bool OsuBeatmapStandard::isLoadingInt()
 {
 	return OsuBeatmap::isLoading() || m_bIsPreLoading || isLoadingStarCache();
+}
+
+void OsuBeatmapStandard::checkHandleStarDiscrepancy(float osuStars, float stars)
+{
+	if (osuStars > 0.1f && stars > 0.1f && std::abs(stars - osuStars) > osu_stars_discrepancy_warning_delta.getFloat())
+		m_osu->getNotificationOverlay()->addNotification(UString::format("Star Discrepancy:  osu! = %.2f*  |  McOsu = %.2f*", osuStars, stars), 0xffffff00, false, 4.0f);
 }

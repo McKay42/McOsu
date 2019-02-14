@@ -14,6 +14,7 @@
 #include "AnimationHandler.h"
 #include "Keyboard.h"
 #include "Mouse.h"
+#include "Timer.h"
 #include "ConVar.h"
 
 #include "Osu.h"
@@ -318,6 +319,11 @@ void OsuBeatmap::drawBackground(Graphics *g)
 
 			y += 100;
 		}
+
+		y += 100;
+
+		g->setColor(m_selectedDifficulty->loaded ? 0xff00ff00 : 0xffff0000);
+		g->fillRect(50, y, 50, 50);
 	}
 }
 
@@ -900,7 +906,20 @@ bool OsuBeatmap::play()
 	// actually load the difficulty (and the hitobjects)
 	if (!m_selectedDifficulty->loaded)
 	{
-		if (!m_selectedDifficulty->loadRaw(this, &m_hitobjects))
+		// HACKHACK: thread sync, see OsuBeatmapDifficulty.cpp
+		{
+			Timer t;
+			while (m_selectedDifficulty->semaphore)
+			{
+				t.sleep(10*1000);
+			}
+		}
+
+		m_selectedDifficulty->semaphore = true;
+		const bool success = m_selectedDifficulty->loadRaw(this, &m_hitobjects);
+		m_selectedDifficulty->semaphore = false;
+
+		if (!success)
 			return false;
 		else
 		{
@@ -1264,7 +1283,7 @@ int OsuBeatmap::getBPM()
 float OsuBeatmap::getSpeedMultiplier()
 {
 	if (m_music != NULL)
-		return m_music->getSpeed();
+		return std::max(m_music->getSpeed(), 0.05f);
 	else
 		return 1.0f;
 }

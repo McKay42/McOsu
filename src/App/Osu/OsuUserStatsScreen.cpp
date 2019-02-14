@@ -33,7 +33,6 @@ OsuUserStatsScreen::OsuUserStatsScreen(Osu *osu) : OsuScreenBackable(osu)
 {
 	m_name_ref = convar->getConVarByName("name");
 
-	// TODO: button to right of user panel in songbrowser <<< Top Ranks
 	// TODO: (statistics panel with values (how many plays, average UR/offset+-/score/pp/etc.))
 
 	m_container = new CBaseUIContainer();
@@ -54,6 +53,10 @@ OsuUserStatsScreen::OsuUserStatsScreen(Osu *osu) : OsuScreenBackable(osu)
 
 	// the context menu gets added last (drawn on top of everything)
 	m_container->addBaseUIElement(m_contextMenu);
+
+	m_vInfoText.push_back("Old scores are not recalculated yet!");
+	m_vInfoText.push_back("Will be included in the next update.");
+	m_vInfoText.push_back("New scores use the new stars/pp ofc.");
 }
 
 OsuUserStatsScreen::~OsuUserStatsScreen()
@@ -65,26 +68,27 @@ void OsuUserStatsScreen::draw(Graphics *g)
 {
 	if (!m_bVisible) return;
 
-	/*
-	const float infoScale = 0.1f;
-	const float paddingScale = 0.4f;
-	McFont *infoFont = m_osu->getSubTitleFont();
-	g->setColor(0xff888888);
-	for (int i=0; i<m_vInfoText.size(); i++)
+	if (m_vInfoText.size() > 0)
 	{
-		g->pushTransform();
+		const float infoScale = 0.1f;
+		const float paddingScale = 0.4f;
+		McFont *infoFont = m_osu->getSubTitleFont();
+		g->setColor(0xff888888);
+		for (int i=0; i<m_vInfoText.size(); i++)
 		{
-			const float scale = (m_scores->getPos().y / infoFont->getHeight())*infoScale;
-			const float height = infoFont->getHeight()*scale;
-			const float padding = height*paddingScale;
+			g->pushTransform();
+			{
+				const float scale = (m_scores->getPos().y / infoFont->getHeight())*infoScale;
+				const float height = infoFont->getHeight()*scale;
+				const float padding = height*paddingScale;
 
-			g->scale(scale, scale);
-			g->translate(m_scores->getPos().x, m_scores->getPos().y/2 + height/2 - ((m_vInfoText.size()-1)*height + (m_vInfoText.size()-1)*padding)/2 + i*(height+padding));
-			g->drawString(infoFont, m_vInfoText[i]);
+				g->scale(scale, scale);
+				g->translate(m_userButton->getPos().x + m_userButton->getSize().x + 10, m_scores->getPos().y/2 + height/2 - ((m_vInfoText.size()-1)*height + (m_vInfoText.size()-1)*padding)/2 + i*(height+padding));
+				g->drawString(infoFont, m_vInfoText[i]);
+			}
+			g->popTransform();
 		}
-		g->popTransform();
 	}
-	*/
 
 	m_container->draw(g);
 
@@ -172,7 +176,7 @@ void OsuUserStatsScreen::onUserClicked(CBaseUIButton *button)
 {
 	engine->getSound()->play(m_osu->getSkin()->getMenuClick());
 
-	// HACKHACK: code duplication (see OsuSongbrowser2.cpp)
+	// NOTE: code duplication (see OsuSongbrowser2.cpp)
 	std::vector<UString> names = m_osu->getSongBrowser()->getDatabase()->getPlayerNamesWithPPScores();
 	if (names.size() > 0)
 	{

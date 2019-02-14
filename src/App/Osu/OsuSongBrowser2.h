@@ -89,7 +89,7 @@ public:
 
 private:
 	static bool searchMatcher(OsuBeatmap *beatmap, UString searchString);
-	static bool findSubstringInDifficulty(OsuBeatmapDifficulty *diff, UString searchString);
+	static bool findSubstringInDifficulty(OsuBeatmapDifficulty *diff, UString &searchString);
 
 	enum class GROUP
 	{

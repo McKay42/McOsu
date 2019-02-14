@@ -52,8 +52,8 @@ OsuUISongBrowserButton::OsuUISongBrowserButton(Osu *osu, OsuSongBrowser2 *songBr
 
 	m_iSortHack = sortHackCounter++;
 
-	m_inactiveBackgroundColor = COLOR(255, 235, 73, 153); // pink
-	m_activeBackgroundColor = COLOR(255, 255, 255, 255); // white
+	m_inactiveBackgroundColor = COLOR(240, 235, 73, 153); // pink
+	m_activeBackgroundColor = COLOR(220 + 10, 255, 255, 255); // white
 
 	m_fHoverMoveAwayAnimation = 0.0f;
 	m_moveAwayState = MOVE_AWAY_STATE::MOVE_CENTER;

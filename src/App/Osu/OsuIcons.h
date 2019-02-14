@@ -40,6 +40,7 @@ public:
 	static wchar_t ARROW_DOWN;
 	static wchar_t GLOBE;
 	static wchar_t USER;
+	static wchar_t UNDO;
 };
 
 #endif

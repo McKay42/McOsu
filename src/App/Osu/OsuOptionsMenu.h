@@ -107,6 +107,7 @@ private:
 	void onSliderChangePercent(CBaseUISlider *slider);
 
 	void onKeyBindingButtonPressed(CBaseUIButton *button);
+	void onKeyUnbindButtonPressed(CBaseUIButton *button);
 	void onKeyBindingManiaPressedInt();
 	void onKeyBindingManiaPressed(CBaseUIButton *button);
 	void onSliderChangeVRSuperSampling(CBaseUISlider *slider);

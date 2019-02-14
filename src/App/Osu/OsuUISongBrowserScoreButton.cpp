@@ -405,6 +405,13 @@ void OsuUISongBrowserScoreButton::highlight()
 	}
 }
 
+void OsuUISongBrowserScoreButton::resetHighlight()
+{
+	m_bIsPulseAnim = false;
+	anim->deleteExistingAnimation(&m_fIndexNumberAnim);
+	m_fIndexNumberAnim = 0.0f;
+}
+
 void OsuUISongBrowserScoreButton::updateElapsedTimeString()
 {
 	if (m_iScoreUnixTimestamp > 0)

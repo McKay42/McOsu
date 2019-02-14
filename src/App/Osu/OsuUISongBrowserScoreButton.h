@@ -37,6 +37,7 @@ public:
 	void update();
 
 	void highlight();
+	void resetHighlight();
 
 	void setScore(OsuDatabase::Score score, int index = 1, UString titleString = "", float weight = 1.0f);
 	void setIndex(int index) {m_iScoreIndexNumber = index;}

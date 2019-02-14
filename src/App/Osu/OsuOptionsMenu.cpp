@@ -207,6 +207,9 @@ public:
 	OsuOptionsMenuKeyBindLabel(float xPos, float yPos, float xSize, float ySize, UString name, UString text, ConVar *cvar) : CBaseUILabel(xPos, yPos, xSize, ySize, name, text)
 	{
 		m_key = cvar;
+
+		m_textColorBound = 0xffffd700;
+		m_textColorUnbound = 0xffbb0000;
 	}
 
 	virtual void update()
@@ -214,16 +217,34 @@ public:
 		CBaseUILabel::update();
 		if (!m_bVisible) return;
 
+		const KEYCODE keyCode = (KEYCODE)m_key->getInt();
+
 		// succ
-		UString labelText = env->keyCodeToString((KEYCODE)m_key->getInt());
+		UString labelText = env->keyCodeToString(keyCode);
 		if (labelText.find("?") != -1)
 			labelText.append(UString::format("  (%i)", m_key->getInt()));
 
+		// handle bound/unbound
+		if (keyCode == 0)
+		{
+			labelText = "<UNBOUND>";
+			setTextColor(m_textColorUnbound);
+		}
+		else
+			setTextColor(m_textColorBound);
+
+		// update text
 		setText(labelText);
 	}
 
+	void setTextColorBound(Color textColorBound) {m_textColorBound = textColorBound;}
+	void setTextColorUnbound(Color textColorUnbound) {m_textColorUnbound = textColorUnbound;}
+
 private:
 	ConVar *m_key;
+
+	Color m_textColorBound;
+	Color m_textColorUnbound;
 };
 
 class OsuOptionsMenuCategoryButton : public CBaseUIButton
@@ -394,6 +415,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 		m_fullscreenCheckbox = addCheckbox("Fullscreen");
 		m_fullscreenCheckbox->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onFullscreenChange) );
 		addCheckbox("Borderless Windowed Fullscreen", "If enabled: plz enjoy input lag.", convar->getConVarByName("fullscreen_windowed_borderless"))->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onBorderlessWindowedChange) );
+		addCheckbox("Keep Aspect Ratio", "Black borders instead of a stretched image.\nOnly relevant if fullscreen is enabled, and letterboxing is disabled.\nUse the two position sliders below to move the viewport around.", convar->getConVarByName("osu_resolution_keep_aspect_ratio"));
 		addCheckbox("Letterboxing", "Useful to get the low latency of fullscreen with a smaller game resolution.\nUse the two position sliders below to move the viewport around.", convar->getConVarByName("osu_letterboxing"));
 		m_letterboxingOffsetXSlider = addSlider("Horizontal position", -1.0f, 1.0f, convar->getConVarByName("osu_letterboxing_offset_x"), 170)->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeLetterboxingOffset) )->setKeyDelta(0.01f);
 		m_letterboxingOffsetYSlider = addSlider("Vertical position", -1.0f, 1.0f, convar->getConVarByName("osu_letterboxing_offset_y"), 170)->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeLetterboxingOffset) )->setKeyDelta(0.01f);
@@ -621,38 +643,38 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSpacer();
 	addSubSection("Keyboard");
 	addSubSection("Keys - osu! Standard Mode");
-	addKeyBindButton("Left Click", &OsuKeyBindings::LEFT_CLICK)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Right Click", &OsuKeyBindings::RIGHT_CLICK)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addKeyBindButton("Left Click", &OsuKeyBindings::LEFT_CLICK);
+	addKeyBindButton("Right Click", &OsuKeyBindings::RIGHT_CLICK);
 	addSubSection("Keys - In-Game");
-	addKeyBindButton("Game Pause", &OsuKeyBindings::GAME_PAUSE)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Skip Cutscene", &OsuKeyBindings::SKIP_CUTSCENE)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Toggle Scoreboard", &OsuKeyBindings::TOGGLE_SCOREBOARD)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Scrubbing (+ Click Drag!)", &OsuKeyBindings::SEEK_TIME)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Increase Local Song Offset", &OsuKeyBindings::INCREASE_LOCAL_OFFSET)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Decrease Local Song Offset", &OsuKeyBindings::DECREASE_LOCAL_OFFSET)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Quick Retry (hold briefly)", &OsuKeyBindings::QUICK_RETRY)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Quick Save", &OsuKeyBindings::QUICK_SAVE)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Quick Load", &OsuKeyBindings::QUICK_LOAD)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addKeyBindButton("Game Pause", &OsuKeyBindings::GAME_PAUSE);
+	addKeyBindButton("Skip Cutscene", &OsuKeyBindings::SKIP_CUTSCENE);
+	addKeyBindButton("Toggle Scoreboard", &OsuKeyBindings::TOGGLE_SCOREBOARD);
+	addKeyBindButton("Scrubbing (+ Click Drag!)", &OsuKeyBindings::SEEK_TIME);
+	addKeyBindButton("Increase Local Song Offset", &OsuKeyBindings::INCREASE_LOCAL_OFFSET);
+	addKeyBindButton("Decrease Local Song Offset", &OsuKeyBindings::DECREASE_LOCAL_OFFSET);
+	addKeyBindButton("Quick Retry (hold briefly)", &OsuKeyBindings::QUICK_RETRY);
+	addKeyBindButton("Quick Save", &OsuKeyBindings::QUICK_SAVE);
+	addKeyBindButton("Quick Load", &OsuKeyBindings::QUICK_LOAD);
 	addSubSection("Keys - Universal");
-	addKeyBindButton("Save Screenshot", &OsuKeyBindings::SAVE_SCREENSHOT)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Increase Volume", &OsuKeyBindings::INCREASE_VOLUME)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Decrease Volume", &OsuKeyBindings::DECREASE_VOLUME)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Disable Mouse Buttons", &OsuKeyBindings::DISABLE_MOUSE_BUTTONS)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Boss Key (Minimize)", &OsuKeyBindings::BOSS_KEY)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addKeyBindButton("Save Screenshot", &OsuKeyBindings::SAVE_SCREENSHOT);
+	addKeyBindButton("Increase Volume", &OsuKeyBindings::INCREASE_VOLUME);
+	addKeyBindButton("Decrease Volume", &OsuKeyBindings::DECREASE_VOLUME);
+	addKeyBindButton("Disable Mouse Buttons", &OsuKeyBindings::DISABLE_MOUSE_BUTTONS);
+	addKeyBindButton("Boss Key (Minimize)", &OsuKeyBindings::BOSS_KEY);
 	addSubSection("Keys - Mod Select");
-	addKeyBindButton("Easy", &OsuKeyBindings::MOD_EASY)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("No Fail", &OsuKeyBindings::MOD_NOFAIL)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Half Time", &OsuKeyBindings::MOD_HALFTIME)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Hard Rock", &OsuKeyBindings::MOD_HARDROCK)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Sudden Death", &OsuKeyBindings::MOD_SUDDENDEATH)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Double Time", &OsuKeyBindings::MOD_DOUBLETIME)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Hidden", &OsuKeyBindings::MOD_HIDDEN)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Flashlight", &OsuKeyBindings::MOD_FLASHLIGHT)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Relax", &OsuKeyBindings::MOD_RELAX)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Autopilot", &OsuKeyBindings::MOD_AUTOPILOT)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Spunout", &OsuKeyBindings::MOD_SPUNOUT)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Auto", &OsuKeyBindings::MOD_AUTO)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Score V2", &OsuKeyBindings::MOD_SCOREV2)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addKeyBindButton("Easy", &OsuKeyBindings::MOD_EASY);
+	addKeyBindButton("No Fail", &OsuKeyBindings::MOD_NOFAIL);
+	addKeyBindButton("Half Time", &OsuKeyBindings::MOD_HALFTIME);
+	addKeyBindButton("Hard Rock", &OsuKeyBindings::MOD_HARDROCK);
+	addKeyBindButton("Sudden Death", &OsuKeyBindings::MOD_SUDDENDEATH);
+	addKeyBindButton("Double Time", &OsuKeyBindings::MOD_DOUBLETIME);
+	addKeyBindButton("Hidden", &OsuKeyBindings::MOD_HIDDEN);
+	addKeyBindButton("Flashlight", &OsuKeyBindings::MOD_FLASHLIGHT);
+	addKeyBindButton("Relax", &OsuKeyBindings::MOD_RELAX);
+	addKeyBindButton("Autopilot", &OsuKeyBindings::MOD_AUTOPILOT);
+	addKeyBindButton("Spunout", &OsuKeyBindings::MOD_SPUNOUT);
+	addKeyBindButton("Auto", &OsuKeyBindings::MOD_AUTO);
+	addKeyBindButton("Score V2", &OsuKeyBindings::MOD_SCOREV2);
 	addSpacer();
 	///addButton("osu!mania layout")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingManiaPressed) );
 
@@ -1471,6 +1493,8 @@ void OsuOptionsMenu::updateLayout()
 		// and build the layout
 		int elementWidth = optionsWidth - 2*sideMargin - 2;
 
+		const bool isKeyBindButton = (m_elements[i].type == 5);
+
 		if (m_elements[i].elements.size() == 1)
 		{
 			CBaseUIElement *e = m_elements[i].elements[0];
@@ -1497,21 +1521,41 @@ void OsuOptionsMenu::updateLayout()
 
 			yCounter += e->getSize().y;
 		}
-		else if (m_elements[i].elements.size() == 2)
+		else if (m_elements[i].elements.size() == 2 || isKeyBindButton)
 		{
 			CBaseUIElement *e1 = m_elements[i].elements[0];
 			CBaseUIElement *e2 = m_elements[i].elements[1];
 
 			int spacing = 15;
 
-			float dividerEnd = 1.0f / (m_elements[i].type == 5 ? 3 : 2); // 1/3rd division for key bind buttons
-			float dividerBegin = 1.0f - dividerEnd;
+			if (isKeyBindButton)
+			{
+				CBaseUIElement *e3 = m_elements[i].elements[2];
 
-			e1->setRelPos(sideMargin, yCounter);
-			e1->setSizeX(elementWidth*dividerBegin - spacing);
+				const float dividerBegin = 5.0f / 8.0f;
+				const float dividerMiddle = 1.0f / 8.0f;
+				const float dividerEnd = 2.0f / 8.0f;
 
-			e2->setRelPos(sideMargin + e1->getSize().x + 2*spacing, yCounter);
-			e2->setSizeX(elementWidth*dividerEnd - spacing);
+				e1->setRelPos(sideMargin, yCounter);
+				e1->setSizeX(elementWidth*dividerBegin - spacing);
+
+				e2->setRelPos(sideMargin + e1->getSize().x + 0.5f*spacing, yCounter);
+				e2->setSizeX(elementWidth*dividerMiddle - spacing);
+
+				e3->setRelPos(sideMargin + e1->getSize().x + e2->getSize().x + 1.5f*spacing, yCounter);
+				e3->setSizeX(elementWidth*dividerEnd - spacing);
+			}
+			else
+			{
+				float dividerEnd = 1.0f / 2.0f;
+				float dividerBegin = 1.0f - dividerEnd;
+
+				e1->setRelPos(sideMargin, yCounter);
+				e1->setSizeX(elementWidth*dividerBegin - spacing);
+
+				e2->setRelPos(sideMargin + e1->getSize().x + 2*spacing, yCounter);
+				e2->setSizeX(elementWidth*dividerEnd - spacing);
+			}
 
 			yCounter += e1->getSize().y;
 		}
@@ -2031,6 +2075,24 @@ void OsuOptionsMenu::onKeyBindingButtonPressed(CBaseUIButton *button)
 	}
 }
 
+void OsuOptionsMenu::onKeyUnbindButtonPressed(CBaseUIButton *button)
+{
+	for (int i=0; i<m_elements.size(); i++)
+	{
+		for (int e=0; e<m_elements[i].elements.size(); e++)
+		{
+			if (m_elements[i].elements[e] == button)
+			{
+				if (m_elements[i].cvar != NULL)
+				{
+					m_elements[i].cvar->setValue(0.0f);
+				}
+				break;
+			}
+		}
+	}
+}
+
 void OsuOptionsMenu::onKeyBindingManiaPressedInt()
 {
 	onKeyBindingManiaPressed(NULL);
@@ -2330,16 +2392,25 @@ OsuUIButton *OsuOptionsMenu::addKeyBindButton(UString text, ConVar *cvar)
 	OsuUIButton *button = new OsuUIButton(m_osu, 0, 0, m_options->getSize().x, 50, text, text);
 	button->setColor(0xff0e94b5);
 	button->setUseDefaultSkin();
+	button->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
 	m_options->getContainer()->addBaseUIElement(button);
+
+	///UString iconString; iconString.insert(0, OsuIcons::UNDO);
+	OsuUIButton *button2 = new OsuUIButton(m_osu, 0, 0, m_options->getSize().x, 50, text, "");
+	button2->setColor(0x77ff0000);
+	button2->setUseDefaultSkin();
+	button2->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyUnbindButtonPressed) );
+	///button2->setFont(m_osu->getFontIcons());
+	m_options->getContainer()->addBaseUIElement(button2);
 
 	OsuOptionsMenuKeyBindLabel *label = new OsuOptionsMenuKeyBindLabel(0, 0, m_options->getSize().x, 50, "", "", cvar);
 	label->setDrawFrame(false);
-	label->setTextColor(0xffffd700);
 	label->setDrawBackground(false);
 	m_options->getContainer()->addBaseUIElement(label);
 
 	OPTIONS_ELEMENT e;
 	e.elements.push_back(button);
+	e.elements.push_back(button2);
 	e.elements.push_back(label);
 	e.type = 5;
 	e.cvar = cvar;

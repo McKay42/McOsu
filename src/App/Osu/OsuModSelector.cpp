@@ -810,10 +810,9 @@ void OsuModSelector::resetMods()
 		m_modButtons[i]->resetState();
 	}
 
-	// TODO: animation disabled since it causes random crashes while animating down at exactly 0.05x multiplier, investigate why this happens
 	for (int i=0; i<m_overrideSliders.size(); i++)
 	{
-		m_overrideSliders[i].slider->setValue(m_overrideSliders[i].slider->getMin(), false);
+		m_overrideSliders[i].slider->setValue(m_overrideSliders[i].slider->getMin());
 	}
 
 	for (int i=0; i<m_experimentalMods.size(); i++)
@@ -1045,6 +1044,17 @@ void OsuModSelector::checkUpdateBPMSliderSlaves()
 			}
 		}
 	}
+}
+
+void OsuModSelector::enableAuto()
+{
+	if (!m_modButtonAuto->isOn())
+		m_modButtonAuto->click();
+}
+
+void OsuModSelector::toggleAuto()
+{
+	m_modButtonAuto->click();
 }
 
 void OsuModSelector::onCheckboxChange(CBaseUICheckbox *checkbox)

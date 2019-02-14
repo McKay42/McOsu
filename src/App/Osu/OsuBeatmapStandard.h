@@ -62,7 +62,6 @@ public:
 
 private:
 	static ConVar *m_osu_draw_statistics_pp;
-	static ConVar *m_osu_pp_live_type;
 
 	virtual void onBeforeLoad();
 	virtual void onLoad();
@@ -82,11 +81,12 @@ private:
 
 	void calculateStacks();
 
-	void updateStars(); // regular total stars (used for live pp type 0 and 1)
-	void updateStarCache(); // incremental stars (used for live pp type 2)
+	void updateStarCache();
 	void stopStarCacheLoader();
 	bool isLoadingStarCache();
 	bool isLoadingInt();
+
+	void checkHandleStarDiscrepancy(float osuStars, float stars);
 
 	// beatmap
 	bool m_bIsSpinnerActive;
@@ -135,6 +135,7 @@ private:
 	int m_iPreLoadingIndex;
 	bool m_bIsVRDraw; // for switching legacy drawing to osuCoords2Pixels/osuCoords2VRPixels
 	bool m_bWasHREnabled; // dynamic stack recalculation
+	bool m_bWasStarDiffWarningIssued; // star diff warning once
 
 	RenderTarget *m_mafhamActiveRenderTarget;
 	RenderTarget *m_mafhamFinishedRenderTarget;

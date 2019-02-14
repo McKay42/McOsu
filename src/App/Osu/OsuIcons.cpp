@@ -30,3 +30,4 @@ wchar_t OsuIcons::CARET_DOWN = OsuIcons::addIcon(0xf0d7);
 wchar_t OsuIcons::ARROW_DOWN = OsuIcons::addIcon(0xf063);
 wchar_t OsuIcons::GLOBE = OsuIcons::addIcon(0xf0ac);
 wchar_t OsuIcons::USER = OsuIcons::addIcon(0xf2be);
+wchar_t OsuIcons::UNDO = OsuIcons::addIcon(0xf0e2);

@@ -71,7 +71,7 @@ void DUMMY_OSU_MODS(void) {;}
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 29.2f);
+ConVar osu_version("osu_version", 29.3f);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr");
 #else
@@ -112,6 +112,7 @@ ConVar osu_letterboxing_offset_x("osu_letterboxing_offset_x", 0.0f);
 ConVar osu_letterboxing_offset_y("osu_letterboxing_offset_y", 0.0f);
 ConVar osu_resolution("osu_resolution", "1280x720", DUMMY_OSU_VOLUME_MUSIC_ARGS);
 ConVar osu_resolution_enabled("osu_resolution_enabled", false);
+ConVar osu_resolution_keep_aspect_ratio("osu_resolution_keep_aspect_ratio", false);
 ConVar osu_force_legacy_slider_renderer("osu_force_legacy_slider_renderer", false, "on some older machines, this may be faster than vertexbuffers");
 
 ConVar osu_draw_fps("osu_draw_fps", true);
@@ -677,7 +678,17 @@ void Osu::draw(Graphics *g)
 				if (osu_letterboxing.getBool())
 					m_backBuffer->draw(g, offset.x*(1.0f + osu_letterboxing_offset_x.getFloat()), offset.y*(1.0f + osu_letterboxing_offset_y.getFloat()), g_vInternalResolution.x, g_vInternalResolution.y);
 				else
-					m_backBuffer->draw(g, 0, 0, engine->getGraphics()->getResolution().x, engine->getGraphics()->getResolution().y);
+				{
+					if (osu_resolution_keep_aspect_ratio.getBool())
+					{
+						const float scale = getImageScaleToFitResolution(m_backBuffer->getSize(), engine->getGraphics()->getResolution());
+						const float scaledWidth = m_backBuffer->getWidth()*scale;
+						const float scaledHeight = m_backBuffer->getHeight()*scale;
+						m_backBuffer->draw(g, std::max(0.0f, engine->getGraphics()->getResolution().x/2.0f - scaledWidth/2.0f)*(1.0f + osu_letterboxing_offset_x.getFloat()), std::max(0.0f, engine->getGraphics()->getResolution().y/2.0f - scaledHeight/2.0f)*(1.0f + osu_letterboxing_offset_y.getFloat()), scaledWidth, scaledHeight);
+					}
+					else
+						m_backBuffer->draw(g, 0, 0, engine->getGraphics()->getResolution().x, engine->getGraphics()->getResolution().y);
+				}
 			}
 		}
 		g->setBlending(true);
@@ -1585,7 +1596,7 @@ float Osu::getSpeedMultiplier()
 	float speedMultiplier = getRawSpeedMultiplier();
 
 	if (osu_speed_override.getFloat() >= 0.0f)
-		return osu_speed_override.getFloat();
+		return std::max(osu_speed_override.getFloat(), 0.05f);
 
 	return speedMultiplier;
 }

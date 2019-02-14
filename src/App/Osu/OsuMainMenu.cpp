@@ -37,7 +37,7 @@
 
 #define MCOSU_VERSION_TEXT "Version"
 #define MCOSU_BANNER_TEXT "-- WARNING: Will run out of memory and crash! Use HBL NSP! --"
-UString OsuMainMenu::MCOSU_MAIN_BUTTON_TEXT = UString("McOsu NX");
+UString OsuMainMenu::MCOSU_MAIN_BUTTON_TEXT = UString("McOsu");
 UString OsuMainMenu::MCOSU_MAIN_BUTTON_SUBTEXT = UString("Practice Client");
 #define MCOSU_MAIN_BUTTON_BACK_TEXT "by McKay"
 
@@ -166,12 +166,22 @@ private:
 
 
 
+ConVar *OsuMainMenu::m_osu_universal_offset_ref = NULL;
+ConVar *OsuMainMenu::m_osu_universal_offset_hardcoded_ref = NULL;
+
 OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen(osu)
 {
+	if (env->getOS() == Environment::OS::OS_HORIZON)
+		MCOSU_MAIN_BUTTON_TEXT.append(" NX");
 	if (m_osu->isInVRMode())
 		MCOSU_MAIN_BUTTON_TEXT.append(" VR");
 	if (m_osu->isInVRMode())
 		MCOSU_MAIN_BUTTON_SUBTEXT.clear();
+
+	if (m_osu_universal_offset_ref == NULL)
+		m_osu_universal_offset_ref = convar->getConVarByName("osu_universal_offset");
+	if (m_osu_universal_offset_hardcoded_ref == NULL)
+		m_osu_universal_offset_hardcoded_ref = convar->getConVarByName("osu_universal_offset_hardcoded");
 
 	// engine settings
 	engine->getMouse()->addListener(this);
@@ -279,7 +289,7 @@ void OsuMainMenu::draw(Graphics *g)
 	if (m_osu->getSelectedBeatmap() != NULL && m_osu->getSelectedBeatmap()->getSelectedDifficulty() != NULL && m_osu->getSelectedBeatmap()->getMusic() != NULL && m_osu->getSelectedBeatmap()->getMusic()->isPlaying())
 	{
 		haveTimingpoints = true;
-		long curMusicPos = m_osu->getSelectedBeatmap()->getMusic()->getPositionMS();
+		const long curMusicPos = (long)m_osu->getSelectedBeatmap()->getMusic()->getPositionMS() + (long)m_osu_universal_offset_ref->getInt() + (long)m_osu_universal_offset_hardcoded_ref->getInt();
 		OsuBeatmapDifficulty::TIMING_INFO t = m_osu->getSelectedBeatmap()->getSelectedDifficulty()->getTimingInfoForTime(curMusicPos);
 		if (t.beatLengthBase == 0.0f) // bah
 			t.beatLengthBase = 1.0f;
