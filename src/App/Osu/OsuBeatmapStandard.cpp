@@ -826,7 +826,7 @@ void OsuBeatmapStandard::update()
 
 				const float stars = OsuDifficultyCalculator::calculateTotalStarsFromSkills(aim, speed);
 
-				checkHandleStarDiscrepancy(m_selectedDifficulty->starsNoMod, stars);
+				checkHandleStarDiscrepancy(m_selectedDifficulty, stars);
 			}
 		}
 	}
@@ -1263,7 +1263,7 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 
 		// warn the user if osu stars differ too much from mcosu stars
 		if (m_selectedDifficulty->starsWereCalculatedAccurately)
-			checkHandleStarDiscrepancy(m_selectedDifficulty->starsNoMod, totalStars);
+			checkHandleStarDiscrepancy(m_selectedDifficulty, totalStars);
 
 		const int numHitObjects = m_hitobjects.size();
 		const int numCircles = m_selectedDifficulty->hitcircles.size();
@@ -1805,8 +1805,18 @@ bool OsuBeatmapStandard::isLoadingInt()
 	return OsuBeatmap::isLoading() || m_bIsPreLoading || isLoadingStarCache();
 }
 
-void OsuBeatmapStandard::checkHandleStarDiscrepancy(float osuStars, float stars)
+void OsuBeatmapStandard::checkHandleStarDiscrepancy(OsuBeatmapDifficulty *selectedDiff, float stars)
 {
-	if (osuStars > 0.1f && stars > 0.1f && std::abs(stars - osuStars) > osu_stars_discrepancy_warning_delta.getFloat())
-		m_osu->getNotificationOverlay()->addNotification(UString::format("Star Discrepancy:  osu! = %.2f*  |  McOsu = %.2f*", osuStars, stars), 0xffffff00, false, 4.0f);
+	// TODO: since we only have the base nomod stars from osu, this doesn't really work out that well
+	/*
+	if (m_osu->getSpeedMultiplier() == 1.0f
+			&& std::abs(getCS() - selectedDiff->CS) < 0.01
+			&& std::abs(getAR() - selectedDiff->AR) < 0.01
+			&& std::abs(getOD() - selectedDiff->OD) < 0.01
+			&& std::abs(getHP() - selectedDiff->HP) < 0.01
+			&& selectedDiff->starsNoMod > 0.1f
+			&& stars > 0.1f
+			&& std::abs(stars - selectedDiff->starsNoMod) > osu_stars_discrepancy_warning_delta.getFloat())
+		m_osu->getNotificationOverlay()->addNotification(UString::format("Star Discrepancy:  osu! = %.2f*  |  McOsu = %.2f*", selectedDiff->starsNoMod, stars), 0xffffff00, false, 4.0f);
+	*/
 }

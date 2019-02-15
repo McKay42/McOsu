@@ -86,7 +86,7 @@ private:
 	bool isLoadingStarCache();
 	bool isLoadingInt();
 
-	void checkHandleStarDiscrepancy(float osuStars, float stars);
+	void checkHandleStarDiscrepancy(OsuBeatmapDifficulty *selectedDiff, float stars);
 
 	// beatmap
 	bool m_bIsSpinnerActive;
