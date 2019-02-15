@@ -18,6 +18,8 @@
 #include "ConVar.h"
 #include "File.h"
 
+#include "HorizonSDLEnvironment.h"
+
 #include "Osu.h"
 #include "OsuSkin.h"
 #include "OsuSkinImage.h"
@@ -34,7 +36,7 @@
 #include "CBaseUIButton.h"
 
 #define MCOSU_VERSION_TEXT "Version"
-#define MCOSU_BANNER_TEXT "--Debug--"
+#define MCOSU_BANNER_TEXT "-- WARNING: Will run out of memory and crash! Use HBL NSP! --"
 UString OsuMainMenu::MCOSU_MAIN_BUTTON_TEXT = UString("McOsu");
 UString OsuMainMenu::MCOSU_MAIN_BUTTON_SUBTEXT = UString("Practice Client");
 #define MCOSU_MAIN_BUTTON_BACK_TEXT "by McKay"
@@ -164,12 +166,22 @@ private:
 
 
 
+ConVar *OsuMainMenu::m_osu_universal_offset_ref = NULL;
+ConVar *OsuMainMenu::m_osu_universal_offset_hardcoded_ref = NULL;
+
 OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen(osu)
 {
+	if (env->getOS() == Environment::OS::OS_HORIZON)
+		MCOSU_MAIN_BUTTON_TEXT.append(" NX");
 	if (m_osu->isInVRMode())
 		MCOSU_MAIN_BUTTON_TEXT.append(" VR");
 	if (m_osu->isInVRMode())
 		MCOSU_MAIN_BUTTON_SUBTEXT.clear();
+
+	if (m_osu_universal_offset_ref == NULL)
+		m_osu_universal_offset_ref = convar->getConVarByName("osu_universal_offset");
+	if (m_osu_universal_offset_hardcoded_ref == NULL)
+		m_osu_universal_offset_hardcoded_ref = convar->getConVarByName("osu_universal_offset_hardcoded");
 
 	// engine settings
 	engine->getMouse()->addListener(this);
@@ -277,7 +289,7 @@ void OsuMainMenu::draw(Graphics *g)
 	if (m_osu->getSelectedBeatmap() != NULL && m_osu->getSelectedBeatmap()->getSelectedDifficulty() != NULL && m_osu->getSelectedBeatmap()->getMusic() != NULL && m_osu->getSelectedBeatmap()->getMusic()->isPlaying())
 	{
 		haveTimingpoints = true;
-		long curMusicPos = m_osu->getSelectedBeatmap()->getMusic()->getPositionMS();
+		const long curMusicPos = (long)m_osu->getSelectedBeatmap()->getMusic()->getPositionMS() + (long)m_osu_universal_offset_ref->getInt() + (long)m_osu_universal_offset_hardcoded_ref->getInt();
 		OsuBeatmapDifficulty::TIMING_INFO t = m_osu->getSelectedBeatmap()->getSelectedDifficulty()->getTimingInfoForTime(curMusicPos);
 		if (t.beatLengthBase == 0.0f) // bah
 			t.beatLengthBase = 1.0f;
@@ -294,8 +306,16 @@ void OsuMainMenu::draw(Graphics *g)
 	size += size*m_fSizeAddAnim;
 	McRect mainButtonRect = McRect(m_vCenter.x - size.x/2.0f - m_fCenterOffsetAnim, m_vCenter.y - size.y/2.0f, size.x, size.y);
 
+	bool drawBanner = false; // false
+
+#ifdef __SWITCH__
+
+	drawBanner = drawBanner || ((HorizonSDLEnvironment*)env)->getMemAvailableMB() < 1024;
+
+#endif
+
 	// draw banner
-	if (/*m_osu->isInVRMode()*/false)
+	if (drawBanner)
 	{
 		McFont *bannerFont = m_osu->getSubTitleFont();
 		float bannerStringWidth = bannerFont->getStringWidth(MCOSU_BANNER_TEXT);
@@ -530,6 +550,9 @@ void OsuMainMenu::update()
 	if (m_osu->getHUD()->isVolumeOverlayBusy())
 		m_container->stealFocus();
 
+	if (m_osu->getOptionsMenu()->isMouseInside())
+		m_container->stealFocus();
+
 	// update and focus handling
 	// the main button always gets top focus
 	m_mainButton->update();
@@ -632,12 +655,12 @@ void OsuMainMenu::onKeyDown(KeyboardEvent &e)
 
 	if (!m_bMenuElementsVisible)
 	{
-		if (e == KEY_P)
+		if (e == KEY_P || e == KEY_ENTER)
 			m_mainButton->click();
 	}
 	else
 	{
-		if (e == KEY_P)
+		if (e == KEY_P || e == KEY_ENTER)
 			onPlayButtonPressed();
 		if (e == KEY_O)
 			onOptionsButtonPressed();
@@ -883,6 +906,13 @@ void OsuMainMenu::onGithubPressed()
 {
 	if (m_osu->getInstanceID() > 1) return;
 
+	if (env->getOS() == Environment::OS::OS_HORIZON)
+	{
+		m_osu->getNotificationOverlay()->addNotification("Go to https://github.com/McKay42/McOsu/", 0xffffffff, false, 0.75f);
+		return;
+	}
+
+	m_osu->getNotificationOverlay()->addNotification("Opening browser, please wait ...", 0xffffffff, false, 0.75f);
 	env->openURLInDefaultBrowser("https://github.com/McKay42/McOsu/");
 }
 

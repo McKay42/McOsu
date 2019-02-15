@@ -19,6 +19,14 @@
 #include "OsuBeatmapDifficulty.h"
 #include "OsuHitObject.h"
 
+#ifdef MCENGINE_FEATURE_MULTITHREADING
+
+#include <mutex>
+#include "WinMinGW.Mutex.h" // necessary due to incomplete implementation in mingw-w64
+#include "Horizon.Mutex.h"
+
+#endif
+
 ConVar osu_mania_playfield_width_percent("osu_mania_playfield_width_percent", 0.25f);
 ConVar osu_mania_playfield_height_percent("osu_mania_playfield_height_percent", 0.85f);
 ConVar osu_mania_playfield_offset_x_percent("osu_mania_playfield_offset_x_percent", 0.44f);
@@ -157,7 +165,11 @@ void OsuBeatmapMania::update()
 void OsuBeatmapMania::onKeyDown(KeyboardEvent &key)
 {
 	// lock asap
+#ifdef MCENGINE_FEATURE_MULTITHREADING
+
 	//std::lock_guard<std::mutex> lk(m_clicksMutex);
+
+#endif
 
 	int column = getColumnForKey(getNumColumns(), key);
 	if (column != -1 && !m_bColumnKeyDown[column])
@@ -175,7 +187,11 @@ void OsuBeatmapMania::onKeyDown(KeyboardEvent &key)
 void OsuBeatmapMania::onKeyUp(KeyboardEvent &key)
 {
 	// lock asap
+#ifdef MCENGINE_FEATURE_MULTITHREADING
+
 	//std::lock_guard<std::mutex> lk(m_clicksMutex);
+
+#endif
 
 	int column = getColumnForKey(getNumColumns(), key);
 	if (column != -1 && m_bColumnKeyDown[column])

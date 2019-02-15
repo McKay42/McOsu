@@ -10,6 +10,8 @@
 
 #include "cbase.h"
 
+#include "OsuDifficultyCalculator.h"
+
 class BackgroundImagePathLoader;
 
 class Osu;
@@ -26,13 +28,15 @@ public:
 	static ConVar *m_osu_draw_statistics_pp;
 	static ConVar *m_osu_debug_pp;
 	static ConVar *m_osu_database_dynamic_star_calculation;
+	static ConVar *m_osu_slider_end_inside_check_offset;
+	static ConVar *m_osu_stars_xexxar_angles_sliders;
 
 public:
 	OsuBeatmapDifficulty(Osu *osu, UString filepath, UString folder);
 	~OsuBeatmapDifficulty();
 	void unload();
 
-	bool loadMetadataRaw(bool calculateStars = false);
+	bool loadMetadataRaw(bool calculateStars = false, bool calculateStarsInaccurately = false);
 	bool loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject*> *hitobjects);
 
 	void loadBackgroundImage();
@@ -78,8 +82,8 @@ public:
 		float sliderTime;
 		float sliderTimeWithoutRepeats;
 		std::vector<float> ticks;
-		std::vector<SLIDER_CLICK> clicked;
-		std::vector<SLIDER_CLICK> ticked;
+
+		std::vector<long> scoringTimesForStarCalc;
 	};
 
 	struct SPINNER
@@ -110,8 +114,8 @@ public:
 	bool loaded;
 
 	// metadata
-	int version; // e.g. "osu file format v12" -> 12
-	int mode; // 0 = osu!standard, 1 = Taiko, 2 = Catch the Beat, 3 = osu!mania
+	int version;	// e.g. "osu file format v12" -> 12
+	int mode;		// 0 = osu!standard, 1 = Taiko, 2 = Catch the Beat, 3 = osu!mania
 
 	UString title;
 	UString audioFileName;
@@ -121,7 +125,7 @@ public:
 
 	UString artist;
 	UString creator;
-	UString name; // difficulty name ("Version")
+	UString name;	// difficulty name ("Version")
 	UString source;
 	UString tags;
 	std::string md5hash;
@@ -158,6 +162,8 @@ public:
 	float starsNoMod;
 	int ID;
 	int setID;
+	bool starsWereCalculatedAccurately;
+	bool semaphore; // yes, I know this is disgusting
 
 	// timing (points) + breaks
 	struct TIMING_INFO
@@ -176,47 +182,26 @@ public:
 
 	bool isInBreak(unsigned long positionMS);
 
-	// pp & star calculation
-	enum class SCORE_VERSION
-	{
-		SCORE_V1,
-		SCORE_V2
-	};
-	enum class PP_HITOBJECT_TYPE : char
-	{
-		invalid = 0,
-		circle,
-		spinner,
-		slider,
-	};
-	struct PPHitObject
-	{
-		Vector2 pos;
-		long time = 0;
-		PP_HITOBJECT_TYPE type = PP_HITOBJECT_TYPE::invalid;
-		long end_time = 0; // for spinners and sliders
-		unsigned long long sortHack = 0;
-		//slider_data slider;
-	};
-	void rebuildStarCacheForUpToHitObjectIndex(OsuBeatmap *beatmap, std::atomic<bool> &kys, std::atomic<int> &progress);
-	std::vector<PPHitObject> generatePPHitObjectsForBeatmap(OsuBeatmap *beatmap);
-	static double calculateStarDiffForHitObjects(std::vector<PPHitObject> &hitObjects, float CS, double *aim, double *speed, int upToObjectIndex = -1);
-	double calculateStarDiff(OsuBeatmap *beatmap, double *aim, double *speed, int upToObjectIndex = -1);
-	static double calculatePPv2(Osu *osu, OsuBeatmap *beatmap, double aim, double speed, int numHitObjects, int numCircles, int maxPossibleCombo, int combo = -1, int misses = 0, int c300 = -1, int c100 = 0, int c50 = 0/*, SCORE_VERSION scoreVersion = SCORE_VERSION::SCORE_V1*/);
-	static double calculatePPv2(int modsLegacy, double timescale, double ar, double od, double aim, double speed, int numHitObjects, int numCircles, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50, SCORE_VERSION scoreVersion);
-	static double calculatePPv2Acc(Osu *osu, OsuBeatmap *beatmap, double aim, double speed, double acc, int numHitObjects, int numCircles, int maxPossibleCombo, int combo = -1, int misses = 0/*, SCORE_VERSION scoreVersion = SCORE_VERSION::SCORE_V1*/);
-	static double calculateAcc(int c300, int c100, int c50, int misses);
-	static double calculateBaseStrain(double strain);
+	// star calculation
+	// NOTE: calculateStarsInaccurately is only used for initial songbrowser sorting/calculation: as soon as a beatmap is selected it will be recalculated fully (together with the background image loader)
+	std::vector<std::shared_ptr<OsuDifficultyHitObject>> generateDifficultyHitObjectsForBeatmap(OsuBeatmap *beatmap, bool calculateStarsInaccurately = false);
+	double calculateStarDiff(OsuBeatmap *beatmap, double *aim, double *speed, int upToObjectIndex = -1, bool calculateStarsInaccurately = false);
 
-	inline int getMaxCombo() {return m_iMaxCombo;}
-	inline unsigned long long getScoreV2ComboPortionMaximum() {return m_fScoreV2ComboPortionMaximum;}
+	// for live pp
+	void rebuildStarCacheForUpToHitObjectIndex(OsuBeatmap *beatmap, std::atomic<bool> &kys, std::atomic<int> &progress);
 	inline double getAimStarsForUpToHitObjectIndex(int upToHitObjectIndex) {return (m_aimStarsForNumHitObjects.size() > 0 ? m_aimStarsForNumHitObjects[clamp<int>(upToHitObjectIndex, 0, m_aimStarsForNumHitObjects.size()-1)] : 0);}
 	inline double getSpeedStarsForUpToHitObjectIndex(int upToHitObjectIndex) {return (m_speedStarsForNumHitObjects.size() > 0 ? m_speedStarsForNumHitObjects[clamp<int>(upToHitObjectIndex, 0, m_speedStarsForNumHitObjects.size()-1)] : 0);}
+
+	// for score v2
+	inline int getMaxCombo() {return m_iMaxCombo;}
+	inline unsigned long long getScoreV2ComboPortionMaximum() {return m_fScoreV2ComboPortionMaximum;}
 
 private:
 	static unsigned long long sortHackCounter;
 
 	friend class BackgroundImagePathLoader;
+
+	void deleteBackgroundImagePathLoader();
 
 	// every supported type of beatmap/gamemode gets its own build function here. it should build the hitobject classes from the data loaded from disk.
 	void buildStandardHitObjects(OsuBeatmapStandard *beatmap, std::vector<OsuHitObject*> *hitobjects);
@@ -224,17 +209,17 @@ private:
 	// void buildTaikoHitObjects(OsuBeatmapTaiko *beatmap, std::vector<OsuHitObject*> *hitobjects);
 
 	// generic helper functions
-	float getSliderTickDistance();
-	float getSliderTimeForSlider(SLIDER *slider);
-	float getSliderVelocity(SLIDER *slider);
-	float getTimingPointMultiplierForSlider(SLIDER *slider); // needed for slider ticks
+	void calculateAllSliderTimesAndClicksTicks();
 
-	void deleteBackgroundImagePathLoader();
+	float getSliderTickDistance();
+	float getSliderTimeForSlider(const SLIDER &slider);
+	float getSliderVelocity(const SLIDER &slider);
+	float getTimingPointMultiplierForSlider(const SLIDER &slider); // needed for slider ticks
 
 	Osu *m_osu;
 
-	UString m_sFilePath;
-	UString m_sFolder;
+	UString m_sFilePath;	// path to .osu file
+	UString m_sFolder;		// path to folder containing .osu file
 
 	// custom
 	bool m_bShouldBackgroundImageBeLoaded;

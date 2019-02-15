@@ -36,6 +36,10 @@ ConVar osu_folder("osu_folder", "/media/pg/Win7/Program Files (x86)/osu!/");
 
 ConVar osu_folder("osu_folder", "/osu!/");
 
+#elif defined __SWITCH__
+
+ConVar osu_folder("osu_folder", "sdmc:/switch/McOsu/");
+
 #else
 
 #error "put correct default folder convar here"
@@ -44,6 +48,7 @@ ConVar osu_folder("osu_folder", "/osu!/");
 
 ConVar osu_database_enabled("osu_database_enabled", true);
 ConVar osu_database_dynamic_star_calculation("osu_database_dynamic_star_calculation", true, "dynamically calculate star ratings in the background");
+ConVar osu_database_ignore_version_warnings("osu_database_ignore_version_warnings", false);
 ConVar osu_scores_enabled("osu_scores_enabled", true);
 ConVar osu_scores_legacy_enabled("osu_scores_legacy_enabled", true, "load osu!'s scores.db");
 ConVar osu_scores_custom_enabled("osu_scores_custom_enabled", true, "load custom scores.db");
@@ -381,7 +386,7 @@ std::vector<UString> OsuDatabase::getPlayerNamesWithPPScores()
 	return names;
 }
 
-std::vector<OsuDatabase::Score*> OsuDatabase::getPlayerPPScores(UString playerName)
+OsuDatabase::PlayerPPScores OsuDatabase::getPlayerPPScores(UString playerName)
 {
 	std::vector<Score*> scores;
 
@@ -407,6 +412,7 @@ std::vector<OsuDatabase::Score*> OsuDatabase::getPlayerPPScores(UString playerNa
 	    }
 	};
 
+	unsigned long long totalScore = 0;
 	for (auto &key : keys)
 	{
 		if (m_scores[key].size() > 0)
@@ -421,6 +427,8 @@ std::vector<OsuDatabase::Score*> OsuDatabase::getPlayerPPScores(UString playerNa
 				if (!score.isLegacyScore && (osu_user_include_relax_and_autopilot_for_stats.getBool() ? true : !((score.modsLegacy & OsuReplay::Mods::Relax) || (score.modsLegacy & OsuReplay::Mods::Relax2))) && score.playerName == playerName)
 				{
 					foundValidScore = true;
+
+					totalScore += score.score;
 
 					score.sortHack = m_iSortHackCounter++;
 					score.md5hash = key;
@@ -441,17 +449,21 @@ std::vector<OsuDatabase::Score*> OsuDatabase::getPlayerPPScores(UString playerNa
 	// sort by pp
 	std::sort(scores.begin(), scores.end(), ScoreSortComparator());
 
-	return scores;
+	PlayerPPScores ppScores;
+	ppScores.ppScores = std::move(scores);
+	ppScores.totalScore = totalScore;
+
+	return ppScores;
 }
 
 OsuDatabase::PlayerStats OsuDatabase::calculatePlayerStats(UString playerName)
 {
 	if (!m_bDidScoresChangeForStats && playerName == m_prevPlayerStats.name) return m_prevPlayerStats;
 
-	std::vector<Score*> pss = getPlayerPPScores(playerName);
+	PlayerPPScores ps = getPlayerPPScores(playerName);
 
 	// delay caching until we actually have scores loaded
-	if (pss.size() > 0)
+	if (ps.ppScores.size() > 0)
 		m_bDidScoresChangeForStats = false;
 
 	// "If n is the amount of scores giving more pp than a given score, then the score's weight is 0.95^n"
@@ -462,37 +474,35 @@ OsuDatabase::PlayerStats OsuDatabase::calculatePlayerStats(UString playerName)
 
 	float pp = 0.0f;
 	float acc = 0.0f;
-	unsigned long long totalScore = 0;
-	for (int i=0; i<pss.size(); i++)
+	for (int i=0; i<ps.ppScores.size(); i++)
 	{
-		const float weight = getWeightForIndex(pss.size()-1-i);
+		const float weight = getWeightForIndex(ps.ppScores.size()-1-i);
 
-		pp += pss[i]->pp * weight;
-		acc += OsuScore::calculateAccuracy(pss[i]->num300s, pss[i]->num100s, pss[i]->num50s, pss[i]->numMisses) * weight;
-		totalScore += pss[i]->score;
+		pp += ps.ppScores[i]->pp * weight;
+		acc += OsuScore::calculateAccuracy(ps.ppScores[i]->num300s, ps.ppScores[i]->num100s, ps.ppScores[i]->num50s, ps.ppScores[i]->numMisses) * weight;
 	}
 
-	if (pss.size() > 0)
-		acc /= (20.0f * (1.0f - getWeightForIndex(pss.size()))); // normalize accuracy
+	if (ps.ppScores.size() > 0)
+		acc /= (20.0f * (1.0f - getWeightForIndex(ps.ppScores.size()))); // normalize accuracy
 
 	// fill stats
 	m_prevPlayerStats.name = playerName;
 	m_prevPlayerStats.pp = pp;
 	m_prevPlayerStats.accuracy = acc;
-	m_prevPlayerStats.numScoresWithPP = pss.size();
+	m_prevPlayerStats.numScoresWithPP = ps.ppScores.size();
 
-	if (totalScore != m_prevPlayerStats.totalScore)
+	if (ps.totalScore != m_prevPlayerStats.totalScore)
 	{
-		m_prevPlayerStats.level = getLevelForScore(totalScore);
+		m_prevPlayerStats.level = getLevelForScore(ps.totalScore);
 
 		const unsigned long long requiredScoreForCurrentLevel = getRequiredScoreForLevel(m_prevPlayerStats.level);
 		const unsigned long long requiredScoreForNextLevel = getRequiredScoreForLevel(m_prevPlayerStats.level + 1);
 
 		if (requiredScoreForNextLevel > requiredScoreForCurrentLevel)
-			m_prevPlayerStats.percentToNextLevel = (double)(totalScore - requiredScoreForCurrentLevel) / (double)(requiredScoreForNextLevel - requiredScoreForCurrentLevel);
+			m_prevPlayerStats.percentToNextLevel = (double)(ps.totalScore - requiredScoreForCurrentLevel) / (double)(requiredScoreForNextLevel - requiredScoreForCurrentLevel);
 	}
 
-	m_prevPlayerStats.totalScore = totalScore;
+	m_prevPlayerStats.totalScore = ps.totalScore;
 
 	return m_prevPlayerStats;
 }
@@ -743,6 +753,7 @@ void OsuDatabase::loadDB(OsuFile *db)
 	m_iNumBeatmapsToLoad = db->readInt();
 
 	debugLog("Database: version = %i, folderCount = %i, playerName = %s, numDiffs = %i\n", m_iVersion, m_iFolderCount, m_sPlayerName.toUtf8(), m_iNumBeatmapsToLoad);
+
 	if (m_iVersion < 20140609)
 	{
 		debugLog("Database: Version is below 20140609, not supported.\n");
@@ -756,6 +767,14 @@ void OsuDatabase::loadDB(OsuFile *db)
 		m_osu->getNotificationOverlay()->addNotification("osu!.db version too old, update osu! and try again!", 0xffff0000);
 		m_fLoadingProgress = 1.0f;
 		return;
+	}
+
+	if (!osu_database_ignore_version_warnings.getBool())
+	{
+		if (m_iVersion < 20190207) // xexxar angles star recalc
+		{
+			m_osu->getNotificationOverlay()->addNotification("osu!.db version is old,  let osu! update when convenient.", 0xffffff00, false, 3.0f);
+		}
 	}
 
 	// read beatmapInfos
@@ -943,6 +962,7 @@ void OsuDatabase::loadDB(OsuFile *db)
 			diff->starsNoMod = numOsuStandardStars;
 			diff->ID = beatmapID;
 			diff->setID = beatmapSetID;
+			diff->starsWereCalculatedAccurately = (diff->starsNoMod > 0.0f); // NOTE: important
 
 			// calculate bpm range
 			float minBeatLength = 0;

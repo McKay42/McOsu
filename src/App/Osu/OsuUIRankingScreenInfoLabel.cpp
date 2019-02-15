@@ -14,6 +14,8 @@
 #include "OsuBeatmap.h"
 #include "OsuBeatmapDifficulty.h"
 
+#include <chrono>
+
 OsuUIRankingScreenInfoLabel::OsuUIRankingScreenInfoLabel(Osu *osu, float xPos, float yPos, float xSize, float ySize, UString name) : CBaseUIElement(xPos, yPos, xSize, ySize, name)
 {
 	m_osu = osu;

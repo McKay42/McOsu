@@ -71,7 +71,7 @@ void DUMMY_OSU_MODS(void) {;}
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 29.2f);
+ConVar osu_version("osu_version", 29.3f);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr");
 #else
@@ -112,6 +112,7 @@ ConVar osu_letterboxing_offset_x("osu_letterboxing_offset_x", 0.0f);
 ConVar osu_letterboxing_offset_y("osu_letterboxing_offset_y", 0.0f);
 ConVar osu_resolution("osu_resolution", "1280x720", DUMMY_OSU_VOLUME_MUSIC_ARGS);
 ConVar osu_resolution_enabled("osu_resolution_enabled", false);
+ConVar osu_resolution_keep_aspect_ratio("osu_resolution_keep_aspect_ratio", false);
 ConVar osu_force_legacy_slider_renderer("osu_force_legacy_slider_renderer", false, "on some older machines, this may be faster than vertexbuffers");
 
 ConVar osu_draw_fps("osu_draw_fps", true);
@@ -186,6 +187,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	convar->getConVarByName("console_overlay")->setValue(0.0f);
 	convar->getConVarByName("vsync")->setValue(0.0f);
 	convar->getConVarByName("fps_max")->setValue(420.0f);
+
 	m_snd_change_check_interval_ref->setDefaultFloat(0.5f);
 	m_snd_change_check_interval_ref->setValue(m_snd_change_check_interval_ref->getDefaultFloat());
 
@@ -198,6 +200,25 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	steam->setRichPresence("status", "...");
 
 #endif
+
+	// OS specific engine settings/overrides
+	if (env->getOS() == Environment::OS::OS_HORIZON)
+	{
+		convar->getConVarByName("fps_max")->setValue(60.0f);
+		convar->getConVarByName("ui_scrollview_resistance")->setValue(25.0f);
+		convar->getConVarByName("osu_scores_legacy_enabled")->setValue(0.0f); // would collide
+		convar->getConVarByName("osu_mod_mafham_render_livesize")->setValue(7.0f);
+		convar->getConVarByName("osu_mod_mafham_render_chunksize")->setValue(12.0f);
+		convar->getConVarByName("osu_volume_music")->setValue(0.3f);
+		convar->getConVarByName("osu_universal_offset_hardcoded")->setValue(-45.0f);
+		convar->getConVarByName("osu_key_quick_retry")->setValue(15.0f);	// L, SDL_SCANCODE_L
+		convar->getConVarByName("osu_key_seek_time")->setValue(21.0f);		// R, SDL_SCANCODE_R
+		convar->getConVarByName("osu_key_decrease_local_offset")->setValue(29.0f); // ZL, SDL_SCANCODE_Z
+		convar->getConVarByName("osu_key_increase_local_offset")->setValue(25.0f); // ZR, SDL_SCANCODE_V
+		convar->getConVarByName("osu_key_left_click")->setValue(0.0f);		// (disabled)
+		convar->getConVarByName("osu_key_right_click")->setValue(0.0f);	// (disabled)
+		convar->getConVarByName("name")->setValue(env->getUsername());
+	}
 
 	// VR specific settings
 	if (isInVRMode())
@@ -492,8 +513,8 @@ void Osu::draw(Graphics *g)
 		return;
 	}
 
-	// if we are not using the native window resolution, or in vr mode, or multiple instances are active, draw into the buffer
-	const bool isBufferedDraw = osu_resolution_enabled.getBool() || isInVRMode() || m_iInstanceID > 0;
+	// if we are not using the native window resolution, or in vr mode, or playing on a nintendo switch, or multiple instances are active, draw into the buffer
+	const bool isBufferedDraw = osu_resolution_enabled.getBool() || isInVRMode() || env->getOS() == Environment::OS::OS_HORIZON || m_iInstanceID > 0;
 
 	if (isBufferedDraw)
 		m_backBuffer->enable();
@@ -517,6 +538,7 @@ void Osu::draw(Graphics *g)
 
 		// special cursor handling (fading cursor + invisible cursor mods)
 		const bool isAuto = (m_bModAuto || m_bModAutopilot);
+		const bool allowDoubleCursor = (env->getOS() == Environment::OS::OS_HORIZON);
 		const bool allowDrawCursor = !osu_hide_cursor_during_gameplay.getBool() || getSelectedBeatmap()->isPaused();
 		float fadingCursorAlpha = 1.0f - clamp<float>((float)m_score->getCombo()/osu_mod_fadingcursor_combo.getFloat(), 0.0f, 1.0f);
 		if (m_pauseMenu->isVisible() || getSelectedBeatmap()->isContinueScheduled())
@@ -540,10 +562,8 @@ void Osu::draw(Graphics *g)
 		m_windowManager->draw(g);
 
 		// draw player cursor
-		if (!isAuto && allowDrawCursor && (!isInVRMode() || (m_vr->isVirtualCursorOnScreen() || engine->hasFocus())))
-		{
-			m_hud->drawCursor(g, beatmapStd != NULL ? beatmapStd->getCursorPos() : engine->getMouse()->getPos(), osu_mod_fadingcursor.getBool() ? fadingCursorAlpha : 1.0f);
-		}
+		if ((!isAuto || allowDoubleCursor) && allowDrawCursor && (!isInVRMode() || (m_vr->isVirtualCursorOnScreen() || engine->hasFocus())))
+			m_hud->drawCursor(g, (beatmapStd != NULL && !isAuto) ? beatmapStd->getCursorPos() : engine->getMouse()->getPos(), (osu_mod_fadingcursor.getBool() && !isAuto) ? fadingCursorAlpha : 1.0f, isAuto);
 
 		// draw projected VR cursors for spectators
 		if (isInVRMode() && isInPlayMode() && !getSelectedBeatmap()->isPaused() && beatmapStd != NULL)
@@ -643,10 +663,33 @@ void Osu::draw(Graphics *g)
 
 		g->setBlending(false);
 		{
-			if (osu_letterboxing.getBool())
-				m_backBuffer->draw(g, offset.x*(1.0f + osu_letterboxing_offset_x.getFloat()), offset.y*(1.0f + osu_letterboxing_offset_y.getFloat()), g_vInternalResolution.x, g_vInternalResolution.y);
+			if (env->getOS() == Environment::OS::OS_HORIZON)
+			{
+				// NOTE: the nintendo switch always draws in 1080p, even undocked
+				const Vector2 backupResolution = engine->getGraphics()->getResolution();
+				g->onResolutionChange(Vector2(1920, 1080));
+				{
+					m_backBuffer->draw(g, offset.x*(1.0f + osu_letterboxing_offset_x.getFloat()), offset.y*(1.0f + osu_letterboxing_offset_y.getFloat()), g_vInternalResolution.x, g_vInternalResolution.y);
+				}
+				g->onResolutionChange(backupResolution);
+			}
 			else
-				m_backBuffer->draw(g, 0, 0, engine->getGraphics()->getResolution().x, engine->getGraphics()->getResolution().y);
+			{
+				if (osu_letterboxing.getBool())
+					m_backBuffer->draw(g, offset.x*(1.0f + osu_letterboxing_offset_x.getFloat()), offset.y*(1.0f + osu_letterboxing_offset_y.getFloat()), g_vInternalResolution.x, g_vInternalResolution.y);
+				else
+				{
+					if (osu_resolution_keep_aspect_ratio.getBool())
+					{
+						const float scale = getImageScaleToFitResolution(m_backBuffer->getSize(), engine->getGraphics()->getResolution());
+						const float scaledWidth = m_backBuffer->getWidth()*scale;
+						const float scaledHeight = m_backBuffer->getHeight()*scale;
+						m_backBuffer->draw(g, std::max(0.0f, engine->getGraphics()->getResolution().x/2.0f - scaledWidth/2.0f)*(1.0f + osu_letterboxing_offset_x.getFloat()), std::max(0.0f, engine->getGraphics()->getResolution().y/2.0f - scaledHeight/2.0f)*(1.0f + osu_letterboxing_offset_y.getFloat()), scaledWidth, scaledHeight);
+					}
+					else
+						m_backBuffer->draw(g, 0, 0, engine->getGraphics()->getResolution().x, engine->getGraphics()->getResolution().y);
+				}
+			}
 		}
 		g->setBlending(true);
 	}
@@ -1553,7 +1596,7 @@ float Osu::getSpeedMultiplier()
 	float speedMultiplier = getRawSpeedMultiplier();
 
 	if (osu_speed_override.getFloat() >= 0.0f)
-		return osu_speed_override.getFloat();
+		return std::max(osu_speed_override.getFloat(), 0.05f);
 
 	return speedMultiplier;
 }

@@ -93,6 +93,7 @@ private:
 	void onResolutionSelect2(UString resolution, int id = -1);
 	void onOutputDeviceSelect();
 	void onOutputDeviceSelect2(UString outputDeviceName, int id = -1);
+	void onOutputDeviceRestart();
 	void onDownloadOsuClicked();
 	void onManuallyManageBeatmapsClicked();
 	void onLIVReloadCalibrationClicked();
@@ -106,6 +107,7 @@ private:
 	void onSliderChangePercent(CBaseUISlider *slider);
 
 	void onKeyBindingButtonPressed(CBaseUIButton *button);
+	void onKeyUnbindButtonPressed(CBaseUIButton *button);
 	void onKeyBindingManiaPressedInt();
 	void onKeyBindingManiaPressed(CBaseUIButton *button);
 	void onSliderChangeVRSuperSampling(CBaseUISlider *slider);

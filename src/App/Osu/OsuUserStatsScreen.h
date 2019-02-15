@@ -51,6 +51,8 @@ private:
 
 	CBaseUIScrollView *m_scores;
 	std::vector<OsuUISongBrowserScoreButton*> m_scoreButtons;
+
+	std::vector<UString> m_vInfoText;
 };
 
 #endif

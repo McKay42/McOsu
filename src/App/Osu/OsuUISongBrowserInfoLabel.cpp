@@ -54,6 +54,7 @@ OsuUISongBrowserInfoLabel::OsuUISongBrowserInfoLabel(Osu *osu, float xPos, float
 	m_fOD = 5.0f;
 	m_fHP = 5.0f;
 	m_fStars = 5.0f;
+	m_bStarsRecalculating = false;
 
 	m_iLocalOffset = 0;
 	m_iOnlineOffset = 0;
@@ -308,7 +309,11 @@ UString OsuUISongBrowserInfoLabel::buildDiffInfoString()
 		areStarsInaccurate = beatmap->getSpeedMultiplier() != 1.0f || CS != m_fCS || AR != m_fAR || OD != m_fOD;
 	}
 
-	return UString::format(areStarsInaccurate ? "CS:%.3g AR:%.3g OD:%.3g HP:%.3g Stars:? (%.3g)" : "CS:%.3g AR:%.3g OD:%.3g HP:%.3g Stars:%.3g", CS, AR, OD, HP, stars);
+	UString finalString = UString::format(areStarsInaccurate ? "CS:%.3g AR:%.3g OD:%.3g HP:%.3g Stars:? (%.3g)" : "CS:%.3g AR:%.3g OD:%.3g HP:%.3g Stars:%.3g", CS, AR, OD, HP, stars);
+	if (m_bStarsRecalculating)
+		finalString.append(" (recalculating ...)");
+
+	return finalString;
 }
 
 UString OsuUISongBrowserInfoLabel::buildOffsetInfoString()

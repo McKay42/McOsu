@@ -49,6 +49,7 @@
 #include "OpenGLHeaders.h"
 #include "OpenGLLegacyInterface.h"
 #include "OpenGL3Interface.h"
+#include "OpenGLES2Interface.h"
 
 ConVar osu_options_save_on_back("osu_options_save_on_back", true);
 ConVar osu_options_high_quality_sliders("osu_options_high_quality_sliders", false);
@@ -206,6 +207,9 @@ public:
 	OsuOptionsMenuKeyBindLabel(float xPos, float yPos, float xSize, float ySize, UString name, UString text, ConVar *cvar) : CBaseUILabel(xPos, yPos, xSize, ySize, name, text)
 	{
 		m_key = cvar;
+
+		m_textColorBound = 0xffffd700;
+		m_textColorUnbound = 0xffbb0000;
 	}
 
 	virtual void update()
@@ -213,16 +217,34 @@ public:
 		CBaseUILabel::update();
 		if (!m_bVisible) return;
 
+		const KEYCODE keyCode = (KEYCODE)m_key->getInt();
+
 		// succ
-		UString labelText = env->keyCodeToString((KEYCODE)m_key->getInt());
+		UString labelText = env->keyCodeToString(keyCode);
 		if (labelText.find("?") != -1)
 			labelText.append(UString::format("  (%i)", m_key->getInt()));
 
+		// handle bound/unbound
+		if (keyCode == 0)
+		{
+			labelText = "<UNBOUND>";
+			setTextColor(m_textColorUnbound);
+		}
+		else
+			setTextColor(m_textColorBound);
+
+		// update text
 		setText(labelText);
 	}
 
+	void setTextColorBound(Color textColorBound) {m_textColorBound = textColorBound;}
+	void setTextColorUnbound(Color textColorUnbound) {m_textColorUnbound = textColorUnbound;}
+
 private:
 	ConVar *m_key;
+
+	Color m_textColorBound;
+	Color m_textColorUnbound;
 };
 
 class OsuOptionsMenuCategoryButton : public CBaseUIButton
@@ -290,6 +312,10 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_vrSliderVibrationStrengthSlider = NULL;
 	m_vrHudDistanceSlider = NULL;
 	m_vrHudScaleSlider = NULL;
+	m_resolutionLabel = NULL;
+	m_fullscreenCheckbox = NULL;
+	m_sliderQualitySlider = NULL;
+	m_outputDeviceLabel = NULL;
 
 	m_fOsuFolderTextboxInvalidAnim = 0.0f;
 	m_fVibrationStrengthExampleTimer = 0.0f;
@@ -351,7 +377,8 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_osuFolderTextbox = addTextbox(convar->getConVarByName("osu_folder")->getString(), convar->getConVarByName("osu_folder"));
 	addSpacer();
 	addCheckbox("Use osu!.db database (read-only)", "If you have an existing osu! installation,\nthen this will speed up the initial loading process.", convar->getConVarByName("osu_database_enabled"));
-	addCheckbox("Load osu! scores.db (read-only)", "If you have an existing osu! installation,\nalso load and display your achieved scores from there.", convar->getConVarByName("osu_scores_legacy_enabled"));
+	if (env->getOS() != Environment::OS::OS_HORIZON)
+		addCheckbox("Load osu! scores.db (read-only)", "If you have an existing osu! installation,\nalso load and display your achieved scores from there.", convar->getConVarByName("osu_scores_legacy_enabled"));
 
 	addSubSection("Player (Name)");
 	m_nameTextbox = addTextbox(convar->getConVarByName("name")->getString(), convar->getConVarByName("name"));
@@ -369,26 +396,30 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSubSection("Renderer");
 	addCheckbox("VSync", "If enabled: plz enjoy input lag.", convar->getConVarByName("vsync"));
 	addCheckbox("Show FPS Counter", convar->getConVarByName("osu_draw_fps"));
-	addSpacer();
+	if (env->getOS() != Environment::OS::OS_HORIZON)
+	{
+		addSpacer();
 
-	if (!m_osu->isInVRMode())
-		addCheckbox("Unlimited FPS", convar->getConVarByName("fps_unlimited"));
+		if (!m_osu->isInVRMode())
+			addCheckbox("Unlimited FPS", convar->getConVarByName("fps_unlimited"));
 
-	CBaseUISlider *fpsSlider = addSlider("FPS Limiter:", 60.0f, 1000.0f, convar->getConVarByName("fps_max"));
-	fpsSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeInt) );
-	fpsSlider->setKeyDelta(1);
+		CBaseUISlider *fpsSlider = addSlider("FPS Limiter:", 60.0f, 1000.0f, convar->getConVarByName("fps_max"));
+		fpsSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeInt) );
+		fpsSlider->setKeyDelta(1);
 
-	addSubSection("Layout");
-	OPTIONS_ELEMENT resolutionSelect = addButton("Select Resolution", UString::format("%ix%i", m_osu->getScreenWidth(), m_osu->getScreenHeight()));
-	((CBaseUIButton*)resolutionSelect.elements[0])->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onResolutionSelect) );
-	m_resolutionLabel = (CBaseUILabel*)resolutionSelect.elements[1];
-	m_resolutionSelectButton = resolutionSelect.elements[0];
-	m_fullscreenCheckbox = addCheckbox("Fullscreen");
-	m_fullscreenCheckbox->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onFullscreenChange) );
-	addCheckbox("Borderless Windowed Fullscreen", "If enabled: plz enjoy input lag.", convar->getConVarByName("fullscreen_windowed_borderless"))->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onBorderlessWindowedChange) );
-	addCheckbox("Letterboxing", "Useful to get the low latency of fullscreen with a smaller game resolution.\nUse the two position sliders below to move the viewport around.", convar->getConVarByName("osu_letterboxing"));
-	m_letterboxingOffsetXSlider = addSlider("Horizontal position", -1.0f, 1.0f, convar->getConVarByName("osu_letterboxing_offset_x"), 170)->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeLetterboxingOffset) )->setKeyDelta(0.01f);
-	m_letterboxingOffsetYSlider = addSlider("Vertical position", -1.0f, 1.0f, convar->getConVarByName("osu_letterboxing_offset_y"), 170)->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeLetterboxingOffset) )->setKeyDelta(0.01f);
+		addSubSection("Layout");
+		OPTIONS_ELEMENT resolutionSelect = addButton("Select Resolution", UString::format("%ix%i", m_osu->getScreenWidth(), m_osu->getScreenHeight()));
+		((CBaseUIButton*)resolutionSelect.elements[0])->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onResolutionSelect) );
+		m_resolutionLabel = (CBaseUILabel*)resolutionSelect.elements[1];
+		m_resolutionSelectButton = resolutionSelect.elements[0];
+		m_fullscreenCheckbox = addCheckbox("Fullscreen");
+		m_fullscreenCheckbox->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onFullscreenChange) );
+		addCheckbox("Borderless Windowed Fullscreen", "If enabled: plz enjoy input lag.", convar->getConVarByName("fullscreen_windowed_borderless"))->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onBorderlessWindowedChange) );
+		addCheckbox("Keep Aspect Ratio", "Black borders instead of a stretched image.\nOnly relevant if fullscreen is enabled, and letterboxing is disabled.\nUse the two position sliders below to move the viewport around.", convar->getConVarByName("osu_resolution_keep_aspect_ratio"));
+		addCheckbox("Letterboxing", "Useful to get the low latency of fullscreen with a smaller game resolution.\nUse the two position sliders below to move the viewport around.", convar->getConVarByName("osu_letterboxing"));
+		m_letterboxingOffsetXSlider = addSlider("Horizontal position", -1.0f, 1.0f, convar->getConVarByName("osu_letterboxing_offset_x"), 170)->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeLetterboxingOffset) )->setKeyDelta(0.01f);
+		m_letterboxingOffsetYSlider = addSlider("Vertical position", -1.0f, 1.0f, convar->getConVarByName("osu_letterboxing_offset_y"), 170)->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeLetterboxingOffset) )->setKeyDelta(0.01f);
+	}
 
 	addSubSection("Detail Settings");
 	addCheckbox("Mipmaps", "Reload your skin to apply! (CTRL + ALT + SHIFT + S)\nGenerate mipmaps for each skin element, at the cost of VRAM.\nProvides smoother visuals on lower resolutions for @2x-only skins.", convar->getConVarByName("osu_skin_mipmaps"));
@@ -396,10 +427,13 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Snaking in sliders", "\"Growing\" sliders.\nSliders gradually snake out from their starting point while fading in.\nHas no impact on performance whatsoever.", convar->getConVarByName("osu_snaking_sliders"));
 	addCheckbox("Snaking out sliders", "\"Shrinking\" sliders.\nSliders will shrink with the sliderball while sliding.\nCan improve performance a tiny bit, since there will be less to draw overall.", convar->getConVarByName("osu_slider_shrink"));
 	addSpacer();
-	addCheckbox("Legacy Slider Renderer (!)", "WARNING: Only try enabling this on shitty old computers!\nMay or may not improve fps while few sliders are visible.\nGuaranteed lower fps while many sliders are visible!", convar->getConVarByName("osu_force_legacy_slider_renderer"));
-	addCheckbox("Higher Quality Sliders (!)", "Disable this if your fps drop too low while sliders are visible.", convar->getConVarByName("osu_options_high_quality_sliders"))->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onHighQualitySlidersCheckboxChange) );
-	m_sliderQualitySlider = addSlider("Slider Quality", 0.0f, 1.0f, convar->getConVarByName("osu_options_slider_quality"));
-	m_sliderQualitySlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeSliderQuality) );
+	if (env->getOS() != Environment::OS::OS_HORIZON)
+	{
+		addCheckbox("Legacy Slider Renderer (!)", "WARNING: Only try enabling this on shitty old computers!\nMay or may not improve fps while few sliders are visible.\nGuaranteed lower fps while many sliders are visible!", convar->getConVarByName("osu_force_legacy_slider_renderer"));
+		addCheckbox("Higher Quality Sliders (!)", "Disable this if your fps drop too low while sliders are visible.", convar->getConVarByName("osu_options_high_quality_sliders"))->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onHighQualitySlidersCheckboxChange) );
+		m_sliderQualitySlider = addSlider("Slider Quality", 0.0f, 1.0f, convar->getConVarByName("osu_options_slider_quality"));
+		m_sliderQualitySlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeSliderQuality) );
+	}
 
 	//**************************************************************************************************************************//
 
@@ -499,10 +533,15 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	CBaseUIElement *sectionAudio = addSection("Audio");
 
 	addSubSection("Devices");
-	OPTIONS_ELEMENT outputDeviceSelect = addButton("Select Output Device", "Default");
-	((CBaseUIButton*)outputDeviceSelect.elements[0])->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onOutputDeviceSelect) );
-	m_outputDeviceSelectButton = outputDeviceSelect.elements[0];
-	m_outputDeviceLabel = (CBaseUILabel*)outputDeviceSelect.elements[1];
+	if (env->getOS() != Environment::OS::OS_HORIZON)
+	{
+		OPTIONS_ELEMENT outputDeviceSelect = addButton("Select Output Device", "Default");
+		((CBaseUIButton*)outputDeviceSelect.elements[0])->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onOutputDeviceSelect) );
+		m_outputDeviceSelectButton = outputDeviceSelect.elements[0];
+		m_outputDeviceLabel = (CBaseUILabel*)outputDeviceSelect.elements[1];
+	}
+	else
+		addButton("Restart SoundEngine (fix crackling)")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onOutputDeviceRestart) );
 
 	addSubSection("Volume");
 	addSlider("Master:", 0.0f, 1.0f, convar->getConVarByName("osu_volume_master"), 70.0f);
@@ -548,7 +587,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Automatic Cursor Size", "Cursor size will adjust based on the CS of the current beatmap.", convar->getConVarByName("osu_automatic_cursor_size"));
 	addSpacer();
 	m_sliderPreviewElement = (OsuOptionsMenuSliderPreviewElement*)addSliderPreview();
-	addCheckbox("Use slidergradient.png", convar->getConVarByName("osu_slider_use_gradient_image"));
+	addCheckbox("Use slidergradient.png", "Enabling this will improve performance,\nbut also block all dynamic slider (color/border) features.", convar->getConVarByName("osu_slider_use_gradient_image"));
 	addCheckbox("Use osu!lazer Slider Style", "Only really looks good if your skin doesn't \"SliderTrackOverride\" too dark.", convar->getConVarByName("osu_slider_osu_next_style"));
 	addCheckbox("Use combo color as tint for slider ball", convar->getConVarByName("osu_slider_ball_tint_combo_color"));
 	addCheckbox("Use combo color as tint for slider border", convar->getConVarByName("osu_slider_border_tint_combo_color"));
@@ -563,7 +602,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	CBaseUIElement *sectionInput = addSection("Input");
 
 	addSubSection("Mouse");
-	if (env->getOS() == Environment::OS::OS_WINDOWS || env->getOS() == Environment::OS::OS_MACOS)
+	if (env->getOS() == Environment::OS::OS_WINDOWS || env->getOS() == Environment::OS::OS_MACOS || env->getOS() == Environment::OS::OS_HORIZON)
 	{
 		addSlider("Sensitivity:", 0.1f, 6.0f, convar->getConVarByName("mouse_sensitivity"))->setKeyDelta(0.01f);
 		if (env->getOS() == Environment::OS::OS_MACOS)
@@ -585,9 +624,12 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 		addLabel("Use xinput or xsetwacom to change the tablet area.")->setTextColor(0xff555555);
 		addLabel("");
 	}
-	addCheckbox("Confine Cursor (Windowed)", convar->getConVarByName("osu_confine_cursor_windowed"));
-	addCheckbox("Confine Cursor (Fullscreen)", convar->getConVarByName("osu_confine_cursor_fullscreen"));
-	addCheckbox("Disable Mouse Wheel in Play Mode", convar->getConVarByName("osu_disable_mousewheel"));
+	if (env->getOS() != Environment::OS::OS_HORIZON)
+	{
+		addCheckbox("Confine Cursor (Windowed)", convar->getConVarByName("osu_confine_cursor_windowed"));
+		addCheckbox("Confine Cursor (Fullscreen)", convar->getConVarByName("osu_confine_cursor_fullscreen"));
+		addCheckbox("Disable Mouse Wheel in Play Mode", convar->getConVarByName("osu_disable_mousewheel"));
+	}
 	addCheckbox("Disable Mouse Buttons in Play Mode", convar->getConVarByName("osu_disable_mousebuttons"));
 
 	if (env->getOS() == Environment::OS::OS_WINDOWS)
@@ -601,38 +643,38 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSpacer();
 	addSubSection("Keyboard");
 	addSubSection("Keys - osu! Standard Mode");
-	addKeyBindButton("Left Click", &OsuKeyBindings::LEFT_CLICK)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Right Click", &OsuKeyBindings::RIGHT_CLICK)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addKeyBindButton("Left Click", &OsuKeyBindings::LEFT_CLICK);
+	addKeyBindButton("Right Click", &OsuKeyBindings::RIGHT_CLICK);
 	addSubSection("Keys - In-Game");
-	addKeyBindButton("Game Pause", &OsuKeyBindings::GAME_PAUSE)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Skip Cutscene", &OsuKeyBindings::SKIP_CUTSCENE)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Toggle Scoreboard", &OsuKeyBindings::TOGGLE_SCOREBOARD)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Scrubbing (+ Click Drag!)", &OsuKeyBindings::SEEK_TIME)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Increase Local Song Offset", &OsuKeyBindings::INCREASE_LOCAL_OFFSET)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Decrease Local Song Offset", &OsuKeyBindings::DECREASE_LOCAL_OFFSET)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Quick Retry (hold briefly)", &OsuKeyBindings::QUICK_RETRY)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Quick Save", &OsuKeyBindings::QUICK_SAVE)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Quick Load", &OsuKeyBindings::QUICK_LOAD)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addKeyBindButton("Game Pause", &OsuKeyBindings::GAME_PAUSE);
+	addKeyBindButton("Skip Cutscene", &OsuKeyBindings::SKIP_CUTSCENE);
+	addKeyBindButton("Toggle Scoreboard", &OsuKeyBindings::TOGGLE_SCOREBOARD);
+	addKeyBindButton("Scrubbing (+ Click Drag!)", &OsuKeyBindings::SEEK_TIME);
+	addKeyBindButton("Increase Local Song Offset", &OsuKeyBindings::INCREASE_LOCAL_OFFSET);
+	addKeyBindButton("Decrease Local Song Offset", &OsuKeyBindings::DECREASE_LOCAL_OFFSET);
+	addKeyBindButton("Quick Retry (hold briefly)", &OsuKeyBindings::QUICK_RETRY);
+	addKeyBindButton("Quick Save", &OsuKeyBindings::QUICK_SAVE);
+	addKeyBindButton("Quick Load", &OsuKeyBindings::QUICK_LOAD);
 	addSubSection("Keys - Universal");
-	addKeyBindButton("Save Screenshot", &OsuKeyBindings::SAVE_SCREENSHOT)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Increase Volume", &OsuKeyBindings::INCREASE_VOLUME)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Decrease Volume", &OsuKeyBindings::DECREASE_VOLUME)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Disable Mouse Buttons", &OsuKeyBindings::DISABLE_MOUSE_BUTTONS)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Boss Key (Minimize)", &OsuKeyBindings::BOSS_KEY)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addKeyBindButton("Save Screenshot", &OsuKeyBindings::SAVE_SCREENSHOT);
+	addKeyBindButton("Increase Volume", &OsuKeyBindings::INCREASE_VOLUME);
+	addKeyBindButton("Decrease Volume", &OsuKeyBindings::DECREASE_VOLUME);
+	addKeyBindButton("Disable Mouse Buttons", &OsuKeyBindings::DISABLE_MOUSE_BUTTONS);
+	addKeyBindButton("Boss Key (Minimize)", &OsuKeyBindings::BOSS_KEY);
 	addSubSection("Keys - Mod Select");
-	addKeyBindButton("Easy", &OsuKeyBindings::MOD_EASY)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("No Fail", &OsuKeyBindings::MOD_NOFAIL)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Half Time", &OsuKeyBindings::MOD_HALFTIME)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Hard Rock", &OsuKeyBindings::MOD_HARDROCK)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Sudden Death", &OsuKeyBindings::MOD_SUDDENDEATH)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Double Time", &OsuKeyBindings::MOD_DOUBLETIME)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Hidden", &OsuKeyBindings::MOD_HIDDEN)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Flashlight", &OsuKeyBindings::MOD_FLASHLIGHT)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Relax", &OsuKeyBindings::MOD_RELAX)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Autopilot", &OsuKeyBindings::MOD_AUTOPILOT)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Spunout", &OsuKeyBindings::MOD_SPUNOUT)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Auto", &OsuKeyBindings::MOD_AUTO)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	addKeyBindButton("Score V2", &OsuKeyBindings::MOD_SCOREV2)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	addKeyBindButton("Easy", &OsuKeyBindings::MOD_EASY);
+	addKeyBindButton("No Fail", &OsuKeyBindings::MOD_NOFAIL);
+	addKeyBindButton("Half Time", &OsuKeyBindings::MOD_HALFTIME);
+	addKeyBindButton("Hard Rock", &OsuKeyBindings::MOD_HARDROCK);
+	addKeyBindButton("Sudden Death", &OsuKeyBindings::MOD_SUDDENDEATH);
+	addKeyBindButton("Double Time", &OsuKeyBindings::MOD_DOUBLETIME);
+	addKeyBindButton("Hidden", &OsuKeyBindings::MOD_HIDDEN);
+	addKeyBindButton("Flashlight", &OsuKeyBindings::MOD_FLASHLIGHT);
+	addKeyBindButton("Relax", &OsuKeyBindings::MOD_RELAX);
+	addKeyBindButton("Autopilot", &OsuKeyBindings::MOD_AUTOPILOT);
+	addKeyBindButton("Spunout", &OsuKeyBindings::MOD_SPUNOUT);
+	addKeyBindButton("Auto", &OsuKeyBindings::MOD_AUTO);
+	addKeyBindButton("Score V2", &OsuKeyBindings::MOD_SCOREV2);
 	addSpacer();
 	///addButton("osu!mania layout")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingManiaPressed) );
 
@@ -727,10 +769,14 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 
 	//**************************************************************************************************************************//
 
-	CBaseUIElement *sectionOnline = addSection("Online");
+	CBaseUIElement *sectionOnline = NULL;
+	if (env->getOS() != Environment::OS::OS_HORIZON)
+	{
+		sectionOnline = addSection("Online");
 
-	addSubSection("Integration");
-	addCheckbox("Rich Presence (Discord + Steam)", "Shows your current game state in your friends' friendslists.\ne.g.: Playing Gavin G - Reach Out [Cherry Blossom's Insane]", convar->getConVarByName("osu_rich_presence"));
+		addSubSection("Integration");
+		addCheckbox("Rich Presence (Discord + Steam)", "Shows your current game state in your friends' friendslists.\ne.g.: Playing Gavin G - Reach Out [Cherry Blossom's Insane]", convar->getConVarByName("osu_rich_presence"));
+	}
 
 	//**************************************************************************************************************************//
 
@@ -760,7 +806,9 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCategory(sectionSkin, OsuIcons::PAINTBRUSH);
 	addCategory(sectionInput, OsuIcons::GAMEPAD);
 	addCategory(sectionGameplay, OsuIcons::CIRCLE);
-	addCategory(sectionOnline, OsuIcons::GLOBE);
+
+	if (sectionOnline != NULL)
+		addCategory(sectionOnline, OsuIcons::GLOBE);
 
 	//**************************************************************************************************************************//
 
@@ -768,7 +816,8 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_options->getContainer()->addBaseUIElement(m_contextMenu);
 
 	// HACKHACK: force current value update
-	onHighQualitySlidersConVarChange("", osu_options_high_quality_sliders.getString());
+	if (m_sliderQualitySlider != NULL)
+		onHighQualitySlidersConVarChange("", osu_options_high_quality_sliders.getString());
 }
 
 OsuOptionsMenu::~OsuOptionsMenu()
@@ -781,7 +830,15 @@ void OsuOptionsMenu::draw(Graphics *g)
 	const bool isAnimating = anim->isAnimating(&m_fAnimation);
 	if (!m_bVisible && !isAnimating) return;
 
-	const bool isOpenGLRendererHack = (dynamic_cast<OpenGLLegacyInterface*>(g) != NULL || dynamic_cast<OpenGL3Interface*>(g) != NULL);
+#if defined(MCENGINE_FEATURE_OPENGL)
+
+			const bool isOpenGLRendererHack = (dynamic_cast<OpenGLLegacyInterface*>(g) != NULL || dynamic_cast<OpenGL3Interface*>(g) != NULL);
+
+#elif defined(MCENGINE_FEATURE_OPENGLES)
+
+			const bool isOpenGLRendererHack = (dynamic_cast<OpenGLES2Interface*>(g) != NULL);
+
+#endif
 
 	m_sliderPreviewElement->setDrawSliderHack(!isAnimating);
 
@@ -789,8 +846,12 @@ void OsuOptionsMenu::draw(Graphics *g)
 	{
 		m_osu->getSliderFrameBuffer()->enable();
 
+#if defined(MCENGINE_FEATURE_OPENGL) || defined(MCENGINE_FEATURE_OPENGLES)
+
 		if (isOpenGLRendererHack)
 			glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA); // HACKHACK: OpenGL hardcoded
+
+#endif
 	}
 
 	const bool isPlayingBeatmap = m_osu->isInPlayMode();
@@ -887,8 +948,12 @@ void OsuOptionsMenu::draw(Graphics *g)
 		if (!m_bVisible)
 			m_backButton->draw(g);
 
+#if defined(MCENGINE_FEATURE_OPENGL) || defined(MCENGINE_FEATURE_OPENGLES)
+
 		if (isOpenGLRendererHack)
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // HACKHACK: OpenGL hardcoded
+
+#endif
 
 		m_osu->getSliderFrameBuffer()->disable();
 
@@ -1088,7 +1153,8 @@ void OsuOptionsMenu::onResolutionChange(Vector2 newResolution)
 	if ((env->getOS() == Environment::OS::OS_WINDOWS && env->isFullscreen() && env->isFullscreenWindowedBorderless() && (int)newResolution.y == (int)env->getNativeScreenSize().y+1))
 		newResolution.y--;
 
-	m_resolutionLabel->setText(UString::format("%ix%i", (int)newResolution.x, (int)newResolution.y));
+	if (m_resolutionLabel != NULL)
+		m_resolutionLabel->setText(UString::format("%ix%i", (int)newResolution.x, (int)newResolution.y));
 }
 
 void OsuOptionsMenu::onKey(KeyboardEvent &e)
@@ -1244,13 +1310,15 @@ void OsuOptionsMenu::updateLayout()
 		}
 	}
 
-	m_fullscreenCheckbox->setChecked(env->isFullscreen(), false);
+	if (m_fullscreenCheckbox != NULL)
+		m_fullscreenCheckbox->setChecked(env->isFullscreen(), false);
 
 	updateVRRenderTargetResolutionLabel();
 
 	// temp, not correct anymore if loading fails!
 	m_skinLabel->setText(convar->getConVarByName("osu_skin")->getString());
-	m_outputDeviceLabel->setText(engine->getSound()->getOutputDevice());
+	if (m_outputDeviceLabel != NULL)
+		m_outputDeviceLabel->setText(engine->getSound()->getOutputDevice());
 
 	//************************************************************************************************************************************//
 
@@ -1425,6 +1493,8 @@ void OsuOptionsMenu::updateLayout()
 		// and build the layout
 		int elementWidth = optionsWidth - 2*sideMargin - 2;
 
+		const bool isKeyBindButton = (m_elements[i].type == 5);
+
 		if (m_elements[i].elements.size() == 1)
 		{
 			CBaseUIElement *e = m_elements[i].elements[0];
@@ -1451,21 +1521,41 @@ void OsuOptionsMenu::updateLayout()
 
 			yCounter += e->getSize().y;
 		}
-		else if (m_elements[i].elements.size() == 2)
+		else if (m_elements[i].elements.size() == 2 || isKeyBindButton)
 		{
 			CBaseUIElement *e1 = m_elements[i].elements[0];
 			CBaseUIElement *e2 = m_elements[i].elements[1];
 
 			int spacing = 15;
 
-			float dividerEnd = 1.0f / (m_elements[i].type == 5 ? 3 : 2); // 1/3rd division for key bind buttons
-			float dividerBegin = 1.0f - dividerEnd;
+			if (isKeyBindButton)
+			{
+				CBaseUIElement *e3 = m_elements[i].elements[2];
 
-			e1->setRelPos(sideMargin, yCounter);
-			e1->setSizeX(elementWidth*dividerBegin - spacing);
+				const float dividerBegin = 5.0f / 8.0f;
+				const float dividerMiddle = 1.0f / 8.0f;
+				const float dividerEnd = 2.0f / 8.0f;
 
-			e2->setRelPos(sideMargin + e1->getSize().x + 2*spacing, yCounter);
-			e2->setSizeX(elementWidth*dividerEnd - spacing);
+				e1->setRelPos(sideMargin, yCounter);
+				e1->setSizeX(elementWidth*dividerBegin - spacing);
+
+				e2->setRelPos(sideMargin + e1->getSize().x + 0.5f*spacing, yCounter);
+				e2->setSizeX(elementWidth*dividerMiddle - spacing);
+
+				e3->setRelPos(sideMargin + e1->getSize().x + e2->getSize().x + 1.5f*spacing, yCounter);
+				e3->setSizeX(elementWidth*dividerEnd - spacing);
+			}
+			else
+			{
+				float dividerEnd = 1.0f / 2.0f;
+				float dividerBegin = 1.0f - dividerEnd;
+
+				e1->setRelPos(sideMargin, yCounter);
+				e1->setSizeX(elementWidth*dividerBegin - spacing);
+
+				e2->setRelPos(sideMargin + e1->getSize().x + 2*spacing, yCounter);
+				e2->setSizeX(elementWidth*dividerEnd - spacing);
+			}
 
 			yCounter += e1->getSize().y;
 		}
@@ -1776,14 +1866,31 @@ void OsuOptionsMenu::onOutputDeviceSelect2(UString outputDeviceName, int id)
 	m_osu->reloadSkin(); // needed to reload sounds
 }
 
+void OsuOptionsMenu::onOutputDeviceRestart()
+{
+	engine->getSound()->setOutputDevice("Default");
+}
+
 void OsuOptionsMenu::onDownloadOsuClicked()
 {
+	if (env->getOS() == Environment::OS::OS_HORIZON)
+	{
+		m_osu->getNotificationOverlay()->addNotification("Go to https://osu.ppy.sh/", 0xffffffff, false, 0.75f);
+		return;
+	}
+
 	m_osu->getNotificationOverlay()->addNotification("Opening browser, please wait ...", 0xffffffff, false, 0.75f);
 	env->openURLInDefaultBrowser("https://osu.ppy.sh/");
 }
 
 void OsuOptionsMenu::onManuallyManageBeatmapsClicked()
 {
+	if (env->getOS() == Environment::OS::OS_HORIZON)
+	{
+		m_osu->getNotificationOverlay()->addNotification("Google \"How to use McOsu without osu!\"", 0xffffffff, false, 0.75f);
+		return;
+	}
+
 	m_osu->getNotificationOverlay()->addNotification("Opening browser, please wait ...", 0xffffffff, false, 0.75f);
 	env->openURLInDefaultBrowser("https://steamcommunity.com/sharedfiles/filedetails/?id=880768265");
 }
@@ -1961,6 +2068,24 @@ void OsuOptionsMenu::onKeyBindingButtonPressed(CBaseUIButton *button)
 					notificationText.append(button->getText());
 					notificationText.append(":");
 					m_osu->getNotificationOverlay()->addNotification(notificationText, 0xffffffff, true);
+				}
+				break;
+			}
+		}
+	}
+}
+
+void OsuOptionsMenu::onKeyUnbindButtonPressed(CBaseUIButton *button)
+{
+	for (int i=0; i<m_elements.size(); i++)
+	{
+		for (int e=0; e<m_elements[i].elements.size(); e++)
+		{
+			if (m_elements[i].elements[e] == button)
+			{
+				if (m_elements[i].cvar != NULL)
+				{
+					m_elements[i].cvar->setValue(0.0f);
 				}
 				break;
 			}
@@ -2267,16 +2392,25 @@ OsuUIButton *OsuOptionsMenu::addKeyBindButton(UString text, ConVar *cvar)
 	OsuUIButton *button = new OsuUIButton(m_osu, 0, 0, m_options->getSize().x, 50, text, text);
 	button->setColor(0xff0e94b5);
 	button->setUseDefaultSkin();
+	button->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
 	m_options->getContainer()->addBaseUIElement(button);
+
+	///UString iconString; iconString.insert(0, OsuIcons::UNDO);
+	OsuUIButton *button2 = new OsuUIButton(m_osu, 0, 0, m_options->getSize().x, 50, text, "");
+	button2->setColor(0x77ff0000);
+	button2->setUseDefaultSkin();
+	button2->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyUnbindButtonPressed) );
+	///button2->setFont(m_osu->getFontIcons());
+	m_options->getContainer()->addBaseUIElement(button2);
 
 	OsuOptionsMenuKeyBindLabel *label = new OsuOptionsMenuKeyBindLabel(0, 0, m_options->getSize().x, 50, "", "", cvar);
 	label->setDrawFrame(false);
-	label->setTextColor(0xffffd700);
 	label->setDrawBackground(false);
 	m_options->getContainer()->addBaseUIElement(label);
 
 	OPTIONS_ELEMENT e;
 	e.elements.push_back(button);
+	e.elements.push_back(button2);
 	e.elements.push_back(label);
 	e.type = 5;
 	e.cvar = cvar;
@@ -2442,18 +2576,21 @@ void OsuOptionsMenu::save()
 	removeConCommands.push_back(convar->getConVarByName("osu_skin"));
 	removeConCommands.push_back(convar->getConVarByName("snd_output_device"));
 
-	if (m_fullscreenCheckbox->isChecked())
+	if (m_fullscreenCheckbox != NULL)
 	{
-		manualConCommands.push_back(convar->getConVarByName("fullscreen"));
-		if (convar->getConVarByName("osu_resolution_enabled")->getBool())
-			manualConVars.push_back(convar->getConVarByName("osu_resolution"));
+		if (m_fullscreenCheckbox->isChecked())
+		{
+			manualConCommands.push_back(convar->getConVarByName("fullscreen"));
+			if (convar->getConVarByName("osu_resolution_enabled")->getBool())
+				manualConVars.push_back(convar->getConVarByName("osu_resolution"));
+			else
+				removeConCommands.push_back(convar->getConVarByName("osu_resolution"));
+		}
 		else
+		{
+			removeConCommands.push_back(convar->getConVarByName("fullscreen"));
 			removeConCommands.push_back(convar->getConVarByName("osu_resolution"));
-	}
-	else
-	{
-		removeConCommands.push_back(convar->getConVarByName("fullscreen"));
-		removeConCommands.push_back(convar->getConVarByName("osu_resolution"));
+		}
 	}
 
 	// get user stuff in the config file
@@ -2544,7 +2681,7 @@ void OsuOptionsMenu::save()
 	out << "monitor " << env->getMonitor() << "\n";
 	if (engine->getSound()->getOutputDevice() != "Default")
 		out << "snd_output_device " << engine->getSound()->getOutputDevice().toUtf8() << "\n";
-	if (!m_fullscreenCheckbox->isChecked())
+	if (m_fullscreenCheckbox != NULL && !m_fullscreenCheckbox->isChecked())
 		out << "windowed " << engine->getScreenWidth() << "x" << engine->getScreenHeight() << "\n";
 
 	// write options elements convars

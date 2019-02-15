@@ -32,7 +32,7 @@ public:
 	static void drawMM(Graphics *g, Osu *osu, const std::vector<std::vector<Vector2>> &points, float hitcircleDiameter, float from = 0.0f, float to = 1.0f, Color color = 0xffffffff, float alpha = 1.0f, long sliderTimeForRainbow = 0);
 
 private:
-	static void drawFillSliderBodyPeppy(Graphics *g, Osu *osu, const std::vector<Vector2> &points, VertexArrayObject *circleMesh, float radius, int drawFromIndex, int drawUpToIndex);
+	static void drawFillSliderBodyPeppy(Graphics *g, Osu *osu, const std::vector<Vector2> &points, VertexArrayObject *circleMesh, float radius, int drawFromIndex, int drawUpToIndex, Shader *shader = NULL);
 	static void drawFillSliderBodyPeppyVR(Graphics *g, Osu *osu, OsuVR *vr, Matrix4 &mvp, const std::vector<Vector2> &points, VertexArrayObject *circleMesh, float radius, int drawFromIndex, int drawUpToIndex);
 	static void drawFillSliderBodyPeppyVR2(Graphics *g, OsuVR *vr, Matrix4 &mvp, const std::vector<Vector2> &points, VertexArrayObject *circleMesh, float radius, int drawFromIndex, int drawUpToIndex);
 	static void drawFillSliderBodyMM(Graphics *g, const std::vector<std::vector<Vector2>> &points, float radius, int drawFromIndex, int drawUpToIndex);

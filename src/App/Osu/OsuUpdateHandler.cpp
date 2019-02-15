@@ -24,6 +24,8 @@ const char *OsuUpdateHandler::TEMP_UPDATE_DOWNLOAD_FILEPATH = "update.zip";
 
 ConVar *OsuUpdateHandler::m_osu_release_stream_ref = NULL;
 
+#ifdef MCENGINE_FEATURE_PTHREADS
+
 void *OsuUpdateHandler::run(void *data)
 {
 	// not using semaphores/mutexes here because it's not critical
@@ -80,9 +82,16 @@ void *OsuUpdateHandler::run(void *data)
 	return NULL;
 }
 
+#endif
+
 OsuUpdateHandler::OsuUpdateHandler()
 {
+#ifdef MCENGINE_FEATURE_PTHREADS
+
 	m_updateThread = 0;
+
+#endif
+
 	m_status = Osu::autoUpdater ? STATUS::STATUS_CHECKING_FOR_UPDATE : STATUS::STATUS_UP_TO_DATE;
 	m_iNumRetries = 0;
 	_m_bKYS = false;
@@ -94,30 +103,44 @@ OsuUpdateHandler::OsuUpdateHandler()
 
 OsuUpdateHandler::~OsuUpdateHandler()
 {
+#ifdef MCENGINE_FEATURE_PTHREADS
+
 	if (m_updateThread != 0)
 		engine->showMessageErrorFatal("Fatal Error", "OsuUpdateHandler was destroyed while the update thread is still running!!!");
+
+#endif
 }
 
 void OsuUpdateHandler::stop()
 {
+#ifdef MCENGINE_FEATURE_PTHREADS
+
 	if (m_updateThread != 0)
 	{
 		_m_bKYS = true;
 		m_updateThread = 0;
 	}
+
+#endif
 }
 
 void OsuUpdateHandler::wait()
 {
+#ifdef MCENGINE_FEATURE_PTHREADS
+
 	if (m_updateThread != 0)
 	{
 		pthread_join(m_updateThread, NULL);
 		m_updateThread = 0;
 	}
+
+#endif
 }
 
 void OsuUpdateHandler::checkForUpdates()
 {
+#ifdef MCENGINE_FEATURE_PTHREADS
+
 	if (!Osu::autoUpdater || Osu::debug->getBool() || m_updateThread != 0) return;
 
 	int ret = pthread_create(&m_updateThread, NULL, OsuUpdateHandler::run, (void*)this);
@@ -130,6 +153,8 @@ void OsuUpdateHandler::checkForUpdates()
 
 	if (m_iNumRetries > 0)
 		debugLog("OsuUpdateHandler::checkForUpdates() retry %i ...\n", m_iNumRetries);
+
+#endif
 }
 
 bool OsuUpdateHandler::isUpdateAvailable()

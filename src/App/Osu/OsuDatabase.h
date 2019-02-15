@@ -81,6 +81,12 @@ public:
 		unsigned long long totalScore;
 	};
 
+	struct PlayerPPScores
+	{
+		std::vector<Score*> ppScores;
+		unsigned long long totalScore;
+	};
+
 public:
 	OsuDatabase(Osu *osu);
 	~OsuDatabase();
@@ -98,7 +104,7 @@ public:
 	void sortScores(std::string beatmapMD5Hash);
 
 	std::vector<UString> getPlayerNamesWithPPScores();
-	std::vector<Score*> getPlayerPPScores(UString playerName);
+	PlayerPPScores getPlayerPPScores(UString playerName);
 	PlayerStats calculatePlayerStats(UString playerName);
 	void recalculatePPForAllScores();
 	static float getWeightForIndex(int i);
