@@ -29,6 +29,8 @@
 #include "OsuUISongBrowserScoreButton.h"
 #include "OsuUISongBrowserUserButton.h"
 
+ConVar osu_ui_top_ranks_max("osu_ui_top_ranks_max", 100, "maximum number of displayed scores, to keep the ui/scrollbar manageable");
+
 OsuUserStatsScreen::OsuUserStatsScreen(Osu *osu) : OsuScreenBackable(osu)
 {
 	m_name_ref = convar->getConVarByName("name");
@@ -140,7 +142,7 @@ void OsuUserStatsScreen::rebuildScoreButtons(UString playerName)
 	// TODO: optimize db accesses by caching a hashmap from md5hash -> OsuBeatmap*, currently it just does a loop over all diffs of all beatmaps (for every score here)
 	OsuDatabase *db = m_osu->getSongBrowser()->getDatabase();
 	std::vector<OsuDatabase::Score*> scores = db->getPlayerPPScores(playerName).ppScores;
-	for (int i=scores.size()-1; i>=0; i--)
+	for (int i=scores.size()-1; i>=std::max(0, (int)scores.size() - osu_ui_top_ranks_max.getInt()); i--)
 	{
 		const float weight = OsuDatabase::getWeightForIndex(scores.size()-1-i);
 

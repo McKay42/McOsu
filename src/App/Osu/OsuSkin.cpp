@@ -1014,7 +1014,7 @@ void OsuSkin::checkLoadSound(Sound **addressOfPointer, UString skinElementName, 
 	defaultpath2.append(".mp3");
 
 	UString defaultResourceName = resourceName;
-	defaultResourceName.append("_DEFAULT"); // so we don't load the default skin twice
+	defaultResourceName.append("_DEFAULT");
 	if (env->fileExists(defaultpath1))
 		*addressOfPointer = engine->getResourceManager()->loadSoundAbs(defaultpath1, defaultResourceName, false, false, loop);
 	else if (env->fileExists(defaultpath2))
@@ -1045,6 +1045,10 @@ void OsuSkin::checkLoadSound(Sound **addressOfPointer, UString skinElementName, 
 			isDefaultSkin = false;
 		}
 	}
+
+	// force reload default skin sound anyway if the custom skin does not include it (e.g. audio device change)
+	if (isDefaultSkin && *addressOfPointer != NULL)
+		(*addressOfPointer)->reload();
 
 	if ((*addressOfPointer) != NULL)
 	{
