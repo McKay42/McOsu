@@ -50,13 +50,15 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha29Steam.changes.push_back("- Show <artist> - <name> [<diff>] in window title while playing");
 	alpha29Steam.changes.push_back("- Draw up to 10 background stars on song diff buttons");
 	alpha29Steam.changes.push_back("- Default to 0pp in ranking screen for incomplete scores due to scrubbing");
+	alpha29Steam.changes.push_back("- Windows: Fixed touchscreen handling being broken");
 	alpha29Steam.changes.push_back("- Fixed rare override slider reset crash");
 	alpha29Steam.changes.push_back("- Fixed lv only counting top pp scores");
 	alpha29Steam.changes.push_back("- Fixed top rank score button blinking animation not resetting");
 	alpha29Steam.changes.push_back("- Fixed top left info label in songbrowser not updating 0 stars after slow calculation finishes");
 	alpha29Steam.changes.push_back("- Fixed star calculation not prioritizing active selected beatmap if background image loading is disabled");
 	alpha29Steam.changes.push_back("- Fixed potential crashes and data mangling due to race conditions for slow background image/star loading");
-	alpha29Steam.changes.push_back("- Added ConVars: osu_stars_xexxar_angles_sliders, osu_stars_stacking");
+	alpha29Steam.changes.push_back("- Fixed changing audio output device breaking default skin sounds");
+	alpha29Steam.changes.push_back("- Added ConVars: osu_stars_xexxar_angles_sliders, osu_stars_stacking, osu_ui_top_ranks_max");
 	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("- Added \"Top Ranks\"/\"Best Performance\" screen showing all weighted scores (Songbrowser > User > Top Ranks)");
 	alpha29Steam.changes.push_back("- Added option \"Include Relax/Autopilot for total weighted pp/acc\" (Options > General > Player (Name))");
