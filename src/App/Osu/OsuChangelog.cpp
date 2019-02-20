@@ -58,6 +58,7 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha29Steam.changes.push_back("- Fixed star calculation not prioritizing active selected beatmap if background image loading is disabled");
 	alpha29Steam.changes.push_back("- Fixed potential crashes and data mangling due to race conditions for slow background image/star loading");
 	alpha29Steam.changes.push_back("- Fixed changing audio output device breaking default skin sounds");
+	alpha29Steam.changes.push_back("- Fixed search not working as expected after behaviour change");
 	alpha29Steam.changes.push_back("- Added ConVars: osu_stars_xexxar_angles_sliders, osu_stars_stacking, osu_ui_top_ranks_max");
 	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("- Added \"Top Ranks\"/\"Best Performance\" screen showing all weighted scores (Songbrowser > User > Top Ranks)");
