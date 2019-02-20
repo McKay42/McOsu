@@ -235,6 +235,9 @@ void OsuBeatmapDifficulty::unload()
 
 bool OsuBeatmapDifficulty::loadMetadataRaw(bool calculateStars, bool calculateStarsInaccurately)
 {
+	if (env->getOS() == Environment::OS::OS_HORIZON) // causes too much lag on the switch (1)
+		calculateStarsInaccurately = true;
+
 	// to avoid double access/calculation by the background image loader and the songbrowser
 	bool forceCalculateStars = false;
 	if (calculateStars && (starsNoMod == 0.0f || (!starsWereCalculatedAccurately && !calculateStarsInaccurately)))
@@ -641,7 +644,7 @@ bool OsuBeatmapDifficulty::loadMetadataRaw(bool calculateStars, bool calculateSt
 			double speedStars = 0.0;
 
 			starsNoMod = calculateStarDiff(NULL, &aimStars, &speedStars, -1, calculateStarsInaccurately);
-			starsWereCalculatedAccurately = !calculateStarsInaccurately;
+			starsWereCalculatedAccurately = (!calculateStarsInaccurately || env->getOS() == Environment::OS::OS_HORIZON); // causes too much lag on the switch (2)
 
 			// reset
 			if (!loaded) // NOTE: as long as a diff is fully "loaded" (i.e. while playing), we do not have permission to modify any data (reading is fine though)
