@@ -1698,9 +1698,10 @@ bool OsuSongBrowser2::searchMatcher(OsuBeatmap *beatmap, UString searchString)
 	// early return here for literal match/contains
 	if (literalSearchString.length() > 0)
 	{
-		bool atLeastOneFullMatch = true;
 		for (int i=0; i<diffs.size(); i++)
 		{
+			bool atLeastOneFullMatch = true;
+
 			for (int s=0; s<literalSearchStrings.size(); s++)
 			{
 				if (!findSubstringInDifficulty(diffs[i], literalSearchStrings[s]))
@@ -1712,7 +1713,8 @@ bool OsuSongBrowser2::searchMatcher(OsuBeatmap *beatmap, UString searchString)
 				return true;
 		}
 
-		return atLeastOneFullMatch;
+		// expression may have matched, but literal didn't match, so the entire beatmap doesn't match
+		return false;
 	}
 
 	return expressionMatches;
