@@ -322,6 +322,8 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_fullscreenCheckbox = NULL;
 	m_sliderQualitySlider = NULL;
 	m_outputDeviceLabel = NULL;
+	m_dpiTextbox = NULL;
+	m_cm360Textbox = NULL;
 
 	m_fOsuFolderTextboxInvalidAnim = 0.0f;
 	m_fVibrationStrengthExampleTimer = 0.0f;
@@ -794,17 +796,20 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	fovSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeInt) );
 	fovSlider->setKeyDelta(1);
 
-	addSubSection("FPoSu - Mouse");
-	OsuUIButton *cm360CalculatorLinkButton = addButton("https://www.mouse-sensitivity.com/");
-	cm360CalculatorLinkButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onCM360CalculatorLinkClicked) );
-	cm360CalculatorLinkButton->setColor(0xff10667b);
-	addLabel("");
-	m_dpiTextbox = addTextbox(convar->getConVarByName("fposu_mouse_dpi")->getString(), "DPI:", convar->getConVarByName("fposu_mouse_dpi"));
-	m_cm360Textbox = addTextbox(convar->getConVarByName("fposu_mouse_cm_360")->getString(), "cm per 360:", convar->getConVarByName("fposu_mouse_cm_360"));
-	addLabel("");
-	addCheckbox("Invert Vertical", convar->getConVarByName("fposu_invert_vertical"));
-	addCheckbox("Invert Horizontal", convar->getConVarByName("fposu_invert_horizontal"));
-	addCheckbox("Tablet/Absolute Mode (!)", "WARNING: Do NOT enable this if you are using a mouse!\nIf this is enabled, then DPI and cm per 360 will be ignored!", convar->getConVarByName("fposu_absolute_mode"));
+	if (env->getOS() == Environment::OS::OS_WINDOWS)
+	{
+		addSubSection("FPoSu - Mouse");
+		OsuUIButton *cm360CalculatorLinkButton = addButton("https://www.mouse-sensitivity.com/");
+		cm360CalculatorLinkButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onCM360CalculatorLinkClicked) );
+		cm360CalculatorLinkButton->setColor(0xff10667b);
+		addLabel("");
+		m_dpiTextbox = addTextbox(convar->getConVarByName("fposu_mouse_dpi")->getString(), "DPI:", convar->getConVarByName("fposu_mouse_dpi"));
+		m_cm360Textbox = addTextbox(convar->getConVarByName("fposu_mouse_cm_360")->getString(), "cm per 360:", convar->getConVarByName("fposu_mouse_cm_360"));
+		addLabel("");
+		addCheckbox("Invert Vertical", convar->getConVarByName("fposu_invert_vertical"));
+		addCheckbox("Invert Horizontal", convar->getConVarByName("fposu_invert_horizontal"));
+		addCheckbox("Tablet/Absolute Mode (!)", "WARNING: Do NOT enable this if you are using a mouse!\nIf this is enabled, then DPI and cm per 360 will be ignored!", convar->getConVarByName("fposu_absolute_mode"));
+	}
 
 	//**************************************************************************************************************************//
 
@@ -1099,9 +1104,9 @@ void OsuOptionsMenu::update()
 		updateOsuFolder();
 	if (m_nameTextbox->hitEnter())
 		updateName();
-	if (m_dpiTextbox->hitEnter())
+	if (m_dpiTextbox != NULL && m_dpiTextbox->hitEnter())
 		updateFposuDPI();
-	if (m_cm360Textbox->hitEnter())
+	if (m_cm360Textbox != NULL && m_cm360Textbox->hitEnter())
 		updateFposuCMper360();
 }
 
@@ -1744,12 +1749,16 @@ void OsuOptionsMenu::updateName()
 
 void OsuOptionsMenu::updateFposuDPI()
 {
+	if (m_dpiTextbox == NULL) return;
+
 	m_dpiTextbox->stealFocus();
 	convar->getConVarByName("fposu_mouse_dpi")->setValue(m_dpiTextbox->getText());
 }
 
 void OsuOptionsMenu::updateFposuCMper360()
 {
+	if (m_cm360Textbox == NULL) return;
+
 	m_cm360Textbox->stealFocus();
 	convar->getConVarByName("fposu_mouse_cm_360")->setValue(m_cm360Textbox->getText());
 }
