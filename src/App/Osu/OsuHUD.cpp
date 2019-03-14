@@ -76,6 +76,7 @@ ConVar osu_hud_playfield_border_size("osu_hud_playfield_border_size", 5.0f);
 ConVar osu_hud_statistics_scale("osu_hud_statistics_scale", 1.0f);
 ConVar osu_hud_statistics_offset_x("osu_hud_statistics_offset_x", 5.0f);
 ConVar osu_hud_statistics_offset_y("osu_hud_statistics_offset_y", 0.0f);
+ConVar osu_hud_statistics_pp_decimal_places("osu_hud_statistics_pp_decimal_places", 0, "number of decimal places for the live pp counter (min = 0, max = 2)");
 ConVar osu_hud_volume_duration("osu_hud_volume_duration", 1.0f);
 ConVar osu_hud_volume_size_multiplier("osu_hud_volume_size_multiplier", 1.5f);
 ConVar osu_hud_scoreboard_scale("osu_hud_scoreboard_scale", 1.0f);
@@ -955,7 +956,7 @@ void OsuHUD::drawVolumeChange(Graphics *g)
 	{
 		g->push3DScene(McRect(m_volumeMaster->getPos().x, m_volumeMaster->getPos().y, m_volumeMaster->getSize().x, (m_osu->getScreenHeight() - m_volumeMaster->getPos().y)*2.05f));
 		g->rotate3DScene(-(1.0f - m_fVolumeChangeFade)*90, 0, 0);
-		g->translate3DScene(0, 0, (m_fVolumeChangeFade)*500 - 500);
+		g->translate3DScene(0, m_fVolumeChangeFade*60 - 60, (m_fVolumeChangeFade)*500 - 500);
 	}
 
 	m_volumeMaster->setPos(m_osu->getScreenSize() - m_volumeMaster->getSize() - Vector2(m_volumeMaster->getSize().y, m_volumeMaster->getSize().y));
@@ -1858,7 +1859,7 @@ void OsuHUD::drawProgressBarVR(Graphics *g, Matrix4 &mvp, OsuVR *vr, float perce
 	}
 }
 
-void OsuHUD::drawStatistics(Graphics *g, int misses, int sliderbreaks, int bpm, float ar, float cs, float od, int nps, int nd, int ur, int pp)
+void OsuHUD::drawStatistics(Graphics *g, int misses, int sliderbreaks, int bpm, float ar, float cs, float od, int nps, int nd, int ur, float pp)
 {
 	g->pushTransform();
 	{
@@ -1868,7 +1869,7 @@ void OsuHUD::drawStatistics(Graphics *g, int misses, int sliderbreaks, int bpm, 
 		const int yDelta = (int)((m_osu->getTitleFont()->getHeight() + 10)*osu_hud_scale.getFloat()*osu_hud_statistics_scale.getFloat());
 		if (osu_draw_statistics_pp.getBool())
 		{
-			drawStatisticText(g, UString::format("%ipp", pp));
+			drawStatisticText(g, (osu_hud_statistics_pp_decimal_places.getInt() < 1 ? UString::format("%ipp", (int)pp) : (osu_hud_statistics_pp_decimal_places.getInt() > 1 ? UString::format("%.2fpp", pp) : UString::format("%.1fpp", pp))));
 			g->translate(0, yDelta);
 		}
 		if (osu_draw_statistics_misses.getBool())

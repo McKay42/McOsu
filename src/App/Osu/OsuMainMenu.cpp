@@ -198,6 +198,8 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen(osu)
 	m_fMainMenuAnim1Target = 0.0f;
 	m_fMainMenuAnim2Target = 0.0f;
 	m_fMainMenuAnim3Target = 0.0f;
+	m_bInMainMenuRandomAnim = false;
+	m_bMainMenuRandomAnimType = 0;
 
 	m_fShutdownScheduledTime = 0.0f;
 	m_bWasCleanShutdown = false;
@@ -289,12 +291,15 @@ void OsuMainMenu::draw(Graphics *g)
 	if (m_osu->getSelectedBeatmap() != NULL && m_osu->getSelectedBeatmap()->getSelectedDifficulty() != NULL && m_osu->getSelectedBeatmap()->getMusic() != NULL && m_osu->getSelectedBeatmap()->getMusic()->isPlaying())
 	{
 		haveTimingpoints = true;
+
 		const long curMusicPos = (long)m_osu->getSelectedBeatmap()->getMusic()->getPositionMS() + (long)m_osu_universal_offset_ref->getInt() + (long)m_osu_universal_offset_hardcoded_ref->getInt();
+
 		OsuBeatmapDifficulty::TIMING_INFO t = m_osu->getSelectedBeatmap()->getSelectedDifficulty()->getTimingInfoForTime(curMusicPos);
+
 		if (t.beatLengthBase == 0.0f) // bah
 			t.beatLengthBase = 1.0f;
 
-		pulse = (float)((curMusicPos - t.offset) % (long)t.beatLengthBase) / t.beatLengthBase;
+		pulse = (float)((curMusicPos - t.offset) % std::max((long)t.beatLengthBase, (long)1)) / t.beatLengthBase; // modulo must be >= 1
 	}
 	else
 		pulse = (div - fmod(engine->getTime(), div))/div;
@@ -390,10 +395,20 @@ void OsuMainMenu::draw(Graphics *g)
 		g->pop3DScene();
 
 	// draw main button
+	float inset = 0.0f;
 	if (m_fMainMenuAnim > 0.0f && m_fMainMenuAnim != 1.0f)
 	{
+		inset = 1.0f;
+
+		g->setDepthBuffer(true);
+		g->clearDepthBuffer();
+
 		g->push3DScene(mainButtonRect);
+		g->offset3DScene(0, 0, mainButtonRect.getWidth()/2);
+
 		g->rotate3DScene(m_fMainMenuAnim1*360.0f, m_fMainMenuAnim2*360.0f, m_fMainMenuAnim3*360.0f);
+
+		//g->rotate3DScene(engine->getMouse()->getPos().y, engine->getMouse()->getPos().x, 0);
 
 		/*
 		g->offset3DScene(0, 0, 300.0f);
@@ -401,135 +416,149 @@ void OsuMainMenu::draw(Graphics *g)
 		*/
 	}
 
-	/*
-	g->setDepthBuffer(true);
-	g->clearDepthBuffer();
-	g->setCulling(true);
-	*/
-
 	// front side
 	g->setColor(0xff000000);
 	g->pushTransform();
-	g->translate(0, 0, -0.1f);
-	g->fillRect(mainButtonRect.getX(), mainButtonRect.getY(), mainButtonRect.getWidth(), mainButtonRect.getHeight());
+	{
+		g->translate(0, 0, inset);
+		g->fillRect(mainButtonRect.getX() + inset, mainButtonRect.getY() + inset, mainButtonRect.getWidth() - 2*inset, mainButtonRect.getHeight() - 2*inset);
+	}
 	g->popTransform();
 	g->setColor(0xffffffff);
 	g->drawRect(mainButtonRect.getX(), mainButtonRect.getY(), mainButtonRect.getWidth(), mainButtonRect.getHeight());
 
-	/*
-	// right side
-	g->offset3DScene(0, 0, mainButtonRect.getWidth()/2);
-	g->rotate3DScene(0, 90, 0);
-	{
-		g->setColor(0xff00ff00);
-		g->pushTransform();
-		g->translate(0, 0, -0.1f);
-		g->fillRect(mainButtonRect.getX(), mainButtonRect.getY(), mainButtonRect.getWidth(), mainButtonRect.getHeight());
-		g->popTransform();
-		//g->setColor(0xffffffff);
-		//g->drawRect(mainButtonRect.getX(), mainButtonRect.getY(), mainButtonRect.getWidth(), mainButtonRect.getHeight());
-	}
-	g->rotate3DScene(0, -90, 0);
-	g->offset3DScene(0, 0, 0);
-
-	// left side
-	g->offset3DScene(0, 0, mainButtonRect.getWidth()/2);
-	g->rotate3DScene(0, -90, 0);
-	{
-		g->setColor(0xffffff00);
-		g->pushTransform();
-		g->translate(0, 0, -0.1f);
-		g->fillRect(mainButtonRect.getX(), mainButtonRect.getY(), mainButtonRect.getWidth(), mainButtonRect.getHeight());
-		g->popTransform();
-		//g->setColor(0xffffffff);
-		//g->drawRect(mainButtonRect.getX(), mainButtonRect.getY(), mainButtonRect.getWidth(), mainButtonRect.getHeight());
-	}
-	g->rotate3DScene(0, 90, 0);
-	g->offset3DScene(0, 0, 0);
-
-	// top side
-	g->offset3DScene(0, 0, mainButtonRect.getHeight()/2);
-	g->rotate3DScene(90, 0, 0);
-	{
-		g->setColor(0xff00ffff);
-		g->pushTransform();
-		g->translate(0, 0, -0.1f);
-		g->fillRect(mainButtonRect.getX(), mainButtonRect.getY(), mainButtonRect.getWidth(), mainButtonRect.getHeight());
-		g->popTransform();
-		//g->setColor(0xffffffff);
-		//g->drawRect(mainButtonRect.getX(), mainButtonRect.getY(), mainButtonRect.getWidth(), mainButtonRect.getHeight());
-	}
-	g->rotate3DScene(-90, 0, 0);
-	g->offset3DScene(0, 0, 0);
-
-	// bottom side
-	g->offset3DScene(0, 0, mainButtonRect.getHeight()/2);
-	g->rotate3DScene(-90, 0, 0);
-	{
-		g->setColor(0xffff0000);
-		g->pushTransform();
-		g->translate(0, 0, -0.1f);
-		g->fillRect(mainButtonRect.getX(), mainButtonRect.getY(), mainButtonRect.getWidth(), mainButtonRect.getHeight());
-		g->popTransform();
-		//g->setColor(0xffffffff);
-		//g->drawRect(mainButtonRect.getX(), mainButtonRect.getY(), mainButtonRect.getWidth(), mainButtonRect.getHeight());
-	}
-	g->rotate3DScene(90, 0, 0);
-	g->offset3DScene(0, 0, 0);
-	*/
-
-	float fontScale = 1.0f - pulseSub + m_fSizeAddAnim;
-
+	// main text
+	const float fontScale = 1.0f - pulseSub + m_fSizeAddAnim;
 	g->setColor(0xffffffff);
 	g->pushTransform();
-	g->scale(fontScale, fontScale);
-	g->translate(m_vCenter.x - m_fCenterOffsetAnim - (titleFont->getStringWidth(MCOSU_MAIN_BUTTON_TEXT)/2.0f)*fontScale, m_vCenter.y + (titleFont->getHeight()*fontScale)/2.25f);
-	g->drawString(titleFont, MCOSU_MAIN_BUTTON_TEXT);
+	{
+		g->scale(fontScale, fontScale);
+		g->translate(m_vCenter.x - m_fCenterOffsetAnim - (titleFont->getStringWidth(MCOSU_MAIN_BUTTON_TEXT)/2.0f)*fontScale, m_vCenter.y + (titleFont->getHeight()*fontScale)/2.25f, -1.0f);
+		g->drawString(titleFont, MCOSU_MAIN_BUTTON_TEXT);
+	}
 	g->popTransform();
 
-	if ((m_fMainMenuAnim1*360.0f > 90.0f && m_fMainMenuAnim1*360.0f < 270.0f) || (m_fMainMenuAnim2*360.0f > 90.0f && m_fMainMenuAnim2*360.0f < 270.0f)
-	 || (m_fMainMenuAnim1*360.0f < -90.0f && m_fMainMenuAnim1*360.0f > -270.0f) || (m_fMainMenuAnim2*360.0f < -90.0f && m_fMainMenuAnim2*360.0f > -270.0f))
+	// subtitle
+	if (MCOSU_MAIN_BUTTON_SUBTEXT.length() > 0)
 	{
-		// huehuehuehuehue
-	}
-	else
-	{
-		if (MCOSU_MAIN_BUTTON_SUBTEXT.length() > 0)
-		{
-			float invertedPulse = 1.0f - pulse;
+		float invertedPulse = 1.0f - pulse;
 
-			if (haveTimingpoints)
-				g->setColor(COLORf(1.0f, 0.10f + 0.15f*invertedPulse, 0.10f + 0.15f*invertedPulse, 0.10f + 0.15f*invertedPulse));
-			else
-				g->setColor(0xff444444);
+		if (haveTimingpoints)
+			g->setColor(COLORf(1.0f, 0.10f + 0.15f*invertedPulse, 0.10f + 0.15f*invertedPulse, 0.10f + 0.15f*invertedPulse));
+		else
+			g->setColor(0xff444444);
 
-			g->pushTransform();
-			g->scale(fontScale, fontScale);
-			g->translate(m_vCenter.x - m_fCenterOffsetAnim - (smallFont->getStringWidth(MCOSU_MAIN_BUTTON_SUBTEXT)/2.0f)*fontScale, m_vCenter.y + (mainButtonRect.getHeight()/2.0f)/2.0f + (smallFont->getHeight()*fontScale)/2.0f);
-			g->drawString(smallFont, MCOSU_MAIN_BUTTON_SUBTEXT);
-			g->popTransform();
-		}
+		g->pushTransform();
+		g->scale(fontScale, fontScale);
+		g->translate(m_vCenter.x - m_fCenterOffsetAnim - (smallFont->getStringWidth(MCOSU_MAIN_BUTTON_SUBTEXT)/2.0f)*fontScale, m_vCenter.y + (mainButtonRect.getHeight()/2.0f)/2.0f + (smallFont->getHeight()*fontScale)/2.0f, -1.0f);
+		g->drawString(smallFont, MCOSU_MAIN_BUTTON_SUBTEXT);
+		g->popTransform();
 	}
 
 	if (m_fMainMenuAnim > 0.0f && m_fMainMenuAnim != 1.0f)
 	{
-		if ((m_fMainMenuAnim1*360.0f > 90.0f && m_fMainMenuAnim1*360.0f < 270.0f) || (m_fMainMenuAnim2*360.0f > 90.0f && m_fMainMenuAnim2*360.0f < 270.0f)
-		 || (m_fMainMenuAnim1*360.0f < -90.0f && m_fMainMenuAnim1*360.0f > -270.0f) || (m_fMainMenuAnim2*360.0f < -90.0f && m_fMainMenuAnim2*360.0f > -270.0f))
+		// back side
+		g->rotate3DScene(0, -180, 0);
+		g->setColor(0xff000000);
+		g->pushTransform();
 		{
-			g->setColor(0xffffffff);
-			g->pushTransform();
-			g->scale(fontScale, fontScale);
-			g->translate(m_vCenter.x - m_fCenterOffsetAnim - (titleFont->getStringWidth(MCOSU_MAIN_BUTTON_BACK_TEXT)/2.0f)*fontScale, m_vCenter.y + ((titleFont->getHeight()*fontScale)/2.25f)*4.0f);
-			g->drawString(titleFont, MCOSU_MAIN_BUTTON_BACK_TEXT);
-			g->popTransform();
+			g->translate(0, 0, inset);
+			g->fillRect(mainButtonRect.getX() + inset, mainButtonRect.getY() + inset, mainButtonRect.getWidth() - 2*inset, mainButtonRect.getHeight() - 2*inset);
 		}
-		g->pop3DScene();
-	}
+		g->popTransform();
+		g->setColor(0xffffffff);
+		g->drawRect(mainButtonRect.getX(), mainButtonRect.getY(), mainButtonRect.getWidth(), mainButtonRect.getHeight());
 
-	/*
-	g->setCulling(false);
-	g->setDepthBuffer(false);
-	*/
+		// right side
+		g->offset3DScene(0, 0, mainButtonRect.getWidth()/2);
+		g->rotate3DScene(0, 90, 0);
+		{
+			//g->setColor(0xff00ff00);
+			g->setColor(0xff000000);
+			g->pushTransform();
+			{
+				g->translate(0, 0, inset);
+				g->fillRect(mainButtonRect.getX() + inset, mainButtonRect.getY() + inset, mainButtonRect.getWidth() - 2*inset, mainButtonRect.getHeight() - 2*inset);
+			}
+			g->popTransform();
+
+			g->setColor(0xffffffff);
+			g->drawRect(mainButtonRect.getX(), mainButtonRect.getY(), mainButtonRect.getWidth(), mainButtonRect.getHeight());
+		}
+		g->rotate3DScene(0, -90, 0);
+		g->offset3DScene(0, 0, 0);
+
+		// left side
+		g->offset3DScene(0, 0, mainButtonRect.getWidth()/2);
+		g->rotate3DScene(0, -90, 0);
+		{
+			//g->setColor(0xffffff00);
+			g->setColor(0xff000000);
+			g->pushTransform();
+			{
+				g->translate(0, 0, inset);
+				g->fillRect(mainButtonRect.getX() + inset, mainButtonRect.getY() + inset, mainButtonRect.getWidth() - 2*inset, mainButtonRect.getHeight() - 2*inset);
+			}
+			g->popTransform();
+
+			g->setColor(0xffffffff);
+			g->drawRect(mainButtonRect.getX(), mainButtonRect.getY(), mainButtonRect.getWidth(), mainButtonRect.getHeight());
+		}
+		g->rotate3DScene(0, 90, 0);
+		g->offset3DScene(0, 0, 0);
+
+		// top side
+		g->offset3DScene(0, 0, mainButtonRect.getHeight()/2);
+		g->rotate3DScene(90, 0, 0);
+		{
+			//g->setColor(0xff00ffff);
+			g->setColor(0xff000000);
+			g->pushTransform();
+			{
+				g->translate(0, 0, inset);
+				g->fillRect(mainButtonRect.getX() + inset, mainButtonRect.getY() + inset, mainButtonRect.getWidth() - 2*inset, mainButtonRect.getHeight() - 2*inset);
+			}
+			g->popTransform();
+
+			g->setColor(0xffffffff);
+			g->drawRect(mainButtonRect.getX(), mainButtonRect.getY(), mainButtonRect.getWidth(), mainButtonRect.getHeight());
+		}
+		g->rotate3DScene(-90, 0, 0);
+		g->offset3DScene(0, 0, 0);
+
+		// bottom side
+		g->offset3DScene(0, 0, mainButtonRect.getHeight()/2);
+		g->rotate3DScene(-90, 0, 0);
+		{
+			//g->setColor(0xffff0000);
+			g->setColor(0xff000000);
+			g->pushTransform();
+			{
+				g->translate(0, 0, inset);
+				g->fillRect(mainButtonRect.getX() + inset, mainButtonRect.getY() + inset, mainButtonRect.getWidth() - 2*inset, mainButtonRect.getHeight() - 2*inset);
+			}
+			g->popTransform();
+
+			g->setColor(0xffffffff);
+			g->drawRect(mainButtonRect.getX(), mainButtonRect.getY(), mainButtonRect.getWidth(), mainButtonRect.getHeight());
+		}
+		g->rotate3DScene(90, 0, 0);
+		g->offset3DScene(0, 0, 0);
+
+		// back text
+		g->setColor(0xffffffff);
+		g->pushTransform();
+		{
+			g->scale(fontScale, fontScale);
+			g->translate(m_vCenter.x - m_fCenterOffsetAnim - (titleFont->getStringWidth(MCOSU_MAIN_BUTTON_BACK_TEXT)/2.0f)*fontScale, m_vCenter.y + ((titleFont->getHeight()*fontScale)/2.25f)*4.0f, -1.0f);
+			g->drawString(titleFont, MCOSU_MAIN_BUTTON_BACK_TEXT);
+		}
+		g->popTransform();
+
+		g->pop3DScene();
+
+		g->setDepthBuffer(false);
+	}
 
 	/*
 	if (m_fShutdownScheduledTime != 0.0f)
@@ -588,12 +617,32 @@ void OsuMainMenu::update()
 		m_fShutdownScheduledTime = 0.0f;
 	}
 
+	// main button autohide + anim
 	if (m_bMenuElementsVisible)
 		m_fMainMenuAnimTime = engine->getTime() + 15.0f;
 	if (engine->getTime() > m_fMainMenuAnimTime)
 	{
 		m_fMainMenuAnimTime = engine->getTime() + 10.0f + (static_cast<float>(rand())/static_cast<float>(RAND_MAX))*5.0f;
 		animMainButton();
+	}
+
+	if (m_bInMainMenuRandomAnim && m_bMainMenuRandomAnimType == 1 && anim->isAnimating(&m_fMainMenuAnim))
+	{
+		Vector2 mouseDelta = (m_mainButton->getPos() + m_mainButton->getSize()/2) - engine->getMouse()->getPos();
+		mouseDelta.x = clamp<float>(mouseDelta.x, -engine->getScreenSize().x/2, engine->getScreenSize().x/2);
+		mouseDelta.y = clamp<float>(mouseDelta.y, -engine->getScreenSize().y/2, engine->getScreenSize().y/2);
+		mouseDelta.x /= engine->getScreenSize().x;
+		mouseDelta.y /= engine->getScreenSize().y;
+
+		const float decay = clamp<float>((1.0f - m_fMainMenuAnim - 0.075f) / 0.025f, 0.0f, 1.0f);
+
+		const Vector2 pushAngle = Vector2(mouseDelta.y, -mouseDelta.x) * Vector2(0.15f, 0.15f) * decay;
+
+		anim->moveQuadOut(&m_fMainMenuAnim1, pushAngle.x, 0.15f, true);
+
+		anim->moveQuadOut(&m_fMainMenuAnim2, pushAngle.y, 0.15f, true);
+
+		anim->moveQuadOut(&m_fMainMenuAnim3, 0.0f, 0.15f, true);
 	}
 
 	// handle update checker and status text
@@ -746,6 +795,8 @@ void OsuMainMenu::updateLayout()
 
 		m_menuElements[i]->setRelPos(m_mainButton->getRelPos().x + m_mainButton->getSize().x*offsetPercent - menuElementExtraWidth*offsetPercent + menuElementExtraWidth*(1.0f - offsetPercent), curY);
 		m_menuElements[i]->setSize(m_mainButton->getSize().x + menuElementExtraWidth*offsetPercent - 2.0f*menuElementExtraWidth*(1.0f - offsetPercent), menuElementHeight);
+		m_menuElements[i]->setTextColor(COLORf(offsetPercent, 1.0f, 1.0f, 1.0f));
+		m_menuElements[i]->setFrameColor(COLORf(offsetPercent, 1.0f, 1.0f, 1.0f));
 	}
 
 	m_container->setSize(m_osu->getScreenSize() + Vector2(1,1));
@@ -754,29 +805,57 @@ void OsuMainMenu::updateLayout()
 
 void OsuMainMenu::animMainButton()
 {
+	m_bInMainMenuRandomAnim = true;
+
+	m_bMainMenuRandomAnimType = (rand() % 4) == 1 ? 1 : 0;
+
 	m_fMainMenuAnim = 0.0f;
 	m_fMainMenuAnim1 = 0.0f;
 	m_fMainMenuAnim2 = 0.0f;
-	m_fMainMenuAnim3 = 1.0f;
 
-	m_fMainMenuAnim1Target = (rand() % 2) == 1 ? 1.0f : -1.0f;
-	m_fMainMenuAnim2Target = (rand() % 2) == 1 ? 1.0f : -1.0f;
-	m_fMainMenuAnim3Target = (rand() % 2) == 1 ? 1.0f : -1.0f;
+	if (m_bMainMenuRandomAnimType == 0)
+	{
+		m_fMainMenuAnim3 = 1.0f;
 
-	anim->moveQuadOut(&m_fMainMenuAnim, 1.0f, 2.5f + 2.5f);
-	anim->moveQuadOut(&m_fMainMenuAnim1, m_fMainMenuAnim1Target, 2.5f + (static_cast<float>(rand())/static_cast<float>(RAND_MAX))*2.5f);
-	anim->moveQuadOut(&m_fMainMenuAnim2, m_fMainMenuAnim2Target, 2.5f + (static_cast<float>(rand())/static_cast<float>(RAND_MAX))*2.5f);
-	anim->moveQuadOut(&m_fMainMenuAnim3, m_fMainMenuAnim3Target, 2.5f + (static_cast<float>(rand())/static_cast<float>(RAND_MAX))*2.5f);
+		m_fMainMenuAnim1Target = (rand() % 2) == 1 ? 1.0f : -1.0f;
+		m_fMainMenuAnim2Target = (rand() % 2) == 1 ? 1.0f : -1.0f;
+		m_fMainMenuAnim3Target = (rand() % 2) == 1 ? 1.0f : -1.0f;
+
+		const float randomDuration1 = (static_cast<float>(rand())/static_cast<float>(RAND_MAX))*3.5f;
+		const float randomDuration2 = (static_cast<float>(rand())/static_cast<float>(RAND_MAX))*3.5f;
+		const float randomDuration3 = (static_cast<float>(rand())/static_cast<float>(RAND_MAX))*3.5f;
+
+		anim->moveQuadOut(&m_fMainMenuAnim, 1.0f, 1.5f + std::max(randomDuration1, std::max(randomDuration2, randomDuration3)));
+		anim->moveQuadOut(&m_fMainMenuAnim1, m_fMainMenuAnim1Target, 1.5f + randomDuration1);
+		anim->moveQuadOut(&m_fMainMenuAnim2, m_fMainMenuAnim2Target, 1.5f + randomDuration2);
+		anim->moveQuadOut(&m_fMainMenuAnim3, m_fMainMenuAnim3Target, 1.5f + randomDuration3);
+	}
+	else
+	{
+		m_fMainMenuAnim3 = 0.0f;
+
+		m_fMainMenuAnim1Target = 0.0f;
+		m_fMainMenuAnim2Target = 0.0f;
+		m_fMainMenuAnim3Target = 0.0f;
+
+		m_fMainMenuAnim = 0.0f;
+		anim->moveQuadOut(&m_fMainMenuAnim, 1.0f, 5.0f);
+	}
 }
 
 void OsuMainMenu::animMainButtonBack()
 {
+	m_bInMainMenuRandomAnim = false;
+
 	if (anim->isAnimating(&m_fMainMenuAnim))
 	{
 		anim->moveQuadOut(&m_fMainMenuAnim, 1.0f, 0.25f, true);
 		anim->moveQuadOut(&m_fMainMenuAnim1, m_fMainMenuAnim1Target, 0.25f, true);
+		anim->moveQuadOut(&m_fMainMenuAnim1, 0.0f, 0.0f, 0.25f);
 		anim->moveQuadOut(&m_fMainMenuAnim2, m_fMainMenuAnim2Target, 0.25f, true);
+		anim->moveQuadOut(&m_fMainMenuAnim2, 0.0f, 0.0f, 0.25f);
 		anim->moveQuadOut(&m_fMainMenuAnim3, m_fMainMenuAnim3Target, 0.10f, true);
+		anim->moveQuadOut(&m_fMainMenuAnim3, 0.0f, 0.0f, 0.1f);
 	}
 }
 
@@ -856,7 +935,40 @@ void OsuMainMenu::onMainMenuButtonPressed()
 	else
 		setMenuElementsVisible(true);
 
-	animMainButtonBack();
+	if (anim->isAnimating(&m_fMainMenuAnim) && m_bInMainMenuRandomAnim)
+		animMainButtonBack();
+	else
+	{
+		m_bInMainMenuRandomAnim = false;
+
+		Vector2 mouseDelta = (m_mainButton->getPos() + m_mainButton->getSize()/2) - engine->getMouse()->getPos();
+		mouseDelta.x = clamp<float>(mouseDelta.x, -m_mainButton->getSize().x/2, m_mainButton->getSize().x/2);
+		mouseDelta.y = clamp<float>(mouseDelta.y, -m_mainButton->getSize().y/2, m_mainButton->getSize().y/2);
+		mouseDelta.x /= m_mainButton->getSize().x;
+		mouseDelta.y /= m_mainButton->getSize().y;
+
+		const Vector2 pushAngle = Vector2(mouseDelta.y, -mouseDelta.x) * Vector2(0.15f, 0.15f);
+
+		m_fMainMenuAnim = 0.001f;
+		anim->moveQuadOut(&m_fMainMenuAnim, 1.0f, 0.15f + 0.4f, true);
+
+		if (!anim->isAnimating(&m_fMainMenuAnim1))
+			m_fMainMenuAnim1 = 0.0f;
+
+		anim->moveQuadOut(&m_fMainMenuAnim1, pushAngle.x, 0.15f, true);
+		anim->moveQuadOut(&m_fMainMenuAnim1, 0.0f, 0.4f, 0.15f);
+
+		if (!anim->isAnimating(&m_fMainMenuAnim2))
+			m_fMainMenuAnim2 = 0.0f;
+
+		anim->moveQuadOut(&m_fMainMenuAnim2, pushAngle.y, 0.15f, true);
+		anim->moveQuadOut(&m_fMainMenuAnim2, 0.0f, 0.4f, 0.15f);
+
+		if (!anim->isAnimating(&m_fMainMenuAnim3))
+			m_fMainMenuAnim3 = 0.0f;
+
+		anim->moveQuadOut(&m_fMainMenuAnim3, 0.0f, 0.15f, true);
+	}
 }
 
 void OsuMainMenu::onPlayButtonPressed()

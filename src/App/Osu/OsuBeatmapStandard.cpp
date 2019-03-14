@@ -1283,7 +1283,7 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 		// save local score, but only under certain conditions
 		const bool isComplete = (num300s + num100s + num50s + numMisses >= numHitObjects);
 		const bool isZero = (m_osu->getScore()->getScore() < 1);
-		const bool isUnranked = (m_osu->getModAuto() || (m_osu->getModAutopilot() && m_osu->getModRelax()));
+		const bool isUnranked = (m_osu->getModAuto() || (m_osu->getModAutopilot() && m_osu->getModRelax())) || m_osu->getScore()->isUnranked();
 		int scoreIndex = -1;
 		if (isComplete && !isZero && !isUnranked && !m_osu->getScore()->hasDied())
 		{

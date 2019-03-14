@@ -52,9 +52,11 @@ void OsuUISongBrowserCollectionButton::draw(Graphics *g)
 	float titleScale = (size.y*m_fTitleScale) / m_font->getHeight();
 	g->setColor(m_bSelected ? skin->getSongSelectActiveText() : skin->getSongSelectInactiveText());
 	g->pushTransform();
+	{
 		g->scale(titleScale, titleScale);
 		g->translate(pos.x + textXOffset, pos.y + size.y/2 + (m_font->getHeight()*titleScale)/2);
 		g->drawString(m_font, titleString);
+	}
 	g->popTransform();
 }
 
@@ -75,18 +77,23 @@ std::vector<OsuUISongBrowserButton*> OsuUISongBrowserCollectionButton::getChildr
 	{
 		for (int i=0; i<m_children.size(); i++)
 		{
+			OsuUISongBrowserButton *child = m_children[i];
+
 			// TODO:
 			// parent
 			// special case here, since the beatmap button is hidden while it is selected (gets replaced by the diff buttons)
 			///if (!m_children[i]->isSelected())
-				children.push_back(m_children[i]);
-
-			// children
-			std::vector<OsuUISongBrowserButton*> recursiveChildren = m_children[i]->getChildren();
-			if (recursiveChildren.size() > 0)
+			if (child->getCollectionSearchHack())
 			{
-				children.reserve(children.size() + recursiveChildren.size());
-				children.insert(children.end(), recursiveChildren.begin(), recursiveChildren.end());
+				children.push_back(child);
+
+				// children
+				std::vector<OsuUISongBrowserButton*> recursiveChildren = child->getChildren();
+				if (recursiveChildren.size() > 0)
+				{
+					children.reserve(children.size() + recursiveChildren.size());
+					children.insert(children.end(), recursiveChildren.begin(), recursiveChildren.end());
+				}
 			}
 		}
 	}
@@ -106,6 +113,7 @@ void OsuUISongBrowserCollectionButton::onSelected(bool wasSelected)
 		getPreviousButton()->deselect();
 	else
 		m_songBrowser->rebuildSongButtons(); // this is in the else-branch to avoid double execution (since it is already executed in deselect())
+
 	setPreviousButton(this);
 
 	m_songBrowser->scrollToSongButton(this, true);
@@ -124,12 +132,15 @@ UString OsuUISongBrowserCollectionButton::buildTitleString()
 	int numChildren = 0;
 	for (int i=0; i<m_children.size(); i++)
 	{
-		// OsuUISongBrowserSongButtons
-		numChildren += m_children[i]->getChildrenAbs().size();
+		if (m_children[i]->getCollectionSearchHack())
+		{
+			// OsuUISongBrowserButtons
+			numChildren += m_children[i]->getChildrenAbs().size();
 
-		// OsuUISongBrowserSongDifficultyButtons
-		if (m_children[i]->getChildrenAbs().size() < 1)
-			numChildren++;
+			// OsuUISongBrowserSongDifficultyButtons
+			if (m_children[i]->getChildrenAbs().size() < 1)
+				numChildren++;
+		}
 	}
 
 	titleString.append(UString::format((numChildren == 1 ? " (%i map)" : " (%i maps)"), numChildren));

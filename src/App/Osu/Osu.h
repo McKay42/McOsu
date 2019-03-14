@@ -34,6 +34,7 @@ class OsuHUD;
 class OsuVRTutorial;
 class OsuChangelog;
 class OsuEditor;
+class OsuModFPoSu;
 
 class ConVar;
 class Image;
@@ -135,6 +136,7 @@ public:
 	inline OsuScore *getScore() const {return m_score;}
 	inline OsuUpdateHandler *getUpdateHandler() const {return m_updateHandler;}
 
+	inline RenderTarget *getPlayfieldBuffer() const {return m_playfieldBuffer;}
 	inline RenderTarget *getSliderFrameBuffer() const {return m_sliderFrameBuffer;}
 	inline RenderTarget *getFrameBuffer() const {return m_frameBuffer;}
 	inline RenderTarget *getFrameBuffer2() const {return m_frameBuffer2;}
@@ -217,6 +219,7 @@ private:
 	void onKey2Change(bool pressed, bool mouse);
 
 	void onModMafhamChange(UString oldValue, UString newValue);
+	void onModFPoSuChange(UString oldValue, UString newValue);
 
 	void onLetterboxingOffsetChange(UString oldValue, UString newValue);
 
@@ -236,6 +239,7 @@ private:
 	ConVar *m_osu_draw_cursor_trail_ref;
 	ConVar *m_osu_volume_effects_ref;
 	ConVar *m_osu_mod_mafham_ref;
+	ConVar *m_osu_mod_fposu_ref;
 	ConVar *m_snd_change_check_interval_ref;
 
 	// interfaces
@@ -263,6 +267,7 @@ private:
 
 	// rendering
 	RenderTarget *m_backBuffer;
+	RenderTarget *m_playfieldBuffer;
 	RenderTarget *m_sliderFrameBuffer;
 	RenderTarget *m_frameBuffer;
 	RenderTarget *m_frameBuffer2;
@@ -337,6 +342,9 @@ private:
 	int m_iMultiplayerClientNumEscPresses;
 	bool m_bIsInVRDraw;
 	int m_iInstanceID;
+	bool m_bWasBossKeyPaused;
+
+	OsuModFPoSu *m_fposu;
 };
 
 #endif

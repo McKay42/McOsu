@@ -42,13 +42,15 @@ public:
 	void setHideIfSelected(bool hideIfSelected) {m_bHideIfSelected = hideIfSelected;}
 
 	void setCollectionDiffHack(bool collectionDiffHack) {m_bCollectionDiffHack = collectionDiffHack;}
+	void setCollectionSearchHack(bool collectionSearchHack) {m_bCollectionSearchHack = collectionSearchHack;}
 
 	Vector2 getActualOffset();
 	inline Vector2 getActualSize() {return m_vSize - 2*getActualOffset();}
 	inline Vector2 getActualPos() {return m_vPos + getActualOffset();}
-	inline std::vector<OsuUISongBrowserButton*> getChildrenAbs() {return m_children;}
+	inline std::vector<OsuUISongBrowserButton*> &getChildrenAbs() {return m_children;}
 
 	inline bool getCollectionDiffHack() const {return m_bCollectionDiffHack;}
+	inline bool getCollectionSearchHack() const {return m_bCollectionSearchHack;}
 	inline int getSortHack() const {return m_iSortHack;}
 
 	virtual OsuBeatmap *getBeatmap() const {return NULL;}
@@ -72,6 +74,7 @@ protected:
 
 	bool m_bSelected;
 	bool m_bCollectionDiffHack;
+	bool m_bCollectionSearchHack;
 
 	std::vector<OsuUISongBrowserButton*> m_children;
 

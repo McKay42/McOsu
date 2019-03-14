@@ -132,6 +132,8 @@ private:
 
 	void onDatabaseLoadingFinished();
 
+	void onSearchUpdate();
+
 	void onSortClicked(CBaseUIButton *button);
 	void onSortChange(UString text, int id = -1);
 
@@ -183,6 +185,7 @@ private:
 	std::vector<CBaseUIButton*> m_topbarRightSortButtons;
 	CBaseUILabel *m_groupLabel;
 	CBaseUIButton *m_noGroupingButton;
+	CBaseUIButton *m_collectionsButton;
 	CBaseUILabel *m_sortLabel;
 	CBaseUIButton *m_sortButton;
 	OsuUIContextMenu *m_contextMenu;
@@ -231,6 +234,7 @@ private:
 	UString m_sSearchString;
 	float m_fSearchWaitTime;
 	bool m_bInSearch;
+	GROUP m_searchPrevGroup;
 
 	// background star calculation
 	float m_fBackgroundStarCalculationWorkNotificationTime;
