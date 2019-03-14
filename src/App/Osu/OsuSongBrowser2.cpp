@@ -419,7 +419,8 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	m_groupLabel->setDrawBackground(false);
 	m_topbarRight->addBaseUIElement(m_groupLabel);
 
-	addTopBarRightTabButton("Collections")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onGroupCollections) );
+	m_collectionsButton = addTopBarRightTabButton("Collections");
+	m_collectionsButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onGroupCollections) );
 	///addTopBarRightTabButton("By Artist");
 	///addTopBarRightTabButton("By Date Added")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onSortDateAdded) );
 	///addTopBarRightTabButton("By Difficulty")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onGroupDifficulty) );
@@ -492,6 +493,7 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	m_search->setOffsetRight(10);
 	m_fSearchWaitTime = 0.0f;
 	m_bInSearch = false;
+	m_searchPrevGroup = GROUP::GROUP_NO_GROUPING;
 
 	// background star calculation
 	m_fBackgroundStarCalculationWorkNotificationTime = 0.0f;
@@ -849,40 +851,7 @@ void OsuSongBrowser2::update()
 	if (m_fSearchWaitTime != 0.0f && engine->getTime() > m_fSearchWaitTime)
 	{
 		m_fSearchWaitTime = 0.0f;
-		m_bInSearch = true;
-
-		// empty the container
-		m_songBrowser->getContainer()->empty();
-
-		// rebuild visible song buttons, scroll to top search result
-		m_visibleSongButtons.clear();
-		if (m_sSearchString.length() > 0)
-		{
-			// search for possible matches, add the children below the possibly visible currently selected song button (which owns them)
-			for (int i=0; i<m_songButtons.size(); i++)
-			{
-				m_songButtons[i]->setVisible(false); // unload images
-
-				if (searchMatcher(m_songButtons[i]->getBeatmap(), m_sSearchString))
-					m_visibleSongButtons.push_back(m_songButtons[i]);
-			}
-
-			rebuildSongButtons();
-
-			// scroll to top result, or select the only result
-			if (m_visibleSongButtons.size() > 1)
-				scrollToSongButton(m_visibleSongButtons[0]);
-			else if (m_visibleSongButtons.size() > 0)
-			{
-				selectSongButton(m_visibleSongButtons[0]);
-				m_songBrowser->scrollY(1);
-			}
-		}
-		else
-		{
-			// TODO: remember which tab was selected, instead of defaulting back to no grouping
-			onGroupNoGrouping(m_noGroupingButton);
-		}
+		onSearchUpdate();
 	}
 
 	// handle background star calculation
@@ -1182,8 +1151,7 @@ void OsuSongBrowser2::onKeyUp(KeyboardEvent &key)
 
 void OsuSongBrowser2::onChar(KeyboardEvent &e)
 {
-	if (e.getCharCode() < 32 || !m_bVisible || m_bBeatmapRefreshScheduled || (engine->getKeyboard()->isControlDown() && !engine->getKeyboard()->isAltDown()))
-		return;
+	if (e.getCharCode() < 32 || !m_bVisible || m_bBeatmapRefreshScheduled || (engine->getKeyboard()->isControlDown() && !engine->getKeyboard()->isAltDown())) return;
 
 	// handle searching
 	KEYCODE charCode = e.getCharCode();
@@ -1274,16 +1242,16 @@ void OsuSongBrowser2::selectBeatmapMP(OsuBeatmap *beatmap, OsuBeatmapDifficulty 
 {
 	// this is a bit hacky, but the easiest solution (since we are using the visible songbuttons)
 	{
-		// force no grouping
-		if (m_group != GROUP::GROUP_NO_GROUPING)
-			onGroupNoGrouping(m_noGroupingButton);
-
 		// force exit search
 		if (m_sSearchString.length() > 0)
 		{
 			m_sSearchString = "";
-			scheduleSearchUpdate(true);
+			onSearchUpdate();
 		}
+
+		// force no grouping
+		if (m_group != GROUP::GROUP_NO_GROUPING)
+			onGroupNoGrouping(m_noGroupingButton);
 	}
 
 	for (int i=0; i<m_visibleSongButtons.size(); i++)
@@ -1312,13 +1280,12 @@ void OsuSongBrowser2::selectBeatmapMP(OsuBeatmap *beatmap, OsuBeatmapDifficulty 
 
 void OsuSongBrowser2::refreshBeatmaps()
 {
-	if (!m_bVisible || m_bHasSelectedAndIsPlaying)
-		return;
+	if (!m_bVisible || m_bHasSelectedAndIsPlaying) return;
 
 	// reset
 	m_selectedBeatmap = NULL;
 
-	// delete database
+	// delete local database and UI
 	m_songBrowser->getContainer()->empty();
 	for (int i=0; i<m_songButtons.size(); i++)
 	{
@@ -1427,7 +1394,7 @@ void OsuSongBrowser2::updateSongButtonLayout()
 
 		if (songButton != NULL)
 		{
-			// HACKHACK: fuck
+			// HACKHACK: since individual diff buttons are not supported with the current UI structure, highlight added collection diffs in collections
 			if (songButton->getCollectionDiffHack())
 			{
 				if (m_group == GROUP::GROUP_COLLECTIONS)
@@ -1437,8 +1404,8 @@ void OsuSongBrowser2::updateSongButtonLayout()
 			}
 
 			// depending on the object type, layout differently
-			bool isCollectionButton = dynamic_cast<OsuUISongBrowserCollectionButton*>(songButton) != NULL;
-			bool isDiffButton = dynamic_cast<OsuUISongBrowserSongDifficultyButton*>(songButton) != NULL;
+			const bool isCollectionButton = dynamic_cast<OsuUISongBrowserCollectionButton*>(songButton) != NULL;
+			const bool isDiffButton = dynamic_cast<OsuUISongBrowserSongDifficultyButton*>(songButton) != NULL;
 
 			// give selected items & diffs a bit more spacing, to make them stand out
 			if (((songButton->isSelected() && !isCollectionButton) || isSelected || isDiffButton) && !wasCollectionButton)
@@ -1472,7 +1439,7 @@ void OsuSongBrowser2::updateSongButtonLayout()
 void OsuSongBrowser2::setVisible(bool visible)
 {
 	m_bVisible = visible;
-	m_bShiftPressed = false; // this seems to get stuck sometimes otherwise
+	m_bShiftPressed = false; // seems to get stuck sometimes otherwise
 
 	if (m_bVisible)
 	{
@@ -1497,6 +1464,8 @@ void OsuSongBrowser2::setVisible(bool visible)
 
 bool OsuSongBrowser2::searchMatcher(OsuBeatmap *beatmap, UString searchString)
 {
+	if (beatmap == NULL) return false;
+
 	std::vector<OsuBeatmapDifficulty*> diffs = beatmap->getDifficulties();
 
 	// intelligent search parser
@@ -2032,7 +2001,7 @@ void OsuSongBrowser2::onDatabaseLoadingFinished()
 						}
 					}
 
-					// TODO: only add matched diffs, instead of the whole beatmap
+					// TODO: only add matched diffs, instead of the whole beatmap (not supported by UI structure atm)
 					/*
 					if (matchingDiffs.size() > 1)
 						children.push_back(m_songButtons[sb]);
@@ -2077,6 +2046,86 @@ void OsuSongBrowser2::onDatabaseLoadingFinished()
 
 	// update user name/stats
 	onUserButtonChange(m_name_ref->getString(), -1);
+}
+
+void OsuSongBrowser2::onSearchUpdate()
+{
+	m_bInSearch = (m_sSearchString.length() > 0);
+
+	// empty the container
+	m_songBrowser->getContainer()->empty();
+
+	// rebuild visible song buttons, scroll to top search result
+	m_visibleSongButtons.clear();
+	if (m_bInSearch)
+	{
+		m_searchPrevGroup = m_group;
+
+		// search for possible matches, add the children below the possibly visible currently selected song button (which owns them)
+		switch (m_group)
+		{
+		case GROUP::GROUP_NO_GROUPING:
+			for (int i=0; i<m_songButtons.size(); i++)
+			{
+				if (searchMatcher(m_songButtons[i]->getBeatmap(), m_sSearchString))
+					m_visibleSongButtons.push_back(m_songButtons[i]);
+			}
+			break;
+
+		case GROUP::GROUP_COLLECTIONS:
+			for (int i=0; i<m_collectionButtons.size(); i++)
+			{
+				bool match = false;
+
+				std::vector<OsuUISongBrowserButton*> &children = m_collectionButtons[i]->getChildrenAbs();
+				for (int c=0; c<children.size(); c++)
+				{
+					const bool searchMatch = searchMatcher(children[c]->getBeatmap(), m_sSearchString);
+					match |= searchMatch;
+					children[c]->setCollectionSearchHack(searchMatch); // flag every match
+				}
+
+				if (match)
+					m_visibleSongButtons.push_back(m_collectionButtons[i]);
+			}
+			break;
+		}
+
+		rebuildSongButtons();
+
+		// scroll to top result, or select the only result
+		if (m_visibleSongButtons.size() > 1)
+			scrollToSongButton(m_visibleSongButtons[0]);
+		else if (m_visibleSongButtons.size() > 0)
+		{
+			selectSongButton(m_visibleSongButtons[0]);
+			m_songBrowser->scrollY(1);
+		}
+	}
+	else // exit search
+	{
+		// reset match flag
+		for (int i=0; i<m_collectionButtons.size(); i++)
+		{
+			std::vector<OsuUISongBrowserButton*> &children = m_collectionButtons[i]->getChildrenAbs();
+			for (int c=0; c<children.size(); c++)
+			{
+				children[c]->setCollectionSearchHack(true);
+			}
+		}
+
+		// remember which tab was selected, instead of defaulting back to no grouping
+		switch (m_searchPrevGroup)
+		{
+		case GROUP::GROUP_NO_GROUPING:
+			onGroupNoGrouping(m_noGroupingButton);
+			break;
+
+		case GROUP::GROUP_COLLECTIONS:
+			onGroupCollections(m_collectionsButton);
+			break;
+		}
+	}
 }
 
 void OsuSongBrowser2::onSortClicked(CBaseUIButton *button)
@@ -2182,9 +2231,9 @@ void OsuSongBrowser2::onGroupDifficulty(CBaseUIButton *b)
 
 void OsuSongBrowser2::onAfterSortingOrGroupChange(CBaseUIButton *b)
 {
-	// delete possible search & text
-	m_bInSearch = false;
-	m_sSearchString = "";
+	// keep search state consistent between tab changes
+	if (m_bInSearch)
+		onSearchUpdate();
 
 	// highlight current
 	for (int i=0; i<m_topbarRightTabButtons.size(); i++)
@@ -2207,6 +2256,7 @@ void OsuSongBrowser2::onAfterSortingOrGroupChange(CBaseUIButton *b)
 			break;
 		}
 	}
+
 	if (isAnythingSelected)
 		scrollToSelectedSongButton();
 	else
@@ -2374,8 +2424,7 @@ void OsuSongBrowser2::selectRandomBeatmap()
 			songButtons.push_back(songButton);
 	}
 
-	if (songButtons.size() < 1)
-		return;
+	if (songButtons.size() < 1) return;
 
 	// remember previous
 	if (m_previousRandomBeatmaps.size() == 0 && m_selectedBeatmap != NULL)

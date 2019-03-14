@@ -66,7 +66,7 @@ public:
 	bool play();
 	void restart(bool quick = false);
 	void pause(bool quitIfWaiting = true);
-	void pausePreviewMusic();
+	void pausePreviewMusic(bool toggle = true);
 	bool isPreviewMusicPlaying();
 	void stop(bool quit = true);
 	void fail();

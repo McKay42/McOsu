@@ -199,6 +199,7 @@ public:
 	inline Image *getCircleFull() {return m_circleFull;}
 	inline Image *getSeekTriangle() {return m_seekTriangle;}
 	inline Image *getUserIcon() {return m_userIcon;}
+	inline Image *getBackgroundCube() {return m_backgroundCube;}
 
 	inline Sound *getSpinnerBonus() {return m_spinnerBonus;}
 	inline Sound *getSpinnerSpinSound() {return m_spinnerSpinSound;}
@@ -464,6 +465,7 @@ private:
 	Image *m_circleFull;
 	Image *m_seekTriangle;
 	Image *m_userIcon;
+	Image *m_backgroundCube;
 
 	Sound *m_normalHitNormal;
 	Sound *m_normalHitWhistle;

@@ -115,6 +115,8 @@ private:
 	float m_fMainMenuAnim1Target;
 	float m_fMainMenuAnim2Target;
 	float m_fMainMenuAnim3Target;
+	bool m_bInMainMenuRandomAnim;
+	int m_bMainMenuRandomAnimType;
 
 	float m_fShutdownScheduledTime;
 	bool m_bWasCleanShutdown;

@@ -74,6 +74,8 @@ void OsuScore::reset()
 	m_iNumM1 = 0;
 	m_iNumM2 = 0;
 
+	m_bIsUnranked = false;
+
 	onScoreChange();
 }
 
@@ -378,6 +380,9 @@ void OsuScore::onScoreChange()
 {
 	if (m_osu->getMultiplayer() != NULL)
 		m_osu->getMultiplayer()->onClientScoreChange(getCombo(), getAccuracy(), getScore(), isDead());
+
+	// only used to block local scores for people who think they are very clever by quickly disabling auto just before the end of a beatmap
+	m_bIsUnranked |= (m_osu->getModAuto() || (m_osu->getModAutopilot() && m_osu->getModRelax()));
 }
 
 float OsuScore::calculateAccuracy(int num300s, int num100s, int num50s, int numMisses)

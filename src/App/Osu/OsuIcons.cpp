@@ -17,6 +17,7 @@ wchar_t OsuIcons::Z_SPACE = OsuIcons::addIcon(0x20);
 wchar_t OsuIcons::GEAR = OsuIcons::addIcon(0xf013);
 wchar_t OsuIcons::DESKTOP = OsuIcons::addIcon(0xf108);
 wchar_t OsuIcons::CIRCLE = OsuIcons::addIcon(0xf10c);
+wchar_t OsuIcons::CUBE = OsuIcons::addIcon(0xf1b2);
 wchar_t OsuIcons::VOLUME_UP = OsuIcons::addIcon(0xf028);
 wchar_t OsuIcons::VOLUME_DOWN = OsuIcons::addIcon(0xf027);
 wchar_t OsuIcons::VOLUME_OFF = OsuIcons::addIcon(0xf026);

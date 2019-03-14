@@ -94,6 +94,8 @@ public:
 	inline bool isDead() const {return m_bDead;}
 	inline bool hasDied() const {return m_bDied;}
 
+	inline bool isUnranked() const {return m_bIsUnranked;}
+
 	int getKeyCount(int key);
 
 	UString getModsString();
@@ -143,6 +145,9 @@ private:
 	int m_iNumK2;
 	int m_iNumM1;
 	int m_iNumM2;
+
+	// custom
+	bool m_bIsUnranked;
 };
 
 #endif
