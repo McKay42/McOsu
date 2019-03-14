@@ -11,6 +11,7 @@
 #include "ConVar.h"
 #include "Camera.h"
 #include "Mouse.h"
+#include "Environment.h"
 #include "ResourceManager.h"
 
 #include "Osu.h"
@@ -131,7 +132,7 @@ void OsuModFPoSu::update()
 
 	const bool isAutoCursor = (m_osu->getModAuto() || m_osu->getModAutopilot());
 
-	if (!fposu_absolute_mode.getBool() && !isAutoCursor)
+	if (!fposu_absolute_mode.getBool() && !isAutoCursor && env->getOS() == Environment::OS::OS_WINDOWS) // HACKHACK: windows only for now (raw input support)
 	{
 		// calculate mouse delta
 		// HACKHACK: undo engine mouse sensitivity multiplier
