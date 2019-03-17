@@ -253,6 +253,7 @@ public:
 	OsuOptionsMenuCategoryButton(CBaseUIElement *section, float xPos, float yPos, float xSize, float ySize, UString name, UString text) : CBaseUIButton(xPos, yPos, xSize, ySize, name, text)
 	{
 		m_section = section;
+		m_bActiveCategory = false;
 	}
 
 	virtual void drawText(Graphics *g)
@@ -273,10 +274,14 @@ public:
 		}
 	}
 
+	void setActiveCategory(bool activeCategory) {m_bActiveCategory = activeCategory;}
+
 	inline CBaseUIElement *getSection() const {return m_section;}
+	inline bool isActiveCategory() const {return m_bActiveCategory;}
 
 private:
 	CBaseUIElement *m_section;
+	bool m_bActiveCategory;
 };
 
 
@@ -292,6 +297,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_osu_slider_curve_points_separation = convar->getConVarByName("osu_slider_curve_points_separation");
 	m_osu_letterboxing_offset_x = convar->getConVarByName("osu_letterboxing_offset_x");
 	m_osu_letterboxing_offset_y = convar->getConVarByName("osu_letterboxing_offset_y");
+	m_osu_mod_fposu = convar->getConVarByName("osu_mod_fposu");
 
 	// convar callbacks
 	convar->getConVarByName("osu_skin_use_skin_hitsounds")->setCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onUseSkinsSoundSamplesChange) );
@@ -316,6 +322,8 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_fullscreenCheckbox = NULL;
 	m_sliderQualitySlider = NULL;
 	m_outputDeviceLabel = NULL;
+	m_dpiTextbox = NULL;
+	m_cm360Textbox = NULL;
 
 	m_fOsuFolderTextboxInvalidAnim = 0.0f;
 	m_fVibrationStrengthExampleTimer = 0.0f;
@@ -773,6 +781,38 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 
 	//**************************************************************************************************************************//
 
+	CBaseUIElement *sectionFposu = addSection("FPoSu (3D)");
+
+	addSubSection("FPoSu - General");
+	addCheckbox("FPoSu", "The real 3D FPS mod.\nPlay from a first person shooter perspective in a 3D environment.\nThis is intended only for mouse! (Enable \"Tablet/Absolute Mode\" for tablets.)", convar->getConVarByName("osu_mod_fposu"));
+	addCheckbox("Curved play area", convar->getConVarByName("fposu_curved"));
+	addCheckbox("Background cube", convar->getConVarByName("fposu_cube"));
+	addLabel("");
+	addLabel("NOTE: Use CTRL + O during gameplay to get here!")->setTextColor(0xff777777);
+	addLabel("");
+	CBaseUISlider *fposuDistanceSlider = addSlider("Distance:", 0.01f, 2.0f, convar->getConVarByName("fposu_distance"));
+	fposuDistanceSlider->setKeyDelta(0.01f);
+	CBaseUISlider *fovSlider = addSlider("FOV Horizontal:", 20.0f, 160.0f, convar->getConVarByName("fposu_fov"));
+	fovSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeInt) );
+	fovSlider->setKeyDelta(1);
+
+	if (env->getOS() == Environment::OS::OS_WINDOWS)
+	{
+		addSubSection("FPoSu - Mouse");
+		OsuUIButton *cm360CalculatorLinkButton = addButton("https://www.mouse-sensitivity.com/");
+		cm360CalculatorLinkButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onCM360CalculatorLinkClicked) );
+		cm360CalculatorLinkButton->setColor(0xff10667b);
+		addLabel("");
+		m_dpiTextbox = addTextbox(convar->getConVarByName("fposu_mouse_dpi")->getString(), "DPI:", convar->getConVarByName("fposu_mouse_dpi"));
+		m_cm360Textbox = addTextbox(convar->getConVarByName("fposu_mouse_cm_360")->getString(), "cm per 360:", convar->getConVarByName("fposu_mouse_cm_360"));
+		addLabel("");
+		addCheckbox("Invert Vertical", convar->getConVarByName("fposu_invert_vertical"));
+		addCheckbox("Invert Horizontal", convar->getConVarByName("fposu_invert_horizontal"));
+		addCheckbox("Tablet/Absolute Mode (!)", "WARNING: Do NOT enable this if you are using a mouse!\nIf this is enabled, then DPI and cm per 360 will be ignored!", convar->getConVarByName("fposu_absolute_mode"));
+	}
+
+	//**************************************************************************************************************************//
+
 	CBaseUIElement *sectionOnline = NULL;
 	if (env->getOS() != Environment::OS::OS_HORIZON)
 	{
@@ -810,6 +850,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCategory(sectionSkin, OsuIcons::PAINTBRUSH);
 	addCategory(sectionInput, OsuIcons::GAMEPAD);
 	addCategory(sectionGameplay, OsuIcons::CIRCLE);
+	m_fposuCategoryButton = addCategory(sectionFposu, OsuIcons::CUBE);
 
 	if (sectionOnline != NULL)
 		addCategory(sectionOnline, OsuIcons::GLOBE);
@@ -1032,6 +1073,7 @@ void OsuOptionsMenu::update()
 			OsuOptionsMenuCategoryButton *categoryButton = m_categoryButtons[i];
 			if (categoryButton != NULL && categoryButton->getSection() != NULL)
 			{
+				categoryButton->setActiveCategory(false);
 				categoryButton->setTextColor(0xff737373);
 
 				if (categoryButton->getSection()->getPos().y < m_options->getSize().y*0.4)
@@ -1039,7 +1081,10 @@ void OsuOptionsMenu::update()
 			}
 		}
 		if (activeCategoryButton != NULL)
+		{
+			activeCategoryButton->setActiveCategory(true);
 			activeCategoryButton->setTextColor(0xffffffff);
+		}
 	}
 
 	// delayed update letterboxing mouse scale/offset settings
@@ -1053,6 +1098,16 @@ void OsuOptionsMenu::update()
 			m_osu_letterboxing_offset_y->setValue(m_letterboxingOffsetYSlider->getFloat());
 		}
 	}
+
+	// apply textbox changes on enter key
+	if (m_osuFolderTextbox->hitEnter())
+		updateOsuFolder();
+	if (m_nameTextbox->hitEnter())
+		updateName();
+	if (m_dpiTextbox != NULL && m_dpiTextbox->hitEnter())
+		updateFposuDPI();
+	if (m_cm360Textbox != NULL && m_cm360Textbox->hitEnter())
+		updateFposuCMper360();
 }
 
 void OsuOptionsMenu::onKeyDown(KeyboardEvent &e)
@@ -1245,6 +1300,10 @@ void OsuOptionsMenu::setVisibleInt(bool visible, bool fromOnBack)
 		//anim->deleteExistingAnimation(&m_fAnimation);
 		//m_fAnimation = 0.0f;
 	}
+
+	// auto scroll to fposu settings if opening options while in fposu gamemode
+	if (visible && m_osu->isInPlayMode() && m_osu_mod_fposu->getBool() && !m_fposuCategoryButton->isActiveCategory())
+		onCategoryClicked(m_fposuCategoryButton);
 }
 
 void OsuOptionsMenu::setUsername(UString username)
@@ -1348,7 +1407,10 @@ void OsuOptionsMenu::updateLayout()
 	m_categories->setRelPosX(m_options->getRelPos().x - categoriesWidth);
 	m_categories->setSize(categoriesWidth, m_osu->getScreenHeight() + 1);
 
+	// reset
 	m_options->getContainer()->empty();
+
+	// build layout
 	bool enableHorizontalScrolling = false;
 	int sideMargin = 25*2;
 	int spaceSpacing = 25;
@@ -1532,6 +1594,11 @@ void OsuOptionsMenu::updateLayout()
 
 			int spacing = 15;
 
+			int sideMarginAdd = 0;
+			CBaseUILabel *labelPointer = dynamic_cast<CBaseUILabel*>(e1);
+			if (labelPointer != NULL)
+				sideMarginAdd += elementTextStartOffset;
+
 			if (isKeyBindButton)
 			{
 				CBaseUIElement *e3 = m_elements[i].elements[2];
@@ -1554,7 +1621,7 @@ void OsuOptionsMenu::updateLayout()
 				float dividerEnd = 1.0f / 2.0f;
 				float dividerBegin = 1.0f - dividerEnd;
 
-				e1->setRelPos(sideMargin, yCounter);
+				e1->setRelPos(sideMargin + sideMarginAdd, yCounter);
 				e1->setSizeX(elementWidth*dividerBegin - spacing);
 
 				e2->setRelPos(sideMargin + e1->getSize().x + 2*spacing, yCounter);
@@ -1655,8 +1722,9 @@ void OsuOptionsMenu::scheduleSearchUpdate()
 
 void OsuOptionsMenu::updateOsuFolder()
 {
+	m_osuFolderTextbox->stealFocus();
+
 	// automatically insert a slash at the end if the user forgets
-	// i don't know how i feel about this code
 	UString newOsuFolder = m_osuFolderTextbox->getText();
 	newOsuFolder = newOsuFolder.trim();
 	if (newOsuFolder.length() > 0)
@@ -1675,7 +1743,24 @@ void OsuOptionsMenu::updateOsuFolder()
 
 void OsuOptionsMenu::updateName()
 {
+	m_nameTextbox->stealFocus();
 	convar->getConVarByName("name")->setValue(m_nameTextbox->getText());
+}
+
+void OsuOptionsMenu::updateFposuDPI()
+{
+	if (m_dpiTextbox == NULL) return;
+
+	m_dpiTextbox->stealFocus();
+	convar->getConVarByName("fposu_mouse_dpi")->setValue(m_dpiTextbox->getText());
+}
+
+void OsuOptionsMenu::updateFposuCMper360()
+{
+	if (m_cm360Textbox == NULL) return;
+
+	m_cm360Textbox->stealFocus();
+	convar->getConVarByName("fposu_mouse_cm_360")->setValue(m_cm360Textbox->getText());
 }
 
 void OsuOptionsMenu::updateVRRenderTargetResolutionLabel()
@@ -1902,6 +1987,18 @@ void OsuOptionsMenu::onManuallyManageBeatmapsClicked()
 void OsuOptionsMenu::onLIVReloadCalibrationClicked()
 {
 	convar->getConVarByName("vr_liv_reload_calibration")->exec();
+}
+
+void OsuOptionsMenu::onCM360CalculatorLinkClicked()
+{
+	if (env->getOS() == Environment::OS::OS_HORIZON)
+	{
+		m_osu->getNotificationOverlay()->addNotification("Go to https://www.mouse-sensitivity.com/", 0xffffffff, false, 0.75f);
+		return;
+	}
+
+	m_osu->getNotificationOverlay()->addNotification("Opening browser, please wait ...", 0xffffffff, false, 0.75f);
+	env->openURLInDefaultBrowser("https://www.mouse-sensitivity.com/");
 }
 
 void OsuOptionsMenu::onCheckboxChange(CBaseUICheckbox *checkbox)
@@ -2507,6 +2604,28 @@ CBaseUITextbox *OsuOptionsMenu::addTextbox(UString text, ConVar *cvar)
 	return textbox;
 }
 
+CBaseUITextbox *OsuOptionsMenu::addTextbox(UString text, UString labelText, ConVar *cvar)
+{
+	CBaseUITextbox *textbox = new CBaseUITextbox(0, 0, m_options->getSize().x, 40, "");
+	textbox->setText(text);
+	m_options->getContainer()->addBaseUIElement(textbox);
+
+	CBaseUILabel *label = new CBaseUILabel(0, 0, m_options->getSize().x, 40, labelText, labelText);
+	label->setDrawFrame(false);
+	label->setDrawBackground(false);
+	label->setWidthToContent();
+	m_options->getContainer()->addBaseUIElement(label);
+
+	OPTIONS_ELEMENT e;
+	e.elements.push_back(label);
+	e.elements.push_back(textbox);
+	e.type = 8;
+	e.cvar = cvar;
+	m_elements.push_back(e);
+
+	return textbox;
+}
+
 CBaseUIElement *OsuOptionsMenu::addSkinPreview()
 {
 	CBaseUIElement *skinPreview = new OsuOptionsMenuSkinPreviewElement(m_osu, 0, 0, 0, 200, "skincirclenumberhitresultpreview");
@@ -2535,7 +2654,7 @@ CBaseUIElement *OsuOptionsMenu::addSliderPreview()
 	return sliderPreview;
 }
 
-CBaseUIButton *OsuOptionsMenu::addCategory(CBaseUIElement *section, wchar_t icon)
+OsuOptionsMenuCategoryButton *OsuOptionsMenu::addCategory(CBaseUIElement *section, wchar_t icon)
 {
 	UString iconString; iconString.insert(0, icon);
 	OsuOptionsMenuCategoryButton *button = new OsuOptionsMenuCategoryButton(section, 0, 0, 50, 50, "", iconString);
@@ -2559,6 +2678,8 @@ void OsuOptionsMenu::save()
 
 	updateOsuFolder();
 	updateName();
+	updateFposuDPI();
+	updateFposuCMper360();
 
 	debugLog("Osu: Saving user config file ...\n");
 

@@ -35,7 +35,24 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	std::vector<CHANGELOG> changelogs;
 
 	CHANGELOG alpha29Steam;
-	alpha29Steam.title = UString::format("29.3 (Steam VR Version, %s, %s)", __DATE__, __TIME__);
+	alpha29Steam.title = UString::format("29.4 (Steam VR Version, %s, %s)", __DATE__, __TIME__);
+	alpha29Steam.changes.push_back("- Merged FPoSu (Options > FPoSu)");
+	alpha29Steam.changes.push_back("- FPoSu is a real 3D first person gamemode, contrary to the 2D experimental mod \"First Person\"");
+	alpha29Steam.changes.push_back("- Thanks to Colin Brook (aka SnakeModule on GitHub)");
+	alpha29Steam.changes.push_back("- FPoSu: Moved \"Playfield Edge Distance\" from Mod Selector to Options > FPoSu > \"Distance\"");
+	alpha29Steam.changes.push_back("- FPoSu: Made mouse movement handling independent from regular osu sensitivity settings");
+	alpha29Steam.changes.push_back("- FPoSu: Made backgroundcube.png skinnable");
+	alpha29Steam.changes.push_back("- FPoSu: Added tablet support (Options > FPoSu > \"Tablet/Absolute Mode\")");
+	alpha29Steam.changes.push_back("- FPoSu: Added auto/pilot support");
+	alpha29Steam.changes.push_back("- FPoSu: Added ConVars: fposu_cube_tint_r, fposu_cube_tint_g, fposu_cube_tint_b");
+	alpha29Steam.changes.push_back("- FPoSu: Added letterboxing support");
+	alpha29Steam.changes.push_back("- FPoSu: Fixed mouse position getting set while engine is in background");
+	alpha29Steam.changes.push_back("- Added support for searching in collections");
+	alpha29Steam.changes.push_back("- Added support for changing grouping/sorting while in active search");
+	alpha29Steam.changes.push_back("- Added ConVar: osu_hud_statistics_pp_decimal_places");
+	alpha29Steam.changes.push_back("- Fixed boss key not pausing music");
+	alpha29Steam.changes.push_back("- Fixed another ArithmeticException in main menu (Aspire, Acid Rain - Covetous Beaver)");
+	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("- NOTE: New stars/pp are accurate with an average delta of ~0.1% or ~0.003 stars, except for very few Aspire/2B maps with ~15%");
 	alpha29Steam.changes.push_back("- Updated star algorithm to respect slider curves/repeats/ticks/tails and stacking (7)");
 	alpha29Steam.changes.push_back("- Updated star algorithm (Xexxar) (6), see https://osu.ppy.sh/home/news/2019-02-05-new-changes-to-star-rating-performance-points");

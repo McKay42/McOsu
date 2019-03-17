@@ -81,6 +81,8 @@ private:
 
 	void updateOsuFolder();
 	void updateName();
+	void updateFposuDPI();
+	void updateFposuCMper360();
 	void updateVRRenderTargetResolutionLabel();
 
 	// options
@@ -97,6 +99,7 @@ private:
 	void onDownloadOsuClicked();
 	void onManuallyManageBeatmapsClicked();
 	void onLIVReloadCalibrationClicked();
+	void onCM360CalculatorLinkClicked();
 
 	void onCheckboxChange(CBaseUICheckbox *checkbox);
 	void onSliderChange(CBaseUISlider *slider);
@@ -134,11 +137,12 @@ private:
 	CBaseUICheckbox *addCheckbox(UString text, UString tooltipText = "", ConVar *cvar = NULL);
 	OsuUISlider *addSlider(UString text, float min = 0.0f, float max = 1.0f, ConVar *cvar = NULL, float label1Width = 0.0f);
 	CBaseUITextbox *addTextbox(UString text, ConVar *cvar = NULL);
+	CBaseUITextbox *addTextbox(UString text, UString labelText, ConVar *cvar = NULL);
 	CBaseUIElement *addSkinPreview();
 	CBaseUIElement *addSliderPreview();
 
 	// categories
-	CBaseUIButton *addCategory(CBaseUIElement *section, wchar_t icon);
+	OsuOptionsMenuCategoryButton *addCategory(CBaseUIElement *section, wchar_t icon);
 
 	// vars
 	Osu *m_osu;
@@ -148,6 +152,7 @@ private:
 	OsuUIContextMenu *m_contextMenu;
 	OsuUISearchOverlay *m_search;
 	CBaseUILabel *m_spacer;
+	OsuOptionsMenuCategoryButton *m_fposuCategoryButton;
 
 	std::vector<OsuOptionsMenuCategoryButton*> m_categoryButtons;
 	std::vector<OPTIONS_ELEMENT> m_elements;
@@ -188,11 +193,14 @@ private:
 	CBaseUISlider *m_letterboxingOffsetXSlider;
 	CBaseUISlider *m_letterboxingOffsetYSlider;
 	OsuOptionsMenuSliderPreviewElement *m_sliderPreviewElement;
+	CBaseUITextbox *m_dpiTextbox;
+	CBaseUITextbox *m_cm360Textbox;
 
 	ConVar *m_waitingKey;
 	ConVar *m_osu_slider_curve_points_separation;
 	ConVar *m_osu_letterboxing_offset_x;
 	ConVar *m_osu_letterboxing_offset_y;
+	ConVar *m_osu_mod_fposu;
 
 	float m_fOsuFolderTextboxInvalidAnim;
 	float m_fVibrationStrengthExampleTimer;

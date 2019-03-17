@@ -55,6 +55,7 @@
 #include "OsuChangelog.h"
 #include "OsuEditor.h"
 #include "OsuRichPresence.h"
+#include "OsuModFPoSu.h"
 
 #include "OsuBeatmap.h"
 #include "OsuBeatmapDifficulty.h"
@@ -71,7 +72,7 @@ void DUMMY_OSU_MODS(void) {;}
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 29.3f);
+ConVar osu_version("osu_version", 29.4f);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr");
 #else
@@ -144,6 +145,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_osu_draw_cursor_trail_ref = convar->getConVarByName("osu_draw_cursor_trail");
 	m_osu_volume_effects_ref = convar->getConVarByName("osu_volume_effects");
 	m_osu_mod_mafham_ref = convar->getConVarByName("osu_mod_mafham");
+	m_osu_mod_fposu_ref = convar->getConVarByName("osu_mod_fposu");
 	m_snd_change_check_interval_ref = convar->getConVarByName("snd_change_check_interval");
 
 	// experimental mods list
@@ -328,6 +330,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_bScheduleEndlessModNextBeatmap = false;
 	m_iMultiplayerClientNumEscPresses = 0;
 	m_bIsInVRDraw = false;
+	m_bWasBossKeyPaused = false;
 
 	// debug
 	m_windowManager = new CWindowManager();
@@ -340,6 +343,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	// renderer
 	g_vInternalResolution = engine->getScreenSize();
 	m_backBuffer = engine->getResourceManager()->createRenderTarget(0, 0, getScreenWidth(), getScreenHeight());
+	m_playfieldBuffer = engine->getResourceManager()->createRenderTarget(0, 0, 64, 64);
 	m_sliderFrameBuffer = engine->getResourceManager()->createRenderTarget(0, 0, getScreenWidth(), getScreenHeight());
 	m_frameBuffer = engine->getResourceManager()->createRenderTarget(0, 0, 64, 64);
 	m_frameBuffer2 = engine->getResourceManager()->createRenderTarget(0, 0, 64, 64);
@@ -396,6 +400,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_vrTutorial = new OsuVRTutorial(this);
 	m_changelog = new OsuChangelog(this);
 	m_editor = new OsuEditor(this);
+	m_fposu = new OsuModFPoSu(this);
 
 	// the order in this vector will define in which order events are handled/consumed
 	m_screens.push_back(m_notificationOverlay);
@@ -479,8 +484,9 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 
 
 
-	// memory/performance optimization; if osu_mod_mafham is not enabled, reduce the two rendertarget sizes to 64x64
+	// memory/performance optimization; if osu_mod_mafham is not enabled, reduce the two rendertarget sizes to 64x64, same for fposu
 	m_osu_mod_mafham_ref->setCallback( fastdelegate::MakeDelegate(this, &Osu::onModMafhamChange) );
+	m_osu_mod_fposu_ref->setCallback( fastdelegate::MakeDelegate(this, &Osu::onModFPoSuChange) );
 }
 
 Osu::~Osu()
@@ -497,6 +503,8 @@ Osu::~Osu()
 		debugLog("%i\n", i);
 		SAFE_DELETE(m_screens[i]);
 	}
+
+	SAFE_DELETE(m_fposu);
 
 	SAFE_DELETE(m_score);
 	SAFE_DELETE(m_vr);
@@ -522,8 +530,15 @@ void Osu::draw(Graphics *g)
 	// draw everything in the correct order
 	if (isInPlayMode()) // if we are playing a beatmap
 	{
+		const bool isBufferedPlayfieldDraw = m_osu_mod_fposu_ref->getBool();
+
+		if (isBufferedPlayfieldDraw)
+			m_playfieldBuffer->enable();
+
 		getSelectedBeatmap()->draw(g);
-		m_hud->draw(g);
+
+		if (!m_osu_mod_fposu_ref->getBool())
+			m_hud->draw(g);
 
 		// quick retry fadeout overlay
 		if (m_fQuickRetryTime != 0.0f && m_bQuickRetryDown)
@@ -536,10 +551,11 @@ void Osu::draw(Graphics *g)
 			g->fillRect(0, 0, getScreenWidth(), getScreenHeight());
 		}
 
-		// special cursor handling (fading cursor + invisible cursor mods)
+		// special cursor handling (fading cursor + invisible cursor mods + draw order etc.)
 		const bool isAuto = (m_bModAuto || m_bModAutopilot);
-		const bool allowDoubleCursor = (env->getOS() == Environment::OS::OS_HORIZON);
-		const bool allowDrawCursor = !osu_hide_cursor_during_gameplay.getBool() || getSelectedBeatmap()->isPaused();
+		const bool isFPoSu = (m_osu_mod_fposu_ref->getBool());
+		const bool allowDoubleCursor = (env->getOS() == Environment::OS::OS_HORIZON || isFPoSu);
+		const bool allowDrawCursor = (!osu_hide_cursor_during_gameplay.getBool() || getSelectedBeatmap()->isPaused());
 		float fadingCursorAlpha = 1.0f - clamp<float>((float)m_score->getCombo()/osu_mod_fadingcursor_combo.getFloat(), 0.0f, 1.0f);
 		if (m_pauseMenu->isVisible() || getSelectedBeatmap()->isContinueScheduled())
 			fadingCursorAlpha = 1.0f;
@@ -547,23 +563,40 @@ void Osu::draw(Graphics *g)
 		OsuBeatmapStandard *beatmapStd = dynamic_cast<OsuBeatmapStandard*>(getSelectedBeatmap());
 
 		// draw auto cursor
-		if (isAuto && allowDrawCursor && beatmapStd != NULL)
+		if (isAuto && allowDrawCursor && beatmapStd != NULL && !isFPoSu)
 			m_hud->drawCursor(g, m_osu_mod_fps_ref->getBool() ? OsuGameRules::getPlayfieldCenter(this) : beatmapStd->getCursorPos(), osu_mod_fadingcursor.getBool() ? fadingCursorAlpha : 1.0f);
 
 		m_pauseMenu->draw(g);
 		m_modSelector->draw(g);
 		m_optionsMenu->draw(g);
 
-		if (osu_draw_fps.getBool())
+		if (osu_draw_fps.getBool() && !isFPoSu)
 			m_hud->drawFps(g);
 
 		m_hud->drawVolumeChange(g);
 
 		m_windowManager->draw(g);
 
+		if (isBufferedPlayfieldDraw)
+			m_playfieldBuffer->disable();
+
+		if (isFPoSu)
+		{
+			m_fposu->draw(g);
+			m_hud->draw(g);
+			m_hud->drawFps(g);
+		}
+
 		// draw player cursor
 		if ((!isAuto || allowDoubleCursor) && allowDrawCursor && (!isInVRMode() || (m_vr->isVirtualCursorOnScreen() || engine->hasFocus())))
-			m_hud->drawCursor(g, (beatmapStd != NULL && !isAuto) ? beatmapStd->getCursorPos() : engine->getMouse()->getPos(), (osu_mod_fadingcursor.getBool() && !isAuto) ? fadingCursorAlpha : 1.0f, isAuto);
+		{
+			Vector2 cursorPos = (beatmapStd != NULL && !isAuto) ? beatmapStd->getCursorPos() : engine->getMouse()->getPos();
+
+			if (isFPoSu)
+				cursorPos = getScreenSize() / 2.0f;
+
+			m_hud->drawCursor(g, cursorPos, (osu_mod_fadingcursor.getBool() && !isAuto) ? fadingCursorAlpha : 1.0f, isAuto);
+		}
 
 		// draw projected VR cursors for spectators
 		if (isInVRMode() && isInPlayMode() && !getSelectedBeatmap()->isPaused() && beatmapStd != NULL)
@@ -745,6 +778,9 @@ void Osu::update()
 	m_bSeeking = false;
 	if (isInPlayMode())
 	{
+		if (m_osu_mod_fposu_ref->getBool())
+			m_fposu->update();
+
 		getSelectedBeatmap()->update();
 
 		// scrubbing/seeking
@@ -1049,9 +1085,16 @@ void Osu::onKeyDown(KeyboardEvent &key)
 	if (key == (KEYCODE)OsuKeyBindings::SAVE_SCREENSHOT.getInt())
 		saveScreenshot();
 
-	// boss key (minimize)
+	// boss key (minimize + mute)
 	if (key == (KEYCODE)OsuKeyBindings::BOSS_KEY.getInt())
+	{
 		engine->getEnvironment()->minimize();
+		if (getSelectedBeatmap() != NULL)
+		{
+			m_bWasBossKeyPaused = getSelectedBeatmap()->isPreviewMusicPlaying();
+			getSelectedBeatmap()->pausePreviewMusic(false);
+		}
+	}
 
 	// local hotkeys
 
@@ -1705,6 +1748,11 @@ void Osu::rebuildRenderTargets()
 	m_backBuffer->rebuild(0, 0, g_vInternalResolution.x, g_vInternalResolution.y);
 	m_sliderFrameBuffer->rebuild(0, 0, g_vInternalResolution.x, g_vInternalResolution.y);
 
+	if (m_osu_mod_fposu_ref->getBool())
+		m_playfieldBuffer->rebuild(0, 0, g_vInternalResolution.x, g_vInternalResolution.y);
+	else
+		m_playfieldBuffer->rebuild(0, 0, 64, 64);
+
 	if (m_osu_mod_mafham_ref->getBool())
 	{
 		m_frameBuffer->rebuild(0, 0, g_vInternalResolution.x, g_vInternalResolution.y);
@@ -1777,6 +1825,13 @@ void Osu::onFocusGained()
 {
 	// cursor clipping
 	updateConfineCursor();
+
+	if (m_bWasBossKeyPaused)
+	{
+		m_bWasBossKeyPaused = false;
+		if (getSelectedBeatmap() != NULL)
+			getSelectedBeatmap()->pausePreviewMusic();
+	}
 }
 
 void Osu::onFocusLost()
@@ -1956,6 +2011,11 @@ void Osu::onKey2Change(bool pressed, bool mouse)
 }
 
 void Osu::onModMafhamChange(UString oldValue, UString newValue)
+{
+	rebuildRenderTargets();
+}
+
+void Osu::onModFPoSuChange(UString oldValue, UString newValue)
 {
 	rebuildRenderTargets();
 }

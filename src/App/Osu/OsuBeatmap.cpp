@@ -1084,13 +1084,13 @@ void OsuBeatmap::pause(bool quitIfWaiting)
 	anim->deleteExistingAnimation(&m_fHealth);
 }
 
-void OsuBeatmap::pausePreviewMusic()
+void OsuBeatmap::pausePreviewMusic(bool toggle)
 {
 	if (m_music != NULL)
 	{
 		if (m_music->isPlaying())
 			engine->getSound()->pause(m_music);
-		else
+		else if (toggle)
 			engine->getSound()->play(m_music);
 	}
 }

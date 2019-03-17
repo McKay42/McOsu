@@ -27,6 +27,7 @@ public:
 	static wchar_t GEAR;
 	static wchar_t DESKTOP;
 	static wchar_t CIRCLE;
+	static wchar_t CUBE;
 	static wchar_t VOLUME_UP;
 	static wchar_t VOLUME_DOWN;
 	static wchar_t VOLUME_OFF;

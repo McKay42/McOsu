@@ -42,6 +42,7 @@ OsuUISongBrowserButton::OsuUISongBrowserButton(Osu *osu, OsuSongBrowser2 *songBr
 	m_bSelected = false;
 	m_bHideIfSelected = false;
 	m_bCollectionDiffHack = false;
+	m_bCollectionSearchHack = true;
 
 	m_fTargetRelPosY = yPos;
 	m_fScale = 1.0f;
