@@ -1,6 +1,6 @@
 //================ Copyright (c) 2019, Colin Brook & PG, All rights reserved. =================//
 //
-// Purpose:		real 3d first person mode for fps warmup/practice
+// Purpose:		real 3d first person mode for fps warmup/practice.
 //
 // $NoKeywords: $fposu
 //=============================================================================================//
