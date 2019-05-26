@@ -42,6 +42,9 @@ public:
 	static wchar_t GLOBE;
 	static wchar_t USER;
 	static wchar_t UNDO;
+	static wchar_t KEYBOARD;
+	static wchar_t LOCK;
+	static wchar_t UNLOCK;
 };
 
 #endif

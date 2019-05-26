@@ -20,6 +20,7 @@ class OsuUISearchOverlay;
 
 class OsuOptionsMenuSliderPreviewElement;
 class OsuOptionsMenuCategoryButton;
+class OsuOptionsMenuResetButton;
 
 class CBaseUIContainer;
 class CBaseUIImageButton;
@@ -68,6 +69,14 @@ private:
 
 	struct OPTIONS_ELEMENT
 	{
+		OPTIONS_ELEMENT()
+		{
+			resetButton = NULL;
+			cvar = NULL;
+			type = -1;
+		}
+
+		OsuOptionsMenuResetButton *resetButton;
 		std::vector<CBaseUIElement*> elements;
 		ConVar *cvar;
 		int type;
@@ -95,6 +104,8 @@ private:
 	void onResolutionSelect2(UString resolution, int id = -1);
 	void onOutputDeviceSelect();
 	void onOutputDeviceSelect2(UString outputDeviceName, int id = -1);
+	void onOutputDeviceResetClicked();
+	void onOutputDeviceResetUpdate();
 	void onOutputDeviceRestart();
 	void onDownloadOsuClicked();
 	void onManuallyManageBeatmapsClicked();
@@ -107,10 +118,12 @@ private:
 	void onSliderChangeOneDecimalPlaceMeters(CBaseUISlider *slider);
 	void onSliderChangeInt(CBaseUISlider *slider);
 	void onSliderChangeIntMS(CBaseUISlider *slider);
+	void onSliderChangeFloatMS(CBaseUISlider *slider);
 	void onSliderChangePercent(CBaseUISlider *slider);
 
 	void onKeyBindingButtonPressed(CBaseUIButton *button);
 	void onKeyUnbindButtonPressed(CBaseUIButton *button);
+	void onKeyBindingsResetAllPressed(CBaseUIButton *button);
 	void onKeyBindingManiaPressedInt();
 	void onKeyBindingManiaPressed(CBaseUIButton *button);
 	void onSliderChangeVRSuperSampling(CBaseUISlider *slider);
@@ -125,13 +138,17 @@ private:
 	// categories
 	void onCategoryClicked(CBaseUIButton *button);
 
+	// reset
+	void onResetUpdate(CBaseUIButton *button);
+	void onResetClicked(CBaseUIButton *button);
+
 	// options
 	void addSpacer();
 	CBaseUILabel *addSection(UString text);
 	CBaseUILabel *addSubSection(UString text);
 	CBaseUILabel *addLabel(UString text);
-	OsuUIButton *addButton(UString text, ConVar *cvar = NULL);
-	OPTIONS_ELEMENT addButton(UString text, UString labelText);
+	OsuUIButton *addButton(UString text);
+	OPTIONS_ELEMENT addButton(UString text, UString labelText, bool withResetButton = false);
 	OsuUIButton *addKeyBindButton(UString text, ConVar *cvar);
 	CBaseUICheckbox *addCheckbox(UString text, ConVar *cvar);
 	CBaseUICheckbox *addCheckbox(UString text, UString tooltipText = "", ConVar *cvar = NULL);
@@ -183,6 +200,7 @@ private:
 	CBaseUITextbox *m_nameTextbox;
 	CBaseUIElement *m_outputDeviceSelectButton;
 	CBaseUILabel *m_outputDeviceLabel;
+	OsuOptionsMenuResetButton *m_outputDeviceResetButton;
 	CBaseUILabel *m_vrRenderTargetResolutionLabel;
 	CBaseUISlider *m_vrApproachDistanceSlider;
 	CBaseUISlider *m_vrVibrationStrengthSlider;
@@ -192,6 +210,7 @@ private:
 	CBaseUISlider *m_sliderQualitySlider;
 	CBaseUISlider *m_letterboxingOffsetXSlider;
 	CBaseUISlider *m_letterboxingOffsetYSlider;
+	CBaseUIButton *m_letterboxingOffsetResetButton;
 	OsuOptionsMenuSliderPreviewElement *m_sliderPreviewElement;
 	CBaseUITextbox *m_dpiTextbox;
 	CBaseUITextbox *m_cm360Textbox;
@@ -205,6 +224,9 @@ private:
 	float m_fOsuFolderTextboxInvalidAnim;
 	float m_fVibrationStrengthExampleTimer;
 	bool m_bLetterboxingOffsetUpdateScheduled;
+
+	// key bindings
+	int m_iNumResetAllKeyBindingsPressed;
 
 	// mania layout
 	int m_iManiaK;

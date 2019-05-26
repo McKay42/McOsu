@@ -21,6 +21,7 @@
 #include "OsuHUD.h"
 #include "OsuSkin.h"
 #include "OsuSkinImage.h"
+#include "OsuIcons.h"
 #include "OsuBeatmap.h"
 #include "OsuBeatmapDifficulty.h"
 #include "OsuTooltipOverlay.h"
@@ -39,6 +40,84 @@
 #include "OsuUISlider.h"
 #include "OsuUICheckbox.h"
 #include "OsuUIModSelectorModButton.h"
+
+class OsuModSelectorOverrideSliderDescButton : public CBaseUIButton
+{
+public:
+	OsuModSelectorOverrideSliderDescButton(float xPos, float yPos, float xSize, float ySize, UString name, UString text) : CBaseUIButton(xPos, yPos, xSize, ySize, name, text) {}
+
+private:
+	virtual void drawText(Graphics *g)
+	{
+		if (m_font != NULL && m_sText.length() > 0)
+		{
+			float xPosAdd = m_vSize.x/2.0f - m_fStringWidth/2.0f;
+
+			//g->pushClipRect(McRect(m_vPos.x, m_vPos.y, m_vSize.x, m_vSize.y));
+			{
+				g->setColor(m_textColor);
+				g->pushTransform();
+				{
+					g->translate((int)(m_vPos.x + (xPosAdd)), (int)(m_vPos.y + m_vSize.y/2.0f + m_fStringHeight/2.0f));
+					g->drawString(m_font, m_sText);
+				}
+				g->popTransform();
+			}
+			//g->popClipRect();
+		}
+	}
+};
+
+class OsuModSelectorOverrideSliderLockButton : public CBaseUICheckbox
+{
+public:
+	OsuModSelectorOverrideSliderLockButton(Osu *osu, float xPos, float yPos, float xSize, float ySize, UString name, UString text) : CBaseUICheckbox(xPos, yPos, xSize, ySize, name, text)
+	{
+		m_osu = osu;
+		m_fAnim = 1.0f;
+	}
+
+	virtual void draw(Graphics *g)
+	{
+		if (!m_bVisible) return;
+
+		const wchar_t icon = (m_bChecked ? OsuIcons::LOCK : OsuIcons::UNLOCK);
+		UString iconString; iconString.insert(0, icon);
+
+		McFont *iconFont = m_osu->getFontIcons();
+		const float scale = (m_vSize.y / iconFont->getHeight()) * m_fAnim;
+		g->setColor(m_bChecked ? 0xffffffff : 0xff1166ff);
+
+		g->pushTransform();
+		{
+			g->scale(scale, scale);
+			g->translate(m_vPos.x + m_vSize.x/2.0f - iconFont->getStringWidth(iconString)*scale/2.0f, m_vPos.y + m_vSize.y/2.0f + (iconFont->getHeight()*scale/2.0f)*0.8f);
+			g->drawString(iconFont, iconString);
+		}
+		g->popTransform();
+	}
+
+private:
+	virtual void onPressed()
+	{
+		CBaseUICheckbox::onPressed();
+		engine->getSound()->play(isChecked() ? m_osu->getSkin()->getCheckOn() : m_osu->getSkin()->getCheckOff());
+
+		if (isChecked())
+		{
+			//anim->moveQuadOut(&m_fAnim, 1.5f, 0.060f, true);
+			//anim->moveQuadIn(&m_fAnim, 1.0f, 0.250f, 0.150f, false);
+		}
+		else
+		{
+			anim->deleteExistingAnimation(&m_fAnim);
+			m_fAnim = 1.0f;
+		}
+	}
+
+	Osu *m_osu;
+	float m_fAnim;
+};
 
 OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen(osu)
 {
@@ -81,10 +160,10 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen(osu)
 	}
 
 	// build override sliders
-	OVERRIDE_SLIDER overrideCS = addOverrideSlider("CS Override", "CS:", convar->getConVarByName("osu_cs_override"));
-	OVERRIDE_SLIDER overrideAR = addOverrideSlider("AR Override", "AR:", convar->getConVarByName("osu_ar_override"));
-	OVERRIDE_SLIDER overrideOD = addOverrideSlider("OD Override", "OD:", convar->getConVarByName("osu_od_override"));
-	OVERRIDE_SLIDER overrideHP = addOverrideSlider("HP Override", "HP:", convar->getConVarByName("osu_hp_override"));
+	OVERRIDE_SLIDER overrideCS = addOverrideSlider("CS Override", "CS:", convar->getConVarByName("osu_cs_override"), 0.0f, 12.5f);
+	OVERRIDE_SLIDER overrideAR = addOverrideSlider("AR Override", "AR:", convar->getConVarByName("osu_ar_override"), 0.0f, 12.5f, convar->getConVarByName("osu_ar_override_lock"));
+	OVERRIDE_SLIDER overrideOD = addOverrideSlider("OD Override", "OD:", convar->getConVarByName("osu_od_override"), 0.0f, 12.5f, convar->getConVarByName("osu_od_override_lock"));
+	OVERRIDE_SLIDER overrideHP = addOverrideSlider("HP Override", "HP:", convar->getConVarByName("osu_hp_override"), 0.0f, 12.5f);
 
 	overrideCS.slider->setAnimated(false); // quick fix for otherwise possible inconsistencies due to slider vertex buffers and animated CS changes
 	overrideCS.slider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
@@ -92,23 +171,28 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen(osu)
 	overrideOD.slider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
 	overrideHP.slider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
 
+	overrideAR.desc->setClickCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onOverrideARSliderDescClicked) );
+	overrideOD.desc->setClickCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onOverrideODSliderDescClicked) );
+
 	m_CSSlider = overrideCS.slider;
 	m_ARSlider = overrideAR.slider;
 	m_ODSlider = overrideOD.slider;
+	m_ARLock = overrideAR.lock;
+	m_ODLock = overrideOD.lock;
 
 	if (env->getOS() != Environment::OS::OS_HORIZON)
 	{
-		OVERRIDE_SLIDER overrideBPM = addOverrideSlider("BPM Override", "BPM:", convar->getConVarByName("osu_speed_override"), 0.0f, 2.5f);
-		OVERRIDE_SLIDER overrideSpeed = addOverrideSlider("Speed Multiplier", "x", convar->getConVarByName("osu_speed_override"), 0.0f, 2.5f);
+		///OVERRIDE_SLIDER overrideBPM = addOverrideSlider("BPM Override", "BPM:", convar->getConVarByName("osu_speed_override"), 0.0f, 2.5f);
+		OVERRIDE_SLIDER overrideSpeed = addOverrideSlider("Speed/BPM Multiplier", "x", convar->getConVarByName("osu_speed_override"), 0.0f, 2.5f);
 
-		overrideBPM.slider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
-		overrideBPM.slider->setValue(-1.0f, false);
-		overrideBPM.slider->setAnimated(false); // same quick fix as above
+		///overrideBPM.slider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
+		///overrideBPM.slider->setValue(-1.0f, false);
+		///overrideBPM.slider->setAnimated(false); // same quick fix as above
 		overrideSpeed.slider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
 		overrideSpeed.slider->setValue(-1.0f, false);
 		overrideSpeed.slider->setAnimated(false); // same quick fix as above
 
-		m_BPMSlider = overrideBPM.slider;
+		///m_BPMSlider = overrideBPM.slider;
 		m_speedSlider = overrideSpeed.slider;
 	}
 
@@ -190,8 +274,7 @@ OsuModSelector::~OsuModSelector()
 
 void OsuModSelector::draw(Graphics *g)
 {
-	if (!m_bVisible && !m_bScheduledHide)
-		return;
+	if (!m_bVisible && !m_bScheduledHide) return;
 
 	// for compact mode (and experimental mods)
 	const int margin = 10;
@@ -205,7 +288,7 @@ void OsuModSelector::draw(Graphics *g)
 		Vector2 overrideSlidersSize;
 		for (int i=0; i<m_overrideSliders.size(); i++)
 		{
-			CBaseUILabel *desc = m_overrideSliders[i].desc;
+			CBaseUIButton *desc = m_overrideSliders[i].desc;
 			CBaseUILabel *label = m_overrideSliders[i].label;
 
 			if (desc->getPos().x < overrideSlidersStart.x)
@@ -381,7 +464,7 @@ void OsuModSelector::update()
 	}
 
 	// handle dynamic live pp calculation updates (when CS or Speed/BPM changes)
-	if ((m_speedSlider != NULL && m_speedSlider->isActive()) || (m_BPMSlider != NULL && m_BPMSlider->isActive()))
+	if ((m_speedSlider != NULL && m_speedSlider->isActive())/* || (m_BPMSlider != NULL && m_BPMSlider->isActive())*/)
 	{
 		m_bWaitForSpeedChangeFinished = true;
 	}
@@ -439,8 +522,7 @@ void OsuModSelector::onKeyDown(KeyboardEvent &key)
 
 void OsuModSelector::onKeyUp(KeyboardEvent &key)
 {
-	if (!m_bVisible)
-		return;
+	if (!m_bVisible) return;
 
 	if (key == KEY_F1)
 		m_bWaitForF1KeyUp = false;
@@ -517,8 +599,7 @@ bool OsuModSelector::isMouseInScrollView()
 
 void OsuModSelector::updateLayout()
 {
-	if (m_modButtons.size() < 1 || m_overrideSliders.size() < 1)
-		return;
+	if (m_modButtons.size() < 1 || m_overrideSliders.size() < 1) return;
 
 	if (!isInCompactMode()) // normal layout
 	{
@@ -550,13 +631,16 @@ void OsuModSelector::updateLayout()
 		Vector2 overrideSliderStart = Vector2(m_osu->getScreenWidth()/2 - overrideSliderWidth/2, start.y/2 - (m_overrideSliders.size()*overrideSliderHeight + (m_overrideSliders.size()-1)*overrideSliderOffsetY)/1.75f);
 		for (int i=0; i<m_overrideSliders.size(); i++)
 		{
-			m_overrideSliders[i].desc->setSizeToContent(0, 0);
+			m_overrideSliders[i].desc->setSizeToContent(5, 0);
 			m_overrideSliders[i].desc->setSizeY(m_overrideSliders[i].slider->getSize().y);
 
 			m_overrideSliders[i].slider->setPos(overrideSliderStart.x, overrideSliderStart.y + i*overrideSliderHeight + i*overrideSliderOffsetY);
 			m_overrideSliders[i].slider->setSizeX(overrideSliderWidth);
 
 			m_overrideSliders[i].desc->setPos(m_overrideSliders[i].slider->getPos().x - m_overrideSliders[i].desc->getSize().x - 10, m_overrideSliders[i].slider->getPos().y);
+
+			if (m_overrideSliders[i].lock != NULL && m_overrideSliders.size() > 1)
+				m_overrideSliders[i].lock->setPos(m_overrideSliders[1].desc->getPos().x - m_overrideSliders[i].lock->getSize().x - 10 - 3, m_overrideSliders[i].desc->getPos().y);
 
 			m_overrideSliders[i].label->setPos(m_overrideSliders[i].slider->getPos().x + m_overrideSliders[i].slider->getSize().x + 10, m_overrideSliders[i].slider->getPos().y);
 			m_overrideSliders[i].label->setSizeToContent(0,0);
@@ -607,13 +691,16 @@ void OsuModSelector::updateLayout()
 		Vector2 overrideSliderStart = Vector2(m_osu->getScreenWidth()/2 - overrideSliderWidth/2, 5);
 		for (int i=0; i<m_overrideSliders.size(); i++)
 		{
-			m_overrideSliders[i].desc->setSizeToContent(0, 0);
+			m_overrideSliders[i].desc->setSizeToContent(5, 0);
 			m_overrideSliders[i].desc->setSizeY(m_overrideSliders[i].slider->getSize().y);
 
 			m_overrideSliders[i].slider->setPos(overrideSliderStart.x, overrideSliderStart.y + i*overrideSliderHeight + i*overrideSliderOffsetY);
 			m_overrideSliders[i].slider->setSizeX(overrideSliderWidth);
 
 			m_overrideSliders[i].desc->setPos(m_overrideSliders[i].slider->getPos().x - m_overrideSliders[i].desc->getSize().x - 10, m_overrideSliders[i].slider->getPos().y);
+
+			if (m_overrideSliders[i].lock != NULL && m_overrideSliders.size() > 1)
+				m_overrideSliders[i].lock->setPos(m_overrideSliders[1].desc->getPos().x - m_overrideSliders[i].lock->getSize().x - 10 - 3, m_overrideSliders[i].desc->getPos().y);
 
 			m_overrideSliders[i].label->setPos(m_overrideSliders[i].slider->getPos().x + m_overrideSliders[i].slider->getSize().x + 10, m_overrideSliders[i].slider->getPos().y);
 			m_overrideSliders[i].label->setSizeToContent(0,0);
@@ -713,7 +800,7 @@ OsuUIModSelectorModButton *OsuModSelector::setModButtonOnGrid(int x, int y, int 
 
 OsuUIModSelectorModButton *OsuModSelector::getModButtonOnGrid(int x, int y)
 {
-	int index = x*m_iGridHeight + y;
+	const int index = x*m_iGridHeight + y;
 
 	if (index < m_modButtons.size())
 		return m_modButtons[index];
@@ -721,21 +808,29 @@ OsuUIModSelectorModButton *OsuModSelector::getModButtonOnGrid(int x, int y)
 		return NULL;
 }
 
-OsuModSelector::OVERRIDE_SLIDER OsuModSelector::addOverrideSlider(UString text, UString labelText, ConVar *cvar, float min, float max)
+OsuModSelector::OVERRIDE_SLIDER OsuModSelector::addOverrideSlider(UString text, UString labelText, ConVar *cvar, float min, float max, ConVar *lockCvar)
 {
 	int height = 25;
 
 	OVERRIDE_SLIDER os;
-	os.desc = new CBaseUILabel(0, 0, 100, height, "", text);
+	if (lockCvar != NULL)
+	{
+		os.lock = new OsuModSelectorOverrideSliderLockButton(m_osu, 0, 0, height, height, "", "");
+		os.lock->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onOverrideSliderLockChange) );
+	}
+	os.desc = new OsuModSelectorOverrideSliderDescButton(0, 0, 100, height, "", text);
 	os.slider = new OsuUISlider(m_osu, 0, 0, 100, height, "");
 	os.label = new CBaseUILabel(0, 0, 100, height, labelText, labelText);
 	os.cvar = cvar;
+	os.lockCvar = lockCvar;
 
 	bool debugDrawFrame = false;
 
 	os.slider->setDrawFrame(debugDrawFrame);
 	os.slider->setDrawBackground(false);
 	os.slider->setFrameColor(0xff777777);
+	//os.desc->setTextJustification(CBaseUILabel::TEXT_JUSTIFICATION::TEXT_JUSTIFICATION_CENTERED);
+	os.desc->setEnabled(lockCvar != NULL);
 	os.desc->setDrawFrame(debugDrawFrame);
 	os.desc->setDrawBackground(false);
 	os.desc->setTextColor(0xff777777);
@@ -748,10 +843,14 @@ OsuModSelector::OVERRIDE_SLIDER OsuModSelector::addOverrideSlider(UString text, 
 	os.slider->setLiveUpdate(true);
 	os.slider->setAllowMouseWheel(false);
 
+	if (os.lock != NULL)
+		m_overrideSliderContainer->addBaseUIElement(os.lock);
+
 	m_overrideSliderContainer->addBaseUIElement(os.desc);
 	m_overrideSliderContainer->addBaseUIElement(os.slider);
 	m_overrideSliderContainer->addBaseUIElement(os.label);
 	m_overrideSliders.push_back(os);
+
 	return os;
 }
 
@@ -803,7 +902,11 @@ CBaseUICheckbox *OsuModSelector::addExperimentalCheckbox(UString text, UString t
 
 void OsuModSelector::resetMods()
 {
-	m_resetModsButton->animateClickColor();
+	for (int i=0; i<m_overrideSliders.size(); i++)
+	{
+		if (m_overrideSliders[i].lock != NULL)
+			m_overrideSliders[i].lock->setChecked(false);
+	}
 
 	for (int i=0; i<m_modButtons.size(); i++)
 	{
@@ -821,6 +924,8 @@ void OsuModSelector::resetMods()
 		if (checkboxPointer != NULL)
 			checkboxPointer->setChecked(false);
 	}
+
+	m_resetModsButton->animateClickColor();
 }
 
 void OsuModSelector::close()
@@ -835,7 +940,8 @@ void OsuModSelector::onOverrideSliderChange(CBaseUISlider *slider)
 	{
 		if (m_overrideSliders[i].slider == slider)
 		{
-			float sliderValue = slider->getFloat()-1.0f;
+			float sliderValue = slider->getFloat() - 1.0f;
+			const float rawSliderValue = slider->getFloat();
 
 			// alt key allows rounding to only 1 decimal digit
 			if (!engine->getKeyboard()->isAltDown())
@@ -854,13 +960,29 @@ void OsuModSelector::onOverrideSliderChange(CBaseUISlider *slider)
 					if (m_overrideSliders[i].label->getName().find("BPM") != -1)
 					{
 						// reset AR and OD override sliders if the bpm slider was reset
-						m_ARSlider->setValue(0.0f, false);
-						m_ODSlider->setValue(0.0f, false);
+						if (!m_ARLock->isChecked())
+							m_ARSlider->setValue(0.0f, false);
+						if (!m_ODLock->isChecked())
+							m_ODSlider->setValue(0.0f, false);
 					}
+				}
+
+				// usability: auto disable lock if override slider is fully set to -1.0f (disabled)
+				if (rawSliderValue == 0.0f)
+				{
+					if (m_overrideSliders[i].lock != NULL && m_overrideSliders[i].lock->isChecked())
+						m_overrideSliders[i].lock->setChecked(false);
 				}
 			}
 			else
 			{
+				// AR/OD lock may not be used in conjunction with BPM
+				if (m_overrideSliders[i].label->getName().find("BPM") != -1)
+				{
+					m_ARLock->setChecked(false);
+					m_ODLock->setChecked(false);
+				}
+
 				// HACKHACK: dirty
 				if (m_osu->getSelectedBeatmap() != NULL && m_osu->getSelectedBeatmap()->getSelectedDifficulty() != NULL)
 				{
@@ -877,16 +999,16 @@ void OsuModSelector::onOverrideSliderChange(CBaseUISlider *slider)
 						m_overrideSliders[i].cvar->setValue(sliderValue);
 
 						// force change all other depending sliders
-						float newAR = OsuGameRules::getConstantApproachRateForSpeedMultiplier(m_osu->getSelectedBeatmap());
-						float newOD = OsuGameRules::getConstantOverallDifficultyForSpeedMultiplier(m_osu->getSelectedBeatmap());
+						const float newAR = OsuGameRules::getConstantApproachRateForSpeedMultiplier(m_osu->getSelectedBeatmap());
+						const float newOD = OsuGameRules::getConstantOverallDifficultyForSpeedMultiplier(m_osu->getSelectedBeatmap());
 
-						m_ARSlider->setValue(newAR+1.0f, false); // '+1' to compensate for turn-off area of the override sliders
-						m_ODSlider->setValue(newOD+1.0f, false);
+						m_ARSlider->setValue(newAR + 1.0f, false); // '+1' to compensate for turn-off area of the override sliders
+						m_ODSlider->setValue(newOD + 1.0f, false);
 					}
 					else if (m_overrideSliders[i].desc->getText().find("Speed") != -1)
 					{
 						// bpm slider may not be used in conjunction
-						m_BPMSlider->setValue(0.0f, false);
+						///m_BPMSlider->setValue(0.0f, false);
 					}
 				}
 
@@ -895,11 +1017,65 @@ void OsuModSelector::onOverrideSliderChange(CBaseUISlider *slider)
 					sliderValue = std::max(sliderValue, 0.05f);
 			}
 
+			// update convar with final value (e.g. osu_ar_override, osu_speed_override, etc.)
 			m_overrideSliders[i].cvar->setValue(sliderValue);
+
 			updateOverrideSliderLabels();
+
 			break;
 		}
 	}
+}
+
+void OsuModSelector::onOverrideSliderLockChange(CBaseUICheckbox *checkbox)
+{
+	for (int i=0; i<m_overrideSliders.size(); i++)
+	{
+		if (m_overrideSliders[i].lock == checkbox)
+		{
+			const bool locked = m_overrideSliders[i].lock->isChecked();
+			const bool wasLocked = m_overrideSliders[i].lockCvar->getBool();
+
+			// bpm slider may not be used in conjunction
+			///if (locked && m_BPMSlider->getFloat() > 0.99f)
+			///	m_BPMSlider->setValue(0.0f, false);
+
+			// update convar with final value (e.g. osu_ar_override_lock, osu_od_override_lock)
+			m_overrideSliders[i].lockCvar->setValue(locked ? 1.0f : 0.0f);
+
+			// usability: if we just got locked, and the override slider value is < 0.0f (disabled), then set override to current value
+			if (locked && !wasLocked)
+			{
+				if (m_osu->getSelectedBeatmap() != NULL)
+				{
+					if (checkbox == m_ARLock)
+					{
+						if (m_ARSlider->getFloat() < 1.0f)
+							m_ARSlider->setValue(m_osu->getSelectedBeatmap()->getRawAR() + 1.0f, false); // '+1' to compensate for turn-off area of the override sliders
+					}
+					else if (checkbox == m_ODLock)
+					{
+						if (m_ODSlider->getFloat() < 1.0f)
+							m_ODSlider->setValue(m_osu->getSelectedBeatmap()->getRawOD() + 1.0f, false); // '+1' to compensate for turn-off area of the override sliders
+					}
+				}
+			}
+
+			updateOverrideSliderLabels();
+
+			break;
+		}
+	}
+}
+
+void OsuModSelector::onOverrideARSliderDescClicked(CBaseUIButton *button)
+{
+	m_ARLock->click();
+}
+
+void OsuModSelector::onOverrideODSliderDescClicked(CBaseUIButton *button)
+{
+	m_ODLock->click();
 }
 
 void OsuModSelector::updateOverrideSliderLabels()
@@ -911,9 +1087,10 @@ void OsuModSelector::updateOverrideSliderLabels()
 	for (int i=0; i<m_overrideSliders.size(); i++)
 	{
 		const float convarValue = m_overrideSliders[i].cvar->getFloat();
+		const bool isLocked = (m_overrideSliders[i].lock != NULL && m_overrideSliders[i].lock->isChecked());
 
 		// update colors
-		if (convarValue < 0.0f)
+		if (convarValue < 0.0f && !isLocked)
 		{
 			m_overrideSliders[i].label->setTextColor(inactiveLabelColor);
 			m_overrideSliders[i].desc->setTextColor(inactiveColor);
@@ -926,9 +1103,15 @@ void OsuModSelector::updateOverrideSliderLabels()
 			m_overrideSliders[i].slider->setFrameColor(activeColor);
 		}
 
+		m_overrideSliders[i].desc->setDrawFrame(isLocked);
+
 		// update label text
 		m_overrideSliders[i].label->setText(getOverrideSliderLabelText(m_overrideSliders[i], convarValue >= 0.0f));
 		m_overrideSliders[i].label->setWidthToContent(0);
+
+		// update lock checkbox
+		if (m_overrideSliders[i].lock != NULL && m_overrideSliders[i].lockCvar != NULL && m_overrideSliders[i].lock->isChecked() != m_overrideSliders[i].lockCvar->getBool())
+			m_overrideSliders[i].lock->setChecked(m_overrideSliders[i].lockCvar->getBool());
 	}
 }
 
@@ -973,6 +1156,7 @@ UString OsuModSelector::getOverrideSliderLabelText(OsuModSelector::OVERRIDE_SLID
 			beatmapValue = m_osu->getSelectedBeatmap()->getSelectedDifficulty()->HP;
 		else if (s.label->getName().find("BPM") != -1)
 		{
+			/*
 			wasBPMslider = true;
 
 			int minBPM = m_osu->getSelectedBeatmap()->getSelectedDifficulty()->minBPM;
@@ -998,9 +1182,50 @@ UString OsuModSelector::getOverrideSliderLabelText(OsuModSelector::OVERRIDE_SLID
 						newLabelText.append(UString::format(" %i-%i  ->  %i-%i", minBPM, maxBPM,  newMinBPM, newMaxBPM));
 				}
 			}
+			*/
 		}
 		else if (s.desc->getText().find("Speed") != -1)
+		{
 			beatmapValue = active ? m_osu->getRawSpeedMultiplier() : m_osu->getSpeedMultiplier();
+
+			wasBPMslider = true;
+			{
+				{
+					if (!active)
+						newLabelText.append(UString::format(" %.4g", beatmapValue));
+					else
+						newLabelText.append(UString::format(" %.4g -> %.4g", beatmapValue, convarValue));
+				}
+
+				newLabelText.append("  (BPM: ");
+
+				int minBPM = m_osu->getSelectedBeatmap()->getSelectedDifficulty()->minBPM;
+				int maxBPM = m_osu->getSelectedBeatmap()->getSelectedDifficulty()->maxBPM;
+				int newMinBPM = minBPM * m_osu->getSpeedMultiplier();
+				int newMaxBPM = maxBPM * m_osu->getSpeedMultiplier();
+				if (!active)
+				{
+					if (minBPM == maxBPM)
+						newLabelText.append(UString::format("%i", newMaxBPM));
+					else
+						newLabelText.append(UString::format("%i-%i", newMinBPM, newMaxBPM));
+				}
+				else
+				{
+					if (m_osu->getSpeedMultiplier() == 1.0f)
+						newLabelText.append(UString::format("%i", newMaxBPM));
+					else
+					{
+						if (minBPM == maxBPM)
+							newLabelText.append(UString::format("%i -> %i", maxBPM, newMaxBPM));
+						else
+							newLabelText.append(UString::format("%i-%i -> %i-%i", minBPM, maxBPM,  newMinBPM, newMaxBPM));
+					}
+				}
+
+				newLabelText.append(")");
+			}
+		}
 
 		// always round beatmapValue to 1 decimal digit, except for the speed slider
 		// HACKHACK: dirty
@@ -1023,6 +1248,7 @@ UString OsuModSelector::getOverrideSliderLabelText(OsuModSelector::OVERRIDE_SLID
 void OsuModSelector::checkUpdateBPMSliderSlaves()
 {
 	// only force OD/AR slider constant update if diff changed
+	/*
 	if (m_osu->getSelectedBeatmap() != NULL && m_osu->getSelectedBeatmap()->getSelectedDifficulty() != NULL)
 	{
 		OsuBeatmapDifficulty *diff = m_osu->getSelectedBeatmap()->getSelectedDifficulty();
@@ -1039,11 +1265,13 @@ void OsuModSelector::checkUpdateBPMSliderSlaves()
 
 					if (sliderValue >= 0.0f) // force constant AR/OD recalculation if bpm slider is active and we have changed diffs/maps
 						onOverrideSliderChange(m_overrideSliders[i].slider);
+
 					break;
 				}
 			}
 		}
 	}
+	*/
 }
 
 void OsuModSelector::enableAuto()

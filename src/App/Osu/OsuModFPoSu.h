@@ -67,7 +67,6 @@ private:
 	// helper functions
 	static float subdivide(std::list<VertexPair> meshList, const std::list<VertexPair>::iterator begin, const std::list<VertexPair>::iterator end, int n, float edgeDistance);
 	static Vector3 normalFromTriangle(Vector3 p1, Vector3 p2, Vector3 p3);
-	static Matrix4 buildMatrixPerspectiveFovHorizontal(float fovRad, float aspect, float zn, float zf);
 };
 
 #endif

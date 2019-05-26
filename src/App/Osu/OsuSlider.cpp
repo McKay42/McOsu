@@ -45,6 +45,7 @@ ConVar osu_slider_reverse_arrow_black_threshold("osu_slider_reverse_arrow_black_
 ConVar osu_slider_body_smoothsnake("osu_slider_body_smoothsnake", true, "draw 1 extra interpolated circle mesh at the start & end of every slider for extra smooth snaking/shrinking");
 ConVar osu_slider_body_lazer_fadeout_style("osu_slider_body_lazer_fadeout_style", true, "if snaking out sliders are enabled (aka shrinking sliders), smoothly fade out the last remaining part of the body (instead of vanishing instantly)");
 ConVar osu_slider_reverse_arrow_animated("osu_slider_reverse_arrow_animated", true, "pulse animation on reverse arrows");
+ConVar osu_slider_reverse_arrow_alpha_multiplier("osu_slider_reverse_arrow_alpha_multiplier", 1.0f);
 
 ConVar *OsuSlider::m_osu_playfield_mirror_horizontal_ref = NULL;
 ConVar *OsuSlider::m_osu_playfield_mirror_vertical_ref = NULL;
@@ -891,6 +892,7 @@ void OsuSlider::update(long curPos)
 	const long reverseArrowFadeInStart = m_iTime - (osu_snaking_sliders.getBool() ? (2.0f / 3.0f)*m_iApproachTime : m_iApproachTime);
 	const long reverseArrowFadeInEnd = reverseArrowFadeInStart + 150;
 	m_fReverseArrowAlpha = 1.0f - clamp<float>(((float)(reverseArrowFadeInEnd - curPos) / (float)(reverseArrowFadeInEnd - reverseArrowFadeInStart)), 0.0f, 1.0f);
+	m_fReverseArrowAlpha *= osu_slider_reverse_arrow_alpha_multiplier.getFloat();
 
 	m_fBodyAlpha = m_fAlpha;
 	if (m_beatmap->getOsu()->getModHD()) // hidden modifies the body alpha

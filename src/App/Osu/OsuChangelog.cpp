@@ -35,7 +35,13 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	std::vector<CHANGELOG> changelogs;
 
 	CHANGELOG alpha29Steam;
-	alpha29Steam.title = UString::format("29.4 (Steam VR Version, %s, %s)", __DATE__, __TIME__);
+	alpha29Steam.title = UString::format("29.5 (Steam VR Version, %s, %s)", __DATE__, __TIME__);
+	alpha29Steam.changes.push_back("- Added lock buttons to AR/OD override sliders (force constant AR/OD even with speed multiplier)");
+	alpha29Steam.changes.push_back("- Added reset buttons to all options settings");
+	alpha29Steam.changes.push_back("- Added ConVars: osu_slider_reverse_arrow_alpha_multiplier, snd_speed_compensate_pitch");
+	alpha29Steam.changes.push_back("- Fixed BPM statistics overlay only applying speed multiplier after music is loaded");
+	alpha29Steam.changes.push_back("- Windows: Fixed random stuck cursor on engine startup if launched in background (invalid focus)");
+	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("- Merged FPoSu (Options > FPoSu)");
 	alpha29Steam.changes.push_back("- FPoSu is a real 3D first person gamemode, contrary to the 2D experimental mod \"First Person\"");
 	alpha29Steam.changes.push_back("- Thanks to Colin Brook (aka SnakeModule on GitHub)");

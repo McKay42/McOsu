@@ -72,7 +72,7 @@ void DUMMY_OSU_MODS(void) {;}
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 29.4f);
+ConVar osu_version("osu_version", 29.5f);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr");
 #else
@@ -189,6 +189,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	convar->getConVarByName("console_overlay")->setValue(0.0f);
 	convar->getConVarByName("vsync")->setValue(0.0f);
 	convar->getConVarByName("fps_max")->setValue(420.0f);
+	convar->getConVarByName("fps_max")->setDefaultFloat(420.0f);
 
 	m_snd_change_check_interval_ref->setDefaultFloat(0.5f);
 	m_snd_change_check_interval_ref->setValue(m_snd_change_check_interval_ref->getDefaultFloat());
@@ -200,6 +201,13 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	// init steam rich presence localization
 	steam->setRichPresence("steam_display", "#Status");
 	steam->setRichPresence("status", "...");
+
+#endif
+
+#ifdef MCENGINE_FEATURE_BASS_WASAPI
+
+	// since we use the newer bass/fx dlls for wasapi builds anyway (which have different time handling)
+	convar->getConVarByName("osu_universal_offset_hardcoded")->setValue(-25.0f);
 
 #endif
 
