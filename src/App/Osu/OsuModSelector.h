@@ -60,10 +60,22 @@ public:
 private:
 	struct OVERRIDE_SLIDER
 	{
-		CBaseUILabel *desc;
+		OVERRIDE_SLIDER()
+		{
+			lock = NULL;
+			desc = NULL;
+			slider = NULL;
+			label = NULL;
+			cvar = NULL;
+			lockCvar = NULL;
+		}
+
+		CBaseUICheckbox *lock;
+		CBaseUIButton *desc;
 		CBaseUISlider *slider;
 		CBaseUILabel *label;
 		ConVar *cvar;
+		ConVar *lockCvar;
 	};
 
 	struct EXPERIMENTAL_MOD
@@ -80,8 +92,11 @@ private:
 	OsuUIModSelectorModButton *setModButtonOnGrid(int x, int y, int state, UString modName, UString tooltipText, std::function<OsuSkinImage*()> getImageFunc);
 	OsuUIModSelectorModButton *getModButtonOnGrid(int x, int y);
 
-	OVERRIDE_SLIDER addOverrideSlider(UString text, UString labelText, ConVar *cvar, float min = 0.0f, float max = 12.5f);
+	OVERRIDE_SLIDER addOverrideSlider(UString text, UString labelText, ConVar *cvar, float min, float max, ConVar *lockCvar = NULL);
 	void onOverrideSliderChange(CBaseUISlider *slider);
+	void onOverrideSliderLockChange(CBaseUICheckbox *checkbox);
+	void onOverrideARSliderDescClicked(CBaseUIButton *button);
+	void onOverrideODSliderDescClicked(CBaseUIButton *button);
 	void updateOverrideSliderLabels();
 	UString getOverrideSliderLabelText(OVERRIDE_SLIDER s, bool active);
 
@@ -114,6 +129,8 @@ private:
 	CBaseUISlider *m_ODSlider;
 	CBaseUISlider *m_BPMSlider;
 	CBaseUISlider *m_speedSlider;
+	CBaseUICheckbox *m_ARLock;
+	CBaseUICheckbox *m_ODLock;
 	OsuBeatmapDifficulty *m_previousDifficulty;
 
 	// mod grid buttons

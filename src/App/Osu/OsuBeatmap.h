@@ -146,6 +146,8 @@ public:
 	inline std::vector<OsuHitObject*> *getHitObjectsPointer() {return &m_hitobjects;}
 
 protected:
+	static ConVar *m_snd_speed_compensate_pitch_ref;
+
 	static ConVar *m_osu_pvs;
 	static ConVar *m_osu_draw_hitobjects_ref;
 	static ConVar *m_osu_vr_draw_desktop_playfield_ref;

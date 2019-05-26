@@ -63,6 +63,8 @@ ConVar osu_ar_override("osu_ar_override", -1.0f);
 ConVar osu_cs_override("osu_cs_override", -1.0f);
 ConVar osu_hp_override("osu_hp_override", -1.0f);
 ConVar osu_od_override("osu_od_override", -1.0f);
+ConVar osu_ar_override_lock("osu_ar_override_lock", false, "always force constant AR even through speed changes");
+ConVar osu_od_override_lock("osu_od_override_lock", false, "always force constant OD even through speed changes");
 
 ConVar osu_background_dim("osu_background_dim", 0.9f);
 ConVar osu_background_fade_after_load("osu_background_fade_after_load", true);
@@ -105,6 +107,8 @@ ConVar osu_drain_miss("osu_drain_miss", -0.15f);
 
 ConVar osu_debug_draw_timingpoints("osu_debug_draw_timingpoints", false);
 
+ConVar *OsuBeatmap::m_snd_speed_compensate_pitch_ref = NULL;
+
 ConVar *OsuBeatmap::m_osu_pvs = &osu_pvs;
 ConVar *OsuBeatmap::m_osu_draw_hitobjects_ref = &osu_draw_hitobjects;
 ConVar *OsuBeatmap::m_osu_vr_draw_desktop_playfield_ref = &osu_vr_draw_desktop_playfield;
@@ -125,7 +129,9 @@ ConVar *OsuBeatmap::m_osu_pitch_override_ref = NULL;
 
 OsuBeatmap::OsuBeatmap(Osu *osu)
 {
-	// convar callbacks
+	// convar refs
+	if (m_snd_speed_compensate_pitch_ref == NULL)
+		m_snd_speed_compensate_pitch_ref = convar->getConVarByName("snd_speed_compensate_pitch");
 	if (m_osu_volume_music_ref == NULL)
 		m_osu_volume_music_ref = convar->getConVarByName("osu_volume_music");
 	if (m_osu_speed_override_ref == NULL)
@@ -1274,8 +1280,13 @@ float OsuBeatmap::getPercentFinishedPlayable()
 
 int OsuBeatmap::getBPM()
 {
-	if (m_selectedDifficulty != NULL && m_music != NULL)
-		return (int)(m_selectedDifficulty->maxBPM*m_music->getSpeed());
+	if (m_selectedDifficulty != NULL)
+	{
+		if (m_music != NULL)
+			return (int)(m_selectedDifficulty->maxBPM * m_music->getSpeed());
+		else
+			return (int)(m_selectedDifficulty->maxBPM * m_osu->getSpeedMultiplier());
+	}
 	else
 		return 0;
 }
@@ -1308,9 +1319,12 @@ float OsuBeatmap::getAR()
 	if (osu_ar_override.getFloat() >= 0.0f)
 		AR = osu_ar_override.getFloat();
 
+	if (osu_ar_override_lock.getBool())
+		AR = OsuGameRules::getRawConstantApproachRateForSpeedMultiplier(OsuGameRules::getRawApproachTime(AR), m_osu->getSpeedMultiplier());
+
 	if (osu_mod_artimewarp.getBool() && m_hitobjects.size() > 0)
 	{
-		float percent = 1.0f - ((double)(m_iCurMusicPos - m_hitobjects[0]->getTime()) / (double)(m_hitobjects[m_hitobjects.size()-1]->getTime() + m_hitobjects[m_hitobjects.size()-1]->getDuration() - m_hitobjects[0]->getTime()))*(1.0f - osu_mod_artimewarp_multiplier.getFloat());
+		const float percent = 1.0f - ((double)(m_iCurMusicPos - m_hitobjects[0]->getTime()) / (double)(m_hitobjects[m_hitobjects.size()-1]->getTime() + m_hitobjects[m_hitobjects.size()-1]->getDuration() - m_hitobjects[0]->getTime()))*(1.0f - osu_mod_artimewarp_multiplier.getFloat());
 		AR *= percent;
 	}
 
@@ -1333,7 +1347,7 @@ float OsuBeatmap::getCS()
 	{
 		if (m_hitobjects.size() > 0)
 		{
-			float percent = 1.0f + ((double)(m_iCurMusicPos - m_hitobjects[0]->getTime()) / (double)(m_hitobjects[m_hitobjects.size()-1]->getTime() + m_hitobjects[m_hitobjects.size()-1]->getDuration() - m_hitobjects[0]->getTime()))*osu_mod_minimize_multiplier.getFloat();
+			const float percent = 1.0f + ((double)(m_iCurMusicPos - m_hitobjects[0]->getTime()) / (double)(m_hitobjects[m_hitobjects.size()-1]->getTime() + m_hitobjects[m_hitobjects.size()-1]->getDuration() - m_hitobjects[0]->getTime()))*osu_mod_minimize_multiplier.getFloat();
 			CS *= percent;
 		}
 	}
@@ -1364,6 +1378,9 @@ float OsuBeatmap::getOD()
 	float OD = getRawOD();
 	if (osu_od_override.getFloat() >= 0.0f)
 		OD = osu_od_override.getFloat();
+
+	if (osu_od_override_lock.getBool())
+		OD = OsuGameRules::getRawConstantOverallDifficultyForSpeedMultiplier(OsuGameRules::getRawHitWindow300(OD), m_osu->getSpeedMultiplier());
 
 	return OD;
 }
@@ -1714,7 +1731,7 @@ unsigned long OsuBeatmap::getMusicPositionMSInterpolated()
 
             // calculate final return value
             returnPos = (unsigned long)std::round(m_fInterpolatedMusicPos);
-            if (speed < 1.0f && osu_compensate_music_speed.getBool())
+            if (speed < 1.0f && osu_compensate_music_speed.getBool() && m_snd_speed_compensate_pitch_ref->getBool())
             	returnPos += (unsigned long)((1.0f / speed) * 9);
 		}
 		else // no interpolation

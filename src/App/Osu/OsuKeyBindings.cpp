@@ -9,8 +9,8 @@
 
 #include "Keyboard.h"
 
-ConVar OsuKeyBindings::LEFT_CLICK("osu_key_left_click", (int)KEY_R);
-ConVar OsuKeyBindings::RIGHT_CLICK("osu_key_right_click", (int)KEY_T);
+ConVar OsuKeyBindings::LEFT_CLICK("osu_key_left_click", (int)KEY_Z);
+ConVar OsuKeyBindings::RIGHT_CLICK("osu_key_right_click", (int)KEY_X);
 
 ConVar OsuKeyBindings::INCREASE_SPEED("osu_key_mania_increase_speed", (int)KEY_RIGHT);
 ConVar OsuKeyBindings::DECREASE_SPEED("osu_key_mania_decrease_speed", (int)KEY_LEFT);
@@ -45,6 +45,45 @@ ConVar OsuKeyBindings::MOD_AUTOPILOT("osu_key_mod_autopilot", (int)KEY_X);
 ConVar OsuKeyBindings::MOD_SPUNOUT("osu_key_mod_spunout", (int)KEY_C);
 ConVar OsuKeyBindings::MOD_AUTO("osu_key_mod_auto", (int)KEY_V);
 ConVar OsuKeyBindings::MOD_SCOREV2("osu_key_mod_scorev2", (int)KEY_B);
+
+std::vector<ConVar*> OsuKeyBindings::ALL = {
+	&OsuKeyBindings::LEFT_CLICK,
+	&OsuKeyBindings::RIGHT_CLICK,
+
+	&OsuKeyBindings::INCREASE_SPEED,
+	&OsuKeyBindings::DECREASE_SPEED,
+
+	&OsuKeyBindings::INCREASE_VOLUME,
+	&OsuKeyBindings::DECREASE_VOLUME,
+
+	&OsuKeyBindings::INCREASE_LOCAL_OFFSET,
+	&OsuKeyBindings::DECREASE_LOCAL_OFFSET,
+
+	&OsuKeyBindings::GAME_PAUSE,
+	&OsuKeyBindings::SKIP_CUTSCENE,
+	&OsuKeyBindings::TOGGLE_SCOREBOARD,
+	&OsuKeyBindings::SEEK_TIME,
+	&OsuKeyBindings::QUICK_RETRY,
+	&OsuKeyBindings::QUICK_SAVE,
+	&OsuKeyBindings::QUICK_LOAD,
+	&OsuKeyBindings::SAVE_SCREENSHOT,
+	&OsuKeyBindings::DISABLE_MOUSE_BUTTONS,
+	&OsuKeyBindings::BOSS_KEY,
+
+	&OsuKeyBindings::MOD_EASY,
+	&OsuKeyBindings::MOD_NOFAIL,
+	&OsuKeyBindings::MOD_HALFTIME,
+	&OsuKeyBindings::MOD_HARDROCK,
+	&OsuKeyBindings::MOD_SUDDENDEATH,
+	&OsuKeyBindings::MOD_DOUBLETIME,
+	&OsuKeyBindings::MOD_HIDDEN,
+	&OsuKeyBindings::MOD_FLASHLIGHT,
+	&OsuKeyBindings::MOD_RELAX,
+	&OsuKeyBindings::MOD_AUTOPILOT,
+	&OsuKeyBindings::MOD_SPUNOUT,
+	&OsuKeyBindings::MOD_AUTO,
+	&OsuKeyBindings::MOD_SCOREV2
+};
 
 std::vector<std::vector<ConVar*>> OsuKeyBindings::MANIA = OsuKeyBindings::createManiaConVarSets();
 
