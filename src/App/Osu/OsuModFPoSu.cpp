@@ -64,7 +64,7 @@ void OsuModFPoSu::draw(Graphics *g)
 {
 	if (!osu_mod_fposu.getBool()) return;
 
-	Matrix4 projectionMatrix = buildMatrixPerspectiveFovHorizontal(deg2rad(fposu_fov.getFloat()), ((float)m_osu->getScreenHeight() / (float)m_osu->getScreenWidth()), 0.05f, 50.0f);
+	Matrix4 projectionMatrix = Camera::buildMatrixPerspectiveFovHorizontal(deg2rad(fposu_fov.getFloat()), ((float)m_osu->getScreenHeight() / (float)m_osu->getScreenWidth()), 0.05f, 50.0f);
 	Matrix4 viewMatrix = Camera::buildMatrixLookAt(m_camera->getPos(), m_camera->getViewDirection(), m_camera->getViewUp());
 
 	// HACKHACK: there is currently no way to directly modify the viewport origin, so the only option for rendering non-2d stuff with correct offsets (i.e. top left) is by rendering into a rendertarget
@@ -448,17 +448,4 @@ Vector3 OsuModFPoSu::normalFromTriangle(Vector3 p1, Vector3 p2, Vector3 p3)
 	const Vector3 v = (p3 - p1);
 
 	return u.cross(v).normalize();
-}
-
-Matrix4 OsuModFPoSu::buildMatrixPerspectiveFovHorizontal(float fovRad, float aspect, float zn, float zf)
-{
-	const float f = 1.0f / std::tan(fovRad/2.0f);
-
-	const float q = (zf+zn)/(zn-zf);
-	const float qn = (2*zf*zn)/(zn-zf);
-
-	return Matrix4(f,	0,			0, 		0,
-				   0, 	f/aspect, 	0,		0,
-				   0, 	0,			q,		qn,
-				   0,	0,			-1,		0).transpose();
 }

@@ -322,8 +322,19 @@ void OsuMainMenu::draw(Graphics *g)
 	// draw banner
 	if (drawBanner)
 	{
+		UString bannerText = MCOSU_BANNER_TEXT;
+
+#ifdef MCENGINE_FEATURE_BASS_WASAPI
+
+		bannerText = UString::format(convar->getConVarByName("win_snd_wasapi_exclusive")->getBool() ?
+				"-- WASAPI Exclusive Mode! win_snd_wasapi_buffer_size = %i ms --" :
+				"-- WASAPI Shared Mode! win_snd_wasapi_buffer_size = %i ms --",
+				(int)(std::round(convar->getConVarByName("win_snd_wasapi_buffer_size")->getFloat()*1000.0f)));
+
+#endif
+
 		McFont *bannerFont = m_osu->getSubTitleFont();
-		float bannerStringWidth = bannerFont->getStringWidth(MCOSU_BANNER_TEXT);
+		float bannerStringWidth = bannerFont->getStringWidth(bannerText);
 		int bannerDiff = 20;
 		int bannerMargin = 5;
 		int numBanners = (int)std::round(m_osu->getScreenWidth() / (bannerStringWidth + bannerDiff)) + 2;
@@ -335,7 +346,7 @@ void OsuMainMenu::draw(Graphics *g)
 		{
 			g->pushTransform();
 			g->translate(i*bannerStringWidth + i*bannerDiff + fmod(engine->getTime()*30, bannerStringWidth + bannerDiff), bannerFont->getHeight() + bannerMargin);
-			g->drawString(bannerFont, MCOSU_BANNER_TEXT);
+			g->drawString(bannerFont, bannerText);
 			g->popTransform();
 		}
 		g->popTransform();
@@ -344,7 +355,7 @@ void OsuMainMenu::draw(Graphics *g)
 		{
 			g->pushTransform();
 			g->translate(i*bannerStringWidth + i*bannerDiff + fmod(engine->getTime()*30, bannerStringWidth + bannerDiff), bannerFont->getHeight() + bannerMargin);
-			g->drawString(bannerFont, MCOSU_BANNER_TEXT);
+			g->drawString(bannerFont, bannerText);
 			g->popTransform();
 		}
 	}

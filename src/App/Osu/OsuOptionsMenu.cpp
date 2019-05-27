@@ -31,6 +31,7 @@
 #include "OsuSkin.h"
 #include "OsuGameRules.h"
 #include "OsuKeyBindings.h"
+#include "OsuTooltipOverlay.h"
 #include "OsuNotificationOverlay.h"
 #include "OsuSliderRenderer.h"
 #include "OsuCircle.h"
@@ -284,6 +285,66 @@ private:
 	bool m_bActiveCategory;
 };
 
+class OsuOptionsMenuResetButton : public CBaseUIButton
+{
+public:
+	OsuOptionsMenuResetButton(Osu *osu, float xPos, float yPos, float xSize, float ySize, UString name, UString text) : CBaseUIButton(xPos, yPos, xSize, ySize, name, text)
+	{
+		m_osu = osu;
+		m_fAnim = 1.0f;
+	}
+
+	virtual ~OsuOptionsMenuResetButton()
+	{
+		anim->deleteExistingAnimation(&m_fAnim);
+	}
+
+	virtual void draw(Graphics *g)
+	{
+		if (!m_bVisible || m_fAnim <= 0.0f) return;
+
+		const int fullColorBlockSize = 4;
+
+		Color left = COLOR((int)(255*m_fAnim), 255, 233, 50);
+		Color middle = COLOR((int)(255*m_fAnim), 255, 211, 50);
+		Color right = 0x00000000;
+
+		g->fillGradient(m_vPos.x, m_vPos.y, m_vSize.x*1.25f, m_vSize.y, middle, right, middle, right);
+		g->fillGradient(m_vPos.x, m_vPos.y, fullColorBlockSize, m_vSize.y, left, middle, left, middle);
+	}
+
+	virtual void update()
+	{
+		CBaseUIButton::update();
+		if (!m_bVisible || !m_bEnabled) return;
+
+		if (isMouseInside())
+		{
+			m_osu->getTooltipOverlay()->begin();
+			{
+				m_osu->getTooltipOverlay()->addLine("Reset");
+			}
+			m_osu->getTooltipOverlay()->end();
+		}
+	}
+
+private:
+	virtual void onEnabled()
+	{
+		CBaseUIButton::onEnabled();
+		anim->moveQuadOut(&m_fAnim, 1.0f, (1.0f - m_fAnim)*0.15f, true);
+	}
+
+	virtual void onDisabled()
+	{
+		CBaseUIButton::onDisabled();
+		anim->moveQuadOut(&m_fAnim, 0.0f, m_fAnim*0.15f, true);
+	}
+
+	Osu *m_osu;
+	float m_fAnim;
+};
+
 
 
 OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
@@ -322,12 +383,16 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_fullscreenCheckbox = NULL;
 	m_sliderQualitySlider = NULL;
 	m_outputDeviceLabel = NULL;
+	m_outputDeviceResetButton = NULL;
 	m_dpiTextbox = NULL;
 	m_cm360Textbox = NULL;
+	m_letterboxingOffsetResetButton = NULL;
 
 	m_fOsuFolderTextboxInvalidAnim = 0.0f;
 	m_fVibrationStrengthExampleTimer = 0.0f;
 	m_bLetterboxingOffsetUpdateScheduled = false;
+
+	m_iNumResetAllKeyBindingsPressed = 0;
 
 	m_iManiaK = 0;
 	m_iManiaKey = 0;
@@ -543,18 +608,35 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSubSection("Devices");
 	if (env->getOS() != Environment::OS::OS_HORIZON)
 	{
-		OPTIONS_ELEMENT outputDeviceSelect = addButton("Select Output Device", "Default");
+		OPTIONS_ELEMENT outputDeviceSelect = addButton("Select Output Device", "Default", true);
 		((CBaseUIButton*)outputDeviceSelect.elements[0])->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onOutputDeviceSelect) );
+		outputDeviceSelect.resetButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onOutputDeviceResetClicked) );
+
+		m_outputDeviceResetButton = outputDeviceSelect.resetButton;
 		m_outputDeviceSelectButton = outputDeviceSelect.elements[0];
 		m_outputDeviceLabel = (CBaseUILabel*)outputDeviceSelect.elements[1];
 	}
 	else
 		addButton("Restart SoundEngine (fix crackling)")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onOutputDeviceRestart) );
 
+#ifdef MCENGINE_FEATURE_BASS_WASAPI
+
+	addSubSection("WASAPI");
+	CBaseUISlider *wasapiBufferSlider = addSlider("Buffer Size:", 0.001f, 0.050f, convar->getConVarByName("win_snd_wasapi_buffer_size"));
+	wasapiBufferSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeFloatMS) );
+	wasapiBufferSlider->setKeyDelta(0.001f);
+	addLabel("Windows 7: Start at 11 ms,")->setTextColor(0xff666666);
+	addLabel("Windows 10: Start at 1 ms,")->setTextColor(0xff666666);
+	addLabel("and if crackling: increment until fixed.")->setTextColor(0xff666666);
+	addLabel("(lower is better, non-wasapi has ~40 ms minimum)")->setTextColor(0xff666666);
+	addCheckbox("Exclusive Mode", "Dramatically reduces audio latency, leave this enabled.\nExclusive Mode = No other application can use audio.", convar->getConVarByName("win_snd_wasapi_exclusive"));
+
+#endif
+
 	addSubSection("Volume");
-	addSlider("Master:", 0.0f, 1.0f, convar->getConVarByName("osu_volume_master"), 70.0f);
-	addSlider("Music:", 0.0f, 1.0f, convar->getConVarByName("osu_volume_music"), 70.0f);
-	addSlider("Effects:", 0.0f, 1.0f, convar->getConVarByName("osu_volume_effects"), 70.0f);
+	addSlider("Master:", 0.0f, 1.0f, convar->getConVarByName("osu_volume_master"), 70.0f)->setKeyDelta(0.01f);
+	addSlider("Music:", 0.0f, 1.0f, convar->getConVarByName("osu_volume_music"), 70.0f)->setKeyDelta(0.01f);
+	addSlider("Effects:", 0.0f, 1.0f, convar->getConVarByName("osu_volume_effects"), 70.0f)->setKeyDelta(0.01f);
 
 	addSubSection("Offset Adjustment");
 	CBaseUISlider *offsetSlider = addSlider("Universal Offset:", -300.0f, 300.0f, convar->getConVarByName("osu_universal_offset"));
@@ -653,7 +735,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	}
 
 	addSpacer();
-	addSubSection("Keyboard");
+	CBaseUIElement *subSectionKeyboard = addSubSection("Keyboard");
 	addSubSection("Keys - osu! Standard Mode");
 	addKeyBindButton("Left Click", &OsuKeyBindings::LEFT_CLICK);
 	addKeyBindButton("Right Click", &OsuKeyBindings::RIGHT_CLICK);
@@ -688,6 +770,9 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addKeyBindButton("Auto", &OsuKeyBindings::MOD_AUTO);
 	addKeyBindButton("Score V2", &OsuKeyBindings::MOD_SCOREV2);
 	addSpacer();
+	OsuUIButton *resetAllKeyBindingsButton = addButton("Reset all key bindings");
+	resetAllKeyBindingsButton->setColor(0xffff0000);
+	resetAllKeyBindingsButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingsResetAllPressed) );
 	///addButton("osu!mania layout")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingManiaPressed) );
 
 	//**************************************************************************************************************************//
@@ -849,6 +934,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCategory(sectionAudio, OsuIcons::VOLUME_UP);
 	addCategory(sectionSkin, OsuIcons::PAINTBRUSH);
 	addCategory(sectionInput, OsuIcons::GAMEPAD);
+	addCategory(subSectionKeyboard, OsuIcons::KEYBOARD);
 	addCategory(sectionGameplay, OsuIcons::CIRCLE);
 	m_fposuCategoryButton = addCategory(sectionFposu, OsuIcons::CUBE);
 
@@ -1096,6 +1182,9 @@ void OsuOptionsMenu::update()
 
 			m_osu_letterboxing_offset_x->setValue(m_letterboxingOffsetXSlider->getFloat());
 			m_osu_letterboxing_offset_y->setValue(m_letterboxingOffsetYSlider->getFloat());
+
+			// and update reset buttons as usual
+			onResetUpdate(m_letterboxingOffsetResetButton);
 		}
 	}
 
@@ -1304,6 +1393,10 @@ void OsuOptionsMenu::setVisibleInt(bool visible, bool fromOnBack)
 	// auto scroll to fposu settings if opening options while in fposu gamemode
 	if (visible && m_osu->isInPlayMode() && m_osu_mod_fposu->getBool() && !m_fposuCategoryButton->isActiveCategory())
 		onCategoryClicked(m_fposuCategoryButton);
+
+	// reset key bind reset counter
+	if (visible)
+		m_iNumResetAllKeyBindingsPressed = 0;
 }
 
 void OsuOptionsMenu::setUsername(UString username)
@@ -1329,7 +1422,7 @@ bool OsuOptionsMenu::shouldDrawVRDummyHUD()
 
 void OsuOptionsMenu::updateLayout()
 {
-	// set all elements to the current convar values
+	// set all elements to the current convar values, and update the reset button states
 	for (int i=0; i<m_elements.size(); i++)
 	{
 		switch (m_elements[i].type)
@@ -1354,7 +1447,7 @@ void OsuOptionsMenu::updateLayout()
 					if (sliderPointer != NULL)
 					{
 						sliderPointer->setValue(m_elements[i].cvar->getFloat(), false);
-						sliderPointer->forceCallCallback();
+						sliderPointer->fireChangeCallback();
 					}
 				}
 			}
@@ -1371,6 +1464,8 @@ void OsuOptionsMenu::updateLayout()
 			}
 			break;
 		}
+
+		onResetUpdate(m_elements[i].resetButton);
 	}
 
 	if (m_fullscreenCheckbox != NULL)
@@ -1380,8 +1475,11 @@ void OsuOptionsMenu::updateLayout()
 
 	// temp, not correct anymore if loading fails!
 	m_skinLabel->setText(convar->getConVarByName("osu_skin")->getString());
+
 	if (m_outputDeviceLabel != NULL)
 		m_outputDeviceLabel->setText(engine->getSound()->getOutputDevice());
+
+	onOutputDeviceResetUpdate();
 
 	//************************************************************************************************************************************//
 
@@ -1543,9 +1641,16 @@ void OsuOptionsMenu::updateLayout()
 		}
 
 		// add all elements of the current entry
-		for (int e=0; e<m_elements[i].elements.size(); e++)
 		{
-			m_options->getContainer()->addBaseUIElement(m_elements[i].elements[e]);
+			// reset button
+			if (m_elements[i].resetButton != NULL)
+				m_options->getContainer()->addBaseUIElement(m_elements[i].resetButton);
+
+			// elements
+			for (int e=0; e<m_elements[i].elements.size(); e++)
+			{
+				m_options->getContainer()->addBaseUIElement(m_elements[i].elements[e]);
+			}
 		}
 
 		// if this element is a new section, add even more spacing
@@ -1560,6 +1665,13 @@ void OsuOptionsMenu::updateLayout()
 		int elementWidth = optionsWidth - 2*sideMargin - 2;
 
 		const bool isKeyBindButton = (m_elements[i].type == 5);
+
+		if (m_elements[i].resetButton != NULL)
+		{
+			CBaseUIButton *resetButton = m_elements[i].resetButton;
+			resetButton->setRelPosY(yCounter);
+			resetButton->setRelPosX(0);
+		}
 
 		if (m_elements[i].elements.size() == 1)
 		{
@@ -1778,6 +1890,20 @@ void OsuOptionsMenu::onFullscreenChange(CBaseUICheckbox *checkbox)
 		env->enableFullscreen();
 	else
 		env->disableFullscreen();
+
+	// and update reset button as usual
+	for (int i=0; i<m_elements.size(); i++)
+	{
+		for (int e=0; e<m_elements[i].elements.size(); e++)
+		{
+			if (m_elements[i].elements[e] == checkbox)
+			{
+				onResetUpdate(m_elements[i].resetButton);
+
+				break;
+			}
+		}
+	}
 }
 
 void OsuOptionsMenu::onBorderlessWindowedChange(CBaseUICheckbox *checkbox)
@@ -1786,6 +1912,20 @@ void OsuOptionsMenu::onBorderlessWindowedChange(CBaseUICheckbox *checkbox)
 
 	if (checkbox->isChecked() && !env->isFullscreen())
 		env->enableFullscreen();
+
+	// and update reset button as usual
+	for (int i=0; i<m_elements.size(); i++)
+	{
+		for (int e=0; e<m_elements[i].elements.size(); e++)
+		{
+			if (m_elements[i].elements[e] == checkbox)
+			{
+				onResetUpdate(m_elements[i].resetButton);
+
+				break;
+			}
+		}
+	}
 }
 
 void OsuOptionsMenu::onSkinSelect()
@@ -1953,6 +2093,21 @@ void OsuOptionsMenu::onOutputDeviceSelect2(UString outputDeviceName, int id)
 	engine->getSound()->setOutputDevice(outputDeviceName);
 	m_outputDeviceLabel->setText(engine->getSound()->getOutputDevice());
 	m_osu->reloadSkin(); // needed to reload sounds
+
+	// and update reset button as usual
+	onOutputDeviceResetUpdate();
+}
+
+void OsuOptionsMenu::onOutputDeviceResetClicked()
+{
+	if (engine->getSound()->getOutputDevices().size() > 0)
+		onOutputDeviceSelect2(engine->getSound()->getOutputDevices()[0]);
+}
+
+void OsuOptionsMenu::onOutputDeviceResetUpdate()
+{
+	if (m_outputDeviceResetButton != NULL)
+		m_outputDeviceResetButton->setEnabled(engine->getSound()->getOutputDevices().size() > 0 && engine->getSound()->getOutputDevice() != engine->getSound()->getOutputDevices()[0]);
 }
 
 void OsuOptionsMenu::onOutputDeviceRestart()
@@ -2011,6 +2166,9 @@ void OsuOptionsMenu::onCheckboxChange(CBaseUICheckbox *checkbox)
 			{
 				if (m_elements[i].cvar != NULL)
 					m_elements[i].cvar->setValue(checkbox->isChecked());
+
+				onResetUpdate(m_elements[i].resetButton);
+
 				break;
 			}
 		}
@@ -2033,6 +2191,9 @@ void OsuOptionsMenu::onSliderChange(CBaseUISlider *slider)
 					CBaseUILabel *labelPointer = dynamic_cast<CBaseUILabel*>(m_elements[i].elements[2]);
 					labelPointer->setText(m_elements[i].cvar->getString());
 				}
+
+				onResetUpdate(m_elements[i].resetButton);
+
 				break;
 			}
 		}
@@ -2055,6 +2216,9 @@ void OsuOptionsMenu::onSliderChangeOneDecimalPlace(CBaseUISlider *slider)
 					CBaseUILabel *labelPointer = dynamic_cast<CBaseUILabel*>(m_elements[i].elements[2]);
 					labelPointer->setText(m_elements[i].cvar->getString());
 				}
+
+				onResetUpdate(m_elements[i].resetButton);
+
 				break;
 			}
 		}
@@ -2077,6 +2241,9 @@ void OsuOptionsMenu::onSliderChangeOneDecimalPlaceMeters(CBaseUISlider *slider)
 					CBaseUILabel *labelPointer = dynamic_cast<CBaseUILabel*>(m_elements[i].elements[2]);
 					labelPointer->setText(UString::format("%.1f m", m_elements[i].cvar->getFloat()));
 				}
+
+				onResetUpdate(m_elements[i].resetButton);
+
 				break;
 			}
 		}
@@ -2099,6 +2266,9 @@ void OsuOptionsMenu::onSliderChangeInt(CBaseUISlider *slider)
 					CBaseUILabel *labelPointer = dynamic_cast<CBaseUILabel*>(m_elements[i].elements[2]);
 					labelPointer->setText(m_elements[i].cvar->getString());
 				}
+
+				onResetUpdate(m_elements[i].resetButton);
+
 				break;
 			}
 		}
@@ -2123,6 +2293,36 @@ void OsuOptionsMenu::onSliderChangeIntMS(CBaseUISlider *slider)
 					text.append(" ms");
 					labelPointer->setText(text);
 				}
+
+				onResetUpdate(m_elements[i].resetButton);
+
+				break;
+			}
+		}
+	}
+}
+
+void OsuOptionsMenu::onSliderChangeFloatMS(CBaseUISlider *slider)
+{
+	for (int i=0; i<m_elements.size(); i++)
+	{
+		for (int e=0; e<m_elements[i].elements.size(); e++)
+		{
+			if (m_elements[i].elements[e] == slider)
+			{
+				if (m_elements[i].cvar != NULL)
+					m_elements[i].cvar->setValue(slider->getFloat());
+
+				if (m_elements[i].elements.size() == 3)
+				{
+					CBaseUILabel *labelPointer = dynamic_cast<CBaseUILabel*>(m_elements[i].elements[2]);
+					UString text = UString::format("%i", (int)std::round(m_elements[i].cvar->getFloat()*1000.0f));
+					text.append(" ms");
+					labelPointer->setText(text);
+				}
+
+				onResetUpdate(m_elements[i].resetButton);
+
 				break;
 			}
 		}
@@ -2147,6 +2347,9 @@ void OsuOptionsMenu::onSliderChangePercent(CBaseUISlider *slider)
 					CBaseUILabel *labelPointer = dynamic_cast<CBaseUILabel*>(m_elements[i].elements[2]);
 					labelPointer->setText(UString::format("%i%%", percent));
 				}
+
+				onResetUpdate(m_elements[i].resetButton);
+
 				break;
 			}
 		}
@@ -2194,6 +2397,33 @@ void OsuOptionsMenu::onKeyUnbindButtonPressed(CBaseUIButton *button)
 	}
 }
 
+void OsuOptionsMenu::onKeyBindingsResetAllPressed(CBaseUIButton *button)
+{
+	m_iNumResetAllKeyBindingsPressed++;
+
+	const int numRequiredPressesUntilReset = 4;
+	const int remainingUntilReset = numRequiredPressesUntilReset - m_iNumResetAllKeyBindingsPressed;
+
+	if (m_iNumResetAllKeyBindingsPressed > (numRequiredPressesUntilReset-1))
+	{
+		m_iNumResetAllKeyBindingsPressed = 0;
+
+		for (ConVar *bind : OsuKeyBindings::ALL)
+		{
+			bind->setValue(bind->getDefaultFloat());
+		}
+
+		m_osu->getNotificationOverlay()->addNotification("All key bindings have been reset.", 0xff00ff00);
+	}
+	else
+	{
+		if (remainingUntilReset > 1)
+			m_osu->getNotificationOverlay()->addNotification(UString::format("Press %i more times to confirm.", remainingUntilReset));
+		else
+			m_osu->getNotificationOverlay()->addNotification(UString::format("Press %i more time to confirm!", remainingUntilReset), 0xffffff00);
+	}
+}
+
 void OsuOptionsMenu::onKeyBindingManiaPressedInt()
 {
 	onKeyBindingManiaPressed(NULL);
@@ -2227,6 +2457,9 @@ void OsuOptionsMenu::onSliderChangeVRSuperSampling(CBaseUISlider *slider)
 					labelText.append("x");
 					labelPointer->setText(labelText);
 				}
+
+				onResetUpdate(m_elements[i].resetButton);
+
 				break;
 			}
 		}
@@ -2262,6 +2495,9 @@ void OsuOptionsMenu::onSliderChangeVRAntiAliasing(CBaseUISlider *slider)
 					CBaseUILabel *labelPointer = dynamic_cast<CBaseUILabel*>(m_elements[i].elements[2]);
 					labelPointer->setText(UString::format("%ix", aa));
 				}
+
+				onResetUpdate(m_elements[i].resetButton);
+
 				break;
 			}
 		}
@@ -2289,6 +2525,9 @@ void OsuOptionsMenu::onSliderChangeSliderQuality(CBaseUISlider *slider)
 					UString text = UString::format(percent > 49 ? "%i !" : "%i", percent);
 					labelPointer->setText(text);
 				}
+
+				onResetUpdate(m_elements[i].resetButton);
+
 				break;
 			}
 		}
@@ -2314,6 +2553,11 @@ void OsuOptionsMenu::onSliderChangeLetterboxingOffset(CBaseUISlider *slider)
 					CBaseUILabel *labelPointer = dynamic_cast<CBaseUILabel*>(m_elements[i].elements[2]);
 					labelPointer->setText(UString::format("%i%%", percent));
 				}
+
+				m_letterboxingOffsetResetButton = m_elements[i].resetButton;
+
+				onResetUpdate(m_elements[i].resetButton);
+
 				break;
 			}
 		}
@@ -2351,10 +2595,10 @@ void OsuOptionsMenu::onHighQualitySlidersConVarChange(UString oldValue, UString 
 
 		if (contains)
 		{
-			// show/hide quality slider
+			// HACKHACK: show/hide quality slider, this is ugly as fuck
+			// TODO: containers use setVisible() on all elements. there needs to be a separate API for hiding elements while inside any kind of container
 			for (int e=0; e<m_elements[i].elements.size(); e++)
 			{
-				// this is ugly as fuck
 				m_elements[i].elements[e]->setEnabled(enabled);
 				OsuUISlider *sliderPointer = dynamic_cast<OsuUISlider*>(m_elements[i].elements[e]);
 				CBaseUILabel *labelPointer = dynamic_cast<CBaseUILabel*>(m_elements[i].elements[e]);
@@ -2370,6 +2614,8 @@ void OsuOptionsMenu::onHighQualitySlidersConVarChange(UString oldValue, UString 
 				m_sliderQualitySlider->setValue(m_elements[i].cvar->getDefaultFloat(), false);
 				m_elements[i].cvar->setValue(m_elements[i].cvar->getDefaultFloat());
 			}
+
+			onResetUpdate(m_elements[i].resetButton);
 
 			break;
 		}
@@ -2388,6 +2634,67 @@ void OsuOptionsMenu::onCategoryClicked(CBaseUIButton *button)
 		m_options->scrollToElement(categoryButton->getSection(), 0, 100);
 }
 
+void OsuOptionsMenu::onResetUpdate(CBaseUIButton *button)
+{
+	if (button == NULL) return;
+
+	for (int i=0; i<m_elements.size(); i++)
+	{
+		if (m_elements[i].resetButton == button && m_elements[i].cvar != NULL)
+		{
+			switch (m_elements[i].type)
+			{
+			case 6: // checkbox
+				m_elements[i].resetButton->setEnabled(m_elements[i].cvar->getBool() != (bool)m_elements[i].cvar->getDefaultFloat());
+				break;
+			case 7: // slider
+				m_elements[i].resetButton->setEnabled(m_elements[i].cvar->getFloat() != m_elements[i].cvar->getDefaultFloat());
+				break;
+			}
+
+			break;
+		}
+	}
+}
+
+void OsuOptionsMenu::onResetClicked(CBaseUIButton *button)
+{
+	if (button == NULL) return;
+
+	for (int i=0; i<m_elements.size(); i++)
+	{
+		if (m_elements[i].resetButton == button && m_elements[i].cvar != NULL)
+		{
+			switch (m_elements[i].type)
+			{
+			case 6: // checkbox
+				for (int e=0; e<m_elements[i].elements.size(); e++)
+				{
+					CBaseUICheckbox *checkboxPointer = dynamic_cast<CBaseUICheckbox*>(m_elements[i].elements[e]);
+					if (checkboxPointer != NULL)
+						checkboxPointer->setChecked((bool)m_elements[i].cvar->getDefaultFloat());
+				}
+				break;
+			case 7: // slider
+				if (m_elements[i].elements.size() == 3)
+				{
+					CBaseUISlider *sliderPointer = dynamic_cast<CBaseUISlider*>(m_elements[i].elements[1]);
+					if (sliderPointer != NULL)
+					{
+						sliderPointer->setValue(m_elements[i].cvar->getDefaultFloat(), false);
+						sliderPointer->fireChangeCallback();
+					}
+				}
+				break;
+			}
+
+			break;
+		}
+	}
+
+	onResetUpdate(button);
+}
+
 void OsuOptionsMenu::addSpacer()
 {
 	OPTIONS_ELEMENT e;
@@ -2399,6 +2706,7 @@ void OsuOptionsMenu::addSpacer()
 CBaseUILabel *OsuOptionsMenu::addSection(UString text)
 {
 	CBaseUILabel *label = new CBaseUILabel(0, 0, m_options->getSize().x, 25, text, text);
+	//label->setTextColor(0xff58dafe);
 	label->setFont(m_osu->getTitleFont());
 	label->setSizeToContent(0, 0);
 	label->setTextJustification(CBaseUILabel::TEXT_JUSTIFICATION_RIGHT);
@@ -2450,7 +2758,7 @@ CBaseUILabel *OsuOptionsMenu::addLabel(UString text)
 	return label;
 }
 
-OsuUIButton *OsuOptionsMenu::addButton(UString text, ConVar *cvar)
+OsuUIButton *OsuOptionsMenu::addButton(UString text)
 {
 	OsuUIButton *button = new OsuUIButton(m_osu, 0, 0, m_options->getSize().x, 50, text, text);
 	button->setColor(0xff0e94b5);
@@ -2460,13 +2768,12 @@ OsuUIButton *OsuOptionsMenu::addButton(UString text, ConVar *cvar)
 	OPTIONS_ELEMENT e;
 	e.elements.push_back(button);
 	e.type = 4;
-	e.cvar = cvar;
 	m_elements.push_back(e);
 
 	return button;
 }
 
-OsuOptionsMenu::OPTIONS_ELEMENT OsuOptionsMenu::addButton(UString text, UString labelText)
+OsuOptionsMenu::OPTIONS_ELEMENT OsuOptionsMenu::addButton(UString text, UString labelText, bool withResetButton)
 {
 	OsuUIButton *button = new OsuUIButton(m_osu, 0, 0, m_options->getSize().x, 50, text, text);
 	button->setColor(0xff0e94b5);
@@ -2479,10 +2786,13 @@ OsuOptionsMenu::OPTIONS_ELEMENT OsuOptionsMenu::addButton(UString text, UString 
 	m_options->getContainer()->addBaseUIElement(label);
 
 	OPTIONS_ELEMENT e;
+	if (withResetButton)
+	{
+		e.resetButton = new OsuOptionsMenuResetButton(m_osu, 0, 0, 35, 50, "", "");
+	}
 	e.elements.push_back(button);
 	e.elements.push_back(label);
 	e.type = 4;
-	e.cvar = NULL;
 	m_elements.push_back(e);
 
 	return e;
@@ -2543,6 +2853,11 @@ CBaseUICheckbox *OsuOptionsMenu::addCheckbox(UString text, UString tooltipText, 
 	m_options->getContainer()->addBaseUIElement(checkbox);
 
 	OPTIONS_ELEMENT e;
+	if (cvar != NULL)
+	{
+		e.resetButton = new OsuOptionsMenuResetButton(m_osu, 0, 0, 35, 50, "", "");
+		e.resetButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onResetClicked) );
+	}
 	e.elements.push_back(checkbox);
 	e.type = 6;
 	e.cvar = cvar;
@@ -2553,7 +2868,7 @@ CBaseUICheckbox *OsuOptionsMenu::addCheckbox(UString text, UString tooltipText, 
 
 OsuUISlider *OsuOptionsMenu::addSlider(UString text, float min, float max, ConVar *cvar, float label1Width)
 {
-	OsuUISlider *slider = new OsuUISlider(m_osu, 0, 0, 100, 40, text);
+	OsuUISlider *slider = new OsuUISlider(m_osu, 0, 0, 100, 50, text);
 	slider->setAllowMouseWheel(false);
 	slider->setBounds(min, max);
 	slider->setLiveUpdate(true);
@@ -2564,7 +2879,7 @@ OsuUISlider *OsuOptionsMenu::addSlider(UString text, float min, float max, ConVa
 	}
 	m_options->getContainer()->addBaseUIElement(slider);
 
-	CBaseUILabel *label1 = new CBaseUILabel(0, 0, m_options->getSize().x, 40, text, text);
+	CBaseUILabel *label1 = new CBaseUILabel(0, 0, m_options->getSize().x, 50, text, text);
 	label1->setDrawFrame(false);
 	label1->setDrawBackground(false);
 	label1->setWidthToContent();
@@ -2572,13 +2887,18 @@ OsuUISlider *OsuOptionsMenu::addSlider(UString text, float min, float max, ConVa
 		label1->setSizeX(label1Width);
 	m_options->getContainer()->addBaseUIElement(label1);
 
-	CBaseUILabel *label2 = new CBaseUILabel(0, 0, m_options->getSize().x, 40, "", "8.81");
+	CBaseUILabel *label2 = new CBaseUILabel(0, 0, m_options->getSize().x, 50, "", "8.81");
 	label2->setDrawFrame(false);
 	label2->setDrawBackground(false);
 	label2->setWidthToContent();
 	m_options->getContainer()->addBaseUIElement(label2);
 
 	OPTIONS_ELEMENT e;
+	if (cvar != NULL)
+	{
+		e.resetButton = new OsuOptionsMenuResetButton(m_osu, 0, 0, 35, 50, "", "");
+		e.resetButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onResetClicked) );
+	}
 	e.elements.push_back(label1);
 	e.elements.push_back(slider);
 	e.elements.push_back(label2);

@@ -32,3 +32,6 @@ wchar_t OsuIcons::ARROW_DOWN = OsuIcons::addIcon(0xf063);
 wchar_t OsuIcons::GLOBE = OsuIcons::addIcon(0xf0ac);
 wchar_t OsuIcons::USER = OsuIcons::addIcon(0xf2be);
 wchar_t OsuIcons::UNDO = OsuIcons::addIcon(0xf0e2);
+wchar_t OsuIcons::KEYBOARD = OsuIcons::addIcon(0xf11c);
+wchar_t OsuIcons::LOCK = OsuIcons::addIcon(0xf023);
+wchar_t OsuIcons::UNLOCK = OsuIcons::addIcon(0xf09c);

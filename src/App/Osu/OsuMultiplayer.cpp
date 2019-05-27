@@ -696,7 +696,9 @@ void OsuMultiplayer::onServerModUpdate()
 	{
 		// overrides
 		simpleModConVars.push_back("osu_cs_override");
+		simpleModConVars.push_back("osu_ar_override_lock");
 		simpleModConVars.push_back("osu_ar_override");
+		simpleModConVars.push_back("osu_od_override_lock");
 		simpleModConVars.push_back("osu_od_override");
 		simpleModConVars.push_back("osu_speed_override");
 
