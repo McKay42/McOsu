@@ -54,6 +54,8 @@ public:
 
 	void save();
 
+	void openAndScrollToSkinSection();
+
 	void setFullscreen(bool fullscreen) {m_bFullscreen = fullscreen;}
 
 	void setUsername(UString username);
@@ -61,6 +63,7 @@ public:
 	inline bool isFullscreen() const {return m_bFullscreen;}
 	bool isMouseInside();
 	bool isBusy();
+	inline bool isWorkshopLoading() const {return m_bWorkshopSkinSelectScheduled;}
 
 	bool shouldDrawVRDummyHUD();
 
@@ -93,12 +96,17 @@ private:
 	void updateFposuDPI();
 	void updateFposuCMper360();
 	void updateVRRenderTargetResolutionLabel();
+	void updateSkinNameLabel();
 
 	// options
 	void onFullscreenChange(CBaseUICheckbox *checkbox);
 	void onBorderlessWindowedChange(CBaseUICheckbox *checkbox);
 	void onSkinSelect();
 	void onSkinSelect2(UString skinName, int id = -1);
+	void onSkinSelectWorkshop();
+	void onSkinSelectWorkshop2();
+	void onSkinSelectWorkshop3();
+	void onSkinSelectWorkshop4(UString skinName, int id);
 	void onSkinReload();
 	void onResolutionSelect();
 	void onResolutionSelect2(UString resolution, int id = -1);
@@ -149,6 +157,7 @@ private:
 	CBaseUILabel *addLabel(UString text);
 	OsuUIButton *addButton(UString text);
 	OPTIONS_ELEMENT addButton(UString text, UString labelText, bool withResetButton = false);
+	OPTIONS_ELEMENT addButtonButtonLabel(UString text1, UString text2, UString labelText, bool withResetButton = false);
 	OsuUIButton *addKeyBindButton(UString text, ConVar *cvar);
 	CBaseUICheckbox *addCheckbox(UString text, ConVar *cvar);
 	CBaseUICheckbox *addCheckbox(UString text, UString tooltipText = "", ConVar *cvar = NULL);
@@ -193,7 +202,8 @@ private:
 	CBaseUISlider *m_statisticsOverlayScaleSlider;
 	CBaseUISlider *m_cursorSizeSlider;
 	CBaseUILabel *m_skinLabel;
-	CBaseUIElement *m_skinSelectButton;
+	CBaseUIElement *m_skinSelectLocalButton;
+	CBaseUIElement *m_skinSelectWorkshopButton;
 	CBaseUIElement *m_resolutionSelectButton;
 	CBaseUILabel *m_resolutionLabel;
 	CBaseUITextbox *m_osuFolderTextbox;
@@ -214,16 +224,22 @@ private:
 	OsuOptionsMenuSliderPreviewElement *m_sliderPreviewElement;
 	CBaseUITextbox *m_dpiTextbox;
 	CBaseUITextbox *m_cm360Textbox;
+	CBaseUIElement *m_skinSection;
 
 	ConVar *m_waitingKey;
-	ConVar *m_osu_slider_curve_points_separation;
-	ConVar *m_osu_letterboxing_offset_x;
-	ConVar *m_osu_letterboxing_offset_y;
-	ConVar *m_osu_mod_fposu;
+	ConVar *m_osu_slider_curve_points_separation_ref;
+	ConVar *m_osu_letterboxing_offset_x_ref;
+	ConVar *m_osu_letterboxing_offset_y_ref;
+	ConVar *m_osu_mod_fposu_ref;
+	ConVar *m_osu_skin_ref;
+	ConVar *m_osu_skin_is_from_workshop_ref;
+	ConVar *m_osu_skin_workshop_title_ref;
+	ConVar *m_osu_skin_workshop_id_ref;
 
 	float m_fOsuFolderTextboxInvalidAnim;
 	float m_fVibrationStrengthExampleTimer;
 	bool m_bLetterboxingOffsetUpdateScheduled;
+	bool m_bWorkshopSkinSelectScheduled;
 
 	// key bindings
 	int m_iNumResetAllKeyBindingsPressed;

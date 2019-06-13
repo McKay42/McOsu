@@ -23,13 +23,17 @@ class OsuSkin
 public:
 	static const char *OSUSKIN_DEFAULT_SKIN_PATH;
 
+	static ConVar *m_osu_skin_async;
 	static ConVar *m_osu_skin_hd;
 
 public:
-	OsuSkin(Osu *osu, UString filepath, bool isDefaultSkin = false);
+	OsuSkin(Osu *osu, UString filepath, bool isDefaultSkin = false, bool isWorkshopSkin = false);
 	virtual ~OsuSkin();
 
 	void update();
+
+	bool isReady();
+	inline bool isWorkshopSkin() const {return m_bIsWorkshopSkin;}
 
 	void load();
 	void loadBeatmapOverride(UString filepath);
@@ -124,6 +128,7 @@ public:
 	inline Image *getCursor() {return m_cursor;}
 	inline Image *getCursorMiddle() {return m_cursorMiddle;}
 	inline Image *getCursorTrail() {return m_cursorTrail;}
+	inline Image *getCursorRipple() {return m_cursorRipple;}
 
 	inline OsuSkinImage *getSelectionModEasy() {return m_selectionModEasy;}
 	inline OsuSkinImage *getSelectionModNoFail() {return m_selectionModNoFail;}
@@ -200,6 +205,7 @@ public:
 	inline Image *getSeekTriangle() {return m_seekTriangle;}
 	inline Image *getUserIcon() {return m_userIcon;}
 	inline Image *getBackgroundCube() {return m_backgroundCube;}
+	inline Image *getMenuBackground() {return m_menuBackground;}
 
 	inline Sound *getSpinnerBonus() {return m_spinnerBonus;}
 	inline Sound *getSpinnerSpinSound() {return m_spinnerSpinSound;}
@@ -215,6 +221,7 @@ public:
 
 	inline bool isCursor2x() {return m_bCursor2x;}
 	inline bool isCursorTrail2x() {return m_bCursorTrail2x;}
+	inline bool isCursorRipple2x() {return m_bCursorRipple2x;}
 	inline bool isApproachCircle2x() {return m_bApproachCircle2x;}
 	inline bool isReverseArrow2x() {return m_bReverseArrow2x;}
 	inline bool isHitCircle2x() {return m_bHitCircle2x;}
@@ -289,6 +296,8 @@ public:
 private:
 	static ConVar *m_osu_skin_ref;
 
+	static Image *m_missingTexture;
+
 	struct SOUND_SAMPLE
 	{
 		Sound *sound;
@@ -306,16 +315,16 @@ private:
 	void onEffectVolumeChange(UString oldValue, UString newValue);
 
 	Osu *m_osu;
+	bool m_bReady;
 	bool m_bIsDefaultSkin;
+	bool m_bIsWorkshopSkin;
 	UString m_sFilePath;
 	std::vector<Resource*> m_resources;
 	std::vector<Sound*> m_sounds;
 	std::vector<SOUND_SAMPLE> m_soundSamples;
-
 	std::vector<OsuSkinImage*> m_images;
 
-	static Image *m_missingTexture;
-
+	// images
 	Image *m_hitCircle;
 	OsuSkinImage *m_hitCircleOverlay2;
 	Image *m_approachCircle;
@@ -390,6 +399,7 @@ private:
 	Image *m_cursor;
 	Image *m_cursorMiddle;
 	Image *m_cursorTrail;
+	Image *m_cursorRipple;
 
 	OsuSkinImage *m_selectionModEasy;
 	OsuSkinImage *m_selectionModNoFail;
@@ -466,7 +476,9 @@ private:
 	Image *m_seekTriangle;
 	Image *m_userIcon;
 	Image *m_backgroundCube;
+	Image *m_menuBackground;
 
+	// sounds
 	Sound *m_normalHitNormal;
 	Sound *m_normalHitWhistle;
 	Sound *m_normalHitFinish;
@@ -494,6 +506,7 @@ private:
 	Sound *m_checkOff;
 	Sound *m_shutter;
 
+	// colors
 	std::vector<Color> m_comboColors;
 	std::vector<Color> m_beatmapComboColors;
 	Color m_spinnerApproachCircleColor;
@@ -506,10 +519,10 @@ private:
 
 	Color m_inputOverlayText;
 
-
 	// scaling
 	bool m_bCursor2x;
 	bool m_bCursorTrail2x;
+	bool m_bCursorRipple2x;
 	bool m_bApproachCircle2x;
 	bool m_bReverseArrow2x;
 	bool m_bHitCircle2x;

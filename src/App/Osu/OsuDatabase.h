@@ -112,7 +112,7 @@ public:
 	int getLevelForScore(unsigned long long score, int maxLevel = 120);
 
 	inline float getProgress() const {return m_fLoadingProgress.load();}
-	bool isFinished() const {return getProgress() >= 1.0f;}
+	inline bool isFinished() const {return (getProgress() >= 1.0f);}
 	inline bool foundChanges() const {return m_bFoundChanges;}
 
 	inline int getNumBeatmaps() const {return m_beatmaps.size();} // valid beatmaps
@@ -129,24 +129,26 @@ private:
 
 	static ConVar *m_name_ref;
 
-	void loadRaw();
+	UString parseLegacyCfgBeatmapDirectoryParameter();
+	void scheduleLoadRaw();
 	void loadDB(OsuFile *db);
+
 	void loadScores();
 	void saveScores();
 
-	OsuBeatmap *loadRawBeatmap(UString beatmapPath);
+	OsuBeatmap *loadRawBeatmap(UString beatmapPath);	// only used for raw loading without db
 
-	OsuBeatmap *createBeatmapForActiveGamemode(); // TEMP: workaround
+	OsuBeatmap *createBeatmapForActiveGamemode();		// TEMP: workaround
 
 	Osu *m_osu;
 	Timer *m_importTimer;
-	bool m_bIsFirstLoad;
-	bool m_bFoundChanges; // for total refresh detection of raw loading
+	bool m_bIsFirstLoad;	// only load differences after first raw load
+	bool m_bFoundChanges;	// for total refresh detection of raw loading
 
 	// global
 	int m_iNumBeatmapsToLoad;
 	std::atomic<float> m_fLoadingProgress;
-	std::atomic<bool> m_bKYS;
+	std::atomic<bool> m_bInterruptLoad;
 	std::vector<OsuBeatmap*> m_beatmaps;
 
 	// osu!.db

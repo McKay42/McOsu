@@ -31,22 +31,6 @@ public:
 	static ConVar *m_osu_slider_end_inside_check_offset;
 	static ConVar *m_osu_stars_xexxar_angles_sliders;
 
-public:
-	OsuBeatmapDifficulty(Osu *osu, UString filepath, UString folder);
-	~OsuBeatmapDifficulty();
-	void unload();
-
-	bool loadMetadataRaw(bool calculateStars = false, bool calculateStarsInaccurately = false);
-	bool loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject*> *hitobjects);
-
-	void loadBackgroundImage();
-	void unloadBackgroundImage();
-	void loadBackgroundImagePath();
-
-	inline unsigned long long getSortHack() const {return m_iSortHack;}
-	inline bool shouldBackgroundImageBeLoaded() const {return m_bShouldBackgroundImageBeLoaded;}
-	bool isBackgroundLoaderActive();
-
 	struct HITCIRCLE
 	{
 		int x,y;
@@ -111,6 +95,33 @@ public:
 		unsigned long long sortHack;
 	};
 
+	// custom
+	struct TIMING_INFO
+	{
+		long offset;
+		float beatLengthBase;
+		float beatLength;
+		float volume;
+		int sampleType;
+		int sampleSet;
+	};
+
+public:
+	OsuBeatmapDifficulty(Osu *osu, UString filepath, UString folder);
+	~OsuBeatmapDifficulty();
+	void unload();
+
+	bool loadMetadataRaw(bool calculateStars = false, bool calculateStarsInaccurately = false);
+	bool loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject*> *hitobjects);
+
+	void loadBackgroundImage();
+	void unloadBackgroundImage();
+	void loadBackgroundImagePath();
+
+	inline unsigned long long getSortHack() const {return m_iSortHack;}
+	inline bool shouldBackgroundImageBeLoaded() const {return m_bShouldBackgroundImageBeLoaded;}
+	bool isBackgroundLoaderActive();
+
 	bool loaded;
 
 	// metadata
@@ -163,24 +174,17 @@ public:
 	int ID;
 	int setID;
 	bool starsWereCalculatedAccurately;
-	bool semaphore; // yes, I know this is disgusting
+	std::atomic<bool> semaphore; // yes, I know this is disgusting
 
 	// timing (points) + breaks
-	struct TIMING_INFO
-	{
-		long offset;
-		float beatLengthBase;
-		float beatLength;
-		float volume;
-		int sampleType;
-		int sampleSet;
-	};
-
 	TIMING_INFO getTimingInfoForTime(unsigned long positionMS);
 	unsigned long getBreakDuration(unsigned long positionMS);
 	unsigned long getBreakDurationTotal();
-
 	bool isInBreak(unsigned long positionMS);
+
+	// for score v2
+	inline int getMaxCombo() {return m_iMaxCombo;}
+	inline unsigned long long getScoreV2ComboPortionMaximum() {return m_fScoreV2ComboPortionMaximum;}
 
 	// star calculation
 	// NOTE: calculateStarsInaccurately is only used for initial songbrowser sorting/calculation: as soon as a beatmap is selected it will be recalculated fully (together with the background image loader)
@@ -192,10 +196,6 @@ public:
 	inline double getAimStarsForUpToHitObjectIndex(int upToHitObjectIndex) {return (m_aimStarsForNumHitObjects.size() > 0 ? m_aimStarsForNumHitObjects[clamp<int>(upToHitObjectIndex, 0, m_aimStarsForNumHitObjects.size()-1)] : 0);}
 	inline double getSpeedStarsForUpToHitObjectIndex(int upToHitObjectIndex) {return (m_speedStarsForNumHitObjects.size() > 0 ? m_speedStarsForNumHitObjects[clamp<int>(upToHitObjectIndex, 0, m_speedStarsForNumHitObjects.size()-1)] : 0);}
 
-	// for score v2
-	inline int getMaxCombo() {return m_iMaxCombo;}
-	inline unsigned long long getScoreV2ComboPortionMaximum() {return m_fScoreV2ComboPortionMaximum;}
-
 private:
 	static unsigned long long sortHackCounter;
 
@@ -206,7 +206,7 @@ private:
 	// every supported type of beatmap/gamemode gets its own build function here. it should build the hitobject classes from the data loaded from disk.
 	void buildStandardHitObjects(OsuBeatmapStandard *beatmap, std::vector<OsuHitObject*> *hitobjects);
 	void buildManiaHitObjects(OsuBeatmapMania *beatmap, std::vector<OsuHitObject*> *hitobjects);
-	// void buildTaikoHitObjects(OsuBeatmapTaiko *beatmap, std::vector<OsuHitObject*> *hitobjects);
+	//void buildTaikoHitObjects(OsuBeatmapTaiko *beatmap, std::vector<OsuHitObject*> *hitobjects);
 
 	// generic helper functions
 	void calculateAllSliderTimesAndClicksTicks();

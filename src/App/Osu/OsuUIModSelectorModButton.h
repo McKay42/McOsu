@@ -26,7 +26,7 @@ public:
 
 	void resetState();
 
-	void setState(unsigned int state, UString modName, UString tooltipText, std::function<OsuSkinImage*()> getImageFunc);
+	void setState(unsigned int state, bool initialState, UString modName, UString tooltipText, std::function<OsuSkinImage*()> getImageFunc);
 	void setBaseScale(float xScale, float yScale);
 	void setAvailable(bool available) {m_bAvailable = available;}
 
@@ -39,7 +39,7 @@ private:
 	virtual void onFocusStolen();
 
 	void setOn(bool on);
-	void setState(int state);
+	void setState(int state, bool updateModConVar = true);
 
 	Osu *m_osu;
 	OsuModSelector *m_osuModSelector;

@@ -94,7 +94,7 @@ public:
 	{
 		m_beatmap = beatmap;
 
-		m_bDead = true; // start dead! need to revive() before use
+		m_bDead = true; // NOTE: start dead! need to revive() before use
 		m_iProgress = 0;
 
 		m_bAsyncReady = false;
@@ -105,13 +105,14 @@ public:
 	void kill() {m_bDead = true; m_iProgress = 0;}
 	void revive() {m_bDead = false; m_iProgress = 0;}
 
-	int getProgress() {return m_iProgress.load();}
+	inline int getProgress() const {return m_iProgress.load();}
 
 protected:
 	virtual void init()
 	{
 		m_bReady = true;
 	}
+
 	virtual void initAsync()
 	{
 		if (m_bDead.load())
@@ -126,6 +127,7 @@ protected:
 
 		m_bAsyncReady = true;
 	}
+
 	virtual void destroy() {;}
 
 private:
@@ -196,6 +198,10 @@ OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 OsuBeatmapStandard::~OsuBeatmapStandard()
 {
 	m_starCacheLoader->kill();
+
+	if (engine->getResourceManager()->isLoadingResource(m_starCacheLoader))
+		while (!m_starCacheLoader->isAsyncReady()) {;}
+
 	engine->getResourceManager()->destroyResource(m_starCacheLoader);
 }
 
@@ -304,6 +310,7 @@ void OsuBeatmapStandard::draw(Graphics *g)
 			}
 			for (int i=0; i<m_hitobjectsSortedByEndTime.size(); i++)
 			{
+				// NOTE: to fix mayday simultaneous sliders with increasing endtime getting culled here, would have to switch from m_hitobjectsSortedByEndTime to m_hitobjects
 				// PVS optimization
 				if (usePVS)
 				{
@@ -1414,29 +1421,34 @@ void OsuBeatmapStandard::onRestart(bool quick)
 void OsuBeatmapStandard::updateAutoCursorPos()
 {
 	m_vAutoCursorPos = m_vPlayfieldCenter;
+	m_vAutoCursorPos.y *= 2.5f; // start moving in offscreen from bottom
 
-	if (!m_bIsPlaying && !m_bIsPaused) return;
-	if (m_hitobjects.size() < 1) return;
+	if (!m_bIsPlaying && !m_bIsPaused)
+	{
+		m_vAutoCursorPos = m_vPlayfieldCenter;
+		return;
+	}
+	if (m_hitobjects.size() < 1)
+	{
+		m_vAutoCursorPos = m_vPlayfieldCenter;
+		return;
+	}
 
+	const long curMusicPos = m_iCurMusicPosWithOffsets;
+
+	// general
 	long prevTime = 0;
 	long nextTime = m_hitobjects[0]->getTime();
-	Vector2 prevPos = m_vPlayfieldCenter;
-	Vector2 curPos = m_vPlayfieldCenter;
-	Vector2 nextPos = m_vPlayfieldCenter;
-	int nextPosIndex = 0;
+	Vector2 prevPos = m_vAutoCursorPos;
+	Vector2 curPos = m_vAutoCursorPos;
+	Vector2 nextPos = m_vAutoCursorPos;
 	bool haveCurPos = false;
 
-	long curMusicPos = m_iCurMusicPosWithOffsets;
+	// dance
+	int nextPosIndex = 0;
 
-	if (m_bIsWaiting)
-		prevTime = -(long)m_osu_early_note_time_ref->getInt();
-
-	if (curMusicPos >= 0)
-	{
-		prevPos = m_hitobjects[0]->getAutoCursorPos(0);
-		curPos = prevPos;
-		nextPos = prevPos;
-	}
+	if (m_hitobjects[0]->getTime() < (long)m_osu_early_note_time_ref->getInt())
+		prevTime = -(long)m_osu_early_note_time_ref->getInt() * getSpeedMultiplier();
 
 	if (m_osu->getModAuto())
 	{

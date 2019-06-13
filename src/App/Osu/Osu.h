@@ -26,6 +26,7 @@ class OsuUserStatsScreen;
 class OsuUpdateHandler;
 class OsuNotificationOverlay;
 class OsuTooltipOverlay;
+class OsuSteamWorkshop;
 class OsuBeatmap;
 class OsuScreen;
 class OsuScore;
@@ -135,6 +136,7 @@ public:
 	inline OsuRankingScreen *getRankingScreen() const {return m_rankingScreen;}
 	inline OsuScore *getScore() const {return m_score;}
 	inline OsuUpdateHandler *getUpdateHandler() const {return m_updateHandler;}
+	inline OsuSteamWorkshop *getSteamWorkshop() const {return m_steamWorkshop;}
 
 	inline RenderTarget *getPlayfieldBuffer() const {return m_playfieldBuffer;}
 	inline RenderTarget *getSliderFrameBuffer() const {return m_sliderFrameBuffer;}
@@ -178,6 +180,7 @@ public:
 	bool isInVRMode();
 	inline bool isInVRDraw() const {return m_bIsInVRDraw;}
 	bool isInMultiplayer();
+	inline bool isSkinLoading() const {return m_bSkinLoadScheduled;}
 
 	inline bool isSeeking() const {return m_bSeeking;}
 	inline float getQuickSaveTime() const {return m_fQuickSaveTime;}
@@ -227,6 +230,7 @@ private:
 
 	// convar refs
 	ConVar *m_osu_folder_ref;
+	ConVar *m_osu_folder_sub_skins_ref;
 	ConVar *m_osu_draw_hud_ref;
 	ConVar *m_osu_draw_scoreboard;
 	ConVar *m_osu_mod_fps_ref;
@@ -262,6 +266,8 @@ private:
 	OsuChangelog *m_changelog;
 	OsuEditor *m_editor;
 	OsuUpdateHandler *m_updateHandler;
+	OsuSteamWorkshop *m_steamWorkshop;
+	OsuModFPoSu *m_fposu;
 
 	std::vector<OsuScreen*> m_screens;
 
@@ -343,8 +349,9 @@ private:
 	bool m_bIsInVRDraw;
 	int m_iInstanceID;
 	bool m_bWasBossKeyPaused;
-
-	OsuModFPoSu *m_fposu;
+	bool m_bSkinLoadScheduled;
+	bool m_bSkinLoadWasReload;
+	OsuSkin *m_skinScheduledToLoad;
 };
 
 #endif

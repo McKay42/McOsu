@@ -14,6 +14,7 @@
 #include "SoundEngine.h"
 #include "ResourceManager.h"
 #include "AnimationHandler.h"
+#include "SteamworksInterface.h"
 #include "VertexArrayObject.h"
 #include "ConVar.h"
 #include "File.h"
@@ -166,8 +167,35 @@ private:
 
 
 
+ConVar osu_draw_menu_background("osu_draw_menu_background", true);
+ConVar osu_draw_main_menu_workshop_button("osu_draw_main_menu_workshop_button", true);
+
 ConVar *OsuMainMenu::m_osu_universal_offset_ref = NULL;
 ConVar *OsuMainMenu::m_osu_universal_offset_hardcoded_ref = NULL;
+
+void OsuMainMenu::openSteamWorkshopInGameOverlay(Osu *osu, bool launchInSteamIfOverlayDisabled)
+{
+	if (!steam->isGameOverlayEnabled())
+	{
+		if (engine->getTime() > 10.0f)
+		{
+			osu->getNotificationOverlay()->addNotification("Opening browser, please wait ...", 0xffffffff, false, 0.75f);
+			openSteamWorkshopInDefaultBrowser(launchInSteamIfOverlayDisabled);
+		}
+		else
+			osu->getNotificationOverlay()->addNotification(UString::format("Steam Overlay not ready or disabled, try again (%i/10) ...", (int)std::min(engine->getTime(), 10.0)), 0xffffff00);
+	}
+	else
+		steam->openURLInGameOverlay("https://steamcommunity.com/app/607260/workshop/");
+}
+
+void OsuMainMenu::openSteamWorkshopInDefaultBrowser(bool launchInSteam)
+{
+	if (launchInSteam)
+		env->openURLInDefaultBrowser("steam://url/SteamWorkshopPage/607260");
+	else
+		env->openURLInDefaultBrowser("https://steamcommunity.com/app/607260/workshop/");
+}
 
 OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen(osu)
 {
@@ -247,6 +275,14 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen(osu)
 	m_updateAvailableButton->setColor(0x2200ff00);
 	m_updateAvailableButton->setTextColor(0x22ffffff);
 
+	m_steamWorkshopButton = new OsuUIButton(m_osu, 0, 0, 0, 0, "", "Steam Workshop");
+	m_steamWorkshopButton->setUseDefaultSkin();
+	m_steamWorkshopButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuMainMenu::onSteamWorkshopPressed) );
+	m_steamWorkshopButton->setColor(0xff108fe8);
+	m_steamWorkshopButton->setTextColor(0xffffffff);
+	m_steamWorkshopButton->setVisible(osu_draw_main_menu_workshop_button.getBool());
+	m_container->addBaseUIElement(m_steamWorkshopButton);
+
 	m_githubButton = new OsuUIButton(m_osu, 0, 0, 0, 0, "", "Github");
 	m_githubButton->setUseDefaultSkin();
 	m_githubButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuMainMenu::onGithubPressed) );
@@ -254,6 +290,7 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen(osu)
 	m_githubButton->setTextBrightColor(0x55172e62);
 	m_githubButton->setTextDarkColor(0x11ffffff);
 	m_githubButton->setAlphaAddOnHover(0.5f);
+	m_githubButton->setVisible(false);
 	m_container->addBaseUIElement(m_githubButton);
 
 	m_versionButton = new CBaseUIButton(0, 0, 0, 0, "", "");
@@ -284,6 +321,25 @@ void OsuMainMenu::draw(Graphics *g)
 	McFont *smallFont = m_osu->getSubTitleFont();
 	McFont *titleFont = m_osu->getTitleFont();
 
+	// menu-background
+	if (osu_draw_menu_background.getBool())
+	{
+		Image *backgroundImage = m_osu->getSkin()->getMenuBackground();
+		if (backgroundImage != NULL && backgroundImage != m_osu->getSkin()->getMissingTexture() && backgroundImage->isReady())
+		{
+			const float scale = Osu::getImageScaleToFillResolution(backgroundImage, m_osu->getScreenSize());
+
+			g->setColor(0xffffffff);
+			g->pushTransform();
+			{
+				g->scale(scale, scale);
+				g->translate(m_osu->getScreenWidth()/2, m_osu->getScreenHeight()/2);
+				g->drawImage(backgroundImage);
+			}
+			g->popTransform();
+		}
+	}
+
 	// main button stuff
 	bool haveTimingpoints = false;
 	const float div = 1.25f;
@@ -300,6 +356,9 @@ void OsuMainMenu::draw(Graphics *g)
 			t.beatLengthBase = 1.0f;
 
 		pulse = (float)((curMusicPos - t.offset) % std::max((long)t.beatLengthBase, (long)1)) / t.beatLengthBase; // modulo must be >= 1
+		pulse = clamp<float>(pulse, -1.0f, 1.0f);
+		if (pulse < 0.0f)
+			pulse = 1.0f - std::abs(pulse);
 	}
 	else
 		pulse = (div - fmod(engine->getTime(), div))/div;
@@ -316,6 +375,12 @@ void OsuMainMenu::draw(Graphics *g)
 #ifdef __SWITCH__
 
 	drawBanner = drawBanner || ((HorizonSDLEnvironment*)env)->getMemAvailableMB() < 1024;
+
+#endif
+
+#ifdef MCENGINE_FEATURE_BASS_WASAPI
+
+	drawBanner = true;
 
 #endif
 
@@ -437,6 +502,19 @@ void OsuMainMenu::draw(Graphics *g)
 	g->popTransform();
 	g->setColor(0xffffffff);
 	g->drawRect(mainButtonRect.getX(), mainButtonRect.getY(), mainButtonRect.getWidth(), mainButtonRect.getHeight());
+	{
+		// front side pulse border
+		/*
+		if (haveTimingpoints)
+		{
+			const int pulseSizeMax = mainButtonRect.getWidth()*0.25f;
+			const int pulseOffset = (1.0f - (1.0f - pulse)*(1.0f - pulse))*pulseSizeMax;
+			g->setColor(0xffffffff);
+			g->setAlpha((1.0f - pulse)*0.4f);
+			g->drawRect(mainButtonRect.getX() - pulseOffset/2, mainButtonRect.getY() - pulseOffset/2, mainButtonRect.getWidth() + pulseOffset, mainButtonRect.getHeight() + pulseOffset);
+		}
+		*/
+	}
 
 	// main text
 	const float fontScale = 1.0f - pulseSub + m_fSizeAddAnim;
@@ -730,9 +808,6 @@ void OsuMainMenu::onKeyDown(KeyboardEvent &e)
 		if (e == KEY_ESCAPE)
 			setMenuElementsVisible(false);
 	}
-
-	if (e == KEY_U)
-		m_updateAvailableButton->click();
 }
 
 void OsuMainMenu::onMiddleChange(bool down)
@@ -783,6 +858,9 @@ void OsuMainMenu::updateLayout()
 	m_updateAvailableButton->setSize(375, 50);
 	m_updateAvailableButton->setPos(m_osu->getScreenWidth()/2 - m_updateAvailableButton->getSize().x/2, m_osu->getScreenHeight() - m_updateAvailableButton->getSize().y - 10);
 
+	m_steamWorkshopButton->setSize(m_updateAvailableButton->getSize());
+	m_steamWorkshopButton->setRelPos(m_updateAvailableButton->getPos().x, m_osu->getScreenHeight() - m_steamWorkshopButton->getSize().y - 4);
+
 	m_githubButton->setSize(100, 50);
 	m_githubButton->setRelPos(5, m_osu->getScreenHeight()/2.0f - m_githubButton->getSize().y/2.0f);
 
@@ -808,6 +886,7 @@ void OsuMainMenu::updateLayout()
 		m_menuElements[i]->setSize(m_mainButton->getSize().x + menuElementExtraWidth*offsetPercent - 2.0f*menuElementExtraWidth*(1.0f - offsetPercent), menuElementHeight);
 		m_menuElements[i]->setTextColor(COLORf(offsetPercent, 1.0f, 1.0f, 1.0f));
 		m_menuElements[i]->setFrameColor(COLORf(offsetPercent, 1.0f, 1.0f, 1.0f));
+		m_menuElements[i]->setBackgroundColor(COLORf(offsetPercent, 0.0f, 0.0f, 0.0f));
 	}
 
 	m_container->setSize(m_osu->getScreenSize() + Vector2(1,1));
@@ -1025,6 +1104,22 @@ void OsuMainMenu::onUpdatePressed()
 		m_osu->getUpdateHandler()->checkForUpdates();
 }
 
+void OsuMainMenu::onSteamWorkshopPressed()
+{
+	if (m_osu->getInstanceID() > 1) return;
+
+	if (!steam->isReady())
+	{
+		m_osu->getNotificationOverlay()->addNotification("Error: Steam is not running.", 0xffff0000, false, 5.0f);
+		openSteamWorkshopInDefaultBrowser();
+		return;
+	}
+
+	openSteamWorkshopInGameOverlay(m_osu);
+
+	m_osu->getOptionsMenu()->openAndScrollToSkinSection();
+}
+
 void OsuMainMenu::onGithubPressed()
 {
 	if (m_osu->getInstanceID() > 1) return;
@@ -1099,8 +1194,7 @@ OsuMainMenuButton::OsuMainMenuButton(OsuMainMenu *mainMenu, float xPos, float yP
 
 void OsuMainMenuButton::onMouseDownInside()
 {
-	if (m_mainMenu->m_mainButton->isMouseInside())
-		return;
+	if (m_mainMenu->m_mainButton->isMouseInside()) return;
 
 	engine->getSound()->play(m_mainMenu->getOsu()->getSkin()->getMenuHit());
 	CBaseUIButton::onMouseDownInside();

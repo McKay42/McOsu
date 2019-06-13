@@ -46,6 +46,9 @@ ConVar osu_folder("osu_folder", "sdmc:/switch/McOsu/");
 
 #endif
 
+ConVar osu_folder_sub_songs("osu_folder_sub_songs", "Songs/");
+ConVar osu_folder_sub_skins("osu_folder_sub_skins", "Skins/");
+
 ConVar osu_database_enabled("osu_database_enabled", true);
 ConVar osu_database_dynamic_star_calculation("osu_database_dynamic_star_calculation", true, "dynamically calculate star ratings in the background");
 ConVar osu_database_ignore_version_warnings("osu_database_ignore_version_warnings", false);
@@ -55,6 +58,8 @@ ConVar osu_scores_custom_enabled("osu_scores_custom_enabled", true, "load custom
 ConVar osu_scores_save_immediately("osu_scores_save_immediately", true, "write scores.db as soon as a new score is added");
 ConVar osu_scores_sort_by_pp("osu_scores_sort_by_pp", true, "display pp in score browser instead of score");
 ConVar osu_user_include_relax_and_autopilot_for_stats("osu_user_include_relax_and_autopilot_for_stats", false);
+
+
 
 class OsuDatabaseLoader : public Resource
 {
@@ -74,7 +79,7 @@ protected:
 	{
 		// legacy loading, if db is not found or by convar
 		if (m_bNeedRawLoad)
-			m_db->loadRaw();
+			m_db->scheduleLoadRaw();
 		else
 		{
 			// HACKHACK: delete all previously loaded beatmaps here (must do this from the main thread due to textures etc.)
@@ -136,12 +141,15 @@ private:
 	std::vector<OsuBeatmap*> m_toCleanup;
 };
 
+
+
 ConVar *OsuDatabase::m_name_ref = NULL;
 
 OsuDatabase::OsuDatabase(Osu *osu)
 {
 	// convar refs
-	m_name_ref = convar->getConVarByName("name");
+	if (m_name_ref == NULL)
+		m_name_ref = convar->getConVarByName("name");
 
 	// vars
 	m_importTimer = new Timer();
@@ -150,7 +158,7 @@ OsuDatabase::OsuDatabase(Osu *osu)
 
 	m_iNumBeatmapsToLoad = 0;
 	m_fLoadingProgress = 0.0f;
-	m_bKYS = false;
+	m_bInterruptLoad = false;
 
 	m_osu = osu;
 	m_iVersion = 0;
@@ -175,6 +183,8 @@ OsuDatabase::OsuDatabase(Osu *osu)
 
 OsuDatabase::~OsuDatabase()
 {
+	SAFE_DELETE(m_importTimer);
+
 	for (int i=0; i<m_beatmaps.size(); i++)
 	{
 		delete m_beatmaps[i];
@@ -206,7 +216,7 @@ void OsuDatabase::update()
 
 		while (t.getElapsedTime() < 0.033f)
 		{
-			if (m_bKYS.load()) break; // cancellation point
+			if (m_bInterruptLoad.load()) break; // cancellation point
 
 			if (m_rawLoadBeatmapFolders.size() > 0 && m_iCurRawBeatmapLoadIndex < m_rawLoadBeatmapFolders.size())
 			{
@@ -245,10 +255,10 @@ void OsuDatabase::update()
 
 void OsuDatabase::load()
 {
-	m_bKYS = false;
+	m_bInterruptLoad = false;
 	m_fLoadingProgress = 0.0f;
 
-	OsuDatabaseLoader *loader = new OsuDatabaseLoader(this);
+	OsuDatabaseLoader *loader = new OsuDatabaseLoader(this); // (deletes itself after finishing)
 
 	engine->getResourceManager()->requestNextLoadAsync();
 	engine->getResourceManager()->loadResource(loader);
@@ -256,7 +266,7 @@ void OsuDatabase::load()
 
 void OsuDatabase::cancel()
 {
-	m_bKYS = true;
+	m_bInterruptLoad = true;
 	m_bRawBeatmapLoadScheduled = false;
 	m_fLoadingProgress = 1.0f; // force finished
 	m_bFoundChanges = true;
@@ -460,7 +470,7 @@ OsuDatabase::PlayerStats OsuDatabase::calculatePlayerStats(UString playerName)
 {
 	if (!m_bDidScoresChangeForStats && playerName == m_prevPlayerStats.name) return m_prevPlayerStats;
 
-	PlayerPPScores ps = getPlayerPPScores(playerName);
+	const PlayerPPScores ps = getPlayerPPScores(playerName);
 
 	// delay caching until we actually have scores loaded
 	if (ps.ppScores.size() > 0)
@@ -608,10 +618,78 @@ OsuBeatmapDifficulty *OsuDatabase::getBeatmapDifficulty(std::string md5hash)
 	return NULL;
 }
 
-void OsuDatabase::loadRaw()
+UString OsuDatabase::parseLegacyCfgBeatmapDirectoryParameter()
+{
+	// get BeatmapDirectory parameter from osu!.<OS_USERNAME>.cfg
+	debugLog("OsuDatabase::parseLegacyCfgBeatmapDirectoryParameter() : username = %s\n", env->getUsername().toUtf8());
+	if (env->getUsername().length() > 0)
+	{
+		UString osuUserConfigFilePath = osu_folder.getString();
+		osuUserConfigFilePath.append("osu!.");
+		osuUserConfigFilePath.append(env->getUsername());
+		osuUserConfigFilePath.append(".cfg");
+
+		File file(osuUserConfigFilePath);
+		char stringBuffer[1024];
+		while (file.canRead())
+		{
+			UString uCurLine = file.readLine();
+			const char *curLineChar = uCurLine.toUtf8();
+			std::string curLine(curLineChar);
+
+			memset(stringBuffer, '\0', 1024);
+			if (sscanf(curLineChar, " BeatmapDirectory = %1023[^\n]", stringBuffer) == 1)
+			{
+				UString beatmapDirectory = UString(stringBuffer);
+				beatmapDirectory = beatmapDirectory.trim();
+
+				if (beatmapDirectory.length() > 2)
+				{
+					// if we have an absolute path, use it in its entirety.
+					// otherwise, append the beatmapDirectory to the songFolder (which uses the osu_folder as the starting point)
+					UString songsFolder = osu_folder.getString();
+
+					if (beatmapDirectory.find(":") != -1)
+						songsFolder = beatmapDirectory;
+					else
+					{
+						// ensure that beatmapDirectory doesn't start with a slash
+						if (beatmapDirectory[0] == L'/' || beatmapDirectory[0] == L'\\')
+							beatmapDirectory.erase(0, 1);
+
+						songsFolder.append(beatmapDirectory);
+					}
+
+					// ensure that the songFolder ends with a slash
+					if (songsFolder.length() > 0)
+					{
+						if (songsFolder[songsFolder.length()-1] != L'/' && songsFolder[songsFolder.length()-1] != L'\\')
+							songsFolder.append("/");
+					}
+
+					return songsFolder;
+				}
+
+				break;
+			}
+		}
+	}
+
+	return "";
+}
+
+void OsuDatabase::scheduleLoadRaw()
 {
 	m_sRawBeatmapLoadOsuSongFolder = osu_folder.getString();
-	m_sRawBeatmapLoadOsuSongFolder.append("Songs/");
+	{
+		const UString customBeatmapDirectory = parseLegacyCfgBeatmapDirectoryParameter();
+		if (customBeatmapDirectory.length() < 1)
+			m_sRawBeatmapLoadOsuSongFolder.append(osu_folder_sub_songs.getString());
+		else
+			m_sRawBeatmapLoadOsuSongFolder = customBeatmapDirectory;
+	}
+
+	debugLog("Database: m_sRawBeatmapLoadOsuSongFolder = %s\n", m_sRawBeatmapLoadOsuSongFolder.toUtf8());
 
 	m_rawLoadBeatmapFolders = env->getFoldersInFolder(m_sRawBeatmapLoadOsuSongFolder);
 	m_iNumBeatmapsToLoad = m_rawLoadBeatmapFolders.size();
@@ -686,59 +764,13 @@ void OsuDatabase::loadDB(OsuFile *db)
 	// get BeatmapDirectory parameter from osu!.<OS_USERNAME>.cfg
 	// fallback to /Songs/ if it doesn't exist
 	UString songFolder = osu_folder.getString();
-	bool haveCustomBeatmapDirectory = false;
-	if (env->getUsername().length() > 0)
 	{
-		UString osuUserConfigFilePath = osu_folder.getString();
-		osuUserConfigFilePath.append("osu!.");
-		osuUserConfigFilePath.append(env->getUsername());
-		osuUserConfigFilePath.append(".cfg");
-
-		File file(osuUserConfigFilePath);
-		char stringBuffer[1024];
-		while (file.canRead())
-		{
-			UString uCurLine = file.readLine();
-			const char *curLineChar = uCurLine.toUtf8();
-			std::string curLine(curLineChar);
-
-			memset(stringBuffer, '\0', 1024);
-			if (sscanf(curLineChar, " BeatmapDirectory = %1023[^\n]", stringBuffer) == 1)
-			{
-				UString beatmapDirectory = UString(stringBuffer);
-				beatmapDirectory = beatmapDirectory.trim();
-				if (beatmapDirectory.length() > 2)
-				{
-					haveCustomBeatmapDirectory = true;
-
-					// if we have an absolute path, use it in its entirety.
-					// otherwise, append the beatmapDirectory to the songFolder (which uses the osu_folder as the starting point)
-					if (beatmapDirectory.find(":") != -1)
-						songFolder = beatmapDirectory;
-					else
-					{
-						// ensure that beatmapDirectory doesn't start with a slash
-						const wchar_t *uDir = beatmapDirectory.wc_str();
-						if (uDir[0] == L'/' || uDir[0] == L'\\')
-							beatmapDirectory.erase(0, 1);
-
-						songFolder.append(beatmapDirectory);
-					}
-
-					// ensure that the songFolder ends with a slash
-					if (songFolder.length() > 0)
-					{
-						const wchar_t *uFolder = songFolder.wc_str();
-						if (uFolder[songFolder.length()-1] != L'/' && uFolder[songFolder.length()-1] != L'\\')
-							songFolder.append("/");
-					}
-				}
-				break;
-			}
-		}
+		const UString customBeatmapDirectory = parseLegacyCfgBeatmapDirectoryParameter();
+		if (customBeatmapDirectory.length() < 1)
+			songFolder.append(osu_folder_sub_songs.getString());
+		else
+			songFolder = customBeatmapDirectory;
 	}
-	if (!haveCustomBeatmapDirectory)
-		songFolder.append("Songs/");
 
 	debugLog("Database: songFolder = %s\n", songFolder.toUtf8());
 
@@ -787,14 +819,14 @@ void OsuDatabase::loadDB(OsuFile *db)
 	std::vector<BeatmapSet> beatmapSets;
 	for (int i=0; i<m_iNumBeatmapsToLoad; i++)
 	{
-		if (m_bKYS.load()) break; // cancellation point
+		if (m_bInterruptLoad.load()) break; // cancellation point
 
 		if (Osu::debug->getBool())
 			debugLog("Database: Reading beatmap %i/%i ...\n", (i+1), m_iNumBeatmapsToLoad);
 
 		m_fLoadingProgress = 0.25f + 0.5f*((float)(i+1)/(float)m_iNumBeatmapsToLoad);
 
-		unsigned int size = db->readInt();
+		/*unsigned int size = */db->readInt();
 		UString artistName = db->readString().trim();
 		UString artistNameUnicode = db->readString();
 		UString songTitle = db->readString().trim();
@@ -804,7 +836,7 @@ void OsuDatabase::loadDB(OsuFile *db)
 		UString audioFileName = db->readString();
 		std::string md5hash = db->readStdString();
 		UString osuFileName = db->readString();
-		unsigned char rankedStatus = db->readByte();
+		/*unsigned char rankedStatus = */db->readByte();
 		unsigned short numCircles = db->readShort();
 		unsigned short numSliders = db->readShort();
 		unsigned short numSpinners = db->readShort();
@@ -864,7 +896,7 @@ void OsuDatabase::loadDB(OsuFile *db)
 			db->readDouble();
 		}
 
-		unsigned int drainTime = db->readInt(); // seconds
+		/*unsigned int drainTime = */db->readInt(); // seconds
 		int duration = db->readInt(); // milliseconds
 		duration = duration >= 0 ? duration : 0; // sanity clamp
 		int previewTime = db->readInt();
@@ -882,12 +914,12 @@ void OsuDatabase::loadDB(OsuFile *db)
 
 		unsigned int beatmapID = db->readInt();
 		int beatmapSetID = db->readInt(); // fucking bullshit, this is NOT an unsigned integer as is described on the wiki, it can and is -1 sometimes
-		unsigned int threadID = db->readInt();
+		/*unsigned int threadID = */db->readInt();
 
-		unsigned char osuStandardGrade = db->readByte();
-		unsigned char taikoGrade = db->readByte();
-		unsigned char ctbGrade = db->readByte();
-		unsigned char maniaGrade = db->readByte();
+		/*unsigned char osuStandardGrade = */db->readByte();
+		/*unsigned char taikoGrade = */db->readByte();
+		/*unsigned char ctbGrade = */db->readByte();
+		/*unsigned char maniaGrade = */db->readByte();
 		//debugLog("beatmapID = %i, beatmapSetID = %i, threadID = %i, osuStandardGrade = %i, taikoGrade = %i, ctbGrade = %i, maniaGrade = %i\n", beatmapID, beatmapSetID, threadID, osuStandardGrade, taikoGrade, ctbGrade, maniaGrade);
 
 		short localOffset = db->readShort();
@@ -901,20 +933,20 @@ void OsuDatabase::loadDB(OsuFile *db)
 
 		short onlineOffset = db->readShort();
 		UString songTitleFont = db->readString();
-		bool unplayed = db->readBool();
-		long long lastTimePlayed = db->readLongLong();
-		bool isOsz2 = db->readBool();
+		/*bool unplayed = */db->readBool();
+		/*long long lastTimePlayed = */db->readLongLong();
+		/*bool isOsz2 = */db->readBool();
 		UString path = db->readString().trim(); // somehow, some beatmaps may have spaces at the start/end of their path, breaking the Windows API (e.g. https://osu.ppy.sh/s/215347), therefore the trim
-		long long lastOnlineCheck = db->readLongLong();
+		/*long long lastOnlineCheck = */db->readLongLong();
 		//debugLog("onlineOffset = %i, songTitleFont = %s, unplayed = %i, lastTimePlayed = %lu, isOsz2 = %i, path = %s, lastOnlineCheck = %lu\n", onlineOffset, songTitleFont.toUtf8(), (int)unplayed, lastTimePlayed, (int)isOsz2, path.toUtf8(), lastOnlineCheck);
 
-		bool ignoreBeatmapSounds = db->readBool();
-		bool ignoreBeatmapSkin = db->readBool();
-		bool disableStoryboard = db->readBool();
-		bool disableVideo = db->readBool();
-		bool visualOverride = db->readBool();
-		int lastEditTime = db->readInt();
-		unsigned char maniaScrollSpeed = db->readByte();
+		/*bool ignoreBeatmapSounds = */db->readBool();
+		/*bool ignoreBeatmapSkin = */db->readBool();
+		/*bool disableStoryboard = */db->readBool();
+		/*bool disableVideo = */db->readBool();
+		/*bool visualOverride = */db->readBool();
+		/*int lastEditTime = */db->readInt();
+		/*unsigned char maniaScrollSpeed = */db->readByte();
 		//debugLog("ignoreBeatmapSounds = %i, ignoreBeatmapSkin = %i, disableStoryboard = %i, disableVideo = %i, visualOverride = %i, maniaScrollSpeed = %i\n", (int)ignoreBeatmapSounds, (int)ignoreBeatmapSkin, (int)disableStoryboard, (int)disableVideo, (int)visualOverride, maniaScrollSpeed);
 
 		// build beatmap & diffs from all the data
@@ -1026,7 +1058,7 @@ void OsuDatabase::loadDB(OsuFile *db)
 	// first, build all beatmaps which have a valid setID (trusting the values from the osu database)
 	for (int i=0; i<beatmapSets.size(); i++)
 	{
-		if (m_bKYS.load()) break; // cancellation point
+		if (m_bInterruptLoad.load()) break; // cancellation point
 
 		if (beatmapSets[i].diffs.size() > 0) // sanity check
 		{
@@ -1044,7 +1076,7 @@ void OsuDatabase::loadDB(OsuFile *db)
 	// this goes through every individual diff in a "set" (not really a set because its ID is either 0 or -1) instead of trusting the ID values from the osu database
 	for (int i=0; i<beatmapSets.size(); i++)
 	{
-		if (m_bKYS.load()) break; // cancellation point
+		if (m_bInterruptLoad.load()) break; // cancellation point
 
 		if (beatmapSets[i].diffs.size() > 0) // sanity check
 		{
@@ -1052,7 +1084,7 @@ void OsuDatabase::loadDB(OsuFile *db)
 			{
 				for (int b=0; b<beatmapSets[i].diffs.size(); b++)
 				{
-					if (m_bKYS.load()) break; // cancellation point
+					if (m_bInterruptLoad.load()) break; // cancellation point
 
 					OsuBeatmapDifficulty *diff = beatmapSets[i].diffs[b];
 
@@ -1060,7 +1092,7 @@ void OsuDatabase::loadDB(OsuFile *db)
 					bool existsAlready = false;
 					for (int e=0; e<m_beatmaps.size(); e++)
 					{
-						if (m_bKYS.load()) break; // cancellation point
+						if (m_bInterruptLoad.load()) break; // cancellation point
 
 						if (m_beatmaps[e]->getTitle() == diff->title && m_beatmaps[e]->getArtist() == diff->artist)
 						{
@@ -1113,7 +1145,7 @@ void OsuDatabase::loadDB(OsuFile *db)
 		debugLog("Collection: version = %i, numCollections = %i\n", version, numCollections);
 		for (int i=0; i<numCollections; i++)
 		{
-			if (m_bKYS.load()) break; // cancellation point
+			if (m_bInterruptLoad.load()) break; // cancellation point
 
 			m_fLoadingProgress = 0.75f + 0.24f*((float)(i+1)/(float)numCollections);
 
@@ -1128,7 +1160,7 @@ void OsuDatabase::loadDB(OsuFile *db)
 
 			for (int b=0; b<numBeatmaps; b++)
 			{
-				if (m_bKYS.load()) break; // cancellation point
+				if (m_bInterruptLoad.load()) break; // cancellation point
 
 				std::string md5hash = collectionFile.readStdString();
 				rc.hashes.push_back(md5hash);
@@ -1144,18 +1176,18 @@ void OsuDatabase::loadDB(OsuFile *db)
 				std::vector<OsuBeatmapDifficulty*> matchingDiffs;
 				for (int h=0; h<rc.hashes.size(); h++)
 				{
-					if (m_bKYS.load()) break; // cancellation point
+					if (m_bInterruptLoad.load()) break; // cancellation point
 
 					// for every hash, go through every beatmap
 					for (int b=0; b<m_beatmaps.size(); b++)
 					{
-						if (m_bKYS.load()) break; // cancellation point
+						if (m_bInterruptLoad.load()) break; // cancellation point
 
 						// for every beatmap, go through every diff and check if a diff hash matches, store those matching diffs
 						std::vector<OsuBeatmapDifficulty*> diffs = m_beatmaps[b]->getDifficulties();
 						for (int d=0; d<diffs.size(); d++)
 						{
-							if (m_bKYS.load()) break; // cancellation point
+							if (m_bInterruptLoad.load()) break; // cancellation point
 
 							if (diffs[d]->md5hash == rc.hashes[h])
 								matchingDiffs.push_back(diffs[d]);
@@ -1170,7 +1202,7 @@ void OsuDatabase::loadDB(OsuFile *db)
 				{
 					for (int md=0; md<matchingDiffs.size(); md++)
 					{
-						if (m_bKYS.load()) break; // cancellation point
+						if (m_bInterruptLoad.load()) break; // cancellation point
 
 						OsuBeatmapDifficulty *diff = matchingDiffs[md];
 
@@ -1178,12 +1210,12 @@ void OsuDatabase::loadDB(OsuFile *db)
 						OsuBeatmap *beatmap = NULL;
 						for (int b=0; b<m_beatmaps.size(); b++)
 						{
-							if (m_bKYS.load()) break; // cancellation point
+							if (m_bInterruptLoad.load()) break; // cancellation point
 
 							std::vector<OsuBeatmapDifficulty*> diffs = m_beatmaps[b]->getDifficulties();
 							for (int d=0; d<diffs.size(); d++)
 							{
-								if (m_bKYS.load()) break; // cancellation point
+								if (m_bInterruptLoad.load()) break; // cancellation point
 
 								if (diffs[d] == diff)
 								{
@@ -1197,7 +1229,7 @@ void OsuDatabase::loadDB(OsuFile *db)
 						bool beatmapIsAlreadyInCollection = false;
 						for (int m=0; m<c.beatmaps.size(); m++)
 						{
-							if (m_bKYS.load()) break; // cancellation point
+							if (m_bInterruptLoad.load()) break; // cancellation point
 
 							if (c.beatmaps[m].first == beatmap)
 							{
@@ -1207,7 +1239,7 @@ void OsuDatabase::loadDB(OsuFile *db)
 								bool diffIsAlreadyInCollection = false;
 								for (int d=0; d<c.beatmaps[m].second.size(); d++)
 								{
-									if (m_bKYS.load()) break; // cancellation point
+									if (m_bInterruptLoad.load()) break; // cancellation point
 
 									if (c.beatmaps[m].second[d] == diff)
 									{
@@ -1317,7 +1349,7 @@ void OsuDatabase::loadScores()
 
 					const int score = db.readInt();
 					const short maxCombo = db.readShort();
-					const bool perfect = db.readBool();
+					/*const bool perfect = */db.readBool();
 
 					const int mods = db.readInt();
 					const UString hpGraphString = db.readString();
@@ -1325,11 +1357,11 @@ void OsuDatabase::loadScores()
 
 					db.readByteArray(); // replayCompressed
 
-					long long onlineScoreID = 0;
+					/*long long onlineScoreID = 0;*/
 		            if (scoreVersion >= 20140721)
-		            	onlineScoreID = db.readLongLong();
+		            	/*onlineScoreID = */db.readLongLong();
 		            else if (scoreVersion >= 20121008)
-		            	onlineScoreID = db.readInt();
+		            	/*onlineScoreID = */db.readInt();
 
 		            if (gamemode == 0x0) // gamemode filter (osu!standard)
 					{
