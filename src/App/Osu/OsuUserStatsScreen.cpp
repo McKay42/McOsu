@@ -185,7 +185,7 @@ void OsuUserStatsScreen::onUserClicked(CBaseUIButton *button)
 		m_contextMenu->setPos(m_userButton->getPos() + Vector2(0, m_userButton->getSize().y));
 		m_contextMenu->setRelPos(m_userButton->getPos() + Vector2(0, m_userButton->getSize().y));
 		m_contextMenu->begin(m_userButton->getSize().x);
-		m_contextMenu->addButton("Switch User", 0)->setTextColor(0xff888888)->setTextLeft(false)->setEnabled(false);
+		m_contextMenu->addButton("Switch User", 0)->setTextColor(0xff888888)->setTextDarkColor(0xff000000)->setTextLeft(false)->setEnabled(false);
 		//m_contextMenu->addButton("", 0)->setEnabled(false);
 		for (int i=0; i<names.size(); i++)
 		{

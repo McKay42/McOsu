@@ -51,11 +51,9 @@ public:
 			return clamp<int>((int)std::floor(position / local_x_divisor), 0, 6) + 1;
 		}
 
-		float localXDivisor = 512.0f / availableColumns;
+		const float localXDivisor = 512.0f / availableColumns;
 		return clamp<int>((int)std::floor(position / localXDivisor), 0, availableColumns - 1);
 	}
-
-private:
 };
 
 
@@ -67,10 +65,10 @@ public:
 	{
 		m_diff = diff;
 
-		m_bDead = false;
-
 		m_bAsyncReady = false;
 		m_bReady = false;
+
+		m_bDead = false;
 	};
 
 	void kill() {m_bDead = true;}
@@ -86,6 +84,7 @@ protected:
 		else
 			m_diff->deleteBackgroundImagePathLoader(); // same here
 	}
+
 	virtual void initAsync()
 	{
 		if (m_bDead)
@@ -112,13 +111,17 @@ protected:
 		m_diff->loadBackgroundImagePath();
 		m_bAsyncReady = true;
 	}
+
 	virtual void destroy() {;}
 
 private:
+	static Timer m_timer;
+
 	OsuBeatmapDifficulty *m_diff;
-	bool m_bDead;
-	Timer m_timer;
+	std::atomic<bool> m_bDead;
 };
+
+Timer BackgroundImagePathLoader::m_timer;
 
 
 
@@ -214,8 +217,13 @@ OsuBeatmapDifficulty::~OsuBeatmapDifficulty()
 	if (m_backgroundImagePathLoader != NULL)
 	{
 		m_backgroundImagePathLoader->kill();
+
+		if (engine->getResourceManager()->isLoadingResource(m_backgroundImagePathLoader))
+			while (!m_backgroundImagePathLoader->isAsyncReady()) {;}
+
 		engine->getResourceManager()->destroyResource(m_backgroundImagePathLoader);
 	}
+
 	unloadBackgroundImage();
 }
 
@@ -597,14 +605,14 @@ bool OsuBeatmapDifficulty::loadMetadataRaw(bool calculateStars, bool calculateSt
 			float tempMaxBPM = std::numeric_limits<float>::max();
 			for (int i=0; i<timingpoints.size(); i++)
 			{
-				TIMINGPOINT *t = &timingpoints[i];
+				const TIMINGPOINT &t = timingpoints[i];
 
-				if (t->msPerBeat >= 0) // NOT inherited
+				if (t.msPerBeat >= 0) // NOT inherited
 				{
-					if (t->msPerBeat > tempMinBPM)
-						tempMinBPM = t->msPerBeat;
-					if (t->msPerBeat < tempMaxBPM)
-						tempMaxBPM = t->msPerBeat;
+					if (t.msPerBeat > tempMinBPM)
+						tempMinBPM = t.msPerBeat;
+					if (t.msPerBeat < tempMaxBPM)
+						tempMaxBPM = t.msPerBeat;
 				}
 			}
 
@@ -1060,6 +1068,7 @@ void OsuBeatmapDifficulty::loadBackgroundImage()
 		m_backgroundImagePathLoader = new BackgroundImagePathLoader(this);
 		engine->getResourceManager()->requestNextLoadAsync();
 		engine->getResourceManager()->loadResource(m_backgroundImagePathLoader);
+
 		return;
 	}
 
@@ -1099,6 +1108,7 @@ void OsuBeatmapDifficulty::loadBackgroundImagePath()
 	{
 		if (Osu::debug->getBool())
 			debugLog("OsuBeatmapDifficulty::loadBackgroundImagePath() couldn't read %s\n", m_sFilePath.toUtf8());
+
 		return;
 	}
 
@@ -1142,7 +1152,7 @@ void OsuBeatmapDifficulty::loadBackgroundImagePath()
 
 bool OsuBeatmapDifficulty::isBackgroundLoaderActive()
 {
-	 return m_backgroundImagePathLoader != NULL && !m_backgroundImagePathLoader->isReady();
+	 return (m_backgroundImagePathLoader != NULL && !m_backgroundImagePathLoader->isReady());
 }
 
 void OsuBeatmapDifficulty::deleteBackgroundImagePathLoader()
@@ -1216,9 +1226,6 @@ void OsuBeatmapDifficulty::buildStandardHitObjects(OsuBeatmapStandard *beatmap, 
 	{
 		OsuBeatmapDifficulty::SLIDER *s = &sliders[i];
 
-		int repeats = std::max((s->repeat - 1), 0);
-		m_iMaxCombo += 2 + repeats + (repeats+1)*s->ticks.size(); // start/end + repeat arrow + ticks
-
 		if (osu_mod_random.getBool())
 		{
 			for (int p=0; p<s->points.size(); p++)
@@ -1234,6 +1241,9 @@ void OsuBeatmapDifficulty::buildStandardHitObjects(OsuBeatmapStandard *beatmap, 
 		}
 
 		hitobjects->push_back(new OsuSlider(s->type, s->repeat, s->pixelLength, s->points, s->hitSounds, s->ticks, s->sliderTime, s->sliderTimeWithoutRepeats, s->time, s->sampleType, s->number, s->colorCounter, s->colorOffset, beatmap));
+
+		const int repeats = std::max((s->repeat - 1), 0);
+		m_iMaxCombo += 2 + repeats + (repeats+1)*s->ticks.size(); // start/end + repeat arrow + ticks
 	}
 
 	for (int i=0; i<spinners.size(); i++)
@@ -1266,7 +1276,7 @@ void OsuBeatmapDifficulty::buildManiaHitObjects(OsuBeatmapMania *beatmap, std::v
 {
 	if (beatmap == NULL || hitobjects == NULL) return;
 
-	int availableColumns = beatmap->getNumColumns();
+	const int availableColumns = beatmap->getNumColumns();
 
 	for (int i=0; i<hitcircles.size(); i++)
 	{
@@ -1301,15 +1311,15 @@ void OsuBeatmapDifficulty::calculateAllSliderTimesAndClicksTicks()
 
 		// calculate ticks
 		// TODO: validate https://github.com/ppy/osu/pull/3595/files
-		float minTickPixelDistanceFromEnd = 0.01f * getSliderVelocity(s);
-		float tickPixelLength = getSliderTickDistance() / getTimingPointMultiplierForSlider(s);
-		float tickDurationPercentOfSliderLength = tickPixelLength / (s.pixelLength == 0.0f ? 1.0f : s.pixelLength);
-		int tickCount = (int)std::ceil(s.pixelLength / tickPixelLength) - 1;
+		const float minTickPixelDistanceFromEnd = 0.01f * getSliderVelocity(s);
+		const float tickPixelLength = getSliderTickDistance() / getTimingPointMultiplierForSlider(s);
+		const float tickDurationPercentOfSliderLength = tickPixelLength / (s.pixelLength == 0.0f ? 1.0f : s.pixelLength);
+		const int tickCount = (int)std::ceil(s.pixelLength / tickPixelLength) - 1;
 		if (tickCount > 0)
 		{
-			float tickTOffset = tickDurationPercentOfSliderLength;
-			float t = tickTOffset;
+			const float tickTOffset = tickDurationPercentOfSliderLength;
 			float pixelDistanceToEnd = s.pixelLength;
+			float t = tickTOffset;
 			for (int i=0; i<tickCount; i++, t+=tickTOffset)
 			{
 				// skip ticks which are too close to the end of the slider
@@ -1396,8 +1406,7 @@ OsuBeatmapDifficulty::TIMING_INFO OsuBeatmapDifficulty::getTimingInfoForTime(uns
 	ti.sampleType = 0;
 	ti.sampleSet = 0;
 
-	if (timingpoints.size() <= 0)
-		return ti;
+	if (timingpoints.size() < 1) return ti;
 
 	// initial values
 	ti.offset = timingpoints[0].offset;
@@ -1454,6 +1463,7 @@ unsigned long OsuBeatmapDifficulty::getBreakDuration(unsigned long positionMS)
 		if ((int)positionMS > breaks[i].startTime && (int)positionMS < breaks[i].endTime)
 			return (unsigned long)(breaks[i].endTime - breaks[i].startTime);
 	}
+
 	return 0;
 }
 
@@ -1464,6 +1474,7 @@ unsigned long OsuBeatmapDifficulty::getBreakDurationTotal()
 	{
 		breakDurationTotal += (unsigned long)(breaks[i].endTime - breaks[i].startTime);
 	}
+
 	return breakDurationTotal;
 }
 
@@ -1474,6 +1485,7 @@ bool OsuBeatmapDifficulty::isInBreak(unsigned long positionMS)
 		if ((int)positionMS > breaks[i].startTime && (int)positionMS < breaks[i].endTime)
 			return true;
 	}
+
 	return false;
 }
 
@@ -1675,7 +1687,7 @@ double OsuBeatmapDifficulty::calculateStarDiff(OsuBeatmap *beatmap, double *aim,
 	return OsuDifficultyCalculator::calculateStarDiffForHitObjects(hitObjects, (beatmap != NULL ? beatmap->getCS() : CS), aim, speed, upToObjectIndex);
 }
 
-void OsuBeatmapDifficulty::rebuildStarCacheForUpToHitObjectIndex(OsuBeatmap *beatmap, std::atomic<bool> &kys, std::atomic<int> &progress)
+void OsuBeatmapDifficulty::rebuildStarCacheForUpToHitObjectIndex(OsuBeatmap *beatmap, std::atomic<bool> &interruptLoad, std::atomic<int> &progress)
 {
 	// precalculate cut star values for live pp
 
@@ -1698,11 +1710,11 @@ void OsuBeatmapDifficulty::rebuildStarCacheForUpToHitObjectIndex(OsuBeatmap *bea
 
 		progress = i;
 
-		if (kys.load())
+		if (interruptLoad.load())
 		{
-			//printf("OsuBeatmapDifficulty::rebuildStarCacheForUpToHitObjectIndex() killed\n");
 			m_aimStarsForNumHitObjects.clear();
 			m_speedStarsForNumHitObjects.clear();
+
 			return; // stop everything
 		}
 	}

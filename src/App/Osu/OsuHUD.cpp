@@ -59,6 +59,15 @@ ConVar osu_cursor_trail_smooth_force("osu_cursor_trail_smooth_force", false);
 ConVar osu_cursor_trail_smooth_length("osu_cursor_trail_smooth_length", 0.5f, "how long smooth cursortrails should be, in seconds");
 ConVar osu_cursor_trail_smooth_div("osu_cursor_trail_smooth_div", 4.0f, "divide the cursortrail.png image size by this much, for determining the distance to the next trail image");
 ConVar osu_cursor_trail_max_size("osu_cursor_trail_max_size", 2048, "maximum number of rendered trail images, array size limit");
+ConVar osu_cursor_ripple_duration("osu_cursor_ripple_duration", 0.7f, "time in seconds each cursor ripple is visible");
+ConVar osu_cursor_ripple_alpha("osu_cursor_ripple_alpha", 1.0f);
+ConVar osu_cursor_ripple_additive("osu_cursor_ripple_additive", true, "use additive blending");
+ConVar osu_cursor_ripple_anim_start_scale("osu_cursor_ripple_anim_start_scale", 0.05f, "start size multiplier");
+ConVar osu_cursor_ripple_anim_end_scale("osu_cursor_ripple_anim_end_scale", 0.5f, "end size multiplier");
+ConVar osu_cursor_ripple_anim_start_fadeout_delay("osu_cursor_ripple_anim_start_fadeout_delay", 0.0f, "delay in seconds after which to start fading out (limited by osu_cursor_ripple_duration of course)");
+ConVar osu_cursor_ripple_tint_r("osu_cursor_ripple_tint_r", 255, "from 0 to 255");
+ConVar osu_cursor_ripple_tint_g("osu_cursor_ripple_tint_g", 255, "from 0 to 255");
+ConVar osu_cursor_ripple_tint_b("osu_cursor_ripple_tint_b", 255, "from 0 to 255");
 
 ConVar osu_hud_scale("osu_hud_scale", 1.0f);
 ConVar osu_hud_hiterrorbar_scale("osu_hud_hiterrorbar_scale", 1.0f);
@@ -89,6 +98,7 @@ ConVar osu_hud_inputoverlay_anim_color_duration("osu_hud_inputoverlay_anim_color
 ConVar osu_hud_fps_smoothing("osu_hud_fps_smoothing", true);
 
 ConVar osu_draw_cursor_trail("osu_draw_cursor_trail", true);
+ConVar osu_draw_cursor_ripples("osu_draw_cursor_ripples", false);
 ConVar osu_draw_hud("osu_draw_hud", true);
 ConVar osu_draw_hpbar("osu_draw_hpbar", false);
 ConVar osu_draw_hiterrorbar("osu_draw_hiterrorbar", true);
@@ -291,6 +301,93 @@ void OsuHUD::draw(Graphics *g)
 		drawScrubbingTimeline(g, beatmap->getTime(), beatmap->getLength(), beatmap->getLengthPlayable(), beatmap->getStartTimePlayable(), beatmap->getPercentFinishedPlayable());
 }
 
+void OsuHUD::update()
+{
+	// dynamic hud scaling updates
+	m_fScoreHeight = m_osu->getSkin()->getScore0()->getHeight() * getScoreScale();
+
+	// fps string update
+	if (osu_hud_fps_smoothing.getBool())
+	{
+		const float smooth = std::pow(0.05, engine->getFrameTime());
+		m_fCurFpsSmooth = smooth*m_fCurFpsSmooth + (1.0f - smooth)*(1.0f / engine->getFrameTime());
+		if (engine->getTime() > m_fFpsUpdate || std::abs(m_fCurFpsSmooth-m_fCurFps) > 2.0f)
+		{
+			m_fFpsUpdate = engine->getTime() + 0.25f;
+			m_fCurFps = m_fCurFpsSmooth;
+		}
+	}
+	else
+		m_fCurFps = (1.0f / engine->getFrameTime());
+
+	// target heatmap cleanup
+	if (m_osu->getModTarget())
+	{
+		if (m_targets.size() > 0 && engine->getTime() > m_targets[0].time)
+			m_targets.erase(m_targets.begin());
+	}
+
+	// cursor ripples cleanup
+	if (osu_draw_cursor_ripples.getBool())
+	{
+		if (m_cursorRipples.size() > 0 && engine->getTime() > m_cursorRipples[0].time)
+			m_cursorRipples.erase(m_cursorRipples.begin());
+	}
+
+	// volume overlay
+	m_volumeMaster->setEnabled(m_fVolumeChangeTime > engine->getTime());
+	m_volumeEffects->setEnabled(m_volumeMaster->isEnabled());
+	m_volumeMusic->setEnabled(m_volumeMaster->isEnabled());
+	m_volumeSliderOverlayContainer->setSize(m_osu->getScreenSize());
+	m_volumeSliderOverlayContainer->update();
+
+	if (!m_volumeMaster->isBusy())
+		m_volumeMaster->setValue(m_osu_volume_master_ref->getFloat(), false);
+	else
+	{
+		m_osu_volume_master_ref->setValue(m_volumeMaster->getFloat());
+		m_fLastVolume = m_volumeMaster->getFloat();
+	}
+
+	if (!m_volumeMusic->isBusy())
+		m_volumeMusic->setValue(m_osu_volume_music_ref->getFloat(), false);
+	else
+		m_osu_volume_music_ref->setValue(m_volumeMusic->getFloat());
+
+	if (!m_volumeEffects->isBusy())
+		m_volumeEffects->setValue(m_osu_volume_effects_ref->getFloat(), false);
+	else
+		m_osu_volume_effects_ref->setValue(m_volumeEffects->getFloat());
+
+	// force focus back to master if no longer active
+	if (engine->getTime() > m_fVolumeChangeTime && !m_volumeMaster->isSelected())
+	{
+		m_volumeMusic->setSelected(false);
+		m_volumeEffects->setSelected(false);
+		m_volumeMaster->setSelected(true);
+	}
+
+	// keep overlay alive as long as the user is doing something
+	// switch selection if cursor moves inside one of the sliders
+	if (m_volumeSliderOverlayContainer->isBusy() || (m_volumeMaster->isEnabled() && (m_volumeMaster->isMouseInside() || m_volumeEffects->isMouseInside() || m_volumeMusic->isMouseInside())))
+	{
+		animateVolumeChange();
+
+		for (int i=0; i<m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer()->size(); i++)
+		{
+			if (((OsuUIVolumeSlider*)(*m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer())[i])->checkWentMouseInside())
+			{
+				for (int c=0; c<m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer()->size(); c++)
+				{
+					if (c != i)
+						((OsuUIVolumeSlider*)(*m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer())[c])->setSelected(false);
+				}
+				((OsuUIVolumeSlider*)(*m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer())[i])->setSelected(true);
+			}
+		}
+	}
+}
+
 void OsuHUD::drawDummy(Graphics *g)
 {
 	drawPlayfieldBorder(g, OsuGameRules::getPlayfieldCenter(m_osu), OsuGameRules::getPlayfieldSize(m_osu), 0);
@@ -440,88 +537,11 @@ void OsuHUD::drawVRDummy(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 	vr->getShaderTexturedLegacyGeneric()->disable();
 }
 
-void OsuHUD::update()
-{
-	// dynamic hud scaling updates
-	m_fScoreHeight = m_osu->getSkin()->getScore0()->getHeight() * getScoreScale();
-
-	// fps string update
-	if (osu_hud_fps_smoothing.getBool())
-	{
-		const float smooth = std::pow(0.05, engine->getFrameTime());
-		m_fCurFpsSmooth = smooth*m_fCurFpsSmooth + (1.0f - smooth)*(1.0f / engine->getFrameTime());
-		if (engine->getTime() > m_fFpsUpdate || std::abs(m_fCurFpsSmooth-m_fCurFps) > 2.0f)
-		{
-			m_fFpsUpdate = engine->getTime() + 0.25f;
-			m_fCurFps = m_fCurFpsSmooth;
-		}
-	}
-	else
-		m_fCurFps = (1.0f / engine->getFrameTime());
-
-	// target heatmap cleanup
-	if (m_osu->getModTarget())
-	{
-		if (m_targets.size() > 0 && engine->getTime() > m_targets[0].time)
-			m_targets.erase(m_targets.begin());
-	}
-
-	// volume overlay
-	m_volumeMaster->setEnabled(m_fVolumeChangeTime > engine->getTime());
-	m_volumeEffects->setEnabled(m_volumeMaster->isEnabled());
-	m_volumeMusic->setEnabled(m_volumeMaster->isEnabled());
-	m_volumeSliderOverlayContainer->setSize(m_osu->getScreenSize());
-	m_volumeSliderOverlayContainer->update();
-
-	if (!m_volumeMaster->isBusy())
-		m_volumeMaster->setValue(m_osu_volume_master_ref->getFloat(), false);
-	else
-	{
-		m_osu_volume_master_ref->setValue(m_volumeMaster->getFloat());
-		m_fLastVolume = m_volumeMaster->getFloat();
-	}
-
-	if (!m_volumeMusic->isBusy())
-		m_volumeMusic->setValue(m_osu_volume_music_ref->getFloat(), false);
-	else
-		m_osu_volume_music_ref->setValue(m_volumeMusic->getFloat());
-
-	if (!m_volumeEffects->isBusy())
-		m_volumeEffects->setValue(m_osu_volume_effects_ref->getFloat(), false);
-	else
-		m_osu_volume_effects_ref->setValue(m_volumeEffects->getFloat());
-
-	// force focus back to master if no longer active
-	if (engine->getTime() > m_fVolumeChangeTime && !m_volumeMaster->isSelected())
-	{
-		m_volumeMusic->setSelected(false);
-		m_volumeEffects->setSelected(false);
-		m_volumeMaster->setSelected(true);
-	}
-
-	// keep overlay alive as long as the user is doing something
-	// switch selection if cursor moves inside one of the sliders
-	if (m_volumeSliderOverlayContainer->isBusy() || (m_volumeMaster->isEnabled() && (m_volumeMaster->isMouseInside() || m_volumeEffects->isMouseInside() || m_volumeMusic->isMouseInside())))
-	{
-		animateVolumeChange();
-
-		for (int i=0; i<m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer()->size(); i++)
-		{
-			if (((OsuUIVolumeSlider*)(*m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer())[i])->checkWentMouseInside())
-			{
-				for (int c=0; c<m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer()->size(); c++)
-				{
-					if (c != i)
-						((OsuUIVolumeSlider*)(*m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer())[c])->setSelected(false);
-				}
-				((OsuUIVolumeSlider*)(*m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer())[i])->setSelected(true);
-			}
-		}
-	}
-}
-
 void OsuHUD::drawCursor(Graphics *g, Vector2 pos, float alphaMultiplier, bool secondTrail)
 {
+	if (osu_draw_cursor_ripples.getBool())
+		drawCursorRipples(g);
+
 	const bool vrTrailJumpFix = (m_osu->isInVRMode() && !m_osu->getVR()->isVirtualCursorOnScreen());
 
 	Matrix4 mvp;
@@ -742,6 +762,65 @@ void OsuHUD::drawCursorTrailRaw(Graphics *g, float alpha, Vector2 pos)
 	g->popTransform();
 }
 
+void OsuHUD::drawCursorRipples(Graphics *g)
+{
+	if (m_osu->getSkin()->getCursorRipple() == m_osu->getSkin()->getMissingTexture()) return;
+
+	// allow overscale/underscale as usual
+	// this does additionally scale with the resolution (which osu doesn't do for some reason for cursor ripples)
+	const float normalized2xScale = (m_osu->getSkin()->isCursorRipple2x() ? 0.5f : 1.0f);
+	const float imageScale = Osu::getImageScale(m_osu, Vector2(520.0f, 520.0f), 233.0f);
+
+	const float normalizedWidth = m_osu->getSkin()->getCursorRipple()->getWidth() * normalized2xScale * imageScale;
+	const float normalizedHeight = m_osu->getSkin()->getCursorRipple()->getHeight() * normalized2xScale * imageScale;
+
+	const float duration = std::max(osu_cursor_ripple_duration.getFloat(), 0.0001f);
+	const float fadeDuration = std::max(osu_cursor_ripple_duration.getFloat() - osu_cursor_ripple_anim_start_fadeout_delay.getFloat(), 0.0001f);
+
+#if defined(MCENGINE_FEATURE_OPENGL)
+
+	const bool isOpenGLRendererHack = (dynamic_cast<OpenGLLegacyInterface*>(g) != NULL || dynamic_cast<OpenGL3Interface*>(g) != NULL);
+
+#elif defined(MCENGINE_FEATURE_OPENGLES)
+
+	const bool isOpenGLRendererHack = (dynamic_cast<OpenGLES2Interface*>(g) != NULL);
+
+#endif
+
+#if defined(MCENGINE_FEATURE_OPENGL) || defined(MCENGINE_FEATURE_OPENGLES)
+
+	if (isOpenGLRendererHack && osu_cursor_ripple_additive.getBool())
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE); // HACKHACK: OpenGL hardcoded
+
+#endif
+
+	g->setColor(COLOR(255, clamp<int>(osu_cursor_ripple_tint_r.getInt(), 0, 255), clamp<int>(osu_cursor_ripple_tint_g.getInt(), 0, 255), clamp<int>(osu_cursor_ripple_tint_b.getInt(), 0, 255)));
+	m_osu->getSkin()->getCursorRipple()->bind();
+	{
+		for (int i=0; i<m_cursorRipples.size(); i++)
+		{
+			const Vector2 &pos = m_cursorRipples[i].pos;
+			const float &time = m_cursorRipples[i].time;
+
+			const float animPercent = 1.0f - clamp<float>((time - engine->getTime()) / duration, 0.0f, 1.0f);
+			const float fadePercent = 1.0f - clamp<float>((time - engine->getTime()) / fadeDuration, 0.0f, 1.0f);
+
+			const float scale = lerp<float>(osu_cursor_ripple_anim_start_scale.getFloat(), osu_cursor_ripple_anim_end_scale.getFloat(), 1.0f - (1.0f - animPercent)*(1.0f - animPercent)); // quad out
+
+			g->setAlpha(osu_cursor_ripple_alpha.getFloat() * (1.0f - fadePercent));
+			g->drawQuad(pos.x - normalizedWidth*scale/2, pos.y - normalizedHeight*scale/2, normalizedWidth*scale, normalizedHeight*scale);
+		}
+	}
+	m_osu->getSkin()->getCursorRipple()->unbind();
+
+#if defined(MCENGINE_FEATURE_OPENGL) || defined(MCENGINE_FEATURE_OPENGLES)
+
+	if (isOpenGLRendererHack && osu_cursor_ripple_additive.getBool())
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // HACKHACK: OpenGL hardcoded
+
+#endif
+}
+
 void OsuHUD::drawFps(Graphics *g, McFont *font, float fps)
 {
 	fps = std::round(fps);
@@ -795,8 +874,7 @@ void OsuHUD::drawPlayfieldBorder(Graphics *g, Vector2 playfieldCenter, Vector2 p
 
 void OsuHUD::drawPlayfieldBorder(Graphics *g, Vector2 playfieldCenter, Vector2 playfieldSize, float hitcircleDiameter, float borderSize)
 {
-	if (borderSize == 0.0f)
-		return;
+	if (borderSize <= 0.0f) return;
 
 	// respect playfield stretching
 	playfieldSize.x += playfieldSize.x*m_osu_playfield_stretch_x_ref->getFloat();
@@ -2377,6 +2455,17 @@ void OsuHUD::animateVolumeChange()
 
 	anim->moveQuadOut(&m_fVolumeChangeFade, 0.0f, 0.20f, osu_hud_volume_duration.getFloat(), false);
 	anim->moveQuadOut(&m_fLastVolume, m_osu_volume_master_ref->getFloat(), 0.15f, 0.0f, true);
+}
+
+void OsuHUD::addCursorRipple(Vector2 pos)
+{
+	if (!osu_draw_cursor_ripples.getBool()) return;
+
+	CURSORRIPPLE ripple;
+	ripple.pos = pos;
+	ripple.time = engine->getTime() + osu_cursor_ripple_duration.getFloat();
+
+	m_cursorRipples.push_back(ripple);
 }
 
 void OsuHUD::animateCursorExpand()

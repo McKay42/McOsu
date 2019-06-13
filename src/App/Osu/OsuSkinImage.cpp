@@ -25,6 +25,8 @@ OsuSkinImage::OsuSkinImage(OsuSkin *skin, UString skinElementName, Vector2 baseS
 	m_vBaseSizeForScaling2x = baseSizeForScaling2x;
 	m_fOsuSize = osuSize;
 
+	m_bReady = false;
+
 	if (m_osu_skin_mipmaps_ref == NULL)
 		m_osu_skin_mipmaps_ref = convar->getConVarByName("osu_skin_mipmaps");
 
@@ -110,6 +112,10 @@ bool OsuSkinImage::loadImage(UString skinElementName, bool ignoreDefaultSkin)
 		if (env->fileExists(filepath1))
 		{
 			IMAGE image;
+
+			if (OsuSkin::m_osu_skin_async->getBool())
+				engine->getResourceManager()->requestNextLoadAsync();
+
 			image.img = engine->getResourceManager()->loadImageAbsUnnamed(filepath1, m_osu_skin_mipmaps_ref->getBool());
 			image.scale = 2.0f;
 			m_images.push_back(image);
@@ -126,6 +132,10 @@ bool OsuSkinImage::loadImage(UString skinElementName, bool ignoreDefaultSkin)
 	if (env->fileExists(filepath2))
 	{
 		IMAGE image;
+
+		if (OsuSkin::m_osu_skin_async->getBool())
+			engine->getResourceManager()->requestNextLoadAsync();
+
 		image.img = engine->getResourceManager()->loadImageAbsUnnamed(filepath2, m_osu_skin_mipmaps_ref->getBool());
 		image.scale = 1.0f;
 		m_images.push_back(image);
@@ -147,6 +157,10 @@ bool OsuSkinImage::loadImage(UString skinElementName, bool ignoreDefaultSkin)
 			if (env->fileExists(defaultFilePath))
 			{
 				IMAGE image;
+
+				if (OsuSkin::m_osu_skin_async->getBool())
+					engine->getResourceManager()->requestNextLoadAsync();
+
 				image.img = engine->getResourceManager()->loadImageAbsUnnamed(defaultFilePath, m_osu_skin_mipmaps_ref->getBool());
 				image.scale = 2.0f;
 				m_images.push_back(image);
@@ -164,6 +178,10 @@ bool OsuSkinImage::loadImage(UString skinElementName, bool ignoreDefaultSkin)
 		if (env->fileExists(defaultFilePath))
 		{
 			IMAGE image;
+
+			if (OsuSkin::m_osu_skin_async->getBool())
+				engine->getResourceManager()->requestNextLoadAsync();
+
 			image.img = engine->getResourceManager()->loadImageAbsUnnamed(defaultFilePath, m_osu_skin_mipmaps_ref->getBool());
 			image.scale = 1.0f;
 			m_images.push_back(image);
@@ -291,6 +309,20 @@ float OsuSkinImage::getImageScale()
 float OsuSkinImage::getResolutionScale()
 {
 	return Osu::getImageScale(m_skin->getOsu(), m_vBaseSizeForScaling2x, m_fOsuSize);
+}
+
+bool OsuSkinImage::isReady()
+{
+	if (m_bReady) return true;
+
+	for (int i=0; i<m_images.size(); i++)
+	{
+		if (engine->getResourceManager()->isLoadingResource(m_images[i].img))
+			return false;
+	}
+
+	m_bReady = true;
+	return m_bReady;
 }
 
 OsuSkinImage::IMAGE OsuSkinImage::getImageForCurrentFrame()

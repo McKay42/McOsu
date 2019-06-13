@@ -61,6 +61,7 @@ ConVar osu_songbrowser_topbar_right_percent("osu_songbrowser_topbar_right_percen
 ConVar osu_songbrowser_bottombar_percent("osu_songbrowser_bottombar_percent", 0.116f);
 
 ConVar osu_draw_songbrowser_background_image("osu_draw_songbrowser_background_image", true);
+ConVar osu_draw_songbrowser_menu_background_image("osu_draw_songbrowser_menu_background_image", true);
 ConVar osu_songbrowser_background_fade_in_duration("osu_songbrowser_background_fade_in_duration", 0.1f);
 
 ConVar osu_songbrowser_draw_top_ranks_available_info_message("osu_songbrowser_draw_top_ranks_available_info_message", true);
@@ -586,6 +587,24 @@ void OsuSongBrowser2::draw(Graphics *g)
 		}
 
 		drawSelectedBeatmapBackgroundImage(g, m_osu, alpha);
+	}
+	else if (osu_draw_songbrowser_menu_background_image.getBool())
+	{
+		// menu-background
+		Image *backgroundImage = m_osu->getSkin()->getMenuBackground();
+		if (backgroundImage != NULL && backgroundImage != m_osu->getSkin()->getMissingTexture() && backgroundImage->isReady())
+		{
+			const float scale = Osu::getImageScaleToFillResolution(backgroundImage, m_osu->getScreenSize());
+
+			g->setColor(0xffffffff);
+			g->pushTransform();
+			{
+				g->scale(scale, scale);
+				g->translate(m_osu->getScreenWidth()/2, m_osu->getScreenHeight()/2);
+				g->drawImage(backgroundImage);
+			}
+			g->popTransform();
+		}
 	}
 
 	// draw score browser
@@ -2336,7 +2355,7 @@ void OsuSongBrowser2::onUserButtonClicked()
 		m_contextMenu->setPos(m_userButton->getPos());
 		m_contextMenu->setRelPos(m_userButton->getPos());
 		m_contextMenu->begin(m_userButton->getSize().x);
-		m_contextMenu->addButton("Switch User", 0)->setTextColor(0xff888888)->setTextLeft(false)->setEnabled(false);
+		m_contextMenu->addButton("Switch User", 0)->setTextColor(0xff888888)->setTextDarkColor(0xff000000)->setTextLeft(false)->setEnabled(false);
 		//m_contextMenu->addButton("", 0)->setEnabled(false);
 		for (int i=0; i<names.size(); i++)
 		{
