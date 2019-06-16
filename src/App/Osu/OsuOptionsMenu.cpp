@@ -16,6 +16,7 @@
 #include "AnimationHandler.h"
 #include "OpenVRInterface.h"
 #include "OpenVRController.h"
+#include "SteamworksInterface.h"
 #include "Mouse.h"
 #include "File.h"
 
@@ -33,6 +34,8 @@
 #include "OsuKeyBindings.h"
 #include "OsuTooltipOverlay.h"
 #include "OsuNotificationOverlay.h"
+#include "OsuSteamWorkshop.h"
+#include "OsuMainMenu.h"
 #include "OsuSliderRenderer.h"
 #include "OsuCircle.h"
 #include "OsuIcons.h"
@@ -355,10 +358,14 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_fAnimation = 0.0f;
 
 	// convar refs
-	m_osu_slider_curve_points_separation = convar->getConVarByName("osu_slider_curve_points_separation");
-	m_osu_letterboxing_offset_x = convar->getConVarByName("osu_letterboxing_offset_x");
-	m_osu_letterboxing_offset_y = convar->getConVarByName("osu_letterboxing_offset_y");
-	m_osu_mod_fposu = convar->getConVarByName("osu_mod_fposu");
+	m_osu_slider_curve_points_separation_ref = convar->getConVarByName("osu_slider_curve_points_separation");
+	m_osu_letterboxing_offset_x_ref = convar->getConVarByName("osu_letterboxing_offset_x");
+	m_osu_letterboxing_offset_y_ref = convar->getConVarByName("osu_letterboxing_offset_y");
+	m_osu_mod_fposu_ref = convar->getConVarByName("osu_mod_fposu");
+	m_osu_skin_ref = convar->getConVarByName("osu_skin");
+	m_osu_skin_is_from_workshop_ref = convar->getConVarByName("osu_skin_is_from_workshop");
+	m_osu_skin_workshop_title_ref = convar->getConVarByName("osu_skin_workshop_title");
+	m_osu_skin_workshop_id_ref = convar->getConVarByName("osu_skin_workshop_id");
 
 	// convar callbacks
 	convar->getConVarByName("osu_skin_use_skin_hitsounds")->setCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onUseSkinsSoundSamplesChange) );
@@ -387,10 +394,12 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_dpiTextbox = NULL;
 	m_cm360Textbox = NULL;
 	m_letterboxingOffsetResetButton = NULL;
+	m_skinSelectWorkshopButton = NULL;
 
 	m_fOsuFolderTextboxInvalidAnim = 0.0f;
 	m_fVibrationStrengthExampleTimer = 0.0f;
 	m_bLetterboxingOffsetUpdateScheduled = false;
+	m_bWorkshopSkinSelectScheduled = false;
 
 	m_iNumResetAllKeyBindingsPressed = 0;
 
@@ -645,14 +654,31 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 
 	//**************************************************************************************************************************//
 
-	CBaseUIElement *sectionSkin = addSection("Skin");
+	m_skinSection = addSection("Skin");
 
 	addSubSection("Skin");
 	addSkinPreview();
-	OPTIONS_ELEMENT skinSelect = addButton("Select Skin", "default");
-	((CBaseUIButton*)skinSelect.elements[0])->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSkinSelect) );
-	m_skinLabel = (CBaseUILabel*)skinSelect.elements[1];
-	m_skinSelectButton = skinSelect.elements[0];
+	{
+		OPTIONS_ELEMENT skinSelect;
+		if (steam->isReady())
+		{
+			skinSelect = addButtonButtonLabel("Local Skin ...", "Workshop ...", "default");
+			m_skinSelectLocalButton = skinSelect.elements[0];
+			m_skinSelectWorkshopButton = skinSelect.elements[1];
+			m_skinLabel = (CBaseUILabel*)skinSelect.elements[2];
+
+			((OsuUIButton*)m_skinSelectWorkshopButton)->setColor(0xff108fe8);
+			((CBaseUIButton*)m_skinSelectWorkshopButton)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSkinSelectWorkshop) );
+		}
+		else
+		{
+			skinSelect = addButton("Select Skin", "default");
+			m_skinSelectLocalButton = skinSelect.elements[0];
+			m_skinLabel = (CBaseUILabel*)skinSelect.elements[1];
+		}
+
+		((CBaseUIButton*)m_skinSelectLocalButton)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSkinSelect) );
+	}
 	addButton("Reload Skin (CTRL+ALT+SHIFT+S)")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSkinReload) );
 	addSpacer();
 	CBaseUISlider *numberScaleSlider = addSlider("Number Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_number_scale_multiplier"), 135.0f);
@@ -725,6 +751,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 		addCheckbox("Disable Mouse Wheel in Play Mode", convar->getConVarByName("osu_disable_mousewheel"));
 	}
 	addCheckbox("Disable Mouse Buttons in Play Mode", convar->getConVarByName("osu_disable_mousebuttons"));
+	addCheckbox("Cursor ripples", "The cursor will ripple outwards on clicking.", convar->getConVarByName("osu_draw_cursor_ripples"));
 
 	if (env->getOS() == Environment::OS::OS_WINDOWS)
 	{
@@ -791,9 +818,11 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSpacer();
 	addCheckbox("Load Background Images (!)", "NOTE: Disabling this will disable ALL beatmap images everywhere!", convar->getConVarByName("osu_load_beatmap_background_images"));
 	addCheckbox("Draw Background in Beatmap", convar->getConVarByName("osu_draw_beatmap_background_image"));
-	addCheckbox("Draw Background in SongBrowser", convar->getConVarByName("osu_draw_songbrowser_background_image"));
+	addCheckbox("Draw Background in SongBrowser", "NOTE: You can disable this if you always want menu-background.", convar->getConVarByName("osu_draw_songbrowser_background_image"));
 	addCheckbox("Draw Background Thumbnails in SongBrowser", convar->getConVarByName("osu_draw_songbrowser_thumbnails"));
 	addCheckbox("Draw Background in Ranking/Results Screen", convar->getConVarByName("osu_draw_rankingscreen_background_image"));
+	addCheckbox("Draw menu-background in Menu", convar->getConVarByName("osu_draw_menu_background"));
+	addCheckbox("Draw menu-background in SongBrowser", "NOTE: Only applies if \"Draw Background in SongBrowser\" is disabled.", convar->getConVarByName("osu_draw_songbrowser_menu_background_image"));
 	addSpacer();
 	addCheckbox("Note Blocking/Locking", "NOTE: osu! has this always enabled, so leave it enabled for practicing.\n\"Protects\" you by only allowing circles to be clicked in order.", convar->getConVarByName("osu_note_blocking"));
 	//addCheckbox("Show pp on ranking screen", convar->getConVarByName("osu_rankingscreen_pp"));
@@ -932,7 +961,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 		addCategory(sectionVR, OsuIcons::EYE);
 
 	addCategory(sectionAudio, OsuIcons::VOLUME_UP);
-	addCategory(sectionSkin, OsuIcons::PAINTBRUSH);
+	addCategory(m_skinSection, OsuIcons::PAINTBRUSH);
 	addCategory(sectionInput, OsuIcons::GAMEPAD);
 	addCategory(subSectionKeyboard, OsuIcons::KEYBOARD);
 	addCategory(sectionGameplay, OsuIcons::CIRCLE);
@@ -1103,6 +1132,20 @@ void OsuOptionsMenu::draw(Graphics *g)
 void OsuOptionsMenu::update()
 {
 	OsuScreenBackable::update();
+
+	// workshop background refresh takes some time, open context menu after loading is finished
+	// do this even if options menu is invisible (but only show context menu if visible after finished)
+	if (m_bWorkshopSkinSelectScheduled)
+	{
+		if (m_osu->getSteamWorkshop()->isReady())
+		{
+			m_bWorkshopSkinSelectScheduled = false;
+
+			if (isVisible())
+				onSkinSelectWorkshop3();
+		}
+	}
+
 	if (!m_bVisible) return;
 
 	if (m_osu->getHUD()->isVolumeOverlayBusy() || m_backButton->isActive())
@@ -1180,8 +1223,8 @@ void OsuOptionsMenu::update()
 		{
 			m_bLetterboxingOffsetUpdateScheduled = false;
 
-			m_osu_letterboxing_offset_x->setValue(m_letterboxingOffsetXSlider->getFloat());
-			m_osu_letterboxing_offset_y->setValue(m_letterboxingOffsetYSlider->getFloat());
+			m_osu_letterboxing_offset_x_ref->setValue(m_letterboxingOffsetXSlider->getFloat());
+			m_osu_letterboxing_offset_y_ref->setValue(m_letterboxingOffsetYSlider->getFloat());
 
 			// and update reset buttons as usual
 			onResetUpdate(m_letterboxingOffsetResetButton);
@@ -1391,7 +1434,7 @@ void OsuOptionsMenu::setVisibleInt(bool visible, bool fromOnBack)
 	}
 
 	// auto scroll to fposu settings if opening options while in fposu gamemode
-	if (visible && m_osu->isInPlayMode() && m_osu_mod_fposu->getBool() && !m_fposuCategoryButton->isActiveCategory())
+	if (visible && m_osu->isInPlayMode() && m_osu_mod_fposu_ref->getBool() && !m_fposuCategoryButton->isActiveCategory())
 		onCategoryClicked(m_fposuCategoryButton);
 
 	// reset key bind reset counter
@@ -1472,9 +1515,7 @@ void OsuOptionsMenu::updateLayout()
 		m_fullscreenCheckbox->setChecked(env->isFullscreen(), false);
 
 	updateVRRenderTargetResolutionLabel();
-
-	// temp, not correct anymore if loading fails!
-	m_skinLabel->setText(convar->getConVarByName("osu_skin")->getString());
+	updateSkinNameLabel();
 
 	if (m_outputDeviceLabel != NULL)
 		m_outputDeviceLabel->setText(engine->getSound()->getOutputDevice());
@@ -1748,22 +1789,39 @@ void OsuOptionsMenu::updateLayout()
 			CBaseUIElement *e2 = m_elements[i].elements[1];
 			CBaseUIElement *e3 = m_elements[i].elements[2];
 
-			int labelSliderLabelOffset = 15;
-			int sliderSize = elementWidth - e1->getSize().x - e3->getSize().x;
-
-			if (sliderSize < 100)
+			if (m_elements[i].type == 4)
 			{
-				enableHorizontalScrolling = true;
-				sliderSize = 100;
+				const int buttonButtonLabelOffset = 10;
+
+				int buttonSize = elementWidth / 3 - 2*buttonButtonLabelOffset;
+
+				e1->setSizeX(buttonSize);
+				e2->setSizeX(buttonSize);
+				e3->setSizeX(buttonSize);
+
+				e1->setRelPos(sideMargin, yCounter);
+				e2->setRelPos(e1->getRelPos().x + e1->getSize().x + buttonButtonLabelOffset, yCounter);
+				e3->setRelPos(e2->getRelPos().x + e2->getSize().x + buttonButtonLabelOffset, yCounter);
 			}
+			else
+			{
+				const int labelSliderLabelOffset = 15;
 
-			e1->setRelPos(sideMargin + elementTextStartOffset, yCounter);
+				int sliderSize = elementWidth - e1->getSize().x - e3->getSize().x;
+				if (sliderSize < 100)
+				{
+					enableHorizontalScrolling = true;
+					sliderSize = 100;
+				}
 
-			e2->setRelPos(sideMargin + elementTextStartOffset + e1->getSize().x + labelSliderLabelOffset, yCounter);
-			e2->setSizeX(sliderSize - 2*elementTextStartOffset - labelSliderLabelOffset*2);
+				e1->setRelPos(sideMargin + elementTextStartOffset, yCounter);
 
-			e3->setRelPos(sideMargin + elementTextStartOffset + e1->getSize().x + e2->getSize().x + 2*labelSliderLabelOffset, yCounter);
-			///e3->setSizeX(valueLabelSize - valueLabelOffset);
+				e2->setRelPos(e1->getRelPos().x + e1->getSize().x + labelSliderLabelOffset, yCounter);
+				e2->setSizeX(sliderSize - 2*elementTextStartOffset - labelSliderLabelOffset*2);
+
+				e3->setRelPos(e2->getRelPos().x + e2->getSize().x + labelSliderLabelOffset, yCounter);
+				///e3->setSizeX(valueLabelSize - valueLabelOffset);
+			}
 
 			yCounter += e2->getSize().y;
 		}
@@ -1841,8 +1899,7 @@ void OsuOptionsMenu::updateOsuFolder()
 	newOsuFolder = newOsuFolder.trim();
 	if (newOsuFolder.length() > 0)
 	{
-		const wchar_t *uFolder = newOsuFolder.wc_str();
-		if (uFolder[newOsuFolder.length()-1] != L'/' && uFolder[newOsuFolder.length()-1] != L'\\')
+		if (newOsuFolder[newOsuFolder.length()-1] != L'/' && newOsuFolder[newOsuFolder.length()-1] != L'\\')
 		{
 			newOsuFolder.append("/");
 			m_osuFolderTextbox->setText(newOsuFolder);
@@ -1877,11 +1934,18 @@ void OsuOptionsMenu::updateFposuCMper360()
 
 void OsuOptionsMenu::updateVRRenderTargetResolutionLabel()
 {
-	if (m_vrRenderTargetResolutionLabel == NULL || !openvr->isReady() || !m_osu->isInVRMode())
-		return;
+	if (m_vrRenderTargetResolutionLabel == NULL || !openvr->isReady() || !m_osu->isInVRMode()) return;
 
 	Vector2 vrRenderTargetResolution = openvr->getRenderTargetResolution();
 	m_vrRenderTargetResolutionLabel->setText(UString::format(m_vrRenderTargetResolutionLabel->getName().toUtf8(), (int)vrRenderTargetResolution.x, (int)vrRenderTargetResolution.y));
+}
+
+void OsuOptionsMenu::updateSkinNameLabel()
+{
+	if (m_skinLabel == NULL) return;
+
+	m_skinLabel->setText(m_osu_skin_is_from_workshop_ref->getBool() ? m_osu_skin_workshop_title_ref->getString() : m_osu_skin_ref->getString());
+	m_skinLabel->setTextColor(m_osu_skin_is_from_workshop_ref->getBool() ? 0xff37adff : 0xffffffff);
 }
 
 void OsuOptionsMenu::onFullscreenChange(CBaseUICheckbox *checkbox)
@@ -1932,14 +1996,34 @@ void OsuOptionsMenu::onSkinSelect()
 {
 	updateOsuFolder();
 
+	if (m_osu->isSkinLoading()) return;
+
+
 	UString skinFolder = convar->getConVarByName("osu_folder")->getString();
-	skinFolder.append("Skins/");
+	skinFolder.append(convar->getConVarByName("osu_folder_sub_skins")->getString());
 	std::vector<UString> skinFolders = env->getFoldersInFolder(skinFolder);
+
+
+
+
+	/*
+	std::vector<UString> skinFolders;
+	std::vector<uint64_t> subscribedItems = steam->getWorkshopSubscribedItems();
+	debugLog("subscribed to %i items\n", subscribedItems.size());
+	for (int i=0; i<subscribedItems.size(); i++)
+	{
+		SteamworksInterface::WorkshopItemDetails details = steam->getWorkshopItemDetails(subscribedItems[i]);
+		debugLog("item[%i] = %llu, installInfo = %s, title = %s, desc = %s\n", i, subscribedItems[i], steam->getWorkshopItemInstallInfo(subscribedItems[i]).toUtf8(), details.title.toUtf8(), details.description.toUtf8());
+		skinFolders.push_back(details.title);
+	}
+	*/
+
+
 
 	if (skinFolders.size() > 0)
 	{
-		m_contextMenu->setPos(m_skinSelectButton->getPos());
-		m_contextMenu->setRelPos(m_skinSelectButton->getRelPos());
+		m_contextMenu->setPos(m_skinSelectLocalButton->getPos());
+		m_contextMenu->setRelPos(m_skinSelectLocalButton->getRelPos());
 		m_contextMenu->begin();
 		m_contextMenu->addButton("default");
 		m_contextMenu->addButton("defaultvr");
@@ -1963,12 +2047,104 @@ void OsuOptionsMenu::onSkinSelect()
 
 void OsuOptionsMenu::onSkinSelect2(UString skinName, int id)
 {
+	m_osu_skin_is_from_workshop_ref->setValue(0.0f);
+
 	if (m_osu->getInstanceID() < 1)
-		convar->getConVarByName("osu_skin")->setValue(skinName);
+		m_osu_skin_ref->setValue(skinName);
 	else
 		m_osu->setSkin(skinName);
 
-	m_skinLabel->setText(skinName);
+	updateSkinNameLabel();
+}
+
+void OsuOptionsMenu::onSkinSelectWorkshop()
+{
+	if (m_skinSelectWorkshopButton == NULL) return;
+
+	if (m_osu->getSteamWorkshop()->isReady())
+	{
+		onSkinSelectWorkshop3();
+		return;
+	}
+
+	onSkinSelectWorkshop2();
+}
+
+void OsuOptionsMenu::onSkinSelectWorkshop2()
+{
+	m_osu->getSteamWorkshop()->refresh();
+	m_bWorkshopSkinSelectScheduled = true;
+
+	m_contextMenu->setPos(m_skinSelectWorkshopButton->getPos());
+	m_contextMenu->setRelPos(m_skinSelectWorkshopButton->getRelPos());
+	m_contextMenu->begin();
+	{
+		m_contextMenu->addButton("(Loading, please wait ...)", -4)->setEnabled(false);
+	}
+	m_contextMenu->end();
+}
+
+void OsuOptionsMenu::onSkinSelectWorkshop3()
+{
+	m_contextMenu->setPos(m_skinSelectWorkshopButton->getPos());
+	m_contextMenu->setRelPos(m_skinSelectWorkshopButton->getRelPos());
+	m_contextMenu->begin();
+	{
+		m_contextMenu->addButton(">>> Refresh <<<", -2)->setTextLeft(false);
+		m_contextMenu->addButton("", -4)->setEnabled(false);
+
+		const std::vector<OsuSteamWorkshop::SUBSCRIBED_ITEM> &subscribedItems = m_osu->getSteamWorkshop()->getSubscribedItems();
+		if (subscribedItems.size() > 0)
+		{
+			for (int i=0; i<subscribedItems.size(); i++)
+			{
+				if (subscribedItems[i].status != OsuSteamWorkshop::SUBSCRIBED_ITEM_STATUS::INSTALLED)
+					m_contextMenu->addButton("(Downloading ...)", -4)->setEnabled(false)->setTextColor(0xff888888)->setTextDarkColor(0xff000000);
+				else
+					m_contextMenu->addButton(subscribedItems[i].title, i);
+			}
+		}
+		else
+			m_contextMenu->addButton("(Empty. Click for Workshop!)", -3)->setTextLeft(false);
+	}
+	m_contextMenu->end();
+	m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSkinSelectWorkshop4) );
+}
+
+void OsuOptionsMenu::onSkinSelectWorkshop4(UString skinName, int id)
+{
+	if (id == -2) // ">>> Refresh <<<"
+	{
+		onSkinSelectWorkshop2();
+		return;
+	}
+	else if (id == -3) // "(Empty. Click for Workshop!)"
+	{
+		OsuMainMenu::openSteamWorkshopInGameOverlay(m_osu, true);
+		return;
+	}
+
+	const std::vector<OsuSteamWorkshop::SUBSCRIBED_ITEM> &subscribedItems = m_osu->getSteamWorkshop()->getSubscribedItems();
+	if (id >= 0 && id < subscribedItems.size())
+	{
+		const OsuSteamWorkshop::SUBSCRIBED_ITEM &subscribedItem = subscribedItems[id];
+		debugLog("installInfo = %s\n", subscribedItem.installInfo.toUtf8());
+		if (env->directoryExists(subscribedItem.installInfo))
+		{
+			m_osu_skin_is_from_workshop_ref->setValue(1.0f);
+			m_osu_skin_workshop_title_ref->setValue(subscribedItem.title);
+			m_osu_skin_workshop_id_ref->setValue(UString::format("%llu", subscribedItem.id));
+
+			if (m_osu->getInstanceID() < 1)
+				m_osu_skin_ref->setValue(subscribedItem.installInfo);
+			else
+				m_osu->setSkin(subscribedItem.installInfo);
+
+			updateSkinNameLabel();
+		}
+		else
+			m_osu->getNotificationOverlay()->addNotification("Error: Workshop skin does not exist!", 0xffff0000);
+	}
 }
 
 void OsuOptionsMenu::onSkinReload()
@@ -2798,6 +2974,37 @@ OsuOptionsMenu::OPTIONS_ELEMENT OsuOptionsMenu::addButton(UString text, UString 
 	return e;
 }
 
+OsuOptionsMenu::OPTIONS_ELEMENT OsuOptionsMenu::addButtonButtonLabel(UString text1, UString text2, UString labelText, bool withResetButton)
+{
+	OsuUIButton *button = new OsuUIButton(m_osu, 0, 0, m_options->getSize().x, 50, text1, text1);
+	button->setColor(0xff0e94b5);
+	button->setUseDefaultSkin();
+	m_options->getContainer()->addBaseUIElement(button);
+
+	OsuUIButton *button2 = new OsuUIButton(m_osu, 0, 0, m_options->getSize().x, 50, text2, text2);
+	button2->setColor(0xff0e94b5);
+	button2->setUseDefaultSkin();
+	m_options->getContainer()->addBaseUIElement(button2);
+
+	CBaseUILabel *label = new CBaseUILabel(0, 0, m_options->getSize().x, 50, labelText, labelText);
+	label->setDrawFrame(false);
+	label->setDrawBackground(false);
+	m_options->getContainer()->addBaseUIElement(label);
+
+	OPTIONS_ELEMENT e;
+	if (withResetButton)
+	{
+		e.resetButton = new OsuOptionsMenuResetButton(m_osu, 0, 0, 35, 50, "", "");
+	}
+	e.elements.push_back(button);
+	e.elements.push_back(button2);
+	e.elements.push_back(label);
+	e.type = 4;
+	m_elements.push_back(e);
+
+	return e;
+}
+
 OsuUIButton *OsuOptionsMenu::addKeyBindButton(UString text, ConVar *cvar)
 {
 	OsuUIButton *button = new OsuUIButton(m_osu, 0, 0, m_options->getSize().x, 50, text, text);
@@ -3018,7 +3225,10 @@ void OsuOptionsMenu::save()
 
 	removeConCommands.push_back(convar->getConVarByName("monitor"));
 	removeConCommands.push_back(convar->getConVarByName("windowed"));
-	removeConCommands.push_back(convar->getConVarByName("osu_skin"));
+	removeConCommands.push_back(m_osu_skin_ref);
+	removeConCommands.push_back(m_osu_skin_workshop_title_ref);
+	removeConCommands.push_back(m_osu_skin_workshop_id_ref);
+	removeConCommands.push_back(m_osu_skin_is_from_workshop_ref);
 	removeConCommands.push_back(convar->getConVarByName("snd_output_device"));
 
 	if (m_fullscreenCheckbox != NULL)
@@ -3139,7 +3349,23 @@ void OsuOptionsMenu::save()
 	}
 
 	out << "osu_skin_mipmaps " << convar->getConVarByName("osu_skin_mipmaps")->getString().toUtf8() << "\n";
-	out << "osu_skin " << convar->getConVarByName("osu_skin")->getString().toUtf8() << "\n";
+	if (m_osu_skin_is_from_workshop_ref->getBool())
+	{
+		out << "osu_skin_is_from_workshop " << m_osu_skin_is_from_workshop_ref->getString().toUtf8() << "\n";
+		out << "osu_skin_workshop_title " << m_osu_skin_workshop_title_ref->getString().toUtf8() << "\n";
+		out << "osu_skin_workshop_id " << m_osu_skin_workshop_id_ref->getString().toUtf8() << "\n";
+	}
+	out << "osu_skin " << m_osu_skin_ref->getString().toUtf8() << "\n";
 
 	out.close();
+}
+
+void OsuOptionsMenu::openAndScrollToSkinSection()
+{
+	const bool wasVisible = isVisible();
+	if (!wasVisible)
+		m_osu->toggleOptionsMenu();
+
+	if (!m_skinSelectLocalButton->isVisible() || !wasVisible)
+		m_options->scrollToElement(m_skinSection, 0, 100);
 }

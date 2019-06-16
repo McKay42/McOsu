@@ -10,18 +10,8 @@
 #include "Engine.h"
 #include "ConVar.h"
 #include "Environment.h"
-
-#ifdef MCENGINE_FEATURE_STEAMWORKS
-
 #include "SteamworksInterface.h"
-
-#endif
-
-#ifdef MCENGINE_FEATURE_DISCORD
-
 #include "DiscordInterface.h"
-
-#endif
 
 #include "Osu.h"
 #include "OsuScore.h"
@@ -111,14 +101,8 @@ void OsuRichPresence::setStatus(Osu *osu, UString status, bool force)
 {
 	if (!osu_rich_presence.getBool() && !force) return;
 
-#ifdef MCENGINE_FEATURE_STEAMWORKS
-
 	// steam
 	steam->setRichPresence(KEY_STEAM_STATUS, status);
-
-#endif
-
-#ifdef MCENGINE_FEATURE_DISCORD
 
 	// discord
 	discord->setRichPresence("largeImageKey", "logo_512", true);
@@ -141,7 +125,6 @@ void OsuRichPresence::setStatus(Osu *osu, UString status, bool force)
 	}
 	else if (force && status.length() < 1)
 		discord->setRichPresence(KEY_DISCORD_STATUS, "");
-#endif
 }
 
 void OsuRichPresence::onRichPresenceChange(UString oldValue, UString newValue)

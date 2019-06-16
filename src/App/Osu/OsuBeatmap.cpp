@@ -118,8 +118,6 @@ ConVar *OsuBeatmap::m_osu_early_note_time_ref = &osu_early_note_time;
 ConVar *OsuBeatmap::m_osu_fail_time_ref = &osu_fail_time;
 
 ConVar *OsuBeatmap::m_osu_volume_music_ref = NULL;
-ConVar *OsuBeatmap::m_osu_speed_override_ref = NULL;
-ConVar *OsuBeatmap::m_osu_pitch_override_ref = NULL;
 
 #ifdef MCENGINE_FEATURE_MULTITHREADING
 
@@ -134,10 +132,6 @@ OsuBeatmap::OsuBeatmap(Osu *osu)
 		m_snd_speed_compensate_pitch_ref = convar->getConVarByName("snd_speed_compensate_pitch");
 	if (m_osu_volume_music_ref == NULL)
 		m_osu_volume_music_ref = convar->getConVarByName("osu_volume_music");
-	if (m_osu_speed_override_ref == NULL)
-		m_osu_speed_override_ref = convar->getConVarByName("osu_speed_override");
-	if (m_osu_pitch_override_ref == NULL)
-		m_osu_pitch_override_ref = convar->getConVarByName("osu_pitch_override");
 
 	// vars
 	m_osu = osu;
@@ -1320,7 +1314,7 @@ float OsuBeatmap::getAR()
 		AR = osu_ar_override.getFloat();
 
 	if (osu_ar_override_lock.getBool())
-		AR = OsuGameRules::getRawConstantApproachRateForSpeedMultiplier(OsuGameRules::getRawApproachTime(AR), m_osu->getSpeedMultiplier());
+		AR = OsuGameRules::getRawConstantApproachRateForSpeedMultiplier(OsuGameRules::getRawApproachTime(AR), (m_music != NULL && m_bIsPlaying ? getSpeedMultiplier() : m_osu->getSpeedMultiplier()));
 
 	if (osu_mod_artimewarp.getBool() && m_hitobjects.size() > 0)
 	{
@@ -1380,7 +1374,7 @@ float OsuBeatmap::getOD()
 		OD = osu_od_override.getFloat();
 
 	if (osu_od_override_lock.getBool())
-		OD = OsuGameRules::getRawConstantOverallDifficultyForSpeedMultiplier(OsuGameRules::getRawHitWindow300(OD), m_osu->getSpeedMultiplier());
+		OD = OsuGameRules::getRawConstantOverallDifficultyForSpeedMultiplier(OsuGameRules::getRawHitWindow300(OD), (m_music != NULL && m_bIsPlaying ? getSpeedMultiplier() : m_osu->getSpeedMultiplier()));
 
 	return OD;
 }
@@ -1691,7 +1685,7 @@ unsigned long OsuBeatmap::getMusicPositionMSInterpolated()
 
 		unsigned long returnPos = 0;
 		const double curPos = (double)m_music->getPositionMS();
-		const float speed = m_osu->getSpeedMultiplier();
+		const float speed = m_music->getSpeed();
 
 		// not reinventing the wheel, the interpolation magic numbers here are (c) peppy
 

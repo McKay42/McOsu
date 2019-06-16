@@ -55,7 +55,6 @@ public:
 	bool isMouseInScrollView();
 
 	void updateModConVar();
-	void updateOverrideSliders();
 
 private:
 	struct OVERRIDE_SLIDER
@@ -84,12 +83,12 @@ private:
 		ConVar *cvar;
 	};
 
-	void updateButtons();
+	void updateButtons(bool initial = false);
 	void updateLayout();
 
 	void updateExperimentalLayout();
 
-	OsuUIModSelectorModButton *setModButtonOnGrid(int x, int y, int state, UString modName, UString tooltipText, std::function<OsuSkinImage*()> getImageFunc);
+	OsuUIModSelectorModButton *setModButtonOnGrid(int x, int y, int state, bool initialState, UString modName, UString tooltipText, std::function<OsuSkinImage*()> getImageFunc);
 	OsuUIModSelectorModButton *getModButtonOnGrid(int x, int y);
 
 	OVERRIDE_SLIDER addOverrideSlider(UString text, UString labelText, ConVar *cvar, float min, float max, ConVar *lockCvar = NULL);

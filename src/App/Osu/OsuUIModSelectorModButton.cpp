@@ -39,18 +39,19 @@ OsuUIModSelectorModButton::OsuUIModSelectorModButton(Osu *osu, OsuModSelector *o
 void OsuUIModSelectorModButton::draw(Graphics *g)
 {
 	if (!m_bVisible) return;
+
 	if (getActiveImageFunc != NULL && getActiveImageFunc())
 	{
 		g->pushTransform();
+		{
+			g->scale(m_vScale.x, m_vScale.y);
 
-		g->scale(m_vScale.x, m_vScale.y);
+			if (m_fRot != 0.0f)
+				g->rotate(m_fRot);
 
-		if (m_fRot != 0.0f)
-			g->rotate(m_fRot);
-
-		g->setColor(0xffffffff);
-		getActiveImageFunc()->draw(g, m_vPos + m_vSize/2);
-
+			g->setColor(0xffffffff);
+			getActiveImageFunc()->draw(g, m_vPos + m_vSize/2);
+		}
 		g->popTransform();
 	}
 
@@ -97,9 +98,7 @@ void OsuUIModSelectorModButton::resetState()
 void OsuUIModSelectorModButton::onMouseDownInside()
 {
 	CBaseUIButton::onMouseDownInside();
-
-	if (!m_bAvailable)
-		return;
+	if (!m_bAvailable) return;
 
 	// increase state, wrap around, switch on and off
 	if (m_bOn)
@@ -179,7 +178,7 @@ void OsuUIModSelectorModButton::setOn(bool on)
 	}
 }
 
-void OsuUIModSelectorModButton::setState(int state)
+void OsuUIModSelectorModButton::setState(int state, bool updateModConVar)
 {
 	m_iState = state;
 
@@ -188,10 +187,11 @@ void OsuUIModSelectorModButton::setState(int state)
 		getActiveImageFunc = m_states[m_iState].getImageFunc;
 
 	// update mods
-	m_osuModSelector->updateModConVar();
+	if (updateModConVar)
+		m_osuModSelector->updateModConVar();
 }
 
-void OsuUIModSelectorModButton::setState(unsigned int state, UString modName, UString tooltipText, std::function<OsuSkinImage*()> getImageFunc)
+void OsuUIModSelectorModButton::setState(unsigned int state, bool initialState, UString modName, UString tooltipText, std::function<OsuSkinImage*()> getImageFunc)
 {
 	// dynamically add new state
 	while (m_states.size() < state+1)
@@ -209,6 +209,13 @@ void OsuUIModSelectorModButton::setState(unsigned int state, UString modName, US
 		getActiveImageFunc = m_states[0].getImageFunc;
 	else if (m_iState > -1 && m_iState < m_states.size()) // update current state image
 		getActiveImageFunc = m_states[m_iState].getImageFunc;
+
+	// set initial state on (but without firing callbacks)
+	if (initialState)
+	{
+		setState(state, false);
+		setOn(true);
+	}
 }
 
 UString OsuUIModSelectorModButton::getActiveModName()

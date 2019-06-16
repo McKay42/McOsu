@@ -18,16 +18,11 @@
 #include "SoundEngine.h"
 #include "Console.h"
 #include "ConVar.h"
+#include "SteamworksInterface.h"
 #include "OpenVRInterface.h"
 #include "OpenVRController.h"
 #include "RenderTarget.h"
 #include "Shader.h"
-
-#ifdef MCENGINE_FEATURE_STEAMWORKS
-
-#include "SteamworksInterface.h"
-
-#endif
 
 #include "CWindowManager.h"
 //#include "DebugMonitor.h"
@@ -55,6 +50,7 @@
 #include "OsuChangelog.h"
 #include "OsuEditor.h"
 #include "OsuRichPresence.h"
+#include "OsuSteamWorkshop.h"
 #include "OsuModFPoSu.h"
 
 #include "OsuBeatmap.h"
@@ -66,13 +62,9 @@
 
 #include "OsuUIVolumeSlider.h"
 
-void DUMMY_OSU_LETTERBOXING(UString oldValue, UString newValue) {;}
-void DUMMY_OSU_VOLUME_MUSIC_ARGS(UString oldValue, UString newValue) {;}
-void DUMMY_OSU_MODS(void) {;}
-
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 29.5f);
+ConVar osu_version("osu_version", 30.0f);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr");
 #else
@@ -85,33 +77,36 @@ ConVar osu_vr_tutorial("osu_vr_tutorial", true);
 
 ConVar osu_disable_mousebuttons("osu_disable_mousebuttons", false);
 ConVar osu_disable_mousewheel("osu_disable_mousewheel", false);
-ConVar osu_confine_cursor_windowed("osu_confine_cursor_windowed", false, DUMMY_OSU_LETTERBOXING);
-ConVar osu_confine_cursor_fullscreen("osu_confine_cursor_fullscreen", true, DUMMY_OSU_LETTERBOXING);
+ConVar osu_confine_cursor_windowed("osu_confine_cursor_windowed", false);
+ConVar osu_confine_cursor_fullscreen("osu_confine_cursor_fullscreen", true);
 
-ConVar osu_skin("osu_skin", "", DUMMY_OSU_VOLUME_MUSIC_ARGS); // set dynamically below in the constructor
-ConVar osu_skin_reload("osu_skin_reload", DUMMY_OSU_MODS);
+ConVar osu_skin("osu_skin", ""); // set dynamically below in the constructor
+ConVar osu_skin_is_from_workshop("osu_skin_is_from_workshop", false, "determines whether osu_skin contains a relative folder name, or a full absolute path (for workshop skins)");
+ConVar osu_skin_workshop_title("osu_skin_workshop_title", "", "holds the title/name of the currently selected workshop skin, because osu_skin is already used up for the absolute path then");
+ConVar osu_skin_workshop_id("osu_skin_workshop_id", "0", "holds the id of the currently selected workshop skin");
+ConVar osu_skin_reload("osu_skin_reload");
 
-ConVar osu_volume_master("osu_volume_master", 1.0f, DUMMY_OSU_VOLUME_MUSIC_ARGS);
-ConVar osu_volume_music("osu_volume_music", 0.4f, DUMMY_OSU_VOLUME_MUSIC_ARGS);
+ConVar osu_volume_master("osu_volume_master", 1.0f);
+ConVar osu_volume_music("osu_volume_music", 0.4f);
 ConVar osu_volume_change_interval("osu_volume_change_interval", 0.05f);
 
-ConVar osu_speed_override("osu_speed_override", -1.0f, DUMMY_OSU_VOLUME_MUSIC_ARGS);
-ConVar osu_pitch_override("osu_pitch_override", -1.0f, DUMMY_OSU_VOLUME_MUSIC_ARGS);
+ConVar osu_speed_override("osu_speed_override", -1.0f);
+ConVar osu_pitch_override("osu_pitch_override", -1.0f);
 
 ConVar osu_pause_on_focus_loss("osu_pause_on_focus_loss", true);
 ConVar osu_quick_retry_delay("osu_quick_retry_delay", 0.27f);
 
-ConVar osu_mods("osu_mods", "", DUMMY_OSU_VOLUME_MUSIC_ARGS);
+ConVar osu_mods("osu_mods", "");
 ConVar osu_mod_fadingcursor("osu_mod_fadingcursor", false);
 ConVar osu_mod_fadingcursor_combo("osu_mod_fadingcursor_combo", 50.0f);
 ConVar osu_mod_endless("osu_mod_endless", false);
 
 ConVar osu_notification("osu_notification");
 
-ConVar osu_letterboxing("osu_letterboxing", true, DUMMY_OSU_LETTERBOXING);
+ConVar osu_letterboxing("osu_letterboxing", true);
 ConVar osu_letterboxing_offset_x("osu_letterboxing_offset_x", 0.0f);
 ConVar osu_letterboxing_offset_y("osu_letterboxing_offset_y", 0.0f);
-ConVar osu_resolution("osu_resolution", "1280x720", DUMMY_OSU_VOLUME_MUSIC_ARGS);
+ConVar osu_resolution("osu_resolution", "1280x720");
 ConVar osu_resolution_enabled("osu_resolution_enabled", false);
 ConVar osu_resolution_keep_aspect_ratio("osu_resolution_keep_aspect_ratio", false);
 ConVar osu_force_legacy_slider_renderer("osu_force_legacy_slider_renderer", false, "on some older machines, this may be faster than vertexbuffers");
@@ -133,6 +128,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 
 	// convar refs
 	m_osu_folder_ref = convar->getConVarByName("osu_folder");
+	m_osu_folder_sub_skins_ref = convar->getConVarByName("osu_folder_sub_skins");
 	m_osu_draw_hud_ref = convar->getConVarByName("osu_draw_hud");
 	m_osu_draw_scoreboard = convar->getConVarByName("osu_draw_scoreboard");
 	m_osu_mod_fps_ref = convar->getConVarByName("osu_mod_fps");
@@ -196,13 +192,9 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 
 	osu_resolution.setValue(UString::format("%ix%i", engine->getScreenWidth(), engine->getScreenHeight()));
 
-#ifdef MCENGINE_FEATURE_STEAMWORKS
-
 	// init steam rich presence localization
 	steam->setRichPresence("steam_display", "#Status");
 	steam->setRichPresence("status", "...");
-
-#endif
 
 #ifdef MCENGINE_FEATURE_BASS_WASAPI
 
@@ -339,6 +331,9 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_iMultiplayerClientNumEscPresses = 0;
 	m_bIsInVRDraw = false;
 	m_bWasBossKeyPaused = false;
+	m_bSkinLoadScheduled = false;
+	m_bSkinLoadWasReload = false;
+	m_skinScheduledToLoad = NULL;
 
 	// debug
 	m_windowManager = new CWindowManager();
@@ -350,6 +345,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 
 	// renderer
 	g_vInternalResolution = engine->getScreenSize();
+
 	m_backBuffer = engine->getResourceManager()->createRenderTarget(0, 0, getScreenWidth(), getScreenHeight());
 	m_playfieldBuffer = engine->getResourceManager()->createRenderTarget(0, 0, 64, 64);
 	m_sliderFrameBuffer = engine->getResourceManager()->createRenderTarget(0, 0, getScreenWidth(), getScreenHeight());
@@ -386,12 +382,17 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_fontIcons->setHeight(averageIconHeight);
 
 	// load skin
-	UString skinFolder = m_osu_folder_ref->getString();
-	skinFolder.append("Skins/");
-	skinFolder.append(osu_skin.getString());
-	skinFolder.append("/");
-	if (m_skin == NULL) // the skin may already be loaded by Console::execConfigFile() above
-		m_skin = new OsuSkin(this, skinFolder, (osu_skin.getString() == "default" || osu_skin.getString() == "defaultvr"));
+	{
+		UString skinFolder = m_osu_folder_ref->getString();
+		skinFolder.append(m_osu_folder_sub_skins_ref->getString());
+		skinFolder.append(osu_skin.getString());
+		skinFolder.append("/");
+		if (m_skin == NULL) // the skin may already be loaded by Console::execConfigFile() above
+			onSkinChange("", osu_skin.getString());
+
+		// enable async skin loading for user-action skin changes (but not during startup)
+		OsuSkin::m_osu_skin_async->setValue(1.0f);
+	}
 
 	// load subsystems, add them to the screens array
 	m_tooltipOverlay = new OsuTooltipOverlay(this);
@@ -408,6 +409,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_vrTutorial = new OsuVRTutorial(this);
 	m_changelog = new OsuChangelog(this);
 	m_editor = new OsuEditor(this);
+	m_steamWorkshop = new OsuSteamWorkshop(this);
 	m_fposu = new OsuModFPoSu(this);
 
 	// the order in this vector will define in which order events are handled/consumed
@@ -512,6 +514,7 @@ Osu::~Osu()
 		SAFE_DELETE(m_screens[i]);
 	}
 
+	SAFE_DELETE(m_steamWorkshop);
 	SAFE_DELETE(m_fposu);
 
 	SAFE_DELETE(m_score);
@@ -571,7 +574,7 @@ void Osu::draw(Graphics *g)
 		OsuBeatmapStandard *beatmapStd = dynamic_cast<OsuBeatmapStandard*>(getSelectedBeatmap());
 
 		// draw auto cursor
-		if (isAuto && allowDrawCursor && beatmapStd != NULL && !isFPoSu)
+		if (isAuto && allowDrawCursor && !isFPoSu && beatmapStd != NULL && !beatmapStd->isLoading())
 			m_hud->drawCursor(g, m_osu_mod_fps_ref->getBool() ? OsuGameRules::getPlayfieldCenter(this) : beatmapStd->getCursorPos(), osu_mod_fadingcursor.getBool() ? fadingCursorAlpha : 1.0f);
 
 		m_pauseMenu->draw(g);
@@ -655,6 +658,12 @@ void Osu::draw(Graphics *g)
 
 	m_tooltipOverlay->draw(g);
 	m_notificationOverlay->draw(g);
+
+	// loading spinner for some async tasks
+	if ((m_bSkinLoadScheduled && m_skin != m_skinScheduledToLoad) || m_optionsMenu->isWorkshopLoading() || m_steamWorkshop->isUploading())
+	{
+		m_hud->drawLoadingSmall(g);
+	}
 
 	// if we are not using the native window resolution;
 	// we must also do this if we are in VR mode, since we only draw once and the buffer is used to draw the virtual screen later. otherwise we wouldn't see anything on the desktop window
@@ -985,6 +994,33 @@ void Osu::update()
 
 	// multiplayer update
 	m_multiplayer->update();
+
+	// skin async loading
+	if (m_bSkinLoadScheduled)
+	{
+		if (m_skinScheduledToLoad != NULL && m_skinScheduledToLoad->isReady())
+		{
+			m_bSkinLoadScheduled = false;
+
+			if (m_skin != m_skinScheduledToLoad)
+				SAFE_DELETE(m_skin);
+
+			m_skin = m_skinScheduledToLoad;
+
+			m_skinScheduledToLoad = NULL;
+
+			// force layout update after all skin elements have been loaded
+			onResolutionChanged(g_vInternalResolution);
+
+			// notify if done after reload
+			if (m_bSkinLoadWasReload)
+			{
+				m_bSkinLoadWasReload = false;
+
+				m_notificationOverlay->addNotification("Skin reloaded!");
+			}
+		}
+	}
 }
 
 void Osu::updateMods()
@@ -1058,7 +1094,6 @@ void Osu::onKeyDown(KeyboardEvent &key)
 	if (engine->getKeyboard()->isAltDown() && engine->getKeyboard()->isControlDown() && key == KEY_S)
 	{
 		onSkinReload();
-		m_notificationOverlay->addNotification("Skin reloaded!");
 		key.consume();
 	}
 
@@ -1872,24 +1907,47 @@ bool Osu::onShutdown()
 
 void Osu::onSkinReload()
 {
+	m_bSkinLoadWasReload = true;
 	onSkinChange("", osu_skin.getString());
 }
 
 void Osu::onSkinChange(UString oldValue, UString newValue)
 {
-	if (newValue.length() > 1)
+	if (m_skin != NULL)
 	{
-		SAFE_DELETE(m_skin);
-
-		UString skinFolder = m_osu_folder_ref->getString();
-		skinFolder.append("Skins/");
-		skinFolder.append(newValue);
-		skinFolder.append("/");
-		m_skin = new OsuSkin(this, skinFolder, (newValue == "default" || newValue == "defaultvr"));
-
-		// force
-		onResolutionChanged(g_vInternalResolution);
+		if (m_bSkinLoadScheduled || m_skinScheduledToLoad != NULL) return;
+		if (newValue.length() < 1) return;
 	}
+
+	UString skinFolder = m_osu_folder_ref->getString();
+	skinFolder.append(m_osu_folder_sub_skins_ref->getString());
+	skinFolder.append(newValue);
+	skinFolder.append("/");
+
+	// reset playtime tracking
+	steam->stopWorkshopPlaytimeTrackingForAllItems();
+
+	// workshop skins use absolute paths
+	const bool isWorkshopSkin = osu_skin_is_from_workshop.getBool();
+	if (isWorkshopSkin)
+	{
+		skinFolder = newValue;
+
+		// ensure that the skinFolder ends with a slash
+		if (skinFolder[skinFolder.length()-1] != L'/' && skinFolder[skinFolder.length()-1] != L'\\')
+			skinFolder.append("/");
+
+		// start playtime tracking
+		steam->startWorkshopItemPlaytimeTracking((uint64_t)osu_skin_workshop_id.getString().toLong());
+	}
+
+	m_skinScheduledToLoad = new OsuSkin(this, skinFolder, (newValue == "default" || newValue == "defaultvr"), isWorkshopSkin);
+
+	// initial load
+	if (m_skin == NULL)
+		m_skin = m_skinScheduledToLoad;
+
+	m_bSkinLoadScheduled = true;
 }
 
 void Osu::onMasterVolumeChange(UString oldValue, UString newValue)
@@ -1978,12 +2036,15 @@ void Osu::onKey1Change(bool pressed, bool mouse)
 		}
 	}
 
-	// cursor anim
+	// cursor anim + ripples
 	const bool doAnimate = !(isInPlayMode() && !getSelectedBeatmap()->isPaused() && mouse && osu_disable_mousebuttons.getBool());
 	if (doAnimate)
 	{
 		if (pressed && !(m_bKeyboardKey1Down && m_bMouseKey1Down))
+		{
 			m_hud->animateCursorExpand();
+			m_hud->addCursorRipple(engine->getMouse()->getPos());
+		}
 		else if (!m_bKeyboardKey1Down && !m_bMouseKey1Down && !m_bKeyboardKey2Down && !m_bMouseKey2Down)
 			m_hud->animateCursorShrink();
 	}
@@ -2007,12 +2068,15 @@ void Osu::onKey2Change(bool pressed, bool mouse)
 		}
 	}
 
-	// cursor anim
+	// cursor anim + ripples
 	const bool doAnimate = !(isInPlayMode() && !getSelectedBeatmap()->isPaused() && mouse && osu_disable_mousebuttons.getBool());
 	if (doAnimate)
 	{
 		if (pressed && !(m_bKeyboardKey2Down && m_bMouseKey2Down))
+		{
 			m_hud->animateCursorExpand();
+			m_hud->addCursorRipple(engine->getMouse()->getPos());
+		}
 		else if (!m_bKeyboardKey2Down && !m_bMouseKey2Down && !m_bKeyboardKey1Down && !m_bMouseKey1Down)
 			m_hud->animateCursorShrink();
 	}

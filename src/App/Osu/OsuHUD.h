@@ -31,10 +31,11 @@ public:
 	virtual ~OsuHUD();
 
 	virtual void draw(Graphics *g);
+	virtual void update();
+
 	void drawDummy(Graphics *g);
 	void drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr);
 	void drawVRDummy(Graphics *g, Matrix4 &mvp, OsuVR *vr);
-	virtual void update();
 
 	void drawCursor(Graphics *g, Vector2 pos, float alphaMultiplier = 1.0f, bool secondTrail = false);
 	void drawCursorSpectator1(Graphics *g, Vector2 pos, float alphaMultiplier = 1.0f);
@@ -60,6 +61,7 @@ public:
 	void animateInputoverlay(int key, bool down);
 
 	void animateVolumeChange();
+	void addCursorRipple(Vector2 pos);
 	void animateCursorExpand();
 	void animateCursorShrink();
 
@@ -84,6 +86,12 @@ private:
 		float time;
 		float alpha;
 		float scale;
+	};
+
+	struct CURSORRIPPLE
+	{
+		Vector2 pos;
+		float time;
 	};
 
 	struct HITERROR
@@ -120,6 +128,7 @@ private:
 	void drawCursorInt(Graphics *g, Shader *trailShader, std::vector<CURSORTRAIL> &trail, Matrix4 &mvp, Vector2 pos, float alphaMultiplier = 1.0f, bool emptyTrailFrame = false);
 	void drawCursorRaw(Graphics *g, Vector2 pos, float alphaMultiplier = 1.0f);
 	void drawCursorTrailRaw(Graphics *g, float alpha, Vector2 pos);
+	void drawCursorRipples(Graphics *g);
 	void drawFps(Graphics *g, McFont *font, float fps);
 	void drawAccuracy(Graphics *g, float accuracy);
 	void drawCombo(Graphics *g, int combo);
@@ -199,7 +208,7 @@ private:
 	OsuUIVolumeSlider *m_volumeEffects;
 	OsuUIVolumeSlider *m_volumeMusic;
 
-	// cursor & trail
+	// cursor & trail & ripples
 	float m_fCursorExpandAnim;
 	std::vector<CURSORTRAIL> m_cursorTrail;
 	std::vector<CURSORTRAIL> m_cursorTrail2;
@@ -210,6 +219,7 @@ private:
 	Shader *m_cursorTrailShader;
 	Shader *m_cursorTrailShaderVR;
 	VertexArrayObject *m_cursorTrailVAO;
+	std::vector<CURSORRIPPLE> m_cursorRipples;
 
 	// target heatmap
 	std::vector<TARGET> m_targets;

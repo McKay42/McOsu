@@ -28,7 +28,7 @@ OsuFile::OsuFile(UString filepath, bool write)
 	}
 	else if (m_file->canWrite() && write)
 	{
-		m_writeBuffer.reserve(1024*1024); // 1 MB should be good, my db is ~700K atm
+		m_writeBuffer.reserve(1024*1024);
 		m_bReady = true;
 	}
 }

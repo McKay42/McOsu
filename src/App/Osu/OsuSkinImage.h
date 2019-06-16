@@ -35,6 +35,8 @@ public:
 
 	float getResolutionScale();
 
+	bool isReady();
+
 	inline int getNumImages() const {return m_images.size();}
 	inline float getFrameDuration() const {return m_fFrameDuration;}
 	inline unsigned int getFrameNumber() const {return m_iFrameCounter;}
@@ -58,6 +60,7 @@ private:
 	IMAGE getImageForCurrentFrame();
 
 	OsuSkin *m_skin;
+	bool m_bReady;
 
 	// scaling
 	Vector2 m_vBaseSizeForScaling2x;

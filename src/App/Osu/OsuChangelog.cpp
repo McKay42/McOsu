@@ -35,7 +35,16 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	std::vector<CHANGELOG> changelogs;
 
 	CHANGELOG alpha29Steam;
-	alpha29Steam.title = UString::format("29.5 (Steam VR Version, %s, %s)", __DATE__, __TIME__);
+	alpha29Steam.title = UString::format("30.0 (Steam VR Version, %s, %s)", __DATE__, __TIME__);
+	alpha29Steam.changes.push_back("- Added Steam Workshop support (for skins)");
+	alpha29Steam.changes.push_back("- Added option \"Cursor ripples\" (Options > Input > Mouse)");
+	alpha29Steam.changes.push_back("- Added skinning support for menu-background and cursor-ripple");
+	alpha29Steam.changes.push_back("- Added support for using custom BeatmapDirectory even without an osu installation/database");
+	alpha29Steam.changes.push_back("- Added ConVars: osu_cursor_ripple_duration/alpha/additive/anim_start_scale/end/fadeout_delay/tint_r/g/b");
+	alpha29Steam.changes.push_back("- General engine stability improvements");
+	alpha29Steam.changes.push_back("- Fixed AR/OD lock buttons being ignored by Timewarp experimental mod");
+	alpha29Steam.changes.push_back("- Fixed custom ConVars being ignored in cfg: osu_mods, osu_speed/ar/od/cs_override");
+	alpha29Steam.changes.push_back("");
 	alpha29Steam.changes.push_back("- Added lock buttons to AR/OD override sliders (force constant AR/OD even with speed multiplier)");
 	alpha29Steam.changes.push_back("- Added reset buttons to all options settings");
 	alpha29Steam.changes.push_back("- Added ConVars: osu_slider_reverse_arrow_alpha_multiplier, snd_speed_compensate_pitch");

@@ -157,8 +157,6 @@ protected:
 	static ConVar *m_osu_fail_time_ref;
 
 	static ConVar *m_osu_volume_music_ref;
-	static ConVar *m_osu_speed_override_ref;
-	static ConVar *m_osu_pitch_override_ref;
 
 	// overridable child events
 	virtual void onBeforeLoad() {;} // called before hitobjects are loaded
