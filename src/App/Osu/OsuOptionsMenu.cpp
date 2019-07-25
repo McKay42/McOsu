@@ -908,8 +908,9 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	fposuDistanceSlider->setKeyDelta(0.01f);
 	addCheckbox("Vertical FOV", convar->getConVarByName("fposu_vertical_fov"));
 	CBaseUISlider *fovSlider = addSlider("FOV:", 20.0f, 160.0f, convar->getConVarByName("fposu_fov"));
-	fovSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeInt) );
-	fovSlider->setKeyDelta(1);
+	fovSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeOneDecimalPlace));
+	fovSlider->setKeyDelta(0.1f);
+	addLabel("LEFT/RIGHT arrow keys to precisely adjust FOV slider")->setTextColor(0xff777777);
 
 	if (env->getOS() == Environment::OS::OS_WINDOWS)
 	{
