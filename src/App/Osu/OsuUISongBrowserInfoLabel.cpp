@@ -31,8 +31,8 @@ OsuUISongBrowserInfoLabel::OsuUISongBrowserInfoLabel(Osu *osu, float xPos, float
 
 	m_iMargin = 10;
 
-	const float scaleToOldHardcodedFontSize = 23.0f/m_font->getHeight();
-	const float globalScaler = 1.3f*scaleToOldHardcodedFontSize;
+	const float globalScaler = 1.3f;
+
 	m_fTitleScale = 0.77f*globalScaler;
 	m_fSubTitleScale = 0.6f*globalScaler;
 	m_fSongInfoScale = 0.7f*globalScaler;
@@ -81,7 +81,7 @@ void OsuUISongBrowserInfoLabel::draw(Graphics *g)
 	const UString diffInfoText = buildDiffInfoString();
 	const UString offsetInfoText = buildOffsetInfoString();
 
-	const float globalScale = std::max((m_vSize.y / getMinimumHeight())*0.7f, 1.0f);
+	const float globalScale = std::max((m_vSize.y / getMinimumHeight())*0.91f, 1.0f);
 
 	int yCounter = m_vPos.y;
 
@@ -241,11 +241,14 @@ void OsuUISongBrowserInfoLabel::setFromMissingBeatmap(long beatmapId)
 
 void OsuUISongBrowserInfoLabel::onClicked()
 {
+	// deprecated due to "Web" button
+	/*
 	if (m_iBeatmapId > 0)
 	{
 		env->openURLInDefaultBrowser(UString::format("https://osu.ppy.sh/b/%ld", m_iBeatmapId));
 		m_osu->getNotificationOverlay()->addNotification("Opening browser, please wait ...", 0xffffffff, false, 0.75f);
 	}
+	*/
 	CBaseUIButton::onClicked();
 }
 

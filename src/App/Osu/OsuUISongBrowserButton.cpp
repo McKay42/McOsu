@@ -134,10 +134,12 @@ void OsuUISongBrowserButton::update()
 
 void OsuUISongBrowserButton::updateLayoutEx()
 {
+	const float uiScale = Osu::ui_scale->getFloat();
+
 	Image *menuButtonBackground = m_osu->getSkin()->getMenuButtonBackground();
 	Vector2 minimumSize = Vector2(699.0f, 103.0f)*(m_osu->getSkin()->isMenuButtonBackground2x() ? 2.0f : 1.0f);
 	float minimumScale = Osu::getImageScaleToFitResolution(menuButtonBackground, minimumSize);
-	m_fScale = Osu::getImageScale(m_osu, menuButtonBackground->getSize()*minimumScale, 64.0f);
+	m_fScale = Osu::getImageScale(m_osu, menuButtonBackground->getSize()*minimumScale, 64.0f) * uiScale;
 
 	if (m_bVisible) // lag prevention (animationHandler overflow)
 	{

@@ -108,6 +108,7 @@ ConVar osu_draw_score("osu_draw_score", true);
 ConVar osu_draw_accuracy("osu_draw_accuracy", true);
 ConVar osu_draw_target_heatmap("osu_draw_target_heatmap", true);
 ConVar osu_draw_scrubbing_timeline("osu_draw_scrubbing_timeline", true);
+ConVar osu_draw_scrubbing_timeline_breaks("osu_draw_scrubbing_timeline_breaks", true);
 ConVar osu_draw_continue("osu_draw_continue", true);
 ConVar osu_draw_scoreboard("osu_draw_scoreboard", true);
 ConVar osu_draw_inputoverlay("osu_draw_inputoverlay", true);
@@ -171,7 +172,6 @@ OsuHUD::OsuHUD(Osu *osu) : OsuScreen(osu)
 	m_fCurFps = 60.0f;
 	m_fCurFpsSmooth = 60.0f;
 	m_fFpsUpdate = 0.0f;
-	m_fFpsFontHeight = m_tempFont->getHeight();
 
 	m_fInputoverlayK1AnimScale = 1.0f;
 	m_fInputoverlayK2AnimScale = 1.0f;
@@ -298,7 +298,41 @@ void OsuHUD::draw(Graphics *g)
 		drawContinue(g, beatmapStd->getContinueCursorPoint(), beatmapStd->getHitcircleDiameter());
 
 	if (osu_draw_scrubbing_timeline.getBool() && m_osu->isSeeking())
-		drawScrubbingTimeline(g, beatmap->getTime(), beatmap->getLength(), beatmap->getLengthPlayable(), beatmap->getStartTimePlayable(), beatmap->getPercentFinishedPlayable());
+	{
+		std::vector<BREAK> breaks;
+
+		if (osu_draw_scrubbing_timeline_breaks.getBool())
+		{
+			const unsigned long lengthPlayableMS = beatmap->getLengthPlayable();
+			const unsigned long startTimePlayableMS = beatmap->getStartTimePlayable();
+			const unsigned long endTimePlayableMS = startTimePlayableMS + lengthPlayableMS;
+
+			if (beatmap->getSelectedDifficulty() != NULL)
+			{
+				breaks.reserve(beatmap->getSelectedDifficulty()->breaks.size());
+
+				for (int i=0; i<beatmap->getSelectedDifficulty()->breaks.size(); i++)
+				{
+					const OsuBeatmapDifficulty::BREAK &bk = beatmap->getSelectedDifficulty()->breaks[i];
+
+					// ignore breaks after last hitobject
+					if (/*bk.endTime <= (int)startTimePlayableMS ||*/ bk.startTime >= (int)(startTimePlayableMS + lengthPlayableMS))
+						continue;
+
+					BREAK bk2;
+
+					bk2.startPercent = (float)(bk.startTime) / (float)(endTimePlayableMS);
+					bk2.endPercent = (float)(bk.endTime) / (float)(endTimePlayableMS);
+
+					//debugLog("%i: s = %f, e = %f\n", i, bk2.startPercent, bk2.endPercent);
+
+					breaks.push_back(bk2);
+				}
+			}
+		}
+
+		drawScrubbingTimeline(g, beatmap->getTime(), beatmap->getLength(), beatmap->getLengthPlayable(), beatmap->getStartTimePlayable(), beatmap->getPercentFinishedPlayable(), breaks);
+	}
 }
 
 void OsuHUD::update()
@@ -385,6 +419,29 @@ void OsuHUD::update()
 				((OsuUIVolumeSlider*)(*m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer())[i])->setSelected(true);
 			}
 		}
+	}
+}
+
+void OsuHUD::onResolutionChange(Vector2 newResolution)
+{
+	updateLayout();
+}
+
+void OsuHUD::updateLayout()
+{
+	// volume overlay
+	{
+		const float dpiScale = Osu::getUIScale();
+		const float sizeMultiplier = osu_hud_volume_size_multiplier.getFloat() * dpiScale;
+
+		m_volumeMaster->setSize(300*sizeMultiplier, 50*sizeMultiplier);
+		m_volumeMaster->setBlockSize(m_volumeMaster->getSize().y + 7 * dpiScale, m_volumeMaster->getSize().y);
+
+		m_volumeEffects->setSize(m_volumeMaster->getSize().x, m_volumeMaster->getSize().y/1.5f);
+		m_volumeEffects->setBlockSize((m_volumeMaster->getSize().y + 7 * dpiScale)/1.5f, m_volumeMaster->getSize().y/1.5f);
+
+		m_volumeMusic->setSize(m_volumeMaster->getSize().x, m_volumeMaster->getSize().y/1.5f);
+		m_volumeMusic->setBlockSize((m_volumeMaster->getSize().y + 7 * dpiScale)/1.5f, m_volumeMaster->getSize().y/1.5f);
 	}
 }
 
@@ -827,17 +884,22 @@ void OsuHUD::drawFps(Graphics *g, McFont *font, float fps)
 	UString fpsString = UString::format("%i fps", (int)(fps));
 	UString msString = UString::format("%.1f ms", (1.0f/fps)*1000.0f);
 
+	const float dpiScale = Osu::getUIScale();
+
+	const int margin = std::round(3.0f * dpiScale);
+	const int shadowOffset = std::round(1.0f * dpiScale);
+
 	// shadow
 	g->setColor(0xff000000);
 	g->pushTransform();
 	{
-		g->translate(m_osu->getScreenWidth() - font->getStringWidth(fpsString) - 3 + 1, m_osu->getScreenHeight() - 3 - m_fFpsFontHeight - 3 + 1);
+		g->translate(m_osu->getScreenWidth() - font->getStringWidth(fpsString) - margin + shadowOffset, m_osu->getScreenHeight() - margin - font->getHeight() - margin + shadowOffset);
 		g->drawString(font, fpsString);
 	}
 	g->popTransform();
 	g->pushTransform();
 	{
-		g->translate(m_osu->getScreenWidth() - font->getStringWidth(msString) - 3 + 1, m_osu->getScreenHeight() - 3 + 1);
+		g->translate(m_osu->getScreenWidth() - font->getStringWidth(msString) - margin + shadowOffset, m_osu->getScreenHeight() - margin + shadowOffset);
 		g->drawString(font, msString);
 	}
 	g->popTransform();
@@ -855,13 +917,13 @@ void OsuHUD::drawFps(Graphics *g, McFont *font, float fps)
 
 	g->pushTransform();
 	{
-		g->translate(m_osu->getScreenWidth() - font->getStringWidth(fpsString) - 3, m_osu->getScreenHeight() - 3 - m_fFpsFontHeight - 3);
+		g->translate(m_osu->getScreenWidth() - font->getStringWidth(fpsString) - margin, m_osu->getScreenHeight() - margin - font->getHeight() - margin);
 		g->drawString(font, fpsString);
 	}
 	g->popTransform();
 	g->pushTransform();
 	{
-		g->translate(m_osu->getScreenWidth() - font->getStringWidth(msString) - 3, m_osu->getScreenHeight() - 3);
+		g->translate(m_osu->getScreenWidth() - font->getStringWidth(msString) - margin, m_osu->getScreenHeight() - margin);
 		g->drawString(font, msString);
 	}
 	g->popTransform();
@@ -1024,6 +1086,9 @@ void OsuHUD::drawVolumeChange(Graphics *g)
 {
 	if (engine->getTime() > m_fVolumeChangeTime) return;
 
+	const float dpiScale = Osu::getUIScale();
+	const float sizeMultiplier = osu_hud_volume_size_multiplier.getFloat() * dpiScale;
+
 	// legacy
 	/*
 	g->setColor(COLOR((char)(68*m_fVolumeChangeFade), 255, 255, 255));
@@ -1034,12 +1099,12 @@ void OsuHUD::drawVolumeChange(Graphics *g)
 	{
 		g->push3DScene(McRect(m_volumeMaster->getPos().x, m_volumeMaster->getPos().y, m_volumeMaster->getSize().x, (m_osu->getScreenHeight() - m_volumeMaster->getPos().y)*2.05f));
 		g->rotate3DScene(-(1.0f - m_fVolumeChangeFade)*90, 0, 0);
-		g->translate3DScene(0, m_fVolumeChangeFade*60 - 60, (m_fVolumeChangeFade)*500 - 500);
+		g->translate3DScene(0, (m_fVolumeChangeFade*60 - 60) * sizeMultiplier / 1.5f, ((m_fVolumeChangeFade)*500 - 500) * sizeMultiplier / 1.5f);
 	}
 
-	m_volumeMaster->setPos(m_osu->getScreenSize() - m_volumeMaster->getSize() - Vector2(m_volumeMaster->getSize().y, m_volumeMaster->getSize().y));
-	m_volumeEffects->setPos(m_volumeMaster->getPos() - Vector2(0, m_volumeEffects->getSize().y + 20));
-	m_volumeMusic->setPos(m_volumeEffects->getPos() - Vector2(0, m_volumeMusic->getSize().y + 20));
+	m_volumeMaster->setPos(m_osu->getScreenSize() - m_volumeMaster->getSize() - Vector2(m_volumeMaster->getMinimumExtraTextWidth(), m_volumeMaster->getSize().y));
+	m_volumeEffects->setPos(m_volumeMaster->getPos() - Vector2(0, m_volumeEffects->getSize().y + 20 * sizeMultiplier));
+	m_volumeMusic->setPos(m_volumeEffects->getPos() - Vector2(0, m_volumeMusic->getSize().y + 20 * sizeMultiplier));
 
 	m_volumeSliderOverlayContainer->draw(g);
 
@@ -1453,7 +1518,7 @@ void OsuHUD::drawScoreBoardMP(Graphics *g)
 	drawScoreBoardInt(g, scoreEntries);
 }
 
-void OsuHUD::drawScoreBoardInt(Graphics *g, std::vector<OsuHUD::SCORE_ENTRY> &scoreEntries)
+void OsuHUD::drawScoreBoardInt(Graphics *g, const std::vector<OsuHUD::SCORE_ENTRY> &scoreEntries)
 {
 	if (scoreEntries.size() < 1) return;
 
@@ -2086,26 +2151,42 @@ void OsuHUD::drawTargetHeatmap(Graphics *g, float hitcircleDiameter)
 	}
 }
 
-void OsuHUD::drawScrubbingTimeline(Graphics *g, unsigned long beatmapTime, unsigned long beatmapLength, unsigned long beatmapLengthPlayable, unsigned long beatmapStartTimePlayable, float beatmapPercentFinishedPlayable)
+void OsuHUD::drawScrubbingTimeline(Graphics *g, unsigned long beatmapTime, unsigned long beatmapLength, unsigned long beatmapLengthPlayable, unsigned long beatmapStartTimePlayable, float beatmapPercentFinishedPlayable, const std::vector<BREAK> &breaks)
 {
+	const float dpiScale = Osu::getUIScale();
+
 	const Vector2 cursorPos = engine->getMouse()->getPos();
 
-	Color grey = 0xffbbbbbb;
-	Color green = 0xff00ff00;
+	const Color grey = 0xffbbbbbb;
+	const Color greyTransparent = 0xbbbbbbbb;
+	const Color greyDark = 0xff777777;
+	const Color green = 0xff00ff00;
 
 	McFont *timeFont = m_osu->getSubTitleFont();
-	const float currentTimeTopTextOffset = 7;
-	const float currentTimeLeftRightTextOffset = 5;
-	const float startAndEndTimeTextOffset = 5;
+
+	const float breakHeight = 15 * dpiScale;
+
+	const float currentTimeTopTextOffset = 7 * dpiScale;
+	const float currentTimeLeftRightTextOffset = 5 * dpiScale;
+	const float startAndEndTimeTextOffset = 5 * dpiScale + breakHeight;
+
 	const unsigned long lengthFullMS = beatmapLength;
 	const unsigned long lengthMS = beatmapLengthPlayable;
 	const unsigned long startTimeMS = beatmapStartTimePlayable;
 	const unsigned long endTimeMS = startTimeMS + lengthMS;
 	const unsigned long currentTimeMS = beatmapTime;
 
-	// timeline
+	// breaks
+	g->setColor(greyTransparent);
+	for (int i=0; i<breaks.size(); i++)
+	{
+		const int width = std::max((int)(m_osu->getScreenWidth() * clamp<float>(breaks[i].endPercent - breaks[i].startPercent, 0.0f, 1.0f)), 2);
+		g->fillRect(m_osu->getScreenWidth() * breaks[i].startPercent, cursorPos.y + 1, width, breakHeight);
+	}
+
+	// line
 	g->setColor(0xff000000);
-	g->drawLine(0, cursorPos.y+1, m_osu->getScreenWidth(), cursorPos.y+1);
+	g->drawLine(0, cursorPos.y + 1, m_osu->getScreenWidth(), cursorPos.y + 1);
 	g->setColor(grey);
 	g->drawLine(0, cursorPos.y, m_osu->getScreenWidth(), cursorPos.y);
 
@@ -2139,11 +2220,11 @@ void OsuHUD::drawScrubbingTimeline(Graphics *g, unsigned long beatmapTime, unsig
 	UString startTimeText = UString::format("(%i:%02i)", (startTimeMS/1000) / 60, (startTimeMS/1000) % 60);
 	g->pushTransform();
 	{
-		g->translate(startAndEndTimeTextOffset + 1, triangleTip.y + startAndEndTimeTextOffset + timeFont->getHeight() + 1);
+		g->translate((int)(startAndEndTimeTextOffset + 1), (int)(triangleTip.y + startAndEndTimeTextOffset + timeFont->getHeight() + 1));
 		g->setColor(0xff000000);
 		g->drawString(timeFont, startTimeText);
 		g->translate(-1, -1);
-		g->setColor(grey);
+		g->setColor(greyDark);
 		g->drawString(timeFont, startTimeText);
 	}
 	g->popTransform();
@@ -2152,11 +2233,11 @@ void OsuHUD::drawScrubbingTimeline(Graphics *g, unsigned long beatmapTime, unsig
 	UString endTimeText = UString::format("%i:%02i", (endTimeMS/1000) / 60, (endTimeMS/1000) % 60);
 	g->pushTransform();
 	{
-		g->translate(m_osu->getScreenWidth() - timeFont->getStringWidth(endTimeText) - startAndEndTimeTextOffset + 1, triangleTip.y + startAndEndTimeTextOffset + timeFont->getHeight() + 1);
+		g->translate((int)(m_osu->getScreenWidth() - timeFont->getStringWidth(endTimeText) - startAndEndTimeTextOffset + 1), (int)(triangleTip.y + startAndEndTimeTextOffset + timeFont->getHeight() + 1));
 		g->setColor(0xff000000);
 		g->drawString(timeFont, endTimeText);
 		g->translate(-1, -1);
-		g->setColor(grey);
+		g->setColor(greyDark);
 		g->drawString(timeFont, endTimeText);
 	}
 	g->popTransform();
@@ -2183,7 +2264,7 @@ void OsuHUD::drawScrubbingTimeline(Graphics *g, unsigned long beatmapTime, unsig
 		UString endTimeText = UString::format("%i:%02i", (quickSaveTimeMS/1000) / 60, (quickSaveTimeMS/1000) % 60);
 		g->pushTransform();
 		{
-			g->translate(clamp<float>(triangleTip.x - timeFont->getStringWidth(currentTimeText)/2.0f, currentTimeLeftRightTextOffset, m_osu->getScreenWidth() - timeFont->getStringWidth(currentTimeText) - currentTimeLeftRightTextOffset) + 1, triangleTip.y + m_osu->getSkin()->getSeekTriangle()->getHeight()*1.5f + currentTimeTopTextOffset + 1);
+			g->translate((int)(clamp<float>(triangleTip.x - timeFont->getStringWidth(currentTimeText)/2.0f, currentTimeLeftRightTextOffset, m_osu->getScreenWidth() - timeFont->getStringWidth(currentTimeText) - currentTimeLeftRightTextOffset) + 1), (int)(triangleTip.y + startAndEndTimeTextOffset + timeFont->getHeight()*2.2f + 1));
 			g->setColor(0xff000000);
 			g->drawString(timeFont, endTimeText);
 			g->translate(-1, -1);
@@ -2199,7 +2280,7 @@ void OsuHUD::drawScrubbingTimeline(Graphics *g, unsigned long beatmapTime, unsig
 	triangleTip = Vector2(cursorPos.x, cursorPos.y);
 	g->pushTransform();
 	{
-		g->translate((int)clamp<float>(triangleTip.x - timeFont->getStringWidth(currentTimeText)/2.0f, currentTimeLeftRightTextOffset, m_osu->getScreenWidth() - timeFont->getStringWidth(currentTimeText) - currentTimeLeftRightTextOffset) + 1, (int)(triangleTip.y - m_osu->getSkin()->getSeekTriangle()->getHeight()*1.85f - currentTimeTopTextOffset - 1));
+		g->translate((int)clamp<float>(triangleTip.x - timeFont->getStringWidth(currentTimeText)/2.0f, currentTimeLeftRightTextOffset, m_osu->getScreenWidth() - timeFont->getStringWidth(currentTimeText) - currentTimeLeftRightTextOffset) + 1, (int)(triangleTip.y - m_osu->getSkin()->getSeekTriangle()->getHeight() - timeFont->getHeight()*1.2f - currentTimeTopTextOffset - 1));
 		g->setColor(0xff000000);
 		g->drawString(timeFont, hoverTimeText);
 		g->translate(-1, -1);
@@ -2339,16 +2420,7 @@ float OsuHUD::getScoreScale()
 
 void OsuHUD::onVolumeOverlaySizeChange(UString oldValue, UString newValue)
 {
-	const float sizeMultiplier = newValue.toFloat();
-
-	m_volumeMaster->setSize(300*sizeMultiplier, 50*sizeMultiplier);
-	m_volumeMaster->setBlockSize(m_volumeMaster->getSize().y + 7, m_volumeMaster->getSize().y);
-
-	m_volumeEffects->setSize(m_volumeMaster->getSize().x, m_volumeMaster->getSize().y/1.5f);
-	m_volumeEffects->setBlockSize((m_volumeMaster->getSize().y + 7)/1.5f, m_volumeMaster->getSize().y/1.5f);
-
-	m_volumeMusic->setSize(m_volumeMaster->getSize().x, m_volumeMaster->getSize().y/1.5f);
-	m_volumeMusic->setBlockSize((m_volumeMaster->getSize().y + 7)/1.5f, m_volumeMaster->getSize().y/1.5f);
+	updateLayout();
 }
 
 void OsuHUD::animateCombo()

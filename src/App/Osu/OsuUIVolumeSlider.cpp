@@ -23,6 +23,8 @@ OsuUIVolumeSlider::OsuUIVolumeSlider(Osu *osu, float xPos, float yPos, float xSi
 	m_bWentMouseInside = false;
 	m_fSelectionAnim = 0.0f;
 
+	m_font = engine->getResourceManager()->getFont("FONT_DEFAULT");
+
 	engine->getResourceManager()->loadImage("ic_volume_mute_white_48dp.png",	"OSU_UI_VOLUME_SLIDER_BLOCK_0");
 	engine->getResourceManager()->loadImage("ic_volume_up_white_48dp.png",		"OSU_UI_VOLUME_SLIDER_BLOCK_1");
 	engine->getResourceManager()->loadImage("ic_music_off_48dp.png",			"OSU_UI_VOLUME_SLIDER_MUSIC_0");
@@ -54,16 +56,15 @@ void OsuUIVolumeSlider::drawBlock(Graphics *g)
 	g->popTransform();
 
 	// draw percentage
-	McFont *font = engine->getResourceManager()->getFont("FONT_DEFAULT");
 	g->pushTransform();
 	{
-		g->translate((int)(m_vPos.x + m_vSize.x + 15), (int)(m_vPos.y + m_vSize.y/2 + font->getHeight()/2));
+		g->translate((int)(m_vPos.x + m_vSize.x + m_vSize.x*0.0335f), (int)(m_vPos.y + m_vSize.y/2 + m_font->getHeight()/2));
 		g->setColor(0xff000000);
 		g->translate(1, 1);
-		g->drawString(font, UString::format("%i%%", (int)(std::round(getFloat()*100.0f))));
+		g->drawString(m_font, UString::format("%i%%", (int)(std::round(getFloat()*100.0f))));
 		g->setColor(0xffffffff);
 		g->translate(-1, -1);
-		g->drawString(font, UString::format("%i%%", (int)(std::round(getFloat()*100.0f))));
+		g->drawString(m_font, UString::format("%i%%", (int)(std::round(getFloat()*100.0f))));
 	}
 	g->popTransform();
 }
@@ -97,4 +98,9 @@ bool OsuUIVolumeSlider::checkWentMouseInside()
 	const bool temp = m_bWentMouseInside;
 	m_bWentMouseInside = false;
 	return temp;
+}
+
+float OsuUIVolumeSlider::getMinimumExtraTextWidth()
+{
+	return m_vSize.x*0.0335f*2.0f + m_font->getStringWidth("100%");
 }

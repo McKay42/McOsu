@@ -77,12 +77,17 @@ private:
 			resetButton = NULL;
 			cvar = NULL;
 			type = -1;
+			label1Width = 0.0f;
+			relSizeDPI = 96.0f;
 		}
 
 		OsuOptionsMenuResetButton *resetButton;
 		std::vector<CBaseUIElement*> elements;
 		ConVar *cvar;
 		int type;
+
+		float label1Width;
+		float relSizeDPI;
 	};
 
 	virtual void updateLayout();
@@ -101,6 +106,7 @@ private:
 	// options
 	void onFullscreenChange(CBaseUICheckbox *checkbox);
 	void onBorderlessWindowedChange(CBaseUICheckbox *checkbox);
+	void onDPIScalingChange(CBaseUICheckbox *checkbox);
 	void onSkinSelect();
 	void onSkinSelect2(UString skinName, int id = -1);
 	void onSkinSelectWorkshop();
@@ -138,6 +144,7 @@ private:
 	void onSliderChangeVRAntiAliasing(CBaseUISlider *slider);
 	void onSliderChangeSliderQuality(CBaseUISlider *slider);
 	void onSliderChangeLetterboxingOffset(CBaseUISlider *slider);
+	void onSliderChangeUIScale(CBaseUISlider *slider);
 
 	void onUseSkinsSoundSamplesChange(UString oldValue, UString newValue);
 	void onHighQualitySlidersCheckboxChange(CBaseUICheckbox *checkbox);
@@ -225,6 +232,8 @@ private:
 	CBaseUITextbox *m_dpiTextbox;
 	CBaseUITextbox *m_cm360Textbox;
 	CBaseUIElement *m_skinSection;
+	CBaseUISlider *m_uiScaleSlider;
+	OsuOptionsMenuResetButton *m_uiScaleResetButton;
 
 	ConVar *m_waitingKey;
 	ConVar *m_osu_slider_curve_points_separation_ref;
@@ -235,11 +244,15 @@ private:
 	ConVar *m_osu_skin_is_from_workshop_ref;
 	ConVar *m_osu_skin_workshop_title_ref;
 	ConVar *m_osu_skin_workshop_id_ref;
+	ConVar *m_osu_ui_scale_ref;
 
 	float m_fOsuFolderTextboxInvalidAnim;
 	float m_fVibrationStrengthExampleTimer;
 	bool m_bLetterboxingOffsetUpdateScheduled;
 	bool m_bWorkshopSkinSelectScheduled;
+	bool m_bUIScaleChangeScheduled;
+	bool m_bUIScaleScrollToSliderScheduled;
+	bool m_bDPIScalingScrollToSliderScheduled;
 
 	// key bindings
 	int m_iNumResetAllKeyBindingsPressed;

@@ -31,12 +31,14 @@ void OsuTooltipOverlay::draw(Graphics *g)
 {
 	if (m_fAnim > 0.0f)
 	{
+		const float dpiScale = Osu::getUIScale();
+
 		McFont *font = engine->getResourceManager()->getFont("FONT_DEFAULT");
 
-		Vector2 offset = Vector2(10, 10);
-		int margin = 5;
-		int lineSpacing = 8;
-		float alpha = m_fAnim*m_fAnim*m_fAnim;
+		const Vector2 offset = Vector2(10, 10) * dpiScale;
+		const int margin = 5 * dpiScale;
+		const int lineSpacing = 8 * dpiScale;
+		const float alpha = m_fAnim*m_fAnim*m_fAnim;
 
 		int width = 0;
 		for (int i=0; i<m_lines.size(); i++)
@@ -45,7 +47,7 @@ void OsuTooltipOverlay::draw(Graphics *g)
 			if (lineWidth > width)
 				width = lineWidth;
 		}
-		int height = font->getHeight()*m_lines.size() + lineSpacing*(m_lines.size()-1) + 3;
+		const int height = font->getHeight()*m_lines.size() + lineSpacing*(m_lines.size()-1) + 3 * dpiScale;
 
 		Vector2 cursorPos = engine->getMouse()->getPos();
 
@@ -66,11 +68,11 @@ void OsuTooltipOverlay::draw(Graphics *g)
 		g->setColor(0xffffffff);
 		g->setAlpha(alpha);
 		g->pushTransform();
-		g->translate((int)cursorPos.x + offset.x + margin, (int)cursorPos.y + offset.y + margin + font->getHeight());
+		g->translate((int)(cursorPos.x + offset.x + margin), (int)(cursorPos.y + offset.y + margin + font->getHeight()));
 		for (int i=0; i<m_lines.size(); i++)
 		{
 			g->drawString(font, m_lines[i]);
-			g->translate(0, font->getHeight() + lineSpacing);
+			g->translate(0, (int)(font->getHeight() + lineSpacing));
 		}
 		g->popTransform();
 

@@ -50,8 +50,10 @@ void OsuUISlider::draw(Graphics *g)
 
 	g->setColor(m_frameColor);
 	g->pushTransform();
-	g->scale(scale.x, scale.y);
-	g->translate(blockCenter.x, blockCenter.y + 1);
-	g->drawImage(m_osu->getSkin()->getCircleEmpty());
+	{
+		g->scale(scale.x, scale.y);
+		g->translate(blockCenter.x, blockCenter.y + 1);
+		g->drawImage(m_osu->getSkin()->getCircleEmpty());
+	}
 	g->popTransform();
 }

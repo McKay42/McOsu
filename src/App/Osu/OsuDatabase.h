@@ -87,6 +87,18 @@ public:
 		unsigned long long totalScore;
 	};
 
+	struct SCORE_SORTING_COMPARATOR
+	{
+		virtual ~SCORE_SORTING_COMPARATOR() {;}
+		virtual bool operator() (OsuDatabase::Score const &a, OsuDatabase::Score const &b) const = 0;
+	};
+
+	struct SCORE_SORTING_METHOD
+	{
+		UString name;
+		SCORE_SORTING_COMPARATOR *comparator;
+	};
+
 public:
 	OsuDatabase(Osu *osu);
 	~OsuDatabase();
@@ -123,11 +135,13 @@ public:
 	inline const std::vector<Collection> getCollections() const {return m_collections;}
 
 	inline std::unordered_map<std::string, std::vector<Score>> *getScores() {return &m_scores;}
+	inline const std::vector<SCORE_SORTING_METHOD> &getScoreSortingMethods() const {return m_scoreSortingMethods;}
 
 private:
 	friend class OsuDatabaseLoader;
 
 	static ConVar *m_name_ref;
+	static ConVar *m_osu_songbrowser_scores_sortingtype_ref;
 
 	UString parseLegacyCfgBeatmapDirectoryParameter();
 	void scheduleLoadRaw();
@@ -166,6 +180,7 @@ private:
 	bool m_bDidScoresChangeForStats;
 	unsigned long long m_iSortHackCounter;
 	PlayerStats m_prevPlayerStats;
+	std::vector<SCORE_SORTING_METHOD> m_scoreSortingMethods;
 
 	// raw load
 	bool m_bRawBeatmapLoadScheduled;

@@ -269,7 +269,7 @@ public:
 				g->setColor(m_textColor);
 				g->pushTransform();
 				{
-					g->translate((int)(m_vPos.x + m_vSize.x/2.0f - m_fStringWidth/2.0f), (int)(m_vPos.y + m_vSize.y/2.0f + m_fStringHeight/2.0f));
+					g->translate((int)(m_vPos.x + m_vSize.x/2.0f - (m_fStringWidth/2.0f)), (int)(m_vPos.y + m_vSize.y/2.0f + (m_fStringHeight/2.0f)));
 					g->drawString(m_font, m_sText);
 				}
 				g->popTransform();
@@ -306,7 +306,7 @@ public:
 	{
 		if (!m_bVisible || m_fAnim <= 0.0f) return;
 
-		const int fullColorBlockSize = 4;
+		const int fullColorBlockSize = 4 * Osu::getUIScale();
 
 		Color left = COLOR((int)(255*m_fAnim), 255, 233, 50);
 		Color middle = COLOR((int)(255*m_fAnim), 255, 211, 50);
@@ -366,6 +366,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_osu_skin_is_from_workshop_ref = convar->getConVarByName("osu_skin_is_from_workshop");
 	m_osu_skin_workshop_title_ref = convar->getConVarByName("osu_skin_workshop_title");
 	m_osu_skin_workshop_id_ref = convar->getConVarByName("osu_skin_workshop_id");
+	m_osu_ui_scale_ref = convar->getConVarByName("osu_ui_scale");
 
 	// convar callbacks
 	convar->getConVarByName("osu_skin_use_skin_hitsounds")->setCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onUseSkinsSoundSamplesChange) );
@@ -395,11 +396,16 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_cm360Textbox = NULL;
 	m_letterboxingOffsetResetButton = NULL;
 	m_skinSelectWorkshopButton = NULL;
+	m_uiScaleSlider = NULL;
+	m_uiScaleResetButton = NULL;
 
 	m_fOsuFolderTextboxInvalidAnim = 0.0f;
 	m_fVibrationStrengthExampleTimer = 0.0f;
 	m_bLetterboxingOffsetUpdateScheduled = false;
 	m_bWorkshopSkinSelectScheduled = false;
+	m_bUIScaleChangeScheduled = false;
+	m_bUIScaleScrollToSliderScheduled = false;
+	m_bDPIScalingScrollToSliderScheduled = false;
 
 	m_iNumResetAllKeyBindingsPressed = 0;
 
@@ -477,6 +483,10 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 
 	addSubSection("Renderer");
 	addCheckbox("VSync", "If enabled: plz enjoy input lag.", convar->getConVarByName("vsync"));
+
+	if (env->getOS() == Environment::OS::OS_WINDOWS)
+		addCheckbox("High Priority (!)", "WARNING: Only enable this if nothing else works!\nSets the process priority to High.\nMay fix microstuttering and other weird problems.\nTry to fix your broken computer/OS/drivers first!", convar->getConVarByName("win_processpriority"));
+
 	addCheckbox("Show FPS Counter", convar->getConVarByName("osu_draw_fps"));
 	if (env->getOS() != Environment::OS::OS_HORIZON)
 	{
@@ -496,11 +506,21 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 		m_resolutionSelectButton = resolutionSelect.elements[0];
 		m_fullscreenCheckbox = addCheckbox("Fullscreen");
 		m_fullscreenCheckbox->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onFullscreenChange) );
-		addCheckbox("Borderless Windowed Fullscreen", "If enabled: plz enjoy input lag.", convar->getConVarByName("fullscreen_windowed_borderless"))->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onBorderlessWindowedChange) );
+		addCheckbox("Borderless", "If enabled: plz enjoy input lag.", convar->getConVarByName("fullscreen_windowed_borderless"))->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onBorderlessWindowedChange) );
 		addCheckbox("Keep Aspect Ratio", "Black borders instead of a stretched image.\nOnly relevant if fullscreen is enabled, and letterboxing is disabled.\nUse the two position sliders below to move the viewport around.", convar->getConVarByName("osu_resolution_keep_aspect_ratio"));
 		addCheckbox("Letterboxing", "Useful to get the low latency of fullscreen with a smaller game resolution.\nUse the two position sliders below to move the viewport around.", convar->getConVarByName("osu_letterboxing"));
-		m_letterboxingOffsetXSlider = addSlider("Horizontal position", -1.0f, 1.0f, convar->getConVarByName("osu_letterboxing_offset_x"), 170)->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeLetterboxingOffset) )->setKeyDelta(0.01f);
-		m_letterboxingOffsetYSlider = addSlider("Vertical position", -1.0f, 1.0f, convar->getConVarByName("osu_letterboxing_offset_y"), 170)->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeLetterboxingOffset) )->setKeyDelta(0.01f);
+		m_letterboxingOffsetXSlider = addSlider("Horizontal position", -1.0f, 1.0f, convar->getConVarByName("osu_letterboxing_offset_x"), 170)->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeLetterboxingOffset) )->setKeyDelta(0.01f)->setAnimated(false);
+		m_letterboxingOffsetYSlider = addSlider("Vertical position", -1.0f, 1.0f, convar->getConVarByName("osu_letterboxing_offset_y"), 170)->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeLetterboxingOffset) )->setKeyDelta(0.01f)->setAnimated(false);
+	}
+
+	if (!m_osu->isInVRMode())
+	{
+		addSubSection("UI Scaling");
+		addCheckbox("DPI Scaling", UString::format("Automatically scale to the DPI of your display: %i DPI.\nScale factor = %i / 96 = %.2gx", env->getDPI(), env->getDPI(), env->getDPIScale()), convar->getConVarByName("osu_ui_scale_to_dpi"))->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onDPIScalingChange) );
+		m_uiScaleSlider = addSlider("UI Scale:", 1.0f, 1.5f, convar->getConVarByName("osu_ui_scale"));
+		m_uiScaleSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeUIScale) );
+		m_uiScaleSlider->setKeyDelta(0.01f);
+		m_uiScaleSlider->setAnimated(false);
 	}
 
 	addSubSection("Detail Settings");
@@ -538,6 +558,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 		aaSlider->setKeyDelta(2.0f);
 		aaSlider->setAnimated(false);
 
+		/*
 		addSpacer();
 #ifdef MCENGINE_FEATURE_DIRECTX
 
@@ -556,6 +577,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 		addLabel("3) BETAS > Select the \"cutting-edge\" beta")->setTextColor(0xff777777);
 
 #endif
+		*/
 
 		addSpacer();
 		addSubSection("Play Area / Playfield");
@@ -816,6 +838,8 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Show approach circle on first \"Hidden\" object", convar->getConVarByName("osu_show_approach_circle_on_first_hidden_object"));
 	addCheckbox("SuddenDeath restart on miss", "Skips the failing animation, and instantly restarts like SS/PF.", convar->getConVarByName("osu_mod_suddendeath_restart"));
 	addSpacer();
+	addCheckbox("Note Blocking/Locking", "NOTE: osu! has this always enabled, so leave it enabled for practicing.\n\"Protects\" you by only allowing circles to be clicked in order.", convar->getConVarByName("osu_note_blocking"));
+	addSpacer();
 	addCheckbox("Load Background Images (!)", "NOTE: Disabling this will disable ALL beatmap images everywhere!", convar->getConVarByName("osu_load_beatmap_background_images"));
 	addCheckbox("Draw Background in Beatmap", convar->getConVarByName("osu_draw_beatmap_background_image"));
 	addCheckbox("Draw Background in SongBrowser", "NOTE: You can disable this if you always want menu-background.", convar->getConVarByName("osu_draw_songbrowser_background_image"));
@@ -824,7 +848,6 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Draw menu-background in Menu", convar->getConVarByName("osu_draw_menu_background"));
 	addCheckbox("Draw menu-background in SongBrowser", "NOTE: Only applies if \"Draw Background in SongBrowser\" is disabled.", convar->getConVarByName("osu_draw_songbrowser_menu_background_image"));
 	addSpacer();
-	addCheckbox("Note Blocking/Locking", "NOTE: osu! has this always enabled, so leave it enabled for practicing.\n\"Protects\" you by only allowing circles to be clicked in order.", convar->getConVarByName("osu_note_blocking"));
 	//addCheckbox("Show pp on ranking screen", convar->getConVarByName("osu_rankingscreen_pp"));
 
 	addSubSection("HUD");
@@ -906,9 +929,12 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addLabel("");
 	CBaseUISlider *fposuDistanceSlider = addSlider("Distance:", 0.01f, 2.0f, convar->getConVarByName("fposu_distance"));
 	fposuDistanceSlider->setKeyDelta(0.01f);
-	CBaseUISlider *fovSlider = addSlider("FOV Horizontal:", 20.0f, 160.0f, convar->getConVarByName("fposu_fov"));
-	fovSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeInt) );
-	fovSlider->setKeyDelta(1);
+	addCheckbox("Vertical FOV", "If enabled: Vertical FOV.\nIf disabled: Horizontal FOV (default).", convar->getConVarByName("fposu_vertical_fov"));
+	CBaseUISlider *fovSlider = addSlider("FOV:", 20.0f, 160.0f, convar->getConVarByName("fposu_fov"));
+	fovSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeOneDecimalPlace) );
+	fovSlider->setKeyDelta(0.1f);
+	addLabel("");
+	addLabel("LEFT/RIGHT arrow keys to precisely adjust sliders.")->setTextColor(0xff777777);
 
 	if (env->getOS() == Environment::OS::OS_WINDOWS)
 	{
@@ -1148,6 +1174,12 @@ void OsuOptionsMenu::update()
 
 	if (!m_bVisible) return;
 
+	if (m_bDPIScalingScrollToSliderScheduled)
+	{
+		m_bDPIScalingScrollToSliderScheduled = false;
+		m_options->scrollToElement(m_uiScaleSlider, 0, 200 * Osu::getUIScale());
+	}
+
 	if (m_osu->getHUD()->isVolumeOverlayBusy() || m_backButton->isActive())
 		m_container->stealFocus();
 
@@ -1228,6 +1260,34 @@ void OsuOptionsMenu::update()
 
 			// and update reset buttons as usual
 			onResetUpdate(m_letterboxingOffsetResetButton);
+		}
+	}
+
+	if (m_bUIScaleScrollToSliderScheduled)
+	{
+		m_bUIScaleScrollToSliderScheduled = false;
+		m_options->scrollToElement(m_uiScaleSlider, 0, 200 * Osu::getUIScale());
+	}
+
+	// delayed UI scale change
+	if (m_bUIScaleChangeScheduled)
+	{
+		if (!m_uiScaleSlider->isActive())
+		{
+			m_bUIScaleChangeScheduled = false;
+
+			const float oldUIScale = Osu::getUIScale();
+
+			m_osu_ui_scale_ref->setValue(m_uiScaleSlider->getFloat());
+
+			const float newUIScale = Osu::getUIScale();
+
+			// and update reset buttons as usual
+			onResetUpdate(m_uiScaleResetButton);
+
+			// additionally compensate scroll pos (but delay 1 frame)
+			if (oldUIScale != newUIScale)
+				m_bUIScaleScrollToSliderScheduled = true;
 		}
 	}
 
@@ -1524,16 +1584,21 @@ void OsuOptionsMenu::updateLayout()
 
 	//************************************************************************************************************************************//
 
+	// TODO: correctly scale individual UI elements to dpiScale (depend on initial value in e.g. addCheckbox())
+
 	OsuScreenBackable::updateLayout();
+
+	const float dpiScale = Osu::getUIScale();
 
 	m_container->setSize(m_osu->getScreenSize());
 
 	// options panel
 	const float optionsScreenWidthPercent = 0.5f;
 	const float categoriesOptionsPercent = 0.135f;
+
 	int optionsWidth = (int)(m_osu->getScreenWidth()*optionsScreenWidthPercent);
 	if (!m_bFullscreen)
-		optionsWidth = std::min((int)(725*(1.0f - categoriesOptionsPercent)), optionsWidth);
+		optionsWidth = std::min((int)(725.0f*(1.0f - categoriesOptionsPercent)), optionsWidth) * dpiScale;
 
 	const int categoriesWidth = optionsWidth*categoriesOptionsPercent;
 
@@ -1551,15 +1616,15 @@ void OsuOptionsMenu::updateLayout()
 
 	// build layout
 	bool enableHorizontalScrolling = false;
-	int sideMargin = 25*2;
-	int spaceSpacing = 25;
-	int sectionSpacing = -15; // section title to first element
-	int subsectionSpacing = 15; // subsection title to first element
-	int sectionEndSpacing = /*70*/120; // last section element to next section title
-	int subsectionEndSpacing = 65; // last subsection element to next subsection title
-	int elementSpacing = 5;
-	int elementTextStartOffset = 11; // e.g. labels in front of sliders
-	int yCounter = sideMargin + 20;
+	int sideMargin = 25*2 * dpiScale;
+	int spaceSpacing = 25 * dpiScale;
+	int sectionSpacing = -15 * dpiScale; // section title to first element
+	int subsectionSpacing = 15 * dpiScale; // subsection title to first element
+	int sectionEndSpacing = /*70*/120 * dpiScale; // last section element to next section title
+	int subsectionEndSpacing = 65 * dpiScale; // last subsection element to next subsection title
+	int elementSpacing = 5 * dpiScale;
+	int elementTextStartOffset = 11 * dpiScale; // e.g. labels in front of sliders
+	int yCounter = sideMargin + 20 * dpiScale;
 	bool inSkipSection = false;
 	bool inSkipSubSection = false;
 	bool sectionTitleMatch = false;
@@ -1687,12 +1752,14 @@ void OsuOptionsMenu::updateLayout()
 			if (m_elements[i].resetButton != NULL)
 				m_options->getContainer()->addBaseUIElement(m_elements[i].resetButton);
 
-			// elements
+			// (sub-)elements
 			for (int e=0; e<m_elements[i].elements.size(); e++)
 			{
 				m_options->getContainer()->addBaseUIElement(m_elements[i].elements[e]);
 			}
 		}
+
+		// and build the layout
 
 		// if this element is a new section, add even more spacing
 		if (i > 0 && m_elements[i].type == 1)
@@ -1702,25 +1769,44 @@ void OsuOptionsMenu::updateLayout()
 		if (i > 0 && m_elements[i].type == 2)
 			yCounter += subsectionEndSpacing;
 
-		// and build the layout
-		int elementWidth = optionsWidth - 2*sideMargin - 2;
-
+		const int elementWidth = optionsWidth - 2*sideMargin - 2 * dpiScale;
 		const bool isKeyBindButton = (m_elements[i].type == 5);
 
 		if (m_elements[i].resetButton != NULL)
 		{
 			CBaseUIButton *resetButton = m_elements[i].resetButton;
+			resetButton->setSize(Vector2(35, 50) * dpiScale);
 			resetButton->setRelPosY(yCounter);
 			resetButton->setRelPosX(0);
+		}
+
+		for (int j=0; j<m_elements[i].elements.size(); j++)
+		{
+			CBaseUIElement *e = m_elements[i].elements[j];
+			e->setSizeY(e->getRelSize().y * dpiScale);
 		}
 
 		if (m_elements[i].elements.size() == 1)
 		{
 			CBaseUIElement *e = m_elements[i].elements[0];
 
+			int sideMarginAdd = 0;
+			CBaseUILabel *labelPointer = dynamic_cast<CBaseUILabel*>(e);
+			if (labelPointer != NULL)
+			{
+				labelPointer->onResized(); // HACKHACK: framework, setSize*() does not update string metrics
+				labelPointer->setSizeToContent(0, 0);
+				sideMarginAdd += elementTextStartOffset;
+			}
+
+			CBaseUIButton *buttonPointer = dynamic_cast<CBaseUIButton*>(e);
+			if (buttonPointer != NULL)
+				buttonPointer->onResized(); // HACKHACK: framework, setSize*() does not update string metrics
+
 			CBaseUICheckbox *checkboxPointer = dynamic_cast<CBaseUICheckbox*>(e);
 			if (checkboxPointer != NULL)
 			{
+				checkboxPointer->onResized(); // HACKHACK: framework, setWidth*() does not update string metrics
 				checkboxPointer->setWidthToContent(0);
 				if (checkboxPointer->getSize().x > elementWidth)
 					enableHorizontalScrolling = true;
@@ -1729,11 +1815,6 @@ void OsuOptionsMenu::updateLayout()
 			}
 			else
 				e->setSizeX(elementWidth);
-
-			int sideMarginAdd = 0;
-			CBaseUILabel *labelPointer = dynamic_cast<CBaseUILabel*>(e);
-			if (labelPointer != NULL)
-				sideMarginAdd += elementTextStartOffset;
 
 			e->setRelPosX(sideMargin + sideMarginAdd);
 			e->setRelPosY(yCounter);
@@ -1745,12 +1826,16 @@ void OsuOptionsMenu::updateLayout()
 			CBaseUIElement *e1 = m_elements[i].elements[0];
 			CBaseUIElement *e2 = m_elements[i].elements[1];
 
-			int spacing = 15;
+			const int spacing = 15 * dpiScale;
 
 			int sideMarginAdd = 0;
 			CBaseUILabel *labelPointer = dynamic_cast<CBaseUILabel*>(e1);
 			if (labelPointer != NULL)
 				sideMarginAdd += elementTextStartOffset;
+
+			CBaseUIButton *buttonPointer = dynamic_cast<CBaseUIButton*>(e1);
+			if (buttonPointer != NULL)
+				buttonPointer->onResized(); // HACKHACK: framework, setSize*() does not update string metrics
 
 			if (isKeyBindButton)
 			{
@@ -1791,9 +1876,17 @@ void OsuOptionsMenu::updateLayout()
 
 			if (m_elements[i].type == 4)
 			{
-				const int buttonButtonLabelOffset = 10;
+				const int buttonButtonLabelOffset = 10 * dpiScale;
 
-				int buttonSize = elementWidth / 3 - 2*buttonButtonLabelOffset;
+				const int buttonSize = elementWidth / 3 - 2*buttonButtonLabelOffset;
+
+				CBaseUIButton *button1Pointer = dynamic_cast<CBaseUIButton*>(e1);
+				if (button1Pointer != NULL)
+					button1Pointer->onResized(); // HACKHACK: framework, setSize*() does not update string metrics
+
+				CBaseUIButton *button2Pointer = dynamic_cast<CBaseUIButton*>(e2);
+				if (button2Pointer != NULL)
+					button2Pointer->onResized(); // HACKHACK: framework, setSize*() does not update string metrics
 
 				e1->setSizeX(buttonSize);
 				e2->setSizeX(buttonSize);
@@ -1805,7 +1898,29 @@ void OsuOptionsMenu::updateLayout()
 			}
 			else
 			{
-				const int labelSliderLabelOffset = 15;
+				const int labelSliderLabelOffset = 15 * dpiScale;
+
+				// this is a big mess, because some elements rely on fixed initial widths from default strings, combined with variable font dpi on startup, will clean up whenever
+				CBaseUILabel *label1Pointer = dynamic_cast<CBaseUILabel*>(e1);
+				if (label1Pointer != NULL)
+				{
+					label1Pointer->onResized(); // HACKHACK: framework, setSize*() does not update string metrics
+					if (m_elements[i].label1Width > 0.0f)
+						label1Pointer->setSizeX(m_elements[i].label1Width * dpiScale);
+					else
+						label1Pointer->setSizeX(label1Pointer->getRelSize().x * (96.0f / m_elements[i].relSizeDPI) * dpiScale);
+				}
+
+				CBaseUISlider *sliderPointer = dynamic_cast<CBaseUISlider*>(e2);
+				if (sliderPointer != NULL)
+					sliderPointer->setBlockSize(20 * dpiScale, 20 * dpiScale);
+
+				CBaseUILabel *label2Pointer = dynamic_cast<CBaseUILabel*>(e3);
+				if (label2Pointer != NULL)
+				{
+					label2Pointer->onResized(); // HACKHACK: framework, setSize*() does not update string metrics
+					label2Pointer->setSizeX(label2Pointer->getRelSize().x * (96.0f / m_elements[i].relSizeDPI) * dpiScale);
+				}
 
 				int sliderSize = elementWidth - e1->getSize().x - e3->getSize().x;
 				if (sliderSize < 100)
@@ -1820,11 +1935,12 @@ void OsuOptionsMenu::updateLayout()
 				e2->setSizeX(sliderSize - 2*elementTextStartOffset - labelSliderLabelOffset*2);
 
 				e3->setRelPos(e2->getRelPos().x + e2->getSize().x + labelSliderLabelOffset, yCounter);
-				///e3->setSizeX(valueLabelSize - valueLabelOffset);
 			}
 
 			yCounter += e2->getSize().y;
 		}
+
+		yCounter += elementSpacing;
 
 		switch (m_elements[i].type)
 		{
@@ -1840,8 +1956,6 @@ void OsuOptionsMenu::updateLayout()
 		default:
 			break;
 		}
-
-		yCounter += elementSpacing;
 	}
 	m_spacer->setPosY(yCounter);
 	m_options->getContainer()->addBaseUIElement(m_spacer);
@@ -1985,6 +2099,30 @@ void OsuOptionsMenu::onBorderlessWindowedChange(CBaseUICheckbox *checkbox)
 			if (m_elements[i].elements[e] == checkbox)
 			{
 				onResetUpdate(m_elements[i].resetButton);
+
+				break;
+			}
+		}
+	}
+}
+
+void OsuOptionsMenu::onDPIScalingChange(CBaseUICheckbox *checkbox)
+{
+	for (int i=0; i<m_elements.size(); i++)
+	{
+		for (int e=0; e<m_elements[i].elements.size(); e++)
+		{
+			if (m_elements[i].elements[e] == checkbox)
+			{
+				const float prevUIScale = Osu::getUIScale();
+
+				if (m_elements[i].cvar != NULL)
+					m_elements[i].cvar->setValue(checkbox->isChecked());
+
+				onResetUpdate(m_elements[i].resetButton);
+
+				if (Osu::getUIScale() != prevUIScale)
+					m_bDPIScalingScrollToSliderScheduled = true;
 
 				break;
 			}
@@ -2730,7 +2868,37 @@ void OsuOptionsMenu::onSliderChangeLetterboxingOffset(CBaseUISlider *slider)
 					labelPointer->setText(UString::format("%i%%", percent));
 				}
 
-				m_letterboxingOffsetResetButton = m_elements[i].resetButton;
+				m_letterboxingOffsetResetButton = m_elements[i].resetButton; // HACKHACK: disgusting
+
+				onResetUpdate(m_elements[i].resetButton);
+
+				break;
+			}
+		}
+	}
+}
+
+void OsuOptionsMenu::onSliderChangeUIScale(CBaseUISlider *slider)
+{
+	m_bUIScaleChangeScheduled = true;
+
+	for (int i=0; i<m_elements.size(); i++)
+	{
+		for (int e=0; e<m_elements[i].elements.size(); e++)
+		{
+			if (m_elements[i].elements[e] == slider)
+			{
+				const float newValue = std::round(slider->getFloat()*100.0f)/100.0f;
+
+				if (m_elements[i].elements.size() == 3)
+				{
+					const int percent = std::round(newValue*100.0f);
+
+					CBaseUILabel *labelPointer = dynamic_cast<CBaseUILabel*>(m_elements[i].elements[2]);
+					labelPointer->setText(UString::format("%i%%", percent));
+				}
+
+				m_uiScaleResetButton = m_elements[i].resetButton; // HACKHACK: disgusting
 
 				onResetUpdate(m_elements[i].resetButton);
 
@@ -2756,7 +2924,7 @@ void OsuOptionsMenu::onHighQualitySlidersCheckboxChange(CBaseUICheckbox *checkbo
 
 void OsuOptionsMenu::onHighQualitySlidersConVarChange(UString oldValue, UString newValue)
 {
-	bool enabled = newValue.toFloat() > 0;
+	const bool enabled = newValue.toFloat() > 0;
 	for (int i=0; i<m_elements.size(); i++)
 	{
 		bool contains = false;
@@ -2776,8 +2944,10 @@ void OsuOptionsMenu::onHighQualitySlidersConVarChange(UString oldValue, UString 
 			for (int e=0; e<m_elements[i].elements.size(); e++)
 			{
 				m_elements[i].elements[e]->setEnabled(enabled);
+
 				OsuUISlider *sliderPointer = dynamic_cast<OsuUISlider*>(m_elements[i].elements[e]);
 				CBaseUILabel *labelPointer = dynamic_cast<CBaseUILabel*>(m_elements[i].elements[e]);
+
 				if (sliderPointer != NULL)
 					sliderPointer->setFrameColor(enabled ? 0xffffffff : 0xff000000);
 				if (labelPointer != NULL)
@@ -2807,7 +2977,7 @@ void OsuOptionsMenu::onCategoryClicked(CBaseUIButton *button)
 	// scroll to category
 	OsuOptionsMenuCategoryButton *categoryButton = dynamic_cast<OsuOptionsMenuCategoryButton*>(button);
 	if (categoryButton != NULL)
-		m_options->scrollToElement(categoryButton->getSection(), 0, 100);
+		m_options->scrollToElement(categoryButton->getSection(), 0, 100 * Osu::getUIScale());
 }
 
 void OsuOptionsMenu::onResetUpdate(CBaseUIButton *button)
@@ -3092,12 +3262,14 @@ OsuUISlider *OsuOptionsMenu::addSlider(UString text, float min, float max, ConVa
 	label1->setWidthToContent();
 	if (label1Width > 1)
 		label1->setSizeX(label1Width);
+	label1->setRelSizeX(label1->getSize().x);
 	m_options->getContainer()->addBaseUIElement(label1);
 
 	CBaseUILabel *label2 = new CBaseUILabel(0, 0, m_options->getSize().x, 50, "", "8.81");
 	label2->setDrawFrame(false);
 	label2->setDrawBackground(false);
 	label2->setWidthToContent();
+	label2->setRelSizeX(label2->getSize().x);
 	m_options->getContainer()->addBaseUIElement(label2);
 
 	OPTIONS_ELEMENT e;
@@ -3111,6 +3283,8 @@ OsuUISlider *OsuOptionsMenu::addSlider(UString text, float min, float max, ConVa
 	e.elements.push_back(label2);
 	e.type = 7;
 	e.cvar = cvar;
+	e.label1Width = label1Width;
+	e.relSizeDPI = label1->getFont()->getDPI();
 	m_elements.push_back(e);
 
 	return slider;
@@ -3220,6 +3394,7 @@ void OsuOptionsMenu::save()
 	std::vector<ConVar*> removeConCommands;
 
 	manualConVars.push_back(convar->getConVarByName("osu_songbrowser_sortingtype"));
+	manualConVars.push_back(convar->getConVarByName("osu_songbrowser_scores_sortingtype"));
 	if (m_osu->isInVRMode())
 		manualConVars.push_back(convar->getConVarByName("osu_vr_layout_lock"));
 
@@ -3367,5 +3542,5 @@ void OsuOptionsMenu::openAndScrollToSkinSection()
 		m_osu->toggleOptionsMenu();
 
 	if (!m_skinSelectLocalButton->isVisible() || !wasVisible)
-		m_options->scrollToElement(m_skinSection, 0, 100);
+		m_options->scrollToElement(m_skinSection, 0, 100 * Osu::getUIScale());
 }

@@ -22,6 +22,7 @@
 #include "OsuTooltipOverlay.h"
 
 #include "OsuSongBrowser2.h"
+#include "OsuUserStatsScreen.h"
 #include "OsuDatabase.h"
 #include "OsuBeatmap.h"
 #include "OsuBeatmapDifficulty.h"
@@ -493,8 +494,8 @@ void OsuUISongBrowserScoreButton::onRightMouseUpInside()
 		m_contextMenu->begin();
 		{
 			m_contextMenu->addButton("Delete Score");
-			m_contextMenu->addButton("TODO2");
-			m_contextMenu->addButton("TODO3");
+			m_contextMenu->addButton("---");
+			m_contextMenu->addButton("---");
 		}
 		m_contextMenu->end();
 		m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUISongBrowserScoreButton::onContextMenu) );
@@ -503,7 +504,11 @@ void OsuUISongBrowserScoreButton::onRightMouseUpInside()
 
 void OsuUISongBrowserScoreButton::onContextMenu(UString text, int id)
 {
-	m_osu->getSongBrowser()->onScoreContextMenu(this, text);
+	// absolutely disgusting
+	if (m_style == STYLE::SCORE_BROWSER)
+		m_osu->getSongBrowser()->onScoreContextMenu(this, text);
+	else if (m_style == STYLE::TOP_RANKS)
+		m_osu->getUserStatsScreen()->onScoreContextMenu(this, text);
 }
 
 void OsuUISongBrowserScoreButton::setScore(OsuDatabase::Score score, int index, UString titleString, float weight)

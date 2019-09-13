@@ -50,29 +50,48 @@ void OsuUIRankingScreenInfoLabel::draw(Graphics *g)
 	const UString subTitleText = buildSubTitleString();
 	const UString playerText = buildPlayerString();
 
-	// draw
+	const float globalScale = std::max((m_vSize.y / getMinimumHeight())*0.741f, 1.0f);
+
+	// draw title
 	g->setColor(0xffffffff);
 	g->pushTransform();
-	g->translate(m_vPos.x, m_vPos.y + m_font->getHeight());
-	g->drawString(m_font, titleText);
+	{
+		const float scale = globalScale;
+
+		g->scale(scale, scale);
+		g->translate(m_vPos.x, m_vPos.y + m_font->getHeight()*scale);
+		g->drawString(m_font, titleText);
+	}
 	g->popTransform();
 
-	const float subTitleStringWidth = m_font->getStringWidth(subTitleText);
+	// draw subtitle
 	g->setColor(0xffffffff);
 	g->pushTransform();
-	g->translate((int)(-subTitleStringWidth/2), (int)(m_font->getHeight()/2));
-	g->scale(m_fSubTitleScale, m_fSubTitleScale);
-	g->translate((int)(m_vPos.x + (subTitleStringWidth/2)*m_fSubTitleScale), (int)(m_vPos.y + m_font->getHeight() + (m_font->getHeight()/2)*m_fSubTitleScale + m_iMargin));
-	g->drawString(m_font, subTitleText);
+	{
+		const float scale = m_fSubTitleScale*globalScale;
+
+		const float subTitleStringWidth = m_font->getStringWidth(subTitleText);
+
+		g->translate((int)(-subTitleStringWidth/2), (int)(m_font->getHeight()/2));
+		g->scale(scale, scale);
+		g->translate((int)(m_vPos.x + (subTitleStringWidth/2)*scale), (int)(m_vPos.y + m_font->getHeight()*globalScale + (m_font->getHeight()/2)*scale + m_iMargin));
+		g->drawString(m_font, subTitleText);
+	}
 	g->popTransform();
 
-	const float playerStringWidth = m_font->getStringWidth(playerText);
+	// draw subsubtitle (player text + datetime)
 	g->setColor(0xffffffff);
 	g->pushTransform();
-	g->translate((int)(-playerStringWidth/2), (int)(m_font->getHeight()/2));
-	g->scale(m_fSubTitleScale, m_fSubTitleScale);
-	g->translate((int)(m_vPos.x + (playerStringWidth/2)*m_fSubTitleScale), (int)(m_vPos.y + m_font->getHeight() + m_font->getHeight()*m_fSubTitleScale + (m_font->getHeight()/2)*m_fSubTitleScale + m_iMargin*2));
-	g->drawString(m_font, playerText);
+	{
+		const float scale = m_fSubTitleScale*globalScale;
+
+		const float playerStringWidth = m_font->getStringWidth(playerText);
+
+		g->translate((int)(-playerStringWidth/2), (int)(m_font->getHeight()/2));
+		g->scale(scale, scale);
+		g->translate((int)(m_vPos.x + (playerStringWidth/2)*scale), (int)(m_vPos.y + m_font->getHeight()*globalScale + m_font->getHeight()*scale + (m_font->getHeight()/2)*scale + m_iMargin*2));
+		g->drawString(m_font, playerText);
+	}
 	g->popTransform();
 }
 

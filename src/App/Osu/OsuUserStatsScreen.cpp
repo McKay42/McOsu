@@ -57,8 +57,8 @@ OsuUserStatsScreen::OsuUserStatsScreen(Osu *osu) : OsuScreenBackable(osu)
 	m_container->addBaseUIElement(m_contextMenu);
 
 	m_vInfoText.push_back("Old scores are not recalculated yet!");
-	m_vInfoText.push_back("Will be included in the next update.");
-	m_vInfoText.push_back("New scores use the new stars/pp ofc.");
+	m_vInfoText.push_back("Will be included in a future update.");
+	m_vInfoText.push_back("(Scores before 15.02.2019 = old pp)");
 }
 
 OsuUserStatsScreen::~OsuUserStatsScreen()
@@ -72,10 +72,12 @@ void OsuUserStatsScreen::draw(Graphics *g)
 
 	if (m_vInfoText.size() > 0)
 	{
+		const float dpiScale = Osu::getUIScale();
+
 		const float infoScale = 0.1f;
 		const float paddingScale = 0.4f;
 		McFont *infoFont = m_osu->getSubTitleFont();
-		g->setColor(0xff888888);
+		g->setColor(0x77888888);
 		for (int i=0; i<m_vInfoText.size(); i++)
 		{
 			g->pushTransform();
@@ -85,7 +87,7 @@ void OsuUserStatsScreen::draw(Graphics *g)
 				const float padding = height*paddingScale;
 
 				g->scale(scale, scale);
-				g->translate(m_userButton->getPos().x + m_userButton->getSize().x + 10, m_scores->getPos().y/2 + height/2 - ((m_vInfoText.size()-1)*height + (m_vInfoText.size()-1)*padding)/2 + i*(height+padding));
+				g->translate(m_userButton->getPos().x + m_userButton->getSize().x + 10 * dpiScale, m_scores->getPos().y/2 + height/2 - ((m_vInfoText.size()-1)*height + (m_vInfoText.size()-1)*padding)/2 + i*(height+padding));
 				g->drawString(infoFont, m_vInfoText[i]);
 			}
 			g->popTransform();
@@ -125,6 +127,17 @@ void OsuUserStatsScreen::setVisible(bool visible)
 		rebuildScoreButtons(m_name_ref->getString());
 }
 
+void OsuUserStatsScreen::onScoreContextMenu(OsuUISongBrowserScoreButton *scoreButton, UString text)
+{
+	if (text == "Delete Score")
+	{
+		m_osu->getSongBrowser()->getDatabase()->deleteScore(std::string(scoreButton->getName().toUtf8()), scoreButton->getScoreUnixTimestamp());
+
+		rebuildScoreButtons(m_name_ref->getString());
+		m_osu->getSongBrowser()->rebuildScoreButtons();
+	}
+}
+
 void OsuUserStatsScreen::onBack()
 {
 	engine->getSound()->play(m_osu->getSkin()->getMenuClick());
@@ -159,7 +172,7 @@ void OsuUserStatsScreen::rebuildScoreButtons(UString playerName)
 			title.append("]");
 		}
 
-		OsuUISongBrowserScoreButton *button = new OsuUISongBrowserScoreButton(m_osu, NULL, 0, 0, 300, 100, "", OsuUISongBrowserScoreButton::STYLE::TOP_RANKS);
+		OsuUISongBrowserScoreButton *button = new OsuUISongBrowserScoreButton(m_osu, m_contextMenu, 0, 0, 300, 100, UString(scores[i]->md5hash.c_str()), OsuUISongBrowserScoreButton::STYLE::TOP_RANKS);
 		button->setScore(*scores[i], scores.size()-i, title, weight);
 		button->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUserStatsScreen::onScoreClicked) );
 
@@ -220,15 +233,18 @@ void OsuUserStatsScreen::updateLayout()
 {
 	OsuScreenBackable::updateLayout();
 
+	const float dpiScale = Osu::getUIScale();
+
 	m_container->setSize(m_osu->getScreenSize());
 
 	const int scoreListHeight = m_osu->getScreenHeight()*0.8f;
 	m_scores->setSize(m_osu->getScreenWidth()*0.6f, scoreListHeight);
 	m_scores->setPos(m_osu->getScreenWidth()/2 - m_scores->getSize().x/2, m_osu->getScreenHeight() - scoreListHeight);
 
-	const int margin = 5;
-	const int padding = 5;
+	const int margin = 5 * dpiScale;
+	const int padding = 5 * dpiScale;
 
+	// NOTE: these can't really be uiScale'd, because of the fixed aspect ratio
 	const int scoreButtonWidth = m_scores->getSize().x*0.92f - 2*margin;
 	const int scoreButtonHeight = scoreButtonWidth*0.065f;
 	for (int i=0; i<m_scoreButtons.size(); i++)

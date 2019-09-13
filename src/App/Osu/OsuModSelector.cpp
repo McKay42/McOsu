@@ -141,6 +141,7 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen(osu)
 	m_BPMSlider = NULL;
 	m_speedSlider = NULL;
 	m_previousDifficulty = NULL;
+	m_bShowOverrideSliderALTHint = true;
 
 	// build mod grid buttons
 	m_iGridWidth = 6;
@@ -425,6 +426,28 @@ void OsuModSelector::update()
 	m_container->update();
 	m_overrideSliderContainer->update();
 
+	// override slider tooltips (ALT)
+	// seems too annoying, commented for now
+	/*
+	if (m_bShowOverrideSliderALTHint)
+	{
+		for (int i=0; i<m_overrideSliders.size(); i++)
+		{
+			if (m_overrideSliders[i].slider->isBusy())
+			{
+				m_osu->getTooltipOverlay()->begin();
+				{
+					m_osu->getTooltipOverlay()->addLine("Hold [ALT] to slide in 0.01 increments.");
+				}
+				m_osu->getTooltipOverlay()->end();
+
+				if (engine->getKeyboard()->isAltDown())
+					m_bShowOverrideSliderALTHint = false;
+			}
+		}
+	}
+	*/
+
 	// handle experimental mods visibility
 	bool experimentalModEnabled = false;
 	for (int i=0; i<m_experimentalMods.size(); i++)
@@ -601,11 +624,14 @@ void OsuModSelector::updateLayout()
 {
 	if (m_modButtons.size() < 1 || m_overrideSliders.size() < 1) return;
 
+	const float dpiScale = Osu::getUIScale();
+	const float uiScale = Osu::ui_scale->getFloat();
+
 	if (!isInCompactMode()) // normal layout
 	{
 		// mod grid buttons
 		Vector2 center = m_osu->getScreenSize()/2.0f;
-		Vector2 size = m_osu->getSkin()->getSelectionModEasy()->getSizeBase();
+		Vector2 size = m_osu->getSkin()->getSelectionModEasy()->getSizeBase() * uiScale;
 		Vector2 offset = Vector2(size.x*1.0f, size.y*0.25f);
 		Vector2 start = Vector2(center.x - (size.x*m_iGridWidth)/2.0f - (offset.x*(m_iGridWidth-1))/2.0f, center.y - (size.y*m_iGridHeight)/2.0f  - (offset.y*(m_iGridHeight-1))/2.0f);
 
@@ -618,44 +644,50 @@ void OsuModSelector::updateLayout()
 				if (button != NULL)
 				{
 					button->setPos(start + Vector2(size.x*x + offset.x*x, size.y*y + offset.y*y));
-					button->setBaseScale(1, 1);
+					button->setBaseScale(1.0f * uiScale, 1.0f * uiScale);
 					button->setSize(size);
 				}
 			}
 		}
 
 		// override sliders (down here because they depend on the mod grid button alignment)
-		int overrideSliderWidth = m_osu->getUIScale(m_osu, 250.0f);
-		int overrideSliderHeight = m_overrideSliders.size() > 0 ? m_overrideSliders[0].slider->getSize().y : 25;
-		int overrideSliderOffsetY = ((start.y - m_overrideSliders.size()*overrideSliderHeight)/(m_overrideSliders.size()-1))*0.35f;
-		Vector2 overrideSliderStart = Vector2(m_osu->getScreenWidth()/2 - overrideSliderWidth/2, start.y/2 - (m_overrideSliders.size()*overrideSliderHeight + (m_overrideSliders.size()-1)*overrideSliderOffsetY)/1.75f);
+		const int margin = 10 * dpiScale;
+		const int overrideSliderWidth = m_osu->getUIScale(m_osu, 250.0f);
+		const int overrideSliderHeight = 25 * dpiScale;
+		const int overrideSliderOffsetY = ((start.y - m_overrideSliders.size()*overrideSliderHeight)/(m_overrideSliders.size()-1))*0.35f;
+		const Vector2 overrideSliderStart = Vector2(m_osu->getScreenWidth()/2 - overrideSliderWidth/2, start.y/2 - (m_overrideSliders.size()*overrideSliderHeight + (m_overrideSliders.size()-1)*overrideSliderOffsetY)/1.75f);
 		for (int i=0; i<m_overrideSliders.size(); i++)
 		{
-			m_overrideSliders[i].desc->setSizeToContent(5, 0);
-			m_overrideSliders[i].desc->setSizeY(m_overrideSliders[i].slider->getSize().y);
+			m_overrideSliders[i].desc->setSizeToContent(5 * dpiScale, 0);
+			m_overrideSliders[i].desc->setSizeY(overrideSliderHeight);
 
+			m_overrideSliders[i].slider->setBlockSize(20 * dpiScale, 20 * dpiScale);
 			m_overrideSliders[i].slider->setPos(overrideSliderStart.x, overrideSliderStart.y + i*overrideSliderHeight + i*overrideSliderOffsetY);
-			m_overrideSliders[i].slider->setSizeX(overrideSliderWidth);
+			m_overrideSliders[i].slider->setSize(overrideSliderWidth, overrideSliderHeight);
 
-			m_overrideSliders[i].desc->setPos(m_overrideSliders[i].slider->getPos().x - m_overrideSliders[i].desc->getSize().x - 10, m_overrideSliders[i].slider->getPos().y);
+			m_overrideSliders[i].desc->setPos(m_overrideSliders[i].slider->getPos().x - m_overrideSliders[i].desc->getSize().x - margin, m_overrideSliders[i].slider->getPos().y);
 
 			if (m_overrideSliders[i].lock != NULL && m_overrideSliders.size() > 1)
-				m_overrideSliders[i].lock->setPos(m_overrideSliders[1].desc->getPos().x - m_overrideSliders[i].lock->getSize().x - 10 - 3, m_overrideSliders[i].desc->getPos().y);
+			{
+				m_overrideSliders[i].lock->setPos(m_overrideSliders[1].desc->getPos().x - m_overrideSliders[i].lock->getSize().x - margin - 3 * dpiScale, m_overrideSliders[i].desc->getPos().y);
+				m_overrideSliders[i].lock->setSizeY(overrideSliderHeight);
+			}
 
-			m_overrideSliders[i].label->setPos(m_overrideSliders[i].slider->getPos().x + m_overrideSliders[i].slider->getSize().x + 10, m_overrideSliders[i].slider->getPos().y);
-			m_overrideSliders[i].label->setSizeToContent(0,0);
-			m_overrideSliders[i].label->setSizeY(m_overrideSliders[i].slider->getSize().y);
+			m_overrideSliders[i].label->setPos(m_overrideSliders[i].slider->getPos().x + m_overrideSliders[i].slider->getSize().x + margin, m_overrideSliders[i].slider->getPos().y);
+			m_overrideSliders[i].label->setSizeToContent(0, 0);
+			m_overrideSliders[i].label->setSizeY(overrideSliderHeight);
 		}
 
 		// action buttons
 		float actionMinY = start.y + size.y*m_iGridHeight + offset.y*(m_iGridHeight-1); // exact bottom of the mod buttons
-		Vector2 actionSize = Vector2(m_osu->getUIScale(m_osu, 448.0f), size.y*0.75f);
+		Vector2 actionSize = Vector2(m_osu->getUIScale(m_osu, 448.0f) * uiScale, size.y*0.75f);
 		float actionOffsetY = actionSize.y*0.5f;
 		Vector2 actionStart = Vector2(m_osu->getScreenWidth()/2.0f - actionSize.x/2.0f, actionMinY + (m_osu->getScreenHeight() - actionMinY)/2.0f  - (actionSize.y*m_actionButtons.size() + actionOffsetY*(m_actionButtons.size()-1))/2.0f);
 		for (int i=0; i<m_actionButtons.size(); i++)
 		{
 			m_actionButtons[i]->setVisible(true);
 			m_actionButtons[i]->setPos(actionStart.x, actionStart.y + actionSize.y*i + actionOffsetY*i);
+			m_actionButtons[i]->onResized(); // HACKHACK: framework, setSize*() does not update string metrics
 			m_actionButtons[i]->setSize(actionSize);
 		}
 	}
@@ -663,7 +695,7 @@ void OsuModSelector::updateLayout()
 	{
 		// mod grid buttons
 		Vector2 center = m_osu->getScreenSize()/2.0f;
-		Vector2 blockSize = m_osu->getSkin()->getSelectionModEasy()->getSizeBase();
+		Vector2 blockSize = m_osu->getSkin()->getSelectionModEasy()->getSizeBase() * uiScale;
 		Vector2 offset = Vector2(blockSize.x*0.15f, blockSize.y*0.05f);
 		Vector2 size = Vector2((blockSize.x*m_iGridWidth) + (offset.x*(m_iGridWidth-1)), (blockSize.y*m_iGridHeight) + (offset.y*(m_iGridHeight-1)));
 		center.y = m_osu->getScreenHeight() - size.y/2 - offset.y*3.0f;
@@ -678,33 +710,37 @@ void OsuModSelector::updateLayout()
 				if (button != NULL)
 				{
 					button->setPos(start + Vector2(blockSize.x*x + offset.x*x, blockSize.y*y + offset.y*y));
-					button->setBaseScale(1, 1);
+					button->setBaseScale(1 * uiScale, 1 * uiScale);
 					button->setSize(blockSize);
 				}
 			}
 		}
 
 		// override sliders (down here because they depend on the mod grid button alignment)
+		const int margin = 10 * dpiScale;
 		int overrideSliderWidth = m_osu->getUIScale(m_osu, 250.0f);
-		int overrideSliderHeight = m_overrideSliders.size() > 0 ? m_overrideSliders[0].slider->getSize().y : 25;
-		int overrideSliderOffsetY = 5;
-		Vector2 overrideSliderStart = Vector2(m_osu->getScreenWidth()/2 - overrideSliderWidth/2, 5);
+		int overrideSliderHeight = 25 * dpiScale;
+		int overrideSliderOffsetY = 5 * dpiScale;
+		Vector2 overrideSliderStart = Vector2(m_osu->getScreenWidth()/2 - overrideSliderWidth/2, 5 * dpiScale);
 		for (int i=0; i<m_overrideSliders.size(); i++)
 		{
-			m_overrideSliders[i].desc->setSizeToContent(5, 0);
-			m_overrideSliders[i].desc->setSizeY(m_overrideSliders[i].slider->getSize().y);
+			m_overrideSliders[i].desc->setSizeToContent(5 * dpiScale, 0);
+			m_overrideSliders[i].desc->setSizeY(overrideSliderHeight);
 
 			m_overrideSliders[i].slider->setPos(overrideSliderStart.x, overrideSliderStart.y + i*overrideSliderHeight + i*overrideSliderOffsetY);
 			m_overrideSliders[i].slider->setSizeX(overrideSliderWidth);
 
-			m_overrideSliders[i].desc->setPos(m_overrideSliders[i].slider->getPos().x - m_overrideSliders[i].desc->getSize().x - 10, m_overrideSliders[i].slider->getPos().y);
+			m_overrideSliders[i].desc->setPos(m_overrideSliders[i].slider->getPos().x - m_overrideSliders[i].desc->getSize().x - margin, m_overrideSliders[i].slider->getPos().y);
 
 			if (m_overrideSliders[i].lock != NULL && m_overrideSliders.size() > 1)
-				m_overrideSliders[i].lock->setPos(m_overrideSliders[1].desc->getPos().x - m_overrideSliders[i].lock->getSize().x - 10 - 3, m_overrideSliders[i].desc->getPos().y);
+			{
+				m_overrideSliders[i].lock->setPos(m_overrideSliders[1].desc->getPos().x - m_overrideSliders[i].lock->getSize().x - margin - 3 * dpiScale, m_overrideSliders[i].desc->getPos().y);
+				m_overrideSliders[i].lock->setSizeY(overrideSliderHeight);
+			}
 
-			m_overrideSliders[i].label->setPos(m_overrideSliders[i].slider->getPos().x + m_overrideSliders[i].slider->getSize().x + 10, m_overrideSliders[i].slider->getPos().y);
-			m_overrideSliders[i].label->setSizeToContent(0,0);
-			m_overrideSliders[i].label->setSizeY(m_overrideSliders[i].slider->getSize().y);
+			m_overrideSliders[i].label->setPos(m_overrideSliders[i].slider->getPos().x + m_overrideSliders[i].slider->getSize().x + margin, m_overrideSliders[i].slider->getPos().y);
+			m_overrideSliders[i].label->setSizeToContent(0, 0);
+			m_overrideSliders[i].label->setSizeY(overrideSliderHeight);
 		}
 
 		// action buttons
@@ -719,14 +755,34 @@ void OsuModSelector::updateLayout()
 
 void OsuModSelector::updateExperimentalLayout()
 {
+	const float dpiScale = Osu::getUIScale();
+
 	// experimental mods
-	int yCounter = 5;
+	int yCounter = 5 * dpiScale;
 	int experimentalMaxWidth = 0;
-	int experimentalOffsetY = 6;
+	int experimentalOffsetY = 6 * dpiScale;
 	for (int i=0; i<m_experimentalMods.size(); i++)
 	{
 		CBaseUIElement *e = m_experimentalMods[i].element;
 		e->setRelPosY(yCounter);
+		e->setSizeY(e->getRelSize().y * dpiScale);
+
+		// custom
+		{
+			CBaseUICheckbox *checkboxPointer = dynamic_cast<CBaseUICheckbox*>(e);
+			if (checkboxPointer != NULL)
+			{
+				checkboxPointer->onResized();
+				checkboxPointer->setWidthToContent(0);
+			}
+
+			CBaseUILabel *labelPointer = dynamic_cast<CBaseUILabel*>(e);
+			if (labelPointer != NULL)
+			{
+				labelPointer->onResized();
+				labelPointer->setWidthToContent(0);
+			}
+		}
 
 		if (e->getSize().x > experimentalMaxWidth)
 			experimentalMaxWidth = e->getSize().x;
@@ -734,13 +790,15 @@ void OsuModSelector::updateExperimentalLayout()
 		yCounter += e->getSize().y + experimentalOffsetY;
 
 		if (i == 0)
-			yCounter += 8;
+			yCounter += 8 * dpiScale;
 	}
+
 	// laziness
 	if (m_osu->getScreenHeight() > yCounter)
-		yCounter = 5 + m_osu->getScreenHeight()/2.0f - yCounter/2.0f;
+		yCounter = 5 * dpiScale + m_osu->getScreenHeight()/2.0f - yCounter/2.0f;
 	else
-		yCounter = 5;
+		yCounter = 5 * dpiScale;
+
 	for (int i=0; i<m_experimentalMods.size(); i++)
 	{
 		CBaseUIElement *e = m_experimentalMods[i].element;
@@ -752,11 +810,12 @@ void OsuModSelector::updateExperimentalLayout()
 		yCounter += e->getSize().y + experimentalOffsetY;
 
 		if (i == 0)
-			yCounter += 8;
+			yCounter += 8 * dpiScale;
 	}
-	m_experimentalContainer->setSizeX(experimentalMaxWidth + 25/*, yCounter*/);
+
+	m_experimentalContainer->setSizeX(experimentalMaxWidth + 25 * dpiScale/*, yCounter*/);
 	m_experimentalContainer->setPosY(-1);
-	m_experimentalContainer->setScrollSizeToContent(1);
+	m_experimentalContainer->setScrollSizeToContent(1 * dpiScale);
 	m_experimentalContainer->getContainer()->update_pos();
 }
 

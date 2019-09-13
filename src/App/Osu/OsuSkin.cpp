@@ -723,7 +723,7 @@ bool OsuSkin::parseSkinINI(UString filepath)
 		return false;
 	}
 
-	int curBlock = -1;
+	int curBlock = 0; // NOTE: was -1, but osu incorrectly defaults to [General] and loads properties even before the actual section start (just for this first section though)
 	while (file.canRead())
 	{
 		UString uCurLine = file.readLine();

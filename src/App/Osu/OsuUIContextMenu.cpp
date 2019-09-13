@@ -95,12 +95,12 @@ void OsuUIContextMenu::begin(int minWidth)
 
 CBaseUIButton *OsuUIContextMenu::addButton(UString text, int id)
 {
-	int buttonHeight = 30;
-	int margin = 9;
+	const int buttonHeight = 30 * Osu::getUIScale();
+	const int margin = 9 * Osu::getUIScale();
 
 	OsuUIContextMenuButton *button = new OsuUIContextMenuButton(margin, m_iYCounter + margin, 0, buttonHeight, text, text, id);
 	button->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUIContextMenu::onClick) );
-	button->setWidthToContent(3);
+	button->setWidthToContent(3 * Osu::getUIScale());
 	button->setTextLeft(true);
 	button->setDrawFrame(false);
 	button->setDrawBackground(false);
@@ -122,12 +122,12 @@ void OsuUIContextMenu::end(bool invertAnimation)
 {
 	m_bInvertAnimation = invertAnimation;
 
-	int margin = 9;
+	const int margin = 9 * Osu::getUIScale();
 
 	std::vector<CBaseUIElement*> *elements = m_container->getAllBaseUIElementsPointer();
 	for (int i=0; i<elements->size(); i++)
 	{
-		((*elements)[i])->setSizeX(m_iWidthCounter-2*margin);
+		((*elements)[i])->setSizeX(m_iWidthCounter - 2*margin);
 	}
 
 	setVisible2(true);

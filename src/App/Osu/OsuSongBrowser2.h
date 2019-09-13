@@ -44,6 +44,7 @@ public:
 
 	struct SORTING_COMPARATOR
 	{
+		virtual ~SORTING_COMPARATOR() {;}
 		virtual bool operator() (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const = 0;
 	};
 
@@ -75,6 +76,7 @@ public:
 	void scrollToSongButton(OsuUISongBrowserButton *songButton, bool alignOnTop = false);
 	void scrollToSelectedSongButton();
 	void rebuildSongButtons(bool unloadAllThumbnails = true);
+	void rebuildScoreButtons();
 	void updateSongButtonLayout();
 
 	OsuUISongBrowserButton* findCurrentlySelectedSongButton() const;
@@ -123,16 +125,21 @@ private:
 
 	void updateScoreBrowserLayout();
 
-	void rebuildScoreButtons();
 	void scheduleSearchUpdate(bool immediately = false);
 
 	OsuUISelectionButton *addBottombarNavButton(std::function<Image*()> getImageFunc, std::function<Image*()> getImageOverFunc);
 	CBaseUIButton *addTopBarRightTabButton(UString text);
 	CBaseUIButton *addTopBarRightSortButton(UString text);
+	CBaseUIButton *addTopBarLeftTabButton(UString text);
+	CBaseUIButton *addTopBarLeftButton(UString text);
 
 	void onDatabaseLoadingFinished();
 
 	void onSearchUpdate();
+
+	void onSortScoresClicked(CBaseUIButton *button);
+	void onSortScoresChange(UString text, int id = -1);
+	void onWebClicked(CBaseUIButton *button);
 
 	void onSortClicked(CBaseUIButton *button);
 	void onSortChange(UString text, int id = -1);
@@ -178,6 +185,10 @@ private:
 	// top bar left
 	CBaseUIContainer *m_topbarLeft;
 	OsuUISongBrowserInfoLabel *m_songInfo;
+	std::vector<CBaseUIButton*> m_topbarLeftTabButtons;
+	std::vector<CBaseUIButton*> m_topbarLeftButtons;
+	CBaseUIButton *m_scoreSortButton;
+	CBaseUIButton *m_webButton;
 
 	// top bar right
 	CBaseUIContainer *m_topbarRight;

@@ -30,6 +30,8 @@ public:
 
 	virtual void setVisible(bool visible);
 
+	void onScoreContextMenu(OsuUISongBrowserScoreButton *scoreButton, UString text);
+
 private:
 	virtual void updateLayout();
 
