@@ -47,6 +47,7 @@ class Osu : public App, public MouseListener
 public:
 	static ConVar *version;
 	static ConVar *debug;
+	static ConVar *ui_scale;
 	static bool autoUpdater;
 
 	static Vector2 osuBaseResolution;
@@ -58,6 +59,7 @@ public:
 	static float getImageScale(Osu *osu, Vector2 size, float osuSize);
 	static float getImageScale(Osu *osu, Image *img, float osuSize);
 	static float getUIScale(Osu *osu, float osuResolutionRatio);
+	static float getUIScale(); // NOTE: includes premultiplied dpi scale!
 
 	static bool findIgnoreCase(const std::string &haystack, const std::string &needle);
 
@@ -137,6 +139,7 @@ public:
 	inline OsuScore *getScore() const {return m_score;}
 	inline OsuUpdateHandler *getUpdateHandler() const {return m_updateHandler;}
 	inline OsuSteamWorkshop *getSteamWorkshop() const {return m_steamWorkshop;}
+	inline OsuUserStatsScreen *getUserStatsScreen() const {return m_userStatsScreen;}
 
 	inline RenderTarget *getPlayfieldBuffer() const {return m_playfieldBuffer;}
 	inline RenderTarget *getSliderFrameBuffer() const {return m_sliderFrameBuffer;}
@@ -177,7 +180,7 @@ public:
 
 	bool isInPlayMode();
 	bool isNotInPlayModeOrPaused();
-	bool isInVRMode();
+	static bool isInVRMode();
 	inline bool isInVRDraw() const {return m_bIsInVRDraw;}
 	bool isInMultiplayer();
 	inline bool isSkinLoading() const {return m_bSkinLoadScheduled;}
@@ -198,7 +201,9 @@ private:
 	void onAudioOutputDeviceChange();
 
 	void rebuildRenderTargets();
+	void reloadFonts();
 	void updateMouseSettings();
+	void fireResolutionChanged();
 
 	// callbacks
 	void onInternalResolutionChanged(UString oldValue, UString args);
@@ -213,6 +218,8 @@ private:
 
 	void onPlayfieldChange(UString oldValue, UString newValue);
 
+	void onUIScaleChange(UString oldValue, UString newValue);
+	void onUIScaleToDPIChange(UString oldValue, UString newValue);
 	void onLetterboxingChange(UString oldValue, UString newValue);
 
 	void onConfineCursorWindowedChange(UString oldValue, UString newValue);
@@ -245,6 +252,7 @@ private:
 	ConVar *m_osu_mod_mafham_ref;
 	ConVar *m_osu_mod_fposu_ref;
 	ConVar *m_snd_change_check_interval_ref;
+	ConVar *m_ui_scrollview_scrollbarwidth_ref;
 
 	// interfaces
 	Osu2 *m_osu2;
@@ -315,6 +323,7 @@ private:
 	float m_fQuickRetryTime;
 	bool m_bSeekKey;
 	bool m_bSeeking;
+	float m_fPrevSeekMousePosX;
 	float m_fQuickSaveTime;
 
 	// async toggles
@@ -333,6 +342,7 @@ private:
 	bool m_bShouldCursorBeVisible;
 
 	// global resources
+	std::vector<McFont*> m_fonts;
 	McFont *m_titleFont;
 	McFont *m_subTitleFont;
 	McFont *m_songBrowserFont;
@@ -352,6 +362,8 @@ private:
 	bool m_bSkinLoadScheduled;
 	bool m_bSkinLoadWasReload;
 	OsuSkin *m_skinScheduledToLoad;
+	bool m_bFontReloadScheduled;
+	bool m_bFireResolutionChangedScheduled;
 };
 
 #endif

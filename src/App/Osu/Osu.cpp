@@ -64,7 +64,7 @@
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 30.0f);
+ConVar osu_version("osu_version", 30.1f);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr");
 #else
@@ -95,6 +95,7 @@ ConVar osu_pitch_override("osu_pitch_override", -1.0f);
 
 ConVar osu_pause_on_focus_loss("osu_pause_on_focus_loss", true);
 ConVar osu_quick_retry_delay("osu_quick_retry_delay", 0.27f);
+ConVar osu_scrubbing_smooth("osu_scrubbing_smooth", true);
 
 ConVar osu_mods("osu_mods", "");
 ConVar osu_mod_fadingcursor("osu_mod_fadingcursor", false);
@@ -103,6 +104,8 @@ ConVar osu_mod_endless("osu_mod_endless", false);
 
 ConVar osu_notification("osu_notification");
 
+ConVar osu_ui_scale("osu_ui_scale", 1.0f);
+ConVar osu_ui_scale_to_dpi("osu_ui_scale_to_dpi", true);
 ConVar osu_letterboxing("osu_letterboxing", true);
 ConVar osu_letterboxing_offset_x("osu_letterboxing_offset_x", 0.0f);
 ConVar osu_letterboxing_offset_y("osu_letterboxing_offset_y", 0.0f);
@@ -116,6 +119,7 @@ ConVar osu_hide_cursor_during_gameplay("osu_hide_cursor_during_gameplay", false)
 
 ConVar *Osu::version = &osu_version;
 ConVar *Osu::debug = &osu_debug;
+ConVar *Osu::ui_scale = &osu_ui_scale;
 Vector2 Osu::g_vInternalResolution;
 Vector2 Osu::osuBaseResolution = Vector2(640.0f, 480.0f);
 
@@ -143,6 +147,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_osu_mod_mafham_ref = convar->getConVarByName("osu_mod_mafham");
 	m_osu_mod_fposu_ref = convar->getConVarByName("osu_mod_fposu");
 	m_snd_change_check_interval_ref = convar->getConVarByName("snd_change_check_interval");
+	m_ui_scrollview_scrollbarwidth_ref = convar->getConVarByName("ui_scrollview_scrollbarwidth");
 
 	// experimental mods list
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_wobble"));
@@ -261,6 +266,8 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	osu_mods.setCallback( fastdelegate::MakeDelegate(this, &Osu::updateModsForConVarTemplate) );
 
 	osu_resolution.setCallback( fastdelegate::MakeDelegate(this, &Osu::onInternalResolutionChanged) );
+	osu_ui_scale.setCallback( fastdelegate::MakeDelegate(this, &Osu::onUIScaleChange) );
+	osu_ui_scale_to_dpi.setCallback( fastdelegate::MakeDelegate(this, &Osu::onUIScaleToDPIChange) );
 	osu_letterboxing.setCallback( fastdelegate::MakeDelegate(this, &Osu::onLetterboxingChange) );
 	osu_letterboxing_offset_x.setCallback( fastdelegate::MakeDelegate(this, &Osu::onLetterboxingOffsetChange) );
 	osu_letterboxing_offset_y.setCallback( fastdelegate::MakeDelegate(this, &Osu::onLetterboxingOffsetChange) );
@@ -294,6 +301,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_fQuickRetryTime = 0.0f;
 	m_bSeeking = false;
 	m_bSeekKey = false;
+	m_fPrevSeekMousePosX = -1.0f;
 	m_fQuickSaveTime = 0.0f;
 
 	m_bToggleModSelectionScheduled = false;
@@ -334,6 +342,8 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_bSkinLoadScheduled = false;
 	m_bSkinLoadWasReload = false;
 	m_skinScheduledToLoad = NULL;
+	m_bFontReloadScheduled = false;
+	m_bFireResolutionChangedScheduled = false;
 
 	// debug
 	m_windowManager = new CWindowManager();
@@ -365,11 +375,22 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	updateMods();
 
 	// load global resources
-	m_titleFont = engine->getResourceManager()->loadFont("SourceSansPro-Semibold.otf", "FONT_OSU_TITLE", 60.0f); // was 40
-	m_subTitleFont = engine->getResourceManager()->loadFont("SourceSansPro-Semibold.otf", "FONT_OSU_SUBTITLE", 21.0f);
-	m_songBrowserFont = engine->getResourceManager()->loadFont("SourceSansPro-Regular.otf", "FONT_OSU_SONGBROWSER", 35.0f);
-	m_songBrowserFontBold = engine->getResourceManager()->loadFont("SourceSansPro-Bold.otf", "FONT_OSU_SONGBROWSER_BOLD", 30.0f);
-	m_fontIcons = engine->getResourceManager()->loadFont("fontawesome-webfont.ttf", "FONT_OSU_ICONS", OsuIcons::icons, 26.0f);
+	const int baseDPI = 96;
+	const int newDPI = Osu::getUIScale() * baseDPI;
+
+	McFont *defaultFont = engine->getResourceManager()->loadFont("weblysleekuisb.ttf", "FONT_DEFAULT", 15, true, newDPI);
+	m_titleFont = engine->getResourceManager()->loadFont("SourceSansPro-Semibold.otf", "FONT_OSU_TITLE", 60, true, newDPI);
+	m_subTitleFont = engine->getResourceManager()->loadFont("SourceSansPro-Semibold.otf", "FONT_OSU_SUBTITLE", 21, true, newDPI);
+	m_songBrowserFont = engine->getResourceManager()->loadFont("SourceSansPro-Regular.otf", "FONT_OSU_SONGBROWSER", 35, true, newDPI);
+	m_songBrowserFontBold = engine->getResourceManager()->loadFont("SourceSansPro-Bold.otf", "FONT_OSU_SONGBROWSER_BOLD", 30, true, newDPI);
+	m_fontIcons = engine->getResourceManager()->loadFont("fontawesome-webfont.ttf", "FONT_OSU_ICONS", OsuIcons::icons, 26, true, newDPI);
+
+	m_fonts.push_back(defaultFont);
+	m_fonts.push_back(m_titleFont);
+	m_fonts.push_back(m_subTitleFont);
+	m_fonts.push_back(m_songBrowserFont);
+	m_fonts.push_back(m_songBrowserFontBold);
+	m_fonts.push_back(m_fontIcons);
 
 	float averageIconHeight = 0.0f;
 	for (int i=0; i<OsuIcons::icons.size(); i++)
@@ -380,6 +401,12 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 			averageIconHeight = height;
 	}
 	m_fontIcons->setHeight(averageIconHeight);
+
+	if (defaultFont->getDPI() != newDPI)
+	{
+		m_bFontReloadScheduled = true;
+		m_bFireResolutionChangedScheduled = true;
+	}
 
 	// load skin
 	{
@@ -782,9 +809,16 @@ void Osu::update()
 	if (m_skin != NULL)
 		m_skin->update();
 
-	m_windowManager->update();
 	if (isInVRMode())
 		m_vr->update();
+
+	if (isInPlayMode())
+	{
+		if (m_osu_mod_fposu_ref->getBool())
+			m_fposu->update();
+	}
+
+	m_windowManager->update();
 
 	for (int i=0; i<m_screens.size(); i++)
 	{
@@ -795,9 +829,6 @@ void Osu::update()
 	m_bSeeking = false;
 	if (isInPlayMode())
 	{
-		if (m_osu_mod_fposu_ref->getBool())
-			m_fposu->update();
-
 		getSelectedBeatmap()->update();
 
 		// scrubbing/seeking
@@ -806,9 +837,20 @@ void Osu::update()
 			if (!isInMultiplayer() || m_multiplayer->isServer())
 			{
 				m_bSeeking = true;
-				const float percent = clamp<float>(engine->getMouse()->getPos().x/getScreenWidth(), 0.0f, 1.0f);
+				const float mousePosX = (int)engine->getMouse()->getPos().x;
+				const float percent = clamp<float>(mousePosX / (float)getScreenWidth(), 0.0f, 1.0f);
+
 				if (engine->getMouse()->isLeftDown())
-					getSelectedBeatmap()->seekPercentPlayable(percent);
+				{
+					if (mousePosX != m_fPrevSeekMousePosX || !osu_scrubbing_smooth.getBool())
+					{
+						m_fPrevSeekMousePosX = mousePosX;
+						getSelectedBeatmap()->seekPercentPlayable(percent);
+					}
+				}
+				else
+					m_fPrevSeekMousePosX = -1.0f;
+
 				if (engine->getMouse()->isRightDown())
 					m_fQuickSaveTime = clamp<float>((float)((getSelectedBeatmap()->getStartTimePlayable()+getSelectedBeatmap()->getLengthPlayable())*percent) / (float)getSelectedBeatmap()->getLength(), 0.0f, 1.0f);
 			}
@@ -1010,7 +1052,7 @@ void Osu::update()
 			m_skinScheduledToLoad = NULL;
 
 			// force layout update after all skin elements have been loaded
-			onResolutionChanged(g_vInternalResolution);
+			fireResolutionChanged();
 
 			// notify if done after reload
 			if (m_bSkinLoadWasReload)
@@ -1020,6 +1062,20 @@ void Osu::update()
 				m_notificationOverlay->addNotification("Skin reloaded!");
 			}
 		}
+	}
+
+	// delayed font reloads (must be before layout updates!)
+	if (m_bFontReloadScheduled)
+	{
+		m_bFontReloadScheduled = false;
+		reloadFonts();
+	}
+
+	// delayed layout updates
+	if (m_bFireResolutionChangedScheduled)
+	{
+		m_bFireResolutionChangedScheduled = false;
+		fireResolutionChanged();
 	}
 }
 
@@ -1768,6 +1824,9 @@ void Osu::onResolutionChanged(Vector2 newResolution)
 		}
 	}
 
+	// update dpi specific engine globals
+	m_ui_scrollview_scrollbarwidth_ref->setValue(15.0f * Osu::getUIScale()); // not happy with this as a convar
+
 	// interfaces
 	for (int i=0; i<m_screens.size(); i++)
 	{
@@ -1808,6 +1867,21 @@ void Osu::rebuildRenderTargets()
 	}
 }
 
+void Osu::reloadFonts()
+{
+	const int baseDPI = 96;
+	const int newDPI = Osu::getUIScale() * baseDPI;
+
+	for (McFont *font : m_fonts)
+	{
+		if (font->getDPI() != newDPI)
+		{
+			font->setDPI(newDPI);
+			font->reload();
+		}
+	}
+}
+
 void Osu::updateMouseSettings()
 {
 	// mouse scaling & offset
@@ -1824,6 +1898,11 @@ void Osu::updateMouseSettings()
 
 	engine->getMouse()->setOffset(offset);
 	engine->getMouse()->setScale(scale);
+}
+
+void Osu::fireResolutionChanged()
+{
+	onResolutionChanged(g_vInternalResolution);
 }
 
 void Osu::onInternalResolutionChanged(UString oldValue, UString args)
@@ -1859,7 +1938,7 @@ void Osu::onInternalResolutionChanged(UString oldValue, UString args)
 			osu_resolution_enabled.setValue(1.0f);
 			g_vInternalResolution = newInternalResolution;
 			m_vInternalResolution = newInternalResolution;
-			onResolutionChanged(newInternalResolution);
+			fireResolutionChanged();
 		}
 	}
 }
@@ -1986,6 +2065,32 @@ void Osu::onPlayfieldChange(UString oldValue, UString newValue)
 		getSelectedBeatmap()->onModUpdate();
 }
 
+void Osu::onUIScaleChange(UString oldValue, UString newValue)
+{
+	const float oldVal = oldValue.toFloat();
+	const float newVal = newValue.toFloat();
+
+	if (oldVal != newVal)
+	{
+		// delay
+		m_bFontReloadScheduled = true;
+		m_bFireResolutionChangedScheduled = true;
+	}
+}
+
+void Osu::onUIScaleToDPIChange(UString oldValue, UString newValue)
+{
+	const bool oldVal = oldValue.toFloat() > 0.0f;
+	const bool newVal = newValue.toFloat() > 0.0f;
+
+	if (oldVal != newVal)
+	{
+		// delay
+		m_bFontReloadScheduled = true;
+		m_bFireResolutionChangedScheduled = true;
+	}
+}
+
 void Osu::onLetterboxingChange(UString oldValue, UString newValue)
 {
 	if (osu_resolution_enabled.getBool())
@@ -1994,7 +2099,7 @@ void Osu::onLetterboxingChange(UString oldValue, UString newValue)
 		bool newVal = newValue.toFloat() > 0.0f;
 
 		if (oldVal != newVal)
-			Osu::onResolutionChanged(g_vInternalResolution);
+			m_bFireResolutionChangedScheduled = true; // delay
 	}
 }
 
@@ -2165,6 +2270,11 @@ float Osu::getUIScale(Osu *osu, float osuResolutionRatio)
 	const float yDiameter = osuResolutionRatio*yMultiplier;
 
 	return xDiameter > yDiameter ? xDiameter : yDiameter;
+}
+
+float Osu::getUIScale()
+{
+	return (isInVRMode() ? 1.0f : ((osu_ui_scale_to_dpi.getBool() ? env->getDPIScale() : 1.0f) * osu_ui_scale.getFloat()));
 }
 
 bool Osu::findIgnoreCase(const std::string &haystack, const std::string &needle)

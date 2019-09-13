@@ -517,7 +517,7 @@ void OsuMainMenu::draw(Graphics *g)
 	}
 
 	// main text
-	const float fontScale = 1.0f - pulseSub + m_fSizeAddAnim;
+	const float fontScale = (1.0f - pulseSub + m_fSizeAddAnim);
 	g->setColor(0xffffffff);
 	g->pushTransform();
 	{
@@ -848,23 +848,27 @@ void OsuMainMenu::setVisible(bool visible)
 
 void OsuMainMenu::updateLayout()
 {
+	const float dpiScale = Osu::getUIScale();
+
 	m_vCenter = m_osu->getScreenSize()/2.0f;
-	float size = Osu::getUIScale(m_osu, 324.0f);
+	const float size = Osu::getUIScale(m_osu, 324.0f);
 	m_vSize = Vector2(size, size);
 
-	m_pauseButton->setSize(30, 30);
-	m_pauseButton->setRelPos(m_osu->getScreenWidth() - m_pauseButton->getSize().x*2 - 10, m_pauseButton->getSize().y + 10);
+	m_pauseButton->setSize(30 * dpiScale, 30 * dpiScale);
+	m_pauseButton->setRelPos(m_osu->getScreenWidth() - m_pauseButton->getSize().x*2 - 10 * dpiScale, m_pauseButton->getSize().y + 10 * dpiScale);
 
-	m_updateAvailableButton->setSize(375, 50);
-	m_updateAvailableButton->setPos(m_osu->getScreenWidth()/2 - m_updateAvailableButton->getSize().x/2, m_osu->getScreenHeight() - m_updateAvailableButton->getSize().y - 10);
+	m_updateAvailableButton->setSize(375 * dpiScale, 50 * dpiScale);
+	m_updateAvailableButton->setPos(m_osu->getScreenWidth()/2 - m_updateAvailableButton->getSize().x/2, m_osu->getScreenHeight() - m_updateAvailableButton->getSize().y - 10 * dpiScale);
 
+	m_steamWorkshopButton->onResized(); // HACKHACK: framework, setSize() does not update string metrics
 	m_steamWorkshopButton->setSize(m_updateAvailableButton->getSize());
-	m_steamWorkshopButton->setRelPos(m_updateAvailableButton->getPos().x, m_osu->getScreenHeight() - m_steamWorkshopButton->getSize().y - 4);
+	m_steamWorkshopButton->setRelPos(m_updateAvailableButton->getPos().x, m_osu->getScreenHeight() - m_steamWorkshopButton->getSize().y - 4 * dpiScale);
 
-	m_githubButton->setSize(100, 50);
-	m_githubButton->setRelPos(5, m_osu->getScreenHeight()/2.0f - m_githubButton->getSize().y/2.0f);
+	m_githubButton->setSize(100 * dpiScale, 50 * dpiScale);
+	m_githubButton->setRelPos(5 * dpiScale, m_osu->getScreenHeight()/2.0f - m_githubButton->getSize().y/2.0f);
 
-	m_versionButton->setSizeToContent(8, 8);
+	m_versionButton->onResized(); // HACKHACK: framework, setSizeToContent() does not update string metrics
+	m_versionButton->setSizeToContent(8 * dpiScale, 8 * dpiScale);
 	m_versionButton->setRelPos(-1, m_osu->getScreenSize().y - m_versionButton->getSize().y);
 
 	m_mainButton->setRelPos(m_vCenter - m_vSize/2.0f - Vector2(m_fCenterOffsetAnim, 0.0f));
@@ -882,6 +886,7 @@ void OsuMainMenu::updateLayout()
 	{
 		curY += (i > 0 ? menuElementHeight+menuElementPadding : 0.0f);
 
+		m_menuElements[i]->onResized(); // HACKHACK: framework, setSize() does not update string metrics
 		m_menuElements[i]->setRelPos(m_mainButton->getRelPos().x + m_mainButton->getSize().x*offsetPercent - menuElementExtraWidth*offsetPercent + menuElementExtraWidth*(1.0f - offsetPercent), curY);
 		m_menuElements[i]->setSize(m_mainButton->getSize().x + menuElementExtraWidth*offsetPercent - 2.0f*menuElementExtraWidth*(1.0f - offsetPercent), menuElementHeight);
 		m_menuElements[i]->setTextColor(COLORf(offsetPercent, 1.0f, 1.0f, 1.0f));

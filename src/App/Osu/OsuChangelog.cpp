@@ -34,279 +34,318 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 
 	std::vector<CHANGELOG> changelogs;
 
-	CHANGELOG alpha29Steam;
-	alpha29Steam.title = UString::format("30.0 (Steam VR Version, %s, %s)", __DATE__, __TIME__);
-	alpha29Steam.changes.push_back("- Added Steam Workshop support (for skins)");
-	alpha29Steam.changes.push_back("- Added option \"Cursor ripples\" (Options > Input > Mouse)");
-	alpha29Steam.changes.push_back("- Added skinning support for menu-background and cursor-ripple");
-	alpha29Steam.changes.push_back("- Added support for using custom BeatmapDirectory even without an osu installation/database");
-	alpha29Steam.changes.push_back("- Added ConVars: osu_cursor_ripple_duration/alpha/additive/anim_start_scale/end/fadeout_delay/tint_r/g/b");
-	alpha29Steam.changes.push_back("- General engine stability improvements");
-	alpha29Steam.changes.push_back("- Fixed AR/OD lock buttons being ignored by Timewarp experimental mod");
-	alpha29Steam.changes.push_back("- Fixed custom ConVars being ignored in cfg: osu_mods, osu_speed/ar/od/cs_override");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("- Added lock buttons to AR/OD override sliders (force constant AR/OD even with speed multiplier)");
-	alpha29Steam.changes.push_back("- Added reset buttons to all options settings");
-	alpha29Steam.changes.push_back("- Added ConVars: osu_slider_reverse_arrow_alpha_multiplier, snd_speed_compensate_pitch");
-	alpha29Steam.changes.push_back("- Fixed BPM statistics overlay only applying speed multiplier after music is loaded");
-	alpha29Steam.changes.push_back("- Windows: Fixed random stuck cursor on engine startup if launched in background (invalid focus)");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("- Merged FPoSu (Options > FPoSu)");
-	alpha29Steam.changes.push_back("- FPoSu is a real 3D first person gamemode, contrary to the 2D experimental mod \"First Person\"");
-	alpha29Steam.changes.push_back("- Thanks to Colin Brook (aka SnakeModule on GitHub)");
-	alpha29Steam.changes.push_back("- FPoSu: Moved \"Playfield Edge Distance\" from Mod Selector to Options > FPoSu > \"Distance\"");
-	alpha29Steam.changes.push_back("- FPoSu: Made mouse movement handling independent from regular osu sensitivity settings");
-	alpha29Steam.changes.push_back("- FPoSu: Made backgroundcube.png skinnable");
-	alpha29Steam.changes.push_back("- FPoSu: Added tablet support (Options > FPoSu > \"Tablet/Absolute Mode\")");
-	alpha29Steam.changes.push_back("- FPoSu: Added auto/pilot support");
-	alpha29Steam.changes.push_back("- FPoSu: Added ConVars: fposu_cube_tint_r, fposu_cube_tint_g, fposu_cube_tint_b");
-	alpha29Steam.changes.push_back("- FPoSu: Added letterboxing support");
-	alpha29Steam.changes.push_back("- FPoSu: Fixed mouse position getting set while engine is in background");
-	alpha29Steam.changes.push_back("- Added support for searching in collections");
-	alpha29Steam.changes.push_back("- Added support for changing grouping/sorting while in active search");
-	alpha29Steam.changes.push_back("- Added ConVar: osu_hud_statistics_pp_decimal_places");
-	alpha29Steam.changes.push_back("- Fixed boss key not pausing music");
-	alpha29Steam.changes.push_back("- Fixed another ArithmeticException in main menu (Aspire, Acid Rain - Covetous Beaver)");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("- NOTE: New stars/pp are accurate with an average delta of ~0.1% or ~0.003 stars, except for very few Aspire/2B maps with ~15%");
-	alpha29Steam.changes.push_back("- Updated star algorithm to respect slider curves/repeats/ticks/tails and stacking (7)");
-	alpha29Steam.changes.push_back("- Updated star algorithm (Xexxar) (6), see https://osu.ppy.sh/home/news/2019-02-05-new-changes-to-star-rating-performance-points");
-	alpha29Steam.changes.push_back("- Updated pp algorithm (5), see https://github.com/ppy/osu-performance/pull/74/");
-	alpha29Steam.changes.push_back("- Updated beatmap parser to allow bullshit sliders (e.g. Aleph-0)");
-	alpha29Steam.changes.push_back("- Updated search behaviour to additively match words separated by spaces, instead of the entire phrase");
-	alpha29Steam.changes.push_back("- Added option \"Keep Aspect Ratio\" (Options > Graphics > Layout)");
-	alpha29Steam.changes.push_back("- Added hotkey: CTRL + Click to play with auto");
-	alpha29Steam.changes.push_back("- Added hotkey: CTRL + ENTER to play with auto");
-	alpha29Steam.changes.push_back("- Added hotkey: CTRL + A to toggle auto in songbrowser");
-	alpha29Steam.changes.push_back("- Added unbind buttons to keybinds");
-	alpha29Steam.changes.push_back("- Show <artist> - <name> [<diff>] in window title while playing");
-	alpha29Steam.changes.push_back("- Draw up to 10 background stars on song diff buttons");
-	alpha29Steam.changes.push_back("- Default to 0pp in ranking screen for incomplete scores due to scrubbing");
-	alpha29Steam.changes.push_back("- Windows: Fixed touchscreen handling being broken");
-	alpha29Steam.changes.push_back("- Fixed rare override slider reset crash");
-	alpha29Steam.changes.push_back("- Fixed lv only counting top pp scores");
-	alpha29Steam.changes.push_back("- Fixed top rank score button blinking animation not resetting");
-	alpha29Steam.changes.push_back("- Fixed top left info label in songbrowser not updating 0 stars after slow calculation finishes");
-	alpha29Steam.changes.push_back("- Fixed star calculation not prioritizing active selected beatmap if background image loading is disabled");
-	alpha29Steam.changes.push_back("- Fixed potential crashes and data mangling due to race conditions for slow background image/star loading");
-	alpha29Steam.changes.push_back("- Fixed changing audio output device breaking default skin sounds");
-	alpha29Steam.changes.push_back("- Fixed search not working as expected after behaviour change");
-	alpha29Steam.changes.push_back("- Added ConVars: osu_stars_xexxar_angles_sliders, osu_stars_stacking, osu_ui_top_ranks_max");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("- Added \"Top Ranks\"/\"Best Performance\" screen showing all weighted scores (Songbrowser > User > Top Ranks)");
-	alpha29Steam.changes.push_back("- Added option \"Include Relax/Autopilot for total weighted pp/acc\" (Options > General > Player (Name))");
-	alpha29Steam.changes.push_back("- Added option \"Show pp instead of score in scorebrowser\" (Options > General > Player (Name))");
-	alpha29Steam.changes.push_back("- Added option \"SuddenDeath restart on miss\" (Options > Gameplay > General)");
-	alpha29Steam.changes.push_back("- Added ConVars: osu_relax_offset, osu_user_draw_pp, osu_user_draw_accuracy, osu_user_draw_level, osu_user_draw_level_bar");
-	alpha29Steam.changes.push_back("- Scale top left info label in songbrowser to screen resolution");
-	alpha29Steam.changes.push_back("- McOsu scores will now show pp instead of score by default (Options > General > Player (Name))");
-	alpha29Steam.changes.push_back("- Updated pp algorithm (4), see https://github.com/ppy/osu-performance/pull/76/");
-	alpha29Steam.changes.push_back("- Updated pp algorithm (3), see https://github.com/ppy/osu-performance/pull/72/");
-	alpha29Steam.changes.push_back("- Fixed total weighted pp counting multiple scores on the same diff");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("- Added rich presence support (Discord + Steam)");
-	alpha29Steam.changes.push_back("- Added user profile info + switcher to songbrowser (total weighted pp/acc/lv)");
-	alpha29Steam.changes.push_back("- Added option \"Rich Presence\" (Options > Online > Integration)");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("- Added option \"Automatic Cursor Size\" (Options > Skin > Skin)");
-	alpha29Steam.changes.push_back("- Added letterboxing option \"Horizontal position\" (Options > Graphics > Layout)");
-	alpha29Steam.changes.push_back("- Added letterboxing option \"Vertical position\" (Options > Graphics > Layout)");
-	alpha29Steam.changes.push_back("- Fade in songbrowser thumbnails");
-	alpha29Steam.changes.push_back("- Fade in songbrowser background");
-	alpha29Steam.changes.push_back("- Fade out background after load");
-	alpha29Steam.changes.push_back("- Fixed cursortrail being too small for some skins (if cursor@2x with non-@2x cursortrail)");
-	alpha29Steam.changes.push_back("- Fixed missing 24 ms offset for beatmaps version < 5");
-	alpha29Steam.changes.push_back("- Added ConVars: osu_songbrowser_thumbnail_fade_in_duration, osu_songbrowser_background_fade_in_duration, osu_background_fade_after_load");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("- Added key overlay");
-	alpha29Steam.changes.push_back("- Improved frame pacing");
-	alpha29Steam.changes.push_back("- Added new experimental mod \"Reverse Sliders\"");
-	alpha29Steam.changes.push_back("- Added mouse sidebutton support (mouse4, mouse5)");
-	alpha29Steam.changes.push_back("- Added detail info tooltip (approach time, hit timings, etc.) when hovering over diff info label in songbrowser (CS AR etc.)");
-	alpha29Steam.changes.push_back("- Updated diff info label in songbrowser to respect mods/overrides");
-	alpha29Steam.changes.push_back("- Updated Score v1 calculation to be more accurate");
-	alpha29Steam.changes.push_back("- Fixed object count always being 0 without osu! database");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("- Fixed slider end/tail judgements being too strict and not matching osu! exactly");
-	alpha29Steam.changes.push_back("- Added ConVar: osu_slider_end_inside_check_offset");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("- Added positional audio for hitsounds");
-	alpha29Steam.changes.push_back("- Added Score V2 keybind (defaults to 'B')");
-	alpha29Steam.changes.push_back("- Updated combo color handling to match osu!");
-	alpha29Steam.changes.push_back("- Added ConVars: osu_sound_panning, osu_sound_panning_multiplier, osu_approachtime_min, osu_approachtime_mid, osu_approachtime_max");
-	alpha29Steam.changes.push_back("- Fixed local score tooltips not applying speed multiplier to AR/OD");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("- Added local scores");
-	alpha29Steam.changes.push_back("- Added osu! scores.db support (read-only)");
-	alpha29Steam.changes.push_back("- Allow options menu anywhere (CTRL + O)");
-	alpha29Steam.changes.push_back("- VR: Added cursortrails, New cursor");
-	alpha29Steam.changes.push_back("- VR: Allow 0 meter approach distance");
-	alpha29Steam.changes.push_back("- VR: Added option \"Draw VR Approach Circles\" (Options > Virtual Reality > Gameplay)");
-	alpha29Steam.changes.push_back("- VR: Added option \"Draw VR Approach Circles on top\" (Options > Virtual Reality > Gameplay)");
-	alpha29Steam.changes.push_back("- VR: Added option \"Draw VR Approach Circles on Playfield\" (Options > Virtual Reality > Gameplay)");
-	alpha29Steam.changes.push_back("- Show enabled experimental mods on ranking screen");
-	alpha29Steam.changes.push_back("- Added scorebar-bg skin element support (usually abused for playfield background)");
-	alpha29Steam.changes.push_back("- Added option \"Draw scorebar-bg\" (Options > Gameplay > Playfield)");
-	alpha29Steam.changes.push_back("- Added option \"Legacy Slider Renderer\" (Options > Graphics > Detail Settings)");
-	alpha29Steam.changes.push_back("- Added option \"Mipmaps\" (Options > Graphics > Detail Settings)");
-	alpha29Steam.changes.push_back("- Added option \"Load osu! scores.db\" (Options > General > osu!folder)");
-	alpha29Steam.changes.push_back("- Added notification during active background star calculation in songbrowser");
-	alpha29Steam.changes.push_back("- Removed CTRL + ALT hardcoded hotkeys for scrubbing timeline");
-	alpha29Steam.changes.push_back("- General engine performance and stability improvements");
-	alpha29Steam.changes.push_back("- Fixed very old beatmaps not loading hitobjects which had float coordinates");
-	alpha29Steam.changes.push_back("- (see https://github.com/ppy/osu/pull/3072)");
-	alpha29Steam.changes.push_back("- Fixed scroll jerks/jumping randomly on all scrollviews");
-	alpha29Steam.changes.push_back("- Fixed random crash on shutdown due to double delete (OsuBeatmap::m_music)");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("- Updated pp algorithm (2), see https://github.com/ppy/osu-performance/pull/47");
-	alpha29Steam.changes.push_back("- Updated pp algorithm (1), see https://github.com/ppy/osu-performance/pull/42");
-	alpha29Steam.changes.push_back("- Removed number keys being hardcoded keybinds for pause menu (1,2,3)");
-	alpha29Steam.changes.push_back("- Fixed smooth cursortrail not expanding with animation");
-	alpha29Steam.changes.push_back("- Fixed sample volumes being reset when tabbing out or losing window focus");
-	alpha29Steam.changes.push_back("- VR: Fixed reverse arrows not being animated");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("- Improved multi-monitor handling: Remember game monitor, Fullscreen to closest monitor");
-	alpha29Steam.changes.push_back("- Don't auto minimize window on focus lost if \"Borderless Windowed Fullscreen\" is enabled");
-	alpha29Steam.changes.push_back("- Added ConVars: monitor, minimize_on_focus_lost_if_borderless_windowed_fullscreen");
-	alpha29Steam.changes.push_back("- Windows: Disable IME by default");
-	alpha29Steam.changes.push_back("- Linux: Window is no longer resizable, added support for setWindowResizable()");
-	alpha29Steam.changes.push_back("- Linux: Disabling fullscreen no longer causes annoying oversized window");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("- Reworked Mouse/Tablet input handling");
-	alpha29Steam.changes.push_back("- Fixed cursor jerking to bottom right corner when accidentally wiggling mouse while using tablet");
-	alpha29Steam.changes.push_back("- Fixed letterboxing cursor behavior (clipping/confining)");
-	alpha29Steam.changes.push_back("- Fixed desynced slider ticks (e.g. Der Wald [Maze], first three sliders)");
-	alpha29Steam.changes.push_back("- Linux: Fixed crash when reloading osu database beatmaps via F5 in songbrowser");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("- Added Score v2 mod");
-	alpha29Steam.changes.push_back("- Added search support to options menu");
-	alpha29Steam.changes.push_back("- Added proper volume overlay HUD with individual sliders for master/effects/music");
-	alpha29Steam.changes.push_back("- Added/Fixed ConVars: osu_slider_followcircle_size_multiplier, osu_cursor_trail_alpha,");
-	alpha29Steam.changes.push_back("                                     osu_hud_volume_duration, osu_hud_volume_size_multiplier");
-	alpha29Steam.changes.push_back("- Fixed entering search text while binding keys in options menu");
-	alpha29Steam.changes.push_back("- Linux: Updated BASS audio library to version 2.4.13 (19/12/2017)");
-	alpha29Steam.changes.push_back("- Linux: Added support for confine cursor (i.e. Options > Input > Mouse > Confine Cursor, works now)");
-	alpha29Steam.changes.push_back("- Linux: Added support for key names (i.e. Options > Input > Keyboard, key names instead of numbers)");
-	alpha29Steam.changes.push_back("- Linux: Added support for focus changes (i.e. Options > General > Window > Pause on Focus Loss, fps_max_background)");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("- Added smooth cursortrail support");
-	alpha29Steam.changes.push_back("- Added option \"Force Smooth CursorTrail\" (Options > Skin)");
-	alpha29Steam.changes.push_back("- Added sliderbreak counter to statistics overlay (Options > HUD > \"Draw Stats: SliderBreaks\")");
-	alpha29Steam.changes.push_back("- Star ratings in songbrowser for everyone (even without osu!.db database)");
-	alpha29Steam.changes.push_back("- VR: Added layout lock checkbox (avoid accidentally messing up your layout, especially for Oculus players)");
-	alpha29Steam.changes.push_back("- Remember selected sorting type in songbrowser");
-	alpha29Steam.changes.push_back("- Remember volume settings if changed outside options");
-	alpha29Steam.changes.push_back("- Linux: Fixed number hotkeys not working in mod selector");
-	alpha29Steam.changes.push_back("- Minor performance improvements (ignore empty transparent skin images)");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("- Added new experimental mod \"Mafham\"");
-	alpha29Steam.changes.push_back("- Added a few ConVars (osu_drain_*, osu_slider_reverse_arrow_animated)");
-	alpha29Steam.changes.push_back("- Round stars to 1 decimal place for intelligent search (e.g. \"stars=6\")");
-	alpha29Steam.changes.push_back("- VR: Added slider sliding vibrations / haptic feedback (Options > Virtual Reality > Haptic Feedback)");
-	alpha29Steam.changes.push_back("- Smoother snaking sliders");
-	alpha29Steam.changes.push_back("- Switched to osu!lazer slider body fadeout style for snaking out sliders (aka shrinking sliders)");
-	alpha29Steam.changes.push_back("- Fixed strange sliderstartcircle hitboxes on some 2007 maps");
-	alpha29Steam.changes.push_back("- Fixed stacks not being recalculated when changing CS Override while playing");
-	alpha29Steam.changes.push_back("- Fixed sliderbody size not updating instantly when changing CS Override slider with arrow keys");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("- Added multiple background image drawing toggles (Options > Gameplay > General)");
-	alpha29Steam.changes.push_back("- Added partial support for \"BeatmapDirectory\" parameter");
-	alpha29Steam.changes.push_back("- Added VR ConVars: osu_vr_controller_offset_x, osu_vr_controller_offset_y, osu_vr_controller_offset_z");
-	alpha29Steam.changes.push_back("- Added description tooltips to some options");
-	alpha29Steam.changes.push_back("- Windows: Added hacky \"Borderless Windowed Fullscreen\" mode (Options > Graphics > Layout)");
-	alpha29Steam.changes.push_back("- Windows: Switched to osu!'s old 2009 BASS audio library dlls to fix some slightly desynced mp3s");
-	alpha29Steam.changes.push_back("- Windows: Stream music files instead of loading them entirely (necessary for above; faster load times)");
-	alpha29Steam.changes.push_back("- Fixed minor visual inaccuracies (approach circle fade-in duration, hidden slider body fading behaviour)");
-	alpha29Steam.changes.push_back("- Fixed skin versions lower than 2.2 drawing thumbnails in songbrowser, even though they shouldn't");
-	alpha29Steam.changes.push_back("- Fixed statistics overlay layout in combination with the target practice mod");
-	alpha29Steam.changes.push_back("- Fixed osu_mod_wobble2 sliders");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("- Fixed timingpoint sample type and sample volume inaccuracies per-hitobject (osu_timingpoints_force, osu_timingpoints_offset)");
-	alpha29Steam.changes.push_back("- Fixed missing sliderbreaks when the slider duration is shorter than the miss timing window of the sliderstartcircle");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("- Added Daycore mod");
-	alpha29Steam.changes.push_back("- Added option \"Higher Quality Sliders\", Options > Graphics > Detail Settings");
-	alpha29Steam.changes.push_back("- Added current key labels to key bindings (Options > Input > Keyboard)");
-	alpha29Steam.changes.push_back("- Added skin support for pause-overlay");
-	alpha29Steam.changes.push_back("- Renamed and moved \"Shrinking Sliders\" to \"Snaking out sliders\" (Options > Graphics > Detail Settings)");
-	alpha29Steam.changes.push_back("- Fixed main menu crashing on some aspire timingpoints due to division by zero");
-	alpha29Steam.changes.push_back("- Fixed missing cursor texture on \"Click on the orange cursor to continue play!\"");
-	alpha29Steam.changes.push_back("- Fixed incorrect hitcircle number skin overlaps");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("- Added preliminary Touchscreen support for Windows 8 and higher (Windows 8.1, Windows 10, etc.)");
-	alpha29Steam.changes.push_back("- Fixed very long beatmaps not working (mostly random marathons with big MP3s, more than ~15 minutes)");
-	alpha29Steam.changes.push_back("- Fixed slider vertexbuffers for ConVars: osu_playfield_rotation, osu_playfield_stretch_x, osu_playfield_stretch_y");
-	alpha29Steam.changes.push_back("- The drawn playfield border now also correctly reflects osu_playfield_stretch_x/y");
-	alpha29Steam.changes.push_back("- VR: Fixed SteamVR SuperSampling causing too large submission textures and breaking everything");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("- Lowered minimum Mouse Sensitivity slider value from 0.4 to 0.1 (Options > Input > Mouse)");
-	alpha29Steam.changes.push_back("- Made \"play-skip\" skin element animatable");
-	alpha29Steam.changes.push_back("- Fixed ranking screen tooltip rounding CS/AR/OD/HP >= 10 incorrectly");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("- Switched slider bezier curve generator to official algorithm (fixes Aspire loading \"freezes\", mostly)");
-	alpha29Steam.changes.push_back("- More stuff in ranking screen tooltip (stars, speed, CS/AR/OD/HP)");
-	alpha29Steam.changes.push_back("- Round pp up from 0.5 (727.49 => 727; 727.5 => 728)");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("- Added option \"Use skin's sound samples\", Options > Skin > Skin");
-	alpha29Steam.changes.push_back("- Added 2 tablet options, \"Ignore Sensitivity\" and \"Windows Ink Workaround\" for problematic tablets/drivers");
-	alpha29Steam.changes.push_back("- Fixed sample set number being used for setting the sample type (hitsounds)");
-	alpha29Steam.changes.push_back("- Fixed invisible selection-*.png skin images with 0 or very small size scaling the *-over.png way too big (Mods + Random)");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("- Thanks to Francesco149 for letting me use his implementation of Tom94's pp algorithm! (https://github.com/Francesco149/oppai/)");
-	alpha29Steam.changes.push_back("- Added pp to ranking/results screen");
-	alpha29Steam.changes.push_back("- Added live pp counter to statistics overlay (Options > HUD > \"Draw Stats: pp\")");
-	alpha29Steam.changes.push_back("- Added new experimental mods \"Full Alternate\", \"No 50s\" and \"No 100s no 50s\" (thanks to Jason Foley for the last two, JTF195 on github)");
-	alpha29Steam.changes.push_back("- Clamped Speed/BPM override sliders to the minimum possible 0.05x multiplier (no more negative zero)");
-	alpha29Steam.changes.push_back("- Unclamped visual AR/CS/HP/OD values in mod selection screen (e.g. negative OD due to EZHT)");
-	alpha29Steam.changes.push_back("- Fixed Auto clicking circles too early directly after loading finished (at time 0)");
-	alpha29Steam.changes.push_back("- Fixed ALT+TAB and general focus loss while starting a beatmap causing it to stop with a D rank and 100% acc");
-	alpha29Steam.changes.push_back("- Fixed \"CursorCentre: 0\" skin.ini parameter not working as expected");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("- Fixed performance optimization partially breaking 2B/Aspire beatmaps (invisible sliders)");
-	alpha29Steam.changes.push_back("- Fixed accuracy calculation dividing by zero if beatmap starts with a slider");
-	alpha29Steam.changes.push_back("- Fixed letterboxing and non-native resolutions not being consistent after restarting");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("- Major performance optimizations");
-	alpha29Steam.changes.push_back("- Switched score calculation to 64-bit. The maximum score is now 18446744073709551615");
-	alpha29Steam.changes.push_back("- Fixed spinning spinners after dying in VR");
-	alpha29Steam.changes.push_back("- Fixed Auto failing impossible spinners");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("- Added \"OS TabletPC Support\" (Options > Input > Tablet)");
-	alpha29Steam.changes.push_back("- Fixed being able to spin spinners with relax while paused");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("- Added support for animated skins");
-	alpha29Steam.changes.push_back("- Added active mods to ranking/results screen");
-	alpha29Steam.changes.push_back("- Added avg error to Unstable Rate tooltip");
-	alpha29Steam.changes.push_back("- Added support for HitCirclePrefix in skin.ini");
-	alpha29Steam.changes.push_back("- Converted hardcoded hitwindow timing values into ConVars (osu_hitwindow_...)");
-	alpha29Steam.changes.push_back("- Fixed random vertexbuffer corruptions with shrinking sliders enabled (white flashes/blocks/triangles/lines, distorted slider bodies)");
-	alpha29Steam.changes.push_back("- Fixed animated skin elements of the default skin incorrectly overriding user skins");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("- Added preliminary primitive sorting options to songbrowser (Artist, BPM, Creator, Date Added, Difficulty, Length, Title)");
-	alpha29Steam.changes.push_back("- Slightly improved right-click absolute scrolling range in songbrowser");
-	alpha29Steam.changes.push_back("- Fixed negative slider durations causing early gameovers (Aspire...)");
-	alpha29Steam.changes.push_back("- Fixed incorrect music lengths while searching (-1 from db caused 2^32-1 due to unsigned integer conversion)");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("- Added VR head model to spectator mode");
-	alpha29Steam.changes.push_back("- Added ConVars vr_head_rendermodel_name, vr_head_rendermodel_scale, vr_head_rendermodel_brightness");
-	alpha29Steam.changes.push_back("- Added option to draw 300s (bottom of Options, last one)");
-	alpha29Steam.changes.push_back("- Made slider parsing & curve generation more robust against abuse, long loading times are not fixed though (Aspire...)");
-	alpha29Steam.changes.push_back("- Fixed experimental mod \"Minimize\" not working with CS Override as expected");
-	alpha29Steam.changes.push_back("- Fixed seeking/scrubbing not working properly while early waiting (green progressbar)");
-	alpha29Steam.changes.push_back("");
-	alpha29Steam.changes.push_back("- Fixed being able to continue spinning spinners while paused");
-	alpha29Steam.changes.push_back("- Fixed random invisible songbuttons in songbrowser on ultrawide resolutions (e.g. 21:9)");
-	changelogs.push_back(alpha29Steam);
+	CHANGELOG alpha301;
+	alpha301.title = UString::format("30.1 (%s, %s)", __DATE__, __TIME__);
+	alpha301.changes.push_back("- Added proper support for HiDPI displays (scaling)");
+	alpha301.changes.push_back("- Added option \"UI Scale\" (Options > Graphics > UI Scaling)");
+	alpha301.changes.push_back("- Added option \"DPI Scaling\" (Options > Graphics > UI Scaling)");
+	alpha301.changes.push_back("- Added context menu for deleting scores in \"Top Ranks\" screen");
+	alpha301.changes.push_back("- Added sorting options for local scores (sort by pp, accuracy, combo, date)");
+	alpha301.changes.push_back("- FPoSu: Added option \"Vertical FOV\" (Options > FPoSu > General)");
+	alpha301.changes.push_back("- Draw breaks in scrubbing timeline");
+	alpha301.changes.push_back("- Made scrubbing smoother by only seeking if the cursor position actually changed");
+	alpha301.changes.push_back("- Windows: Added option \"High Priority\" (Options > Graphics > Renderer)");
+	alpha301.changes.push_back("- Windows: Allow windowed resolutions to overshoot window borders (offscreen)");
+	alpha301.changes.push_back("- Added ConVars: osu_followpoints_connect_combos, osu_scrubbing_smooth");
+	alpha301.changes.push_back("- VR: Removed LIV support (for now)");
+	alpha301.changes.push_back("- Allow loading incorrect skin.ini \"[General]\" section props before section start");
+	alpha301.changes.push_back("- FPoSu: Fixed rare pause menu button jitter/unclickable");
+	alpha301.changes.push_back("- Windows: Fixed toggling fullscreen sometimes causing weird windowed resolutions");
+	changelogs.push_back(alpha301);
+
+	CHANGELOG alpha30;
+	alpha30.title =  "30.0 (13.06.2019)";
+	alpha30.changes.push_back("- Added Steam Workshop support (for skins)");
+	alpha30.changes.push_back("- Added option \"Cursor ripples\" (Options > Input > Mouse)");
+	alpha30.changes.push_back("- Added skinning support for menu-background and cursor-ripple");
+	alpha30.changes.push_back("- Added support for using custom BeatmapDirectory even without an osu installation/database");
+	alpha30.changes.push_back("- Added ConVars: osu_cursor_ripple_duration/alpha/additive/anim_start_scale/end/fadeout_delay/tint_r/g/b");
+	alpha30.changes.push_back("- General engine stability improvements");
+	alpha30.changes.push_back("- Fixed AR/OD lock buttons being ignored by Timewarp experimental mod");
+	alpha30.changes.push_back("- Fixed custom ConVars being ignored in cfg: osu_mods, osu_speed/ar/od/cs_override");
+	changelogs.push_back(alpha30);
+
+	CHANGELOG alpha295;
+	alpha295.title =  "29.5 (26.05.2019)";
+	alpha295.changes.push_back("- Added lock buttons to AR/OD override sliders (force constant AR/OD even with speed multiplier)");
+	alpha295.changes.push_back("- Added reset buttons to all options settings");
+	alpha295.changes.push_back("- Added ConVars: osu_slider_reverse_arrow_alpha_multiplier, snd_speed_compensate_pitch");
+	alpha295.changes.push_back("- Fixed BPM statistics overlay only applying speed multiplier after music is loaded");
+	alpha295.changes.push_back("- Windows: Fixed random stuck cursor on engine startup if launched in background (invalid focus)");
+	changelogs.push_back(alpha295);
+
+	CHANGELOG alpha294;
+	alpha294.title =  "29.4 (14.03.2019)";
+	alpha294.changes.push_back("- Merged FPoSu (Options > FPoSu)");
+	alpha294.changes.push_back("- FPoSu is a real 3D first person gamemode, contrary to the 2D experimental mod \"First Person\"");
+	alpha294.changes.push_back("- Thanks to Colin Brook (aka SnakeModule on GitHub)");
+	alpha294.changes.push_back("- FPoSu: Moved \"Playfield Edge Distance\" from Mod Selector to Options > FPoSu > \"Distance\"");
+	alpha294.changes.push_back("- FPoSu: Made mouse movement handling independent from regular osu sensitivity settings");
+	alpha294.changes.push_back("- FPoSu: Made backgroundcube.png skinnable");
+	alpha294.changes.push_back("- FPoSu: Added tablet support (Options > FPoSu > \"Tablet/Absolute Mode\")");
+	alpha294.changes.push_back("- FPoSu: Added auto/pilot support");
+	alpha294.changes.push_back("- FPoSu: Added ConVars: fposu_cube_tint_r, fposu_cube_tint_g, fposu_cube_tint_b");
+	alpha294.changes.push_back("- FPoSu: Added letterboxing support");
+	alpha294.changes.push_back("- FPoSu: Fixed mouse position getting set while engine is in background");
+	alpha294.changes.push_back("- Added support for searching in collections");
+	alpha294.changes.push_back("- Added support for changing grouping/sorting while in active search");
+	alpha294.changes.push_back("- Added ConVar: osu_hud_statistics_pp_decimal_places");
+	alpha294.changes.push_back("- Fixed boss key not pausing music");
+	alpha294.changes.push_back("- Fixed another ArithmeticException in main menu (Aspire, Acid Rain - Covetous Beaver)");
+	changelogs.push_back(alpha294);
+
+	CHANGELOG alpha293;
+	alpha293.title = "29.3 (15.02.2019)";
+	alpha293.changes.push_back("- NOTE: New stars/pp are accurate with an average delta of ~0.1% or ~0.003 stars, except for very few Aspire/2B maps with ~15%");
+	alpha293.changes.push_back("- Updated star algorithm to respect slider curves/repeats/ticks/tails and stacking (7)");
+	alpha293.changes.push_back("- Updated star algorithm (Xexxar) (6), see https://osu.ppy.sh/home/news/2019-02-05-new-changes-to-star-rating-performance-points");
+	alpha293.changes.push_back("- Updated pp algorithm (5), see https://github.com/ppy/osu-performance/pull/74/");
+	alpha293.changes.push_back("- Updated beatmap parser to allow bullshit sliders (e.g. Aleph-0)");
+	alpha293.changes.push_back("- Updated search behaviour to additively match words separated by spaces, instead of the entire phrase");
+	alpha293.changes.push_back("- Added option \"Keep Aspect Ratio\" (Options > Graphics > Layout)");
+	alpha293.changes.push_back("- Added hotkey: CTRL + Click to play with auto");
+	alpha293.changes.push_back("- Added hotkey: CTRL + ENTER to play with auto");
+	alpha293.changes.push_back("- Added hotkey: CTRL + A to toggle auto in songbrowser");
+	alpha293.changes.push_back("- Added unbind buttons to keybinds");
+	alpha293.changes.push_back("- Show <artist> - <name> [<diff>] in window title while playing");
+	alpha293.changes.push_back("- Draw up to 10 background stars on song diff buttons");
+	alpha293.changes.push_back("- Default to 0pp in ranking screen for incomplete scores due to scrubbing");
+	alpha293.changes.push_back("- Windows: Fixed touchscreen handling being broken");
+	alpha293.changes.push_back("- Fixed rare override slider reset crash");
+	alpha293.changes.push_back("- Fixed lv only counting top pp scores");
+	alpha293.changes.push_back("- Fixed top rank score button blinking animation not resetting");
+	alpha293.changes.push_back("- Fixed top left info label in songbrowser not updating 0 stars after slow calculation finishes");
+	alpha293.changes.push_back("- Fixed star calculation not prioritizing active selected beatmap if background image loading is disabled");
+	alpha293.changes.push_back("- Fixed potential crashes and data mangling due to race conditions for slow background image/star loading");
+	alpha293.changes.push_back("- Fixed changing audio output device breaking default skin sounds");
+	alpha293.changes.push_back("- Fixed search not working as expected after behaviour change");
+	alpha293.changes.push_back("- Added ConVars: osu_stars_xexxar_angles_sliders, osu_stars_stacking, osu_ui_top_ranks_max");
+	changelogs.push_back(alpha293);
+
+	CHANGELOG alpha292;
+	alpha292.title = "29.2 (06.01.2019)";
+	alpha292.changes.push_back("- Added \"Top Ranks\"/\"Best Performance\" screen showing all weighted scores (Songbrowser > User > Top Ranks)");
+	alpha292.changes.push_back("- Added option \"Include Relax/Autopilot for total weighted pp/acc\" (Options > General > Player (Name))");
+	alpha292.changes.push_back("- Added option \"Show pp instead of score in scorebrowser\" (Options > General > Player (Name))");
+	alpha292.changes.push_back("- Added option \"SuddenDeath restart on miss\" (Options > Gameplay > General)");
+	alpha292.changes.push_back("- Added ConVars: osu_relax_offset, osu_user_draw_pp, osu_user_draw_accuracy, osu_user_draw_level, osu_user_draw_level_bar");
+	alpha292.changes.push_back("- Scale top left info label in songbrowser to screen resolution");
+	alpha292.changes.push_back("- McOsu scores will now show pp instead of score by default (Options > General > Player (Name))");
+	alpha292.changes.push_back("- Updated pp algorithm (4), see https://github.com/ppy/osu-performance/pull/76/");
+	alpha292.changes.push_back("- Updated pp algorithm (3), see https://github.com/ppy/osu-performance/pull/72/");
+	alpha292.changes.push_back("- Fixed total weighted pp counting multiple scores on the same diff");
+	changelogs.push_back(alpha292);
+
+	/*
+	CHANGELOG alpha291;
+	alpha291.title = "29.1 (31.12.2018)";
+	alpha291.changes.push_back("- Added rich presence support (Discord + Steam)");
+	alpha291.changes.push_back("- Added user profile info + switcher to songbrowser (total weighted pp/acc/lv)");
+	alpha291.changes.push_back("- Added option \"Rich Presence\" (Options > Online > Integration)");
+	alpha291.changes.push_back("- Added option \"Automatic Cursor Size\" (Options > Skin > Skin)");
+	alpha291.changes.push_back("- Added letterboxing option \"Horizontal position\" (Options > Graphics > Layout)");
+	alpha291.changes.push_back("- Added letterboxing option \"Vertical position\" (Options > Graphics > Layout)");
+	alpha291.changes.push_back("- Added positional audio for hitsounds");
+	alpha291.changes.push_back("- Added Score V2 keybind (defaults to 'B')");
+	alpha291.changes.push_back("- Added new experimental mod \"Reverse Sliders\"");
+	alpha291.changes.push_back("- Added mouse sidebutton support (mouse4, mouse5)");
+	alpha291.changes.push_back("- Added detail info tooltip (approach time, hit timings, etc.) when hovering over diff info label in songbrowser (CS AR etc.)");
+	alpha291.changes.push_back("- Added ConVar: osu_slider_end_inside_check_offset");
+	alpha291.changes.push_back("- Added ConVars: osu_sound_panning, osu_sound_panning_multiplier, osu_approachtime_min, osu_approachtime_mid, osu_approachtime_max");
+	alpha291.changes.push_back("- Added ConVars: osu_songbrowser_thumbnail_fade_in_duration, osu_songbrowser_background_fade_in_duration, osu_background_fade_after_load");
+	alpha291.changes.push_back("- Added key overlay");
+	alpha291.changes.push_back("- Updated combo color handling to match osu!");
+	alpha291.changes.push_back("- Fade in songbrowser thumbnails");
+	alpha291.changes.push_back("- Fade in songbrowser background");
+	alpha291.changes.push_back("- Fade out background after load");
+	alpha291.changes.push_back("- Updated diff info label in songbrowser to respect mods/overrides");
+	alpha291.changes.push_back("- Updated Score v1 calculation to be more accurate");
+	alpha291.changes.push_back("- Improved frame pacing");
+	alpha291.changes.push_back("- Fixed object count always being 0 without osu! database");
+	alpha291.changes.push_back("- Fixed slider end/tail judgements being too strict and not matching osu! exactly");
+	alpha291.changes.push_back("- Fixed cursortrail being too small for some skins (if cursor@2x with non-@2x cursortrail)");
+	alpha291.changes.push_back("- Fixed missing 24 ms offset for beatmaps version < 5");
+	alpha291.changes.push_back("- Fixed local score tooltips not applying speed multiplier to AR/OD");
+	changelogs.push_back(alpha291);
+
+	CHANGELOG alpha29;
+	alpha29.title = "29 (24.07.2018)";
+	alpha29.changes.push_back("- Added local scores");
+	alpha29.changes.push_back("- Added osu! scores.db support (read-only)");
+	alpha29.changes.push_back("- Allow options menu anywhere (CTRL + O)");
+	alpha29.changes.push_back("- VR: Added cursortrails, New cursor");
+	alpha29.changes.push_back("- VR: Allow 0 meter approach distance");
+	alpha29.changes.push_back("- VR: Added option \"Draw VR Approach Circles\" (Options > Virtual Reality > Gameplay)");
+	alpha29.changes.push_back("- VR: Added option \"Draw VR Approach Circles on top\" (Options > Virtual Reality > Gameplay)");
+	alpha29.changes.push_back("- VR: Added option \"Draw VR Approach Circles on Playfield\" (Options > Virtual Reality > Gameplay)");
+	alpha29.changes.push_back("- Show enabled experimental mods on ranking screen");
+	alpha29.changes.push_back("- Added scorebar-bg skin element support (usually abused for playfield background)");
+	alpha29.changes.push_back("- Added option \"Draw scorebar-bg\" (Options > Gameplay > Playfield)");
+	alpha29.changes.push_back("- Added option \"Legacy Slider Renderer\" (Options > Graphics > Detail Settings)");
+	alpha29.changes.push_back("- Added option \"Mipmaps\" (Options > Graphics > Detail Settings)");
+	alpha29.changes.push_back("- Added option \"Load osu! scores.db\" (Options > General > osu!folder)");
+	alpha29.changes.push_back("- Added notification during active background star calculation in songbrowser");
+	alpha29.changes.push_back("- Removed CTRL + ALT hardcoded hotkeys for scrubbing timeline");
+	alpha29.changes.push_back("- General engine performance and stability improvements");
+	alpha29.changes.push_back("- Fixed very old beatmaps not loading hitobjects which had float coordinates");
+	alpha29.changes.push_back("- (see https://github.com/ppy/osu/pull/3072)");
+	alpha29.changes.push_back("- Fixed scroll jerks/jumping randomly on all scrollviews");
+	alpha29.changes.push_back("- Fixed random crash on shutdown due to double delete (OsuBeatmap::m_music)");
+	changelogs.push_back(alpha29);
+
+	CHANGELOG alpha2898;
+	alpha2898.title = "28.98 (03.01.2018)";
+	alpha2898.changes.push_back("- Updated pp algorithm (2), see https://github.com/ppy/osu-performance/pull/47");
+	alpha2898.changes.push_back("- Updated pp algorithm (1), see https://github.com/ppy/osu-performance/pull/42");
+	alpha2898.changes.push_back("- Added Score v2 mod");
+	alpha2898.changes.push_back("- Added search support to options menu");
+	alpha2898.changes.push_back("- Added proper volume overlay HUD with individual sliders for master/effects/music");
+	alpha2898.changes.push_back("- Added/Fixed ConVars: osu_slider_followcircle_size_multiplier, osu_cursor_trail_alpha, osu_hud_volume_duration, osu_hud_volume_size_multiplier");
+	alpha2898.changes.push_back("- Removed number keys being hardcoded keybinds for pause menu (1,2,3)");
+	alpha2898.changes.push_back("- Improved multi-monitor handling: Remember game monitor, Fullscreen to closest monitor");
+	alpha2898.changes.push_back("- Don't auto minimize window on focus lost if \"Borderless Windowed Fullscreen\" is enabled");
+	alpha2898.changes.push_back("- Added ConVars: monitor, minimize_on_focus_lost_if_borderless_windowed_fullscreen");
+	alpha2898.changes.push_back("- Reworked Mouse/Tablet input handling");
+	alpha2898.changes.push_back("- Windows: Disable IME by default");
+	alpha2898.changes.push_back("- Fixed cursor jerking to bottom right corner when accidentally wiggling mouse while using tablet");
+	alpha2898.changes.push_back("- Fixed letterboxing cursor behavior (clipping/confining)");
+	alpha2898.changes.push_back("- Fixed desynced slider ticks (e.g. Der Wald [Maze], first three sliders)");
+	alpha2898.changes.push_back("- Fixed entering search text while binding keys in options menu");
+	alpha2898.changes.push_back("- Fixed smooth cursortrail not expanding with animation");
+	alpha2898.changes.push_back("- Fixed sample volumes being reset when tabbing out or losing window focus");
+	alpha2898.changes.push_back("- VR: Fixed reverse arrows not being animated");
+	alpha2898.changes.push_back("- Linux: Fixed crash when reloading osu database beatmaps via F5 in songbrowser");
+	alpha2898.changes.push_back("- Linux: Updated BASS audio library to version 2.4.13 (19/12/2017)");
+	alpha2898.changes.push_back("- Linux: Added support for confine cursor (i.e. Options > Input > Mouse > Confine Cursor, works now)");
+	alpha2898.changes.push_back("- Linux: Added support for key names (i.e. Options > Input > Keyboard, key names instead of numbers)");
+	alpha2898.changes.push_back("- Linux: Added support for focus changes (i.e. Options > General > Window > Pause on Focus Loss, fps_max_background)");
+	alpha2898.changes.push_back("- Linux: Window is no longer resizable, added support for setWindowResizable()");
+	alpha2898.changes.push_back("- Linux: Disabling fullscreen no longer causes annoying oversized window");
+	alpha2898.changes.push_back("");
+	changelogs.push_back(alpha2898);
+
+	CHANGELOG alpha2897;
+	alpha2897.title = "28.91 to 28.97 (29.10.2017)";
+	alpha2897.changes.push_back("- Star ratings in songbrowser for everyone (even without osu!.db database)");
+	alpha2897.changes.push_back("- Added smooth cursortrail support");
+	alpha2897.changes.push_back("- Added option \"Force Smooth CursorTrail\" (Options > Skin)");
+	alpha2897.changes.push_back("- Added sliderbreak counter to statistics overlay (Options > HUD > \"Draw Stats: SliderBreaks\")");
+	alpha2897.changes.push_back("- Added new experimental mod \"Mafham\"");
+	alpha2897.changes.push_back("- Added a few ConVars (osu_drain_*, osu_slider_reverse_arrow_animated)");
+	alpha2897.changes.push_back("- Added multiple background image drawing toggles (Options > Gameplay > General)");
+	alpha2897.changes.push_back("- Added partial support for \"BeatmapDirectory\" parameter");
+	alpha2897.changes.push_back("- Added VR ConVars: osu_vr_controller_offset_x, osu_vr_controller_offset_y, osu_vr_controller_offset_z");
+	alpha2897.changes.push_back("- Added description tooltips to some options");
+	alpha2897.changes.push_back("- Added Daycore mod");
+	alpha2897.changes.push_back("- Added option \"Higher Quality Sliders\", Options > Graphics > Detail Settings");
+	alpha2897.changes.push_back("- Added current key labels to key bindings (Options > Input > Keyboard)");
+	alpha2897.changes.push_back("- Added skin support for pause-overlay");
+	alpha2897.changes.push_back("- Added preliminary Touchscreen support for Windows 8 and higher (Windows 8.1, Windows 10, etc.)");
+	alpha2897.changes.push_back("- Added option \"Use skin's sound samples\", Options > Skin > Skin");
+	alpha2897.changes.push_back("- Added 2 tablet options, \"Ignore Sensitivity\" and \"Windows Ink Workaround\" for problematic tablets/drivers");
+	alpha2897.changes.push_back("- VR: Added slider sliding vibrations / haptic feedback (Options > Virtual Reality > Haptic Feedback)");
+	alpha2897.changes.push_back("- VR: Added layout lock checkbox (avoid accidentally messing up your layout, especially for Oculus players)");
+	alpha2897.changes.push_back("- Windows: Added hacky \"Borderless Windowed Fullscreen\" mode (Options > Graphics > Layout)");
+	alpha2897.changes.push_back("- Windows: Switched to osu!'s old 2009 BASS audio library dlls to fix some slightly desynced mp3s");
+	alpha2897.changes.push_back("- Windows: Stream music files instead of loading them entirely (necessary for above; faster load times)");
+	alpha2897.changes.push_back("- Remember selected sorting type in songbrowser");
+	alpha2897.changes.push_back("- Remember volume settings if changed outside options");
+	alpha2897.changes.push_back("- Minor performance improvements (ignore empty transparent skin images)");
+	alpha2897.changes.push_back("- Round stars to 1 decimal place for intelligent search (e.g. \"stars=6\")");
+	alpha2897.changes.push_back("- Smoother snaking sliders");
+	alpha2897.changes.push_back("- Switched to osu!lazer slider body fadeout style for snaking out sliders (aka shrinking sliders)");
+	alpha2897.changes.push_back("- Renamed and moved \"Shrinking Sliders\" to \"Snaking out sliders\" (Options > Graphics > Detail Settings)");
+	alpha2897.changes.push_back("- The drawn playfield border now also correctly reflects osu_playfield_stretch_x/y");
+	alpha2897.changes.push_back("- Lowered minimum Mouse Sensitivity slider value from 0.4 to 0.1 (Options > Input > Mouse)");
+	alpha2897.changes.push_back("- Made \"play-skip\" skin element animatable");
+	alpha2897.changes.push_back("- Switched slider bezier curve generator to official algorithm (fixes Aspire loading \"freezes\", mostly)");
+	alpha2897.changes.push_back("- More stuff in ranking screen tooltip (stars, speed, CS/AR/OD/HP)");
+	alpha2897.changes.push_back("- Round pp up from 0.5 (727.49 => 727; 727.5 => 728)");
+	alpha2897.changes.push_back("- Fixed ranking screen tooltip rounding CS/AR/OD/HP >= 10 incorrectly");
+	alpha2897.changes.push_back("- Fixed sample set number being used for setting the sample type (hitsounds)");
+	alpha2897.changes.push_back("- Fixed invisible selection-*.png skin images with 0 or very small size scaling the *-over.png way too big (Mods + Random)");
+	alpha2897.changes.push_back("- Fixed minor visual inaccuracies (approach circle fade-in duration, hidden slider body fading behaviour)");
+	alpha2897.changes.push_back("- Fixed skin versions lower than 2.2 drawing thumbnails in songbrowser, even though they shouldn't");
+	alpha2897.changes.push_back("- Fixed statistics overlay layout in combination with the target practice mod");
+	alpha2897.changes.push_back("- Fixed osu_mod_wobble2 sliders");
+	alpha2897.changes.push_back("- Fixed timingpoint sample type and sample volume inaccuracies per-hitobject (osu_timingpoints_force, osu_timingpoints_offset)");
+	alpha2897.changes.push_back("- Fixed missing sliderbreaks when the slider duration is shorter than the miss timing window of the sliderstartcircle");
+	alpha2897.changes.push_back("- Fixed very long beatmaps not working (mostly random marathons with big MP3s, more than ~15 minutes)");
+	alpha2897.changes.push_back("- Fixed slider vertexbuffers for ConVars: osu_playfield_rotation, osu_playfield_stretch_x, osu_playfield_stretch_y");
+	alpha2897.changes.push_back("- Fixed main menu crashing on some aspire timingpoints due to division by zero");
+	alpha2897.changes.push_back("- Fixed missing cursor texture on \"Click on the orange cursor to continue play!\"");
+	alpha2897.changes.push_back("- Fixed incorrect hitcircle number skin overlaps");
+	alpha2897.changes.push_back("- Fixed strange sliderstartcircle hitboxes on some 2007 maps");
+	alpha2897.changes.push_back("- Fixed stacks not being recalculated when changing CS Override while playing");
+	alpha2897.changes.push_back("- Fixed sliderbody size not updating instantly when changing CS Override slider with arrow keys");
+	alpha2897.changes.push_back("- VR: Fixed SteamVR SuperSampling causing too large submission textures and breaking everything");
+	alpha2897.changes.push_back("- Linux: Fixed number hotkeys not working in mod selector");
+	changelogs.push_back(alpha2897);
+
+	CHANGELOG alpha289;
+	alpha289.title = "28.9 (16.04.2017)";
+	alpha289.changes.push_back("- Thanks to Francesco149 for letting me use his implementation of Tom94's pp algorithm! (https://github.com/Francesco149/oppai/)");
+	alpha289.changes.push_back("- Added pp to ranking/results screen");
+	alpha289.changes.push_back("- Added live pp counter to statistics overlay (Options > HUD > \"Draw Stats: pp\")");
+	alpha289.changes.push_back("- Added new experimental mods \"Full Alternate\", \"No 50s\" and \"No 100s no 50s\" (thanks to Jason Foley for the last two, JTF195 on github)");
+	alpha289.changes.push_back("- Clamped Speed/BPM override sliders to the minimum possible 0.05x multiplier (no more negative zero)");
+	alpha289.changes.push_back("- Unclamped visual AR/CS/HP/OD values in mod selection screen (e.g. negative OD due to EZHT)");
+	alpha289.changes.push_back("- Fixed Auto clicking circles too early directly after loading finished (at time 0)");
+	alpha289.changes.push_back("- Fixed ALT+TAB and general focus loss while starting a beatmap causing it to stop with a D rank and 100% acc");
+	alpha289.changes.push_back("- Fixed \"CursorCentre: 0\" skin.ini parameter not working as expected");
+	alpha289.changes.push_back("- Fixed performance optimization partially breaking 2B/Aspire beatmaps (invisible sliders)");
+	alpha289.changes.push_back("- Fixed accuracy calculation dividing by zero if beatmap starts with a slider");
+	alpha289.changes.push_back("- Fixed letterboxing and non-native resolutions not being consistent after restarting");
+	changelogs.push_back(alpha289);
+
+	CHANGELOG alpha288;
+	alpha288.title = "28.8 (07.04.2017)";
+	alpha288.changes.push_back("- Major performance optimizations");
+	alpha288.changes.push_back("- Switched score calculation to 64-bit. The maximum score is now 18446744073709551615");
+	alpha288.changes.push_back("- Fixed spinning spinners after dying in VR");
+	alpha288.changes.push_back("- Fixed Auto failing impossible spinners");
+	changelogs.push_back(alpha288);
+
+	CHANGELOG alpha287;
+	alpha287.title = "28.7 (05.04.2017)";
+	alpha287.changes.push_back("- Added \"OS TabletPC Support\" (Options > Input > Tablet)");
+	alpha287.changes.push_back("- Fixed being able to spin spinners with relax while paused");
+	changelogs.push_back(alpha287);
+
+	CHANGELOG alpha286;
+	alpha286.title = "28.5 and 28.6 (03.04.2017)";
+	alpha286.changes.push_back("- Added support for animated skins");
+	alpha286.changes.push_back("- Added active mods to ranking/results screen");
+	alpha286.changes.push_back("- Added avg error to Unstable Rate tooltip");
+	alpha286.changes.push_back("- Added support for HitCirclePrefix in skin.ini");
+	alpha286.changes.push_back("- Converted hardcoded hitwindow timing values into ConVars (osu_hitwindow_...)");
+	alpha286.changes.push_back("- Fixed random vertexbuffer corruptions with shrinking sliders enabled (white flashes/blocks/triangles/lines, distorted slider bodies)");
+	alpha286.changes.push_back("- Fixed animated skin elements of the default skin incorrectly overriding user skins");
+	changelogs.push_back(alpha286);
+
+	CHANGELOG alpha284;
+	alpha284.title = "28.4 (28.03.2017)";
+	alpha284.changes.push_back("- Added preliminary primitive sorting options to songbrowser (Artist, BPM, Creator, Date Added, Difficulty, Length, Title)");
+	alpha284.changes.push_back("- Slightly improved right-click absolute scrolling range in songbrowser");
+	alpha284.changes.push_back("- Fixed negative slider durations causing early gameovers (Aspire...)");
+	alpha284.changes.push_back("- Fixed incorrect music lengths while searching (-1 from db caused 2^32-1 due to unsigned integer conversion)");
+	changelogs.push_back(alpha284);
+
+	CHANGELOG alpha283;
+	alpha283.title = "28.3 (25.03.2017)";
+	alpha283.changes.push_back("- Added VR head model to spectator mode");
+	alpha283.changes.push_back("- Added ConVars vr_head_rendermodel_name, vr_head_rendermodel_scale, vr_head_rendermodel_brightness");
+	alpha283.changes.push_back("- Added option to draw 300s (bottom of Options, last one)");
+	alpha283.changes.push_back("- Made slider parsing & curve generation more robust against abuse, long loading times are not fixed though (Aspire...)");
+	alpha283.changes.push_back("- Fixed experimental mod \"Minimize\" not working with CS Override as expected");
+	alpha283.changes.push_back("- Fixed seeking/scrubbing not working properly while early waiting (green progressbar)");
+	changelogs.push_back(alpha283);
+
+	CHANGELOG alpha282;
+	alpha282.title = "28.2 (22.03.2017)";
+	alpha282.changes.push_back("- Fixed being able to continue spinning spinners while paused");
+	alpha282.changes.push_back("- Fixed random invisible songbuttons in songbrowser on ultrawide resolutions (e.g. 21:9)");
+	changelogs.push_back(alpha282);
 
 	CHANGELOG alpha27VR;
 	alpha27VR.title = "27 + 28 (Steam VR Alpha, 20.03.2017)";
@@ -414,25 +453,33 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha25.changes.push_back("- Fixed alt-tab while m_bIsWaiting causing invisible clickable pause menu");
 	alpha25.changes.push_back("- Fixed \"Disable Mouse Wheel in Play Mode\" also being active while not playing");
 	changelogs.push_back(alpha25);
+	*/
 
-	float lastYPos = 0;
+	CHANGELOG padding;
+	padding.title = "... (older changelogs are available on GitHub or Steam)";
+	padding.changes.push_back("");
+	padding.changes.push_back("");
+	padding.changes.push_back("");
+	padding.changes.push_back("");
+	padding.changes.push_back("");
+	changelogs.push_back(padding);
+
 	for (int i=0; i<changelogs.size(); i++)
 	{
+		CHANGELOG_UI changelog;
+
 		// title label
-		CBaseUILabel *title = new CBaseUILabel(0, 0, 0, 0, "", changelogs[i].title);
+		changelog.title = new CBaseUILabel(0, 0, 0, 0, "", changelogs[i].title);
 		if (i == 0)
-			title->setTextColor(0xff00ff00);
+			changelog.title->setTextColor(0xff00ff00);
 		else
-			title->setTextColor(0xff888888);
+			changelog.title->setTextColor(0xff888888);
 
-		title->setSizeToContent();
-		title->setDrawBackground(false);
-		title->setDrawFrame(false);
-		lastYPos += title->getSize().y;
-		title->setPos(15, lastYPos);
-		lastYPos += 10;
+		changelog.title->setSizeToContent();
+		changelog.title->setDrawBackground(false);
+		changelog.title->setDrawFrame(false);
 
-		m_scrollView->getContainer()->addBaseUIElement(title);
+		m_scrollView->getContainer()->addBaseUIElement(changelog.title);
 
 		// changes
 		for (int c=0; c<changelogs[i].changes.size(); c++)
@@ -445,19 +492,20 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 			change->setSizeToContent();
 			change->setDrawBackground(false);
 			change->setDrawFrame(false);
-			lastYPos += change->getSize().y + 7;
-			change->setPos(35, lastYPos);
+
+			changelog.changes.push_back(change);
 
 			m_scrollView->getContainer()->addBaseUIElement(change);
 		}
 
-		// gap to previous version
-		lastYPos += 65;
+		m_changelogs.push_back(changelog);
 	}
 }
 
 OsuChangelog::~OsuChangelog()
 {
+	m_changelogs.clear();
+
 	SAFE_DELETE(m_container);
 }
 
@@ -500,10 +548,34 @@ void OsuChangelog::updateLayout()
 {
 	OsuScreenBackable::updateLayout();
 
-	m_container->setSize(m_osu->getScreenSize() + Vector2(2,2));
-	m_scrollView->setSize(m_osu->getScreenSize() + Vector2(2,2));
+	const float dpiScale = Osu::getUIScale();
 
-	m_scrollView->setScrollSizeToContent(15);
+	m_container->setSize(m_osu->getScreenSize() + Vector2(2, 2));
+	m_scrollView->setSize(m_osu->getScreenSize() + Vector2(2, 2));
+
+	float yCounter = 0;
+	for (const CHANGELOG_UI &changelog : m_changelogs)
+	{
+		changelog.title->onResized(); // HACKHACK: framework, setSizeToContent() does not update string metrics
+		changelog.title->setSizeToContent();
+
+		yCounter += changelog.title->getSize().y;
+		changelog.title->setRelPos(15 * dpiScale, yCounter);
+		yCounter += 10 * dpiScale;
+
+		for (CBaseUILabel *change : changelog.changes)
+		{
+			change->onResized(); // HACKHACK: framework, setSizeToContent() does not update string metrics
+			change->setSizeToContent();
+			yCounter += change->getSize().y + 7 * dpiScale;
+			change->setRelPos(35 * dpiScale, yCounter);
+		}
+
+		// gap to previous version
+		yCounter += 65 * dpiScale;
+	}
+
+	m_scrollView->setScrollSizeToContent(15 * dpiScale);
 }
 
 void OsuChangelog::onBack()

@@ -33,6 +33,8 @@ public:
 	virtual void draw(Graphics *g);
 	virtual void update();
 
+	virtual void onResolutionChange(Vector2 newResolution);
+
 	void drawDummy(Graphics *g);
 	void drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr);
 	void drawVRDummy(Graphics *g, Matrix4 &mvp, OsuVR *vr);
@@ -71,8 +73,10 @@ public:
 	void resetHitErrorBar();
 
 	McRect getSkipClickRect();
+
 	bool isVolumeOverlayVisible();
 	bool isVolumeOverlayBusy();
+
 	OsuUIVolumeSlider *getVolumeMasterSlider() {return m_volumeMaster;}
 	OsuUIVolumeSlider *getVolumeEffectsSlider() {return m_volumeEffects;}
 	OsuUIVolumeSlider *getVolumeMusicSlider() {return m_volumeMusic;}
@@ -123,6 +127,14 @@ private:
 		bool highlight;
 	};
 
+	struct BREAK
+	{
+		float startPercent;
+		float endPercent;
+	};
+
+	void updateLayout();
+
 	void addCursorTrailPosition(std::vector<CURSORTRAIL> &trail, Vector2 pos, bool empty = false);
 
 	void drawCursorInt(Graphics *g, Shader *trailShader, std::vector<CURSORTRAIL> &trail, Matrix4 &mvp, Vector2 pos, float alphaMultiplier = 1.0f, bool emptyTrailFrame = false);
@@ -134,7 +146,7 @@ private:
 	void drawCombo(Graphics *g, int combo);
 	void drawScore(Graphics *g, unsigned long long score);
 	void drawHP(Graphics *g, float health);
-	void drawScoreBoardInt(Graphics *g, std::vector<SCORE_ENTRY> &scoreEntries);
+	void drawScoreBoardInt(Graphics *g, const std::vector<SCORE_ENTRY> &scoreEntries);
 
 	void drawWarningArrows(Graphics *g, float hitcircleDiameter = 0.0f);
 	void drawContinue(Graphics *g, Vector2 cursor, float hitcircleDiameter = 0.0f);
@@ -143,7 +155,7 @@ private:
 	void drawProgressBarVR(Graphics *g, Matrix4 &mvp, OsuVR *vr, float percent, bool waiting);
 	void drawStatistics(Graphics *g, int misses, int sliderbreaks, int bpm, float ar, float cs, float od, int nps, int nd, int ur, float pp);
 	void drawTargetHeatmap(Graphics *g, float hitcircleDiameter);
-	void drawScrubbingTimeline(Graphics *g, unsigned long beatmapTime, unsigned long beatmapLength, unsigned long beatmapLengthPlayable, unsigned long beatmapStartTimePlayable, float beatmapPercentFinishedPlayable);
+	void drawScrubbingTimeline(Graphics *g, unsigned long beatmapTime, unsigned long beatmapLength, unsigned long beatmapLengthPlayable, unsigned long beatmapStartTimePlayable, float beatmapPercentFinishedPlayable, const std::vector<BREAK> &breaks);
 	void drawInputOverlay(Graphics *g, int numK1, int numK2, int numM1, int numM2);
 
 	void drawStatisticText(Graphics *g, const UString text);
@@ -183,7 +195,6 @@ private:
 	float m_fCurFps;
 	float m_fCurFpsSmooth;
 	float m_fFpsUpdate;
-	float m_fFpsFontHeight;
 
 	// hit error bar
 	std::vector<HITERROR> m_hiterrors;

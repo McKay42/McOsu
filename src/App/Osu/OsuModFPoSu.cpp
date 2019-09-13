@@ -66,7 +66,7 @@ void OsuModFPoSu::draw(Graphics *g)
 	if (!osu_mod_fposu.getBool()) return;
 
 	Matrix4 projectionMatrix = fposu_vertical_fov.getBool() ? Camera::buildMatrixPerspectiveFovVertical(deg2rad(fposu_fov.getFloat()), ((float)m_osu->getScreenWidth()/(float)m_osu->getScreenHeight()), 0.05f, 50.0f)
-			: Camera::buildMatrixPerspectiveFovHorizontal(deg2rad(fposu_fov.getFloat()), ((float)m_osu->getScreenHeight() / (float)m_osu->getScreenWidth()), 0.05f, 50.0f);
+															: Camera::buildMatrixPerspectiveFovHorizontal(deg2rad(fposu_fov.getFloat()), ((float)m_osu->getScreenHeight() / (float)m_osu->getScreenWidth()), 0.05f, 50.0f);
 	Matrix4 viewMatrix = Camera::buildMatrixLookAt(m_camera->getPos(), m_camera->getViewDirection(), m_camera->getViewUp());
 
 	// HACKHACK: there is currently no way to directly modify the viewport origin, so the only option for rendering non-2d stuff with correct offsets (i.e. top left) is by rendering into a rendertarget

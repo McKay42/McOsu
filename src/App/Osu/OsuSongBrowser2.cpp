@@ -53,6 +53,7 @@
 ConVar osu_gamemode("osu_gamemode", "std");
 
 ConVar osu_songbrowser_sortingtype("osu_songbrowser_sortingtype", "By Date Added");
+ConVar osu_songbrowser_scores_sortingtype("osu_songbrowser_scores_sortingtype", "Sort By Score");
 ConVar osu_songbrowser_topbar_left_percent("osu_songbrowser_topbar_left_percent", 0.93f);
 ConVar osu_songbrowser_topbar_left_width_percent("osu_songbrowser_topbar_left_width_percent", 0.265f);
 ConVar osu_songbrowser_topbar_middle_width_percent("osu_songbrowser_topbar_middle_width_percent", 0.15f);
@@ -412,6 +413,11 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	m_songInfo = new OsuUISongBrowserInfoLabel(m_osu, 0, 0, 0, 0, "");
 	m_topbarLeft->addBaseUIElement(m_songInfo);
 
+	m_scoreSortButton = addTopBarLeftTabButton("Sort By Score");
+	m_scoreSortButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onSortScoresClicked) );
+	m_webButton = addTopBarLeftButton("Web");
+	m_webButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onWebClicked) );
+
 	// build topbar right
 	m_topbarRight = new CBaseUIContainer(0, 0, 0, 0, "");
 	m_groupLabel = new CBaseUILabel(0, 0, 0, 0, "", "Group:");
@@ -525,6 +531,11 @@ OsuSongBrowser2::~OsuSongBrowser2()
 		delete m_scoreButtonCache[i];
 	}
 	SAFE_DELETE(m_scoreBrowserNoRecordsYetElement);
+
+	for (int i=0; i<m_sortingMethods.size(); i++)
+	{
+		delete m_sortingMethods[i].comparator;
+	}
 
 	SAFE_DELETE(m_search);
 	SAFE_DELETE(m_topbarLeft);
@@ -818,6 +829,7 @@ void OsuSongBrowser2::update()
 
 	if (m_contextMenu->isMouseInside() || m_osu->getHUD()->isVolumeOverlayBusy() || m_backButton->isMouseInside())
 	{
+		m_topbarLeft->stealFocus();
 		m_topbarRight->stealFocus();
 		m_songBrowser->stealFocus();
 		m_bottombar->stealFocus();
@@ -1250,6 +1262,9 @@ void OsuSongBrowser2::onDifficultySelected(OsuBeatmap *beatmap, OsuBeatmapDiffic
 
 	// update score display
 	rebuildScoreButtons();
+
+	// update web button
+	m_webButton->setVisible(m_songInfo->getBeatmapID() > 0);
 }
 
 void OsuSongBrowser2::onDifficultySelectedMP(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff, bool play)
@@ -1761,37 +1776,68 @@ void OsuSongBrowser2::updateLayout()
 {
 	OsuScreenBackable::updateLayout();
 
-	const int margin = 5;
+	const float uiScale = Osu::ui_scale->getFloat();
+	const float dpiScale = Osu::getUIScale();
+
+	const int margin = 5 * dpiScale;
 
 	// top bar
 	m_fSongSelectTopScale = Osu::getImageScaleToFitResolution(m_osu->getSkin()->getSongSelectTop(), m_osu->getScreenSize());
 	const float songSelectTopHeightScaled = std::max(m_osu->getSkin()->getSongSelectTop()->getHeight()*m_fSongSelectTopScale, m_songInfo->getMinimumHeight()*1.5f + margin); // NOTE: the height is a heuristic here more or less
 	m_fSongSelectTopScale = std::max(m_fSongSelectTopScale, songSelectTopHeightScaled / m_osu->getSkin()->getSongSelectTop()->getHeight());
+	m_fSongSelectTopScale *= uiScale; // NOTE: any user osu_ui_scale below 1.0 will break things (because songSelectTop image)
 
 	// topbar left (NOTE: the right side of the std::max() width is commented to keep the scorebrowser width consistent, and because it's not really needed anyway)
 	m_topbarLeft->setSize(std::max(m_osu->getSkin()->getSongSelectTop()->getWidth()*m_fSongSelectTopScale*osu_songbrowser_topbar_left_width_percent.getFloat() + margin, /*m_songInfo->getMinimumWidth() + margin*/0.0f), std::max(m_osu->getSkin()->getSongSelectTop()->getHeight()*m_fSongSelectTopScale*osu_songbrowser_topbar_left_percent.getFloat(), m_songInfo->getMinimumHeight() + margin));
 	m_songInfo->setRelPos(margin, margin);
-	m_songInfo->setSize(m_topbarLeft->getSize().x - margin, std::max(m_topbarLeft->getSize().y - margin, m_songInfo->getMinimumHeight()));
+	m_songInfo->setSize(m_topbarLeft->getSize().x - margin, std::max(m_topbarLeft->getSize().y*0.75f, m_songInfo->getMinimumHeight() + margin));
+
+	const int topbarLeftButtonMargin = 5 * dpiScale;
+	const int topbarLeftButtonHeight = 30 * dpiScale;
+	const int topbarLeftButtonWidth = 55 * dpiScale;
+	for (int i=0; i<m_topbarLeftButtons.size(); i++)
+	{
+		m_topbarLeftButtons[i]->onResized(); // HACKHACK: framework bug (should update string metrics on setSize())
+		m_topbarLeftButtons[i]->setSize(topbarLeftButtonWidth, topbarLeftButtonHeight);
+		m_topbarLeftButtons[i]->setRelPos(m_topbarLeft->getSize().x - (i + 1)*(topbarLeftButtonMargin + topbarLeftButtonWidth), m_topbarLeft->getSize().y-m_topbarLeftButtons[i]->getSize().y);
+	}
+
+	const int topbarLeftTabButtonMargin = topbarLeftButtonMargin;
+	const int topbarLeftTabButtonHeight = topbarLeftButtonHeight;
+	const int topbarLeftTabButtonWidth = m_topbarLeft->getSize().x - 3*topbarLeftTabButtonMargin - m_topbarLeftButtons.size()*(topbarLeftButtonWidth + topbarLeftButtonMargin);
+	for (int i=0; i<m_topbarLeftTabButtons.size(); i++)
+	{
+		m_topbarLeftTabButtons[i]->onResized(); // HACKHACK: framework bug (should update string metrics on setSize())
+		m_topbarLeftTabButtons[i]->setSize(topbarLeftTabButtonWidth, topbarLeftTabButtonHeight);
+		m_topbarLeftTabButtons[i]->setRelPos((topbarLeftTabButtonMargin + i*topbarLeftTabButtonWidth), m_topbarLeft->getSize().y-m_topbarLeftTabButtons[i]->getSize().y);
+	}
+
+	m_topbarLeft->update_pos();
 
 	// topbar right
 	m_topbarRight->setPosX(m_osu->getSkin()->getSongSelectTop()->getWidth()*m_fSongSelectTopScale*osu_songbrowser_topbar_right_percent.getFloat());
 	m_topbarRight->setSize(m_osu->getScreenWidth() - m_topbarRight->getPos().x, m_osu->getSkin()->getSongSelectTop()->getHeight()*m_fSongSelectTopScale*osu_songbrowser_topbar_right_height_percent.getFloat());
 
-	int topbarRightTabButtonMargin = 10;
-	int topbarRightTabButtonHeight = 30;
-	int topbarRightTabButtonWidth = clamp<float>((float)(m_topbarRight->getSize().x - 2*topbarRightTabButtonMargin) / (float)m_topbarRightTabButtons.size(), 0.0f, 200.0f);
+	const int topbarRightTabButtonMargin = 10 * dpiScale;
+	const int topbarRightTabButtonHeight = 30 * dpiScale;
+	const int topbarRightTabButtonWidth = clamp<float>((float)(m_topbarRight->getSize().x - 2*topbarRightTabButtonMargin) / (float)m_topbarRightTabButtons.size(), 0.0f, 200.0f * dpiScale);
 	for (int i=0; i<m_topbarRightTabButtons.size(); i++)
 	{
+		m_topbarRightTabButtons[i]->onResized(); // HACKHACK: framework bug (should update string metrics on setSize())
 		m_topbarRightTabButtons[i]->setSize(topbarRightTabButtonWidth, topbarRightTabButtonHeight);
 		m_topbarRightTabButtons[i]->setRelPos(m_topbarRight->getSize().x - (topbarRightTabButtonMargin + (m_topbarRightTabButtons.size()-i)*topbarRightTabButtonWidth), m_topbarRight->getSize().y-m_topbarRightTabButtons[i]->getSize().y);
 	}
 
 	if (m_topbarRightTabButtons.size() > 0)
+	{
+		m_groupLabel->onResized(); // HACKHACK: framework bug (should update string metrics on setSizeToContent())
+		m_groupLabel->setSizeToContent(3 * dpiScale);
 		m_groupLabel->setRelPos(m_topbarRightTabButtons[0]->getRelPos() + Vector2(-m_groupLabel->getSize().x, m_topbarRightTabButtons[0]->getSize().y/2.0f - m_groupLabel->getSize().y/2.0f));
+	}
 
-	int topbarRightSortButtonMargin = 10;
-	int topbarRightSortButtonHeight = 30;
-	int topbarRightSortButtonWidth = clamp<float>((float)(m_topbarRight->getSize().x - 2*topbarRightSortButtonMargin) / (float)m_topbarRightSortButtons.size(), 0.0f, 200.0f);
+	const int topbarRightSortButtonMargin = 10 * dpiScale;
+	const int topbarRightSortButtonHeight = 30 * dpiScale;
+	const int topbarRightSortButtonWidth = clamp<float>((float)(m_topbarRight->getSize().x - 2*topbarRightSortButtonMargin) / (float)m_topbarRightSortButtons.size(), 0.0f, 200.0f * dpiScale);
 	for (int i=0; i<m_topbarRightSortButtons.size(); i++)
 	{
 		m_topbarRightSortButtons[i]->setSize(topbarRightSortButtonWidth, topbarRightSortButtonHeight);
@@ -1799,20 +1845,24 @@ void OsuSongBrowser2::updateLayout()
 	}
 
 	if (m_topbarRightSortButtons.size() > 0)
+	{
+		m_sortLabel->onResized(); // HACKHACK: framework bug (should update string metrics on setSizeToContent())
+		m_sortLabel->setSizeToContent(3 * dpiScale);
 		m_sortLabel->setRelPos(m_topbarRightSortButtons[m_topbarRightSortButtons.size()-1]->getRelPos() + Vector2(-m_sortLabel->getSize().x, m_topbarRightSortButtons[m_topbarRightSortButtons.size()-1]->getSize().y/2.0f - m_sortLabel->getSize().y/2.0f));
+	}
 
 	m_topbarRight->update_pos();
 
 	// bottombar
-	int bottomBarHeight = m_osu->getScreenHeight()*osu_songbrowser_bottombar_percent.getFloat();
+	const int bottomBarHeight = m_osu->getScreenHeight()*osu_songbrowser_bottombar_percent.getFloat() * uiScale;
 
 	m_bottombar->setPosY(m_osu->getScreenHeight() - bottomBarHeight);
 	m_bottombar->setSize(m_osu->getScreenWidth(), bottomBarHeight);
 
 	// nav bar
 	float navBarStart = std::max(m_osu->getScreenWidth()*0.175f, m_backButton->getSize().x);
-	if (m_osu->getScreenWidth()*0.175f < m_backButton->getSize().x + 25)
-		navBarStart += m_backButton->getSize().x - m_osu->getScreenWidth()*0.175f;
+	if (m_osu->getScreenWidth()*0.175f * uiScale < m_backButton->getSize().x + 25)
+		navBarStart += m_backButton->getSize().x - m_osu->getScreenWidth()*0.175f * uiScale;
 
 	// bottombar cont
 	for (int i=0; i<m_bottombarNavButtons.size(); i++)
@@ -1831,12 +1881,12 @@ void OsuSongBrowser2::updateLayout()
 	m_bottombar->update_pos();
 
 	// score browser
-	const int scoreBrowserExtraPaddingRight = 5; // duplication, see below
+	const int scoreBrowserExtraPaddingRight = 5 * dpiScale; // duplication, see below
 	updateScoreBrowserLayout();
 
 	// song browser
 	m_songBrowser->setPos(m_topbarLeft->getPos().x + m_topbarLeft->getSize().x + 1 + scoreBrowserExtraPaddingRight, m_topbarRight->getPos().y + m_topbarRight->getSize().y + 2);
-	m_songBrowser->setSize(m_osu->getScreenWidth() - (m_topbarLeft->getPos().x + m_topbarLeft->getSize().x + scoreBrowserExtraPaddingRight), m_osu->getScreenHeight() - m_songBrowser->getPos().y - m_bottombar->getSize().y+2);
+	m_songBrowser->setSize(m_osu->getScreenWidth() - (m_topbarLeft->getPos().x + m_topbarLeft->getSize().x + scoreBrowserExtraPaddingRight), m_osu->getScreenHeight() - m_songBrowser->getPos().y - m_bottombar->getSize().y + 2);
 	updateSongButtonLayout();
 
 	m_search->setPos(m_songBrowser->getPos());
@@ -1851,13 +1901,15 @@ void OsuSongBrowser2::onBack()
 
 void OsuSongBrowser2::updateScoreBrowserLayout()
 {
+	const float dpiScale = Osu::getUIScale();
+
 	if (m_osu_scores_enabled->getBool() != m_scoreBrowser->isVisible())
 		m_scoreBrowser->setVisible(m_osu_scores_enabled->getBool());
 
-	const int scoreBrowserExtraPaddingRight = 5; // duplication, see above
-	const int scoreButtonWidthMax = m_topbarLeft->getSize().x + 2;
-	m_scoreBrowser->setPos(m_topbarLeft->getPos().x - 2, m_topbarLeft->getPos().y + m_topbarLeft->getSize().y);
-	m_scoreBrowser->setSize(scoreButtonWidthMax + scoreBrowserExtraPaddingRight, m_bottombar->getPos().y - (m_topbarLeft->getPos().y + m_topbarLeft->getSize().y) + 2);
+	const int scoreBrowserExtraPaddingRight = 5 * dpiScale; // duplication, see above
+	const int scoreButtonWidthMax = m_topbarLeft->getSize().x + 2 * dpiScale;
+	m_scoreBrowser->setPos(m_topbarLeft->getPos().x - 2 * dpiScale, m_topbarLeft->getPos().y + m_topbarLeft->getSize().y);
+	m_scoreBrowser->setSize(scoreButtonWidthMax + scoreBrowserExtraPaddingRight, m_bottombar->getPos().y - (m_topbarLeft->getPos().y + m_topbarLeft->getSize().y) + 2 * dpiScale);
 	int scoreHeight = 100;
 	{
 		Image *menuButtonBackground = m_osu->getSkin()->getMenuButtonBackground();
@@ -1879,7 +1931,7 @@ void OsuSongBrowser2::updateScoreBrowserLayout()
 	{
 		CBaseUIElement *scoreButton = (*m_scoreBrowser->getContainer()->getAllBaseUIElementsPointer())[i];
 		scoreButton->setSize(m_scoreBrowser->getSize().x, scoreHeight);
-		scoreButton->setRelPos(scoreBrowserExtraPaddingRight, i*scoreButton->getSize().y + 5);
+		scoreButton->setRelPos(scoreBrowserExtraPaddingRight, i*scoreButton->getSize().y + 5 * dpiScale);
 	}
 	m_scoreBrowserNoRecordsYetElement->setSize(m_scoreBrowser->getSize().x*0.9f, scoreHeight*0.75f);
 	m_scoreBrowserNoRecordsYetElement->setRelPos(m_scoreBrowser->getSize().x/2 - m_scoreBrowserNoRecordsYetElement->getSize().x/2, (m_scoreBrowser->getSize().y/2)*0.65f - m_scoreBrowserNoRecordsYetElement->getSize().y/2);
@@ -1920,6 +1972,7 @@ void OsuSongBrowser2::rebuildScoreButtons()
 		for (int i=0; i<numScores; i++)
 		{
 			OsuUISongBrowserScoreButton *button = m_scoreButtonCache[i];
+			button->setName(UString(getSelectedBeatmap()->getSelectedDifficulty()->md5hash.c_str()));
 			button->setScore((*m_db->getScores())[getSelectedBeatmap()->getSelectedDifficulty()->md5hash][i], i+1);
 			scoreButtons.push_back(button);
 		}
@@ -1958,6 +2011,7 @@ OsuUISelectionButton *OsuSongBrowser2::addBottombarNavButton(std::function<Image
 CBaseUIButton *OsuSongBrowser2::addTopBarRightTabButton(UString text)
 {
 	CBaseUIButton *btn = new CBaseUIButton(0, 0, 0, 0, "", text);
+	btn->setDrawBackground(false);
 	m_topbarRight->addBaseUIElement(btn);
 	m_topbarRightTabButtons.push_back(btn);
 	return btn;
@@ -1966,8 +2020,27 @@ CBaseUIButton *OsuSongBrowser2::addTopBarRightTabButton(UString text)
 CBaseUIButton *OsuSongBrowser2::addTopBarRightSortButton(UString text)
 {
 	CBaseUIButton *btn = new CBaseUIButton(0, 0, 0, 0, "", text);
+	btn->setDrawBackground(false);
 	m_topbarRight->addBaseUIElement(btn);
 	m_topbarRightSortButtons.push_back(btn);
+	return btn;
+}
+
+CBaseUIButton *OsuSongBrowser2::addTopBarLeftTabButton(UString text)
+{
+	CBaseUIButton *btn = new CBaseUIButton(0, 0, 0, 0, "", text);
+	btn->setDrawBackground(false);
+	m_topbarLeft->addBaseUIElement(btn);
+	m_topbarLeftTabButtons.push_back(btn);
+	return btn;
+}
+
+CBaseUIButton *OsuSongBrowser2::addTopBarLeftButton(UString text)
+{
+	CBaseUIButton *btn = new CBaseUIButton(0, 0, 0, 0, "", text);
+	btn->setDrawBackground(false);
+	m_topbarLeft->addBaseUIElement(btn);
+	m_topbarLeftButtons.push_back(btn);
 	return btn;
 }
 
@@ -2059,6 +2132,7 @@ void OsuSongBrowser2::onDatabaseLoadingFinished()
 	*/
 
 	onSortChange(osu_songbrowser_sortingtype.getString());
+	onSortScoresChange(osu_songbrowser_scores_sortingtype.getString());
 
 	// update rich presence (discord total pp)
 	OsuRichPresence::onSongBrowser(m_osu);
@@ -2147,16 +2221,53 @@ void OsuSongBrowser2::onSearchUpdate()
 	}
 }
 
+void OsuSongBrowser2::onSortScoresClicked(CBaseUIButton *button)
+{
+	m_contextMenu->setPos(button->getPos());
+	m_contextMenu->setRelPos(button->getRelPos());
+	m_contextMenu->begin(button->getSize().x);
+	{
+		const std::vector<OsuDatabase::SCORE_SORTING_METHOD> &scoreSortingMethods = m_db->getScoreSortingMethods();
+		for (int i=0; i<scoreSortingMethods.size(); i++)
+		{
+			CBaseUIButton *button = m_contextMenu->addButton(scoreSortingMethods[i].name);
+			if (scoreSortingMethods[i].name == osu_songbrowser_scores_sortingtype.getString())
+				button->setTextBrightColor(0xff00ff00);
+		}
+	}
+	m_contextMenu->end();
+	m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onSortScoresChange) );
+}
+
+void OsuSongBrowser2::onSortScoresChange(UString text, int id)
+{
+	osu_songbrowser_scores_sortingtype.setValue(text); // remember
+	m_scoreSortButton->setText(text);
+	rebuildScoreButtons();
+	m_scoreBrowser->scrollToTop();
+}
+
+void OsuSongBrowser2::onWebClicked(CBaseUIButton *button)
+{
+	if (m_songInfo->getBeatmapID() > 0)
+	{
+		env->openURLInDefaultBrowser(UString::format("https://osu.ppy.sh/b/%ld", m_songInfo->getBeatmapID()));
+		m_osu->getNotificationOverlay()->addNotification("Opening browser, please wait ...", 0xffffffff, false, 0.75f);
+	}
+}
+
 void OsuSongBrowser2::onSortClicked(CBaseUIButton *button)
 {
 	m_contextMenu->setPos(button->getPos());
 	m_contextMenu->setRelPos(button->getRelPos());
-	m_contextMenu->begin();
-	for (int i=0; i<m_sortingMethods.size(); i++)
+	m_contextMenu->begin(button->getSize().x);
 	{
-		CBaseUIButton *button = m_contextMenu->addButton(m_sortingMethods[i].name);
-		if (m_sortingMethods[i].type == m_sortingMethod)
-			button->setTextBrightColor(0xff00ff00);
+		for (int i=0; i<m_sortingMethods.size(); i++)
+		{
+			CBaseUIButton *button = m_contextMenu->addButton(m_sortingMethods[i].name);
+			if (m_sortingMethods[i].type == m_sortingMethod)
+				button->setTextBrightColor(0xff00ff00);
+		}
 	}
 	m_contextMenu->end();
 	m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onSortChange) );
@@ -2405,7 +2516,7 @@ void OsuSongBrowser2::onScoreContextMenu(OsuUISongBrowserScoreButton *scoreButto
 {
 	if (text == "Delete Score")
 	{
-		m_db->deleteScore(getSelectedBeatmap()->getSelectedDifficulty()->md5hash, scoreButton->getScoreUnixTimestamp());
+		m_db->deleteScore(std::string(scoreButton->getName().toUtf8()), scoreButton->getScoreUnixTimestamp());
 
 		rebuildScoreButtons();
 		m_userButton->updateUserStats();

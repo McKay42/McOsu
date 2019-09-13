@@ -594,32 +594,35 @@ void OsuRankingScreen::updateLayout()
 {
 	OsuScreenBackable::updateLayout();
 
+	const float uiScale = Osu::ui_scale->getFloat();
+
 	m_container->setSize(m_osu->getScreenSize());
 
 	m_rankingTitle->setImage(m_osu->getSkin()->getRankingTitle());
-	m_rankingTitle->setScale(Osu::getImageScale(m_osu, m_rankingTitle->getImage(), 75.0f), Osu::getImageScale(m_osu, m_rankingTitle->getImage(), 75.0f));
+	m_rankingTitle->setScale(Osu::getImageScale(m_osu, m_rankingTitle->getImage(), 75.0f) * uiScale, Osu::getImageScale(m_osu, m_rankingTitle->getImage(), 75.0f) * uiScale);
 	m_rankingTitle->setSize(m_rankingTitle->getImage()->getWidth()*m_rankingTitle->getScale().x, m_rankingTitle->getImage()->getHeight()*m_rankingTitle->getScale().y);
 	m_rankingTitle->setRelPos(m_container->getSize().x - m_rankingTitle->getSize().x - m_osu->getUIScale(m_osu, 20.0f), 0);
 
-	m_songInfo->setSize(m_osu->getScreenWidth(), m_rankingTitle->getSize().y*osu_rankingscreen_topbar_height_percent.getFloat());
+	m_songInfo->setSize(m_osu->getScreenWidth(), std::max(m_songInfo->getMinimumHeight(), m_rankingTitle->getSize().y*osu_rankingscreen_topbar_height_percent.getFloat()));
 
 	m_rankings->setSize(m_osu->getScreenSize().x + 2, m_osu->getScreenSize().y - m_songInfo->getSize().y + 3);
 	m_rankings->setRelPosY(m_songInfo->getSize().y - 1);
 	m_container->update_pos();
 
-	Vector2 hardcodedOsuRankingPanelImageSize = Vector2(622, 505) * (m_osu->getSkin()->isRankingPanel2x() ? 2.0f : 1.0f);
+	// NOTE: no uiScale for rankingPanel and rankingGrade, doesn't really work due to legacy layout expectations
+	const Vector2 hardcodedOsuRankingPanelImageSize = Vector2(622, 505) * (m_osu->getSkin()->isRankingPanel2x() ? 2.0f : 1.0f);
 	m_rankingPanel->setImage(m_osu->getSkin()->getRankingPanel());
 	m_rankingPanel->setScale(Osu::getImageScale(m_osu, hardcodedOsuRankingPanelImageSize, 317.0f), Osu::getImageScale(m_osu, hardcodedOsuRankingPanelImageSize, 317.0f));
 	m_rankingPanel->setSize(m_rankingPanel->getImage()->getWidth()*m_rankingPanel->getScale().x, m_rankingPanel->getImage()->getHeight()*m_rankingPanel->getScale().y);
 
-	m_rankingIndex->setSize(m_rankings->getSize().x + 2, m_osu->getScreenHeight()*0.07f);
+	m_rankingIndex->setSize(m_rankings->getSize().x + 2, m_osu->getScreenHeight()*0.07f * uiScale);
 	m_rankingIndex->setBackgroundColor(0xff745e13);
 	m_rankingIndex->setRelPosY(m_rankings->getSize().y + 1);
 
 	m_rankingBottom->setSize(m_rankings->getSize().x + 2, m_osu->getScreenHeight()*0.2f);
 	m_rankingBottom->setRelPosY(m_rankingIndex->getRelPos().y + m_rankingIndex->getSize().y);
 
-	m_rankingScrollDownInfoButton->setSize(m_container->getSize().x*0.2f, m_container->getSize().y*0.1f); // TODO: dynamic size
+	m_rankingScrollDownInfoButton->setSize(m_container->getSize().x*0.2f * uiScale, m_container->getSize().y*0.1f * uiScale);
 	m_rankingScrollDownInfoButton->setRelPos(m_container->getPos().x + m_container->getSize().x/2 - m_rankingScrollDownInfoButton->getSize().x/2, m_container->getSize().y - m_rankingScrollDownInfoButton->getSize().y);
 
 	setGrade(m_grade);
@@ -685,7 +688,10 @@ void OsuRankingScreen::setGrade(OsuScore::GRADE grade)
 		m_rankingGrade->setImage(m_osu->getSkin()->getRankingD());
 		break;
 	}
-	m_rankingGrade->setScale(Osu::getImageScale(m_osu, hardcodedOsuRankingGradeImageSize, 230.0f), Osu::getImageScale(m_osu, hardcodedOsuRankingGradeImageSize, 230.0f));
+
+	const float uiScale = /*Osu::ui_scale->getFloat()*/1.0f; // NOTE: no uiScale for rankingPanel and rankingGrade, doesn't really work due to legacy layout expectations
+
+	m_rankingGrade->setScale(Osu::getImageScale(m_osu, hardcodedOsuRankingGradeImageSize, 230.0f) * uiScale, Osu::getImageScale(m_osu, hardcodedOsuRankingGradeImageSize, 230.0f) * uiScale);
 	m_rankingGrade->setSize(m_rankingGrade->getImage()->getWidth()*m_rankingGrade->getScale().x, m_rankingGrade->getImage()->getHeight()*m_rankingGrade->getScale().y);
 	m_rankingGrade->setRelPos(m_rankings->getSize().x - m_rankingGrade->getSize().x - m_osu->getUIScale(m_osu, 5), m_rankingPanel->getRelPos().y + m_osu->getUIScale(m_osu, 5));
 }

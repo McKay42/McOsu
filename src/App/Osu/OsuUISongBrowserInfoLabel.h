@@ -49,6 +49,8 @@ public:
 	float getMinimumWidth();
 	float getMinimumHeight();
 
+	long getBeatmapID() const {return m_iBeatmapId;}
+
 private:
 	virtual void onClicked();
 

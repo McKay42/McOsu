@@ -13,6 +13,7 @@
 class CBaseUIContainer;
 class CBaseUIScrollView;
 class CBaseUIImage;
+class CBaseUILabel;
 
 class OsuChangelog : public OsuScreenBackable
 {
@@ -37,6 +38,14 @@ private:
 		UString title;
 		std::vector<UString> changes;
 	};
+
+	struct CHANGELOG_UI
+	{
+		CBaseUILabel *title;
+		std::vector<CBaseUILabel*> changes;
+	};
+
+	std::vector<CHANGELOG_UI> m_changelogs;
 };
 
 #endif

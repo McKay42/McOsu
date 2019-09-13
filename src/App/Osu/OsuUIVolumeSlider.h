@@ -12,6 +12,8 @@
 
 class Osu;
 
+class McFont;
+
 class OsuUIVolumeSlider : public CBaseUISlider
 {
 public:
@@ -30,6 +32,8 @@ public:
 
 	bool checkWentMouseInside();
 
+	float getMinimumExtraTextWidth();
+
 	inline bool isSelected() const {return m_bSelected;}
 
 private:
@@ -43,6 +47,8 @@ private:
 
 	bool m_bWentMouseInside;
 	float m_fSelectionAnim;
+
+	McFont *m_font;
 };
 
 #endif

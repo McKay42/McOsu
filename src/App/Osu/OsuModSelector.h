@@ -85,7 +85,6 @@ private:
 
 	void updateButtons(bool initial = false);
 	void updateLayout();
-
 	void updateExperimentalLayout();
 
 	OsuUIModSelectorModButton *setModButtonOnGrid(int x, int y, int state, bool initialState, UString modName, UString tooltipText, std::function<OsuSkinImage*()> getImageFunc);
@@ -131,6 +130,7 @@ private:
 	CBaseUICheckbox *m_ARLock;
 	CBaseUICheckbox *m_ODLock;
 	OsuBeatmapDifficulty *m_previousDifficulty;
+	bool m_bShowOverrideSliderALTHint;
 
 	// mod grid buttons
 	int m_iGridWidth;

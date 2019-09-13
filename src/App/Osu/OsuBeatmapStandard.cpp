@@ -57,6 +57,7 @@ ConVar osu_auto_cursordance("osu_auto_cursordance", false);
 ConVar osu_autopilot_snapping_strength("osu_autopilot_snapping_strength", 2.0f, "How many iterations of quadratic interpolation to use, more = snappier, 0 = linear");
 ConVar osu_autopilot_lenience("osu_autopilot_lenience", 0.75f);
 
+ConVar osu_followpoints_connect_combos("osu_followpoints_connect_combos", false, "connect followpoints even if a new combo has started");
 ConVar osu_followpoints_approachtime("osu_followpoints_approachtime", 800.0f);
 ConVar osu_followpoints_scale_multiplier("osu_followpoints_scale_multiplier", 1.0f);
 
@@ -638,7 +639,7 @@ void OsuBeatmapStandard::drawFollowPoints(Graphics *g)
 		}
 
 		// NOTE: "m_hitobjects[index]->getComboNumber() != 1" breaks (not literally) on new combos
-		if (lastObjectIndex >= 0 && m_hitobjects[index]->getComboNumber() != 1)
+		if (lastObjectIndex >= 0 && (m_hitobjects[index]->getComboNumber() != 1 || osu_followpoints_connect_combos.getBool()))
 		{
 			// ignore previous spinners
 			spinnerPointer = dynamic_cast<OsuSpinner*>(m_hitobjects[lastObjectIndex]);

@@ -61,6 +61,142 @@ ConVar osu_user_include_relax_and_autopilot_for_stats("osu_user_include_relax_an
 
 
 
+struct SortScoreByScore : public OsuDatabase::SCORE_SORTING_COMPARATOR
+{
+	virtual ~SortScoreByScore() {;}
+	bool operator() (OsuDatabase::Score const &a, OsuDatabase::Score const &b) const
+	{
+		// first: score
+		unsigned long long score1 = a.score;
+		unsigned long long score2 = b.score;
+
+		// second: time
+		if (score1 == score2)
+		{
+			score1 = a.unixTimestamp;
+			score2 = b.unixTimestamp;
+		}
+
+		// strict weak ordering!
+		if (score1 == score2)
+			return a.sortHack > b.sortHack;
+
+		return score1 > score2;
+	}
+};
+
+struct SortScoreByCombo : public OsuDatabase::SCORE_SORTING_COMPARATOR
+{
+	virtual ~SortScoreByCombo() {;}
+	bool operator() (OsuDatabase::Score const &a, OsuDatabase::Score const &b) const
+	{
+		// first: combo
+		unsigned long long score1 = a.comboMax;
+		unsigned long long score2 = b.comboMax;
+
+		// second: score
+		if (score1 == score2)
+		{
+			score1 = a.score;
+			score2 = b.score;
+		}
+
+		// third: time
+		if (score1 == score2)
+		{
+			score1 = a.unixTimestamp;
+			score2 = b.unixTimestamp;
+		}
+
+		// strict weak ordering!
+		if (score1 == score2)
+			return a.sortHack > b.sortHack;
+
+		return score1 > score2;
+	}
+};
+
+struct SortScoreByDate : public OsuDatabase::SCORE_SORTING_COMPARATOR
+{
+	virtual ~SortScoreByDate() {;}
+	bool operator() (OsuDatabase::Score const &a, OsuDatabase::Score const &b) const
+	{
+		// first: time
+		unsigned long long score1 = a.unixTimestamp;
+		unsigned long long score2 = b.unixTimestamp;
+
+		// strict weak ordering!
+		if (score1 == score2)
+			return a.sortHack > b.sortHack;
+
+		return score1 > score2;
+	}
+};
+
+struct SortScoreByAccuracy : public OsuDatabase::SCORE_SORTING_COMPARATOR
+{
+	virtual ~SortScoreByAccuracy() {;}
+	bool operator() (OsuDatabase::Score const &a, OsuDatabase::Score const &b) const
+	{
+		// first: accuracy
+		unsigned long long score1 = (unsigned long long)(OsuScore::calculateAccuracy(a.num300s, a.num100s, a.num50s, a.numMisses) * 10000.0f);
+		unsigned long long score2 = (unsigned long long)(OsuScore::calculateAccuracy(b.num300s, b.num100s, b.num50s, b.numMisses) * 10000.0f);
+
+		// second: score
+		if (score1 == score2)
+		{
+			score1 = a.score;
+			score2 = b.score;
+		}
+
+		// third: time
+		if (score1 == score2)
+		{
+			score1 = a.unixTimestamp;
+			score2 = b.unixTimestamp;
+		}
+
+		// strict weak ordering!
+		if (score1 == score2)
+			return a.sortHack > b.sortHack;
+
+		return score1 > score2;
+	}
+};
+
+struct SortScoreByPP : public OsuDatabase::SCORE_SORTING_COMPARATOR
+{
+	virtual ~SortScoreByPP() {;}
+	bool operator() (OsuDatabase::Score const &a, OsuDatabase::Score const &b) const
+	{
+		// first: pp
+		unsigned long long score1 = (unsigned long long)std::max(a.pp * 100.0f, 0.0f);
+		unsigned long long score2 = (unsigned long long)std::max(b.pp * 100.0f, 0.0f);
+
+		// second: score
+		if (score1 == score2)
+		{
+			score1 = a.score;
+			score2 = b.score;
+		}
+
+		// third: time
+		if (score1 == score2)
+		{
+			score1 = a.unixTimestamp;
+			score2 = b.unixTimestamp;
+		}
+
+		// strict weak ordering!
+		if (score1 == score2 || a.isLegacyScore != b.isLegacyScore) // force for type discrepancies (legacy scores don't contain pp data)
+			return a.sortHack > b.sortHack;
+
+		return score1 > score2;
+	}
+};
+
+
+
 class OsuDatabaseLoader : public Resource
 {
 public:
@@ -144,12 +280,15 @@ private:
 
 
 ConVar *OsuDatabase::m_name_ref = NULL;
+ConVar *OsuDatabase::m_osu_songbrowser_scores_sortingtype_ref = NULL;
 
 OsuDatabase::OsuDatabase(Osu *osu)
 {
 	// convar refs
 	if (m_name_ref == NULL)
 		m_name_ref = convar->getConVarByName("name");
+	if (m_osu_songbrowser_scores_sortingtype_ref == NULL)
+		m_osu_songbrowser_scores_sortingtype_ref = convar->getConVarByName("osu_songbrowser_scores_sortingtype");
 
 	// vars
 	m_importTimer = new Timer();
@@ -179,6 +318,12 @@ OsuDatabase::OsuDatabase(Osu *osu)
 	m_prevPlayerStats.level = 0;
 	m_prevPlayerStats.percentToNextLevel = 0.0f;
 	m_prevPlayerStats.totalScore = 0;
+
+	m_scoreSortingMethods.push_back({"Sort By Accuracy", new SortScoreByAccuracy()});
+	m_scoreSortingMethods.push_back({"Sort By Combo", new SortScoreByCombo()});
+	m_scoreSortingMethods.push_back({"Sort By Date", new SortScoreByDate()});
+	m_scoreSortingMethods.push_back({"Sort By pp (Mc)", new SortScoreByPP()});
+	m_scoreSortingMethods.push_back({"Sort By Score", new SortScoreByScore()});
 }
 
 OsuDatabase::~OsuDatabase()
@@ -188,6 +333,11 @@ OsuDatabase::~OsuDatabase()
 	for (int i=0; i<m_beatmaps.size(); i++)
 	{
 		delete m_beatmaps[i];
+	}
+
+	for (int i=0; i<m_scoreSortingMethods.size(); i++)
+	{
+		delete m_scoreSortingMethods[i].comparator;
 	}
 }
 
@@ -319,6 +469,7 @@ void OsuDatabase::deleteScore(std::string beatmapMD5Hash, uint64_t scoreUnixTime
 			m_scores[beatmapMD5Hash].erase(m_scores[beatmapMD5Hash].begin() + i);
 			m_bDidScoresChangeForSave = true;
 			m_bDidScoresChangeForStats = true;
+			//debugLog("Deleted score for %s at %llu\n", beatmapMD5Hash.c_str(), scoreUnixTimestamp);
 			break;
 		}
 	}
@@ -328,37 +479,27 @@ void OsuDatabase::sortScores(std::string beatmapMD5Hash)
 {
 	if (beatmapMD5Hash.length() != 32 || m_scores[beatmapMD5Hash].size() < 2) return;
 
-	struct OSU_SCORE_SORTING_COMPARATOR
+	for (int i=0; i<m_scoreSortingMethods.size(); i++)
 	{
-		virtual ~OSU_SCORE_SORTING_COMPARATOR() {;}
-		virtual bool operator() (OsuDatabase::Score const &a, OsuDatabase::Score const &b) const = 0;
-	};
-
-	struct SortByScore : public OSU_SCORE_SORTING_COMPARATOR
-	{
-		virtual ~SortByScore() {;}
-		bool operator() (OsuDatabase::Score const &a, OsuDatabase::Score const &b) const
+		if (m_osu_songbrowser_scores_sortingtype_ref->getString() == m_scoreSortingMethods[i].name)
 		{
-			// first: score
-			unsigned long long score1 = a.score;
-			unsigned long long score2 = b.score;
-
-			// second: time
-			if (score1 == score2)
+			struct COMPARATOR_WRAPPER
 			{
-				score1 = a.unixTimestamp;
-				score2 = b.unixTimestamp;
-			}
+				SCORE_SORTING_COMPARATOR *comp;
+				bool operator() (OsuDatabase::Score const &a, OsuDatabase::Score const &b) const
+				{
+					return comp->operator()(a, b);
+				}
+			};
+			COMPARATOR_WRAPPER comparatorWrapper;
+			comparatorWrapper.comp = m_scoreSortingMethods[i].comparator;
 
-			// strict weak ordering!
-			if (score1 == score2)
-				return a.sortHack > b.sortHack;
-
-			return score1 > score2;
+			std::sort(m_scores[beatmapMD5Hash].begin(), m_scores[beatmapMD5Hash].end(), comparatorWrapper);
+			break;
 		}
-	};
+	}
 
-	std::sort(m_scores[beatmapMD5Hash].begin(), m_scores[beatmapMD5Hash].end(), SortByScore());
+	debugLog("ERROR: Invalid score sortingtype \"%s\"\n", m_osu_songbrowser_scores_sortingtype_ref->getString().toUtf8());
 }
 
 std::vector<UString> OsuDatabase::getPlayerNamesWithPPScores()
