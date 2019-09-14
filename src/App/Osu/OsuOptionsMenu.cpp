@@ -757,7 +757,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	if (env->getOS() == Environment::OS::OS_WINDOWS)
 	{
 		addCheckbox("Raw Input", convar->getConVarByName("mouse_raw_input"));
-		addCheckbox("Map Absolute Raw Input to Window", convar->getConVarByName("mouse_raw_input_absolute_to_window"));
+		addCheckbox("Map Absolute Raw Input to Window", convar->getConVarByName("mouse_raw_input_absolute_to_window"))->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onRawInputToAbsoluteWindowChange) );
 	}
 	if (env->getOS() == Environment::OS::OS_LINUX)
 	{
@@ -2123,6 +2123,28 @@ void OsuOptionsMenu::onDPIScalingChange(CBaseUICheckbox *checkbox)
 
 				if (Osu::getUIScale() != prevUIScale)
 					m_bDPIScalingScrollToSliderScheduled = true;
+
+				break;
+			}
+		}
+	}
+}
+
+void OsuOptionsMenu::onRawInputToAbsoluteWindowChange(CBaseUICheckbox *checkbox)
+{
+	for (int i=0; i<m_elements.size(); i++)
+	{
+		for (int e=0; e<m_elements[i].elements.size(); e++)
+		{
+			if (m_elements[i].elements[e] == checkbox)
+			{
+				if (m_elements[i].cvar != NULL)
+					m_elements[i].cvar->setValue(checkbox->isChecked());
+
+				onResetUpdate(m_elements[i].resetButton);
+
+				// special case: this requires a virtual mouse offset update, but since it is an engine convar we can't use callbacks
+				m_osu->updateMouseSettings();
 
 				break;
 			}
