@@ -107,6 +107,7 @@ private:
 	void onFullscreenChange(CBaseUICheckbox *checkbox);
 	void onBorderlessWindowedChange(CBaseUICheckbox *checkbox);
 	void onDPIScalingChange(CBaseUICheckbox *checkbox);
+	void onRawInputToAbsoluteWindowChange(CBaseUICheckbox *checkbox);
 	void onSkinSelect();
 	void onSkinSelect2(UString skinName, int id = -1);
 	void onSkinSelectWorkshop();

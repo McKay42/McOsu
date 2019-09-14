@@ -148,6 +148,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_osu_mod_fposu_ref = convar->getConVarByName("osu_mod_fposu");
 	m_snd_change_check_interval_ref = convar->getConVarByName("snd_change_check_interval");
 	m_ui_scrollview_scrollbarwidth_ref = convar->getConVarByName("ui_scrollview_scrollbarwidth");
+	m_mouse_raw_input_absolute_to_window_ref = convar->getConVarByName("mouse_raw_input_absolute_to_window");
 
 	// experimental mods list
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_wobble"));
@@ -1891,7 +1892,12 @@ void Osu::updateMouseSettings()
 	{
 		if (osu_letterboxing.getBool())
 		{
-			offset = -Vector2((engine->getScreenWidth()/2 - g_vInternalResolution.x/2)*(1.0f + osu_letterboxing_offset_x.getFloat()), (engine->getScreenHeight()/2 - g_vInternalResolution.y/2)*(1.0f + osu_letterboxing_offset_y.getFloat()));
+			// special case for osu: since letterboxed raw input absolute to window should mean the 'game' window, and not the 'engine' window, no offset scaling is necessary
+			if (m_mouse_raw_input_absolute_to_window_ref->getBool())
+				offset = -Vector2((engine->getScreenWidth()/2 - g_vInternalResolution.x/2), (engine->getScreenHeight()/2 - g_vInternalResolution.y/2));
+			else
+				offset = -Vector2((engine->getScreenWidth()/2 - g_vInternalResolution.x/2)*(1.0f + osu_letterboxing_offset_x.getFloat()), (engine->getScreenHeight()/2 - g_vInternalResolution.y/2)*(1.0f + osu_letterboxing_offset_y.getFloat()));
+
 			scale = Vector2(g_vInternalResolution.x / engine->getScreenWidth(), g_vInternalResolution.y / engine->getScreenHeight());
 		}
 	}

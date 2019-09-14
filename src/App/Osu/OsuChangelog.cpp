@@ -51,6 +51,7 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha301.changes.push_back("- Allow loading incorrect skin.ini \"[General]\" section props before section start");
 	alpha301.changes.push_back("- FPoSu: Fixed rare pause menu button jitter/unclickable");
 	alpha301.changes.push_back("- Windows: Fixed toggling fullscreen sometimes causing weird windowed resolutions");
+	alpha301.changes.push_back("- Windows: Fixed letterboxed \"Map Absolute Raw Input to Window\" offsets not matching osu!");
 	changelogs.push_back(alpha301);
 
 	CHANGELOG alpha30;

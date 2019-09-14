@@ -192,6 +192,7 @@ public:
 
 	void updateMods();
 	void updateConfineCursor();
+	void updateMouseSettings();
 
 private:
 	static Vector2 g_vInternalResolution;
@@ -202,7 +203,6 @@ private:
 
 	void rebuildRenderTargets();
 	void reloadFonts();
-	void updateMouseSettings();
 	void fireResolutionChanged();
 
 	// callbacks
@@ -253,6 +253,7 @@ private:
 	ConVar *m_osu_mod_fposu_ref;
 	ConVar *m_snd_change_check_interval_ref;
 	ConVar *m_ui_scrollview_scrollbarwidth_ref;
+	ConVar *m_mouse_raw_input_absolute_to_window_ref;
 
 	// interfaces
 	Osu2 *m_osu2;
