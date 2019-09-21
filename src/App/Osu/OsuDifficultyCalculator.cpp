@@ -580,7 +580,6 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<std::
 	*aim = std::sqrt(*aim) * star_scaling_factor;
 	*speed = std::sqrt(*speed) * star_scaling_factor;
 
-	// TODO: touch nerf goes here
 	if (hasTD)
 		*aim = pow(*aim, 0.8f);
 
