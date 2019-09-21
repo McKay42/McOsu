@@ -175,6 +175,7 @@ public:
 	inline bool getModSD() const {return m_bModSD;}
 	inline bool getModSS() const {return m_bModSS;}
 	inline bool getModNM() const {return m_bModNM;}
+	inline bool getModTD() const {return m_bModTD;}
 
 	inline std::vector<ConVar*> getExperimentalMods() const {return m_experimentalMods;}
 
@@ -306,6 +307,7 @@ private:
 	bool m_bModSD;
 	bool m_bModSS;
 	bool m_bModNM;
+	bool m_bModTD;
 
 	std::vector<ConVar*> m_experimentalMods;
 

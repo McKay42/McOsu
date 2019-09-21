@@ -148,6 +148,7 @@ public:
 	inline OsuSkinImage *getSelectionModNightmare() {return m_selectionModNightmare;}
 	inline OsuSkinImage *getSelectionModTarget() {return m_selectionModTarget;}
 	inline OsuSkinImage *getSelectionModScorev2() {return m_selectionModScorev2;}
+	inline OsuSkinImage *getSelectionModTD() {return m_selectionModTD;}
 
 	inline Image *getPauseContinue() {return m_pauseContinue;}
 	inline Image *getPauseRetry() {return m_pauseRetry;}
@@ -419,6 +420,7 @@ private:
 	OsuSkinImage *m_selectionModNightmare;
 	OsuSkinImage *m_selectionModTarget;
 	OsuSkinImage *m_selectionModScorev2;
+	OsuSkinImage *m_selectionModTD;
 
 	Image *m_pauseContinue;
 	Image *m_pauseRetry;

@@ -1684,7 +1684,7 @@ std::vector<std::shared_ptr<OsuDifficultyHitObject>> OsuBeatmapDifficulty::gener
 double OsuBeatmapDifficulty::calculateStarDiff(OsuBeatmap *beatmap, double *aim, double *speed, int upToObjectIndex, bool calculateStarsInaccurately)
 {
 	std::vector<std::shared_ptr<OsuDifficultyHitObject>> hitObjects = generateDifficultyHitObjectsForBeatmap(beatmap, calculateStarsInaccurately);
-	return OsuDifficultyCalculator::calculateStarDiffForHitObjects(hitObjects, (beatmap != NULL ? beatmap->getCS() : CS), aim, speed, upToObjectIndex);
+	return OsuDifficultyCalculator::calculateStarDiffForHitObjects(hitObjects, (beatmap != NULL ? beatmap->getCS() : CS), aim, speed, upToObjectIndex, beatmap->getOsu()->getModTD());
 }
 
 void OsuBeatmapDifficulty::rebuildStarCacheForUpToHitObjectIndex(OsuBeatmap *beatmap, std::atomic<bool> &interruptLoad, std::atomic<int> &progress)
