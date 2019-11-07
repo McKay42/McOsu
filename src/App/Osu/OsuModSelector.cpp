@@ -266,6 +266,26 @@ void OsuModSelector::updateButtons(bool initial)
 	}
 }
 
+void OsuModSelector::updateExperimentalButtons(bool initial)
+{
+	if (initial)
+	{
+		for (int i=0; i<m_experimentalMods.size(); i++)
+		{
+			ConVar *cvar = m_experimentalMods[i].cvar;
+			if (cvar != NULL)
+			{
+				CBaseUICheckbox *checkboxPointer = dynamic_cast<CBaseUICheckbox*>(m_experimentalMods[i].element);
+				if (checkboxPointer != NULL)
+				{
+					if (cvar->getBool() != checkboxPointer->isChecked())
+						checkboxPointer->setChecked(cvar->getBool(), false);
+				}
+			}
+		}
+	}
+}
+
 OsuModSelector::~OsuModSelector()
 {
 	SAFE_DELETE(m_container);
@@ -557,7 +577,8 @@ void OsuModSelector::setVisible(bool visible)
 	{
 		m_bScheduledHide = false;
 
-		updateButtons();
+		updateButtons(true); // force state update without firing callbacks
+		updateExperimentalButtons(true); // force state update without firing callbacks
 		updateLayout();
 		updateOverrideSliderLabels();
 		checkUpdateBPMSliderSlaves();

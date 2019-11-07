@@ -22,6 +22,7 @@
 #include "OsuBeatmapDifficulty.h"
 
 ConVar osu_rich_presence("osu_rich_presence", true, OsuRichPresence::onRichPresenceChange);
+ConVar osu_rich_presence_dynamic_windowtitle("osu_rich_presence_dynamic_windowtitle", true, "should the window title show the currently playing beatmap Artist - Title and [Difficulty] name");
 ConVar osu_rich_presence_show_recentplaystats("osu_rich_presence_show_recentplaystats", true);
 ConVar osu_rich_presence_discord_show_totalpp("osu_rich_presence_discord_show_totalpp", true);
 
@@ -41,7 +42,8 @@ void OsuRichPresence::onSongBrowser(Osu *osu)
 	setStatus(osu, "Song Selection");
 
 	// also update window title
-	env->setWindowTitle("McOsu");
+	if (osu_rich_presence_dynamic_windowtitle.getBool())
+		env->setWindowTitle("McOsu");
 }
 
 void OsuRichPresence::onPlayStart(Osu *osu)
@@ -57,9 +59,12 @@ void OsuRichPresence::onPlayStart(Osu *osu)
 	setStatus(osu, playingInfo);
 
 	// also update window title
-	UString windowTitle = UString(playingInfo);
-	windowTitle.insert(0, "McOsu - ");
-	env->setWindowTitle(windowTitle);
+	if (osu_rich_presence_dynamic_windowtitle.getBool())
+	{
+		UString windowTitle = UString(playingInfo);
+		windowTitle.insert(0, "McOsu - ");
+		env->setWindowTitle(windowTitle);
+	}
 }
 
 void OsuRichPresence::onPlayEnd(Osu *osu, bool quit)

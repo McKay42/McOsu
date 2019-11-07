@@ -19,6 +19,8 @@
 #include "OsuDatabase.h"
 #include "OsuBeatmap.h"
 #include "OsuBeatmapDifficulty.h"
+
+#include "OsuMainMenu.h"
 #include "OsuSongBrowser2.h"
 #include "OsuNotificationOverlay.h"
 
@@ -30,6 +32,7 @@ ConVar osu_mp_win_condition_accuracy("osu_mp_win_condition_accuracy", false);
 ConVar osu_mp_allow_client_beatmap_select("osu_mp_sv_allow_client_beatmap_select", true);
 ConVar osu_mp_broadcastcommand("osu_mp_broadcastcommand");
 ConVar osu_mp_clientcastcommand("osu_mp_clientcastcommand");
+ConVar osu_mp_select_beatmap("osu_mp_select_beatmap");
 
 unsigned long long OsuMultiplayer::sortHackCounter = 0;
 ConVar *OsuMultiplayer::m_cl_cmdrate = NULL;
@@ -56,7 +59,11 @@ OsuMultiplayer::OsuMultiplayer(Osu *osu)
 	osu_mp_broadcastcommand.setCallback( fastdelegate::MakeDelegate(this, &OsuMultiplayer::onBroadcastCommand) );
 	osu_mp_clientcastcommand.setCallback( fastdelegate::MakeDelegate(this, &OsuMultiplayer::onClientcastCommand) );
 
+	osu_mp_select_beatmap.setCallback( fastdelegate::MakeDelegate(this, &OsuMultiplayer::onMPSelectBeatmap) );
+
 	m_fNextPlayerCmd = 0.0f;
+
+	m_bMPSelectBeatmapScheduled = false;
 
 	/*
 	PLAYER ply;
@@ -85,6 +92,16 @@ OsuMultiplayer::~OsuMultiplayer()
 
 void OsuMultiplayer::update()
 {
+	if (m_bMPSelectBeatmapScheduled)
+	{
+		// wait for songbrowser db load
+		if (m_osu->getSongBrowser()->getDatabase()->isFinished())
+		{
+			setBeatmap(m_sMPSelectBeatmapScheduledMD5Hash);
+			m_bMPSelectBeatmapScheduled = false; // NOTE: resetting flag below to avoid endless loops
+		}
+	}
+
 	if (!isInMultiplayer()) return;
 
 	/*
@@ -270,7 +287,21 @@ bool OsuMultiplayer::onClientReceiveInt(uint32_t id, void *data, uint32_t size, 
 
 					if (!found)
 					{
-						m_osu->getNotificationOverlay()->addNotification((pp->beatmapId > 0 ? "Missing beatmap! -> ^^^ Click top left corner ^^^" : "Missing Beatmap!"), 0xffff0000);
+						if (beatmaps.size() < 1)
+						{
+							if (m_osu->getMainMenu()->isVisible() && !m_bMPSelectBeatmapScheduled)
+							{
+								m_bMPSelectBeatmapScheduled = true;
+								m_sMPSelectBeatmapScheduledMD5Hash = std::string(pp->beatmapMD5Hash, sizeof(pp->beatmapMD5Hash));
+
+								m_osu->toggleSongBrowser();
+							}
+							else
+								m_osu->getNotificationOverlay()->addNotification("Database not yet loaded ...", 0xffffff00);
+						}
+						else
+							m_osu->getNotificationOverlay()->addNotification((pp->beatmapId > 0 ? "Missing beatmap! -> ^^^ Click top left [Web] ^^^" : "Missing Beatmap!"), 0xffff0000);
+
 						m_osu->getSongBrowser()->getInfoLabel()->setFromMissingBeatmap(pp->beatmapId);
 					}
 
@@ -864,4 +895,9 @@ void OsuMultiplayer::onClientCommandInt(UString string, bool executeLocallyToo)
 	memcpy((void*)(((char*)&wrappedPacket) + wrapperSize), &pp, size);
 
 	engine->getNetworkHandler()->broadcast(wrappedPacket, size + wrapperSize, true);
+}
+
+void OsuMultiplayer::onMPSelectBeatmap(UString md5hash)
+{
+	setBeatmap(std::string(md5hash.toUtf8()));
 }

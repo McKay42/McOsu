@@ -34,8 +34,18 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 
 	std::vector<CHANGELOG> changelogs;
 
+	CHANGELOG alpha311;
+	alpha311.title = UString::format("30.11 (%s, %s)", __DATE__, __TIME__);
+	alpha311.changes.push_back("- Fixed new osu database format breaking loading");
+	alpha311.changes.push_back("- Added upper osu database version loading limit");
+	alpha311.changes.push_back("- Added \"Sort By Misses\" to score sorting options");
+	alpha311.changes.push_back("- Added ConVars: osu_rich_presence_dynamic_windowtitle, osu_database_ignore_version");
+	alpha311.changes.push_back("- FPoSu: Fixed disabling \"Show FPS Counter\" not working (was always shown)");
+	alpha311.changes.push_back("- Fixed rare custom manual ConVars getting removed from osu.cfg");
+	changelogs.push_back(alpha311);
+
 	CHANGELOG alpha301;
-	alpha301.title = UString::format("30.1 (%s, %s)", __DATE__, __TIME__);
+	alpha301.title = "30.1 (13.09.2019)";
 	alpha301.changes.push_back("- Added proper support for HiDPI displays (scaling)");
 	alpha301.changes.push_back("- Added option \"UI Scale\" (Options > Graphics > UI Scaling)");
 	alpha301.changes.push_back("- Added option \"DPI Scaling\" (Options > Graphics > UI Scaling)");

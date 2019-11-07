@@ -145,7 +145,7 @@ private:
 
 	UString parseLegacyCfgBeatmapDirectoryParameter();
 	void scheduleLoadRaw();
-	void loadDB(OsuFile *db);
+	void loadDB(OsuFile *db, bool &fallbackToRawLoad);
 
 	void loadScores();
 	void saveScores();

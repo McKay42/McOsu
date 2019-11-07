@@ -52,6 +52,7 @@ ConVar osu_folder_sub_skins("osu_folder_sub_skins", "Skins/");
 ConVar osu_database_enabled("osu_database_enabled", true);
 ConVar osu_database_dynamic_star_calculation("osu_database_dynamic_star_calculation", true, "dynamically calculate star ratings in the background");
 ConVar osu_database_ignore_version_warnings("osu_database_ignore_version_warnings", false);
+ConVar osu_database_ignore_version("osu_database_ignore_version", false, "ignore upper version limit and force load the db file (may crash)");
 ConVar osu_scores_enabled("osu_scores_enabled", true);
 ConVar osu_scores_legacy_enabled("osu_scores_legacy_enabled", true, "load osu!'s scores.db");
 ConVar osu_scores_custom_enabled("osu_scores_custom_enabled", true, "load custom scores.db");
@@ -124,6 +125,37 @@ struct SortScoreByDate : public OsuDatabase::SCORE_SORTING_COMPARATOR
 		// first: time
 		unsigned long long score1 = a.unixTimestamp;
 		unsigned long long score2 = b.unixTimestamp;
+
+		// strict weak ordering!
+		if (score1 == score2)
+			return a.sortHack > b.sortHack;
+
+		return score1 > score2;
+	}
+};
+
+struct SortScoreByMisses : public OsuDatabase::SCORE_SORTING_COMPARATOR
+{
+	virtual ~SortScoreByMisses() {;}
+	bool operator() (OsuDatabase::Score const &a, OsuDatabase::Score const &b) const
+	{
+		// first: misses
+		unsigned long long score1 = b.numMisses; // swapped (lower numMisses is better)
+		unsigned long long score2 = a.numMisses;
+
+		// second: score
+		if (score1 == score2)
+		{
+			score1 = a.score;
+			score2 = b.score;
+		}
+
+		// third: time
+		if (score1 == score2)
+		{
+			score1 = a.unixTimestamp;
+			score2 = b.unixTimestamp;
+		}
 
 		// strict weak ordering!
 		if (score1 == score2)
@@ -256,7 +288,7 @@ protected:
 			m_db->m_beatmaps.clear();
 
 			m_db->m_fLoadingProgress = 0.25f;
-			m_db->loadDB(db);
+			m_db->loadDB(db, m_bNeedRawLoad);
 		}
 		else
 			m_bNeedRawLoad = true;
@@ -322,6 +354,7 @@ OsuDatabase::OsuDatabase(Osu *osu)
 	m_scoreSortingMethods.push_back({"Sort By Accuracy", new SortScoreByAccuracy()});
 	m_scoreSortingMethods.push_back({"Sort By Combo", new SortScoreByCombo()});
 	m_scoreSortingMethods.push_back({"Sort By Date", new SortScoreByDate()});
+	m_scoreSortingMethods.push_back({"Sort By Misses", new SortScoreByMisses()});
 	m_scoreSortingMethods.push_back({"Sort By pp (Mc)", new SortScoreByPP()});
 	m_scoreSortingMethods.push_back({"Sort By Score", new SortScoreByScore()});
 }
@@ -393,6 +426,7 @@ void OsuDatabase::update()
 			{
 				m_rawLoadBeatmapFolders.clear();
 				m_bRawBeatmapLoadScheduled = false;
+				m_fLoadingProgress = 1.0f;
 				m_importTimer->update();
 				debugLog("Refresh finished, added %i beatmaps in %f seconds.\n", m_beatmaps.size(), m_importTimer->getElapsedTime());
 				break;
@@ -495,7 +529,7 @@ void OsuDatabase::sortScores(std::string beatmapMD5Hash)
 			comparatorWrapper.comp = m_scoreSortingMethods[i].comparator;
 
 			std::sort(m_scores[beatmapMD5Hash].begin(), m_scores[beatmapMD5Hash].end(), comparatorWrapper);
-			break;
+			return;
 		}
 	}
 
@@ -886,7 +920,7 @@ void OsuDatabase::scheduleLoadRaw()
 	m_bIsFirstLoad = false;
 }
 
-void OsuDatabase::loadDB(OsuFile *db)
+void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 {
 	// reset
 	m_collections.clear();
@@ -950,6 +984,16 @@ void OsuDatabase::loadDB(OsuFile *db)
 		}
 	}
 
+	if (m_iVersion > 20191107 && !osu_database_ignore_version.getBool())
+	{
+		m_osu->getNotificationOverlay()->addNotification(UString::format("osu!.db version unknown (%i),  using fallback loader.", m_iVersion), 0xffffff00, false, 5.0f);
+
+		fallbackToRawLoad = true;
+		m_fLoadingProgress = 0.0f;
+
+		return;
+	}
+
 	// read beatmapInfos
 	struct BeatmapSet
 	{
@@ -967,7 +1011,11 @@ void OsuDatabase::loadDB(OsuFile *db)
 
 		m_fLoadingProgress = 0.25f + 0.5f*((float)(i+1)/(float)m_iNumBeatmapsToLoad);
 
-		/*unsigned int size = */db->readInt();
+		if (m_iVersion < 20191107) // see https://osu.ppy.sh/home/changelog/stable40/20191107.2
+		{
+			/*unsigned int size = */db->readInt(); // size in bytes of the beatmap entry
+		}
+
 		UString artistName = db->readString().trim();
 		UString artistNameUnicode = db->readString();
 		UString songTitle = db->readString().trim();

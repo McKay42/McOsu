@@ -167,6 +167,8 @@ private:
 
 
 
+ConVar osu_toggle_preview_music("osu_toggle_preview_music");
+
 ConVar osu_draw_menu_background("osu_draw_menu_background", true);
 ConVar osu_draw_main_menu_workshop_button("osu_draw_main_menu_workshop_button", true);
 
@@ -210,6 +212,8 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen(osu)
 		m_osu_universal_offset_ref = convar->getConVarByName("osu_universal_offset");
 	if (m_osu_universal_offset_hardcoded_ref == NULL)
 		m_osu_universal_offset_hardcoded_ref = convar->getConVarByName("osu_universal_offset_hardcoded");
+
+	osu_toggle_preview_music.setCallback( fastdelegate::MakeDelegate(this, &OsuMainMenu::onPausePressed) );
 
 	// engine settings
 	engine->getMouse()->addListener(this);
