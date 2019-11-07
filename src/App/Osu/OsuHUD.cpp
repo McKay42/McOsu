@@ -1899,9 +1899,9 @@ void OsuHUD::drawProgressBar(Graphics *g, float percent, bool waiting)
 		}
 
 		// draw it
-		g->setAntialiasing(true);
+		///g->setAntialiasing(true); // commented for now
 		g->drawVAO(&vao);
-		g->setAntialiasing(false);
+		///g->setAntialiasing(false);
 	}
 
 	// draw circularmetre

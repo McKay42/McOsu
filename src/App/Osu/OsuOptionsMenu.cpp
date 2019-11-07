@@ -3465,8 +3465,19 @@ void OsuOptionsMenu::save()
 				{
 					if (m_elements[i].cvar != NULL && line.find(m_elements[i].cvar->getName().toUtf8()) != std::string::npos)
 					{
-						keepLine = false;
-						break;
+						// we don't want to remove custom convars which start with options entry convars (e.g. osu_rich_presence and osu_rich_presence_dynamic_windowtitle)
+						// so, keep lines which only have partial matches
+
+						const size_t firstSpaceIndex = line.find(" ");
+						const size_t endOfConVarNameIndex = (firstSpaceIndex != std::string::npos ? firstSpaceIndex : line.length());
+
+						if (std::string(m_elements[i].cvar->getName().toUtf8()).find(line.c_str(), 0, endOfConVarNameIndex) != std::string::npos)
+						{
+							keepLine = false;
+							break;
+						}
+						//else
+						//	debugLog("ignoring match %s with %s\n", m_elements[i].cvar->getName().toUtf8(), line.c_str());
 					}
 				}
 

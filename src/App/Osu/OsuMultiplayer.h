@@ -111,6 +111,8 @@ private:
 	void onBroadcastCommand(UString command);
 	void onClientCommandInt(UString string, bool executeLocallyToo);
 
+	void onMPSelectBeatmap(UString md5hash);
+
 	enum PACKET_TYPE
 	{
 		PLAYER_CHANGE_TYPE,
@@ -178,6 +180,9 @@ private:
 
 	float m_fNextPlayerCmd;
 	std::vector<PLAYER_INPUT_PACKET> m_playerInputBuffer;
+
+	bool m_bMPSelectBeatmapScheduled;
+	std::string m_sMPSelectBeatmapScheduledMD5Hash;
 };
 
 #endif

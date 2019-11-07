@@ -84,6 +84,7 @@ private:
 	};
 
 	void updateButtons(bool initial = false);
+	void updateExperimentalButtons(bool initial);
 	void updateLayout();
 	void updateExperimentalLayout();
 

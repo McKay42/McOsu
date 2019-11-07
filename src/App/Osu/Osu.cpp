@@ -64,7 +64,7 @@
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 30.1f);
+ConVar osu_version("osu_version", 30.11f);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr");
 #else
@@ -623,7 +623,9 @@ void Osu::draw(Graphics *g)
 		{
 			m_fposu->draw(g);
 			m_hud->draw(g);
-			m_hud->drawFps(g);
+
+			if (osu_draw_fps.getBool())
+				m_hud->drawFps(g);
 		}
 
 		// draw player cursor
@@ -813,11 +815,8 @@ void Osu::update()
 	if (isInVRMode())
 		m_vr->update();
 
-	if (isInPlayMode())
-	{
-		if (m_osu_mod_fposu_ref->getBool())
-			m_fposu->update();
-	}
+	if (isInPlayMode() && m_osu_mod_fposu_ref->getBool())
+		m_fposu->update();
 
 	m_windowManager->update();
 
@@ -1198,7 +1197,7 @@ void Osu::onKeyDown(KeyboardEvent &key)
 
 	// local hotkeys
 
-	// while playing
+	// while playing (and not in options)
 	if (isInPlayMode() && !m_optionsMenu->isVisible())
 	{
 		// while playing and not paused
@@ -2155,6 +2154,12 @@ void Osu::onKey1Change(bool pressed, bool mouse)
 		{
 			m_hud->animateCursorExpand();
 			m_hud->addCursorRipple(engine->getMouse()->getPos());
+
+			/*
+			engine->getResourceManager()->loadSoundAbs("c:/Program Files (x86)/osu!/Skins/HL skin normal sounds/pl_gun3.wav", "OSU_TEMP_GUN_3")->setOverlayable(true);
+			engine->getResourceManager()->loadSoundAbs("c:/Program Files (x86)/osu!/Skins/HL skin normal sounds/pl_gun3.wav", "OSU_TEMP_GUN_3")->setVolume(0.2f);
+			engine->getSound()->play(engine->getResourceManager()->loadSoundAbs("c:/Program Files (x86)/osu!/Skins/HL skin normal sounds/pl_gun3.wav", "OSU_TEMP_GUN_3"));
+			*/
 		}
 		else if (!m_bKeyboardKey1Down && !m_bMouseKey1Down && !m_bKeyboardKey2Down && !m_bMouseKey2Down)
 			m_hud->animateCursorShrink();
@@ -2187,6 +2192,10 @@ void Osu::onKey2Change(bool pressed, bool mouse)
 		{
 			m_hud->animateCursorExpand();
 			m_hud->addCursorRipple(engine->getMouse()->getPos());
+
+			/*
+			engine->getSound()->play(engine->getResourceManager()->loadSoundAbs("c:/Program Files (x86)/osu!/Skins/HL skin normal sounds/pl_gun3.wav", "OSU_TEMP_GUN_3"));
+			*/
 		}
 		else if (!m_bKeyboardKey2Down && !m_bMouseKey2Down && !m_bKeyboardKey1Down && !m_bMouseKey1Down)
 			m_hud->animateCursorShrink();

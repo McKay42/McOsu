@@ -135,6 +135,7 @@ public:
 	inline OsuTooltipOverlay *getTooltipOverlay() const {return m_tooltipOverlay;}
 	inline OsuModSelector *getModSelector() const {return m_modSelector;}
 	inline OsuPauseMenu *getPauseMenu() const {return m_pauseMenu;}
+	inline OsuMainMenu *getMainMenu() const {return m_mainMenu;}
 	inline OsuRankingScreen *getRankingScreen() const {return m_rankingScreen;}
 	inline OsuScore *getScore() const {return m_score;}
 	inline OsuUpdateHandler *getUpdateHandler() const {return m_updateHandler;}
