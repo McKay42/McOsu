@@ -984,6 +984,7 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 		}
 	}
 
+	// hard cap upper db version
 	if (m_iVersion > 20191107 && !osu_database_ignore_version.getBool())
 	{
 		m_osu->getNotificationOverlay()->addNotification(UString::format("osu!.db version unknown (%i),  using fallback loader.", m_iVersion), 0xffffff00, false, 5.0f);
@@ -994,7 +995,7 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 		return;
 	}
 
-	// read beatmapInfos
+	// read beatmapInfos, and also build two hashmaps (diff hash -> OsuBeatmapDifficulty, diff hash -> OsuBeatmap)
 	struct BeatmapSet
 	{
 		int setID;
@@ -1002,6 +1003,8 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 		std::vector<OsuBeatmapDifficulty*> diffs;
 	};
 	std::vector<BeatmapSet> beatmapSets;
+	std::unordered_map<std::string, OsuBeatmapDifficulty*> hashToDiff;
+	std::unordered_map<std::string, OsuBeatmap*> hashToBeatmap;
 	for (int i=0; i<m_iNumBeatmapsToLoad; i++)
 	{
 		if (m_bInterruptLoad.load()) break; // cancellation point
@@ -1009,10 +1012,14 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 		if (Osu::debug->getBool())
 			debugLog("Database: Reading beatmap %i/%i ...\n", (i+1), m_iNumBeatmapsToLoad);
 
-		m_fLoadingProgress = 0.25f + 0.5f*((float)(i+1)/(float)m_iNumBeatmapsToLoad);
+		m_fLoadingProgress = 0.24f + 0.5f*((float)(i+1)/(float)m_iNumBeatmapsToLoad);
 
 		if (m_iVersion < 20191107) // see https://osu.ppy.sh/home/changelog/stable40/20191107.2
 		{
+			// also see https://github.com/ppy/osu-wiki/commit/b90f312e06b4f86e509b397565f1fe014bb15943
+			// no idea why peppy decided to change the wiki version from 20191107 to 20191106, because that's not what stable is doing.
+			// the correct version is still 20191107
+
 			/*unsigned int size = */db->readInt(); // size in bytes of the beatmap entry
 		}
 
@@ -1240,6 +1247,10 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 				s.diffs.push_back(diff);
 				beatmapSets.push_back(s);
 			}
+
+			// and add an entry in our hashmap
+			if (diff->md5hash.length() == 32)
+				hashToDiff[diff->md5hash] = diff;
 		}
 	}
 
@@ -1258,6 +1269,14 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 				bm->setDifficulties(beatmapSets[i].diffs);
 
 				m_beatmaps.push_back(bm);
+
+				// and add an entry in our hashmap
+				for (int d=0; d<beatmapSets[i].diffs.size(); d++)
+				{
+					const std::string &md5hash = beatmapSets[i].diffs[d]->md5hash;
+					if (md5hash.length() == 32)
+						hashToBeatmap[md5hash] = bm;
+				}
 			}
 		}
 	}
@@ -1290,6 +1309,10 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 							// we have found a matching beatmap, add ourself to its diffs
 							m_beatmaps[e]->getDifficultiesPointer()->push_back(diff);
 
+							// and add an entry in our hashmap
+							if (diff->md5hash.length() == 32)
+								hashToBeatmap[diff->md5hash] = m_beatmaps[e];
+
 							break;
 						}
 					}
@@ -1301,9 +1324,18 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 
 						std::vector<OsuBeatmapDifficulty*> diffs;
 						diffs.push_back(beatmapSets[i].diffs[b]);
+
 						bm->setDifficulties(diffs);
 
 						m_beatmaps.push_back(bm);
+
+						// and add an entry in our hashmap
+						for (int d=0; d<diffs.size(); d++)
+						{
+							const std::string &md5hash = diffs[d]->md5hash;
+							if (md5hash.length() == 32)
+								hashToBeatmap[md5hash] = bm;
+						}
 					}
 				}
 			}
@@ -1328,67 +1360,81 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 			std::vector<std::string> hashes;
 		};
 
-		int version = collectionFile.readInt();
-		int numCollections = collectionFile.readInt();
+		const int version = collectionFile.readInt();
+		const int numCollections = collectionFile.readInt();
 
 		debugLog("Collection: version = %i, numCollections = %i\n", version, numCollections);
-		for (int i=0; i<numCollections; i++)
+
+		if (version > 20191107 && !osu_database_ignore_version.getBool())
+			m_osu->getNotificationOverlay()->addNotification(UString::format("collection.db version unknown (%i),  skipping loading.", version), 0xffffff00, false, 5.0f);
+
+		if (version <= 20191107 || osu_database_ignore_version.getBool())
 		{
-			if (m_bInterruptLoad.load()) break; // cancellation point
-
-			m_fLoadingProgress = 0.75f + 0.24f*((float)(i+1)/(float)numCollections);
-
-			UString name = collectionFile.readString();
-			int numBeatmaps = collectionFile.readInt();
-
-			RawCollection rc;
-			rc.name = name;
-
-			if (Osu::debug->getBool())
-				debugLog("Raw Collection #%i: name = %s, numBeatmaps = %i\n", i, name.toUtf8(), numBeatmaps);
-
-			for (int b=0; b<numBeatmaps; b++)
+			for (int i=0; i<numCollections; i++)
 			{
 				if (m_bInterruptLoad.load()) break; // cancellation point
 
-				std::string md5hash = collectionFile.readStdString();
-				rc.hashes.push_back(md5hash);
-			}
+				m_fLoadingProgress = 0.75f + 0.24f*((float)(i+1)/(float)numCollections);
 
-			if (rc.hashes.size() > 0)
-			{
-				// collect OsuBeatmaps corresponding to this collection
-				Collection c;
-				c.name = rc.name;
+				UString name = collectionFile.readString();
+				int numBeatmaps = collectionFile.readInt();
 
-				// go through every hash of the collection
-				std::vector<OsuBeatmapDifficulty*> matchingDiffs;
-				for (int h=0; h<rc.hashes.size(); h++)
+				RawCollection rc;
+				rc.name = name;
+
+				if (Osu::debug->getBool())
+					debugLog("Raw Collection #%i: name = %s, numBeatmaps = %i\n", i, name.toUtf8(), numBeatmaps);
+
+				for (int b=0; b<numBeatmaps; b++)
 				{
 					if (m_bInterruptLoad.load()) break; // cancellation point
 
-					// for every hash, go through every beatmap
-					for (int b=0; b<m_beatmaps.size(); b++)
+					std::string md5hash = collectionFile.readStdString();
+					rc.hashes.push_back(md5hash);
+				}
+
+				if (rc.hashes.size() > 0)
+				{
+					// collect OsuBeatmaps corresponding to this collection
+					Collection c;
+					c.name = rc.name;
+
+					// go through every hash of the collection
+					std::vector<OsuBeatmapDifficulty*> matchingDiffs;
+					for (int h=0; h<rc.hashes.size(); h++)
 					{
 						if (m_bInterruptLoad.load()) break; // cancellation point
 
-						// for every beatmap, go through every diff and check if a diff hash matches, store those matching diffs
-						std::vector<OsuBeatmapDifficulty*> diffs = m_beatmaps[b]->getDifficulties();
-						for (int d=0; d<diffs.size(); d++)
+						// old: for every hash, go through every beatmap
+						/*
+						for (int b=0; b<m_beatmaps.size(); b++)
 						{
 							if (m_bInterruptLoad.load()) break; // cancellation point
 
-							if (diffs[d]->md5hash == rc.hashes[h])
-								matchingDiffs.push_back(diffs[d]);
+							// for every beatmap, go through every diff and check if a diff hash matches, store those matching diffs
+							std::vector<OsuBeatmapDifficulty*> diffs = m_beatmaps[b]->getDifficulties();
+							for (int d=0; d<diffs.size(); d++)
+							{
+								if (m_bInterruptLoad.load()) break; // cancellation point
+
+								if (diffs[d]->md5hash == rc.hashes[h])
+									matchingDiffs.push_back(diffs[d]);
+							}
+						}
+						*/
+
+						// new: use hashmap
+						if (rc.hashes[h].length() == 32)
+						{
+							const auto result = hashToDiff.find(rc.hashes[h]);
+							if (result != hashToDiff.end())
+								matchingDiffs.push_back(result->second);
 						}
 					}
-				}
 
-				// we now have an array of all OsuBeatmapDifficulty objects within this collection
+					// we now have an array of all OsuBeatmapDifficulty objects within this collection
 
-				// go through every found OsuBeatmapDifficulty
-				if (matchingDiffs.size() > 0)
-				{
+					// go through every found OsuBeatmapDifficulty
 					for (int md=0; md<matchingDiffs.size(); md++)
 					{
 						if (m_bInterruptLoad.load()) break; // cancellation point
@@ -1397,67 +1443,84 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 
 						// find the OsuBeatmap object corresponding to this diff
 						OsuBeatmap *beatmap = NULL;
-						for (int b=0; b<m_beatmaps.size(); b++)
+						if (diff->md5hash.length() == 32)
 						{
-							if (m_bInterruptLoad.load()) break; // cancellation point
+							// new: use hashmap
+							const auto result = hashToBeatmap.find(diff->md5hash);
+							if (result != hashToBeatmap.end())
+								beatmap = result->second;
+						}
 
-							std::vector<OsuBeatmapDifficulty*> diffs = m_beatmaps[b]->getDifficulties();
-							for (int d=0; d<diffs.size(); d++)
+						/*
+						if (beatmap == NULL) // fallback
+						{
+							// old: search
+							for (int b=0; b<m_beatmaps.size(); b++)
 							{
 								if (m_bInterruptLoad.load()) break; // cancellation point
 
-								if (diffs[d] == diff)
-								{
-									beatmap = m_beatmaps[b];
-									break;
-								}
-							}
-						}
-
-						// we now have one matching OsuBeatmap and OsuBeatmapDifficulty, add either of them if they don't exist yet
-						bool beatmapIsAlreadyInCollection = false;
-						for (int m=0; m<c.beatmaps.size(); m++)
-						{
-							if (m_bInterruptLoad.load()) break; // cancellation point
-
-							if (c.beatmaps[m].first == beatmap)
-							{
-								beatmapIsAlreadyInCollection = true;
-
-								// the beatmap already exists, check if we have to add the current diff
-								bool diffIsAlreadyInCollection = false;
-								for (int d=0; d<c.beatmaps[m].second.size(); d++)
+								const std::vector<OsuBeatmapDifficulty*> &diffs = m_beatmaps[b]->getDifficulties();
+								for (int d=0; d<diffs.size(); d++)
 								{
 									if (m_bInterruptLoad.load()) break; // cancellation point
 
-									if (c.beatmaps[m].second[d] == diff)
+									if (diffs[d] == diff)
 									{
-										diffIsAlreadyInCollection = true;
+										beatmap = m_beatmaps[b];
 										break;
 									}
 								}
-
-								// add diff
-								if (!diffIsAlreadyInCollection && diff != NULL)
-									c.beatmaps[m].second.push_back(diff);
-
-								break;
 							}
 						}
+						*/
 
-						// add beatmap
-						if (!beatmapIsAlreadyInCollection && beatmap != NULL && diff != NULL)
+						if (beatmap != NULL)
 						{
-							std::vector<OsuBeatmapDifficulty*> diffs;
-							diffs.push_back(diff);
-							c.beatmaps.push_back(std::pair<OsuBeatmap*, std::vector<OsuBeatmapDifficulty*>>(beatmap, diffs));
+							// we now have one matching OsuBeatmap and OsuBeatmapDifficulty, add either of them if they don't exist yet
+							bool beatmapIsAlreadyInCollection = false;
+							for (int m=0; m<c.beatmaps.size(); m++)
+							{
+								if (m_bInterruptLoad.load()) break; // cancellation point
+
+								if (c.beatmaps[m].first == beatmap)
+								{
+									beatmapIsAlreadyInCollection = true;
+
+									// the beatmap already exists, check if we have to add the current diff
+									bool diffIsAlreadyInCollection = false;
+									for (int d=0; d<c.beatmaps[m].second.size(); d++)
+									{
+										if (m_bInterruptLoad.load()) break; // cancellation point
+
+										if (c.beatmaps[m].second[d] == diff)
+										{
+											diffIsAlreadyInCollection = true;
+											break;
+										}
+									}
+
+									// add diff
+									if (!diffIsAlreadyInCollection && diff != NULL)
+										c.beatmaps[m].second.push_back(diff);
+
+									break;
+								}
+							}
+
+							// add beatmap
+							if (!beatmapIsAlreadyInCollection && diff != NULL)
+							{
+								std::vector<OsuBeatmapDifficulty*> diffs;
+								diffs.push_back(diff);
+								c.beatmaps.push_back(std::pair<OsuBeatmap*, std::vector<OsuBeatmapDifficulty*>>(beatmap, diffs));
+							}
 						}
 					}
-				}
 
-				// add the collection
-				if (c.beatmaps.size() > 0) // sanity check
-					m_collections.push_back(c);
+					// add the collection
+					if (c.beatmaps.size() > 0) // sanity check
+						m_collections.push_back(c);
+				}
 			}
 		}
 
