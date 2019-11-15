@@ -51,6 +51,7 @@ ConVar osu_folder_sub_skins("osu_folder_sub_skins", "Skins/");
 
 ConVar osu_database_enabled("osu_database_enabled", true);
 ConVar osu_database_dynamic_star_calculation("osu_database_dynamic_star_calculation", true, "dynamically calculate star ratings in the background");
+ConVar osu_database_version("osu_database_version", 20191114, "maximum supported version, above this will use fallback loader");
 ConVar osu_database_ignore_version_warnings("osu_database_ignore_version_warnings", false);
 ConVar osu_database_ignore_version("osu_database_ignore_version", false, "ignore upper version limit and force load the db file (may crash)");
 ConVar osu_scores_enabled("osu_scores_enabled", true);
@@ -985,7 +986,7 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 	}
 
 	// hard cap upper db version
-	if (m_iVersion > 20191107 && !osu_database_ignore_version.getBool())
+	if (m_iVersion > osu_database_version.getInt() && !osu_database_ignore_version.getBool())
 	{
 		m_osu->getNotificationOverlay()->addNotification(UString::format("osu!.db version unknown (%i),  using fallback loader.", m_iVersion), 0xffffff00, false, 5.0f);
 
@@ -1365,10 +1366,10 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 
 		debugLog("Collection: version = %i, numCollections = %i\n", version, numCollections);
 
-		if (version > 20191107 && !osu_database_ignore_version.getBool())
+		if (version > osu_database_version.getInt() && !osu_database_ignore_version.getBool())
 			m_osu->getNotificationOverlay()->addNotification(UString::format("collection.db version unknown (%i),  skipping loading.", version), 0xffffff00, false, 5.0f);
 
-		if (version <= 20191107 || osu_database_ignore_version.getBool())
+		if (version <= osu_database_version.getInt() || osu_database_ignore_version.getBool())
 		{
 			for (int i=0; i<numCollections; i++)
 			{

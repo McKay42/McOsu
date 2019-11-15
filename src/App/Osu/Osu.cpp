@@ -103,6 +103,9 @@ ConVar osu_mod_fadingcursor_combo("osu_mod_fadingcursor_combo", 50.0f);
 ConVar osu_mod_endless("osu_mod_endless", false);
 
 ConVar osu_notification("osu_notification");
+ConVar osu_notification_color_r("osu_notification_color_r", 255);
+ConVar osu_notification_color_g("osu_notification_color_g", 255);
+ConVar osu_notification_color_b("osu_notification_color_b", 255);
 
 ConVar osu_ui_scale("osu_ui_scale", 1.0f);
 ConVar osu_ui_scale_to_dpi("osu_ui_scale_to_dpi", true);
@@ -370,7 +373,10 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 
 	// exec the main config file (this must be right here!)
 	if (m_iInstanceID < 2)
+	{
 		Console::execConfigFile(isInVRMode() ? "osuvr" : "osu");
+		Console::execConfigFile("override"); // used for quickfixing live builds without redeploying/recompiling
+	}
 
 	// update mod settings
 	updateMods();
@@ -2219,7 +2225,7 @@ void Osu::onLetterboxingOffsetChange(UString oldValue, UString newValue)
 
 void Osu::onNotification(UString args)
 {
-	m_notificationOverlay->addNotification(args);
+	m_notificationOverlay->addNotification(args, COLOR(255, osu_notification_color_r.getInt(), osu_notification_color_g.getInt(), osu_notification_color_b.getInt()));
 }
 
 
