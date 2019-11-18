@@ -61,7 +61,7 @@ OsuUISongBrowserSongButton::OsuUISongBrowserSongButton(Osu *osu, OsuSongBrowser2
 	// build children
 	if (m_beatmap != NULL)
 	{
-		std::vector<OsuBeatmapDifficulty*> difficulties = m_beatmap->getDifficulties();
+		const std::vector<OsuBeatmapDifficulty*> &difficulties = m_beatmap->getDifficulties();
 
 		// and add them
 		for (int i=0; i<difficulties.size(); i++)

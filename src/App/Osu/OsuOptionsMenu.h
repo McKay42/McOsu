@@ -246,6 +246,7 @@ private:
 	ConVar *m_osu_skin_workshop_title_ref;
 	ConVar *m_osu_skin_workshop_id_ref;
 	ConVar *m_osu_ui_scale_ref;
+	ConVar *m_fps_max_ref;
 
 	float m_fOsuFolderTextboxInvalidAnim;
 	float m_fVibrationStrengthExampleTimer;

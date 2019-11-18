@@ -1500,7 +1500,7 @@ bool OsuSongBrowser2::searchMatcher(OsuBeatmap *beatmap, UString searchString)
 {
 	if (beatmap == NULL) return false;
 
-	std::vector<OsuBeatmapDifficulty*> diffs = beatmap->getDifficulties();
+	const std::vector<OsuBeatmapDifficulty*> &diffs = beatmap->getDifficulties();
 
 	// intelligent search parser
 	// all strings which are not expressions get appended with spaces between, then checked with one call to findSubstringInDifficulty()

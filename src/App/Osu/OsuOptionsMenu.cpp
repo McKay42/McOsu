@@ -367,6 +367,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_osu_skin_workshop_title_ref = convar->getConVarByName("osu_skin_workshop_title");
 	m_osu_skin_workshop_id_ref = convar->getConVarByName("osu_skin_workshop_id");
 	m_osu_ui_scale_ref = convar->getConVarByName("osu_ui_scale");
+	m_fps_max_ref = convar->getConVarByName("fps_max");
 
 	// convar callbacks
 	convar->getConVarByName("osu_skin_use_skin_hitsounds")->setCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onUseSkinsSoundSamplesChange) );
@@ -1549,6 +1550,10 @@ void OsuOptionsMenu::updateLayout()
 					CBaseUISlider *sliderPointer = dynamic_cast<CBaseUISlider*>(m_elements[i].elements[1]);
 					if (sliderPointer != NULL)
 					{
+						// HACKHACK: hardcoded special rule for fps_max to allow unclamped upper values
+						if (m_fps_max_ref == m_elements[i].cvar && m_elements[i].cvar->getFloat() > sliderPointer->getMax())
+							sliderPointer->setBounds(sliderPointer->getMin(), m_elements[i].cvar->getFloat());
+
 						sliderPointer->setValue(m_elements[i].cvar->getFloat(), false);
 						sliderPointer->fireChangeCallback();
 					}

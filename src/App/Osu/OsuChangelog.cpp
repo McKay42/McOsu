@@ -35,7 +35,8 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	std::vector<CHANGELOG> changelogs;
 
 	CHANGELOG alpha311;
-	alpha311.title = UString::format("30.11 (%s, %s)", __DATE__, __TIME__);
+	alpha311.title = UString::format("30.11 (%s, %s)", __DATE__, __TIME__); // og 07.11.2019
+	alpha311.changes.push_back("- Improved osu collection.db loading speed");
 	alpha311.changes.push_back("- Fixed new osu database format breaking loading");
 	alpha311.changes.push_back("- Added upper osu database version loading limit");
 	alpha311.changes.push_back("- Added \"Sort By Misses\" to score sorting options");
