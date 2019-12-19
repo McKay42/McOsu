@@ -33,6 +33,11 @@ ConVar osu_vr_approach_circles_on_top("osu_vr_approach_circles_on_top", false);
 
 ConVar osu_timingpoints_force("osu_timingpoints_force", true, "Forces the correct sample type and volume to be used, by getting the active timingpoint through iteration EVERY TIME a hitsound is played (performance!)");
 
+ConVar osu_mod_hd_circle_fadein_start_percent("osu_mod_hd_circle_fadein_start_percent", 1.0f, "hiddenFadeInStartTime = circleTime - approachTime * osu_mod_hd_circle_fadein_start_percent");
+ConVar osu_mod_hd_circle_fadein_end_percent("osu_mod_hd_circle_fadein_end_percent", 0.6f, "hiddenFadeInEndTime = circleTime - approachTime * osu_mod_hd_circle_fadein_end_percent");
+ConVar osu_mod_hd_circle_fadeout_start_percent("osu_mod_hd_circle_fadeout_start_percent", 0.6f, "hiddenFadeOutStartTime = circleTime - approachTime * osu_mod_hd_circle_fadeout_start_percent");
+ConVar osu_mod_hd_circle_fadeout_end_percent("osu_mod_hd_circle_fadeout_end_percent", 0.3f, "hiddenFadeOutEndTime = circleTime - approachTime * osu_mod_hd_circle_fadeout_end_percent");
+
 ConVar osu_mod_target_300_percent("osu_mod_target_300_percent", 0.5f);
 ConVar osu_mod_target_100_percent("osu_mod_target_100_percent", 0.7f);
 ConVar osu_mod_target_50_percent("osu_mod_target_50_percent", 0.95f);
@@ -213,13 +218,13 @@ void OsuHitObject::update(long curPos)
 		if (m_beatmap->getOsu()->getModHD())
 		{
 			// hidden hitobject body fadein
-			const long hiddenFadeInStart = m_iTime - m_iApproachTime;
-			const long hiddenFadeInEnd = m_iTime - (long)(m_iApproachTime * 0.6f);
+			const long hiddenFadeInStart = m_iTime - (long)(m_iApproachTime * osu_mod_hd_circle_fadein_start_percent.getFloat());
+			const long hiddenFadeInEnd = m_iTime - (long)(m_iApproachTime * osu_mod_hd_circle_fadein_end_percent.getFloat());
 			m_fAlpha = clamp<float>(1.0f - ((float)(hiddenFadeInEnd - curPos) / (float)(hiddenFadeInEnd - hiddenFadeInStart)), 0.0f, 1.0f);
 
 			// hidden hitobject body fadeout
-			const long hiddenFadeOutStart = m_iTime - (long)(m_iApproachTime * 0.6f);
-			const long hiddenFadeOutEnd = m_iTime - (long)(m_iApproachTime * 0.3f);
+			const long hiddenFadeOutStart = m_iTime - (long)(m_iApproachTime * osu_mod_hd_circle_fadeout_start_percent.getFloat());
+			const long hiddenFadeOutEnd = m_iTime - (long)(m_iApproachTime * osu_mod_hd_circle_fadeout_end_percent.getFloat());
 			if (curPos >= hiddenFadeOutStart)
 				m_fAlpha = clamp<float>(((float)(hiddenFadeOutEnd - curPos) / (float)(hiddenFadeOutEnd - hiddenFadeOutStart)), 0.0f, 1.0f);
 		}

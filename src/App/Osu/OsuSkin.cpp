@@ -19,6 +19,7 @@
 #include "OsuSkinImage.h"
 #include "OsuBeatmap.h"
 #include "OsuNotificationOverlay.h"
+#include "OsuSteamWorkshop.h"
 
 #include <string.h>
 
@@ -37,6 +38,8 @@ ConVar osu_skin_mipmaps("osu_skin_mipmaps", false, "generate mipmaps for every s
 ConVar osu_skin_color_index_add("osu_skin_color_index_add", 0);
 ConVar osu_skin_animation_force("osu_skin_animation_force", false);
 ConVar osu_skin_use_skin_hitsounds("osu_skin_use_skin_hitsounds", true, "If enabled: Use skin's sound samples. If disabled: Use default skin's sound samples. For hitsounds only.");
+ConVar osu_skin_random("osu_skin_random", false, "select random skin from list");
+ConVar osu_skin_random_elements("osu_skin_random_elements", false, "sElECt RanDOM sKIn eLemENTs FRoM ranDom SKINs");
 ConVar osu_sound_panning("osu_sound_panning", true, "positional hitsound audio depending on the playfield position");
 ConVar osu_sound_panning_multiplier("osu_sound_panning_multiplier", 1.0f, "the final panning value is multiplied with this, e.g. if you want to reduce or increase the effect strength by a percentage");
 
@@ -45,13 +48,16 @@ ConVar osu_ignore_beatmap_sample_volume("osu_ignore_beatmap_sample_volume", fals
 
 const char *OsuSkin::OSUSKIN_DEFAULT_SKIN_PATH = ""; // set dynamically below in the constructor
 Image *OsuSkin::m_missingTexture = NULL;
-ConVar *OsuSkin::m_osu_skin_ref = NULL;
+
 ConVar *OsuSkin::m_osu_skin_async = &osu_skin_async;
 ConVar *OsuSkin::m_osu_skin_hd = &osu_skin_hd;
 
-OsuSkin::OsuSkin(Osu *osu, UString filepath, bool isDefaultSkin, bool isWorkshopSkin)
+ConVar *OsuSkin::m_osu_skin_ref = NULL;
+
+OsuSkin::OsuSkin(Osu *osu, UString name, UString filepath, bool isDefaultSkin, bool isWorkshopSkin)
 {
 	m_osu = osu;
+	m_sName = name;
 	m_sFilePath = filepath;
 	m_bIsDefaultSkin = isDefaultSkin;
 	m_bIsWorkshopSkin = isWorkshopSkin;
@@ -267,6 +273,9 @@ OsuSkin::OsuSkin(Osu *osu, UString filepath, bool isDefaultSkin, bool isWorkshop
 	m_iSampleSet = 1;
 	m_iSampleVolume = (int)(osu_volume_effects.getFloat()*100.0f);
 
+	m_bIsRandom = osu_skin_random.getBool();
+	m_bIsRandomElements = osu_skin_random_elements.getBool();
+
 	// load all files
 	load();
 
@@ -337,12 +346,75 @@ bool OsuSkin::isReady()
 
 void OsuSkin::load()
 {
+	// random skins
+	{
+		filepathsForRandomSkin.clear();
+		if (m_bIsRandom || m_bIsRandomElements)
+		{
+			std::vector<UString> skinNames;
+
+			// steam workshop items
+			if (steam->isReady())
+			{
+				if (!m_osu->getSteamWorkshop()->isReady())
+					m_osu->getSteamWorkshop()->refresh(false, false);
+
+				if (m_osu->getSteamWorkshop()->isReady())
+				{
+					const std::vector<OsuSteamWorkshop::SUBSCRIBED_ITEM> &subscribedItems = m_osu->getSteamWorkshop()->getSubscribedItems();
+
+					for (int i=0; i<subscribedItems.size(); i++)
+					{
+						UString randomSkinFolder = subscribedItems[i].installInfo;
+
+						// ensure that the skinFolder ends with a slash
+						if (randomSkinFolder[randomSkinFolder.length()-1] != L'/' && randomSkinFolder[randomSkinFolder.length()-1] != L'\\')
+							randomSkinFolder.append("/");
+
+						filepathsForRandomSkin.push_back(randomSkinFolder);
+						skinNames.push_back(subscribedItems[i].title);
+					}
+				}
+			}
+
+			// regular skins
+			{
+				UString skinFolder = convar->getConVarByName("osu_folder")->getString();
+				skinFolder.append(convar->getConVarByName("osu_folder_sub_skins")->getString());
+				std::vector<UString> skinFolders = env->getFoldersInFolder(skinFolder);
+
+				for (int i=0; i<skinFolders.size(); i++)
+				{
+					if (skinFolders[i] == "." || skinFolders[i] == "..") // is this universal in every file system? too lazy to check. should probably fix this in the engine and not here
+						continue;
+
+					UString randomSkinFolder = skinFolder;
+					randomSkinFolder.append(skinFolders[i]);
+					randomSkinFolder.append("/");
+
+					filepathsForRandomSkin.push_back(randomSkinFolder);
+					skinNames.push_back(skinFolders[i]);
+				}
+			}
+
+			if (m_bIsRandom && filepathsForRandomSkin.size() > 0)
+			{
+				const int randomIndex = std::rand() % std::min(filepathsForRandomSkin.size(), skinNames.size());
+
+				m_sName = skinNames[randomIndex];
+				m_sFilePath = filepathsForRandomSkin[randomIndex];
+			}
+		}
+	}
+
 	// spinner loading has top priority in async
+	randomizeFilePath();
 	{
 		checkLoadImage(&m_loadingSpinner, "loading-spinner", "OSU_SKIN_LOADING_SPINNER");
 	}
 
 	// and the cursor comes right after that
+	randomizeFilePath();
 	{
 		checkLoadImage(&m_cursor, "cursor", "OSU_SKIN_CURSOR");
 		checkLoadImage(&m_cursorMiddle, "cursormiddle", "OSU_SKIN_CURSORMIDDLE", true);
@@ -355,6 +427,7 @@ void OsuSkin::load()
 	}
 
 	// skin ini
+	randomizeFilePath();
 	UString skinIniFilePath = m_sFilePath;
 	UString defaultSkinIniFilePath = UString(env->getOS() == Environment::OS::OS_HORIZON ? "romfs:/materials/" : "./materials/");
 	defaultSkinIniFilePath.append(OSUSKIN_DEFAULT_SKIN_PATH);
@@ -378,15 +451,20 @@ void OsuSkin::load()
 	}
 
 	// images
+	randomizeFilePath();
 	checkLoadImage(&m_hitCircle, "hitcircle", "OSU_SKIN_HITCIRCLE");
 	m_hitCircleOverlay2 = createOsuSkinImage("hitcircleoverlay", Vector2(128, 128), 64);
 	m_hitCircleOverlay2->setAnimationFramerate(2);
 
+	randomizeFilePath();
 	checkLoadImage(&m_approachCircle, "approachcircle", "OSU_SKIN_APPROACHCIRCLE");
+	randomizeFilePath();
 	checkLoadImage(&m_reverseArrow, "reversearrow", "OSU_SKIN_REVERSEARROW");
 
+	randomizeFilePath();
 	m_followPoint2 = createOsuSkinImage("followpoint", Vector2(16, 22), 64);
 
+	randomizeFilePath();
 	UString hitCirclePrefix = m_sHitCirclePrefix.length() > 0 ? m_sHitCirclePrefix : "default";
 	UString hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-0");
 	checkLoadImage(&m_default0, hitCircleStringFinal, "OSU_SKIN_DEFAULT0");
@@ -419,6 +497,7 @@ void OsuSkin::load()
 	checkLoadImage(&m_default9, hitCircleStringFinal, "OSU_SKIN_DEFAULT9");
 	if (m_default9 == m_missingTexture) checkLoadImage(&m_default9, "default-9", "OSU_SKIN_DEFAULT9");
 
+	randomizeFilePath();
 	checkLoadImage(&m_score0, "score-0", "OSU_SKIN_SCORE0");
 	checkLoadImage(&m_score1, "score-1", "OSU_SKIN_SCORE1");
 	checkLoadImage(&m_score2, "score-2", "OSU_SKIN_SCORE2");
@@ -434,14 +513,20 @@ void OsuSkin::load()
 	checkLoadImage(&m_scorePercent, "score-percent", "OSU_SKIN_SCOREPERCENT");
 	checkLoadImage(&m_scoreDot, "score-dot", "OSU_SKIN_SCOREDOT");
 
+	randomizeFilePath();
 	m_playSkip = createOsuSkinImage("play-skip", Vector2(193, 147), 94);
+	randomizeFilePath();
 	checkLoadImage(&m_playWarningArrow, "play-warningarrow", "OSU_SKIN_PLAYWARNINGARROW");
 	m_playWarningArrow2 = createOsuSkinImage("play-warningarrow", Vector2(167, 129), 128);
+	randomizeFilePath();
 	checkLoadImage(&m_circularmetre, "circularmetre", "OSU_SKIN_CIRCULARMETRE");
+	randomizeFilePath();
 	m_scorebarBg = createOsuSkinImage("scorebar-bg", Vector2(695, 144), 90);
+	randomizeFilePath();
 	m_inputoverlayBackground = createOsuSkinImage("inputoverlay-background", Vector2(193, 55), 34.25f);
 	m_inputoverlayKey = createOsuSkinImage("inputoverlay-key", Vector2(43, 46), 26.75f);
 
+	randomizeFilePath();
 	m_hit0 = createOsuSkinImage("hit0", Vector2(128, 128), 42);
 	m_hit0->setAnimationFramerate(60);
 	m_hit50 = createOsuSkinImage("hit50", Vector2(128, 128), 42);
@@ -457,22 +542,29 @@ void OsuSkin::load()
 	m_hit300k = createOsuSkinImage("hit300k", Vector2(128, 128), 42);
 	m_hit300k->setAnimationFramerate(60);
 
+	randomizeFilePath();
 	checkLoadImage(&m_sliderGradient, "slidergradient", "OSU_SKIN_SLIDERGRADIENT");
+	randomizeFilePath();
 	m_sliderb = createOsuSkinImage("sliderb", Vector2(128, 128), 64, false, "");
 	m_sliderb->setAnimationFramerate(/*45.0f*/ 50.0f);
+	randomizeFilePath();
 	checkLoadImage(&m_sliderScorePoint, "sliderscorepoint", "OSU_SKIN_SLIDERSCOREPOINT");
+	randomizeFilePath();
 	m_sliderFollowCircle2 = createOsuSkinImage("sliderfollowcircle", Vector2(259, 259), 64);
+	randomizeFilePath();
 	checkLoadImage(&m_sliderStartCircle, "sliderstartcircle", "OSU_SKIN_SLIDERSTARTCIRCLE", !m_bIsDefaultSkin); // !m_bIsDefaultSkin ensures that default doesn't override user, in these special cases
 	m_sliderStartCircle2 = createOsuSkinImage("sliderstartcircle", Vector2(128, 128), 64, !m_bIsDefaultSkin);
 	checkLoadImage(&m_sliderStartCircleOverlay, "sliderstartcircleoverlay", "OSU_SKIN_SLIDERSTARTCIRCLEOVERLAY", !m_bIsDefaultSkin);
 	m_sliderStartCircleOverlay2 = createOsuSkinImage("sliderstartcircleoverlay", Vector2(128, 128), 64, !m_bIsDefaultSkin);
 	m_sliderStartCircleOverlay2->setAnimationFramerate(2);
+	randomizeFilePath();
 	checkLoadImage(&m_sliderEndCircle, "sliderendcircle", "OSU_SKIN_SLIDERENDCIRCLE", !m_bIsDefaultSkin);
 	m_sliderEndCircle2 = createOsuSkinImage("sliderendcircle", Vector2(128, 128), 64, !m_bIsDefaultSkin);
 	checkLoadImage(&m_sliderEndCircleOverlay, "sliderendcircleoverlay", "OSU_SKIN_SLIDERENDCIRCLEOVERLAY", !m_bIsDefaultSkin);
 	m_sliderEndCircleOverlay2 = createOsuSkinImage("sliderendcircleoverlay", Vector2(128, 128), 64, !m_bIsDefaultSkin);
 	m_sliderEndCircleOverlay2->setAnimationFramerate(2);
 
+	randomizeFilePath();
 	checkLoadImage(&m_spinnerBackground, "spinner-background", "OSU_SKIN_SPINNERBACKGROUND");
 	checkLoadImage(&m_spinnerCircle, "spinner-circle", "OSU_SKIN_SPINNERCIRCLE");
 	checkLoadImage(&m_spinnerApproachCircle, "spinner-approachcircle", "OSU_SKIN_SPINNERAPPROACHCIRCLE");
@@ -487,6 +579,7 @@ void OsuSkin::load()
 		// cursor loading was here, moved up to improve async usability
 	}
 
+	randomizeFilePath();
 	m_selectionModEasy = createOsuSkinImage("selection-mod-easy", Vector2(68, 66), 38);
 	m_selectionModNoFail = createOsuSkinImage("selection-mod-nofail", Vector2(68, 66), 38);
 	m_selectionModHalfTime = createOsuSkinImage("selection-mod-halftime", Vector2(68, 66), 38);
@@ -506,16 +599,20 @@ void OsuSkin::load()
 	m_selectionModTarget = createOsuSkinImage("selection-mod-target", Vector2(68, 66), 38);
 	m_selectionModScorev2 = createOsuSkinImage("selection-mod-scorev2", Vector2(68, 66), 38);
 
+	randomizeFilePath();
 	checkLoadImage(&m_pauseContinue, "pause-continue", "OSU_SKIN_PAUSE_CONTINUE");
 	checkLoadImage(&m_pauseRetry, "pause-retry", "OSU_SKIN_PAUSE_RETRY");
 	checkLoadImage(&m_pauseBack, "pause-back", "OSU_SKIN_PAUSE_BACK");
 	checkLoadImage(&m_pauseOverlay, "pause-overlay", "OSU_SKIN_PAUSE_OVERLAY"); if (m_pauseOverlay == m_missingTexture) checkLoadImage(&m_pauseOverlay, "pause-overlay", "OSU_SKIN_PAUSE_OVERLAY", true, "jpg");
 	checkLoadImage(&m_unpause, "unpause", "OSU_SKIN_UNPAUSE");
 
+	randomizeFilePath();
 	checkLoadImage(&m_buttonLeft, "button-left", "OSU_SKIN_BUTTON_LEFT");
 	checkLoadImage(&m_buttonMiddle, "button-middle", "OSU_SKIN_BUTTON_MIDDLE");
 	checkLoadImage(&m_buttonRight, "button-right", "OSU_SKIN_BUTTON_RIGHT");
+	randomizeFilePath();
 	m_menuBack = createOsuSkinImage("menu-back", Vector2(225, 87), 54);
+	randomizeFilePath();
 	checkLoadImage(&m_selectionMode, "selection-mode", "OSU_SKIN_SELECTION_MODE");
 	checkLoadImage(&m_selectionModeOver, "selection-mode-over", "OSU_SKIN_SELECTION_MODE_OVER");
 	checkLoadImage(&m_selectionMods, "selection-mods", "OSU_SKIN_SELECTION_MODS");
@@ -525,11 +622,16 @@ void OsuSkin::load()
 	checkLoadImage(&m_selectionOptions, "selection-options", "OSU_SKIN_SELECTION_OPTIONS");
 	checkLoadImage(&m_selectionOptionsOver, "selection-selectoptions-over", "OSU_SKIN_SELECTION_OPTIONS_OVER");
 
+	randomizeFilePath();
 	checkLoadImage(&m_songSelectTop, "songselect-top", "OSU_SKIN_SONGSELECT_TOP");
 	checkLoadImage(&m_songSelectBottom, "songselect-bottom", "OSU_SKIN_SONGSELECT_BOTTOM");
+	randomizeFilePath();
 	checkLoadImage(&m_menuButtonBackground, "menu-button-background", "OSU_SKIN_MENU_BUTTON_BACKGROUND");
 	m_menuButtonBackground2 = createOsuSkinImage("menu-button-background", Vector2(699, 103), 64.0f);
+	randomizeFilePath();
 	checkLoadImage(&m_star, "star", "OSU_SKIN_STAR");
+
+	randomizeFilePath();
 	checkLoadImage(&m_rankingPanel, "ranking-panel", "OSU_SKIN_RANKING_PANEL");
 	checkLoadImage(&m_rankingGraph, "ranking-graph", "OSU_SKIN_RANKING_GRAPH");
 	checkLoadImage(&m_rankingTitle, "ranking-title", "OSU_SKIN_RANKING_TITLE");
@@ -554,15 +656,20 @@ void OsuSkin::load()
 	m_rankingXsmall = createOsuSkinImage("ranking-X-small", Vector2(34, 40), 128);
 	m_rankingXHsmall = createOsuSkinImage("ranking-XH-small", Vector2(34, 41), 128);
 
+	randomizeFilePath();
 	checkLoadImage(&m_beatmapImportSpinner, "beatmapimport-spinner", "OSU_SKIN_BEATMAP_IMPORT_SPINNER");
 	{
 		// loading spinner load was here, moved up to improve async usability
 	}
 	checkLoadImage(&m_circleEmpty, "circle-empty", "OSU_SKIN_CIRCLE_EMPTY");
 	checkLoadImage(&m_circleFull, "circle-full", "OSU_SKIN_CIRCLE_FULL");
+	randomizeFilePath();
 	checkLoadImage(&m_seekTriangle, "seektriangle", "OSU_SKIN_SEEKTRIANGLE");
+	randomizeFilePath();
 	checkLoadImage(&m_userIcon, "user-icon", "OSU_SKIN_USER_ICON");
+	randomizeFilePath();
 	checkLoadImage(&m_backgroundCube, "backgroundcube", "OSU_SKIN_FPOSU_BACKGROUNDCUBE", false, "png", true); // force mipmaps
+	randomizeFilePath();
 	checkLoadImage(&m_menuBackground, "menu-background", "OSU_SKIN_MENU_BACKGROUND", false, "jpg");
 
 	// sounds
@@ -972,6 +1079,12 @@ void OsuSkin::playSpinnerBonusSound()
 	engine->getSound()->play(m_spinnerBonus);
 }
 
+void OsuSkin::randomizeFilePath()
+{
+	if (m_bIsRandomElements && filepathsForRandomSkin.size() > 0)
+		m_sFilePath = filepathsForRandomSkin[rand() % filepathsForRandomSkin.size()];
+}
+
 OsuSkinImage *OsuSkin::createOsuSkinImage(UString skinElementName, Vector2 baseSizeForScaling2x, float osuSize, bool ignoreDefaultSkin, UString animationSeparator)
 {
 	OsuSkinImage *skinImage = new OsuSkinImage(this, skinElementName, baseSizeForScaling2x, osuSize, animationSeparator, ignoreDefaultSkin);
@@ -1090,6 +1203,9 @@ void OsuSkin::checkLoadSound(Sound **addressOfPointer, UString skinElementName, 
 	if (*addressOfPointer != NULL) return; // we are already loaded
 
 	// NOTE: only the default skin is loaded with a resource name (it must never be unloaded by other instances), and it is NOT added to the resources vector
+
+	// random skin support
+	randomizeFilePath();
 
 	// load default
 

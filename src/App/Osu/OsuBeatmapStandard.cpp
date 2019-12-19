@@ -140,7 +140,8 @@ private:
 
 
 
-ConVar *OsuBeatmapStandard::m_osu_draw_statistics_pp = NULL;
+ConVar *OsuBeatmapStandard::m_osu_draw_statistics_pp_ref = NULL;
+ConVar *OsuBeatmapStandard::m_osu_mod_fullalternate_ref = NULL;
 
 OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 {
@@ -192,8 +193,10 @@ OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 	m_bInMafhamRenderChunk = false;
 
 	// convar refs
-	if (m_osu_draw_statistics_pp == NULL)
-		m_osu_draw_statistics_pp = convar->getConVarByName("osu_draw_statistics_pp");
+	if (m_osu_draw_statistics_pp_ref == NULL)
+		m_osu_draw_statistics_pp_ref = convar->getConVarByName("osu_draw_statistics_pp");
+	if (m_osu_mod_fullalternate_ref == NULL)
+		m_osu_mod_fullalternate_ref = convar->getConVarByName("osu_mod_fullalternate");
 }
 
 OsuBeatmapStandard::~OsuBeatmapStandard()
@@ -219,14 +222,18 @@ void OsuBeatmapStandard::draw(Graphics *g)
 
 		g->setColor(0x44ffffff);
 		UString loadingMessage = UString::format("Calculating stars for live pp (%i%%) ...", (int)(progressPercent*100.0f));
-		UString loadingMessage2 = "(To get rid of this delay, disable [Draw Stats: pp])";
+		UString loadingMessage2 = "(To get rid of this delay, disable [Draw Statistics: pp])";
 		g->pushTransform();
-		g->translate((int)(m_osu->getScreenWidth()/2 - m_osu->getSubTitleFont()->getStringWidth(loadingMessage)/2), m_osu->getScreenHeight() - m_osu->getSubTitleFont()->getHeight() - 25);
-		g->drawString(m_osu->getSubTitleFont(), loadingMessage);
+		{
+			g->translate((int)(m_osu->getScreenWidth()/2 - m_osu->getSubTitleFont()->getStringWidth(loadingMessage)/2), m_osu->getScreenHeight() - m_osu->getSubTitleFont()->getHeight() - 25);
+			g->drawString(m_osu->getSubTitleFont(), loadingMessage);
+		}
 		g->popTransform();
 		g->pushTransform();
-		g->translate((int)(m_osu->getScreenWidth()/2 - m_osu->getSubTitleFont()->getStringWidth(loadingMessage2)/2), m_osu->getScreenHeight() - 15);
-		g->drawString(m_osu->getSubTitleFont(), loadingMessage2);
+		{
+			g->translate((int)(m_osu->getScreenWidth()/2 - m_osu->getSubTitleFont()->getStringWidth(loadingMessage2)/2), m_osu->getScreenHeight() - 15);
+			g->drawString(m_osu->getSubTitleFont(), loadingMessage2);
+		}
 		g->popTransform();
 	}
 	else if (m_osu->isInMultiplayer() && m_osu->getMultiplayer()->isWaitingForPlayers())
@@ -605,8 +612,10 @@ void OsuBeatmapStandard::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 					g->setColor(0xff000000);
 					g->setAlpha(failTimePercentInv);
 					g->pushTransform();
-					g->translate(0, 0, 1.0f);
-					g->fillRect(playfieldBorderTopLeft.x, playfieldBorderTopLeft.y, playfieldBorderSize.x, playfieldBorderSize.y);
+					{
+						g->translate(0, 0, 1.0f);
+						g->fillRect(playfieldBorderTopLeft.x, playfieldBorderTopLeft.y, playfieldBorderSize.x, playfieldBorderSize.y);
+					}
 					g->popTransform();
 				}
 				vr->getShaderUntexturedLegacyGeneric()->disable();
@@ -707,6 +716,7 @@ void OsuBeatmapStandard::drawFollowPoints(Graphics *g)
 				g->setColor(0xffffffff);
 				g->setAlpha(alpha);
 				g->pushTransform();
+				{
 					g->rotate(rad2deg(atan2(yDiff, xDiff)));
 					skin->getFollowPoint2()->setAnimationTimeOffset(fadeInTime - 150); // HACKHACK: hardcoded 150 is good enough, was approachTime/2.5 (osu! allows followpoints to finish before hitobject fadein (!), fuck that)
 
@@ -715,6 +725,7 @@ void OsuBeatmapStandard::drawFollowPoints(Graphics *g)
 					const float followPointImageScale = ((m_fHitcircleDiameter/8.0f) / skin->getFollowPoint2()->getSizeBaseRaw().x) * osu_followpoints_scale_multiplier.getFloat();
 
 					skin->getFollowPoint2()->drawRaw(g, followPos, followPointImageScale*scale);
+				}
 				g->popTransform();
 			}
 		}
@@ -821,7 +832,7 @@ void OsuBeatmapStandard::update()
 	}
 
 	// star diff warning (after star cache loader has finished)
-	if (m_osu_draw_statistics_pp->getBool())
+	if (m_osu_draw_statistics_pp_ref->getBool())
 	{
 		if (m_selectedDifficulty->starsWereCalculatedAccurately)
 		{
@@ -837,6 +848,13 @@ void OsuBeatmapStandard::update()
 				checkHandleStarDiscrepancy(m_selectedDifficulty, stars);
 			}
 		}
+	}
+
+	// full alternate mod lenience
+	if (m_osu_mod_fullalternate_ref->getBool())
+	{
+		if (m_bInBreak || m_bIsInSkippableSection || m_bIsSpinnerActive || m_iCurrentHitObjectIndex < 1)
+			m_iAllowAnyNextKeyForFullAlternateUntilHitObjectIndex = m_iCurrentHitObjectIndex + 1;
 	}
 }
 
@@ -915,7 +933,7 @@ void OsuBeatmapStandard::onModUpdate(bool rebuildSliderVertexBuffers)
 	}
 
 	// recalculate star cache for live pp
-	if (m_osu_draw_statistics_pp->getBool()) // sanity + performance/usability
+	if (m_osu_draw_statistics_pp_ref->getBool()) // sanity + performance/usability
 	{
 		bool didCSChange = false;
 		if (getHitcircleDiameter() != m_fPrevHitCircleDiameterForStarCache && m_hitobjects.size() > 0)
@@ -949,7 +967,7 @@ Vector2 OsuBeatmapStandard::pixels2OsuCoords(Vector2 pixelCoords)
 	// un-first-person
 	if (OsuGameRules::osu_mod_fps.getBool())
 	{
-		// this is the worst hack possible (engine->isDrawing()), but it works
+		// HACKHACK: this is the worst hack possible (engine->isDrawing()), but it works
 		// the problem is that this same function is called while draw()ing and update()ing
 		if (!((engine->isDrawing() && (m_osu->getModAuto() || m_osu->getModAutopilot())) || !(m_osu->getModAuto() || m_osu->getModAutopilot())))
 			pixelCoords += getFirstPersonCursorDelta();
@@ -1776,7 +1794,7 @@ void OsuBeatmapStandard::calculateStacks()
 
 void OsuBeatmapStandard::updateStarCache()
 {
-	if (m_osu_draw_statistics_pp->getBool())
+	if (m_osu_draw_statistics_pp_ref->getBool())
 	{
 		// so we don't get a useless double load inside onModUpdate()
 		m_fPrevHitCircleDiameterForStarCache = getHitcircleDiameter();
@@ -1810,12 +1828,12 @@ void OsuBeatmapStandard::stopStarCacheLoader()
 
 bool OsuBeatmapStandard::isLoadingStarCache()
 {
-	return m_osu_draw_statistics_pp->getBool() && !m_starCacheLoader->isReady();
+	return (m_osu_draw_statistics_pp_ref->getBool() && !m_starCacheLoader->isReady());
 }
 
 bool OsuBeatmapStandard::isLoadingInt()
 {
-	return OsuBeatmap::isLoading() || m_bIsPreLoading || isLoadingStarCache();
+	return (OsuBeatmap::isLoading() || m_bIsPreLoading || isLoadingStarCache());
 }
 
 void OsuBeatmapStandard::checkHandleStarDiscrepancy(OsuBeatmapDifficulty *selectedDiff, float stars)

@@ -54,7 +54,7 @@ ConVar osu_vr_draw_desktop_playfield("osu_vr_draw_desktop_playfield", true);
 ConVar osu_universal_offset("osu_universal_offset", 0.0f);
 ConVar osu_universal_offset_hardcoded("osu_universal_offset_hardcoded", 0.0f);
 ConVar osu_old_beatmap_offset("osu_old_beatmap_offset", 24.0f, "offset in ms which is added to beatmap versions < 5 (default value is hardcoded 24 ms in stable)");
-ConVar osu_timingpoints_offset("osu_timingpoints_offset", 50.0f, "Offset in ms which is added before determining the active timingpoint for the sample type and sample volume (hitsounds) of the current frame");
+ConVar osu_timingpoints_offset("osu_timingpoints_offset", 5.0f, "Offset in ms which is added before determining the active timingpoint for the sample type and sample volume (hitsounds) of the current frame");
 ConVar osu_interpolate_music_pos("osu_interpolate_music_pos", true, "Interpolate song position with engine time if the audio library reports the same position more than once");
 ConVar osu_compensate_music_speed("osu_compensate_music_speed", true, "compensates speeds slower than 1x a little bit, by adding an offset depending on the slowness");
 ConVar osu_combobreak_sound_combo("osu_combobreak_sound_combo", 20, "Only play the combobreak sound if the combo is higher than this");
@@ -104,6 +104,8 @@ ConVar osu_drain_300("osu_drain_300", 0.035f);
 ConVar osu_drain_100("osu_drain_100", -0.10f);
 ConVar osu_drain_50("osu_drain_50", -0.125f);
 ConVar osu_drain_miss("osu_drain_miss", -0.15f);
+
+ConVar osu_play_hitsound_on_click_while_playing("osu_play_hitsound_on_click_while_playing", false);
 
 ConVar osu_debug_draw_timingpoints("osu_debug_draw_timingpoints", false);
 
@@ -175,6 +177,7 @@ OsuBeatmap::OsuBeatmap(Osu *osu)
 	m_bClick2Held = false;
 	m_bClickedContinue = false;
 	m_bPrevKeyWasKey1 = false;
+	m_iAllowAnyNextKeyForFullAlternateUntilHitObjectIndex = 0;
 
 	m_iNPS = 0;
 	m_iND = 0;
@@ -494,6 +497,7 @@ void OsuBeatmap::update()
 #endif
 
 		bool blockNextNotes = false;
+
 		const long pvs = !OsuGameRules::osu_mod_mafham.getBool() ? getPVS() : (m_hitobjects.size() > 0 ? (m_hitobjects[clamp<int>(m_iCurrentHitObjectIndex + OsuGameRules::osu_mod_mafham_render_livesize.getInt() + 1, 0, m_hitobjects.size()-1)]->getTime() - m_iCurMusicPosWithOffsets + 1500) : getPVS());
 		const bool usePVS = m_osu_pvs->getBool();
 
@@ -512,7 +516,7 @@ void OsuBeatmap::update()
 			// (because the hitobjects need to know about note blocking before handling the click events)
 
 			// ************ live pp block start ************ //
-			bool isCircle = m_hitobjects[i]->isCircle();
+			const bool isCircle = m_hitobjects[i]->isCircle();
 			// ************ live pp block end ************** //
 
 			// determine previous & next object time, used for auto + followpoints + warning arrows + empty section skipping
@@ -557,7 +561,7 @@ void OsuBeatmap::update()
 			// main hitobject update
 			m_hitobjects[i]->update(m_iCurMusicPosWithOffsets);
 
-			// note blocking
+			// note blocking / notelock
 			if (osu_note_blocking.getBool())
 			{
 				m_hitobjects[i]->setBlocked(blockNextNotes);
@@ -566,9 +570,37 @@ void OsuBeatmap::update()
 				{
 					blockNextNotes = true;
 
-					OsuSlider *sliderPointer = dynamic_cast<OsuSlider*>(m_hitobjects[i]);
-					if (sliderPointer != NULL && sliderPointer->isStartCircleFinished()) // sliders with finished startcircles do not block
-						blockNextNotes = false;
+					// old implementation
+					// sliders are "finished" after their startcircle
+					/*
+					{
+						OsuSlider *sliderPointer = dynamic_cast<OsuSlider*>(m_hitobjects[i]);
+
+						// sliders with finished startcircles do not block
+						if (sliderPointer != NULL && sliderPointer->isStartCircleFinished())
+							blockNextNotes = false;
+					}
+					*/
+
+					// new implementation
+					// sliders are "finished" after they end
+					// extra handling for simultaneous/2b hitobjects, as these would now otherwise get blocked completely
+					// NOTE: this will (same as the old implementation) still unlock some simultaneous/2b patterns too early (slider slider circle [circle]), but nobody from that niche has complained so far
+					{
+						OsuSlider *sliderPointer = dynamic_cast<OsuSlider*>(m_hitobjects[i]);
+
+						const bool isSlider = (sliderPointer != NULL);
+						const bool isSpinner = (!isSlider && !isCircle);
+
+						if (isSlider || isSpinner)
+						{
+							if (i + 1 < m_hitobjects.size())
+							{
+								if ((isSpinner || sliderPointer->isStartCircleFinished()) && m_hitobjects[i + 1]->getTime() < m_hitobjects[i]->getTime() + m_hitobjects[i]->getDuration())
+									blockNextNotes = false;
+							}
+						}
+					}
 				}
 			}
 			else
@@ -643,8 +675,11 @@ void OsuBeatmap::update()
 		// all remaining clicks which have not been consumed by any hitobjects can safely be deleted
 		if (m_clicks.size() > 0)
 		{
+			if (osu_play_hitsound_on_click_while_playing.getBool())
+				m_osu->getSkin()->playHitCircleSound(0);
+
 			// nightmare mod: extra clicks = sliderbreak
-			if ((m_osu->getModNM() || osu_mod_jigsaw1.getBool()) && !m_bIsInSkippableSection)
+			if ((m_osu->getModNM() || osu_mod_jigsaw1.getBool()) && !m_bIsInSkippableSection && !m_bInBreak && m_iCurrentHitObjectIndex > 0)
 				addSliderBreak();
 
 			m_clicks.clear();
@@ -746,8 +781,11 @@ void OsuBeatmap::keyPressed1(bool mouse)
 {
 	if (osu_mod_fullalternate.getBool() && m_bPrevKeyWasKey1)
 	{
-		engine->getSound()->play(getSkin()->getCombobreak());
-		return;
+		if (m_iCurrentHitObjectIndex > m_iAllowAnyNextKeyForFullAlternateUntilHitObjectIndex)
+		{
+			engine->getSound()->play(getSkin()->getCombobreak());
+			return;
+		}
 	}
 
 	// key overlay & counter
@@ -782,8 +820,11 @@ void OsuBeatmap::keyPressed2(bool mouse)
 {
 	if (osu_mod_fullalternate.getBool() && !m_bPrevKeyWasKey1)
 	{
-		engine->getSound()->play(getSkin()->getCombobreak());
-		return;
+		if (m_iCurrentHitObjectIndex > m_iAllowAnyNextKeyForFullAlternateUntilHitObjectIndex)
+		{
+			engine->getSound()->play(getSkin()->getCombobreak());
+			return;
+		}
 	}
 
 	// key overlay & counter

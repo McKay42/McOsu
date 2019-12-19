@@ -104,6 +104,7 @@ public:
 		float volume;
 		int sampleType;
 		int sampleSet;
+		bool isNaN;
 	};
 
 public:
@@ -212,9 +213,9 @@ private:
 	void calculateAllSliderTimesAndClicksTicks();
 
 	float getSliderTickDistance();
-	float getSliderTimeForSlider(const SLIDER &slider);
-	float getSliderVelocity(const SLIDER &slider);
-	float getTimingPointMultiplierForSlider(const SLIDER &slider); // needed for slider ticks
+	float getSliderTimeForSlider(const SLIDER &slider, const TIMING_INFO &timingInfo);
+	float getSliderVelocity(const SLIDER &slider, const TIMING_INFO &timingInfo);
+	float getTimingPointMultiplierForSlider(const SLIDER &slider, const TIMING_INFO &timingInfo); // needed for slider ticks
 
 	Osu *m_osu;
 

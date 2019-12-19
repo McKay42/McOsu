@@ -27,7 +27,7 @@ public:
 	static ConVar *m_osu_skin_hd;
 
 public:
-	OsuSkin(Osu *osu, UString filepath, bool isDefaultSkin = false, bool isWorkshopSkin = false);
+	OsuSkin(Osu *osu, UString name, UString filepath, bool isDefaultSkin = false, bool isWorkshopSkin = false);
 	virtual ~OsuSkin();
 
 	void update();
@@ -47,7 +47,11 @@ public:
 	void playSpinnerSpinSound();
 	void playSpinnerBonusSound();
 
+	// custom
+	void randomizeFilePath();
+
 	// drawable helpers
+	inline UString getName() {return m_sName;}
 	inline UString getFilePath() {return m_sFilePath;}
 	inline Osu *getOsu() {return m_osu;}
 
@@ -318,6 +322,7 @@ private:
 	bool m_bReady;
 	bool m_bIsDefaultSkin;
 	bool m_bIsWorkshopSkin;
+	UString m_sName;
 	UString m_sFilePath;
 	std::vector<Resource*> m_resources;
 	std::vector<Sound*> m_sounds;
@@ -581,6 +586,10 @@ private:
 	// custom
 	int m_iSampleSet;
 	int m_iSampleVolume;
+
+	std::vector<UString> filepathsForRandomSkin;
+	bool m_bIsRandom;
+	bool m_bIsRandomElements;
 };
 
 #endif

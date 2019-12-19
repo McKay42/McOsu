@@ -120,6 +120,7 @@ public:
 
 	inline bool isPlaying() {return m_bIsPlaying;}
 	inline bool isPaused() {return m_bIsPaused;}
+	inline bool isRestartScheduled() {return m_bIsRestartScheduled;}
 	inline bool isContinueScheduled() {return m_bContinueScheduled;}
 	inline bool isWaiting() {return m_bIsWaiting;}
 	inline bool isInSkippableSection() {return m_bIsInSkippableSection;}
@@ -229,6 +230,7 @@ protected:
 	bool m_bClick2Held;
 	bool m_bClickedContinue;
 	bool m_bPrevKeyWasKey1;
+	int m_iAllowAnyNextKeyForFullAlternateUntilHitObjectIndex;
 	std::vector<CLICK> m_clicks;
 	std::vector<CLICK> m_keyUps;
 

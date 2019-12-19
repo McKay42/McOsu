@@ -27,9 +27,11 @@ void OsuUICheckbox::update()
 	if (isMouseInside() && m_tooltipTextLines.size() > 0 && !m_bFocusStolenDelay)
 	{
 		m_osu->getTooltipOverlay()->begin();
-		for (int i=0; i<m_tooltipTextLines.size(); i++)
 		{
-			m_osu->getTooltipOverlay()->addLine(m_tooltipTextLines[i]);
+			for (int i=0; i<m_tooltipTextLines.size(); i++)
+			{
+				m_osu->getTooltipOverlay()->addLine(m_tooltipTextLines[i]);
+			}
 		}
 		m_osu->getTooltipOverlay()->end();
 	}

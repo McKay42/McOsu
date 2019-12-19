@@ -42,9 +42,10 @@ public:
 	OsuSteamWorkshop(Osu *osu);
 	~OsuSteamWorkshop();
 
-	void refresh();
+	void refresh(bool async, bool alsoLoadDetailsWhichTakeVeryLongToLoad = true);
 
 	bool isReady() const;
+	bool areDetailsLoaded() const;
 	bool isUploading() const;
 	const std::vector<SUBSCRIBED_ITEM> &getSubscribedItems() const {return m_subscribedItems;}
 

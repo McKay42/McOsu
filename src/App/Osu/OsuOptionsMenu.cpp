@@ -366,6 +366,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_osu_skin_is_from_workshop_ref = convar->getConVarByName("osu_skin_is_from_workshop");
 	m_osu_skin_workshop_title_ref = convar->getConVarByName("osu_skin_workshop_title");
 	m_osu_skin_workshop_id_ref = convar->getConVarByName("osu_skin_workshop_id");
+	m_osu_skin_random_ref = convar->getConVarByName("osu_skin_random");
 	m_osu_ui_scale_ref = convar->getConVarByName("osu_ui_scale");
 	m_fps_max_ref = convar->getConVarByName("fps_max");
 
@@ -701,8 +702,14 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 		}
 
 		((CBaseUIButton*)m_skinSelectLocalButton)->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSkinSelect) );
+
+		OPTIONS_ELEMENT skinReload = addButtonButton("Reload Skin", "Random Skin");
+		((OsuUIButton*)skinReload.elements[0])->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSkinReload) );
+		((OsuUIButton*)skinReload.elements[0])->setTooltipText("(CTRL + ALT + S)");
+		((OsuUIButton*)skinReload.elements[1])->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSkinRandom) );
+		((OsuUIButton*)skinReload.elements[1])->setTooltipText("Temporary, does not change your configured skin (reload to reset).\nUse \"osu_skin_random 1\" to randomize on every skin reload.\nUse \"osu_skin_random_elements 1\" to mix multiple skins.");
+		((OsuUIButton*)skinReload.elements[1])->setColor(0xff00566b);
 	}
-	addButton("Reload Skin (CTRL+ALT+SHIFT+S)")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSkinReload) );
 	addSpacer();
 	CBaseUISlider *numberScaleSlider = addSlider("Number Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_number_scale_multiplier"), 135.0f);
 	numberScaleSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
@@ -853,6 +860,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 
 	addSubSection("HUD");
 	addCheckbox("Draw HUD", "NOTE: You can also press SHIFT + TAB while playing to toggle this.", convar->getConVarByName("osu_draw_hud"));
+	addCheckbox("SHIFT + TAB toggles everything", "Enabled: McOsu default (toggle \"Draw HUD\")\nDisabled: osu! default (always show hiterrorbar + key overlay)", convar->getConVarByName("osu_hud_shift_tab_toggles_everything"));
 	addSpacer();
 	addCheckbox("Draw Score", convar->getConVarByName("osu_draw_score"));
 	addCheckbox("Draw Combo", convar->getConVarByName("osu_draw_combo"));
@@ -1831,7 +1839,7 @@ void OsuOptionsMenu::updateLayout()
 			CBaseUIElement *e1 = m_elements[i].elements[0];
 			CBaseUIElement *e2 = m_elements[i].elements[1];
 
-			const int spacing = 15 * dpiScale;
+			int spacing = 15 * dpiScale;
 
 			int sideMarginAdd = 0;
 			CBaseUILabel *labelPointer = dynamic_cast<CBaseUILabel*>(e1);
@@ -1841,6 +1849,11 @@ void OsuOptionsMenu::updateLayout()
 			CBaseUIButton *buttonPointer = dynamic_cast<CBaseUIButton*>(e1);
 			if (buttonPointer != NULL)
 				buttonPointer->onResized(); // HACKHACK: framework, setSize*() does not update string metrics
+
+			// button-button spacing
+			CBaseUIButton *buttonPointer2 = dynamic_cast<CBaseUIButton*>(e2);
+			if (buttonPointer != NULL && buttonPointer2 != NULL)
+				spacing *= 0.35f;
 
 			if (isKeyBindButton)
 			{
@@ -2226,7 +2239,7 @@ void OsuOptionsMenu::onSkinSelectWorkshop()
 {
 	if (m_skinSelectWorkshopButton == NULL) return;
 
-	if (m_osu->getSteamWorkshop()->isReady())
+	if (m_osu->getSteamWorkshop()->isReady() && m_osu->getSteamWorkshop()->areDetailsLoaded())
 	{
 		onSkinSelectWorkshop3();
 		return;
@@ -2237,7 +2250,7 @@ void OsuOptionsMenu::onSkinSelectWorkshop()
 
 void OsuOptionsMenu::onSkinSelectWorkshop2()
 {
-	m_osu->getSteamWorkshop()->refresh();
+	m_osu->getSteamWorkshop()->refresh(true);
 	m_bWorkshopSkinSelectScheduled = true;
 
 	m_contextMenu->setPos(m_skinSelectWorkshopButton->getPos());
@@ -2315,6 +2328,19 @@ void OsuOptionsMenu::onSkinSelectWorkshop4(UString skinName, int id)
 void OsuOptionsMenu::onSkinReload()
 {
 	m_osu->reloadSkin();
+}
+
+void OsuOptionsMenu::onSkinRandom()
+{
+	const bool isRandomSkinEnabled = m_osu_skin_random_ref->getBool();
+
+	if (!isRandomSkinEnabled)
+		m_osu_skin_random_ref->setValue(1.0f);
+
+	m_osu->reloadSkin();
+
+	if (!isRandomSkinEnabled)
+		m_osu_skin_random_ref->setValue(0.0f);
 }
 
 void OsuOptionsMenu::onResolutionSelect()
@@ -3165,6 +3191,27 @@ OsuOptionsMenu::OPTIONS_ELEMENT OsuOptionsMenu::addButton(UString text, UString 
 	}
 	e.elements.push_back(button);
 	e.elements.push_back(label);
+	e.type = 4;
+	m_elements.push_back(e);
+
+	return e;
+}
+
+OsuOptionsMenu::OPTIONS_ELEMENT OsuOptionsMenu::addButtonButton(UString text1, UString text2)
+{
+	OsuUIButton *button = new OsuUIButton(m_osu, 0, 0, m_options->getSize().x, 50, text1, text1);
+	button->setColor(0xff0e94b5);
+	button->setUseDefaultSkin();
+	m_options->getContainer()->addBaseUIElement(button);
+
+	OsuUIButton *button2 = new OsuUIButton(m_osu, 0, 0, m_options->getSize().x, 50, text2, text2);
+	button2->setColor(0xff0e94b5);
+	button2->setUseDefaultSkin();
+	m_options->getContainer()->addBaseUIElement(button2);
+
+	OPTIONS_ELEMENT e;
+	e.elements.push_back(button);
+	e.elements.push_back(button2);
 	e.type = 4;
 	m_elements.push_back(e);
 

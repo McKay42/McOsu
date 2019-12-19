@@ -204,6 +204,9 @@ void OsuUISongBrowserSongDifficultyButton::updateGrade()
 
 	bool hasGrade = false;
 	OsuScore::GRADE grade;
+
+	// old
+	/*
 	unsigned long long highestScore = 0;
 	for (int i=0; i<(*m_osu->getSongBrowser()->getDatabase()->getScores())[m_diff->md5hash].size(); i++)
 	{
@@ -221,6 +224,16 @@ void OsuUISongBrowserSongDifficultyButton::updateGrade()
 			hasGrade = true;
 			grade = OsuScore::calculateGrade(num300s, num100s, num50s, numMisses, modHidden, modFlashlight);
 		}
+	}
+	*/
+
+	// new
+	m_osu->getSongBrowser()->getDatabase()->sortScores(m_diff->md5hash);
+	if ((*m_osu->getSongBrowser()->getDatabase()->getScores())[m_diff->md5hash].size() > 0)
+	{
+		const OsuDatabase::Score &score = (*m_osu->getSongBrowser()->getDatabase()->getScores())[m_diff->md5hash][0];
+		hasGrade = true;
+		grade = OsuScore::calculateGrade(score.num300s, score.num100s, score.num50s, score.numMisses, score.modsLegacy & OsuReplay::Mods::Hidden, score.modsLegacy & OsuReplay::Mods::Flashlight);
 	}
 
 	m_bHasGrade = hasGrade;

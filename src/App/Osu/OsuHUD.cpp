@@ -69,6 +69,7 @@ ConVar osu_cursor_ripple_tint_r("osu_cursor_ripple_tint_r", 255, "from 0 to 255"
 ConVar osu_cursor_ripple_tint_g("osu_cursor_ripple_tint_g", 255, "from 0 to 255");
 ConVar osu_cursor_ripple_tint_b("osu_cursor_ripple_tint_b", 255, "from 0 to 255");
 
+ConVar osu_hud_shift_tab_toggles_everything("osu_hud_shift_tab_toggles_everything", true);
 ConVar osu_hud_scale("osu_hud_scale", 1.0f);
 ConVar osu_hud_hiterrorbar_scale("osu_hud_hiterrorbar_scale", 1.0f);
 ConVar osu_hud_hiterrorbar_showmisswindow("osu_hud_hiterrorbar_showmisswindow", false);
@@ -289,6 +290,23 @@ void OsuHUD::draw(Graphics *g)
 
 		if (m_osu->getModTarget() && osu_draw_target_heatmap.getBool() && beatmapStd != NULL)
 			drawTargetHeatmap(g, beatmapStd->getHitcircleDiameter());
+	}
+	else if (!osu_hud_shift_tab_toggles_everything.getBool())
+	{
+		if (osu_draw_inputoverlay.getBool() && beatmapStd != NULL)
+		{
+			const bool isAutoClicking = (m_osu->getModAuto() || m_osu->getModRelax());
+			if (!isAutoClicking)
+				drawInputOverlay(g, m_osu->getScore()->getKeyCount(1), m_osu->getScore()->getKeyCount(2), m_osu->getScore()->getKeyCount(3), m_osu->getScore()->getKeyCount(4));
+		}
+
+		if (osu_draw_hiterrorbar.getBool() && (beatmapStd == NULL || !beatmapStd->isSpinnerActive()) && !beatmap->isLoading())
+		{
+			if (beatmapStd != NULL)
+				drawHitErrorBar(g, OsuGameRules::getHitWindow300(beatmap), OsuGameRules::getHitWindow100(beatmap), OsuGameRules::getHitWindow50(beatmap), OsuGameRules::getHitWindowMiss(beatmap));
+			else if (beatmapMania != NULL)
+				drawHitErrorBar(g, OsuGameRulesMania::getHitWindow300(beatmap), OsuGameRulesMania::getHitWindow100(beatmap), OsuGameRulesMania::getHitWindow50(beatmap), OsuGameRulesMania::getHitWindowMiss(beatmap));
+		}
 	}
 
 	if (beatmap->shouldFlashWarningArrows())
@@ -2464,7 +2482,7 @@ void OsuHUD::addTarget(float delta, float angle)
 
 void OsuHUD::animateInputoverlay(int key, bool down)
 {
-	if (!osu_draw_inputoverlay.getBool() || !osu_draw_hud.getBool()) return;
+	if (!osu_draw_inputoverlay.getBool() || (!osu_draw_hud.getBool() && osu_hud_shift_tab_toggles_everything.getBool())) return;
 
 	float *animScale = &m_fInputoverlayK1AnimScale;
 	float *animColor = &m_fInputoverlayK1AnimColor;

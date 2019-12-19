@@ -25,7 +25,13 @@ public:
 	OsuSteamWorkshopLoader(Osu *osu) : Resource()
 	{
 		m_osu = osu;
+
+		m_bLoadDetails = true;
 	}
+
+	void setLoadDetails(bool loadDetails) {m_bLoadDetails = loadDetails;}
+
+	bool getLoadDetails() const {return m_bLoadDetails;}
 
 protected:
 	virtual void init()
@@ -45,6 +51,8 @@ protected:
 
 		debugLog("OsuSteamWorkshop: Subscribed to %i item(s)\n", subscribedItems.size());
 
+		const std::vector<SteamworksInterface::WorkshopItemDetails> details = (m_bLoadDetails ? steam->getWorkshopItemDetails(subscribedItems) : std::vector<SteamworksInterface::WorkshopItemDetails>());
+
 		for (int i=0; i<subscribedItems.size(); i++)
 		{
 			const bool installed = steam->isWorkshopSubscribedItemInstalled(subscribedItems[i]);
@@ -56,15 +64,25 @@ protected:
 				continue;
 			}
 
-			const SteamworksInterface::WorkshopItemDetails details = steam->getWorkshopItemDetails(subscribedItems[i]);
+			SteamworksInterface::WorkshopItemDetails detail;
+			detail.publishedFileId = 0;
 
-			if (details.title.length() > 0)
+			for (int d=0; d<details.size(); d++)
+			{
+				if (details[d].publishedFileId == subscribedItems[i])
+				{
+					detail = details[d];
+					break;
+				}
+			}
+
+			//if (details.title.length() > 0)
 			{
 				OsuSteamWorkshop::SUBSCRIBED_ITEM item;
 				item.type = OsuSteamWorkshop::SUBSCRIBED_ITEM_TYPE::SKIN;
 				item.status = (installed ? OsuSteamWorkshop::SUBSCRIBED_ITEM_STATUS::INSTALLED : OsuSteamWorkshop::SUBSCRIBED_ITEM_STATUS::DOWNLOADING);
 				item.id = subscribedItems[i];
-				item.title = details.title;
+				item.title = (detail.title.length() > 0 ? detail.title : UString::format("%llu", subscribedItems[i]));
 
 				if (installed)
 				{
@@ -79,8 +97,8 @@ protected:
 
 				m_subscribedItems.push_back(item);
 			}
-			else
-				debugLog("OsuSteamWorkshop: Invalid item %llu (title = %s)\n", subscribedItems[i], details.title.toUtf8());
+			//else
+			//	debugLog("OsuSteamWorkshop: Invalid item %llu (title = %s)\n", subscribedItems[i], details.title.toUtf8());
 		}
 
 		debugLog("OsuSteamWorkshop: Done\n");
@@ -97,7 +115,10 @@ private:
 	Osu *m_osu;
 
 	std::vector<OsuSteamWorkshop::SUBSCRIBED_ITEM> m_subscribedItems;
+	bool m_bLoadDetails;
 };
+
+
 
 class OsuSteamWorkshopUploader : public Resource
 {
@@ -265,7 +286,7 @@ OsuSteamWorkshop::~OsuSteamWorkshop()
 	engine->getResourceManager()->destroyResource(m_uploader);
 }
 
-void OsuSteamWorkshop::refresh()
+void OsuSteamWorkshop::refresh(bool async, bool alsoLoadDetailsWhichTakeVeryLongToLoad)
 {
 	if (!steam->isReady()) return;
 
@@ -277,9 +298,12 @@ void OsuSteamWorkshop::refresh()
 
 	// reset
 	m_loader->release();
+	m_loader->setLoadDetails(alsoLoadDetailsWhichTakeVeryLongToLoad);
 
 	// schedule
-	engine->getResourceManager()->requestNextLoadAsync();
+	if (async)
+		engine->getResourceManager()->requestNextLoadAsync();
+
 	engine->getResourceManager()->loadResource(m_loader);
 }
 
@@ -288,6 +312,13 @@ bool OsuSteamWorkshop::isReady() const
 	if (!steam->isReady()) return true; // empty
 
 	return m_loader->isReady();
+}
+
+bool OsuSteamWorkshop::areDetailsLoaded() const
+{
+	if (!steam->isReady()) return true; // empty
+
+	return m_loader->getLoadDetails();
 }
 
 bool OsuSteamWorkshop::isUploading() const

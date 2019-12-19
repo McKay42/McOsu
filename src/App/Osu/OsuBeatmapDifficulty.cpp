@@ -30,6 +30,12 @@
 #include "OsuManiaNote.h"
 
 ConVar osu_mod_random("osu_mod_random", false);
+ConVar osu_mod_random_circle_offset_x_percent("osu_mod_random_circle_offset_x_percent", 1.0f, "how much the randomness affects things");
+ConVar osu_mod_random_circle_offset_y_percent("osu_mod_random_circle_offset_y_percent", 1.0f, "how much the randomness affects things");
+ConVar osu_mod_random_slider_offset_x_percent("osu_mod_random_slider_offset_x_percent", 1.0f, "how much the randomness affects things");
+ConVar osu_mod_random_slider_offset_y_percent("osu_mod_random_slider_offset_y_percent", 1.0f, "how much the randomness affects things");
+ConVar osu_mod_random_spinner_offset_x_percent("osu_mod_random_spinner_offset_x_percent", 1.0f, "how much the randomness affects things");
+ConVar osu_mod_random_spinner_offset_y_percent("osu_mod_random_spinner_offset_y_percent", 1.0f, "how much the randomness affects things");
 ConVar osu_mod_reverse_sliders("osu_mod_reverse_sliders", false);
 ConVar osu_show_approach_circle_on_first_hidden_object("osu_show_approach_circle_on_first_hidden_object", true);
 ConVar osu_load_beatmap_background_images("osu_load_beatmap_background_images", true);
@@ -1173,8 +1179,8 @@ void OsuBeatmapDifficulty::buildStandardHitObjects(OsuBeatmapStandard *beatmap, 
 
 		if (osu_mod_random.getBool())
 		{
-			c->x = clamp<int>(c->x - (rand() % OsuGameRules::OSU_COORD_WIDTH) / 8, 0, OsuGameRules::OSU_COORD_WIDTH);
-			c->y = clamp<int>(c->y - (rand() & OsuGameRules::OSU_COORD_HEIGHT) / 8, 0, OsuGameRules::OSU_COORD_HEIGHT);
+			c->x = clamp<int>(c->x - (int)(((rand() % OsuGameRules::OSU_COORD_WIDTH) / 8.0f) * osu_mod_random_circle_offset_x_percent.getFloat()), 0, OsuGameRules::OSU_COORD_WIDTH);
+			c->y = clamp<int>(c->y - (int)(((rand() % OsuGameRules::OSU_COORD_HEIGHT) / 8.0f) * osu_mod_random_circle_offset_y_percent.getFloat()), 0, OsuGameRules::OSU_COORD_HEIGHT);
 		}
 
 		hitobjects->push_back(new OsuCircle(c->x, c->y, c->time, c->sampleType, c->number, c->colorCounter, c->colorOffset, beatmap));
@@ -1230,15 +1236,13 @@ void OsuBeatmapDifficulty::buildStandardHitObjects(OsuBeatmapStandard *beatmap, 
 		{
 			for (int p=0; p<s->points.size(); p++)
 			{
-				s->points[p].x = clamp<int>(s->points[p].x - (rand() % OsuGameRules::OSU_COORD_WIDTH) / 3, 0, OsuGameRules::OSU_COORD_WIDTH);
-				s->points[p].y = clamp<int>(s->points[p].y - (rand() % OsuGameRules::OSU_COORD_HEIGHT) / 3, 0, OsuGameRules::OSU_COORD_HEIGHT);
+				s->points[p].x = clamp<int>(s->points[p].x - (int)(((rand() % OsuGameRules::OSU_COORD_WIDTH) / 3.0f) * osu_mod_random_slider_offset_x_percent.getFloat()), 0, OsuGameRules::OSU_COORD_WIDTH);
+				s->points[p].y = clamp<int>(s->points[p].y - (int)(((rand() % OsuGameRules::OSU_COORD_HEIGHT) / 3.0f) * osu_mod_random_slider_offset_y_percent.getFloat()), 0, OsuGameRules::OSU_COORD_HEIGHT);
 			}
 		}
 
 		if (osu_mod_reverse_sliders.getBool())
-		{
 			std::reverse(s->points.begin(), s->points.end());
-		}
 
 		hitobjects->push_back(new OsuSlider(s->type, s->repeat, s->pixelLength, s->points, s->hitSounds, s->ticks, s->sliderTime, s->sliderTimeWithoutRepeats, s->time, s->sampleType, s->number, s->colorCounter, s->colorOffset, beatmap));
 
@@ -1252,8 +1256,8 @@ void OsuBeatmapDifficulty::buildStandardHitObjects(OsuBeatmapStandard *beatmap, 
 
 		if (osu_mod_random.getBool())
 		{
-			s->x = clamp<int>(s->x - ((rand() % OsuGameRules::OSU_COORD_WIDTH) / 1.25f) * (rand() % 2 == 0 ? 1.0f : -1.0f), 0, OsuGameRules::OSU_COORD_WIDTH);
-			s->y = clamp<int>(s->y - ((rand() & OsuGameRules::OSU_COORD_HEIGHT) / 1.25f) * (rand() % 2 == 0 ? 1.0f : -1.0f), 0, OsuGameRules::OSU_COORD_HEIGHT);
+			s->x = clamp<int>(s->x - (int)(((rand() % OsuGameRules::OSU_COORD_WIDTH) / 1.25f) * (rand() % 2 == 0 ? 1.0f : -1.0f) * osu_mod_random_spinner_offset_x_percent.getFloat()), 0, OsuGameRules::OSU_COORD_WIDTH);
+			s->y = clamp<int>(s->y - (int)(((rand() % OsuGameRules::OSU_COORD_HEIGHT) / 1.25f) * (rand() % 2 == 0 ? 1.0f : -1.0f) * osu_mod_random_spinner_offset_y_percent.getFloat()), 0, OsuGameRules::OSU_COORD_HEIGHT);
 		}
 
 		hitobjects->push_back(new OsuSpinner(s->x, s->y, s->time, s->sampleType, s->endTime, beatmap));
@@ -1306,16 +1310,18 @@ void OsuBeatmapDifficulty::calculateAllSliderTimesAndClicksTicks()
 		s.scoringTimesForStarCalc.clear();
 
 		// calculate duration
-		s.sliderTimeWithoutRepeats = getSliderTimeForSlider(s);
+		const TIMING_INFO timingInfo = getTimingInfoForTime(s.time);
+		s.sliderTimeWithoutRepeats = getSliderTimeForSlider(s, timingInfo);
 		s.sliderTime = s.sliderTimeWithoutRepeats * s.repeat;
 
 		// calculate ticks
 		// TODO: validate https://github.com/ppy/osu/pull/3595/files
-		const float minTickPixelDistanceFromEnd = 0.01f * getSliderVelocity(s);
-		const float tickPixelLength = getSliderTickDistance() / getTimingPointMultiplierForSlider(s);
+		const float minTickPixelDistanceFromEnd = 0.01f * getSliderVelocity(s, timingInfo);
+		const float tickPixelLength = getSliderTickDistance() / getTimingPointMultiplierForSlider(s, timingInfo);
 		const float tickDurationPercentOfSliderLength = tickPixelLength / (s.pixelLength == 0.0f ? 1.0f : s.pixelLength);
 		const int tickCount = (int)std::ceil(s.pixelLength / tickPixelLength) - 1;
-		if (tickCount > 0)
+
+		if (tickCount > 0 && !timingInfo.isNaN) // don't generate ticks for NaN timingpoints
 		{
 			const float tickTOffset = tickDurationPercentOfSliderLength;
 			float pixelDistanceToEnd = s.pixelLength;
@@ -1371,29 +1377,28 @@ float OsuBeatmapDifficulty::getSliderTickDistance()
 	return ((100.0f * sliderMultiplier) / sliderTickRate);
 }
 
-float OsuBeatmapDifficulty::getSliderTimeForSlider(const SLIDER &slider)
+float OsuBeatmapDifficulty::getSliderTimeForSlider(const SLIDER &slider, const TIMING_INFO &timingInfo)
 {
-	const float duration = getTimingInfoForTime(slider.time).beatLength * (slider.pixelLength / sliderMultiplier) / 100.0f;
+	const float duration = timingInfo.beatLength * (slider.pixelLength / sliderMultiplier) / 100.0f;
 	return duration >= 1.0f ? duration : 1.0f; // sanity check
 }
 
-float OsuBeatmapDifficulty::getSliderVelocity(const SLIDER &slider)
+float OsuBeatmapDifficulty::getSliderVelocity(const SLIDER &slider, const TIMING_INFO &timingInfo)
 {
-	const float beatLength = getTimingInfoForTime(slider.time).beatLength;
+	const float beatLength = timingInfo.beatLength;
 	if (beatLength > 0.0f)
 		return (getSliderTickDistance() * sliderTickRate * (1000.0f / beatLength));
 	else
 		return getSliderTickDistance() * sliderTickRate;
 }
 
-float OsuBeatmapDifficulty::getTimingPointMultiplierForSlider(const SLIDER &slider)
+float OsuBeatmapDifficulty::getTimingPointMultiplierForSlider(const SLIDER &slider, const TIMING_INFO &timingInfo)
 {
-	const TIMING_INFO t = getTimingInfoForTime(slider.time);
-	float beatLengthBase = t.beatLengthBase;
+	float beatLengthBase = timingInfo.beatLengthBase;
 	if (beatLengthBase == 0.0f) // sanity check
 		beatLengthBase = 1.0f;
 
-	return t.beatLength / beatLengthBase;
+	return timingInfo.beatLength / beatLengthBase;
 }
 
 OsuBeatmapDifficulty::TIMING_INFO OsuBeatmapDifficulty::getTimingInfoForTime(unsigned long positionMS)
@@ -1405,6 +1410,7 @@ OsuBeatmapDifficulty::TIMING_INFO OsuBeatmapDifficulty::getTimingInfoForTime(uns
 	ti.volume = 100;
 	ti.sampleType = 0;
 	ti.sampleSet = 0;
+	ti.isNaN = false;
 
 	if (timingpoints.size() < 1) return ti;
 
@@ -1445,7 +1451,8 @@ OsuBeatmapDifficulty::TIMING_INFO OsuBeatmapDifficulty::getTimingInfoForTime(uns
 		else // inherited
 		{
 			// note how msPerBeat is clamped
-			ti.beatLength = ti.beatLengthBase * (clamp<float>(std::abs(t->msPerBeat), 10, 1000) / 100.0f); // sliderMultiplier of a timingpoint = (t->velocity / -100.0f)
+			ti.isNaN = std::isnan(t->msPerBeat);
+			ti.beatLength = ti.beatLengthBase * (clamp<float>(!ti.isNaN ? std::abs(t->msPerBeat) : 1000, 10, 1000) / 100.0f); // sliderMultiplier of a timingpoint = (t->velocity / -100.0f)
 		}
 
 		ti.volume = t->volume;
