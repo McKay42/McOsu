@@ -2245,6 +2245,24 @@ void OsuSongBrowser2::onSortScoresChange(UString text, int id)
 	m_scoreSortButton->setText(text);
 	rebuildScoreButtons();
 	m_scoreBrowser->scrollToTop();
+
+	// update grades of all visible songdiffbuttons
+	for (int i=0; i<m_visibleSongButtons.size(); i++)
+	{
+		if (m_visibleSongButtons[i]->getBeatmap() == getSelectedBeatmap())
+		{
+			OsuUISongBrowserSongButton *songButtonPointer = dynamic_cast<OsuUISongBrowserSongButton*>(m_visibleSongButtons[i]);
+			if (songButtonPointer != NULL)
+			{
+				for (OsuUISongBrowserButton *diffButton : songButtonPointer->getChildrenAbs())
+				{
+					OsuUISongBrowserSongButton *diffButtonPointer = dynamic_cast<OsuUISongBrowserSongButton*>(diffButton);
+					if (diffButtonPointer != NULL)
+						diffButtonPointer->updateGrade();
+				}
+			}
+		}
+	}
 }
 
 void OsuSongBrowser2::onWebClicked(CBaseUIButton *button)
@@ -2466,7 +2484,7 @@ void OsuSongBrowser2::onUserButtonClicked()
 		m_contextMenu->setPos(m_userButton->getPos());
 		m_contextMenu->setRelPos(m_userButton->getPos());
 		m_contextMenu->begin(m_userButton->getSize().x);
-		m_contextMenu->addButton("Switch User", 0)->setTextColor(0xff888888)->setTextDarkColor(0xff000000)->setTextLeft(false)->setEnabled(false);
+		m_contextMenu->addButton("Switch User:", 0)->setTextColor(0xff888888)->setTextDarkColor(0xff000000)->setTextLeft(false)->setEnabled(false);
 		//m_contextMenu->addButton("", 0)->setEnabled(false);
 		for (int i=0; i<names.size(); i++)
 		{

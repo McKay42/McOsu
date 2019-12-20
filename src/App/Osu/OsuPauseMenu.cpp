@@ -411,6 +411,7 @@ void OsuPauseMenu::setVisible(bool visible)
 		updateLayout();
 
 	m_osu->updateConfineCursor();
+	m_osu->updateWindowsKeyDisable();
 }
 
 void OsuPauseMenu::setContinueEnabled(bool continueEnabled)

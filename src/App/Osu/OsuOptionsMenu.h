@@ -115,6 +115,7 @@ private:
 	void onSkinSelectWorkshop3();
 	void onSkinSelectWorkshop4(UString skinName, int id);
 	void onSkinReload();
+	void onSkinRandom();
 	void onResolutionSelect();
 	void onResolutionSelect2(UString resolution, int id = -1);
 	void onOutputDeviceSelect();
@@ -165,6 +166,7 @@ private:
 	CBaseUILabel *addLabel(UString text);
 	OsuUIButton *addButton(UString text);
 	OPTIONS_ELEMENT addButton(UString text, UString labelText, bool withResetButton = false);
+	OPTIONS_ELEMENT addButtonButton(UString text1, UString text2);
 	OPTIONS_ELEMENT addButtonButtonLabel(UString text1, UString text2, UString labelText, bool withResetButton = false);
 	OsuUIButton *addKeyBindButton(UString text, ConVar *cvar);
 	CBaseUICheckbox *addCheckbox(UString text, ConVar *cvar);
@@ -245,6 +247,7 @@ private:
 	ConVar *m_osu_skin_is_from_workshop_ref;
 	ConVar *m_osu_skin_workshop_title_ref;
 	ConVar *m_osu_skin_workshop_id_ref;
+	ConVar *m_osu_skin_random_ref;
 	ConVar *m_osu_ui_scale_ref;
 	ConVar *m_fps_max_ref;
 

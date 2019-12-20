@@ -18,10 +18,13 @@ public:
 	OsuUIButton(Osu *osu, float xPos, float yPos, float xSize, float ySize, UString name, UString text);
 
 	virtual void draw(Graphics *g);
+	virtual void update();
 
 	void setColor(Color color) {m_color = color; m_backupColor = color;}
 	void setUseDefaultSkin() {m_bDefaultSkin = true;}
 	void setAlphaAddOnHover(float alphaAddOnHover) {m_fAlphaAddOnHover = alphaAddOnHover;}
+
+	void setTooltipText(UString text);
 
 	virtual void onMouseInside();
 	virtual void onMouseOutside();
@@ -30,6 +33,7 @@ public:
 
 private:
 	virtual void onClicked();
+	virtual void onFocusStolen();
 
 	Osu *m_osu;
 
@@ -39,6 +43,9 @@ private:
 	float m_fBrightness;
 	float m_fAnim;
 	float m_fAlphaAddOnHover;
+
+	std::vector<UString> m_tooltipTextLines;
+	bool m_bFocusStolenDelay;
 };
 
 #endif

@@ -432,6 +432,17 @@ void OsuCircle::draw(Graphics *g)
 	}
 	m_beatmap->getSkin()->getHitCircleOverlay2()->setAnimationTimeOffset(!m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iApproachTime : m_beatmap->getCurMusicPosWithOffsets());
 	drawCircle(g, m_beatmap, shakeCorrectedPos, m_iComboNumber, m_iColorCounter, m_iColorOffset, m_bWaiting && !hd ? 1.0f : m_fApproachScale, m_bWaiting && !hd ? 1.0f : m_fAlpha, m_bWaiting && !hd ? 1.0f : m_fAlpha, true, m_bOverrideHDApproachCircle);
+
+	// debug
+	/*
+	if (m_bBlocked)
+	{
+		const Vector2 pos = m_beatmap->osuCoords2Pixels(m_vRawPos);
+
+		g->setColor(0xbbff0000);
+		g->fillRect(pos.x - 20, pos.y - 20, 40, 40);
+	}
+	*/
 }
 
 void OsuCircle::draw2(Graphics *g)

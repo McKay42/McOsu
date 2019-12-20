@@ -12,6 +12,7 @@
 
 #include "Osu.h"
 #include "OsuSkin.h"
+#include "OsuTooltipOverlay.h"
 
 OsuUIButton::OsuUIButton(Osu *osu, float xPos, float yPos, float xSize, float ySize, UString name, UString text) : CBaseUIButton(xPos, yPos, xSize, ySize, name, text)
 {
@@ -23,6 +24,8 @@ OsuUIButton::OsuUIButton(Osu *osu, float xPos, float yPos, float xSize, float yS
 	m_fBrightness = 0.85f;
 	m_fAnim = 0.0f;
 	m_fAlphaAddOnHover = 0.0f;
+
+	m_bFocusStolenDelay = false;
 }
 
 void OsuUIButton::draw(Graphics *g)
@@ -47,18 +50,44 @@ void OsuUIButton::draw(Graphics *g)
 	g->setColor(COLOR(clamp<int>(COLOR_GET_Ai(m_color) + (isMouseInside() ? (int)(m_fAlphaAddOnHover*255.0f) : 0), 0, 255), red, green, blue));
 
 	buttonLeft->bind();
-	g->drawQuad((int)m_vPos.x, (int)m_vPos.y, (int)leftWidth, (int)m_vSize.y);
+	{
+		g->drawQuad((int)m_vPos.x, (int)m_vPos.y, (int)leftWidth, (int)m_vSize.y);
+	}
 	buttonLeft->unbind();
 
 	buttonMiddle->bind();
-	g->drawQuad((int)m_vPos.x + (int)leftWidth, (int)m_vPos.y, (int)middleWidth, (int)m_vSize.y);
+	{
+		g->drawQuad((int)m_vPos.x + (int)leftWidth, (int)m_vPos.y, (int)middleWidth, (int)m_vSize.y);
+	}
 	buttonMiddle->unbind();
 
 	buttonRight->bind();
-	g->drawQuad((int)m_vPos.x + (int)leftWidth + (int)middleWidth, (int)m_vPos.y, (int)rightWidth, (int)m_vSize.y);
+	{
+		g->drawQuad((int)m_vPos.x + (int)leftWidth + (int)middleWidth, (int)m_vPos.y, (int)rightWidth, (int)m_vSize.y);
+	}
 	buttonRight->unbind();
 
 	drawText(g);
+}
+
+void OsuUIButton::update()
+{
+	CBaseUIButton::update();
+	if (!m_bVisible) return;
+
+	if (isMouseInside() && m_tooltipTextLines.size() > 0 && !m_bFocusStolenDelay)
+	{
+		m_osu->getTooltipOverlay()->begin();
+		{
+			for (int i=0; i<m_tooltipTextLines.size(); i++)
+			{
+				m_osu->getTooltipOverlay()->addLine(m_tooltipTextLines[i]);
+			}
+		}
+		m_osu->getTooltipOverlay()->end();
+	}
+
+	m_bFocusStolenDelay = false;
 }
 
 void OsuUIButton::onMouseInside()
@@ -74,11 +103,25 @@ void OsuUIButton::onMouseOutside()
 void OsuUIButton::onClicked()
 {
 	CBaseUIButton::onClicked();
+
 	animateClickColor();
+}
+
+void OsuUIButton::onFocusStolen()
+{
+	CBaseUIButton::onFocusStolen();
+
+	m_bMouseInside = false;
+	m_bFocusStolenDelay = true;
 }
 
 void OsuUIButton::animateClickColor()
 {
 	m_fAnim = 1.0f;
 	anim->moveLinear(&m_fAnim, 0.0f, 0.5f, true);
+}
+
+void OsuUIButton::setTooltipText(UString text)
+{
+	m_tooltipTextLines = text.split("\n");
 }

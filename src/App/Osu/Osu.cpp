@@ -64,7 +64,7 @@
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 30.11f);
+ConVar osu_version("osu_version", 30.12f);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr");
 #else
@@ -120,6 +120,9 @@ ConVar osu_force_legacy_slider_renderer("osu_force_legacy_slider_renderer", fals
 ConVar osu_draw_fps("osu_draw_fps", true);
 ConVar osu_hide_cursor_during_gameplay("osu_hide_cursor_during_gameplay", false);
 
+ConVar osu_alt_f4_quits_even_while_playing("osu_alt_f4_quits_even_while_playing", true);
+ConVar osu_win_disable_windows_key_while_playing("osu_win_disable_windows_key_while_playing", true);
+
 ConVar *Osu::version = &osu_version;
 ConVar *Osu::debug = &osu_debug;
 ConVar *Osu::ui_scale = &osu_ui_scale;
@@ -152,6 +155,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_snd_change_check_interval_ref = convar->getConVarByName("snd_change_check_interval");
 	m_ui_scrollview_scrollbarwidth_ref = convar->getConVarByName("ui_scrollview_scrollbarwidth");
 	m_mouse_raw_input_absolute_to_window_ref = convar->getConVarByName("mouse_raw_input_absolute_to_window");
+	m_win_disable_windows_key_ref = convar->getConVarByName("win_disable_windows_key");
 
 	// experimental mods list
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_wobble"));
@@ -300,6 +304,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_bKeyboardKey2Down = false;
 	m_bMouseKey1Down = false;
 	m_bMouseKey2Down = false;
+	m_bSkipDownCheck = false;
 	m_bSkipScheduled = false;
 	m_bQuickRetryDown = false;
 	m_fQuickRetryTime = 0.0f;
@@ -863,18 +868,31 @@ void Osu::update()
 		}
 
 		// skip button clicking
-		if (getSelectedBeatmap()->isInSkippableSection() && !getSelectedBeatmap()->isPaused() && !m_bSeeking)
+		if (getSelectedBeatmap()->isInSkippableSection() && !getSelectedBeatmap()->isPaused() && !m_bSeeking && !m_hud->isVolumeOverlayBusy())
 		{
-			// TODO: make this on click only, and not if held too. this can also cause earrape while scrubbing
-			bool isAnyOsuKeyDown = (m_bKeyboardKey1Down || m_bKeyboardKey2Down || m_bMouseKey1Down || m_bMouseKey2Down);
-			bool isAnyVRKeyDown = isInVRMode() && !m_vr->isUIActive() && (openvr->getLeftController()->isButtonPressed(OpenVRController::BUTTON::BUTTON_STEAMVR_TOUCHPAD) || openvr->getRightController()->isButtonPressed(OpenVRController::BUTTON::BUTTON_STEAMVR_TOUCHPAD)
+			const bool isAnyOsuKeyDown = (m_bKeyboardKey1Down || m_bKeyboardKey2Down || m_bMouseKey1Down || m_bMouseKey2Down);
+			const bool isAnyVRKeyDown = isInVRMode() && !m_vr->isUIActive() && (openvr->getLeftController()->isButtonPressed(OpenVRController::BUTTON::BUTTON_STEAMVR_TOUCHPAD) || openvr->getRightController()->isButtonPressed(OpenVRController::BUTTON::BUTTON_STEAMVR_TOUCHPAD)
 												|| openvr->getLeftController()->getTrigger() > 0.95f || openvr->getRightController()->getTrigger() > 0.95f);
-			if (!m_hud->isVolumeOverlayBusy() && (engine->getMouse()->isLeftDown() || isAnyOsuKeyDown || isAnyVRKeyDown))
+
+			const bool isAnyKeyDown = (isAnyOsuKeyDown || isAnyVRKeyDown || engine->getMouse()->isLeftDown());
+
+			if (isAnyKeyDown)
 			{
-				if (m_hud->getSkipClickRect().contains(engine->getMouse()->getPos()) || isAnyVRKeyDown)
-					m_bSkipScheduled = true;
+				if (!m_bSkipDownCheck)
+				{
+					m_bSkipDownCheck = true;
+
+					const bool isCursorInsideSkipButton = m_hud->getSkipClickRect().contains(engine->getMouse()->getPos());
+
+					if (isCursorInsideSkipButton || isAnyVRKeyDown)
+						m_bSkipScheduled = true;
+				}
 			}
+			else
+				m_bSkipDownCheck = false;
 		}
+		else
+			m_bSkipDownCheck = false;
 
 		// skipping
 		if (m_bSkipScheduled)
@@ -1065,7 +1083,7 @@ void Osu::update()
 			{
 				m_bSkinLoadWasReload = false;
 
-				m_notificationOverlay->addNotification("Skin reloaded!");
+				m_notificationOverlay->addNotification(m_skin->getName().length() > 0 ? UString::format("Skin reloaded! (%s)", m_skin->getName().toUtf8()) : "Skin reloaded!", 0xffffffff, false, 0.75f);
 			}
 		}
 	}
@@ -1124,6 +1142,9 @@ void Osu::updateMods()
 		env->setCursorVisible(true);
 		m_bShouldCursorBeVisible = true;
 	}
+
+	// handle windows key disable/enable
+	updateWindowsKeyDisable();
 
 	// notify the possibly running beatmap of mod changes, for e.g. recalculating stacks dynamically if HR is toggled
 	if (getSelectedBeatmap() != NULL)
@@ -1610,6 +1631,7 @@ void Osu::onPlayStart()
 	m_fQuickSaveTime = 0.0f; // reset
 
 	updateConfineCursor();
+	updateWindowsKeyDisable();
 
 	OsuRichPresence::onPlayStart(this);
 }
@@ -1668,6 +1690,7 @@ void Osu::onPlayEnd(bool quit)
 		toggleRankingScreen();
 
 	updateConfineCursor();
+	updateWindowsKeyDisable();
 }
 
 
@@ -1911,6 +1934,17 @@ void Osu::updateMouseSettings()
 	engine->getMouse()->setScale(scale);
 }
 
+void Osu::updateWindowsKeyDisable()
+{
+	if (isInVRMode()) return;
+
+	if (osu_win_disable_windows_key_while_playing.getBool())
+	{
+		const bool isPlayerPlaying = isInPlayMode() && getSelectedBeatmap() != NULL && (!getSelectedBeatmap()->isPaused() || getSelectedBeatmap()->isRestartScheduled()) && !m_bModAuto;
+		m_win_disable_windows_key_ref->setValue(isPlayerPlaying ? 1.0f : 0.0f);
+	}
+}
+
 void Osu::fireResolutionChanged()
 {
 	onResolutionChanged(g_vInternalResolution);
@@ -1987,6 +2021,14 @@ bool Osu::onShutdown()
 {
 	debugLog("Osu::onShutdown()\n");
 
+	if (!osu_alt_f4_quits_even_while_playing.getBool() && isInPlayMode())
+	{
+		if (getSelectedBeatmap() != NULL)
+			getSelectedBeatmap()->stop();
+
+		return false;
+	}
+
 	// save everything
 	m_optionsMenu->save();
 	m_songBrowser2->getDatabase()->save();
@@ -2029,9 +2071,12 @@ void Osu::onSkinChange(UString oldValue, UString newValue)
 
 		// start playtime tracking
 		steam->startWorkshopItemPlaytimeTracking((uint64_t)osu_skin_workshop_id.getString().toLong());
+
+		// set correct name of workshop skin
+		newValue = osu_skin_workshop_title.getString();
 	}
 
-	m_skinScheduledToLoad = new OsuSkin(this, skinFolder, (newValue == "default" || newValue == "defaultvr"), isWorkshopSkin);
+	m_skinScheduledToLoad = new OsuSkin(this, newValue, skinFolder, (newValue == "default" || newValue == "defaultvr"), isWorkshopSkin);
 
 	// initial load
 	if (m_skin == NULL)

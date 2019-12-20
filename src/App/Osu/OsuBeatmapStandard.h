@@ -61,7 +61,8 @@ public:
 	inline bool isSpinnerActive() {return m_bIsSpinnerActive;}
 
 private:
-	static ConVar *m_osu_draw_statistics_pp;
+	static ConVar *m_osu_draw_statistics_pp_ref;
+	static ConVar *m_osu_mod_fullalternate_ref;
 
 	virtual void onBeforeLoad();
 	virtual void onLoad();

@@ -194,6 +194,7 @@ public:
 	void updateMods();
 	void updateConfineCursor();
 	void updateMouseSettings();
+	void updateWindowsKeyDisable();
 
 private:
 	static Vector2 g_vInternalResolution;
@@ -255,6 +256,7 @@ private:
 	ConVar *m_snd_change_check_interval_ref;
 	ConVar *m_ui_scrollview_scrollbarwidth_ref;
 	ConVar *m_mouse_raw_input_absolute_to_window_ref;
+	ConVar *m_win_disable_windows_key_ref;
 
 	// interfaces
 	Osu2 *m_osu2;
@@ -320,6 +322,7 @@ private:
 	bool m_bKeyboardKey2Down;
 	bool m_bMouseKey1Down;
 	bool m_bMouseKey2Down;
+	bool m_bSkipDownCheck;
 	bool m_bSkipScheduled;
 	bool m_bQuickRetryDown;
 	float m_fQuickRetryTime;
