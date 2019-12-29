@@ -370,6 +370,9 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_osu_ui_scale_ref = convar->getConVarByName("osu_ui_scale");
 	m_fps_max_ref = convar->getConVarByName("fps_max");
 
+	m_win_snd_wasapi_buffer_size_ref = convar->getConVarByName("win_snd_wasapi_buffer_size", false);
+	m_win_snd_wasapi_period_size_ref = convar->getConVarByName("win_snd_wasapi_period_size", false);
+
 	// convar callbacks
 	convar->getConVarByName("osu_skin_use_skin_hitsounds")->setCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onUseSkinsSoundSamplesChange) );
 	osu_options_high_quality_sliders.setCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onHighQualitySlidersConVarChange) );
@@ -394,6 +397,10 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_sliderQualitySlider = NULL;
 	m_outputDeviceLabel = NULL;
 	m_outputDeviceResetButton = NULL;
+	m_wasapiBufferSizeSlider = NULL;
+	m_wasapiPeriodSizeSlider = NULL;
+	m_wasapiBufferSizeResetButton = NULL;
+	m_wasapiPeriodSizeResetButton = NULL;
 	m_dpiTextbox = NULL;
 	m_cm360Textbox = NULL;
 	m_letterboxingOffsetResetButton = NULL;
@@ -408,6 +415,8 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_bUIScaleChangeScheduled = false;
 	m_bUIScaleScrollToSliderScheduled = false;
 	m_bDPIScalingScrollToSliderScheduled = false;
+	m_bWASAPIBufferChangeScheduled = false;
+	m_bWASAPIPeriodChangeScheduled = false;
 
 	m_iNumResetAllKeyBindingsPressed = 0;
 
@@ -655,14 +664,28 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 #ifdef MCENGINE_FEATURE_BASS_WASAPI
 
 	addSubSection("WASAPI");
-	CBaseUISlider *wasapiBufferSlider = addSlider("Buffer Size:", 0.001f, 0.050f, convar->getConVarByName("win_snd_wasapi_buffer_size"));
-	wasapiBufferSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeFloatMS) );
-	wasapiBufferSlider->setKeyDelta(0.001f);
+	m_wasapiBufferSizeSlider = addSlider("Buffer Size:", 0.000f, 0.050f, convar->getConVarByName("win_snd_wasapi_buffer_size")); // NOTE: allow 0 for shared mode windows 10 + period
+	m_wasapiBufferSizeSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onWASAPIBufferChange) );
+	m_wasapiBufferSizeSlider->setKeyDelta(0.001f);
+	m_wasapiBufferSizeSlider->setAnimated(false);
 	addLabel("Windows 7: Start at 11 ms,")->setTextColor(0xff666666);
 	addLabel("Windows 10: Start at 1 ms,")->setTextColor(0xff666666);
 	addLabel("and if crackling: increment until fixed.")->setTextColor(0xff666666);
 	addLabel("(lower is better, non-wasapi has ~40 ms minimum)")->setTextColor(0xff666666);
 	addCheckbox("Exclusive Mode", "Dramatically reduces audio latency, leave this enabled.\nExclusive Mode = No other application can use audio.", convar->getConVarByName("win_snd_wasapi_exclusive"));
+	//addLabel("(On Windows 10 non-exclusive mode, try buffer = 0)")->setTextColor(0xff666666);
+	//addLabel("(then, try getting the smallest possible period)")->setTextColor(0xff666666);
+	addLabel("");
+	addLabel("");
+	addLabel("WARNING: Only if you know what you are doing")->setTextColor(0xffff0000);
+	m_wasapiPeriodSizeSlider = addSlider("Period Size:", 0.0f, 0.050f, convar->getConVarByName("win_snd_wasapi_period_size"));
+	m_wasapiPeriodSizeSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onWASAPIPeriodChange) );
+	m_wasapiPeriodSizeSlider->setKeyDelta(0.001f);
+	m_wasapiPeriodSizeSlider->setAnimated(false);
+	OsuUIButton *restartSoundEngine = addButton("Restart SoundEngine");
+	restartSoundEngine->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onOutputDeviceRestart) );
+	restartSoundEngine->setColor(0xff00566b);
+	addLabel("");
 
 #endif
 
@@ -1297,6 +1320,32 @@ void OsuOptionsMenu::update()
 			// additionally compensate scroll pos (but delay 1 frame)
 			if (oldUIScale != newUIScale)
 				m_bUIScaleScrollToSliderScheduled = true;
+		}
+	}
+
+	// delayed WASAPI buffer/period change
+	if (m_bWASAPIBufferChangeScheduled)
+	{
+		if (!m_wasapiBufferSizeSlider->isActive())
+		{
+			m_bWASAPIBufferChangeScheduled = false;
+
+			m_win_snd_wasapi_buffer_size_ref->setValue(m_wasapiBufferSizeSlider->getFloat());
+
+			// and update reset buttons as usual
+			onResetUpdate(m_wasapiBufferSizeResetButton);
+		}
+	}
+	if (m_bWASAPIPeriodChangeScheduled)
+	{
+		if (!m_wasapiPeriodSizeSlider->isActive())
+		{
+			m_bWASAPIPeriodChangeScheduled = false;
+
+			m_win_snd_wasapi_period_size_ref->setValue(m_wasapiPeriodSizeSlider->getFloat());
+
+			// and update reset buttons as usual
+			onResetUpdate(m_wasapiPeriodSizeResetButton);
 		}
 	}
 
@@ -2479,7 +2528,15 @@ void OsuOptionsMenu::onOutputDeviceResetUpdate()
 
 void OsuOptionsMenu::onOutputDeviceRestart()
 {
+#ifdef MCENGINE_FEATURE_BASS_WASAPI
+
+	engine->getSound()->setOutputDeviceForce("Default");
+
+#else
+
 	engine->getSound()->setOutputDevice("Default");
+
+#endif
 }
 
 void OsuOptionsMenu::onDownloadOsuClicked()
@@ -2954,6 +3011,58 @@ void OsuOptionsMenu::onSliderChangeUIScale(CBaseUISlider *slider)
 				m_uiScaleResetButton = m_elements[i].resetButton; // HACKHACK: disgusting
 
 				onResetUpdate(m_elements[i].resetButton);
+
+				break;
+			}
+		}
+	}
+}
+
+void OsuOptionsMenu::onWASAPIBufferChange(CBaseUISlider *slider)
+{
+	m_bWASAPIBufferChangeScheduled = true;
+
+	for (int i=0; i<m_elements.size(); i++)
+	{
+		for (int e=0; e<m_elements[i].elements.size(); e++)
+		{
+			if (m_elements[i].elements[e] == slider)
+			{
+				if (m_elements[i].elements.size() == 3)
+				{
+					CBaseUILabel *labelPointer = dynamic_cast<CBaseUILabel*>(m_elements[i].elements[2]);
+					UString text = UString::format("%i", (int)std::round(slider->getFloat()*1000.0f));
+					text.append(" ms");
+					labelPointer->setText(text);
+				}
+
+				m_wasapiBufferSizeResetButton = m_elements[i].resetButton; // HACKHACK: disgusting
+
+				break;
+			}
+		}
+	}
+}
+
+void OsuOptionsMenu::onWASAPIPeriodChange(CBaseUISlider *slider)
+{
+	m_bWASAPIPeriodChangeScheduled = true;
+
+	for (int i=0; i<m_elements.size(); i++)
+	{
+		for (int e=0; e<m_elements[i].elements.size(); e++)
+		{
+			if (m_elements[i].elements[e] == slider)
+			{
+				if (m_elements[i].elements.size() == 3)
+				{
+					CBaseUILabel *labelPointer = dynamic_cast<CBaseUILabel*>(m_elements[i].elements[2]);
+					UString text = UString::format("%i", (int)std::round(slider->getFloat()*1000.0f));
+					text.append(" ms");
+					labelPointer->setText(text);
+				}
+
+				m_wasapiPeriodSizeResetButton = m_elements[i].resetButton; // HACKHACK: disgusting
 
 				break;
 			}

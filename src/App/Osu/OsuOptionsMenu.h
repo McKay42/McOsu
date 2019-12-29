@@ -148,6 +148,9 @@ private:
 	void onSliderChangeLetterboxingOffset(CBaseUISlider *slider);
 	void onSliderChangeUIScale(CBaseUISlider *slider);
 
+	void onWASAPIBufferChange(CBaseUISlider *slider);
+	void onWASAPIPeriodChange(CBaseUISlider *slider);
+
 	void onUseSkinsSoundSamplesChange(UString oldValue, UString newValue);
 	void onHighQualitySlidersCheckboxChange(CBaseUICheckbox *checkbox);
 	void onHighQualitySlidersConVarChange(UString oldValue, UString newValue);
@@ -221,6 +224,10 @@ private:
 	CBaseUIElement *m_outputDeviceSelectButton;
 	CBaseUILabel *m_outputDeviceLabel;
 	OsuOptionsMenuResetButton *m_outputDeviceResetButton;
+	CBaseUISlider *m_wasapiBufferSizeSlider;
+	CBaseUISlider *m_wasapiPeriodSizeSlider;
+	OsuOptionsMenuResetButton *m_wasapiBufferSizeResetButton;
+	OsuOptionsMenuResetButton *m_wasapiPeriodSizeResetButton;
 	CBaseUILabel *m_vrRenderTargetResolutionLabel;
 	CBaseUISlider *m_vrApproachDistanceSlider;
 	CBaseUISlider *m_vrVibrationStrengthSlider;
@@ -250,6 +257,8 @@ private:
 	ConVar *m_osu_skin_random_ref;
 	ConVar *m_osu_ui_scale_ref;
 	ConVar *m_fps_max_ref;
+	ConVar *m_win_snd_wasapi_buffer_size_ref;
+	ConVar *m_win_snd_wasapi_period_size_ref;
 
 	float m_fOsuFolderTextboxInvalidAnim;
 	float m_fVibrationStrengthExampleTimer;
@@ -258,6 +267,8 @@ private:
 	bool m_bUIScaleChangeScheduled;
 	bool m_bUIScaleScrollToSliderScheduled;
 	bool m_bDPIScalingScrollToSliderScheduled;
+	bool m_bWASAPIBufferChangeScheduled;
+	bool m_bWASAPIPeriodChangeScheduled;
 
 	// key bindings
 	int m_iNumResetAllKeyBindingsPressed;
