@@ -23,7 +23,6 @@
 
 #include <mutex>
 #include "WinMinGW.Mutex.h" // necessary due to incomplete implementation in mingw-w64
-#include "Horizon.Mutex.h"
 
 #endif
 
