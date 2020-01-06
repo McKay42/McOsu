@@ -535,7 +535,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	}
 
 	addSubSection("Detail Settings");
-	addCheckbox("Mipmaps", "Reload your skin to apply! (CTRL + ALT + SHIFT + S)\nGenerate mipmaps for each skin element, at the cost of VRAM.\nProvides smoother visuals on lower resolutions for @2x-only skins.", convar->getConVarByName("osu_skin_mipmaps"));
+	addCheckbox("Mipmaps", "Reload your skin to apply! (CTRL + ALT + S)\nGenerate mipmaps for each skin element, at the cost of VRAM.\nProvides smoother visuals on lower resolutions for @2x-only skins.", convar->getConVarByName("osu_skin_mipmaps"));
 	addSpacer();
 	addCheckbox("Snaking in sliders", "\"Growing\" sliders.\nSliders gradually snake out from their starting point while fading in.\nHas no impact on performance whatsoever.", convar->getConVarByName("osu_snaking_sliders"));
 	addCheckbox("Snaking out sliders", "\"Shrinking\" sliders.\nSliders will shrink with the sliderball while sliding.\nCan improve performance a tiny bit, since there will be less to draw overall.", convar->getConVarByName("osu_slider_shrink"));
@@ -1420,6 +1420,20 @@ void OsuOptionsMenu::onKeyDown(KeyboardEvent &e)
 	{
 		if (e == KEY_ESCAPE || e == (KEYCODE)OsuKeyBindings::GAME_PAUSE.getInt())
 			onBack();
+	}
+
+	// paste clipboard support
+	if (e == KEY_V)
+	{
+		if (engine->getKeyboard()->isControlDown())
+		{
+			const UString clipstring = env->getClipBoardText();
+			if (clipstring.length() > 0)
+			{
+				m_sSearchString.append(clipstring);
+				scheduleSearchUpdate();
+			}
+		}
 	}
 
 	e.consume();
