@@ -1109,8 +1109,8 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 			timingPoints.push_back(db->readTimingPoint());
 		}
 
-		unsigned int beatmapID = db->readInt();
-		int beatmapSetID = db->readInt(); // fucking bullshit, this is NOT an unsigned integer as is described on the wiki, it can and is -1 sometimes
+		int beatmapID = db->readInt(); // fucking bullshit, this is NOT an unsigned integer as is described on the wiki, it can and is -1 sometimes
+		int beatmapSetID = db->readInt(); // same here
 		/*unsigned int threadID = */db->readInt();
 
 		/*unsigned char osuStandardGrade = */db->readByte();
