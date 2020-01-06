@@ -397,7 +397,7 @@ void OsuBeatmap::update()
 			if (!m_bIsRestartScheduledQuick && m_hitobjects.size() > 0)
 			{
 				if (m_hitobjects[0]->getTime() < (long)osu_early_note_time.getInt())
-					m_fWaitTime = engine->getTimeReal() + osu_early_note_time.getInt()/1000.0f;
+					m_fWaitTime = engine->getTimeReal() + osu_early_note_time.getFloat()/1000.0f;
 			}
 		}
 		else
@@ -423,7 +423,7 @@ void OsuBeatmap::update()
 				}
 			}
 			else
-				m_iCurMusicPos = (engine->getTimeReal() - m_fWaitTime)*1000.0f*m_osu->getSpeedMultiplier();
+				m_iCurMusicPos = (engine->getTimeReal() - m_fWaitTime) * 1000.0f * m_osu->getSpeedMultiplier();
 		}
 
 		// ugh. force update all hitobjects while waiting (necessary because of pvs optimization)
@@ -1217,9 +1217,16 @@ void OsuBeatmap::seekPercent(double percent)
 	m_fWaitTime = 0.0f;
 
 	m_music->setPosition(percent);
+	m_music->setVolume(m_osu_volume_music_ref->getFloat());
 
 	resetHitObjects(m_music->getPositionMS());
 	resetScore();
+
+	if (m_bIsWaiting)
+	{
+		m_bIsWaiting = false;
+		engine->getSound()->play(m_music);
+	}
 }
 
 void OsuBeatmap::seekPercentPlayable(double percent)
@@ -1246,9 +1253,16 @@ void OsuBeatmap::seekMS(unsigned long ms)
 	m_fWaitTime = 0.0f;
 
 	m_music->setPositionMS(ms);
+	m_music->setVolume(m_osu_volume_music_ref->getFloat());
 
 	resetHitObjects(m_music->getPositionMS());
 	resetScore();
+
+	if (m_bIsWaiting)
+	{
+		m_bIsWaiting = false;
+		engine->getSound()->play(m_music);
+	}
 }
 
 unsigned long OsuBeatmap::getTime()
@@ -1707,7 +1721,7 @@ void OsuBeatmap::resetScore()
 
 unsigned long OsuBeatmap::getMusicPositionMSInterpolated()
 {
-	if (!osu_interpolate_music_pos.getBool() || m_bFailed)
+	if (!osu_interpolate_music_pos.getBool() || m_bFailed || isLoading())
 		return m_music->getPositionMS();
 	else
 	{
