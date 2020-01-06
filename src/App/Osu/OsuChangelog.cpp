@@ -34,15 +34,25 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 
 	std::vector<CHANGELOG> changelogs;
 
+	CHANGELOG alpha313;
+	alpha313.title = UString::format("30.13 (%s, %s)", __DATE__, __TIME__);
+	alpha313.changes.push_back("- Added searching by beatmap ID + beatmap set ID");
+	alpha313.changes.push_back("- Added CTRL + V support to songbrowser search (paste clipboard)");
+	alpha313.changes.push_back("- Added ConVars: osu_songbrowser_search_delay");
+	alpha313.changes.push_back("- Windows: Added WASAPI option \"Period Size\" (Options > Audio > WASAPI) (wasapi-test beta)");
+	alpha313.changes.push_back("- Improved engine background async loading (rm_numthreads)");
+	alpha313.changes.push_back("- Fixed skin hit0/hit50/hit100/hit300 animation handling (keep last frame and fade)");
+	alpha313.changes.push_back("- Fixed scrubbing during lead-in time breaking things");
+	changelogs.push_back(alpha313);
+
 	CHANGELOG alpha312;
-	alpha312.title = UString::format("30.12 (%s, %s)", __DATE__, __TIME__);
+	alpha312.title = "30.12 (19.12.2019)";
 	alpha312.changes.push_back("- Added button \"Random Skin\" (Options > Skin)");
 	alpha312.changes.push_back("- Added option \"SHIFT + TAB toggles everything\" (Options > Gameplay > HUD)");
 	alpha312.changes.push_back("- Added ConVars (1): osu_mod_random_circle/slider/spinner_offset_x/y_percent, osu_mod_hd_circle_fadein/fadeout_start/end_percent");
 	alpha312.changes.push_back("- Added ConVars (2): osu_play_hitsound_on_click_while_playing, osu_alt_f4_quits_even_while_playing");
 	alpha312.changes.push_back("- Added ConVars (3): osu_skin_random, osu_skin_random_elements, osu_slider_body_unit_circle_subdivisions");
 	alpha312.changes.push_back("- Windows: Ignore Windows key while playing (osu_win_disable_windows_key_while_playing)");
-	alpha312.changes.push_back("- Windows: Added WASAPI option \"Period Size\" (Options > Audio > WASAPI) (wasapi-test beta)");
 	alpha312.changes.push_back("- Made skip button only skip if click started inside");
 	alpha312.changes.push_back("- Made mod \"Jigsaw\" allow clicks during breaks and before first hitobject");
 	alpha312.changes.push_back("- Made experimental mod \"Full Alternate\" allow any key for first hitobjects, and after break, and during/after spinners");
@@ -51,7 +61,6 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha312.changes.push_back("- Fixed notelock unlocking sliders too early (previously unlocked after sliderstartcircle, now unlocks after slider end)");
 	alpha312.changes.push_back("- Fixed rare hitsound timingpoint offsets (accurate on slider start/end now)");
 	alpha312.changes.push_back("- Fixed NaN timingpoint handling for aspire (maybe)");
-	alpha312.changes.push_back("- Fixed skin hit0/hit50/hit100/hit300 animation handling (keep last frame and fade)");
 	changelogs.push_back(alpha312);
 
 	CHANGELOG alpha311;
