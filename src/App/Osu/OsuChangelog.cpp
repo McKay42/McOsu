@@ -38,6 +38,8 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha313.title = UString::format("30.13 (%s, %s)", __DATE__, __TIME__);
 	alpha313.changes.push_back("- Added searching by beatmap ID + beatmap set ID");
 	alpha313.changes.push_back("- Added CTRL + V support to songbrowser search (paste clipboard)");
+	alpha313.changes.push_back("- Added Touch Device mod (allows simulating pp nerf)");
+	alpha313.changes.push_back("- Added option \"Always enable touch device pp nerf mod\" (Options > General > Player)");
 	alpha313.changes.push_back("- Added ConVars: osu_songbrowser_search_delay");
 	alpha313.changes.push_back("- Windows: Added WASAPI option \"Period Size\" (Options > Audio > WASAPI) (wasapi-test beta)");
 	alpha313.changes.push_back("- Improved engine background async loading (rm_numthreads)");

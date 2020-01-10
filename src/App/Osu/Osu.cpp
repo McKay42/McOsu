@@ -98,6 +98,7 @@ ConVar osu_quick_retry_delay("osu_quick_retry_delay", 0.27f);
 ConVar osu_scrubbing_smooth("osu_scrubbing_smooth", true);
 
 ConVar osu_mods("osu_mods", "");
+ConVar osu_mod_touchdevice("osu_mod_touchdevice", false, "used for force applying touch pp nerf always");
 ConVar osu_mod_fadingcursor("osu_mod_fadingcursor", false);
 ConVar osu_mod_fadingcursor_combo("osu_mod_fadingcursor_combo", 50.0f);
 ConVar osu_mod_endless("osu_mod_endless", false);

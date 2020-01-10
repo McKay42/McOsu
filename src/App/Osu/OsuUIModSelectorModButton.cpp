@@ -140,6 +140,8 @@ void OsuUIModSelectorModButton::setBaseScale(float xScale, float yScale)
 
 void OsuUIModSelectorModButton::setOn(bool on)
 {
+	if (!m_bAvailable) return;
+
 	bool prevState = m_bOn;
 	m_bOn = on;
 	const float animationDuration = 0.05f;
