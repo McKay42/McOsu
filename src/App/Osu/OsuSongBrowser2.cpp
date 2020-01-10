@@ -1228,6 +1228,10 @@ void OsuSongBrowser2::onPlayEnd(bool quit)
 		if (selectedSongDiffButton != NULL)
 			selectedSongDiffButton->updateGrade();
 	}
+
+	// update song info
+	if (getSelectedBeatmap() != NULL && getSelectedBeatmap()->getSelectedDifficulty() != NULL)
+		m_songInfo->setFromBeatmap(getSelectedBeatmap(), getSelectedBeatmap()->getSelectedDifficulty());
 }
 
 void OsuSongBrowser2::onDifficultySelected(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff, bool play, bool mp)
