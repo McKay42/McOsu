@@ -23,7 +23,6 @@ ConVar osu_stars_slider_curve_points_separation("osu_stars_slider_curve_points_s
 
 
 unsigned long long OsuDifficultyHitObject::sortHackCounter = 0;
-bool tdEnabled = 0;
 
 OsuDifficultyHitObject::OsuDifficultyHitObject(TYPE type, Vector2 pos, long time) : OsuDifficultyHitObject(type, pos, time, time)
 {
@@ -108,7 +107,7 @@ Vector2 OsuDifficultyHitObject::getOriginalRawPosAt(long pos)
 
 ConVar *OsuDifficultyCalculator::m_osu_slider_scorev2_ref = NULL;
 
-double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<std::shared_ptr<OsuDifficultyHitObject>> &sortedHitObjects, float CS, double *aim, double *speed, int upToObjectIndex, bool hasTD)
+double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<std::shared_ptr<OsuDifficultyHitObject>> &sortedHitObjects, float CS, double *aim, double *speed, int upToObjectIndex)
 {
 	// NOTE: depends on speed multiplier + CS
 
@@ -580,9 +579,6 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<std::
 	*aim = std::sqrt(*aim) * star_scaling_factor;
 	*speed = std::sqrt(*speed) * star_scaling_factor;
 
-	if (hasTD)
-		*aim = pow(*aim, 0.8f);
-
 	return calculateTotalStarsFromSkills(*aim, *speed);
 }
 
@@ -671,6 +667,11 @@ double OsuDifficultyCalculator::calculatePPv2(int modsLegacy, double timescale, 
 	double acc = calculateAcc(c300, c100, c50, misses);
 
 	// aim pp ------------------------------------------------------------------
+	
+	// touch nerf
+	if (modsLegacy & OsuReplay::Mods::TouchDevice)
+		aim = std::pow(aim, 0.8);
+	
 	double aim_value = calculateBaseStrain(aim);
 
 	// length bonus (reused in speed pp)
