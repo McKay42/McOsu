@@ -47,6 +47,7 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha313.changes.push_back("- Loop music");
 	alpha313.changes.push_back("- Fixed skin hit0/hit50/hit100/hit300 animation handling (keep last frame and fade)");
 	alpha313.changes.push_back("- Fixed scrubbing during lead-in time breaking things");
+	alpha313.changes.push_back("- Windows: Fixed Windows key not unlocking on focus loss if \"Pause on Focus Loss\" is disabled");
 	changelogs.push_back(alpha313);
 
 	CHANGELOG alpha312;

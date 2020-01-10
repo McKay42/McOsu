@@ -1943,7 +1943,7 @@ void Osu::updateWindowsKeyDisable()
 
 	if (osu_win_disable_windows_key_while_playing.getBool())
 	{
-		const bool isPlayerPlaying = isInPlayMode() && getSelectedBeatmap() != NULL && (!getSelectedBeatmap()->isPaused() || getSelectedBeatmap()->isRestartScheduled()) && !m_bModAuto;
+		const bool isPlayerPlaying = engine->hasFocus() && isInPlayMode() && getSelectedBeatmap() != NULL && (!getSelectedBeatmap()->isPaused() || getSelectedBeatmap()->isRestartScheduled()) && !m_bModAuto;
 		m_win_disable_windows_key_ref->setValue(isPlayerPlaying ? 1.0f : 0.0f);
 	}
 }
@@ -2002,6 +2002,8 @@ void Osu::onFocusGained()
 		if (getSelectedBeatmap() != NULL)
 			getSelectedBeatmap()->pausePreviewMusic();
 	}
+
+	updateWindowsKeyDisable();
 }
 
 void Osu::onFocusLost()
@@ -2015,6 +2017,8 @@ void Osu::onFocusLost()
 			m_modSelector->setVisible(false);
 		}
 	}
+
+	updateWindowsKeyDisable();
 
 	// release cursor clip
 	env->setCursorClip(false, McRect());
