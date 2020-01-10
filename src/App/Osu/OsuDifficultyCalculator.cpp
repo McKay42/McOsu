@@ -579,8 +579,6 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<std::
 	*aim = std::sqrt(*aim) * star_scaling_factor;
 	*speed = std::sqrt(*speed) * star_scaling_factor;
 
-	// TODO: touch nerf goes here
-
 	return calculateTotalStarsFromSkills(*aim, *speed);
 }
 
@@ -604,6 +602,7 @@ double OsuDifficultyCalculator::calculatePPv2(Osu *osu, OsuBeatmap *beatmap, dou
 	modsLegacy |= (osu->getModHT() || osu->getModDC() ? OsuReplay::Mods::HalfTime : 0);
 	modsLegacy |= (osu->getModNF() ? OsuReplay::Mods::NoFail : 0);
 	modsLegacy |= (osu->getModSpunout() ? OsuReplay::Mods::SpunOut : 0);
+	modsLegacy |= (osu->getModTD() ? OsuReplay::Mods::TouchDevice : 0);
 	///modsLegacy |= (osu->getModFL() ? OsuReplay::Mods::Flashlight : 0); // TODO: not yet implemented
 
 	return calculatePPv2(modsLegacy, osu->getSpeedMultiplier(), beatmap->getAR(), beatmap->getOD(), aim, speed, numHitObjects, numCircles, maxPossibleCombo, combo, misses, c300, c100, c50, scoreVersion);
@@ -668,6 +667,11 @@ double OsuDifficultyCalculator::calculatePPv2(int modsLegacy, double timescale, 
 	double acc = calculateAcc(c300, c100, c50, misses);
 
 	// aim pp ------------------------------------------------------------------
+	
+	// touch nerf
+	if (modsLegacy & OsuReplay::Mods::TouchDevice)
+		aim = std::pow(aim, 0.8);
+	
 	double aim_value = calculateBaseStrain(aim);
 
 	// length bonus (reused in speed pp)

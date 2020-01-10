@@ -620,7 +620,7 @@ UString OsuUISongBrowserScoreButton::getModsString(int mods)
 	if (mods & OsuReplay::Mods::Easy)
 		modsString.append("EZ,");
 	if (mods & OsuReplay::Mods::TouchDevice)
-		modsString.append("Touch,");
+		modsString.append("TD,");
 	if (mods & OsuReplay::Mods::Hidden)
 		modsString.append("HD,");
 	if (mods & OsuReplay::Mods::HardRock)

@@ -242,6 +242,7 @@ void OsuModSelector::updateButtons(bool initial)
 	m_modButtonHalftime = setModButtonOnGrid(2, 0, 0, initial && m_osu->getModHT(), "ht", "Less zoom.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModHalfTime();});
 	setModButtonOnGrid(2, 0, 1, initial && m_osu->getModDC(), "dc", "A E S T H E T I C", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModDayCore();});
 	setModButtonOnGrid(4, 0, 0, initial && m_osu->getModNM(), "nm", "Massively reduced slider follow circle radius. Unnecessary clicks count as misses.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModNightmare();});
+	m_modButtonTD = setModButtonOnGrid(5, 0, 0, initial && m_osu->getModTD(), "ts", "Enable Touch Device for aim difficulty calculation and leaderboards", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModTD();});
 
 	m_modButtonHardrock = setModButtonOnGrid(0, 1, 0, initial && m_osu->getModHR(), "hr", "Everything just got a bit harder...", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModHardRock();});
 	m_modButtonSuddendeath = setModButtonOnGrid(1, 1, 0, initial && m_osu->getModSD(), "sd", "Miss a note and fail.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModSuddenDeath();});

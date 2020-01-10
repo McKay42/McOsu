@@ -598,6 +598,7 @@ void OsuSkin::load()
 	m_selectionModNightmare = createOsuSkinImage("selection-mod-nightmare", Vector2(68, 66), 38);
 	m_selectionModTarget = createOsuSkinImage("selection-mod-target", Vector2(68, 66), 38);
 	m_selectionModScorev2 = createOsuSkinImage("selection-mod-scorev2", Vector2(68, 66), 38);
+	m_selectionModTD = createOsuSkinImage("selection-mod-touchdevice", Vector2(68, 66), 38);
 
 	randomizeFilePath();
 	checkLoadImage(&m_pauseContinue, "pause-continue", "OSU_SKIN_PAUSE_CONTINUE");

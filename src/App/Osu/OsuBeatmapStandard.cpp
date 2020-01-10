@@ -1352,6 +1352,7 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 				score.modsLegacy |= (m_osu->getModSD() ? OsuReplay::Mods::SuddenDeath : 0);
 				score.modsLegacy |= (m_osu->getModSS() ? OsuReplay::Mods::Perfect : 0);
 				score.modsLegacy |= (m_osu->getModNM() ? OsuReplay::Mods::Nightmare : 0);
+				score.modsLegacy |= (m_osu->getModTD() ? OsuReplay::Mods::TouchDevice : 0);
 
 				// custom
 				score.numSliderBreaks = m_osu->getScore()->getNumSliderBreaks();

@@ -150,6 +150,7 @@ private:
 	OsuUIModSelectorModButton *m_modButtonSpunout;
 	OsuUIModSelectorModButton *m_modButtonAuto;
 	OsuUIModSelectorModButton *m_modButtonScoreV2;
+	OsuUIModSelectorModButton *m_modButtonTD;
 
 	// experimental mods
 	std::vector<EXPERIMENTAL_MOD> m_experimentalMods;

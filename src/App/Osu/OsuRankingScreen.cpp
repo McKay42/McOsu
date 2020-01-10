@@ -262,6 +262,7 @@ OsuRankingScreen::OsuRankingScreen(Osu *osu) : OsuScreenBackable(osu)
 	m_bModHT = false;
 	m_bModAutopilot = false;
 	m_bModAuto = false;
+	m_bModTD = false;
 
 	m_bIsLegacyScore = false;
 }
@@ -316,6 +317,8 @@ void OsuRankingScreen::draw(Graphics *g)
 		drawModImage(g, m_osu->getSkin()->getSelectionModAutopilot(), modPos, modPosMax);
 	if (m_bModAuto)
 		drawModImage(g, m_osu->getSkin()->getSelectionModAutoplay(), modPos, modPosMax);
+	if (m_bModTD)
+		drawModImage(g, m_osu->getSkin()->getSelectionModTD(), modPos, modPosMax);
 
 	// draw experimental mods
 	if (m_enabledExperimentalMods.size() > 0)
@@ -507,6 +510,7 @@ void OsuRankingScreen::setScore(OsuScore *score)
 	m_bModHT = m_osu->getModHT();
 	m_bModAutopilot = m_osu->getModAutopilot();
 	m_bModAuto = m_osu->getModAuto();
+	m_bModTD = m_osu->getModTD();
 
 	m_enabledExperimentalMods.clear();
 	std::vector<ConVar*> allExperimentalMods = m_osu->getExperimentalMods();
@@ -560,6 +564,7 @@ void OsuRankingScreen::setScore(OsuDatabase::Score score, UString dateTime)
 	m_bModHT = score.modsLegacy & OsuReplay::Mods::HalfTime;
 	m_bModAutopilot = score.modsLegacy & OsuReplay::Mods::Relax2;
 	m_bModAuto = score.modsLegacy & OsuReplay::Mods::Autoplay;
+	m_bModTD = score.modsLegacy & OsuReplay::Mods::TouchDevice;
 
 	m_enabledExperimentalMods.clear();
 	if (score.experimentalModsConVars.length() > 0)
