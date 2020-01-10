@@ -464,7 +464,6 @@ void OsuBeatmap::update()
 	// detect and handle music end
 	if (!m_bIsWaiting && m_music->isReady() && (m_music->isFinished() || (m_hitobjects.size() > 0 && m_iCurMusicPos > (m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size()-1]->getTime() + m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size()-1]->getDuration() + (long)osu_end_delay_time.getInt()))))
 	{
-		debugLog("finished. finished = %i, hitobjects = %i, pos = %i\n", (int)m_music->isFinished(), m_hitobjects.size(), (int)m_iCurMusicPos);
 		stop(false);
 		return;
 	}
@@ -989,6 +988,7 @@ bool OsuBeatmap::play()
 	unloadMusic(); // need to reload in case of speed/pitch changes (just to be sure)
 	loadMusic(false, m_bForceStreamPlayback);
 
+	m_music->setLoop(false);
 	m_music->setEnablePitchAndSpeedShiftingHack(true && !m_bForceStreamPlayback);
 	m_bIsPaused = false;
 	m_bContinueScheduled = false;
@@ -1051,6 +1051,7 @@ void OsuBeatmap::actualRestart()
 	// reset/restore frequency (from potential fail before)
 	m_music->setFrequency(0);
 
+	m_music->setLoop(false);
 	m_music->setEnablePitchAndSpeedShiftingHack(true && !m_bForceStreamPlayback);
 	m_bIsPaused = false;
 	m_bContinueScheduled = false;
@@ -1640,6 +1641,10 @@ void OsuBeatmap::handlePreviewPlay()
 			m_music->setVolume(m_osu_volume_music_ref->getFloat());
 		}
 	}
+
+	// always loop during preview
+	if (m_music != NULL)
+		m_music->setLoop(true);
 }
 
 void OsuBeatmap::loadMusic(bool stream, bool prescan)
