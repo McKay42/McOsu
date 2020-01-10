@@ -57,6 +57,7 @@ ConVar osu_timingpoints_offset("osu_timingpoints_offset", 5.0f, "Offset in ms wh
 ConVar osu_interpolate_music_pos("osu_interpolate_music_pos", true, "Interpolate song position with engine time if the audio library reports the same position more than once");
 ConVar osu_compensate_music_speed("osu_compensate_music_speed", true, "compensates speeds slower than 1x a little bit, by adding an offset depending on the slowness");
 ConVar osu_combobreak_sound_combo("osu_combobreak_sound_combo", 20, "Only play the combobreak sound if the combo is higher than this");
+ConVar osu_beatmap_preview_mods_live("osu_beatmap_preview_mods_live", false, "whether to immediately apply all currently selected mods while browsing beatmaps (e.g. speed/pitch)");
 
 ConVar osu_ar_override("osu_ar_override", -1.0f);
 ConVar osu_cs_override("osu_cs_override", -1.0f);
@@ -903,6 +904,9 @@ void OsuBeatmap::selectDifficulty(int index, bool deleteImage)
 		loadMusic();
 		handlePreviewPlay();
 	}
+
+	if (osu_beatmap_preview_mods_live.getBool())
+		onModUpdate();
 }
 
 void OsuBeatmap::selectDifficulty(OsuBeatmapDifficulty *difficulty, bool deleteImage)
