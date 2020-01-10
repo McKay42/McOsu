@@ -107,6 +107,7 @@ private:
 	bool m_bModHT;
 	bool m_bModAutopilot;
 	bool m_bModAuto;
+	bool m_bModTD;
 
 	std::vector<ConVar*> m_enabledExperimentalMods;
 
