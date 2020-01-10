@@ -255,7 +255,7 @@ void OsuModSelector::updateButtons(bool initial)
 	m_modButtonHidden = setModButtonOnGrid(3, 1, 0, initial && m_osu->getModHD(), "hd", "Play with no approach circles and fading notes for a slight score advantage.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModHidden();});
 	m_modButtonFlashlight = setModButtonOnGrid(4, 1, 0, false, "fl", "Restricted view area.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModFlashlight();});
 	getModButtonOnGrid(4, 1)->setAvailable(false);
-	m_modButtonTD = setModButtonOnGrid(5, 1, 0, initial && (m_osu->getModTD() || m_osu_mod_touchdevice_ref->getBool()), "ts", "Simulate pp nerf for touch devices.\nOnly affects pp calculation.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModTD();});
+	m_modButtonTD = setModButtonOnGrid(5, 1, 0, initial && (m_osu->getModTD() || m_osu_mod_touchdevice_ref->getBool()), "nerftd", "Simulate pp nerf for touch devices.\nOnly affects pp calculation.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModTD();});
 	getModButtonOnGrid(5, 1)->setAvailable(!m_osu_mod_touchdevice_ref->getBool());
 
 	m_modButtonRelax = setModButtonOnGrid(0, 2, 0, initial && m_osu->getModRelax(), "relax", "You don't need to click.\nGive your clicking/tapping fingers a break from the heat of things.\n** UNRANKED **", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModRelax();});

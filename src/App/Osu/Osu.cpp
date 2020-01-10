@@ -1124,7 +1124,7 @@ void Osu::updateMods()
 	m_bModSD = osu_mods.getString().find("sd") != -1;
 	m_bModSS = osu_mods.getString().find("ss") != -1;
 	m_bModNM = osu_mods.getString().find("nm") != -1;
-	m_bModTD = osu_mods.getString().find("ts") != -1;
+	m_bModTD = osu_mods.getString().find("nerftd") != -1;
 
 	// static overrides
 	onSpeedChange("", osu_speed_override.getString());
