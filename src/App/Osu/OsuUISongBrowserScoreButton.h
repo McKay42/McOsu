@@ -96,6 +96,7 @@ private:
 	UString m_sScoreScorePP;
 	UString m_sScoreAccuracy;
 	UString m_sScoreMods;
+	UString m_sCustom;
 
 	// STYLE::TOP_RANKS
 	UString m_sScoreTitle;

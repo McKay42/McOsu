@@ -285,6 +285,8 @@ void OsuRankingScreen::draw(Graphics *g)
 	// draw active mods
 	Vector2 modPos = m_rankingGrade->getPos() + Vector2(m_rankingGrade->getSize().x*0.925f, m_rankingGrade->getSize().y*0.7f);
 	Vector2 modPosMax;
+	if (m_bModTD)
+		drawModImage(g, m_osu->getSkin()->getSelectionModTD(), modPos, modPosMax);
 	if (m_bModSS)
 		drawModImage(g, m_osu->getSkin()->getSelectionModPerfect(), modPos, modPosMax);
 	else if (m_bModSD)
@@ -317,8 +319,6 @@ void OsuRankingScreen::draw(Graphics *g)
 		drawModImage(g, m_osu->getSkin()->getSelectionModAutopilot(), modPos, modPosMax);
 	if (m_bModAuto)
 		drawModImage(g, m_osu->getSkin()->getSelectionModAutoplay(), modPos, modPosMax);
-	if (m_bModTD)
-		drawModImage(g, m_osu->getSkin()->getSelectionModTD(), modPos, modPosMax);
 
 	// draw experimental mods
 	if (m_enabledExperimentalMods.size() > 0)

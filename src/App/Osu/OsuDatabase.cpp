@@ -1646,7 +1646,7 @@ void OsuDatabase::loadScores()
 						sc.starsTomTotal = 0.0f;
 						sc.starsTomAim = 0.0f;
 						sc.starsTomSpeed = 0.0f;
-						sc.speedMultiplier = 1.0f;
+						sc.speedMultiplier = (mods & OsuReplay::Mods::HalfTime ? 0.75f : (((mods & OsuReplay::Mods::DoubleTime) || (mods & OsuReplay::Mods::Nightcore)) ? 1.5f : 1.0f));
 						sc.CS = 0.0f; sc.AR = 0.0f; sc.OD = 0.0f; sc.HP = 0.0f;
 						sc.maxPossibleCombo = -1;
 						sc.numHitObjects = -1;
