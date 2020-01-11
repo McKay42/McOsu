@@ -45,11 +45,11 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha313.changes.push_back("- Added option \"Draw Stats: 300 hitwindow\" (Options > Gameplay > HUD)");
 	alpha313.changes.push_back("- Added option \"Show Skip Button during Intro\" (Options > Gameplay > General)");
 	alpha313.changes.push_back("- Added option \"Show Skip Button during Breaks\" (Options > Gameplay > General)");
-	alpha313.changes.push_back("- Added ConVars (1): osu_songbrowser_search_delay, osu_followpoints_separation_multiplier");
-	alpha313.changes.push_back("- Added ConVars (2): osu_slider_body_fade_out_time_multiplier");
+	alpha313.changes.push_back("- Added ConVars (1): osu_followpoints_separation_multiplier, osu_songbrowser_search_delay");
+	alpha313.changes.push_back("- Added ConVars (2): osu_slider_body_fade_out_time_multiplier, osu_beatmap_preview_music_loop");
 	alpha313.changes.push_back("- Windows: Added WASAPI option \"Period Size\" (Options > Audio > WASAPI) (wasapi-test beta)");
 	alpha313.changes.push_back("- Allow overscaling osu_slider_body_alpha_multiplier/color_saturation, osu_cursor_scale, fposu_distance");
-	alpha313.changes.push_back("- Improved engine background async loading (rm_numthreads)");
+	alpha313.changes.push_back("- Improved engine background async loading");
 	alpha313.changes.push_back("- Loop music");
 	alpha313.changes.push_back("- Fixed skin hit0/hit50/hit100/hit300 animation handling (keep last frame and fade)");
 	alpha313.changes.push_back("- Fixed scrubbing during lead-in time breaking things");

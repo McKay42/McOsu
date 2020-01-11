@@ -58,6 +58,7 @@ ConVar osu_interpolate_music_pos("osu_interpolate_music_pos", true, "Interpolate
 ConVar osu_compensate_music_speed("osu_compensate_music_speed", true, "compensates speeds slower than 1x a little bit, by adding an offset depending on the slowness");
 ConVar osu_combobreak_sound_combo("osu_combobreak_sound_combo", 20, "Only play the combobreak sound if the combo is higher than this");
 ConVar osu_beatmap_preview_mods_live("osu_beatmap_preview_mods_live", false, "whether to immediately apply all currently selected mods while browsing beatmaps (e.g. speed/pitch)");
+ConVar osu_beatmap_preview_music_loop("osu_beatmap_preview_music_loop", true);
 
 ConVar osu_ar_override("osu_ar_override", -1.0f);
 ConVar osu_cs_override("osu_cs_override", -1.0f);
@@ -1648,7 +1649,7 @@ void OsuBeatmap::handlePreviewPlay()
 
 	// always loop during preview
 	if (m_music != NULL)
-		m_music->setLoop(true);
+		m_music->setLoop(osu_beatmap_preview_music_loop.getBool());
 }
 
 void OsuBeatmap::loadMusic(bool stream, bool prescan)
