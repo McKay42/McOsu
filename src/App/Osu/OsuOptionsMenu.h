@@ -77,8 +77,12 @@ private:
 			resetButton = NULL;
 			cvar = NULL;
 			type = -1;
+
 			label1Width = 0.0f;
 			relSizeDPI = 96.0f;
+
+			allowOverscale = false;
+			allowUnderscale = false;
 		}
 
 		OsuOptionsMenuResetButton *resetButton;
@@ -88,6 +92,9 @@ private:
 
 		float label1Width;
 		float relSizeDPI;
+
+		bool allowOverscale;
+		bool allowUnderscale;
 	};
 
 	virtual void updateLayout();
@@ -174,7 +181,7 @@ private:
 	OsuUIButton *addKeyBindButton(UString text, ConVar *cvar);
 	CBaseUICheckbox *addCheckbox(UString text, ConVar *cvar);
 	CBaseUICheckbox *addCheckbox(UString text, UString tooltipText = "", ConVar *cvar = NULL);
-	OsuUISlider *addSlider(UString text, float min = 0.0f, float max = 1.0f, ConVar *cvar = NULL, float label1Width = 0.0f);
+	OsuUISlider *addSlider(UString text, float min = 0.0f, float max = 1.0f, ConVar *cvar = NULL, float label1Width = 0.0f, bool allowOverscale = false, bool allowUnderscale = false);
 	CBaseUITextbox *addTextbox(UString text, ConVar *cvar = NULL);
 	CBaseUITextbox *addTextbox(UString text, UString labelText, ConVar *cvar = NULL);
 	CBaseUIElement *addSkinPreview();
@@ -256,7 +263,6 @@ private:
 	ConVar *m_osu_skin_workshop_id_ref;
 	ConVar *m_osu_skin_random_ref;
 	ConVar *m_osu_ui_scale_ref;
-	ConVar *m_fps_max_ref;
 	ConVar *m_win_snd_wasapi_buffer_size_ref;
 	ConVar *m_win_snd_wasapi_period_size_ref;
 
