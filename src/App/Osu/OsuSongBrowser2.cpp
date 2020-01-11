@@ -399,6 +399,9 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	osu_gamemode.setCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onModeChange) );
 
 	// vars
+	m_bSongBrowserRightClickScrollCheck = false;
+	m_bSongBrowserRightClickScrolling = false;
+
 	m_bF1Pressed = false;
 	m_bF2Pressed = false;
 	m_bShiftPressed = false;
@@ -861,9 +864,29 @@ void OsuSongBrowser2::update()
 	if (m_osu->getOptionsMenu()->isBusy())
 		m_songBrowser->stealFocus();
 
-	// handle right click absolute drag scrolling
-	if (m_songBrowser->isMouseInside() && engine->getMouse()->isRightDown())
-		m_songBrowser->scrollToY(-((engine->getMouse()->getPos().y - 2 - m_songBrowser->getPos().y)/m_songBrowser->getSize().y)*m_songBrowser->getScrollSize().y);
+	// handle right click absolute scrolling
+	{
+		if (engine->getMouse()->isRightDown())
+		{
+			if (!m_bSongBrowserRightClickScrollCheck)
+			{
+				m_bSongBrowserRightClickScrollCheck = true;
+
+				if (m_songBrowser->isMouseInside())
+					m_bSongBrowserRightClickScrolling = true;
+				else
+					m_bSongBrowserRightClickScrolling = false;
+			}
+		}
+		else
+		{
+			m_bSongBrowserRightClickScrollCheck = false;
+			m_bSongBrowserRightClickScrolling = false;
+		}
+
+		if (m_bSongBrowserRightClickScrolling)
+			m_songBrowser->scrollToY(-((engine->getMouse()->getPos().y - 2 - m_songBrowser->getPos().y)/m_songBrowser->getSize().y)*m_songBrowser->getScrollSize().y);
+	}
 
 	// handle async random beatmap selection
 	if (m_bRandomBeatmapScheduled)

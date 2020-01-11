@@ -213,6 +213,8 @@ private:
 
 	// song browser
 	CBaseUIScrollView *m_songBrowser;
+	bool m_bSongBrowserRightClickScrollCheck;
+	bool m_bSongBrowserRightClickScrolling;
 
 	// beatmap database
 	OsuDatabase *m_db;
