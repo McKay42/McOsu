@@ -872,7 +872,7 @@ void OsuSongBrowser2::update()
 			{
 				m_bSongBrowserRightClickScrollCheck = true;
 
-				if (m_songBrowser->isMouseInside())
+				if (m_songBrowser->isMouseInside() && !m_osu->getOptionsMenu()->isMouseInside())
 					m_bSongBrowserRightClickScrolling = true;
 				else
 					m_bSongBrowserRightClickScrolling = false;

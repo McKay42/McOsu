@@ -149,6 +149,8 @@ OsuHUD::OsuHUD(Osu *osu) : OsuScreen(osu)
 	m_osu_playfield_stretch_y_ref = convar->getConVarByName("osu_playfield_stretch_y");
 	m_osu_mp_win_condition_accuracy_ref = convar->getConVarByName("osu_mp_win_condition_accuracy");
 	m_osu_background_dim_ref = convar->getConVarByName("osu_background_dim");
+	m_osu_skip_intro_enabled_ref = convar->getConVarByName("osu_skip_intro_enabled");
+	m_osu_skip_breaks_enabled_ref = convar->getConVarByName("osu_skip_breaks_enabled");
 
 	// convar callbacks
 	osu_hud_volume_size_multiplier.setCallback( fastdelegate::MakeDelegate(this, &OsuHUD::onVolumeOverlaySizeChange) );
@@ -254,7 +256,7 @@ void OsuHUD::draw(Graphics *g)
 				drawScoreBoard(g, beatmap->getSelectedDifficulty()->md5hash, m_osu->getScore());
 		}
 
-		if (beatmap->isInSkippableSection())
+		if (beatmap->isInSkippableSection() && ((m_osu_skip_intro_enabled_ref->getBool() && beatmap->getHitObjectIndexForCurrentTime() < 1) || (m_osu_skip_breaks_enabled_ref->getBool() && beatmap->getHitObjectIndexForCurrentTime() > 0)))
 			drawSkip(g);
 
 		g->pushTransform();
@@ -538,7 +540,7 @@ void OsuHUD::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 					drawScoreBoard(g, beatmap->getSelectedDifficulty()->md5hash, m_osu->getScore());
 			}
 
-			if (beatmap->isInSkippableSection())
+			if (beatmap->isInSkippableSection() && ((m_osu_skip_intro_enabled_ref->getBool() && beatmap->getHitObjectIndexForCurrentTime() < 1) || (m_osu_skip_breaks_enabled_ref->getBool() && beatmap->getHitObjectIndexForCurrentTime() > 0)))
 				drawSkip(g);
 
 			drawStatistics(g,

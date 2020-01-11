@@ -96,6 +96,8 @@ ConVar osu_pitch_override("osu_pitch_override", -1.0f);
 ConVar osu_pause_on_focus_loss("osu_pause_on_focus_loss", true);
 ConVar osu_quick_retry_delay("osu_quick_retry_delay", 0.27f);
 ConVar osu_scrubbing_smooth("osu_scrubbing_smooth", true);
+ConVar osu_skip_intro_enabled("osu_skip_intro_enabled", true, "enables/disables skip button for intro until first hitobject");
+ConVar osu_skip_breaks_enabled("osu_skip_breaks_enabled", true, "enables/disables skip button for breaks in the middle of beatmaps");
 
 ConVar osu_mods("osu_mods", "");
 ConVar osu_mod_touchdevice("osu_mod_touchdevice", false, "used for force applying touch pp nerf always");
@@ -901,10 +903,15 @@ void Osu::update()
 		{
 			if (getSelectedBeatmap()->isInSkippableSection() && !getSelectedBeatmap()->isPaused())
 			{
-				m_multiplayer->onServerPlayStateChange(OsuMultiplayer::STATE::SKIP);
-
 				if (!isInMultiplayer() || m_multiplayer->isServer())
-					getSelectedBeatmap()->skipEmptySection();
+				{
+					if ((osu_skip_intro_enabled.getBool() && getSelectedBeatmap()->getHitObjectIndexForCurrentTime() < 1) || (osu_skip_breaks_enabled.getBool() && getSelectedBeatmap()->getHitObjectIndexForCurrentTime() > 0))
+					{
+						m_multiplayer->onServerPlayStateChange(OsuMultiplayer::STATE::SKIP);
+
+						getSelectedBeatmap()->skipEmptySection();
+					}
+				}
 			}
 
 			m_bSkipScheduled = false;

@@ -182,6 +182,8 @@ private:
 	ConVar *m_osu_playfield_stretch_y_ref;
 	ConVar *m_osu_mp_win_condition_accuracy_ref;
 	ConVar *m_osu_background_dim_ref;
+	ConVar *m_osu_skip_intro_enabled_ref;
+	ConVar *m_osu_skip_breaks_enabled_ref;
 
 	// shit code
 	float m_fAccuracyXOffset;

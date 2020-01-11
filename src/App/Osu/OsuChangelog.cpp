@@ -42,6 +42,8 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha313.changes.push_back("- Added option \"Always enable touch device pp nerf mod\" (Options > General > Player)");
 	alpha313.changes.push_back("- Added option \"Apply speed/pitch mods while browsing\" (Options > Audio > Songbrowser)");
 	alpha313.changes.push_back("- Added option \"Draw Stats: 300 hitwindow\" (Options > Gameplay > HUD)");
+	alpha313.changes.push_back("- Added option \"Show Skip Button during Intro\" (Options > Gameplay > General)");
+	alpha313.changes.push_back("- Added option \"Show Skip Button during Breaks\" (Options > Gameplay > General)");
 	alpha313.changes.push_back("- Added ConVars (1): osu_songbrowser_search_delay, osu_followpoints_separation_multiplier");
 	alpha313.changes.push_back("- Added ConVars (2): osu_slider_body_fade_out_time_multiplier");
 	alpha313.changes.push_back("- Windows: Added WASAPI option \"Period Size\" (Options > Audio > WASAPI) (wasapi-test beta)");
