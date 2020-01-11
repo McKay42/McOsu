@@ -41,7 +41,7 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha313.changes.push_back("- Added Touch Device mod (allows simulating pp nerf)");
 	alpha313.changes.push_back("- Added option \"Always enable touch device pp nerf mod\" (Options > General > Player)");
 	alpha313.changes.push_back("- Added option \"Apply speed/pitch mods while browsing\" (Options > Audio > Songbrowser)");
-	alpha313.changes.push_back("- Added ConVars: osu_songbrowser_search_delay");
+	alpha313.changes.push_back("- Added ConVars: osu_songbrowser_search_delay, osu_followpoints_separation_multiplier");
 	alpha313.changes.push_back("- Windows: Added WASAPI option \"Period Size\" (Options > Audio > WASAPI) (wasapi-test beta)");
 	alpha313.changes.push_back("- Allow overscaling osu_slider_body_alpha_multiplier/color_saturation, osu_cursor_scale, fposu_distance");
 	alpha313.changes.push_back("- Improved engine background async loading (rm_numthreads)");

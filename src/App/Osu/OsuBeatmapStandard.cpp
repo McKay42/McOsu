@@ -60,6 +60,7 @@ ConVar osu_autopilot_lenience("osu_autopilot_lenience", 0.75f);
 ConVar osu_followpoints_connect_combos("osu_followpoints_connect_combos", false, "connect followpoints even if a new combo has started");
 ConVar osu_followpoints_approachtime("osu_followpoints_approachtime", 800.0f);
 ConVar osu_followpoints_scale_multiplier("osu_followpoints_scale_multiplier", 1.0f);
+ConVar osu_followpoints_separation_multiplier("osu_followpoints_separation_multiplier", 1.0f, "todo");
 
 ConVar osu_number_scale_multiplier("osu_number_scale_multiplier", 1.0f);
 
@@ -632,6 +633,12 @@ void OsuBeatmapStandard::drawFollowPoints(Graphics *g)
 	const long curPos = m_iCurMusicPosWithOffsets;
 	const long approachTime = std::min((long)OsuGameRules::getApproachTime(this), (long)osu_followpoints_approachtime.getFloat());
 
+	const bool followPointsConnectCombos = osu_followpoints_connect_combos.getBool();
+	const float followPointSeparationMultiplier = std::max(osu_followpoints_separation_multiplier.getFloat(), 0.1f);
+	const float followPointPrevFadeTime = m_osu_followpoints_prevfadetime_ref->getFloat();
+	const float followPointScaleMultiplier = osu_followpoints_scale_multiplier.getFloat();
+	const float followPointSizeBaseRawX = skin->getFollowPoint2()->getSizeBaseRaw().x;
+
 	// include previous object in followpoints
 	int lastObjectIndex = -1;
 
@@ -648,7 +655,7 @@ void OsuBeatmapStandard::drawFollowPoints(Graphics *g)
 		}
 
 		// NOTE: "m_hitobjects[index]->getComboNumber() != 1" breaks (not literally) on new combos
-		if (lastObjectIndex >= 0 && (m_hitobjects[index]->getComboNumber() != 1 || osu_followpoints_connect_combos.getBool()))
+		if (lastObjectIndex >= 0 && (m_hitobjects[index]->getComboNumber() != 1 || followPointsConnectCombos))
 		{
 			// ignore previous spinners
 			spinnerPointer = dynamic_cast<OsuSpinner*>(m_hitobjects[lastObjectIndex]);
@@ -672,8 +679,8 @@ void OsuBeatmapStandard::drawFollowPoints(Graphics *g)
 			const float dist = std::round(diff.length() * 100.0f) / 100.0f; // rounded to avoid flicker with playfield rotations
 
 			// draw all points between the two objects
-			const int followPointSeparation = Osu::getUIScale(m_osu, 32);
-			for (int j=(int)(followPointSeparation * 1.5f); j<dist-followPointSeparation; j+=followPointSeparation)
+			const int followPointSeparation = Osu::getUIScale(m_osu, 32) * followPointSeparationMultiplier;
+			for (int j=(int)(followPointSeparation * 1.5f); j<(dist - followPointSeparation); j+=followPointSeparation)
 			{
 				const float animRatio = ((float)j / dist);
 
@@ -685,8 +692,8 @@ void OsuBeatmapStandard::drawFollowPoints(Graphics *g)
 
 				// draw
 				float alpha = 1.0f;
-				float followAnimPercent = clamp<float>((float)(curPos - fadeInTime)/(float)m_osu_followpoints_prevfadetime_ref->getFloat(), 0.0f, 1.0f);
-				followAnimPercent = -followAnimPercent*(followAnimPercent-2); // quad out
+				float followAnimPercent = clamp<float>((float)(curPos - fadeInTime) / (float)followPointPrevFadeTime, 0.0f, 1.0f);
+				followAnimPercent = -followAnimPercent*(followAnimPercent - 2.0f); // quad out
 
 				const float scale = 1.5f - 0.5f*followAnimPercent;
 				const Vector2 followPos = animPosStart + (finalPos - animPosStart)*followAnimPercent;
@@ -703,11 +710,11 @@ void OsuBeatmapStandard::drawFollowPoints(Graphics *g)
 					const float delta = curPos - fadeInTime;
 					alpha = (float)delta / (float)approachTime;
 				}
-				else if (curPos >= fadeOutTime && curPos < fadeOutTime+(long)m_osu_followpoints_prevfadetime_ref->getFloat())
+				else if (curPos >= fadeOutTime && curPos < (fadeOutTime + (long)followPointPrevFadeTime))
 				{
 					// previous trail
 					const long delta = curPos - fadeOutTime;
-					alpha = 1.0f - (float)delta / (float)(m_osu_followpoints_prevfadetime_ref->getFloat());
+					alpha = 1.0f - (float)delta / (float)(followPointPrevFadeTime);
 				}
 				else
 					alpha = 0.0f;
@@ -717,12 +724,14 @@ void OsuBeatmapStandard::drawFollowPoints(Graphics *g)
 				g->setAlpha(alpha);
 				g->pushTransform();
 				{
-					g->rotate(rad2deg(atan2(yDiff, xDiff)));
-					skin->getFollowPoint2()->setAnimationTimeOffset(fadeInTime - 150); // HACKHACK: hardcoded 150 is good enough, was approachTime/2.5 (osu! allows followpoints to finish before hitobject fadein (!), fuck that)
+					g->rotate(rad2deg(std::atan2(yDiff, xDiff)));
+
+					// HACKHACK: hardcoded 150 ms is good enough, was approachTime/2.5 (osu! allows followpoints to finish before hitobject fadein (!), fuck that)
+					skin->getFollowPoint2()->setAnimationTimeOffset(fadeInTime - 150);
 
 					// NOTE: getSizeBaseRaw() depends on the current animation time being set correctly beforehand! (otherwise you get incorrect scales, e.g. for animated elements with inconsistent @2x mixed in)
 					// the followpoints are scaled by one eighth of the hitcirclediameter (not the raw diameter, but the scaled diameter)
-					const float followPointImageScale = ((m_fHitcircleDiameter/8.0f) / skin->getFollowPoint2()->getSizeBaseRaw().x) * osu_followpoints_scale_multiplier.getFloat();
+					const float followPointImageScale = ((m_fHitcircleDiameter / 8.0f) / followPointSizeBaseRawX) * followPointScaleMultiplier;
 
 					skin->getFollowPoint2()->drawRaw(g, followPos, followPointImageScale*scale);
 				}
