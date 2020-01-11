@@ -124,6 +124,7 @@ ConVar osu_draw_statistics_nps("osu_draw_statistics_nps", false);
 ConVar osu_draw_statistics_nd("osu_draw_statistics_nd", false);
 ConVar osu_draw_statistics_ur("osu_draw_statistics_ur", false);
 ConVar osu_draw_statistics_pp("osu_draw_statistics_pp", false);
+ConVar osu_draw_statistics_hitwindow300("osu_draw_statistics_hitwindow300", false);
 
 ConVar osu_combo_anim1_duration("osu_combo_anim1_duration", 0.15f);
 ConVar osu_combo_anim1_size("osu_combo_anim1_size", 0.15f);
@@ -261,7 +262,18 @@ void OsuHUD::draw(Graphics *g)
 			if (m_osu->getModTarget() && osu_draw_target_heatmap.getBool() && beatmapStd != NULL)
 				g->translate(0, beatmapStd->getHitcircleDiameter()*(1.0f / (osu_hud_scale.getFloat()*osu_hud_statistics_scale.getFloat())));
 
-			drawStatistics(g, m_osu->getScore()->getNumMisses(), m_osu->getScore()->getNumSliderBreaks(), beatmap->getBPM(), OsuGameRules::getApproachRateForSpeedMultiplier(beatmap, beatmap->getSpeedMultiplier()), beatmap->getCS(), OsuGameRules::getOverallDifficultyForSpeedMultiplier(beatmap, beatmap->getSpeedMultiplier()), beatmap->getNPS(), beatmap->getND(), m_osu->getScore()->getUnstableRate(), m_osu->getScore()->getPPv2());
+			drawStatistics(g,
+					m_osu->getScore()->getNumMisses(),
+					m_osu->getScore()->getNumSliderBreaks(),
+					beatmap->getBPM(),
+					OsuGameRules::getApproachRateForSpeedMultiplier(beatmap, beatmap->getSpeedMultiplier()),
+					beatmap->getCS(),
+					OsuGameRules::getOverallDifficultyForSpeedMultiplier(beatmap, beatmap->getSpeedMultiplier()),
+					beatmap->getNPS(),
+					beatmap->getND(),
+					m_osu->getScore()->getUnstableRate(),
+					m_osu->getScore()->getPPv2(),
+					((int)OsuGameRules::getHitWindow300(beatmap) - 0.5f) * (1.0f / m_osu->getSpeedMultiplier())); // see OsuUISongBrowserInfoLabel::update()
 		}
 		g->popTransform();
 
@@ -488,7 +500,7 @@ void OsuHUD::drawDummy(Graphics *g)
 
 	drawSkip(g);
 
-	drawStatistics(g, 0, 0, 180, 9.0f, 4.0f, 8.0f, 4, 6, 90.0f, 123);
+	drawStatistics(g, 0, 0, 180, 9.0f, 4.0f, 8.0f, 4, 6, 90.0f, 123, 25);
 
 	drawWarningArrows(g);
 
@@ -529,7 +541,18 @@ void OsuHUD::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 			if (beatmap->isInSkippableSection())
 				drawSkip(g);
 
-			drawStatistics(g, m_osu->getScore()->getNumMisses(), m_osu->getScore()->getNumSliderBreaks(), beatmap->getBPM(), OsuGameRules::getApproachRateForSpeedMultiplier(beatmap, beatmap->getSpeedMultiplier()), beatmap->getCS(), OsuGameRules::getOverallDifficultyForSpeedMultiplier(beatmap, beatmap->getSpeedMultiplier()), beatmap->getNPS(), beatmap->getND(), m_osu->getScore()->getUnstableRate(), m_osu->getScore()->getPPv2());
+			drawStatistics(g,
+					m_osu->getScore()->getNumMisses(),
+					m_osu->getScore()->getNumSliderBreaks(),
+					beatmap->getBPM(),
+					OsuGameRules::getApproachRateForSpeedMultiplier(beatmap, beatmap->getSpeedMultiplier()),
+					beatmap->getCS(),
+					OsuGameRules::getOverallDifficultyForSpeedMultiplier(beatmap, beatmap->getSpeedMultiplier()),
+					beatmap->getNPS(),
+					beatmap->getND(),
+					m_osu->getScore()->getUnstableRate(),
+					m_osu->getScore()->getPPv2(),
+					((int)OsuGameRules::getHitWindow300(beatmap) - 0.5f) * (1.0f / m_osu->getSpeedMultiplier())); // see OsuUISongBrowserInfoLabel::update()
 
 			vr->getShaderUntexturedLegacyGeneric()->enable();
 			vr->getShaderUntexturedLegacyGeneric()->setUniformMatrix4fv("matrix", mvp);
@@ -584,7 +607,7 @@ void OsuHUD::drawVRDummy(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 
 		drawSkip(g);
 
-		drawStatistics(g, 0, 0, 180, 9.0f, 4.0f, 8.0f, 4, 6, 90.0f, 123);
+		drawStatistics(g, 0, 0, 180, 9.0f, 4.0f, 8.0f, 4, 6, 90.0f, 123, 25);
 
 		vr->getShaderUntexturedLegacyGeneric()->enable();
 		vr->getShaderUntexturedLegacyGeneric()->setUniformMatrix4fv("matrix", mvp);
@@ -2020,7 +2043,7 @@ void OsuHUD::drawProgressBarVR(Graphics *g, Matrix4 &mvp, OsuVR *vr, float perce
 	}
 }
 
-void OsuHUD::drawStatistics(Graphics *g, int misses, int sliderbreaks, int bpm, float ar, float cs, float od, int nps, int nd, int ur, float pp)
+void OsuHUD::drawStatistics(Graphics *g, int misses, int sliderbreaks, int bpm, float ar, float cs, float od, int nps, int nd, int ur, float pp, float hitWindow300)
 {
 	g->pushTransform();
 	{
@@ -2064,6 +2087,11 @@ void OsuHUD::drawStatistics(Graphics *g, int misses, int sliderbreaks, int bpm, 
 		{
 			od = std::round(od * 100.0f) / 100.0f;
 			drawStatisticText(g, UString::format("OD: %g", od));
+			g->translate(0, yDelta);
+		}
+		if (osu_draw_statistics_hitwindow300.getBool())
+		{
+			drawStatisticText(g, UString::format("+-%ims", (int)hitWindow300));
 			g->translate(0, yDelta);
 		}
 		if (osu_draw_statistics_nps.getBool())
