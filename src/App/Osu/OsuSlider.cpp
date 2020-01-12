@@ -156,6 +156,7 @@ OsuSlider::OsuSlider(char type, int repeat, float pixelLength, std::vector<Vecto
 	m_fEndSliderBodyFadeAnimation = 0.0f;
 	m_iLastClickHeld = 0;
 	m_iDownKey = 0;
+	m_iPrevSliderSlideSoundSampleSet = -1;
 	m_bCursorLeft = true;
 	m_bCursorInside = false;
 	m_bHeldTillEnd = false;
@@ -875,6 +876,10 @@ void OsuSlider::update(long curPos)
 		m_epilepsy->setValue(0.0f);
 	}
 
+	// stop slide sound while paused
+	if (m_beatmap->isPaused() || !m_beatmap->isPlaying() || m_beatmap->hasFailed())
+		m_beatmap->getSkin()->stopSliderSlideSound();
+
 	// animations must be updated even if we are finished
 	updateAnimations(curPos);
 
@@ -1179,18 +1184,28 @@ void OsuSlider::update(long curPos)
 			}
 		}
 
-		// handle constant sliding vibration
-		if (m_beatmap->getOsu()->isInVRMode())
+		// handle sliderslide sound + VR controller constant sliding vibration
+		if (m_bStartFinished && !m_bEndFinished && m_bCursorInside && !m_beatmap->isPaused() && !m_beatmap->isWaiting() && m_beatmap->isPlaying())
 		{
-			// clicks have priority over the constant sliding vibration, that's why this is at the bottom here AFTER the other function above have had a chance to call triggerHapticPulse()
-			// while sliding the slider, vibrate the controller constantly
-			if (m_bStartFinished && !m_bEndFinished && m_bCursorInside && !m_beatmap->isPaused() && !m_beatmap->isWaiting() && m_beatmap->isPlaying())
+			if (m_beatmap->getOsu()->isInVRMode())
 			{
+				// clicks have priority over the constant sliding vibration, that's why this is at the bottom here AFTER the other function above have had a chance to call triggerHapticPulse()
+				// while sliding the slider, vibrate the controller constantly
 				if (m_bOnHitVRLeftControllerHapticFeedback)
 					openvr->getLeftController()->triggerHapticPulse(m_beatmap->getOsu()->getVR()->getSliderHapticPulseStrength());
 				else
 					openvr->getRightController()->triggerHapticPulse(m_beatmap->getOsu()->getVR()->getSliderHapticPulseStrength());
 			}
+
+			const Vector2 osuCoords = m_beatmap->pixels2OsuCoords(m_beatmap->osuCoords2Pixels(m_vCurPointRaw));
+
+			m_beatmap->getSkin()->playSliderSlideSound(OsuGameRules::osuCoords2Pan(osuCoords.x));
+			m_iPrevSliderSlideSoundSampleSet = m_beatmap->getSkin()->getSampleSet();
+		}
+		else
+		{
+			m_beatmap->getSkin()->stopSliderSlideSound(m_iPrevSliderSlideSoundSampleSet);
+			m_iPrevSliderSlideSoundSampleSet = -1;
 		}
 	}
 }
@@ -1375,6 +1390,8 @@ void OsuSlider::onHit(OsuScore::HIT result, long delta, bool startOrEnd, float t
 
 		m_fEndSliderBodyFadeAnimation = 0.001f; // quickfix for 1 frame missing images
 		anim->moveQuadOut(&m_fEndSliderBodyFadeAnimation, 1.0f, OsuGameRules::getFadeOutTime(m_beatmap) * osu_slider_body_fade_out_time_multiplier.getFloat(), true);
+
+		m_beatmap->getSkin()->stopSliderSlideSound();
 	}
 
 	m_iCurRepeatCounterForHitSounds++;
@@ -1483,8 +1500,11 @@ void OsuSlider::onReset(long curPos)
 {
 	OsuHitObject::onReset(curPos);
 
+	m_beatmap->getSkin()->stopSliderSlideSound();
+
 	m_iLastClickHeld = 0;
 	m_iDownKey = 0;
+	m_iPrevSliderSlideSoundSampleSet = -1;
 	m_bCursorLeft = true;
 	m_bHeldTillEnd = false;
 	m_bHeldTillEndForLenienceHack = false;
