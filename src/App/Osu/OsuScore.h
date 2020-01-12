@@ -83,6 +83,8 @@ public:
 	inline float getUnstableRate() const {return m_fUnstableRate;}
 	inline float getHitErrorAvgMin() const {return m_fHitErrorAvgMin;}
 	inline float getHitErrorAvgMax() const {return m_fHitErrorAvgMax;}
+	inline float getHitErrorAvgCustomMin() const {return m_fHitErrorAvgCustomMin;}
+	inline float getHitErrorAvgCustomMax() const {return m_fHitErrorAvgCustomMax;}
 	inline int getNumMisses() const {return m_iNumMisses;}
 	inline int getNumSliderBreaks() const {return m_iNumSliderBreaks;}
 	inline int getNum50s() const {return m_iNum50s;}
@@ -128,6 +130,8 @@ private:
 	float m_fAccuracy;
 	float m_fHitErrorAvgMin;
 	float m_fHitErrorAvgMax;
+	float m_fHitErrorAvgCustomMin;
+	float m_fHitErrorAvgCustomMax;
 	float m_fUnstableRate;
 
 	int m_iNumMisses;

@@ -125,6 +125,7 @@ ConVar osu_draw_statistics_nd("osu_draw_statistics_nd", false);
 ConVar osu_draw_statistics_ur("osu_draw_statistics_ur", false);
 ConVar osu_draw_statistics_pp("osu_draw_statistics_pp", false);
 ConVar osu_draw_statistics_hitwindow300("osu_draw_statistics_hitwindow300", false);
+ConVar osu_draw_statistics_hitdelta("osu_draw_statistics_hitdelta", false);
 
 ConVar osu_combo_anim1_duration("osu_combo_anim1_duration", 0.15f);
 ConVar osu_combo_anim1_size("osu_combo_anim1_size", 0.15f);
@@ -275,7 +276,9 @@ void OsuHUD::draw(Graphics *g)
 					beatmap->getND(),
 					m_osu->getScore()->getUnstableRate(),
 					m_osu->getScore()->getPPv2(),
-					((int)OsuGameRules::getHitWindow300(beatmap) - 0.5f) * (1.0f / m_osu->getSpeedMultiplier())); // see OsuUISongBrowserInfoLabel::update()
+					((int)OsuGameRules::getHitWindow300(beatmap) - 0.5f) * (1.0f / m_osu->getSpeedMultiplier()), // see OsuUISongBrowserInfoLabel::update()
+					m_osu->getScore()->getHitErrorAvgCustomMin(),
+					m_osu->getScore()->getHitErrorAvgCustomMax());
 		}
 		g->popTransform();
 
@@ -502,7 +505,7 @@ void OsuHUD::drawDummy(Graphics *g)
 
 	drawSkip(g);
 
-	drawStatistics(g, 0, 0, 180, 9.0f, 4.0f, 8.0f, 4, 6, 90.0f, 123, 25);
+	drawStatistics(g, 0, 0, 180, 9.0f, 4.0f, 8.0f, 4, 6, 90.0f, 123, 25, -5, 15);
 
 	drawWarningArrows(g);
 
@@ -554,7 +557,9 @@ void OsuHUD::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 					beatmap->getND(),
 					m_osu->getScore()->getUnstableRate(),
 					m_osu->getScore()->getPPv2(),
-					((int)OsuGameRules::getHitWindow300(beatmap) - 0.5f) * (1.0f / m_osu->getSpeedMultiplier())); // see OsuUISongBrowserInfoLabel::update()
+					((int)OsuGameRules::getHitWindow300(beatmap) - 0.5f) * (1.0f / m_osu->getSpeedMultiplier()), // see OsuUISongBrowserInfoLabel::update()
+					m_osu->getScore()->getHitErrorAvgCustomMin(),
+					m_osu->getScore()->getHitErrorAvgCustomMax());
 
 			vr->getShaderUntexturedLegacyGeneric()->enable();
 			vr->getShaderUntexturedLegacyGeneric()->setUniformMatrix4fv("matrix", mvp);
@@ -609,7 +614,7 @@ void OsuHUD::drawVRDummy(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 
 		drawSkip(g);
 
-		drawStatistics(g, 0, 0, 180, 9.0f, 4.0f, 8.0f, 4, 6, 90.0f, 123, 25);
+		drawStatistics(g, 0, 0, 180, 9.0f, 4.0f, 8.0f, 4, 6, 90.0f, 123, 25, -5, 15);
 
 		vr->getShaderUntexturedLegacyGeneric()->enable();
 		vr->getShaderUntexturedLegacyGeneric()->setUniformMatrix4fv("matrix", mvp);
@@ -2045,7 +2050,7 @@ void OsuHUD::drawProgressBarVR(Graphics *g, Matrix4 &mvp, OsuVR *vr, float perce
 	}
 }
 
-void OsuHUD::drawStatistics(Graphics *g, int misses, int sliderbreaks, int bpm, float ar, float cs, float od, int nps, int nd, int ur, float pp, float hitWindow300)
+void OsuHUD::drawStatistics(Graphics *g, int misses, int sliderbreaks, int bpm, float ar, float cs, float od, int nps, int nd, int ur, float pp, float hitWindow300, int hitdeltaMin, int hitdeltaMax)
 {
 	g->pushTransform();
 	{
@@ -2093,7 +2098,7 @@ void OsuHUD::drawStatistics(Graphics *g, int misses, int sliderbreaks, int bpm, 
 		}
 		if (osu_draw_statistics_hitwindow300.getBool())
 		{
-			drawStatisticText(g, UString::format("+-%ims", (int)hitWindow300));
+			drawStatisticText(g, UString::format("300: +-%ims", (int)hitWindow300));
 			g->translate(0, yDelta);
 		}
 		if (osu_draw_statistics_nps.getBool())
@@ -2109,6 +2114,11 @@ void OsuHUD::drawStatistics(Graphics *g, int misses, int sliderbreaks, int bpm, 
 		if (osu_draw_statistics_ur.getBool())
 		{
 			drawStatisticText(g, UString::format("UR: %i", ur));
+			g->translate(0, yDelta);
+		}
+		if (osu_draw_statistics_hitdelta.getBool())
+		{
+			drawStatisticText(g, UString::format("-%ims +%ims", std::abs(hitdeltaMin), hitdeltaMax));
 			g->translate(0, yDelta);
 		}
 	}
