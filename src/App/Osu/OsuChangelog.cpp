@@ -35,7 +35,7 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	std::vector<CHANGELOG> changelogs;
 
 	CHANGELOG alpha313;
-	alpha313.title = UString::format("30.13 (%s, %s)", __DATE__, __TIME__);
+	alpha313.title = UString::format("30.13 (%s, %s)", __DATE__, __TIME__); // og 12.01.2020
 	alpha313.changes.push_back("- Added searching by beatmap ID + beatmap set ID");
 	alpha313.changes.push_back("- Added CTRL + V support to songbrowser search (paste clipboard)");
 	alpha313.changes.push_back("- Added speed display to score buttons");
