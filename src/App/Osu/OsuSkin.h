@@ -44,8 +44,12 @@ public:
 
 	void playHitCircleSound(int sampleType, float pan = 0.0f);
 	void playSliderTickSound(float pan = 0.0f);
+	void playSliderSlideSound(float pan = 0.0f);
 	void playSpinnerSpinSound();
 	void playSpinnerBonusSound();
+
+	void stopSliderSlideSound(int sampleSet = -2);
+	void stopSpinnerSpinSound();
 
 	// custom
 	void randomizeFilePath();
@@ -99,7 +103,10 @@ public:
 
 	inline OsuSkinImage *getHit0() {return m_hit0;}
 	inline OsuSkinImage *getHit50() {return m_hit50;}
+	inline OsuSkinImage *getHit50g() {return m_hit50g;}
+	inline OsuSkinImage *getHit50k() {return m_hit50k;}
 	inline OsuSkinImage *getHit100() {return m_hit100;}
+	inline OsuSkinImage *getHit100g() {return m_hit100g;}
 	inline OsuSkinImage *getHit100k() {return m_hit100k;}
 	inline OsuSkinImage *getHit300() {return m_hit300;}
 	inline OsuSkinImage *getHit300g() {return m_hit300g;}
@@ -295,8 +302,9 @@ public:
 	inline int getHitCircleOverlap() {return m_iHitCircleOverlap;}
 
 	// custom
-	inline bool useSmoothCursorTrail() {return m_cursorMiddle != m_missingTexture;}
-	inline bool isDefaultSkin() {return m_bIsDefaultSkin;}
+	inline bool useSmoothCursorTrail() const {return m_cursorMiddle != m_missingTexture;}
+	inline bool isDefaultSkin() const {return m_bIsDefaultSkin;}
+	inline int getSampleSet() const {return m_iSampleSet;}
 
 private:
 	static ConVar *m_osu_skin_ref;
@@ -318,6 +326,7 @@ private:
 	void checkLoadSound(Sound **addressOfPointer, UString skinElementName, UString resourceName, bool isOverlayable = false, bool isSample = false, bool loop = false, float hardcodedVolumeMultiplier = -1.0f);
 
 	void onEffectVolumeChange(UString oldValue, UString newValue);
+	void onExport(UString folderName);
 
 	Osu *m_osu;
 	bool m_bReady;
@@ -325,6 +334,7 @@ private:
 	bool m_bIsWorkshopSkin;
 	UString m_sName;
 	UString m_sFilePath;
+	UString m_sSkinIniFilePath;
 	std::vector<Resource*> m_resources;
 	std::vector<Sound*> m_sounds;
 	std::vector<SOUND_SAMPLE> m_soundSamples;
@@ -361,6 +371,7 @@ private:
 	Image *m_scoreX;
 	Image *m_scorePercent;
 	Image *m_scoreDot;
+	Image *m_scoreComma;
 
 	OsuSkinImage *m_playSkip;
 	Image *m_playWarningArrow;
@@ -372,7 +383,10 @@ private:
 
 	OsuSkinImage *m_hit0;
 	OsuSkinImage *m_hit50;
+	OsuSkinImage *m_hit50g;
+	OsuSkinImage *m_hit50k;
 	OsuSkinImage *m_hit100;
+	OsuSkinImage *m_hit100g;
 	OsuSkinImage *m_hit100k;
 	OsuSkinImage *m_hit300;
 	OsuSkinImage *m_hit300g;
@@ -426,8 +440,10 @@ private:
 	OsuSkinImage *m_selectionModTarget;
 	OsuSkinImage *m_selectionModScorev2;
 	OsuSkinImage *m_selectionModTD;
+	OsuSkinImage *m_selectionModCinema;
 
 	Image *m_pauseContinue;
+	Image *m_pauseReplay;
 	Image *m_pauseRetry;
 	Image *m_pauseBack;
 	Image *m_pauseOverlay;
@@ -490,17 +506,29 @@ private:
 	Sound *m_normalHitWhistle;
 	Sound *m_normalHitFinish;
 	Sound *m_normalHitClap;
+
 	Sound *m_normalSliderTick;
+	Sound *m_normalSliderSlide;
+	Sound *m_normalSliderWhistle;
+
 	Sound *m_softHitNormal;
 	Sound *m_softHitWhistle;
 	Sound *m_softHitFinish;
 	Sound *m_softHitClap;
+
 	Sound *m_softSliderTick;
+	Sound *m_softSliderSlide;
+	Sound *m_softSliderWhistle;
+
 	Sound *m_drumHitNormal;
 	Sound *m_drumHitWhistle;
 	Sound *m_drumHitFinish;
 	Sound *m_drumHitClap;
+
 	Sound *m_drumSliderTick;
+	Sound *m_drumSliderSlide;
+	Sound *m_drumSliderWhistle;
+
 	Sound *m_spinnerBonus;
 	Sound *m_spinnerSpinSound;
 
@@ -512,6 +540,8 @@ private:
 	Sound *m_checkOn;
 	Sound *m_checkOff;
 	Sound *m_shutter;
+	Sound *m_sectionFail;
+	Sound *m_sectionPass;
 
 	// colors
 	std::vector<Color> m_comboColors;
@@ -592,6 +622,8 @@ private:
 	std::vector<UString> filepathsForRandomSkin;
 	bool m_bIsRandom;
 	bool m_bIsRandomElements;
+
+	std::vector<UString> m_filepathsForExport;
 };
 
 #endif

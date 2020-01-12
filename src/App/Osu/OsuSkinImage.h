@@ -42,6 +42,8 @@ public:
 	inline unsigned int getFrameNumber() const {return m_iFrameCounter;}
 	inline bool isMissingTexture() const {return m_bIsMissingTexture;}
 
+	inline std::vector<UString> getFilepathsForExport() const {return m_filepathsForExport;}
+
 private:
 	static ConVar *m_osu_skin_mipmaps_ref;
 
@@ -78,6 +80,9 @@ private:
 	// raw files
 	std::vector<IMAGE> m_images;
 	bool m_bIsMissingTexture;
+
+	// custom
+	std::vector<UString> m_filepathsForExport;
 };
 
 #endif

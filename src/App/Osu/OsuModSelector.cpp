@@ -143,6 +143,10 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen(osu)
 	m_previousDifficulty = NULL;
 	m_bShowOverrideSliderALTHint = true;
 
+	// convar refs
+	m_osu_drain_enabled_ref = convar->getConVarByName("osu_drain_enabled");
+	m_osu_mod_touchdevice_ref = convar->getConVarByName("osu_mod_touchdevice");
+
 	// build mod grid buttons
 	m_iGridWidth = 6;
 	m_iGridHeight = 3;
@@ -238,11 +242,10 @@ void OsuModSelector::updateButtons(bool initial)
 {
 	m_modButtonEasy = setModButtonOnGrid(0, 0, 0, initial && m_osu->getModEZ(), "ez", "Reduces overall difficulty - larger circles, more forgiving HP drain, less accuracy required.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModEasy();});
 	m_modButtonNofail = setModButtonOnGrid(1, 0, 0, initial && m_osu->getModNF(), "nf", "You can't fail. No matter what.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModNoFail();});
-	m_modButtonNofail->setAvailable(convar->getConVarByName("osu_drain_enabled")->getBool());
+	m_modButtonNofail->setAvailable(m_osu_drain_enabled_ref->getBool());
 	m_modButtonHalftime = setModButtonOnGrid(2, 0, 0, initial && m_osu->getModHT(), "ht", "Less zoom.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModHalfTime();});
 	setModButtonOnGrid(2, 0, 1, initial && m_osu->getModDC(), "dc", "A E S T H E T I C", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModDayCore();});
-	setModButtonOnGrid(4, 0, 0, initial && m_osu->getModNM(), "nm", "Massively reduced slider follow circle radius. Unnecessary clicks count as misses.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModNightmare();});
-	m_modButtonTD = setModButtonOnGrid(5, 0, 0, initial && m_osu->getModTD(), "ts", "Enable Touch Device for aim difficulty calculation and leaderboards", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModTD();});
+	setModButtonOnGrid(4, 0, 0, initial && m_osu->getModNM(), "nm", "Unnecessary clicks count as misses.\nMassively reduced slider follow circle radius.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModNightmare();});
 
 	m_modButtonHardrock = setModButtonOnGrid(0, 1, 0, initial && m_osu->getModHR(), "hr", "Everything just got a bit harder...", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModHardRock();});
 	m_modButtonSuddendeath = setModButtonOnGrid(1, 1, 0, initial && m_osu->getModSD(), "sd", "Miss a note and fail.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModSuddenDeath();});
@@ -252,6 +255,8 @@ void OsuModSelector::updateButtons(bool initial)
 	m_modButtonHidden = setModButtonOnGrid(3, 1, 0, initial && m_osu->getModHD(), "hd", "Play with no approach circles and fading notes for a slight score advantage.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModHidden();});
 	m_modButtonFlashlight = setModButtonOnGrid(4, 1, 0, false, "fl", "Restricted view area.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModFlashlight();});
 	getModButtonOnGrid(4, 1)->setAvailable(false);
+	m_modButtonTD = setModButtonOnGrid(5, 1, 0, initial && (m_osu->getModTD() || m_osu_mod_touchdevice_ref->getBool()), "nerftd", "Simulate pp nerf for touch devices.\nOnly affects pp calculation.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModTD();});
+	getModButtonOnGrid(5, 1)->setAvailable(!m_osu_mod_touchdevice_ref->getBool());
 
 	m_modButtonRelax = setModButtonOnGrid(0, 2, 0, initial && m_osu->getModRelax(), "relax", "You don't need to click.\nGive your clicking/tapping fingers a break from the heat of things.\n** UNRANKED **", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModRelax();});
 	m_modButtonAutopilot = setModButtonOnGrid(1, 2, 0, initial && m_osu->getModAutopilot(), "autopilot", "Automatic cursor movement - just follow the rhythm.\n** UNRANKED **", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModAutopilot();});

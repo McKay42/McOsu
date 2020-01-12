@@ -91,7 +91,7 @@ public:
 
 private:
 	static bool searchMatcher(OsuBeatmap *beatmap, UString searchString);
-	static bool findSubstringInDifficulty(OsuBeatmapDifficulty *diff, UString &searchString);
+	static bool findSubstringInDifficulty(OsuBeatmapDifficulty *diff, const UString &searchString);
 
 	enum class GROUP
 	{
@@ -213,6 +213,8 @@ private:
 
 	// song browser
 	CBaseUIScrollView *m_songBrowser;
+	bool m_bSongBrowserRightClickScrollCheck;
+	bool m_bSongBrowserRightClickScrolling;
 
 	// beatmap database
 	OsuDatabase *m_db;

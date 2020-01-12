@@ -39,12 +39,15 @@ ConVar osu_skin_color_index_add("osu_skin_color_index_add", 0);
 ConVar osu_skin_animation_force("osu_skin_animation_force", false);
 ConVar osu_skin_use_skin_hitsounds("osu_skin_use_skin_hitsounds", true, "If enabled: Use skin's sound samples. If disabled: Use default skin's sound samples. For hitsounds only.");
 ConVar osu_skin_random("osu_skin_random", false, "select random skin from list");
-ConVar osu_skin_random_elements("osu_skin_random_elements", false, "sElECt RanDOM sKIn eLemENTs FRoM ranDom SKINs");
+ConVar osu_skin_random_elements("osu_skin_random_elements", false, "sElECt RanDOM sKIn eLemENTs FRoM ranDom SkINs");
 ConVar osu_sound_panning("osu_sound_panning", true, "positional hitsound audio depending on the playfield position");
 ConVar osu_sound_panning_multiplier("osu_sound_panning_multiplier", 1.0f, "the final panning value is multiplied with this, e.g. if you want to reduce or increase the effect strength by a percentage");
 
 ConVar osu_ignore_beatmap_combo_colors("osu_ignore_beatmap_combo_colors", false);
 ConVar osu_ignore_beatmap_sample_volume("osu_ignore_beatmap_sample_volume", false);
+
+ConVar osu_export_skin("osu_export_skin");
+ConVar osu_skin_export("osu_skin_export");
 
 const char *OsuSkin::OSUSKIN_DEFAULT_SKIN_PATH = ""; // set dynamically below in the constructor
 Image *OsuSkin::m_missingTexture = NULL;
@@ -105,6 +108,7 @@ OsuSkin::OsuSkin(Osu *osu, UString name, UString filepath, bool isDefaultSkin, b
 	m_scoreX = m_missingTexture;
 	m_scorePercent = m_missingTexture;
 	m_scoreDot = m_missingTexture;
+	m_scoreComma = m_missingTexture;
 
 	m_playWarningArrow = m_missingTexture;
 	m_circularmetre = m_missingTexture;
@@ -133,6 +137,7 @@ OsuSkin::OsuSkin(Osu *osu, UString name, UString filepath, bool isDefaultSkin, b
 	m_cursorRipple = m_missingTexture;
 
 	m_pauseContinue = m_missingTexture;
+	m_pauseReplay = m_missingTexture;
 	m_pauseRetry = m_missingTexture;
 	m_pauseBack = m_missingTexture;
 	m_pauseOverlay = m_missingTexture;
@@ -184,17 +189,29 @@ OsuSkin::OsuSkin(Osu *osu, UString name, UString filepath, bool isDefaultSkin, b
 	m_normalHitWhistle = NULL;
 	m_normalHitFinish = NULL;
 	m_normalHitClap = NULL;
+
 	m_normalSliderTick = NULL;
+	m_normalSliderSlide = NULL;
+	m_normalSliderWhistle = NULL;
+
 	m_softHitNormal = NULL;
 	m_softHitWhistle = NULL;
 	m_softHitFinish = NULL;
 	m_softHitClap = NULL;
+
 	m_softSliderTick = NULL;
+	m_softSliderSlide = NULL;
+	m_softSliderWhistle = NULL;
+
 	m_drumHitNormal = NULL;
 	m_drumHitWhistle = NULL;
 	m_drumHitFinish = NULL;
 	m_drumHitClap = NULL;
+
 	m_drumSliderTick = NULL;
+	m_drumSliderSlide = NULL;
+	m_drumSliderWhistle = NULL;
+
 	m_spinnerBonus = NULL;
 	m_spinnerSpinSound = NULL;
 
@@ -206,6 +223,8 @@ OsuSkin::OsuSkin(Osu *osu, UString name, UString filepath, bool isDefaultSkin, b
 	m_checkOn = NULL;
 	m_checkOff = NULL;
 	m_shutter = NULL;
+	m_sectionFail = NULL;
+	m_sectionPass = NULL;
 
 	m_spinnerApproachCircleColor = 0xffffffff;
 	m_sliderBorderColor = 0xffffffff;
@@ -281,6 +300,8 @@ OsuSkin::OsuSkin(Osu *osu, UString name, UString filepath, bool isDefaultSkin, b
 
 	// convar callbacks
 	osu_volume_effects.setCallback( fastdelegate::MakeDelegate(this, &OsuSkin::onEffectVolumeChange) );
+	osu_export_skin.setCallback( fastdelegate::MakeDelegate(this, &OsuSkin::onExport) );
+	osu_skin_export.setCallback( fastdelegate::MakeDelegate(this, &OsuSkin::onExport) );
 }
 
 OsuSkin::~OsuSkin()
@@ -299,6 +320,8 @@ OsuSkin::~OsuSkin()
 	m_images.clear();
 
 	m_sounds.clear();
+
+	m_filepathsForExport.clear();
 }
 
 void OsuSkin::update()
@@ -428,17 +451,18 @@ void OsuSkin::load()
 
 	// skin ini
 	randomizeFilePath();
-	UString skinIniFilePath = m_sFilePath;
+	m_sSkinIniFilePath = m_sFilePath;
 	UString defaultSkinIniFilePath = UString(env->getOS() == Environment::OS::OS_HORIZON ? "romfs:/materials/" : "./materials/");
 	defaultSkinIniFilePath.append(OSUSKIN_DEFAULT_SKIN_PATH);
 	defaultSkinIniFilePath.append("skin.ini");
-	skinIniFilePath.append("skin.ini");
+	m_sSkinIniFilePath.append("skin.ini");
 	bool parseSkinIni1Status = true;
 	bool parseSkinIni2Status = true;
-	if (!parseSkinINI(skinIniFilePath))
+	if (!parseSkinINI(m_sSkinIniFilePath))
 	{
 		parseSkinIni1Status = false;
-		parseSkinIni2Status = parseSkinINI(defaultSkinIniFilePath);
+		m_sSkinIniFilePath = defaultSkinIniFilePath;
+		parseSkinIni2Status = parseSkinINI(m_sSkinIniFilePath);
 	}
 
 	// default values, if none were loaded
@@ -512,6 +536,7 @@ void OsuSkin::load()
 	checkLoadImage(&m_scoreX, "score-x", "OSU_SKIN_SCOREX");
 	checkLoadImage(&m_scorePercent, "score-percent", "OSU_SKIN_SCOREPERCENT");
 	checkLoadImage(&m_scoreDot, "score-dot", "OSU_SKIN_SCOREDOT");
+	checkLoadImage(&m_scoreComma, "score-comma", "OSU_SKIN_SCORECOMMA");
 
 	randomizeFilePath();
 	m_playSkip = createOsuSkinImage("play-skip", Vector2(193, 147), 94);
@@ -531,8 +556,14 @@ void OsuSkin::load()
 	m_hit0->setAnimationFramerate(60);
 	m_hit50 = createOsuSkinImage("hit50", Vector2(128, 128), 42);
 	m_hit50->setAnimationFramerate(60);
+	m_hit50g = createOsuSkinImage("hit50g", Vector2(128, 128), 42);
+	m_hit50g->setAnimationFramerate(60);
+	m_hit50k = createOsuSkinImage("hit50k", Vector2(128, 128), 42);
+	m_hit50k->setAnimationFramerate(60);
 	m_hit100 = createOsuSkinImage("hit100", Vector2(128, 128), 42);
 	m_hit100->setAnimationFramerate(60);
+	m_hit100g = createOsuSkinImage("hit100g", Vector2(128, 128), 42);
+	m_hit100g->setAnimationFramerate(60);
 	m_hit100k = createOsuSkinImage("hit100k", Vector2(128, 128), 42);
 	m_hit100k->setAnimationFramerate(60);
 	m_hit300 = createOsuSkinImage("hit300", Vector2(128, 128), 42);
@@ -599,9 +630,11 @@ void OsuSkin::load()
 	m_selectionModTarget = createOsuSkinImage("selection-mod-target", Vector2(68, 66), 38);
 	m_selectionModScorev2 = createOsuSkinImage("selection-mod-scorev2", Vector2(68, 66), 38);
 	m_selectionModTD = createOsuSkinImage("selection-mod-touchdevice", Vector2(68, 66), 38);
+	m_selectionModCinema = createOsuSkinImage("selection-mod-cinema", Vector2(68, 66), 38);
 
 	randomizeFilePath();
 	checkLoadImage(&m_pauseContinue, "pause-continue", "OSU_SKIN_PAUSE_CONTINUE");
+	checkLoadImage(&m_pauseReplay, "pause-replay", "OSU_SKIN_PAUSE_REPLAY");
 	checkLoadImage(&m_pauseRetry, "pause-retry", "OSU_SKIN_PAUSE_RETRY");
 	checkLoadImage(&m_pauseBack, "pause-back", "OSU_SKIN_PAUSE_BACK");
 	checkLoadImage(&m_pauseOverlay, "pause-overlay", "OSU_SKIN_PAUSE_OVERLAY"); if (m_pauseOverlay == m_missingTexture) checkLoadImage(&m_pauseOverlay, "pause-overlay", "OSU_SKIN_PAUSE_OVERLAY", true, "jpg");
@@ -621,7 +654,7 @@ void OsuSkin::load()
 	checkLoadImage(&m_selectionRandom, "selection-random", "OSU_SKIN_SELECTION_RANDOM");
 	checkLoadImage(&m_selectionRandomOver, "selection-random-over", "OSU_SKIN_SELECTION_RANDOM_OVER");
 	checkLoadImage(&m_selectionOptions, "selection-options", "OSU_SKIN_SELECTION_OPTIONS");
-	checkLoadImage(&m_selectionOptionsOver, "selection-selectoptions-over", "OSU_SKIN_SELECTION_OPTIONS_OVER");
+	checkLoadImage(&m_selectionOptionsOver, "selection-options-over", "OSU_SKIN_SELECTION_OPTIONS_OVER");
 
 	randomizeFilePath();
 	checkLoadImage(&m_songSelectTop, "songselect-top", "OSU_SKIN_SONGSELECT_TOP");
@@ -680,17 +713,29 @@ void OsuSkin::load()
 	checkLoadSound(&m_normalHitWhistle, "normal-hitwhistle", "OSU_SKIN_NORMALHITWHISTLE_SND", true, true, false, 0.85f);
 	checkLoadSound(&m_normalHitFinish, "normal-hitfinish", "OSU_SKIN_NORMALHITFINISH_SND", true, true);
 	checkLoadSound(&m_normalHitClap, "normal-hitclap", "OSU_SKIN_NORMALHITCLAP_SND", true, true, false, 0.85f);
+
 	checkLoadSound(&m_normalSliderTick, "normal-slidertick", "OSU_SKIN_NORMALSLIDERTICK_SND", true, true);
+	checkLoadSound(&m_normalSliderSlide, "normal-sliderslide", "OSU_SKIN_NORMALSLIDERSLIDE_SND", false, true, true);
+	checkLoadSound(&m_normalSliderWhistle, "normal-sliderwhistle", "OSU_SKIN_NORMALSLIDERWHISTLE_SND", true, true);
+
 	checkLoadSound(&m_softHitNormal, "soft-hitnormal", "OSU_SKIN_SOFTHITNORMAL_SND", true, true, false, 0.8f);
 	checkLoadSound(&m_softHitWhistle, "soft-hitwhistle", "OSU_SKIN_SOFTHITWHISTLE_SND", true, true, false, 0.85f);
 	checkLoadSound(&m_softHitFinish, "soft-hitfinish", "OSU_SKIN_SOFTHITFINISH_SND", true, true);
 	checkLoadSound(&m_softHitClap, "soft-hitclap", "OSU_SKIN_SOFTHITCLAP_SND", true, true, false, 0.85f);
+
 	checkLoadSound(&m_softSliderTick, "soft-slidertick", "OSU_SKIN_SOFTSLIDERTICK_SND", true, true);
+	checkLoadSound(&m_softSliderSlide, "soft-sliderslide", "OSU_SKIN_SOFTSLIDERSLIDE_SND", false, true, true);
+	checkLoadSound(&m_softSliderWhistle, "soft-sliderwhistle", "OSU_SKIN_SOFTSLIDERWHISTLE_SND", true, true);
+
 	checkLoadSound(&m_drumHitNormal, "drum-hitnormal", "OSU_SKIN_DRUMHITNORMAL_SND", true, true, false, 0.8f);
 	checkLoadSound(&m_drumHitWhistle, "drum-hitwhistle", "OSU_SKIN_DRUMHITWHISTLE_SND", true, true, false, 0.85f);
 	checkLoadSound(&m_drumHitFinish, "drum-hitfinish", "OSU_SKIN_DRUMHITFINISH_SND", true, true);
 	checkLoadSound(&m_drumHitClap, "drum-hitclap", "OSU_SKIN_DRUMHITCLAP_SND", true, true, false, 0.85f);
+
 	checkLoadSound(&m_drumSliderTick, "drum-slidertick", "OSU_SKIN_DRUMSLIDERTICK_SND", true, true);
+	checkLoadSound(&m_drumSliderSlide, "drum-sliderslide", "OSU_SKIN_DRUMSLIDERSLIDE_SND", false, true, true);
+	checkLoadSound(&m_drumSliderWhistle, "drum-sliderwhistle", "OSU_SKIN_DRUMSLIDERWHISTLE_SND", true, true);
+
 	checkLoadSound(&m_spinnerBonus, "spinnerbonus", "OSU_SKIN_SPINNERBONUS_SND", true, true);
 	checkLoadSound(&m_spinnerSpinSound, "spinnerspin", "OSU_SKIN_SPINNERSPIN_SND", false, true, true);
 
@@ -703,6 +748,8 @@ void OsuSkin::load()
 	checkLoadSound(&m_checkOn, "check-on", "OSU_SKIN_CHECKON_SND", true);
 	checkLoadSound(&m_checkOff, "check-off", "OSU_SKIN_CHECKOFF_SND", true);
 	checkLoadSound(&m_shutter, "shutter", "OSU_SKIN_SHUTTER_SND", true);
+	checkLoadSound(&m_sectionFail, "sectionfail", "OSU_SKIN_SECTIONFAIL_SND", true);
+	checkLoadSound(&m_sectionPass, "sectionpass", "OSU_SKIN_SECTIONPASS_SND", true);
 
 	// scaling
 	// HACKHACK: this is pure cancer
@@ -818,7 +865,7 @@ void OsuSkin::load()
 
 void OsuSkin::loadBeatmapOverride(UString filepath)
 {
-	debugLog("OsuSkin::loadBeatmapOverride( %s )\n", filepath.toUtf8());
+	//debugLog("OsuSkin::loadBeatmapOverride( %s )\n", filepath.toUtf8());
 	// TODO: beatmap skin support
 }
 
@@ -957,6 +1004,82 @@ void OsuSkin::onEffectVolumeChange(UString oldValue, UString newValue)
 	setSampleVolume(clamp<float>((float)m_iSampleVolume / 100.0f, 0.0f, 1.0f), true);
 }
 
+void OsuSkin::onExport(UString folderName)
+{
+	if (folderName.length() < 1)
+	{
+		m_osu->getNotificationOverlay()->addNotification("Usage: osu_skin_export MyExportedSkinName", 0xffffffff, false, 3.0f);
+		return;
+	}
+
+	UString exportFolder = convar->getConVarByName("osu_folder")->getString();
+	exportFolder.append(convar->getConVarByName("osu_folder_sub_skins")->getString());
+	exportFolder.append(folderName);
+	exportFolder.append("/");
+
+	if (env->directoryExists(exportFolder))
+	{
+		m_osu->getNotificationOverlay()->addNotification("Error: Folder already exists. Use a different name.", 0xffffff00, false, 3.0f);
+		return;
+	}
+
+	if (!env->createDirectory(exportFolder))
+	{
+		m_osu->getNotificationOverlay()->addNotification(UString::format("Error: Couldn't create folder.", exportFolder.toUtf8()), 0xffff0000, false, 3.0f);
+		return;
+	}
+
+	if (!env->directoryExists(exportFolder))
+	{
+		m_osu->getNotificationOverlay()->addNotification(UString::format("Error: Folder does not exist.", exportFolder.toUtf8()), 0xffff0000, false, 3.0f);
+		return;
+	}
+
+	struct FILE_TO_COPY
+	{
+		UString filePath;
+		UString fileNameWithExtension;
+	};
+
+	std::vector<FILE_TO_COPY> filesToCopy;
+
+	// skin.ini
+	filesToCopy.push_back({m_sSkinIniFilePath, "skin.ini"});
+
+	// checkLoadImage + checkLoadSound + createOsuSkinImage
+	for (const UString &filepath : m_filepathsForExport)
+	{
+		if (filepath.length() < 3) continue;
+
+		const int lastPathSeparatorIndex = filepath.findLast("/");
+		if (lastPathSeparatorIndex > -1)
+		{
+			const UString fileNameWithExtension = filepath.substr(lastPathSeparatorIndex + 1);
+			if (fileNameWithExtension.length() > 0)
+				filesToCopy.push_back({filepath, fileNameWithExtension});
+		}
+	}
+
+	for (const FILE_TO_COPY &fileToCopy : filesToCopy)
+	{
+		UString outputFilePath = exportFolder;
+		outputFilePath.append(fileToCopy.fileNameWithExtension);
+
+		debugLog("Copying \"%s\" to \"%s\"\n", fileToCopy.filePath.toUtf8(), outputFilePath.toUtf8());
+
+		File inputFile(fileToCopy.filePath, File::TYPE::READ);
+		File outputFile(outputFilePath, File::TYPE::WRITE);
+
+		if (inputFile.canRead() && outputFile.canWrite())
+			outputFile.write(inputFile.readFile(), inputFile.getFileSize());
+		else
+			debugLog("Error: Couldn't copy %s\n", fileToCopy.filePath.toUtf8());
+	}
+
+	debugLog("Done.\n");
+	m_osu->getNotificationOverlay()->addNotification("Done.", 0xff00ff00, false, 2.0f);
+}
+
 void OsuSkin::setSampleSet(int sampleSet)
 {
 	if (m_iSampleSet == sampleSet) return;
@@ -1066,11 +1189,59 @@ void OsuSkin::playSliderTickSound(float pan)
 	}
 }
 
+void OsuSkin::playSliderSlideSound(float pan)
+{
+	if ((m_osu->getInstanceID() > 0 && m_osu->getInstanceID() != osu2_sound_source_id.getInt())) return;
+
+	if (!osu_sound_panning.getBool())
+		pan = 0.0f;
+	else
+		pan *= osu_sound_panning_multiplier.getFloat();
+
+	switch (m_iSampleSet)
+	{
+	case 3:
+		if (m_softSliderSlide->isPlaying())
+			engine->getSound()->stop(m_softSliderSlide);
+		if (m_normalSliderSlide->isPlaying())
+			engine->getSound()->stop(m_normalSliderSlide);
+
+		if (!m_drumSliderSlide->isPlaying())
+			engine->getSound()->play(m_drumSliderSlide, pan);
+		else
+			m_drumSliderSlide->setPan(pan);
+		break;
+	case 2:
+		if (m_drumSliderSlide->isPlaying())
+			engine->getSound()->stop(m_drumSliderSlide);
+		if (m_normalSliderSlide->isPlaying())
+			engine->getSound()->stop(m_normalSliderSlide);
+
+		if (!m_softSliderSlide->isPlaying())
+			engine->getSound()->play(m_softSliderSlide, pan);
+		else
+			m_softSliderSlide->setPan(pan);
+		break;
+	default:
+		if (m_softSliderSlide->isPlaying())
+			engine->getSound()->stop(m_softSliderSlide);
+		if (m_drumSliderSlide->isPlaying())
+			engine->getSound()->stop(m_drumSliderSlide);
+
+		if (!m_normalSliderSlide->isPlaying())
+			engine->getSound()->play(m_normalSliderSlide, pan);
+		else
+			m_normalSliderSlide->setPan(pan);
+		break;
+	}
+}
+
 void OsuSkin::playSpinnerSpinSound()
 {
 	if ((m_osu->getInstanceID() > 0 && m_osu->getInstanceID() != osu2_sound_source_id.getInt())) return;
 
-	engine->getSound()->play(m_spinnerSpinSound);
+	if (!m_spinnerSpinSound->isPlaying())
+		engine->getSound()->play(m_spinnerSpinSound);
 }
 
 void OsuSkin::playSpinnerBonusSound()
@@ -1078,6 +1249,22 @@ void OsuSkin::playSpinnerBonusSound()
 	if (m_iSampleVolume <= 0 || (m_osu->getInstanceID() > 0 && m_osu->getInstanceID() != osu2_sound_source_id.getInt())) return;
 
 	engine->getSound()->play(m_spinnerBonus);
+}
+
+void OsuSkin::stopSliderSlideSound(int sampleSet)
+{
+	if (m_softSliderSlide->isPlaying() && (sampleSet == -2 || sampleSet == 3))
+		engine->getSound()->stop(m_softSliderSlide);
+	if (m_drumSliderSlide->isPlaying() && (sampleSet == -2 || sampleSet == 2))
+		engine->getSound()->stop(m_drumSliderSlide);
+	if (m_normalSliderSlide->isPlaying() && (sampleSet == -2 || sampleSet == 1 || sampleSet == 0))
+		engine->getSound()->stop(m_normalSliderSlide);
+}
+
+void OsuSkin::stopSpinnerSpinSound()
+{
+	if (m_spinnerSpinSound->isPlaying())
+		engine->getSound()->stop(m_spinnerSpinSound);
 }
 
 void OsuSkin::randomizeFilePath()
@@ -1090,6 +1277,10 @@ OsuSkinImage *OsuSkin::createOsuSkinImage(UString skinElementName, Vector2 baseS
 {
 	OsuSkinImage *skinImage = new OsuSkinImage(this, skinElementName, baseSizeForScaling2x, osuSize, animationSeparator, ignoreDefaultSkin);
 	m_images.push_back(skinImage);
+
+	const std::vector<UString> &filepathsForExport = skinImage->getFilepathsForExport();
+	m_filepathsForExport.insert(m_filepathsForExport.end(), filepathsForExport.begin(), filepathsForExport.end());
+
 	return skinImage;
 }
 
@@ -1099,18 +1290,41 @@ void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, 
 
 	// NOTE: only the default skin is loaded with a resource name (it must never be unloaded by other instances), and it is NOT added to the resources vector
 
+	UString defaultFilePath1 = UString(env->getOS() == Environment::OS::OS_HORIZON ? "romfs:/materials/" : "./materials/");
+	defaultFilePath1.append(OSUSKIN_DEFAULT_SKIN_PATH);
+	defaultFilePath1.append(skinElementName);
+	defaultFilePath1.append("@2x.");
+	defaultFilePath1.append(fileExtension);
+
+	UString defaultFilePath2 = UString(env->getOS() == Environment::OS::OS_HORIZON ? "romfs:/materials/" : "./materials/");
+	defaultFilePath2.append(OSUSKIN_DEFAULT_SKIN_PATH);
+	defaultFilePath2.append(skinElementName);
+	defaultFilePath2.append(".");
+	defaultFilePath2.append(fileExtension);
+
+	UString filepath1 = m_sFilePath;
+	filepath1.append(skinElementName);
+	filepath1.append("@2x.");
+	filepath1.append(fileExtension);
+
+	UString filepath2 = m_sFilePath;
+	filepath2.append(skinElementName);
+	filepath2.append(".");
+	filepath2.append(fileExtension);
+
+	const bool existsDefaultFilePath1 = env->fileExists(defaultFilePath1);
+	const bool existsDefaultFilePath2 = env->fileExists(defaultFilePath2);
+	const bool existsFilepath1 = env->fileExists(filepath1);
+	const bool existsFilepath2 = env->fileExists(filepath2);
+
 	// check if an @2x version of this image exists
 	if (osu_skin_hd.getBool())
 	{
-		// load default first
+		// load default skin
+
 		if (!ignoreDefaultSkin)
 		{
-			UString defaultFilePath = UString(env->getOS() == Environment::OS::OS_HORIZON ? "romfs:/materials/" : "./materials/");
-			defaultFilePath.append(OSUSKIN_DEFAULT_SKIN_PATH);
-			defaultFilePath.append(skinElementName);
-			defaultFilePath.append("@2x.");
-			defaultFilePath.append(fileExtension);
-			if (env->fileExists(defaultFilePath))
+			if (existsDefaultFilePath1)
 			{
 				UString defaultResourceName = resourceName;
 				defaultResourceName.append("_DEFAULT"); // so we don't load the default skin twice
@@ -1118,17 +1332,12 @@ void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, 
 				if (osu_skin_async.getBool())
 					engine->getResourceManager()->requestNextLoadAsync();
 
-				*addressOfPointer = engine->getResourceManager()->loadImageAbs(defaultFilePath, defaultResourceName, osu_skin_mipmaps.getBool() || forceLoadMipmaps);
-				///m_resources.push_back(*addressOfPointer); // HACKHACK: also reload default skin
+				*addressOfPointer = engine->getResourceManager()->loadImageAbs(defaultFilePath1, defaultResourceName, osu_skin_mipmaps.getBool() || forceLoadMipmaps);
+				///m_resources.push_back(*addressOfPointer); // DEBUG: also reload default skin
 			}
-			else // fallback to default @1x
+			else // fallback to @1x
 			{
-				UString defaultFilePath = UString(env->getOS() == Environment::OS::OS_HORIZON ? "romfs:/materials/" : "./materials/");
-				defaultFilePath.append(OSUSKIN_DEFAULT_SKIN_PATH);
-				defaultFilePath.append(skinElementName);
-				defaultFilePath.append(".");
-				defaultFilePath.append(fileExtension);
-				if (env->fileExists(defaultFilePath))
+				if (existsDefaultFilePath2)
 				{
 					UString defaultResourceName = resourceName;
 					defaultResourceName.append("_DEFAULT"); // so we don't load the default skin twice
@@ -1136,19 +1345,15 @@ void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, 
 					if (osu_skin_async.getBool())
 						engine->getResourceManager()->requestNextLoadAsync();
 
-					*addressOfPointer = engine->getResourceManager()->loadImageAbs(defaultFilePath, defaultResourceName, osu_skin_mipmaps.getBool() || forceLoadMipmaps);
-					///m_resources.push_back(*addressOfPointer); // HACKHACK: also reload default skin
+					*addressOfPointer = engine->getResourceManager()->loadImageAbs(defaultFilePath2, defaultResourceName, osu_skin_mipmaps.getBool() || forceLoadMipmaps);
+					///m_resources.push_back(*addressOfPointer); // DEBUG: also reload default skin
 				}
 			}
 		}
 
-		// and now try to load the actual specified skin
-		UString filepath1 = m_sFilePath;
-		filepath1.append(skinElementName);
-		filepath1.append("@2x.");
-		filepath1.append(fileExtension);
+		// load user skin
 
-		if (env->fileExists(filepath1))
+		if (existsFilepath1)
 		{
 			if (osu_skin_async.getBool())
 				engine->getResourceManager()->requestNextLoadAsync();
@@ -1156,21 +1361,35 @@ void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, 
 			*addressOfPointer = engine->getResourceManager()->loadImageAbs(filepath1, "", osu_skin_mipmaps.getBool() || forceLoadMipmaps);
 			m_resources.push_back(*addressOfPointer);
 
+			// export
+			{
+				if (existsFilepath1)
+					m_filepathsForExport.push_back(filepath1);
+
+				if (existsFilepath2)
+					m_filepathsForExport.push_back(filepath2);
+
+				if (!existsFilepath1 && !existsFilepath2)
+				{
+					if (existsDefaultFilePath1)
+						m_filepathsForExport.push_back(defaultFilePath1);
+
+					if (existsDefaultFilePath2)
+						m_filepathsForExport.push_back(defaultFilePath2);
+				}
+			}
+
 			return; // nothing more to do here
 		}
 	}
 
-	// else load the normal version
+	// else load normal @1x version
 
-	// load default first
+	// load default skin
+
 	if (!ignoreDefaultSkin)
 	{
-		UString defaultFilePath = UString(env->getOS() == Environment::OS::OS_HORIZON ? "romfs:/materials/" : "./materials/");
-		defaultFilePath.append(OSUSKIN_DEFAULT_SKIN_PATH);
-		defaultFilePath.append(skinElementName);
-		defaultFilePath.append(".");
-		defaultFilePath.append(fileExtension);
-		if (env->fileExists(defaultFilePath))
+		if (existsDefaultFilePath2)
 		{
 			UString defaultResourceName = resourceName;
 			defaultResourceName.append("_DEFAULT"); // so we don't load the default skin twice
@@ -1178,24 +1397,38 @@ void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, 
 			if (osu_skin_async.getBool())
 				engine->getResourceManager()->requestNextLoadAsync();
 
-			*addressOfPointer = engine->getResourceManager()->loadImageAbs(defaultFilePath, defaultResourceName, osu_skin_mipmaps.getBool() || forceLoadMipmaps);
-			///m_resources.push_back(*addressOfPointer); // HACKHACK: also reload default skin
+			*addressOfPointer = engine->getResourceManager()->loadImageAbs(defaultFilePath2, defaultResourceName, osu_skin_mipmaps.getBool() || forceLoadMipmaps);
+			///m_resources.push_back(*addressOfPointer); // DEBUG: also reload default skin
 		}
 	}
 
-	// and then the actual specified skin
-	UString filepath2 = m_sFilePath;
-	filepath2.append(skinElementName);
-	filepath2.append(".");
-	filepath2.append(fileExtension);
+	// load user skin
 
-	if (env->fileExists(filepath2))
+	if (existsFilepath2)
 	{
 		if (osu_skin_async.getBool())
 			engine->getResourceManager()->requestNextLoadAsync();
 
 		*addressOfPointer = engine->getResourceManager()->loadImageAbs(filepath2, "", osu_skin_mipmaps.getBool() || forceLoadMipmaps);
 		m_resources.push_back(*addressOfPointer);
+	}
+
+	// export
+	{
+		if (existsFilepath1)
+			m_filepathsForExport.push_back(filepath1);
+
+		if (existsFilepath2)
+			m_filepathsForExport.push_back(filepath2);
+
+		if (!existsFilepath1 && !existsFilepath2)
+		{
+			if (existsDefaultFilePath1)
+				m_filepathsForExport.push_back(defaultFilePath1);
+
+			if (existsDefaultFilePath2)
+				m_filepathsForExport.push_back(defaultFilePath2);
+		}
 	}
 }
 
@@ -1208,7 +1441,7 @@ void OsuSkin::checkLoadSound(Sound **addressOfPointer, UString skinElementName, 
 	// random skin support
 	randomizeFilePath();
 
-	// load default
+	// load default skin
 
 	UString defaultpath1 = UString(env->getOS() == Environment::OS::OS_HORIZON ? "romfs:/materials/" : "./materials/");
 	defaultpath1.append(OSUSKIN_DEFAULT_SKIN_PATH);
@@ -1237,7 +1470,8 @@ void OsuSkin::checkLoadSound(Sound **addressOfPointer, UString skinElementName, 
 		*addressOfPointer = engine->getResourceManager()->loadSoundAbs(defaultpath2, defaultResourceName, false, false, loop);
 	}
 
-	// and then the actual specified skin
+	// load user skin
+
 	bool isDefaultSkin = true;
 	if (!isSample || osu_skin_use_skin_hitsounds.getBool())
 	{
@@ -1290,6 +1524,9 @@ void OsuSkin::checkLoadSound(Sound **addressOfPointer, UString skinElementName, 
 			sample.hardcodedVolumeMultiplier = (hardcodedVolumeMultiplier >= 0.0f ? hardcodedVolumeMultiplier : 1.0f);
 			m_soundSamples.push_back(sample);
 		}
+
+		// export
+		m_filepathsForExport.push_back((*addressOfPointer)->getFilePath());
 	}
 	else
 		debugLog("OsuSkin Warning: NULL sound %s!\n", skinElementName.toUtf8());

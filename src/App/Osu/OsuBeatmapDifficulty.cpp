@@ -206,7 +206,7 @@ OsuBeatmapDifficulty::OsuBeatmapDifficulty(Osu *osu, UString filepath, UString f
 	numObjects = 0;
 	starsNoMod = 0.0f;
 	ID = 0;
-	setID = 0;
+	setID = -1;
 	starsWereCalculatedAccurately = false;
 	semaphore = false;
 
@@ -408,11 +408,8 @@ bool OsuBeatmapDifficulty::loadMetadataRaw(bool calculateStars, bool calculateSt
 								tags = tags.trim();
 							}
 
-							memset(stringBuffer, '\0', 1024);
-							if (sscanf(curLineChar, " BeatmapID :%1023[^\n]", stringBuffer) == 1)
-							{
-								sscanf(stringBuffer, " %ld ", &beatmapId);
-							}
+							sscanf(curLineChar, " BeatmapID : %ld \n", &beatmapId);
+							sscanf(curLineChar, " BeatmapSetID : %i \n", &setID);
 						}
 						break;
 
@@ -1075,7 +1072,7 @@ void OsuBeatmapDifficulty::loadBackgroundImage()
 		engine->getResourceManager()->requestNextLoadAsync();
 		engine->getResourceManager()->loadResource(m_backgroundImagePathLoader);
 
-		return;
+		return; // we're done here
 	}
 
 	if (backgroundImage != NULL || backgroundImageName.length() < 1 || !osu_load_beatmap_background_images.getBool()) return;

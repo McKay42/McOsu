@@ -121,6 +121,7 @@ private:
 	float m_fEndSliderBodyFadeAnimation;
 	long m_iLastClickHeld;
 	int m_iDownKey;
+	int m_iPrevSliderSlideSoundSampleSet;
 	bool m_bCursorLeft;
 	bool m_bCursorInside;
 	bool m_bHeldTillEnd;

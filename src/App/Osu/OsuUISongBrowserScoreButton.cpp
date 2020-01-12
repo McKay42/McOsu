@@ -249,6 +249,31 @@ void OsuUISongBrowserScoreButton::draw(Graphics *g)
 	}
 	g->popTransform();
 
+	// custom info (Spd.)
+	if (m_style == STYLE::SCORE_BROWSER && m_sCustom.length() > 0)
+	{
+		const float customScale = 0.50f;
+		McFont *customFont = m_osu->getSubTitleFont();
+		g->pushTransform();
+		{
+			const float height = rightSideThirdHeight;
+			const float paddingTopPercent = (1.0f - modScale)*0.45f;
+			const float paddingTop = height*paddingTopPercent;
+			const float scale = (height / customFont->getHeight())*customScale;
+
+			g->scale(scale, scale);
+			g->translate((int)(m_vPos.x + m_vSize.x - customFont->getStringWidth(m_sCustom)*scale - rightSidePaddingRight), (int)(yPos + height*2.325f + customFont->getHeight()*scale/2.0f + paddingTop));
+			g->translate(0.75f, 0.75f);
+			g->setColor(0xff000000);
+			g->setAlpha(0.75f);
+			g->drawString(customFont, m_sCustom);
+			g->translate(-0.75f, -0.75f);
+			g->setColor((m_style == STYLE::TOP_RANKS ? 0xffffcc22 : 0xffffffff));
+			g->drawString(customFont, m_sCustom);
+		}
+		g->popTransform();
+	}
+
 	if (m_style == STYLE::TOP_RANKS)
 	{
 		// weighted percent
@@ -539,6 +564,7 @@ void OsuUISongBrowserScoreButton::setScore(OsuDatabase::Score score, int index, 
 				m_sScoreMods.append("++");
 		}
 	}
+	m_sCustom = (score.speedMultiplier != 1.0f ? UString::format("Speed: %gx", score.speedMultiplier) : "");
 
 	char dateString[64];
 	memset(dateString, '\0', 64);

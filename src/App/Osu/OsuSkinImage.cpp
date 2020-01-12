@@ -52,8 +52,10 @@ OsuSkinImage::OsuSkinImage(OsuSkin *skin, UString skinElementName, Vector2 baseS
 		m_bIsMissingTexture = true;
 
 		IMAGE missingTexture;
+
 		missingTexture.img = m_skin->getMissingTexture();
 		missingTexture.scale = 2;
+
 		m_images.push_back(missingTexture);
 	}
 
@@ -99,17 +101,37 @@ bool OsuSkinImage::load(UString skinElementName, UString animationSeparator, boo
 
 bool OsuSkinImage::loadImage(UString skinElementName, bool ignoreDefaultSkin)
 {
+	UString filepath1 = m_skin->getFilePath();
+	filepath1.append(skinElementName);
+	filepath1.append("@2x.png");
+
+	UString filepath2 = m_skin->getFilePath();
+	filepath2.append(skinElementName);
+	filepath2.append(".png");
+
+	UString defaultFilePath1 = UString(env->getOS() == Environment::OS::OS_HORIZON ? "romfs:/materials/" : "./materials/");
+	defaultFilePath1.append(OsuSkin::OSUSKIN_DEFAULT_SKIN_PATH);
+	defaultFilePath1.append(skinElementName);
+	defaultFilePath1.append("@2x.png");
+
+	UString defaultFilePath2 = UString(env->getOS() == Environment::OS::OS_HORIZON ? "romfs:/materials/" : "./materials/");
+	defaultFilePath2.append(OsuSkin::OSUSKIN_DEFAULT_SKIN_PATH);
+	defaultFilePath2.append(skinElementName);
+	defaultFilePath2.append(".png");
+
+	const bool existsFilepath1 = env->fileExists(filepath1);
+	const bool existsFilepath2 = env->fileExists(filepath2);
+	const bool existsDefaultFilePath1 = env->fileExists(defaultFilePath1);
+	const bool existsDefaultFilePath2 = env->fileExists(defaultFilePath2);
+
 	// load user skin
 
 	// check if an @2x version of this image exists
 	if (OsuSkin::m_osu_skin_hd->getBool())
 	{
 		// load user skin
-		UString filepath1 = m_skin->getFilePath();
-		filepath1.append(skinElementName);
-		filepath1.append("@2x.png");
 
-		if (env->fileExists(filepath1))
+		if (existsFilepath1)
 		{
 			IMAGE image;
 
@@ -118,18 +140,25 @@ bool OsuSkinImage::loadImage(UString skinElementName, bool ignoreDefaultSkin)
 
 			image.img = engine->getResourceManager()->loadImageAbsUnnamed(filepath1, m_osu_skin_mipmaps_ref->getBool());
 			image.scale = 2.0f;
+
 			m_images.push_back(image);
+
+			// export
+			{
+				m_filepathsForExport.push_back(filepath1);
+
+				if (existsFilepath2)
+					m_filepathsForExport.push_back(filepath2);
+			}
+
 			return true; // nothing more to do here
 		}
 	}
 	// else load the normal version
 
 	// load user skin
-	UString filepath2 = m_skin->getFilePath();
-	filepath2.append(skinElementName);
-	filepath2.append(".png");
 
-	if (env->fileExists(filepath2))
+	if (existsFilepath2)
 	{
 		IMAGE image;
 
@@ -138,7 +167,17 @@ bool OsuSkinImage::loadImage(UString skinElementName, bool ignoreDefaultSkin)
 
 		image.img = engine->getResourceManager()->loadImageAbsUnnamed(filepath2, m_osu_skin_mipmaps_ref->getBool());
 		image.scale = 1.0f;
+
 		m_images.push_back(image);
+
+		// export
+		{
+			m_filepathsForExport.push_back(filepath2);
+
+			if (existsFilepath1)
+				m_filepathsForExport.push_back(filepath1);
+		}
+
 		return true; // nothing more to do here
 	}
 
@@ -149,44 +188,52 @@ bool OsuSkinImage::loadImage(UString skinElementName, bool ignoreDefaultSkin)
 	// check if an @2x version of this image exists
 	if (OsuSkin::m_osu_skin_hd->getBool())
 	{
-		{
-			UString defaultFilePath = UString(env->getOS() == Environment::OS::OS_HORIZON ? "romfs:/materials/" : "./materials/");
-			defaultFilePath.append(OsuSkin::OSUSKIN_DEFAULT_SKIN_PATH);
-			defaultFilePath.append(skinElementName);
-			defaultFilePath.append("@2x.png");
-			if (env->fileExists(defaultFilePath))
-			{
-				IMAGE image;
-
-				if (OsuSkin::m_osu_skin_async->getBool())
-					engine->getResourceManager()->requestNextLoadAsync();
-
-				image.img = engine->getResourceManager()->loadImageAbsUnnamed(defaultFilePath, m_osu_skin_mipmaps_ref->getBool());
-				image.scale = 2.0f;
-				m_images.push_back(image);
-				return true; // nothing more to do here
-			}
-		}
-	}
-	// else load the normal version
-
-	{
-		UString defaultFilePath = UString(env->getOS() == Environment::OS::OS_HORIZON ? "romfs:/materials/" : "./materials/");
-		defaultFilePath.append(OsuSkin::OSUSKIN_DEFAULT_SKIN_PATH);
-		defaultFilePath.append(skinElementName);
-		defaultFilePath.append(".png");
-		if (env->fileExists(defaultFilePath))
+		if (existsDefaultFilePath1)
 		{
 			IMAGE image;
 
 			if (OsuSkin::m_osu_skin_async->getBool())
 				engine->getResourceManager()->requestNextLoadAsync();
 
-			image.img = engine->getResourceManager()->loadImageAbsUnnamed(defaultFilePath, m_osu_skin_mipmaps_ref->getBool());
-			image.scale = 1.0f;
+			image.img = engine->getResourceManager()->loadImageAbsUnnamed(defaultFilePath1, m_osu_skin_mipmaps_ref->getBool());
+			image.scale = 2.0f;
+
 			m_images.push_back(image);
-			return true;
+
+			// export
+			{
+				m_filepathsForExport.push_back(defaultFilePath1);
+
+				if (existsDefaultFilePath2)
+					m_filepathsForExport.push_back(defaultFilePath2);
+			}
+
+			return true; // nothing more to do here
 		}
+	}
+	// else load the normal version
+
+	if (existsDefaultFilePath2)
+	{
+		IMAGE image;
+
+		if (OsuSkin::m_osu_skin_async->getBool())
+			engine->getResourceManager()->requestNextLoadAsync();
+
+		image.img = engine->getResourceManager()->loadImageAbsUnnamed(defaultFilePath2, m_osu_skin_mipmaps_ref->getBool());
+		image.scale = 1.0f;
+
+		m_images.push_back(image);
+
+		// export
+		{
+			m_filepathsForExport.push_back(defaultFilePath2);
+
+			if (existsDefaultFilePath1)
+				m_filepathsForExport.push_back(defaultFilePath1);
+		}
+
+		return true; // nothing more to do here
 	}
 
 	return false;
@@ -200,6 +247,8 @@ OsuSkinImage::~OsuSkinImage()
 			engine->getResourceManager()->destroyResource(m_images[i].img);
 	}
 	m_images.clear();
+
+	m_filepathsForExport.clear();
 }
 
 void OsuSkinImage::draw(Graphics *g, Vector2 pos, float scale)
@@ -209,9 +258,11 @@ void OsuSkinImage::draw(Graphics *g, Vector2 pos, float scale)
 	scale *= getScale(); // auto scale to current resolution
 
 	g->pushTransform();
-	g->scale(scale, scale);
-	g->translate(pos.x, pos.y);
-	g->drawImage(getImageForCurrentFrame().img);
+	{
+		g->scale(scale, scale);
+		g->translate(pos.x, pos.y);
+		g->drawImage(getImageForCurrentFrame().img);
+	}
 	g->popTransform();
 }
 
@@ -220,15 +271,18 @@ void OsuSkinImage::drawRaw(Graphics *g, Vector2 pos, float scale)
 	if (m_images.size() < 1) return;
 
 	g->pushTransform();
-	g->scale(scale, scale);
-	g->translate(pos.x, pos.y);
-	g->drawImage(getImageForCurrentFrame().img);
+	{
+		g->scale(scale, scale);
+		g->translate(pos.x, pos.y);
+		g->drawImage(getImageForCurrentFrame().img);
+	}
 	g->popTransform();
 }
 
 void OsuSkinImage::update(bool useEngineTimeForAnimations, long curMusicPos)
 {
 	if (m_images.size() < 1) return;
+
 	m_iCurMusicPos = curMusicPos;
 
 	const float frameDurationInSeconds = (osu_skin_animation_fps_override.getFloat() > 0.0f ? (1.0f / osu_skin_animation_fps_override.getFloat()) : m_fFrameDuration);
@@ -332,8 +386,10 @@ OsuSkinImage::IMAGE OsuSkinImage::getImageForCurrentFrame()
 	else
 	{
 		IMAGE image;
+
 		image.img = m_skin->getMissingTexture();
 		image.scale = 1.0f;
+
 		return image;
 	}
 }

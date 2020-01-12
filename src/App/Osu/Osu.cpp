@@ -64,7 +64,7 @@
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 30.12f);
+ConVar osu_version("osu_version", 30.13f);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr");
 #else
@@ -96,8 +96,11 @@ ConVar osu_pitch_override("osu_pitch_override", -1.0f);
 ConVar osu_pause_on_focus_loss("osu_pause_on_focus_loss", true);
 ConVar osu_quick_retry_delay("osu_quick_retry_delay", 0.27f);
 ConVar osu_scrubbing_smooth("osu_scrubbing_smooth", true);
+ConVar osu_skip_intro_enabled("osu_skip_intro_enabled", true, "enables/disables skip button for intro until first hitobject");
+ConVar osu_skip_breaks_enabled("osu_skip_breaks_enabled", true, "enables/disables skip button for breaks in the middle of beatmaps");
 
 ConVar osu_mods("osu_mods", "");
+ConVar osu_mod_touchdevice("osu_mod_touchdevice", false, "used for force applying touch pp nerf always");
 ConVar osu_mod_fadingcursor("osu_mod_fadingcursor", false);
 ConVar osu_mod_fadingcursor_combo("osu_mod_fadingcursor_combo", 50.0f);
 ConVar osu_mod_endless("osu_mod_endless", false);
@@ -900,10 +903,15 @@ void Osu::update()
 		{
 			if (getSelectedBeatmap()->isInSkippableSection() && !getSelectedBeatmap()->isPaused())
 			{
-				m_multiplayer->onServerPlayStateChange(OsuMultiplayer::STATE::SKIP);
-
 				if (!isInMultiplayer() || m_multiplayer->isServer())
-					getSelectedBeatmap()->skipEmptySection();
+				{
+					if ((osu_skip_intro_enabled.getBool() && getSelectedBeatmap()->getHitObjectIndexForCurrentTime() < 1) || (osu_skip_breaks_enabled.getBool() && getSelectedBeatmap()->getHitObjectIndexForCurrentTime() > 0))
+					{
+						m_multiplayer->onServerPlayStateChange(OsuMultiplayer::STATE::SKIP);
+
+						getSelectedBeatmap()->skipEmptySection();
+					}
+				}
 			}
 
 			m_bSkipScheduled = false;
@@ -1123,7 +1131,7 @@ void Osu::updateMods()
 	m_bModSD = osu_mods.getString().find("sd") != -1;
 	m_bModSS = osu_mods.getString().find("ss") != -1;
 	m_bModNM = osu_mods.getString().find("nm") != -1;
-	m_bModTD = osu_mods.getString().find("ts") != -1;
+	m_bModTD = osu_mods.getString().find("nerftd") != -1;
 
 	// static overrides
 	onSpeedChange("", osu_speed_override.getString());
@@ -1942,7 +1950,7 @@ void Osu::updateWindowsKeyDisable()
 
 	if (osu_win_disable_windows_key_while_playing.getBool())
 	{
-		const bool isPlayerPlaying = isInPlayMode() && getSelectedBeatmap() != NULL && (!getSelectedBeatmap()->isPaused() || getSelectedBeatmap()->isRestartScheduled()) && !m_bModAuto;
+		const bool isPlayerPlaying = engine->hasFocus() && isInPlayMode() && getSelectedBeatmap() != NULL && (!getSelectedBeatmap()->isPaused() || getSelectedBeatmap()->isRestartScheduled()) && !m_bModAuto;
 		m_win_disable_windows_key_ref->setValue(isPlayerPlaying ? 1.0f : 0.0f);
 	}
 }
@@ -2001,6 +2009,8 @@ void Osu::onFocusGained()
 		if (getSelectedBeatmap() != NULL)
 			getSelectedBeatmap()->pausePreviewMusic();
 	}
+
+	updateWindowsKeyDisable();
 }
 
 void Osu::onFocusLost()
@@ -2014,6 +2024,8 @@ void Osu::onFocusLost()
 			m_modSelector->setVisible(false);
 		}
 	}
+
+	updateWindowsKeyDisable();
 
 	// release cursor clip
 	env->setCursorClip(false, McRect());

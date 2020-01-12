@@ -153,7 +153,7 @@ private:
 	void drawHitErrorBar(Graphics *g, float hitWindow300, float hitWindow100, float hitWindow50, float hitWindowMiss);
 	void drawProgressBar(Graphics *g, float percent, bool waiting);
 	void drawProgressBarVR(Graphics *g, Matrix4 &mvp, OsuVR *vr, float percent, bool waiting);
-	void drawStatistics(Graphics *g, int misses, int sliderbreaks, int bpm, float ar, float cs, float od, int nps, int nd, int ur, float pp);
+	void drawStatistics(Graphics *g, int misses, int sliderbreaks, int bpm, float ar, float cs, float od, int nps, int nd, int ur, float pp, float hitWindow300);
 	void drawTargetHeatmap(Graphics *g, float hitcircleDiameter);
 	void drawScrubbingTimeline(Graphics *g, unsigned long beatmapTime, unsigned long beatmapLength, unsigned long beatmapLengthPlayable, unsigned long beatmapStartTimePlayable, float beatmapPercentFinishedPlayable, const std::vector<BREAK> &breaks);
 	void drawInputOverlay(Graphics *g, int numK1, int numK2, int numM1, int numM2);
@@ -182,6 +182,8 @@ private:
 	ConVar *m_osu_playfield_stretch_y_ref;
 	ConVar *m_osu_mp_win_condition_accuracy_ref;
 	ConVar *m_osu_background_dim_ref;
+	ConVar *m_osu_skip_intro_enabled_ref;
+	ConVar *m_osu_skip_breaks_enabled_ref;
 
 	// shit code
 	float m_fAccuracyXOffset;

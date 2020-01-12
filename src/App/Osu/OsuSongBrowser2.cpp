@@ -54,6 +54,7 @@ ConVar osu_gamemode("osu_gamemode", "std");
 
 ConVar osu_songbrowser_sortingtype("osu_songbrowser_sortingtype", "By Date Added");
 ConVar osu_songbrowser_scores_sortingtype("osu_songbrowser_scores_sortingtype", "Sort By Score");
+
 ConVar osu_songbrowser_topbar_left_percent("osu_songbrowser_topbar_left_percent", 0.93f);
 ConVar osu_songbrowser_topbar_left_width_percent("osu_songbrowser_topbar_left_width_percent", 0.265f);
 ConVar osu_songbrowser_topbar_middle_width_percent("osu_songbrowser_topbar_middle_width_percent", 0.15f);
@@ -64,6 +65,8 @@ ConVar osu_songbrowser_bottombar_percent("osu_songbrowser_bottombar_percent", 0.
 ConVar osu_draw_songbrowser_background_image("osu_draw_songbrowser_background_image", true);
 ConVar osu_draw_songbrowser_menu_background_image("osu_draw_songbrowser_menu_background_image", true);
 ConVar osu_songbrowser_background_fade_in_duration("osu_songbrowser_background_fade_in_duration", 0.1f);
+
+ConVar osu_songbrowser_search_delay("osu_songbrowser_search_delay", 0.5f, "delay until search update when entering text");
 
 ConVar osu_songbrowser_draw_top_ranks_available_info_message("osu_songbrowser_draw_top_ranks_available_info_message", true);
 
@@ -396,6 +399,9 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	osu_gamemode.setCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onModeChange) );
 
 	// vars
+	m_bSongBrowserRightClickScrollCheck = false;
+	m_bSongBrowserRightClickScrolling = false;
+
 	m_bF1Pressed = false;
 	m_bF2Pressed = false;
 	m_bShiftPressed = false;
@@ -858,9 +864,29 @@ void OsuSongBrowser2::update()
 	if (m_osu->getOptionsMenu()->isBusy())
 		m_songBrowser->stealFocus();
 
-	// handle right click absolute drag scrolling
-	if (m_songBrowser->isMouseInside() && engine->getMouse()->isRightDown())
-		m_songBrowser->scrollToY(-((engine->getMouse()->getPos().y - 2 - m_songBrowser->getPos().y)/m_songBrowser->getSize().y)*m_songBrowser->getScrollSize().y);
+	// handle right click absolute scrolling
+	{
+		if (engine->getMouse()->isRightDown())
+		{
+			if (!m_bSongBrowserRightClickScrollCheck)
+			{
+				m_bSongBrowserRightClickScrollCheck = true;
+
+				if (m_songBrowser->isMouseInside() && !m_osu->getOptionsMenu()->isMouseInside())
+					m_bSongBrowserRightClickScrolling = true;
+				else
+					m_bSongBrowserRightClickScrolling = false;
+			}
+		}
+		else
+		{
+			m_bSongBrowserRightClickScrollCheck = false;
+			m_bSongBrowserRightClickScrolling = false;
+		}
+
+		if (m_bSongBrowserRightClickScrolling)
+			m_songBrowser->scrollToY(-((engine->getMouse()->getPos().y - 2 - m_songBrowser->getPos().y)/m_songBrowser->getSize().y)*m_songBrowser->getScrollSize().y);
+	}
 
 	// handle async random beatmap selection
 	if (m_bRandomBeatmapScheduled)
@@ -993,6 +1019,20 @@ void OsuSongBrowser2::onKeyDown(KeyboardEvent &key)
 	{
 		if (key == KEY_ESCAPE) // can't support GAME_PAUSE hotkey here because of text searching
 			m_osu->toggleSongBrowser();
+	}
+
+	// paste clipboard support
+	if (key == KEY_V)
+	{
+		if (engine->getKeyboard()->isControlDown())
+		{
+			const UString clipstring = env->getClipBoardText();
+			if (clipstring.length() > 0)
+			{
+				m_sSearchString.append(clipstring);
+				scheduleSearchUpdate(false);
+			}
+		}
 	}
 
 	if (key == KEY_SHIFT)
@@ -1211,6 +1251,10 @@ void OsuSongBrowser2::onPlayEnd(bool quit)
 		if (selectedSongDiffButton != NULL)
 			selectedSongDiffButton->updateGrade();
 	}
+
+	// update song info
+	if (getSelectedBeatmap() != NULL && getSelectedBeatmap()->getSelectedDifficulty() != NULL)
+		m_songInfo->setFromBeatmap(getSelectedBeatmap(), getSelectedBeatmap()->getSelectedDifficulty());
 }
 
 void OsuSongBrowser2::onDifficultySelected(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff, bool play, bool mp)
@@ -1505,8 +1549,7 @@ bool OsuSongBrowser2::searchMatcher(OsuBeatmap *beatmap, UString searchString)
 	// intelligent search parser
 	// all strings which are not expressions get appended with spaces between, then checked with one call to findSubstringInDifficulty()
 	// the rest is interpreted
-	// WARNING: this code is quite shitty. the order of the operators array does matter, because find() is used to detect their presence (and '=' would then break '<=' etc.)
-	// TODO: write proper parser
+	// NOTE: this code is quite shitty. the order of the operators array does matter, because find() is used to detect their presence (and '=' would then break '<=' etc.)
 	enum operatorId
 	{
 		EQ,
@@ -1574,8 +1617,8 @@ bool OsuSongBrowser2::searchMatcher(OsuBeatmap *beatmap, UString searchString)
 					if (values.size() == 2 && values[0].length() > 0 && values[1].length() > 0)
 					{
 						//debugLog("lvalue = %s, rvalue = %s\n", values[0].toUtf8(), values[1].toUtf8());
-						UString lvalue = values[0];
-						float rvalue = values[1].toFloat(); // this must always be a number (at least, assume it is)
+						const UString lvalue = values[0];
+						const float rvalue = values[1].toFloat(); // this must always be a number (at least, assume it is)
 
 						// find lvalue keyword in array (only continue if keyword exists)
 						for (int k=0; k<keywords.size(); k++)
@@ -1609,7 +1652,7 @@ bool OsuSongBrowser2::searchMatcher(OsuBeatmap *beatmap, UString searchString)
 									compareValue = diffs[d]->lengthMS / 1000;
 									break;
 								case STARS:
-									compareValue = std::round(diffs[d]->starsNoMod * 10.0f) / 10.0f; // round to 1 decimal place
+									compareValue = std::round(diffs[d]->starsNoMod * 100.0f) / 100.0f; // round to 2 decimal places
 									break;
 								}
 
@@ -1671,9 +1714,10 @@ bool OsuSongBrowser2::searchMatcher(OsuBeatmap *beatmap, UString searchString)
 						break;
 					}
 				}
+
 				if (!exists)
 				{
-					UString litAdd = tokens[i].trim();
+					const UString litAdd = tokens[i].trim();
 					if (litAdd.length() > 0 && !litAdd.isWhitespaceOnly())
 						literalSearchStrings.push_back(litAdd);
 				}
@@ -1686,15 +1730,17 @@ bool OsuSongBrowser2::searchMatcher(OsuBeatmap *beatmap, UString searchString)
 			break;
 		}
 	}
-	if (!expressionMatches) // if no diff matched any expression, we can already stop here
+
+	// if no diff matched any expression, then we can already stop here
+	if (!expressionMatches)
 		return false;
 
-	// build literal search string from all parts
+	// build literal search string from all parts (only used for validating that it's not an empty search)
 	UString literalSearchString;
 	for (int i=0; i<literalSearchStrings.size(); i++)
 	{
 		literalSearchString.append(literalSearchStrings[i]);
-		if (i < literalSearchStrings.size()-1)
+		if (i < (literalSearchStrings.size() - 1))
 			literalSearchString.append(" ");
 	}
 
@@ -1723,49 +1769,63 @@ bool OsuSongBrowser2::searchMatcher(OsuBeatmap *beatmap, UString searchString)
 	return expressionMatches;
 }
 
-bool OsuSongBrowser2::findSubstringInDifficulty(OsuBeatmapDifficulty *diff, UString &searchString)
+bool OsuSongBrowser2::findSubstringInDifficulty(OsuBeatmapDifficulty *diff, const UString &searchString)
 {
-	std::string stdSearchString = searchString.toUtf8();
+	const std::string stdSearchString = searchString.toUtf8();
 
 	if (diff->title.length() > 0)
 	{
-		std::string difficultySongTitle = diff->title.toUtf8();
+		const std::string difficultySongTitle = diff->title.toUtf8();
 		if (Osu::findIgnoreCase(difficultySongTitle, stdSearchString))
 			return true;
 	}
 
 	if (diff->artist.length() > 0)
 	{
-		std::string difficultySongArtist = diff->artist.toUtf8();
+		const std::string difficultySongArtist = diff->artist.toUtf8();
 		if (Osu::findIgnoreCase(difficultySongArtist, stdSearchString))
 			return true;
 	}
 
 	if (diff->creator.length() > 0)
 	{
-		std::string difficultySongCreator = diff->creator.toUtf8();
+		const std::string difficultySongCreator = diff->creator.toUtf8();
 		if (Osu::findIgnoreCase(difficultySongCreator, stdSearchString))
 			return true;
 	}
 
 	if (diff->name.length() > 0)
 	{
-		std::string difficultyName = diff->name.toUtf8();
+		const std::string difficultyName = diff->name.toUtf8();
 		if (Osu::findIgnoreCase(difficultyName, stdSearchString))
 			return true;
 	}
 
 	if (diff->source.length() > 0)
 	{
-		std::string difficultySongSource = diff->source.toUtf8();
+		const std::string difficultySongSource = diff->source.toUtf8();
 		if (Osu::findIgnoreCase(difficultySongSource, stdSearchString))
 			return true;
 	}
 
 	if (diff->tags.length() > 0)
 	{
-		std::string difficultySongTags = diff->tags.toUtf8();
+		const std::string difficultySongTags = diff->tags.toUtf8();
 		if (Osu::findIgnoreCase(difficultySongTags, stdSearchString))
+			return true;
+	}
+
+	if (diff->beatmapId > 0)
+	{
+		const std::string beatmapIdAsString = std::to_string(diff->beatmapId);
+		if (Osu::findIgnoreCase(beatmapIdAsString, stdSearchString))
+			return true;
+	}
+
+	if (diff->setID > 0)
+	{
+		const std::string beatmapSetIdAsString = std::to_string(diff->setID);
+		if (Osu::findIgnoreCase(beatmapSetIdAsString, stdSearchString))
 			return true;
 	}
 
@@ -1997,7 +2057,7 @@ void OsuSongBrowser2::rebuildScoreButtons()
 
 void OsuSongBrowser2::scheduleSearchUpdate(bool immediately)
 {
-	m_fSearchWaitTime = engine->getTime() + (immediately ? 0.0f : 0.5f);
+	m_fSearchWaitTime = engine->getTime() + (immediately ? 0.0f : osu_songbrowser_search_delay.getFloat());
 }
 
 OsuUISelectionButton *OsuSongBrowser2::addBottombarNavButton(std::function<Image*()> getImageFunc, std::function<Image*()> getImageOverFunc)

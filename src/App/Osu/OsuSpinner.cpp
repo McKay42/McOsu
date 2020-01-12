@@ -63,8 +63,7 @@ OsuSpinner::OsuSpinner(int x, int y, long time, int sampleType, long endTime, Os
 
 OsuSpinner::~OsuSpinner()
 {
-	if (m_beatmap->getSkin()->getSpinnerSpinSound()->isPlaying())
-		engine->getSound()->stop(m_beatmap->getSkin()->getSpinnerSpinSound());
+	m_beatmap->getSkin()->stopSpinnerSpinSound();
 
 	delete[] m_storedDeltaAngles;
 	m_storedDeltaAngles = NULL;
@@ -282,8 +281,7 @@ void OsuSpinner::update(long curPos)
 	// stop spinner sound and don't update() while paused
 	if (m_beatmap->isPaused() || !m_beatmap->isPlaying() || m_beatmap->hasFailed())
 	{
-		if (m_beatmap->getSkin()->getSpinnerSpinSound()->isPlaying())
-			engine->getSound()->stop(m_beatmap->getSkin()->getSpinnerSpinSound());
+		m_beatmap->getSkin()->stopSpinnerSpinSound();
 
 		return;
 	}
@@ -423,8 +421,7 @@ void OsuSpinner::onReset(long curPos)
 {
 	OsuHitObject::onReset(curPos);
 
-	if (m_beatmap->getSkin()->getSpinnerSpinSound()->isPlaying())
-		engine->getSound()->stop(m_beatmap->getSkin()->getSpinnerSpinSound());
+	m_beatmap->getSkin()->stopSpinnerSpinSound();
 
 	m_bClickedOnce = false;
 
@@ -482,8 +479,7 @@ void OsuSpinner::onHit()
 	addHitResult(result, 0, m_vRawPos, -1.0f);
 	m_bFinished = true;
 
-	if (m_beatmap->getSkin()->getSpinnerSpinSound()->isPlaying())
-		engine->getSound()->stop(m_beatmap->getSkin()->getSpinnerSpinSound());
+	m_beatmap->getSkin()->stopSpinnerSpinSound();
 }
 
 void OsuSpinner::rotate(float rad)
@@ -508,8 +504,7 @@ void OsuSpinner::rotate(float rad)
 
 	// spinner sound
 	{
-		if (!m_beatmap->getSkin()->getSpinnerSpinSound()->isPlaying())
-			m_beatmap->getSkin()->playSpinnerSpinSound();
+		m_beatmap->getSkin()->playSpinnerSpinSound();
 
 		const float frequency = 20000.0f + (int)(clamp<float>(m_fRatio, 0.0f, 2.5f)*40000.0f);
 		m_beatmap->getSkin()->getSpinnerSpinSound()->setFrequency(frequency);

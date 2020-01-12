@@ -34,8 +34,33 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 
 	std::vector<CHANGELOG> changelogs;
 
+	CHANGELOG alpha313;
+	alpha313.title = UString::format("30.13 (%s, %s)", __DATE__, __TIME__); // og 12.01.2020
+	alpha313.changes.push_back("- Added searching by beatmap ID + beatmap set ID");
+	alpha313.changes.push_back("- Added CTRL + V support to songbrowser search (paste clipboard)");
+	alpha313.changes.push_back("- Added speed display to score buttons");
+	alpha313.changes.push_back("- Added support for sliderslide sound");
+	alpha313.changes.push_back("- Added Touch Device mod (allows simulating pp nerf)");
+	alpha313.changes.push_back("- Added option \"Always enable touch device pp nerf mod\" (Options > General > Player)");
+	alpha313.changes.push_back("- Added option \"Apply speed/pitch mods while browsing\" (Options > Audio > Songbrowser)");
+	alpha313.changes.push_back("- Added option \"Draw Stats: 300 hitwindow\" (Options > Gameplay > HUD)");
+	alpha313.changes.push_back("- Added option \"Show Skip Button during Intro\" (Options > Gameplay > General)");
+	alpha313.changes.push_back("- Added option \"Show Skip Button during Breaks\" (Options > Gameplay > General)");
+	alpha313.changes.push_back("- Added ConVars (1): osu_followpoints_separation_multiplier, osu_songbrowser_search_delay");
+	alpha313.changes.push_back("- Added ConVars (2): osu_slider_body_fade_out_time_multiplier, osu_beatmap_preview_music_loop");
+	alpha313.changes.push_back("- Added ConVars (3): osu_skin_export");
+	alpha313.changes.push_back("- Windows: Added WASAPI option \"Period Size\" (Options > Audio > WASAPI) (wasapi-test beta)");
+	alpha313.changes.push_back("- Allow overscaling osu_slider_body_alpha_multiplier/color_saturation, osu_cursor_scale, fposu_distance");
+	alpha313.changes.push_back("- Improved engine background async loading (please report crashes)");
+	alpha313.changes.push_back("- Loop music");
+	alpha313.changes.push_back("- Fixed skin hit0/hit50/hit100/hit300 animation handling (keep last frame and fade)");
+	alpha313.changes.push_back("- Fixed scrubbing during lead-in time breaking things");
+	alpha313.changes.push_back("- Fixed right click scrolling in songbrowser stalling if cursor goes outside container");
+	alpha313.changes.push_back("- Windows: Fixed Windows key not unlocking on focus loss if \"Pause on Focus Loss\" is disabled");
+	changelogs.push_back(alpha313);
+
 	CHANGELOG alpha312;
-	alpha312.title = UString::format("30.12 (%s, %s)", __DATE__, __TIME__);
+	alpha312.title = "30.12 (19.12.2019)";
 	alpha312.changes.push_back("- Added button \"Random Skin\" (Options > Skin)");
 	alpha312.changes.push_back("- Added option \"SHIFT + TAB toggles everything\" (Options > Gameplay > HUD)");
 	alpha312.changes.push_back("- Added ConVars (1): osu_mod_random_circle/slider/spinner_offset_x/y_percent, osu_mod_hd_circle_fadein/fadeout_start/end_percent");
