@@ -22,6 +22,8 @@
 ConVar osu_hiterrorbar_misses("osu_hiterrorbar_misses", true);
 ConVar osu_debug_pp("osu_debug_pp", false);
 
+ConVar osu_hud_statistics_hitdelta_chunksize("osu_hud_statistics_hitdelta_chunksize", 30, "how many recent hit deltas to average (-1 = all)");
+
 ConVar *OsuScore::m_osu_draw_statistics_pp = NULL;
 
 OsuScore::OsuScore(Osu *osu)
@@ -56,6 +58,8 @@ void OsuScore::reset()
 	m_fAccuracy = 1.0f;
 	m_fHitErrorAvgMin = 0.0f;
 	m_fHitErrorAvgMax = 0.0f;
+	m_fHitErrorAvgCustomMin = 0.0f;
+	m_fHitErrorAvgCustomMax = 0.0f;
 	m_fUnstableRate = 0.0f;
 
 	m_iNumMisses = 0;
@@ -189,10 +193,17 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignor
 	m_fUnstableRate = 0.0f;
 	m_fHitErrorAvgMin = 0.0f;
 	m_fHitErrorAvgMax = 0.0f;
+	m_fHitErrorAvgCustomMin = 0.0f;
+	m_fHitErrorAvgCustomMax = 0.0f;
 	if (m_hitdeltas.size() > 0)
 	{
 		int numPositives = 0;
 		int numNegatives = 0;
+		int numCustomPositives = 0;
+		int numCustomNegatives = 0;
+
+		const int customStartIndex = (osu_hud_statistics_hitdelta_chunksize.getInt() < 0 ? 0 : std::max(0, (int)m_hitdeltas.size() - osu_hud_statistics_hitdelta_chunksize.getInt())) - 1;
+
 		for (int i=0; i<m_hitdeltas.size(); i++)
 		{
 			averageDelta += (float)m_hitdeltas[i];
@@ -202,17 +213,43 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignor
 				// positive
 				m_fHitErrorAvgMax += (float)m_hitdeltas[i];
 				numPositives++;
+
+				if (i > customStartIndex)
+				{
+					m_fHitErrorAvgCustomMax += (float)m_hitdeltas[i];
+					numCustomPositives++;
+				}
 			}
-			else
+			else if (m_hitdeltas[i] < 0)
 			{
 				// negative
 				m_fHitErrorAvgMin += (float)m_hitdeltas[i];
 				numNegatives++;
+
+				if (i > customStartIndex)
+				{
+					m_fHitErrorAvgCustomMin += (float)m_hitdeltas[i];
+					numCustomNegatives++;
+				}
+			}
+			else
+			{
+				// perfect
+				numPositives++;
+				numNegatives++;
+
+				if (i > customStartIndex)
+				{
+					numCustomPositives++;
+					numCustomNegatives++;
+				}
 			}
 		}
 		averageDelta /= (float)m_hitdeltas.size();
 		m_fHitErrorAvgMin = (numNegatives > 0 ? m_fHitErrorAvgMin / (float)numNegatives : 0.0f);
 		m_fHitErrorAvgMax = (numPositives > 0 ? m_fHitErrorAvgMax / (float)numPositives : 0.0f);
+		m_fHitErrorAvgCustomMin = (numCustomNegatives > 0 ? m_fHitErrorAvgCustomMin / (float)numCustomNegatives : 0.0f);
+		m_fHitErrorAvgCustomMax = (numCustomPositives > 0 ? m_fHitErrorAvgCustomMax / (float)numCustomPositives : 0.0f);
 
 		for (int i=0; i<m_hitdeltas.size(); i++)
 		{
