@@ -1253,11 +1253,11 @@ void OsuSkin::playSpinnerBonusSound()
 
 void OsuSkin::stopSliderSlideSound(int sampleSet)
 {
-	if (m_softSliderSlide->isPlaying() && (sampleSet == -2 || sampleSet == 3))
-		engine->getSound()->stop(m_softSliderSlide);
-	if (m_drumSliderSlide->isPlaying() && (sampleSet == -2 || sampleSet == 2))
+	if ((sampleSet == -2 || sampleSet == 3) && m_drumSliderSlide->isPlaying())
 		engine->getSound()->stop(m_drumSliderSlide);
-	if (m_normalSliderSlide->isPlaying() && (sampleSet == -2 || sampleSet == 1 || sampleSet == 0))
+	if ((sampleSet == -2 || sampleSet == 2) && m_softSliderSlide->isPlaying())
+		engine->getSound()->stop(m_softSliderSlide);
+	if ((sampleSet == -2 || sampleSet == 1 || sampleSet == 0) && m_normalSliderSlide->isPlaying())
 		engine->getSound()->stop(m_normalSliderSlide);
 }
 
