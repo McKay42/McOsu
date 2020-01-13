@@ -1184,10 +1184,11 @@ void OsuSlider::update(long curPos)
 			}
 		}
 
-		// handle sliderslide sound + VR controller constant sliding vibration
-		if (m_bStartFinished && !m_bEndFinished && m_bCursorInside && !m_beatmap->isPaused() && !m_beatmap->isWaiting() && m_beatmap->isPlaying())
+		// handle VR controller constant sliding vibration
+		if (m_beatmap->getOsu()->isInVRMode())
 		{
-			if (m_beatmap->getOsu()->isInVRMode())
+			if (m_bStartFinished && !m_bEndFinished && m_bCursorInside
+				&& !m_beatmap->isPaused() && !m_beatmap->isWaiting() && m_beatmap->isPlaying())
 			{
 				// clicks have priority over the constant sliding vibration, that's why this is at the bottom here AFTER the other function above have had a chance to call triggerHapticPulse()
 				// while sliding the slider, vibrate the controller constantly
@@ -1196,7 +1197,13 @@ void OsuSlider::update(long curPos)
 				else
 					openvr->getRightController()->triggerHapticPulse(m_beatmap->getOsu()->getVR()->getSliderHapticPulseStrength());
 			}
+		}
 
+		// handle sliderslide sound
+		if (m_bStartFinished && !m_bEndFinished && m_bCursorInside && m_iDelta <= 0
+			&& (isClickHeldSlider() || m_beatmap->getOsu()->getModAuto() || m_beatmap->getOsu()->getModRelax())
+			&& !m_beatmap->isPaused() && !m_beatmap->isWaiting() && m_beatmap->isPlaying())
+		{
 			const Vector2 osuCoords = m_beatmap->pixels2OsuCoords(m_beatmap->osuCoords2Pixels(m_vCurPointRaw));
 
 			m_beatmap->getSkin()->playSliderSlideSound(OsuGameRules::osuCoords2Pan(osuCoords.x));
