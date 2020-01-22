@@ -1231,7 +1231,12 @@ void OsuBeatmap::seekPercent(double percent)
 	if (m_bIsWaiting)
 	{
 		m_bIsWaiting = false;
+		m_bIsPlaying = true;
+		m_bIsRestartScheduledQuick = false;
+
 		engine->getSound()->play(m_music);
+
+		onPlayStart();
 	}
 }
 
