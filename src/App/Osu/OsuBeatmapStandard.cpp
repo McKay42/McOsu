@@ -767,7 +767,8 @@ void OsuBeatmapStandard::update()
 	if (osu_mod_wobble.getBool())
 	{
 		const float speedMultiplierCompensation = 1.0f / getSpeedMultiplier();
-		m_fPlayfieldRotation = (m_iCurMusicPos/1000.0f)*30.0f*speedMultiplierCompensation*osu_mod_wobble_rotation_speed.getFloat();
+		m_fPlayfieldRotation = (m_iCurMusicPos / 1000.0f) * 30.0f * speedMultiplierCompensation * osu_mod_wobble_rotation_speed.getFloat();
+		m_fPlayfieldRotation = std::fmod(m_fPlayfieldRotation, 360.0f);
 	}
 	else
 		m_fPlayfieldRotation = 0.0f;
@@ -994,7 +995,9 @@ Vector2 OsuBeatmapStandard::osuCoords2Pixels(Vector2 coords)
 	if (m_bIsVRDraw)
 		return osuCoords2VRPixels(coords);
 
-	if (m_osu->getModHR() || osu_playfield_mirror_horizontal.getBool())
+	if (m_osu->getModHR())
+		coords.y = OsuGameRules::OSU_COORD_HEIGHT - coords.y;
+	if (osu_playfield_mirror_horizontal.getBool())
 		coords.y = OsuGameRules::OSU_COORD_HEIGHT - coords.y;
 	if (osu_playfield_mirror_vertical.getBool())
 		coords.x = OsuGameRules::OSU_COORD_WIDTH - coords.x;
@@ -1095,7 +1098,9 @@ Vector2 OsuBeatmapStandard::osuCoords2RawPixels(Vector2 coords)
 
 Vector2 OsuBeatmapStandard::osuCoords2VRPixels(Vector2 coords)
 {
-	if (m_osu->getModHR() || osu_playfield_mirror_horizontal.getBool())
+	if (m_osu->getModHR())
+		coords.y = OsuGameRules::OSU_COORD_HEIGHT - coords.y;
+	if (osu_playfield_mirror_horizontal.getBool())
 		coords.y = OsuGameRules::OSU_COORD_HEIGHT - coords.y;
 	if (osu_playfield_mirror_vertical.getBool())
 		coords.x = OsuGameRules::OSU_COORD_WIDTH - coords.x;
@@ -1174,7 +1179,9 @@ Vector2 OsuBeatmapStandard::osuCoords2VRPixels(Vector2 coords)
 
 Vector2 OsuBeatmapStandard::osuCoords2LegacyPixels(Vector2 coords)
 {
-	if (m_osu->getModHR() || osu_playfield_mirror_horizontal.getBool())
+	if (m_osu->getModHR())
+		coords.y = OsuGameRules::OSU_COORD_HEIGHT - coords.y;
+	if (osu_playfield_mirror_horizontal.getBool())
 		coords.y = OsuGameRules::OSU_COORD_HEIGHT - coords.y;
 	if (osu_playfield_mirror_vertical.getBool())
 		coords.x = OsuGameRules::OSU_COORD_WIDTH - coords.x;
