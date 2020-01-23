@@ -844,7 +844,7 @@ void OsuSongBrowser2::update()
 	}
 
 	if (m_contextMenu->isMouseInside())
-		m_backButton->stealFocus();
+		stealFocus();
 
 	if (m_bottombar->isMouseInside())
 	{
@@ -859,6 +859,7 @@ void OsuSongBrowser2::update()
 		m_bottombar->stealFocus();
 		m_contextMenu->stealFocus();
 		m_songInfo->stealFocus();
+		m_topbarLeft->stealFocus();
 	}
 
 	if (m_osu->getOptionsMenu()->isBusy())
