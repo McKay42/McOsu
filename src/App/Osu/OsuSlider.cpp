@@ -290,7 +290,9 @@ void OsuSlider::draw(Graphics *g)
 					/*Vector2 pos = m_beatmap->osuCoords2Pixels(m_curve->pointAt(sliderSnake));*/ // osu doesn't snake the reverse arrow
 					Vector2 pos = m_beatmap->osuCoords2Pixels(m_curve->pointAt(1.0f));
 					float rotation = m_curve->getEndAngle() - m_osu_playfield_rotation_ref->getFloat() - m_beatmap->getPlayfieldRotation();
-					if (m_beatmap->getOsu()->getModHR() || m_osu_playfield_mirror_horizontal_ref->getBool())
+					if (m_beatmap->getOsu()->getModHR())
+						rotation = 360.0f - rotation;
+					if (m_osu_playfield_mirror_horizontal_ref->getBool())
 						rotation = 360.0f - rotation;
 					if (m_osu_playfield_mirror_vertical_ref->getBool())
 						rotation = 180.0f - rotation;
@@ -315,7 +317,9 @@ void OsuSlider::draw(Graphics *g)
 				{
 					Vector2 pos = m_beatmap->osuCoords2Pixels(m_curve->pointAt(0.0f));
 					float rotation = m_curve->getStartAngle() - m_osu_playfield_rotation_ref->getFloat() - m_beatmap->getPlayfieldRotation();
-					if (m_beatmap->getOsu()->getModHR() || m_osu_playfield_mirror_horizontal_ref->getBool())
+					if (m_beatmap->getOsu()->getModHR())
+						rotation = 360.0f - rotation;
+					if (m_osu_playfield_mirror_horizontal_ref->getBool())
 						rotation = 360.0f - rotation;
 					if (m_osu_playfield_mirror_vertical_ref->getBool())
 						rotation = 180.0f - rotation;
@@ -626,7 +630,9 @@ void OsuSlider::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 					/*Vector2 pos = m_beatmap->osuCoords2Pixels(m_curve->pointAt(sliderSnake));*/ // osu doesn't snake the reverse arrow
 					Vector2 pos = m_beatmap->osuCoords2Pixels(m_curve->pointAt(1.0f));
 					float rotation = m_curve->getEndAngle() - m_osu_playfield_rotation_ref->getFloat() - m_beatmap->getPlayfieldRotation();
-					if (m_beatmap->getOsu()->getModHR() || m_osu_playfield_mirror_horizontal_ref->getBool())
+					if (m_beatmap->getOsu()->getModHR())
+						rotation = 360.0f - rotation;
+					if (m_osu_playfield_mirror_horizontal_ref->getBool())
 						rotation = 360.0f - rotation;
 					if (m_osu_playfield_mirror_vertical_ref->getBool())
 						rotation = 180.0f - rotation;
@@ -652,7 +658,9 @@ void OsuSlider::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 				{
 					Vector2 pos = m_beatmap->osuCoords2Pixels(m_curve->pointAt(0.0f));
 					float rotation = m_curve->getStartAngle() - m_osu_playfield_rotation_ref->getFloat() - m_beatmap->getPlayfieldRotation();
-					if (m_beatmap->getOsu()->getModHR() || m_osu_playfield_mirror_horizontal_ref->getBool())
+					if (m_beatmap->getOsu()->getModHR())
+						rotation = 360.0f - rotation;
+					if (m_osu_playfield_mirror_horizontal_ref->getBool())
 						rotation = 360.0f - rotation;
 					if (m_osu_playfield_mirror_vertical_ref->getBool())
 						rotation = 180.0f - rotation;
