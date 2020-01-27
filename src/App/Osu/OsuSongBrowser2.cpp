@@ -972,8 +972,8 @@ void OsuSongBrowser2::onKeyDown(KeyboardEvent &key)
 		key.consume();
 		return;
 	}
-	if (m_bBeatmapRefreshScheduled)
-		return;
+
+	if (m_bBeatmapRefreshScheduled) return;
 
 	// searching text delete & escape key handling
 	if (m_sSearchString.length() > 0)
@@ -1040,13 +1040,13 @@ void OsuSongBrowser2::onKeyDown(KeyboardEvent &key)
 		m_bShiftPressed = true;
 
 	// function hotkeys
-	if (key == KEY_F1 && !m_bF1Pressed)
+	if ((key == KEY_F1 || key == (KEYCODE)OsuKeyBindings::TOGGLE_MODSELECT.getInt()) && !m_bF1Pressed)
 	{
 		m_bF1Pressed = true;
 		m_bottombarNavButtons[m_bottombarNavButtons.size() > 2 ? 1 : 0]->keyboardPulse();
 		onSelectionMods();
 	}
-	if (key == KEY_F2 && !m_bF2Pressed)
+	if ((key == KEY_F2 || key == (KEYCODE)OsuKeyBindings::RANDOM_BEATMAP.getInt()) && !m_bF2Pressed)
 	{
 		m_bF2Pressed = true;
 		m_bottombarNavButtons[m_bottombarNavButtons.size() > 2 ? 2 : 1]->keyboardPulse();
@@ -1215,15 +1215,16 @@ void OsuSongBrowser2::onKeyUp(KeyboardEvent &key)
 	if (key == KEY_RIGHT)
 		m_bRight = false;
 
-	if (key == KEY_F1)
+	if (key == KEY_F1 || key == (KEYCODE)OsuKeyBindings::TOGGLE_MODSELECT.getInt())
 		m_bF1Pressed = false;
-	if (key == KEY_F2)
+	if (key == KEY_F2 || key == (KEYCODE)OsuKeyBindings::RANDOM_BEATMAP.getInt())
 		m_bF2Pressed = false;
 }
 
 void OsuSongBrowser2::onChar(KeyboardEvent &e)
 {
 	if (e.getCharCode() < 32 || !m_bVisible || m_bBeatmapRefreshScheduled || (engine->getKeyboard()->isControlDown() && !engine->getKeyboard()->isAltDown())) return;
+	if (m_bF1Pressed || m_bF2Pressed) return;
 
 	// handle searching
 	KEYCODE charCode = e.getCharCode();

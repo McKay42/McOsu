@@ -1261,37 +1261,41 @@ void Osu::onKeyDown(KeyboardEvent &key)
 				m_bSkipScheduled = true;
 
 			// toggle ui
-			if (key == KEY_SHIFT)
 			{
-				if (m_bTab && !m_bUIToggleCheck)
+				if (key == KEY_SHIFT)
 				{
-					m_bUIToggleCheck = true;
-					m_osu_draw_hud_ref->setValue(!m_osu_draw_hud_ref->getBool());
+					if (m_bTab && !m_bUIToggleCheck)
+					{
+						m_bUIToggleCheck = true;
+						m_osu_draw_hud_ref->setValue(!m_osu_draw_hud_ref->getBool());
+
+						key.consume();
+					}
+				}
+				if (key == KEY_TAB)
+				{
+					m_bTab = true;
+					if (engine->getKeyboard()->isShiftDown() && !m_bUIToggleCheck)
+					{
+						m_bUIToggleCheck = true;
+						m_osu_draw_hud_ref->setValue(!m_osu_draw_hud_ref->getBool());
+
+						key.consume();
+					}
+				}
+
+				if (!key.isConsumed() && key == (KEYCODE)OsuKeyBindings::TOGGLE_SCOREBOARD.getInt() && !m_bScoreboardToggleCheck)
+				{
+					m_bScoreboardToggleCheck = true;
+					m_osu_draw_scoreboard->setValue(!m_osu_draw_scoreboard->getBool());
+					m_notificationOverlay->addNotification(m_osu_draw_scoreboard->getBool() ? "Scoreboard is shown." : "Scoreboard is hidden.", 0xffffffff, false, 0.1f);
 
 					key.consume();
 				}
-			}
-			if (key == KEY_TAB)
-			{
-				m_bTab = true;
-				if (engine->getKeyboard()->isShiftDown() && !m_bUIToggleCheck)
-				{
-					m_bUIToggleCheck = true;
-					m_osu_draw_hud_ref->setValue(!m_osu_draw_hud_ref->getBool());
-
-					key.consume();
-				}
-			}
-			if (key == (KEYCODE)OsuKeyBindings::TOGGLE_SCOREBOARD.getInt() && !m_bScoreboardToggleCheck)
-			{
-				m_bScoreboardToggleCheck = true;
-				m_osu_draw_scoreboard->setValue(!m_osu_draw_scoreboard->getBool());
-
-				key.consume();
 			}
 
 			// allow live mod changing while playing
-			if (!key.isConsumed() && key == KEY_F1 && !m_bF1 && !getSelectedBeatmap()->hasFailed()) // only if not failed though
+			if (!key.isConsumed() && (key == KEY_F1 || key == (KEYCODE)OsuKeyBindings::TOGGLE_MODSELECT.getInt()) && !m_bF1 && !getSelectedBeatmap()->hasFailed()) // only if not failed though
 			{
 				m_bF1 = true;
 				toggleModSelection(true);
@@ -1457,7 +1461,7 @@ void Osu::onKeyUp(KeyboardEvent &key)
 	}
 
 	// misc hotkeys release
-	if (key == KEY_F1)
+	if (key == KEY_F1 || key == (KEYCODE)OsuKeyBindings::TOGGLE_MODSELECT.getInt())
 		m_bF1 = false;
 	if (key == (KEYCODE)OsuKeyBindings::GAME_PAUSE.getInt() || key == KEY_ESCAPE)
 		m_bEscape = false;

@@ -838,6 +838,9 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addKeyBindButton("Decrease Volume", &OsuKeyBindings::DECREASE_VOLUME);
 	addKeyBindButton("Disable Mouse Buttons", &OsuKeyBindings::DISABLE_MOUSE_BUTTONS);
 	addKeyBindButton("Boss Key (Minimize)", &OsuKeyBindings::BOSS_KEY);
+	addSubSection("Keys - Song Select");
+	addKeyBindButton("Toggle Mod Selection Screen", &OsuKeyBindings::TOGGLE_MODSELECT)->setTooltipText("(F1 can not be unbound. This is just an additional key.)");
+	addKeyBindButton("Random Beatmap", &OsuKeyBindings::RANDOM_BEATMAP)->setTooltipText("(F2 can not be unbound. This is just an additional key.)");
 	addSubSection("Keys - Mod Select");
 	addKeyBindButton("Easy", &OsuKeyBindings::MOD_EASY);
 	addKeyBindButton("No Fail", &OsuKeyBindings::MOD_NOFAIL);
@@ -2830,6 +2833,8 @@ void OsuOptionsMenu::onKeyBindingButtonPressed(CBaseUIButton *button)
 
 void OsuOptionsMenu::onKeyUnbindButtonPressed(CBaseUIButton *button)
 {
+	engine->getSound()->play(m_osu->getSkin()->getCheckOff());
+
 	for (int i=0; i<m_elements.size(); i++)
 	{
 		for (int e=0; e<m_elements[i].elements.size(); e++)
@@ -3393,6 +3398,7 @@ OsuUIButton *OsuOptionsMenu::addKeyBindButton(UString text, ConVar *cvar)
 
 	///UString iconString; iconString.insert(0, OsuIcons::UNDO);
 	OsuUIButton *button2 = new OsuUIButton(m_osu, 0, 0, m_options->getSize().x, 50, text, "");
+	button2->setTooltipText("Unbind");
 	button2->setColor(0x77ff0000);
 	button2->setUseDefaultSkin();
 	button2->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyUnbindButtonPressed) );

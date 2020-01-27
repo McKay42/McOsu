@@ -929,8 +929,8 @@ void OsuHUD::drawCursorRipples(Graphics *g)
 void OsuHUD::drawFps(Graphics *g, McFont *font, float fps)
 {
 	fps = std::round(fps);
-	UString fpsString = UString::format("%i fps", (int)(fps));
-	UString msString = UString::format("%.1f ms", (1.0f/fps)*1000.0f);
+	const UString fpsString = UString::format("%i fps", (int)(fps));
+	const UString msString = UString::format("%.1f ms", (1.0f/fps)*1000.0f);
 
 	const float dpiScale = Osu::getUIScale();
 

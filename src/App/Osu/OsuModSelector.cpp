@@ -535,7 +535,7 @@ void OsuModSelector::onKeyDown(KeyboardEvent &key)
 	if (key == KEY_1)
 		resetMods();
 
-	if ((key == KEY_F1 && !m_bWaitForF1KeyUp) || key == KEY_2 || key == (KEYCODE)OsuKeyBindings::GAME_PAUSE.getInt() || key == KEY_ESCAPE)
+	if (((key == KEY_F1 || key == (KEYCODE)OsuKeyBindings::TOGGLE_MODSELECT.getInt()) && !m_bWaitForF1KeyUp) || key == KEY_2 || key == (KEYCODE)OsuKeyBindings::GAME_PAUSE.getInt() || key == KEY_ESCAPE)
 		close();
 
 	// mod hotkeys
@@ -573,7 +573,7 @@ void OsuModSelector::onKeyUp(KeyboardEvent &key)
 {
 	if (!m_bVisible) return;
 
-	if (key == KEY_F1)
+	if (key == KEY_F1 || key == (KEYCODE)OsuKeyBindings::TOGGLE_MODSELECT.getInt())
 		m_bWaitForF1KeyUp = false;
 }
 

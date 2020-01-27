@@ -32,6 +32,9 @@ ConVar OsuKeyBindings::SAVE_SCREENSHOT("osu_key_save_screenshot", (int)KEY_F12);
 ConVar OsuKeyBindings::DISABLE_MOUSE_BUTTONS("osu_key_disable_mouse_buttons", (int)KEY_F10);
 ConVar OsuKeyBindings::BOSS_KEY("osu_key_boss", (int)KEY_INSERT);
 
+ConVar OsuKeyBindings::TOGGLE_MODSELECT("osu_key_toggle_modselect", (int)KEY_F1);
+ConVar OsuKeyBindings::RANDOM_BEATMAP("osu_key_random_beatmap", (int)KEY_F2);
+
 ConVar OsuKeyBindings::MOD_EASY("osu_key_mod_easy", (int)KEY_Q);
 ConVar OsuKeyBindings::MOD_NOFAIL("osu_key_mod_nofail", (int)KEY_W);
 ConVar OsuKeyBindings::MOD_HALFTIME("osu_key_mod_halftime", (int)KEY_E);
@@ -69,6 +72,9 @@ std::vector<ConVar*> OsuKeyBindings::ALL = {
 	&OsuKeyBindings::SAVE_SCREENSHOT,
 	&OsuKeyBindings::DISABLE_MOUSE_BUTTONS,
 	&OsuKeyBindings::BOSS_KEY,
+
+	&OsuKeyBindings::TOGGLE_MODSELECT,
+	&OsuKeyBindings::RANDOM_BEATMAP,
 
 	&OsuKeyBindings::MOD_EASY,
 	&OsuKeyBindings::MOD_NOFAIL,
