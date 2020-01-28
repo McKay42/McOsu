@@ -34,8 +34,16 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 
 	std::vector<CHANGELOG> changelogs;
 
+	CHANGELOG alpha313x;
+	alpha313x.title = UString::format("30.13 (2) (Build Date: %s, %s)", __DATE__, __TIME__);
+	alpha313x.changes.push_back("- Added \"Toggle Mod Selection Screen\" keybind (Options > Input > Keyboard > Keys - Song Select)");
+	alpha313x.changes.push_back("- Added \"Random Beatmap\" keybind (Options > Input > Keyboard > Keys - Song Select)");
+	alpha313x.changes.push_back("- Updated SHIFT + TAB and SHIFT scoreboard toggle behavior");
+	alpha313x.changes.push_back("- Fixed kinetic tablet scrolling at very high framerates (> ~600 fps)");
+	changelogs.push_back(alpha313x);
+
 	CHANGELOG alpha313;
-	alpha313.title = UString::format("30.13 (%s, %s)", __DATE__, __TIME__); // og 12.01.2020
+	alpha313.title = "30.13 (12.01.2020)";
 	alpha313.changes.push_back("- Added searching by beatmap ID + beatmap set ID");
 	alpha313.changes.push_back("- Added CTRL + V support to songbrowser search (paste clipboard)");
 	alpha313.changes.push_back("- Added speed display to score buttons");
@@ -178,6 +186,7 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha293.changes.push_back("- Added ConVars: osu_stars_xexxar_angles_sliders, osu_stars_stacking, osu_ui_top_ranks_max");
 	changelogs.push_back(alpha293);
 
+	/*
 	CHANGELOG alpha292;
 	alpha292.title = "29.2 (06.01.2019)";
 	alpha292.changes.push_back("- Added \"Top Ranks\"/\"Best Performance\" screen showing all weighted scores (Songbrowser > User > Top Ranks)");
@@ -192,7 +201,6 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha292.changes.push_back("- Fixed total weighted pp counting multiple scores on the same diff");
 	changelogs.push_back(alpha292);
 
-	/*
 	CHANGELOG alpha291;
 	alpha291.title = "29.1 (31.12.2018)";
 	alpha291.changes.push_back("- Added rich presence support (Discord + Steam)");
