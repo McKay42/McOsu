@@ -35,11 +35,12 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	std::vector<CHANGELOG> changelogs;
 
 	CHANGELOG alpha313x;
-	alpha313x.title = UString::format("30.13 (2) (Build Date: %s, %s)", __DATE__, __TIME__);
+	alpha313x.title = UString::format("30.13 (3) (Build Date: %s, %s)", __DATE__, __TIME__);
 	alpha313x.changes.push_back("- Added \"Toggle Mod Selection Screen\" keybind (Options > Input > Keyboard > Keys - Song Select)");
 	alpha313x.changes.push_back("- Added \"Random Beatmap\" keybind (Options > Input > Keyboard > Keys - Song Select)");
 	alpha313x.changes.push_back("- Updated SHIFT + TAB and SHIFT scoreboard toggle behavior");
 	alpha313x.changes.push_back("- Fixed kinetic tablet scrolling at very high framerates (> ~600 fps)");
+	alpha313x.changes.push_back("- Fixed ranking screen layout partially for weird skins (long grade overflow)");
 	changelogs.push_back(alpha313x);
 
 	CHANGELOG alpha313;

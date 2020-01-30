@@ -44,19 +44,22 @@ void OsuUIRankingScreenRankingPanel::draw(Graphics *g)
 
 	const float globalScoreScale = (m_osu->getSkin()->getVersion() > 1.0f ? 1.3f : 1.05f) * uiScale;
 
+	const int globalYOffsetRaw = -1;
+	const int globalYOffset = m_osu->getUIScale(m_osu, globalYOffsetRaw);
+
 	// draw score
 	g->setColor(0xffffffff);
 	float scale = m_osu->getImageScale(m_osu, m_osu->getSkin()->getScore0(), 20.0f) * globalScoreScale;
 	g->pushTransform();
 	{
 		g->scale(scale, scale);
-		g->translate(m_vPos.x + m_osu->getUIScale(m_osu, 111.0f) * uiScale, m_vPos.y + (m_osu->getSkin()->getScore0()->getHeight()/2)*scale + m_osu->getUIScale(m_osu, 11.0f) * uiScale);
+		g->translate(m_vPos.x + m_osu->getUIScale(m_osu, 111.0f) * uiScale, m_vPos.y + (m_osu->getSkin()->getScore0()->getHeight()/2)*scale + (m_osu->getUIScale(m_osu, 11.0f) + globalYOffset) * uiScale);
 		m_osu->getHUD()->drawScoreNumber(g, m_iScore, scale);
 	}
 	g->popTransform();
 
     // draw hit images
-    const Vector2 hitImageStartPos = Vector2(40, 100);
+    const Vector2 hitImageStartPos = Vector2(40, 100 + globalYOffsetRaw);
     const Vector2 hitGridOffsetX = Vector2(200, 0);
     const Vector2 hitGridOffsetY = Vector2(0, 60);
 
@@ -79,12 +82,15 @@ void OsuUIRankingScreenRankingPanel::draw(Graphics *g)
 	drawNumHits(g, m_iNum100ks, scale, numHitStartPos + hitGridOffsetX + hitGridOffsetY);
 	drawNumHits(g, m_iNumMisses, scale, numHitStartPos + hitGridOffsetX + hitGridOffsetY*2);
 
+	const int row4 = 260;
+	const int row4ImageOffset = (m_osu->getSkin()->getVersion() > 1.0f ? 20 : 8) - 20;
+
 	// draw combo
 	scale = m_osu->getImageScale(m_osu, m_osu->getSkin()->getScore0(), 17.0f) * globalScoreScale;
 	g->pushTransform();
 	{
 		g->scale(scale, scale);
-		g->translate(m_vPos.x + m_osu->getUIScale(m_osu, 15.0f) * uiScale, m_vPos.y + (m_osu->getSkin()->getScore0()->getHeight()/2)*scale + m_osu->getUIScale(m_osu, 269.0f) * uiScale);
+		g->translate(m_vPos.x + m_osu->getUIScale(m_osu, 15.0f) * uiScale, m_vPos.y + (m_osu->getSkin()->getScore0()->getHeight()/2)*scale + (m_osu->getUIScale(m_osu, row4 + 10) + globalYOffset) * uiScale);
 		m_osu->getHUD()->drawComboSimple(g, m_iCombo, scale);
 	}
 	g->popTransform();
@@ -95,7 +101,7 @@ void OsuUIRankingScreenRankingPanel::draw(Graphics *g)
 	g->pushTransform();
 	{
 		g->scale(scale, scale);
-		g->translate(m_vPos.x + m_osu->getSkin()->getRankingMaxCombo()->getWidth()*scale*0.5f + m_osu->getUIScale(m_osu, 4.0f) * uiScale, m_vPos.y + m_osu->getUIScale(m_osu, 254.0f) * uiScale);
+		g->translate(m_vPos.x + m_osu->getSkin()->getRankingMaxCombo()->getWidth()*scale*0.5f + m_osu->getUIScale(m_osu, 4.0f) * uiScale, m_vPos.y + (m_osu->getUIScale(m_osu, row4 - 5 - row4ImageOffset) + globalYOffset) * uiScale);
 		g->drawImage(m_osu->getSkin()->getRankingMaxCombo());
 	}
 	g->popTransform();
@@ -105,7 +111,7 @@ void OsuUIRankingScreenRankingPanel::draw(Graphics *g)
 	g->pushTransform();
 	{
 		g->scale(scale, scale);
-		g->translate(m_vPos.x + m_osu->getUIScale(m_osu, 195.0f) * uiScale, m_vPos.y + (m_osu->getSkin()->getScore0()->getHeight()/2)*scale + m_osu->getUIScale(m_osu, 269.0f) * uiScale);
+		g->translate(m_vPos.x + m_osu->getUIScale(m_osu, 195.0f) * uiScale, m_vPos.y + (m_osu->getSkin()->getScore0()->getHeight()/2)*scale + (m_osu->getUIScale(m_osu, row4 + 10) + globalYOffset) * uiScale);
 		m_osu->getHUD()->drawAccuracySimple(g, m_fAccuracy*100.0f, scale);
 	}
 	g->popTransform();
@@ -116,7 +122,7 @@ void OsuUIRankingScreenRankingPanel::draw(Graphics *g)
 	g->pushTransform();
 	{
 		g->scale(scale, scale);
-		g->translate(m_vPos.x + m_osu->getSkin()->getRankingAccuracy()->getWidth()*scale*0.5f + m_osu->getUIScale(m_osu, 183.0f) * uiScale, m_vPos.y + m_osu->getUIScale(m_osu, 257.0f) * uiScale);
+		g->translate(m_vPos.x + m_osu->getSkin()->getRankingAccuracy()->getWidth()*scale*0.5f + m_osu->getUIScale(m_osu, 183.0f) * uiScale, m_vPos.y + (m_osu->getUIScale(m_osu, row4 - 3 - row4ImageOffset) + globalYOffset) * uiScale);
 		g->drawImage(m_osu->getSkin()->getRankingAccuracy());
 	}
 	g->popTransform();
