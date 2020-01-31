@@ -13,6 +13,7 @@
 class Osu;
 class OsuVR;
 class OsuScore;
+class OsuBeatmapStandard;
 
 class McFont;
 class ConVar;
@@ -45,6 +46,7 @@ public:
 	void drawCursorVR1(Graphics *g, Matrix4 &mvp, Vector2 pos, float alphaMultiplier = 1.0f);
 	void drawCursorVR2(Graphics *g, Matrix4 &mvp, Vector2 pos, float alphaMultiplier = 1.0f);
 	void drawFps(Graphics *g) {drawFps(g, m_tempFont, m_fCurFps);}
+	void drawHitErrorBar(Graphics *g, OsuBeatmapStandard *beatmapStd);
 	void drawPlayfieldBorder(Graphics *g, Vector2 playfieldCenter, Vector2 playfieldSize, float hitcircleDiameter);
 	void drawPlayfieldBorder(Graphics *g, Vector2 playfieldCenter, Vector2 playfieldSize, float hitcircleDiameter, float borderSize);
 	void drawLoadingSmall(Graphics *g);
@@ -151,6 +153,7 @@ private:
 	void drawWarningArrows(Graphics *g, float hitcircleDiameter = 0.0f);
 	void drawContinue(Graphics *g, Vector2 cursor, float hitcircleDiameter = 0.0f);
 	void drawHitErrorBar(Graphics *g, float hitWindow300, float hitWindow100, float hitWindow50, float hitWindowMiss);
+	void drawHitErrorBarInt(Graphics *g, float hitWindow300, float hitWindow100, float hitWindow50, float hitWindowMiss);
 	void drawProgressBar(Graphics *g, float percent, bool waiting);
 	void drawProgressBarVR(Graphics *g, Matrix4 &mvp, OsuVR *vr, float percent, bool waiting);
 	void drawStatistics(Graphics *g, int misses, int sliderbreaks, int bpm, float ar, float cs, float od, int nps, int nd, int ur, float pp, float hitWindow300, int hitdeltaMin, int hitdeltaMax);

@@ -48,6 +48,7 @@
 #include "OpenGLES2Interface.h"
 
 ConVar osu_automatic_cursor_size("osu_automatic_cursor_size", false);
+
 ConVar osu_cursor_alpha("osu_cursor_alpha", 1.0f);
 ConVar osu_cursor_scale("osu_cursor_scale", 1.5f);
 ConVar osu_cursor_expand_scale_multiplier("osu_cursor_expand_scale_multiplier", 1.3f);
@@ -71,13 +72,36 @@ ConVar osu_cursor_ripple_tint_b("osu_cursor_ripple_tint_b", 255, "from 0 to 255"
 
 ConVar osu_hud_shift_tab_toggles_everything("osu_hud_shift_tab_toggles_everything", true);
 ConVar osu_hud_scale("osu_hud_scale", 1.0f);
+ConVar osu_hud_hiterrorbar_alpha("osu_hud_hiterrorbar_alpha", 1.0f, "opacity multiplier for entire hiterrorbar");
+ConVar osu_hud_hiterrorbar_bar_alpha("osu_hud_hiterrorbar_bar_alpha", 1.0f, "opacity multiplier for background color bar");
+ConVar osu_hud_hiterrorbar_centerline_alpha("osu_hud_hiterrorbar_centerline_alpha", 1.0f, "opacity multiplier for center line");
+ConVar osu_hud_hiterrorbar_entry_alpha("osu_hud_hiterrorbar_entry_alpha", 0.75f, "opacity multiplier for all hit error entries/lines");
+ConVar osu_hud_hiterrorbar_entry_300_r("osu_hud_hiterrorbar_entry_300_r", 0);
+ConVar osu_hud_hiterrorbar_entry_300_g("osu_hud_hiterrorbar_entry_300_g", 205);
+ConVar osu_hud_hiterrorbar_entry_300_b("osu_hud_hiterrorbar_entry_300_b", 205);
+ConVar osu_hud_hiterrorbar_entry_100_r("osu_hud_hiterrorbar_entry_100_r", 0);
+ConVar osu_hud_hiterrorbar_entry_100_g("osu_hud_hiterrorbar_entry_100_g", 205);
+ConVar osu_hud_hiterrorbar_entry_100_b("osu_hud_hiterrorbar_entry_100_b", 0);
+ConVar osu_hud_hiterrorbar_entry_50_r("osu_hud_hiterrorbar_entry_50_r", 205);
+ConVar osu_hud_hiterrorbar_entry_50_g("osu_hud_hiterrorbar_entry_50_g", 115);
+ConVar osu_hud_hiterrorbar_entry_50_b("osu_hud_hiterrorbar_entry_50_b", 0);
+ConVar osu_hud_hiterrorbar_entry_miss_r("osu_hud_hiterrorbar_entry_miss_r", 205);
+ConVar osu_hud_hiterrorbar_entry_miss_g("osu_hud_hiterrorbar_entry_miss_g", 0);
+ConVar osu_hud_hiterrorbar_entry_miss_b("osu_hud_hiterrorbar_entry_miss_b", 0);
+ConVar osu_hud_hiterrorbar_centerline_r("osu_hud_hiterrorbar_centerline_r", 255);
+ConVar osu_hud_hiterrorbar_centerline_g("osu_hud_hiterrorbar_centerline_g", 255);
+ConVar osu_hud_hiterrorbar_centerline_b("osu_hud_hiterrorbar_centerline_b", 255);
+ConVar osu_hud_hiterrorbar_entry_hit_fade_time("osu_hud_hiterrorbar_entry_hit_fade_time", 6.0f, "fade duration of 50/100/300 hit entries/lines in seconds");
+ConVar osu_hud_hiterrorbar_entry_miss_fade_time("osu_hud_hiterrorbar_entry_miss_fade_time", 4.0f, "fade duration of miss entries/lines in seconds");
 ConVar osu_hud_hiterrorbar_scale("osu_hud_hiterrorbar_scale", 1.0f);
 ConVar osu_hud_hiterrorbar_showmisswindow("osu_hud_hiterrorbar_showmisswindow", false);
 ConVar osu_hud_hiterrorbar_width_percent_with_misswindow("osu_hud_hiterrorbar_width_percent_with_misswindow", 0.4f);
 ConVar osu_hud_hiterrorbar_width_percent("osu_hud_hiterrorbar_width_percent", 0.15f);
 ConVar osu_hud_hiterrorbar_height_percent("osu_hud_hiterrorbar_height_percent", 0.007f);
+ConVar osu_hud_hiterrorbar_offset_percent("osu_hud_hiterrorbar_offset_percent", 0.0f);
 ConVar osu_hud_hiterrorbar_bar_width_scale("osu_hud_hiterrorbar_bar_width_scale", 0.6f);
 ConVar osu_hud_hiterrorbar_bar_height_scale("osu_hud_hiterrorbar_bar_height_scale", 3.4f);
+ConVar osu_hud_hiterrorbar_max_entries("osu_hud_hiterrorbar_max_entries", 32, "maximum number of entries/lines");
 ConVar osu_hud_combo_scale("osu_hud_combo_scale", 1.0f);
 ConVar osu_hud_score_scale("osu_hud_score_scale", 1.0f);
 ConVar osu_hud_accuracy_scale("osu_hud_accuracy_scale", 1.0f);
@@ -103,6 +127,10 @@ ConVar osu_draw_cursor_ripples("osu_draw_cursor_ripples", false);
 ConVar osu_draw_hud("osu_draw_hud", true);
 ConVar osu_draw_hpbar("osu_draw_hpbar", false);
 ConVar osu_draw_hiterrorbar("osu_draw_hiterrorbar", true);
+ConVar osu_draw_hiterrorbar_bottom("osu_draw_hiterrorbar_bottom", true);
+ConVar osu_draw_hiterrorbar_top("osu_draw_hiterrorbar_top", false);
+ConVar osu_draw_hiterrorbar_left("osu_draw_hiterrorbar_left", false);
+ConVar osu_draw_hiterrorbar_right("osu_draw_hiterrorbar_right", false);
 ConVar osu_draw_progressbar("osu_draw_progressbar", true);
 ConVar osu_draw_combo("osu_draw_combo", true);
 ConVar osu_draw_score("osu_draw_score", true);
@@ -238,7 +266,7 @@ void OsuHUD::draw(Graphics *g)
 	if (beatmap == NULL) return; // sanity check
 
 	OsuBeatmapStandard *beatmapStd = dynamic_cast<OsuBeatmapStandard*>(beatmap);
-	OsuBeatmapMania *beatmapMania = dynamic_cast<OsuBeatmapMania*>(beatmap);
+	//OsuBeatmapMania *beatmapMania = dynamic_cast<OsuBeatmapMania*>(beatmap);
 
 	if (osu_draw_hud.getBool())
 	{
@@ -285,6 +313,8 @@ void OsuHUD::draw(Graphics *g)
 		if (osu_draw_hpbar.getBool())
 			drawHP(g, beatmap->getHealth());
 
+		// NOTE: moved to draw behind hitobjects in OsuBeatmapStandard::draw()
+		/*
 		if (osu_draw_hiterrorbar.getBool() && (beatmapStd == NULL || !beatmapStd->isSpinnerActive()) && !beatmap->isLoading())
 		{
 			if (beatmapStd != NULL)
@@ -292,6 +322,7 @@ void OsuHUD::draw(Graphics *g)
 			else if (beatmapMania != NULL)
 				drawHitErrorBar(g, OsuGameRulesMania::getHitWindow300(beatmap), OsuGameRulesMania::getHitWindow100(beatmap), OsuGameRulesMania::getHitWindow50(beatmap), OsuGameRulesMania::getHitWindowMiss(beatmap));
 		}
+		*/
 
 		if (osu_draw_score.getBool())
 			drawScore(g, m_osu->getScore()->getScore());
@@ -317,6 +348,8 @@ void OsuHUD::draw(Graphics *g)
 				drawInputOverlay(g, m_osu->getScore()->getKeyCount(1), m_osu->getScore()->getKeyCount(2), m_osu->getScore()->getKeyCount(3), m_osu->getScore()->getKeyCount(4));
 		}
 
+		// NOTE: moved to draw behind hitobjects in OsuBeatmapStandard::draw()
+		/*
 		if (osu_draw_hiterrorbar.getBool() && (beatmapStd == NULL || !beatmapStd->isSpinnerActive()) && !beatmap->isLoading())
 		{
 			if (beatmapStd != NULL)
@@ -324,6 +357,7 @@ void OsuHUD::draw(Graphics *g)
 			else if (beatmapMania != NULL)
 				drawHitErrorBar(g, OsuGameRulesMania::getHitWindow300(beatmap), OsuGameRulesMania::getHitWindow100(beatmap), OsuGameRulesMania::getHitWindow50(beatmap), OsuGameRulesMania::getHitWindowMiss(beatmap));
 		}
+		*/
 	}
 
 	if (beatmap->shouldFlashWarningArrows())
@@ -1810,19 +1844,83 @@ void OsuHUD::drawContinue(Graphics *g, Vector2 cursor, float hitcircleDiameter)
 	g->popTransform();
 }
 
+void OsuHUD::drawHitErrorBar(Graphics *g, OsuBeatmapStandard *beatmapStd)
+{
+	if (osu_draw_hud.getBool() || !osu_hud_shift_tab_toggles_everything.getBool())
+	{
+		if (osu_draw_hiterrorbar.getBool() && !beatmapStd->isSpinnerActive() && !beatmapStd->isLoading())
+			drawHitErrorBar(g, OsuGameRules::getHitWindow300(beatmapStd), OsuGameRules::getHitWindow100(beatmapStd), OsuGameRules::getHitWindow50(beatmapStd), OsuGameRules::getHitWindowMiss(beatmapStd));
+	}
+}
+
 void OsuHUD::drawHitErrorBar(Graphics *g, float hitWindow300, float hitWindow100, float hitWindow50, float hitWindowMiss)
 {
-	const int brightnessSub = 50;
-	const Color color300 = COLOR(255, 0, 255-brightnessSub, 255-brightnessSub);
-	const Color color100 = COLOR(255, 0, 255-brightnessSub, 0);
-	const Color color50 = COLOR(255, 255-brightnessSub, 165-brightnessSub, 0);
-	const Color colorMiss = COLOR(255, 255-brightnessSub, 0, 0);
+	const Vector2 center = Vector2(m_osu->getScreenWidth()/2.0f, m_osu->getScreenHeight() - m_osu->getScreenHeight()*2.15f*osu_hud_hiterrorbar_height_percent.getFloat()*osu_hud_scale.getFloat()*osu_hud_hiterrorbar_scale.getFloat() - m_osu->getScreenHeight()*osu_hud_hiterrorbar_offset_percent.getFloat());
+
+	if (osu_draw_hiterrorbar_bottom.getBool())
+	{
+		g->pushTransform();
+		{
+			g->translate(center.x, center.y);
+			drawHitErrorBarInt(g, hitWindow300, hitWindow100, hitWindow50, hitWindowMiss);
+		}
+		g->popTransform();
+	}
+
+	if (osu_draw_hiterrorbar_top.getBool())
+	{
+		g->pushTransform();
+		{
+			g->scale(1, -1);
+			g->translate(center.x, m_osu->getScreenHeight() - center.y);
+			drawHitErrorBarInt(g, hitWindow300, hitWindow100, hitWindow50, hitWindowMiss);
+		}
+		g->popTransform();
+	}
+
+	if (osu_draw_hiterrorbar_left.getBool())
+	{
+		g->pushTransform();
+		{
+			g->rotate(90);
+			g->translate(m_osu->getScreenHeight() - center.y, m_osu->getScreenHeight()/2.0f);
+			drawHitErrorBarInt(g, hitWindow300, hitWindow100, hitWindow50, hitWindowMiss);
+		}
+		g->popTransform();
+	}
+
+	if (osu_draw_hiterrorbar_right.getBool())
+	{
+		g->pushTransform();
+		{
+			g->scale(-1, 1);
+			g->rotate(-90);
+			g->translate(m_osu->getScreenWidth() - (m_osu->getScreenHeight() - center.y), m_osu->getScreenHeight()/2.0f);
+			drawHitErrorBarInt(g, hitWindow300, hitWindow100, hitWindow50, hitWindowMiss);
+		}
+		g->popTransform();
+	}
+}
+
+void OsuHUD::drawHitErrorBarInt(Graphics *g, float hitWindow300, float hitWindow100, float hitWindow50, float hitWindowMiss)
+{
+	const float alpha = osu_hud_hiterrorbar_alpha.getFloat();
+	if (alpha <= 0.0f) return;
+
+	const float alphaEntry = alpha * osu_hud_hiterrorbar_entry_alpha.getFloat();
+	const int alphaCenterlineInt = clamp<int>((int)(alpha * osu_hud_hiterrorbar_centerline_alpha.getFloat() * 255.0f), 0, 255);
+	const int alphaBarInt = clamp<int>((int)(alpha * osu_hud_hiterrorbar_bar_alpha.getFloat() * 255.0f), 0, 255);
+
+	const Color color300 = COLOR(alphaBarInt, clamp<int>(osu_hud_hiterrorbar_entry_300_r.getInt(), 0, 255), clamp<int>(osu_hud_hiterrorbar_entry_300_g.getInt(), 0, 255), clamp<int>(osu_hud_hiterrorbar_entry_300_b.getInt(), 0, 255));
+	const Color color100 = COLOR(alphaBarInt, clamp<int>(osu_hud_hiterrorbar_entry_100_r.getInt(), 0, 255), clamp<int>(osu_hud_hiterrorbar_entry_100_g.getInt(), 0, 255), clamp<int>(osu_hud_hiterrorbar_entry_100_b.getInt(), 0, 255));
+	const Color color50 = COLOR(alphaBarInt, clamp<int>(osu_hud_hiterrorbar_entry_50_r.getInt(), 0, 255), clamp<int>(osu_hud_hiterrorbar_entry_50_g.getInt(), 0, 255), clamp<int>(osu_hud_hiterrorbar_entry_50_b.getInt(), 0, 255));
+	const Color colorMiss = COLOR(alphaBarInt, clamp<int>(osu_hud_hiterrorbar_entry_miss_r.getInt(), 0, 255), clamp<int>(osu_hud_hiterrorbar_entry_miss_g.getInt(), 0, 255), clamp<int>(osu_hud_hiterrorbar_entry_miss_b.getInt(), 0, 255));
 
 	Vector2 size = Vector2(m_osu->getScreenWidth()*osu_hud_hiterrorbar_width_percent.getFloat(), m_osu->getScreenHeight()*osu_hud_hiterrorbar_height_percent.getFloat())*osu_hud_scale.getFloat()*osu_hud_hiterrorbar_scale.getFloat();
 	if (osu_hud_hiterrorbar_showmisswindow.getBool())
 		size = Vector2(m_osu->getScreenWidth()*osu_hud_hiterrorbar_width_percent_with_misswindow.getFloat(), m_osu->getScreenHeight()*osu_hud_hiterrorbar_height_percent.getFloat())*osu_hud_scale.getFloat()*osu_hud_hiterrorbar_scale.getFloat();
 
-	const Vector2 center = Vector2(m_osu->getScreenWidth()/2.0f, m_osu->getScreenHeight() - m_osu->getScreenHeight()*2.15f*osu_hud_hiterrorbar_height_percent.getFloat()*osu_hud_scale.getFloat()*osu_hud_hiterrorbar_scale.getFloat());
+	const Vector2 center = Vector2(0, 0); // NOTE: moved to drawHitErrorBar()
 
 	const float entryHeight = size.y*osu_hud_hiterrorbar_bar_height_scale.getFloat();
 	const float entryWidth = size.y*osu_hud_hiterrorbar_bar_width_scale.getFloat();
@@ -1835,41 +1933,50 @@ void OsuHUD::drawHitErrorBar(Graphics *g, float hitWindow300, float hitWindow100
 	const float percent100 = hitWindow100 / totalHitWindowLength;
 	const float percent300 = hitWindow300 / totalHitWindowLength;
 
-	// draw background bar with color indicators for 300s, 100s and 50s
-	if (osu_hud_hiterrorbar_showmisswindow.getBool())
+	// draw background bar with color indicators for 300s, 100s and 50s (and the miss window)
+	if (alphaBarInt > 0)
 	{
-		g->setColor(colorMiss);
-		g->fillRect(center.x - size.x/2.0f, center.y - size.y/2.0f, size.x, size.y);
+		if (osu_hud_hiterrorbar_showmisswindow.getBool())
+		{
+			g->setColor(colorMiss);
+			g->fillRect(center.x - size.x/2.0f, center.y - size.y/2.0f, size.x, size.y);
+		}
+
+		if (!OsuGameRules::osu_mod_no100s.getBool() && !OsuGameRules::osu_mod_no50s.getBool())
+		{
+			g->setColor(color50);
+			g->fillRect(center.x - size.x*percent50/2.0f, center.y - size.y/2.0f, size.x*percent50, size.y);
+		}
+
+		if (!OsuGameRules::osu_mod_ming3012.getBool() && !OsuGameRules::osu_mod_no100s.getBool())
+		{
+			g->setColor(color100);
+			g->fillRect(center.x - size.x*percent100/2.0f, center.y - size.y/2.0f, size.x*percent100, size.y);
+		}
+
+		g->setColor(color300);
+		g->fillRect(center.x - size.x*percent300/2.0f, center.y - size.y/2.0f, size.x*percent300, size.y);
 	}
-	if (!OsuGameRules::osu_mod_no100s.getBool() && !OsuGameRules::osu_mod_no50s.getBool())
-	{
-		g->setColor(color50);
-		g->fillRect(center.x - size.x*percent50/2.0f, center.y - size.y/2.0f, size.x*percent50, size.y);
-	}
-	if (!OsuGameRules::osu_mod_ming3012.getBool() && !OsuGameRules::osu_mod_no100s.getBool())
-	{
-		g->setColor(color100);
-		g->fillRect(center.x - size.x*percent100/2.0f, center.y - size.y/2.0f, size.x*percent100, size.y);
-	}
-	g->setColor(color300);
-	g->fillRect(center.x - size.x*percent300/2.0f, center.y - size.y/2.0f, size.x*percent300, size.y);
 
 	// draw hit errors
+	const bool modMing3012 = OsuGameRules::osu_mod_ming3012.getBool();
+	const float hitFadeDuration = osu_hud_hiterrorbar_entry_hit_fade_time.getFloat();
+	const float missFadeDuration = osu_hud_hiterrorbar_entry_miss_fade_time.getFloat();
 	for (int i=m_hiterrors.size()-1; i>=0; i--)
 	{
 		const float percent = clamp<float>((float)m_hiterrors[i].delta / (float)totalHitWindowLength, -5.0f, 5.0f);
-		float alpha = clamp<float>((m_hiterrors[i].time - engine->getTime()) / (m_hiterrors[i].miss || m_hiterrors[i].misaim ? 4.0f : 6.0f), 0.0f, 1.0f);
-		alpha *= alpha;
+		float fade = clamp<float>((m_hiterrors[i].time - engine->getTime()) / (m_hiterrors[i].miss || m_hiterrors[i].misaim ? missFadeDuration : hitFadeDuration), 0.0f, 1.0f);
+		fade *= fade; // quad out
 
 		if (m_hiterrors[i].miss || m_hiterrors[i].misaim)
 			g->setColor(colorMiss);
 		else
 		{
-			Color barColor = std::abs(percent) <= percent300 ? color300 : (std::abs(percent) <= percent100 && !OsuGameRules::osu_mod_ming3012.getBool() ? color100 : color50);
+			const Color barColor = std::abs(percent) <= percent300 ? color300 : (std::abs(percent) <= percent100 && !modMing3012 ? color100 : color50);
 			g->setColor(barColor);
 		}
 
-		g->setAlpha(alpha*0.75f);
+		g->setAlpha(alphaEntry * fade);
 
 		float missHeightMultiplier = 1.0f;
 		if (m_hiterrors[i].miss)
@@ -1881,8 +1988,11 @@ void OsuHUD::drawHitErrorBar(Graphics *g, float hitWindow300, float hitWindow100
 	}
 
 	// white center line
-	g->setColor(0xffffffff);
-	g->fillRect(center.x - entryWidth/2.0f, center.y - entryHeight/2.0f, entryWidth, entryHeight);
+	if (alphaCenterlineInt > 0)
+	{
+		g->setColor(COLOR(alphaCenterlineInt, clamp<int>(osu_hud_hiterrorbar_centerline_r.getInt(), 0, 255), clamp<int>(osu_hud_hiterrorbar_centerline_g.getInt(), 0, 255), clamp<int>(osu_hud_hiterrorbar_centerline_b.getInt(), 0, 255)));
+		g->fillRect(center.x - entryWidth/2.0f, center.y - entryHeight/2.0f, entryWidth, entryHeight);
+	}
 }
 
 void OsuHUD::drawProgressBar(Graphics *g, float percent, bool waiting)
@@ -2492,22 +2602,30 @@ void OsuHUD::animateCombo()
 
 void OsuHUD::addHitError(long delta, bool miss, bool misaim)
 {
-	HITERROR h;
-	h.delta = delta;
-	h.time = engine->getTime() + (miss || misaim ? 4.0f : 6.0f);
-	h.miss = miss;
-	h.misaim = misaim;
+	// add entry
+	{
+		HITERROR h;
 
-	m_hiterrors.push_back(h);
+		h.delta = delta;
+		h.time = engine->getTime() + (miss || misaim ? osu_hud_hiterrorbar_entry_miss_fade_time.getFloat() : osu_hud_hiterrorbar_entry_hit_fade_time.getFloat());
+		h.miss = miss;
+		h.misaim = misaim;
 
+		m_hiterrors.push_back(h);
+	}
+
+	// remove old
 	for (int i=0; i<m_hiterrors.size(); i++)
 	{
 		if (engine->getTime() > m_hiterrors[i].time)
 		{
-			m_hiterrors.erase(m_hiterrors.begin()+i);
+			m_hiterrors.erase(m_hiterrors.begin() + i);
 			i--;
 		}
 	}
+
+	if (m_hiterrors.size() > osu_hud_hiterrorbar_max_entries.getInt())
+		m_hiterrors.erase(m_hiterrors.begin());
 }
 
 void OsuHUD::addTarget(float delta, float angle)

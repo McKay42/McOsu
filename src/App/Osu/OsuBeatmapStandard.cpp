@@ -254,6 +254,13 @@ void OsuBeatmapStandard::draw(Graphics *g)
 
 	if (isLoading()) return; // only start drawing the rest of the playfield if everything has loaded
 
+	// draw playfield border
+	if (osu_draw_playfield_border.getBool() && !OsuGameRules::osu_mod_fps.getBool())
+		m_osu->getHUD()->drawPlayfieldBorder(g, m_vPlayfieldCenter, m_vPlayfieldSize, m_fHitcircleDiameter);
+
+	// draw hiterrorbar
+	m_osu->getHUD()->drawHitErrorBar(g, this);
+
 	// draw first person crosshair
 	if (OsuGameRules::osu_mod_fps.getBool())
 	{
@@ -263,10 +270,6 @@ void OsuBeatmapStandard::draw(Graphics *g)
 		g->drawLine(center.x, (int)(center.y - length), center.x, (int)(center.y + length + 1));
 		g->drawLine((int)(center.x - length), center.y, (int)(center.x + length + 1), center.y);
 	}
-
-	// draw playfield border
-	if (osu_draw_playfield_border.getBool() && !OsuGameRules::osu_mod_fps.getBool())
-		m_osu->getHUD()->drawPlayfieldBorder(g, m_vPlayfieldCenter, m_vPlayfieldSize, m_fHitcircleDiameter);
 
 	// allow players to not draw all hitobjects twice if in VR
 	if (m_osu->isInVRMode() && !m_osu_vr_draw_desktop_playfield_ref->getBool())
