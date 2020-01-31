@@ -125,6 +125,8 @@ void OsuUserStatsScreen::setVisible(bool visible)
 
 	if (m_bVisible)
 		rebuildScoreButtons(m_name_ref->getString());
+	else
+		m_contextMenu->setVisible2(false);
 }
 
 void OsuUserStatsScreen::onScoreContextMenu(OsuUISongBrowserScoreButton *scoreButton, UString text)

@@ -1540,6 +1540,8 @@ void OsuSongBrowser2::setVisible(bool visible)
 		// update user name/stats
 		onUserButtonChange(m_name_ref->getString(), -1);
 	}
+	else
+		m_contextMenu->setVisible2(false);
 }
 
 bool OsuSongBrowser2::searchMatcher(OsuBeatmap *beatmap, UString searchString)
