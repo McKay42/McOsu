@@ -300,6 +300,7 @@ OsuSkin::OsuSkin(Osu *osu, UString name, UString filepath, bool isDefaultSkin, b
 
 	// convar callbacks
 	osu_volume_effects.setCallback( fastdelegate::MakeDelegate(this, &OsuSkin::onEffectVolumeChange) );
+	osu_ignore_beatmap_sample_volume.setCallback( fastdelegate::MakeDelegate(this, &OsuSkin::onIgnoreBeatmapSampleVolumeChange) );
 	osu_export_skin.setCallback( fastdelegate::MakeDelegate(this, &OsuSkin::onExport) );
 	osu_skin_export.setCallback( fastdelegate::MakeDelegate(this, &OsuSkin::onExport) );
 }
@@ -1004,6 +1005,12 @@ void OsuSkin::onEffectVolumeChange(UString oldValue, UString newValue)
 	setSampleVolume(clamp<float>((float)m_iSampleVolume / 100.0f, 0.0f, 1.0f), true);
 }
 
+void OsuSkin::onIgnoreBeatmapSampleVolumeChange(UString oldValue, UString newValue)
+{
+	// restore sample volumes
+	setSampleVolume(clamp<float>((float)m_iSampleVolume / 100.0f, 0.0f, 1.0f), true);
+}
+
 void OsuSkin::onExport(UString folderName)
 {
 	if (folderName.length() < 1)
@@ -1090,17 +1097,17 @@ void OsuSkin::setSampleSet(int sampleSet)
 
 void OsuSkin::setSampleVolume(float volume, bool force)
 {
-	if (osu_ignore_beatmap_sample_volume.getBool()) return;
+	if (osu_ignore_beatmap_sample_volume.getBool() && (int)(osu_volume_effects.getFloat() * 100.0f) == m_iSampleVolume) return;
 
-	float sampleVolume = volume*osu_volume_effects.getFloat();
-	if (!force && m_iSampleVolume == (int)(sampleVolume*100.0f))
-		return;
+	const float newSampleVolume = (!osu_ignore_beatmap_sample_volume.getBool() ? volume : 1.0f) * osu_volume_effects.getFloat();
 
-	m_iSampleVolume = (int)(sampleVolume*100.0f);
+	if (!force && m_iSampleVolume == (int)(newSampleVolume * 100.0f)) return;
+
+	m_iSampleVolume = (int)(newSampleVolume * 100.0f);
 	///debugLog("sample volume = %f\n", sampleVolume);
 	for (int i=0; i<m_soundSamples.size(); i++)
 	{
-		m_soundSamples[i].sound->setVolume(sampleVolume * m_soundSamples[i].hardcodedVolumeMultiplier);
+		m_soundSamples[i].sound->setVolume(newSampleVolume * m_soundSamples[i].hardcodedVolumeMultiplier);
 	}
 }
 

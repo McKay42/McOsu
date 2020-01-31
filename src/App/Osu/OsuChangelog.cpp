@@ -41,6 +41,7 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha313x.changes.push_back("- Updated SHIFT + TAB and SHIFT scoreboard toggle behavior");
 	alpha313x.changes.push_back("- Fixed kinetic tablet scrolling at very high framerates (> ~600 fps)");
 	alpha313x.changes.push_back("- Fixed ranking screen layout partially for weird skins (long grade overflow)");
+	alpha313x.changes.push_back("- Fixed enabling \"Ignore Beatmap Sample Volume\" not immediately updating sample volume");
 	changelogs.push_back(alpha313x);
 
 	CHANGELOG alpha313;

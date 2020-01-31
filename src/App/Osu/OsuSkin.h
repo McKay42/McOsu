@@ -326,6 +326,7 @@ private:
 	void checkLoadSound(Sound **addressOfPointer, UString skinElementName, UString resourceName, bool isOverlayable = false, bool isSample = false, bool loop = false, float hardcodedVolumeMultiplier = -1.0f);
 
 	void onEffectVolumeChange(UString oldValue, UString newValue);
+	void onIgnoreBeatmapSampleVolumeChange(UString oldValue, UString newValue);
 	void onExport(UString folderName);
 
 	Osu *m_osu;
