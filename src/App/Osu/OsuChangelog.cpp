@@ -38,10 +38,17 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha313x.title = UString::format("30.13 (3) (Build Date: %s, %s)", __DATE__, __TIME__);
 	alpha313x.changes.push_back("- Added \"Toggle Mod Selection Screen\" keybind (Options > Input > Keyboard > Keys - Song Select)");
 	alpha313x.changes.push_back("- Added \"Random Beatmap\" keybind (Options > Input > Keyboard > Keys - Song Select)");
+	alpha313x.changes.push_back("- Added ConVars (1): osu_hud_hiterrorbar_alpha, osu_hud_hiterrorbar_bar_alpha, osu_hud_hiterrorbar_centerline_alpha");
+	alpha313x.changes.push_back("- Added ConVars (2): osu_hud_hiterrorbar_entry_alpha, osu_hud_hiterrorbar_entry_300/100/50/miss_r/g/b");
+	alpha313x.changes.push_back("- Added ConVars (3): osu_hud_hiterrorbar_centerline_r/g/b, osu_hud_hiterrorbar_max_entries");
+	alpha313x.changes.push_back("- Added ConVars (4): osu_hud_hiterrorbar_entry_hit/miss_fade_time, osu_hud_hiterrorbar_offset_percent");
+	alpha313x.changes.push_back("- Added ConVars (5): osu_draw_hiterrorbar_bottom/top/left/right");
+	alpha313x.changes.push_back("- Moved hiterrorbar behind hitobjects");
 	alpha313x.changes.push_back("- Updated SHIFT + TAB and SHIFT scoreboard toggle behavior");
 	alpha313x.changes.push_back("- Fixed kinetic tablet scrolling at very high framerates (> ~600 fps)");
 	alpha313x.changes.push_back("- Fixed ranking screen layout partially for weird skins (long grade overflow)");
 	alpha313x.changes.push_back("- Fixed enabling \"Ignore Beatmap Sample Volume\" not immediately updating sample volume");
+	alpha313x.changes.push_back("- Fixed stale context menu in top ranks screen potentially allowing random score deletion if clicked");
 	changelogs.push_back(alpha313x);
 
 	CHANGELOG alpha313;
