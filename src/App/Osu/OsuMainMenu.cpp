@@ -213,6 +213,8 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen(osu)
 		m_osu_universal_offset_ref = convar->getConVarByName("osu_universal_offset");
 	if (m_osu_universal_offset_hardcoded_ref == NULL)
 		m_osu_universal_offset_hardcoded_ref = convar->getConVarByName("osu_universal_offset_hardcoded");
+	if (m_osu_old_beatmap_offset_ref == NULL)
+		m_osu_old_beatmap_offset_ref = convar->getConVarByName("osu_old_beatmap_offset");
 
 	osu_toggle_preview_music.setCallback( fastdelegate::MakeDelegate(this, &OsuMainMenu::onPausePressed) );
 
