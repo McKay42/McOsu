@@ -1353,25 +1353,7 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 				score.numMisses = m_osu->getScore()->getNumMisses();
 				score.score = m_osu->getScore()->getScore();
 				score.comboMax = m_osu->getScore()->getComboMax();
-				score.modsLegacy = 0;
-				score.modsLegacy |= (m_osu->getModAuto() ? OsuReplay::Mods::Autoplay : 0);
-				score.modsLegacy |= (m_osu->getModAutopilot() ? OsuReplay::Mods::Relax2 : 0);
-				score.modsLegacy |= (m_osu->getModRelax() ? OsuReplay::Mods::Relax : 0);
-				score.modsLegacy |= (m_osu->getModSpunout() ? OsuReplay::Mods::SpunOut : 0);
-				score.modsLegacy |= (m_osu->getModTarget() ? OsuReplay::Mods::Target : 0);
-				score.modsLegacy |= (m_osu->getModScorev2() ? OsuReplay::Mods::ScoreV2 : 0);
-				score.modsLegacy |= (m_osu->getModDT() ? OsuReplay::Mods::DoubleTime : 0);
-				score.modsLegacy |= (m_osu->getModNC() ? OsuReplay::Mods::Nightcore : 0);
-				score.modsLegacy |= (m_osu->getModNF() ? OsuReplay::Mods::NoFail : 0);
-				score.modsLegacy |= (m_osu->getModHT() ? OsuReplay::Mods::HalfTime : 0);
-				score.modsLegacy |= (m_osu->getModDC() ? OsuReplay::Mods::HalfTime : 0);
-				score.modsLegacy |= (m_osu->getModHD() ? OsuReplay::Mods::Hidden : 0);
-				score.modsLegacy |= (m_osu->getModHR() ? OsuReplay::Mods::HardRock : 0);
-				score.modsLegacy |= (m_osu->getModEZ() ? OsuReplay::Mods::Easy : 0);
-				score.modsLegacy |= (m_osu->getModSD() ? OsuReplay::Mods::SuddenDeath : 0);
-				score.modsLegacy |= (m_osu->getModSS() ? OsuReplay::Mods::Perfect : 0);
-				score.modsLegacy |= (m_osu->getModNM() ? OsuReplay::Mods::Nightmare : 0);
-				score.modsLegacy |= (m_osu->getModTD() ? OsuReplay::Mods::TouchDevice : 0);
+				score.modsLegacy = m_osu->getScore()->getModsLegacy();
 
 				// custom
 				score.numSliderBreaks = m_osu->getScore()->getNumSliderBreaks();

@@ -36,6 +36,7 @@
 
 #include "OsuUIRankingScreenInfoLabel.h"
 #include "OsuUIRankingScreenRankingPanel.h"
+#include "OsuUISongBrowserScoreButton.h"
 
 ConVar osu_rankingscreen_topbar_height_percent("osu_rankingscreen_topbar_height_percent", 0.785f);
 ConVar osu_rankingscreen_pp("osu_rankingscreen_pp", true);
@@ -430,7 +431,7 @@ void OsuRankingScreen::update()
 		m_container->stealFocus();
 
 	// tooltip (pp + accuracy + unstable rate)
-	if (m_rankingPanel->isMouseInside() && !m_bIsLegacyScore)
+	if (!m_osu->getOptionsMenu()->isMouseInside() && !m_bIsLegacyScore)
 	{
 		m_osu->getTooltipOverlay()->begin();
 		m_osu->getTooltipOverlay()->addLine(UString::format("%.2fpp", m_fPPv2));
@@ -438,6 +439,10 @@ void OsuRankingScreen::update()
 		m_osu->getTooltipOverlay()->addLine(UString::format("Stars: %.2f (%.2f aim, %.2f speed)", m_fStarsTomTotal, m_fStarsTomAim, m_fStarsTomSpeed));
 		m_osu->getTooltipOverlay()->addLine(UString::format("Speed: %.3gx", m_fSpeedMultiplier));
 		m_osu->getTooltipOverlay()->addLine(UString::format("CS:%.4g AR:%.4g OD:%.4g HP:%.4g", m_fCS, m_fAR, m_fOD, m_fHP));
+
+		if (m_sMods.length() > 0)
+			m_osu->getTooltipOverlay()->addLine(m_sMods);
+
 		m_osu->getTooltipOverlay()->addLine("Accuracy:");
 		m_osu->getTooltipOverlay()->addLine(UString::format("Error: %.2fms - %.2fms avg", m_fHitErrorAvgMin, m_fHitErrorAvgMax));
 		m_osu->getTooltipOverlay()->addLine(UString::format("Unstable Rate: %.2f", m_fUnstableRate));
@@ -498,6 +503,15 @@ void OsuRankingScreen::setScore(OsuScore *score)
 	m_fStarsTomSpeed = score->getStarsTomSpeed();
 	m_fPPv2 = score->getPPv2();
 
+	const UString modsString = OsuUISongBrowserScoreButton::getModsString(score->getModsLegacy());
+	if (modsString.length() > 0)
+	{
+		m_sMods = "Mods: ";
+		m_sMods.append(modsString);
+	}
+	else
+		m_sMods = "";
+
 	m_bModSS = m_osu->getModSS();
 	m_bModSD = m_osu->getModSD();
 	m_bModEZ = m_osu->getModEZ();
@@ -551,6 +565,15 @@ void OsuRankingScreen::setScore(OsuDatabase::Score score, UString dateTime)
 	m_fAR = std::round(OsuGameRules::getRawApproachRateForSpeedMultiplier(OsuGameRules::getRawApproachTime(score.AR), score.speedMultiplier) * 100.0f) / 100.0f;
 	m_fOD = std::round(OsuGameRules::getRawOverallDifficultyForSpeedMultiplier(OsuGameRules::getRawHitWindow300(score.OD), score.speedMultiplier) * 100.0f) / 100.0f;
 	m_fHP = std::round(score.HP * 100.0f) / 100.0f;
+
+	const UString modsString = OsuUISongBrowserScoreButton::getModsString(score.modsLegacy);
+	if (modsString.length() > 0)
+	{
+		m_sMods = "Mods: ";
+		m_sMods.append(modsString);
+	}
+	else
+		m_sMods = "";
 
 	m_bModSS = score.modsLegacy & OsuReplay::Mods::Perfect;
 	m_bModSD = score.modsLegacy & OsuReplay::Mods::SuddenDeath;

@@ -18,6 +18,7 @@
 #include "OsuDifficultyCalculator.h"
 #include "OsuHUD.h"
 #include "OsuGameRules.h"
+#include "OsuReplay.h"
 
 ConVar osu_hiterrorbar_misses("osu_hiterrorbar_misses", true);
 ConVar osu_debug_pp("osu_debug_pp", false);
@@ -366,6 +367,32 @@ int OsuScore::getKeyCount(int key)
 	}
 
 	return 0;
+}
+
+int OsuScore::getModsLegacy()
+{
+	int modsLegacy = 0;
+
+	modsLegacy |= (m_osu->getModAuto() ? OsuReplay::Mods::Autoplay : 0);
+	modsLegacy |= (m_osu->getModAutopilot() ? OsuReplay::Mods::Relax2 : 0);
+	modsLegacy |= (m_osu->getModRelax() ? OsuReplay::Mods::Relax : 0);
+	modsLegacy |= (m_osu->getModSpunout() ? OsuReplay::Mods::SpunOut : 0);
+	modsLegacy |= (m_osu->getModTarget() ? OsuReplay::Mods::Target : 0);
+	modsLegacy |= (m_osu->getModScorev2() ? OsuReplay::Mods::ScoreV2 : 0);
+	modsLegacy |= (m_osu->getModDT() ? OsuReplay::Mods::DoubleTime : 0);
+	modsLegacy |= (m_osu->getModNC() ? OsuReplay::Mods::Nightcore : 0);
+	modsLegacy |= (m_osu->getModNF() ? OsuReplay::Mods::NoFail : 0);
+	modsLegacy |= (m_osu->getModHT() ? OsuReplay::Mods::HalfTime : 0);
+	modsLegacy |= (m_osu->getModDC() ? OsuReplay::Mods::HalfTime : 0);
+	modsLegacy |= (m_osu->getModHD() ? OsuReplay::Mods::Hidden : 0);
+	modsLegacy |= (m_osu->getModHR() ? OsuReplay::Mods::HardRock : 0);
+	modsLegacy |= (m_osu->getModEZ() ? OsuReplay::Mods::Easy : 0);
+	modsLegacy |= (m_osu->getModSD() ? OsuReplay::Mods::SuddenDeath : 0);
+	modsLegacy |= (m_osu->getModSS() ? OsuReplay::Mods::Perfect : 0);
+	modsLegacy |= (m_osu->getModNM() ? OsuReplay::Mods::Nightmare : 0);
+	modsLegacy |= (m_osu->getModTD() ? OsuReplay::Mods::TouchDevice : 0);
+
+	return modsLegacy;
 }
 
 UString OsuScore::getModsString()

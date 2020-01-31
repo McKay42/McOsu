@@ -100,6 +100,7 @@ public:
 
 	int getKeyCount(int key);
 
+	int getModsLegacy();
 	UString getModsString();
 
 private:
