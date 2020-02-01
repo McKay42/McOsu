@@ -70,13 +70,6 @@ private:
 class OsuDifficultyCalculator
 {
 public:
-	enum class SCORE_VERSION
-	{
-		SCORE_V1,
-		SCORE_V2
-	};
-
-public:
 	// stars, fully static
 	static double calculateStarDiffForHitObjects(std::vector<std::shared_ptr<OsuDifficultyHitObject>> &sortedHitObjects, float CS, double *aim, double *speed, int upToObjectIndex = -1);
 
@@ -84,15 +77,40 @@ public:
 	static double calculatePPv2(Osu *osu, OsuBeatmap *beatmap, double aim, double speed, int numHitObjects, int numCircles, int maxPossibleCombo, int combo = -1, int misses = 0, int c300 = -1, int c100 = 0, int c50 = 0);
 
 	// pp, fully static
-	static double calculatePPv2(int modsLegacy, double timescale, double ar, double od, double aim, double speed, int numHitObjects, int numCircles, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50, SCORE_VERSION scoreVersion);
+	static double calculatePPv2(int modsLegacy, double timescale, double ar, double od, double aim, double speed, int numHitObjects, int numCircles, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50);
 
 	// helper functions
-	static double calculateAcc(int c300, int c100, int c50, int misses);
-	static double calculateBaseStrain(double strain);
 	static double calculateTotalStarsFromSkills(double aim, double speed);
 
 private:
 	static ConVar *m_osu_slider_scorev2_ref;
+
+	struct Attributes
+	{
+		double AimStrain;
+		double SpeedStrain;
+		double ApproachRate;
+		double OverallDifficulty;
+	};
+
+	struct ScoreData
+	{
+		double accuracy;
+		int modsLegacy;
+		int countGreat;
+		int countGood;
+		int countMeh;
+		int countMiss;
+		int totalHits;
+		int totalSuccessfulHits;
+		int beatmapMaxCombo;
+		int scoreMaxCombo;
+		int amountHitObjectsWithAccuracy;
+	};
+
+	static double computeAimValue(const ScoreData &score, const Attributes &attributes);
+	static double computeSpeedValue(const ScoreData &score, const Attributes &attributes);
+	static double computeAccuracyValue(const ScoreData &score, const Attributes &attributes);
 };
 
 #endif
