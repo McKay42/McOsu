@@ -120,52 +120,48 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<std::
 		if (sortedHitObjects[0]->type != OsuDifficultyHitObject::TYPE::SLIDER) return 0.0;
 	}
 
+	// global independent variables/constants
 	const float circleRadiusInOsuPixels = OsuGameRules::getRawHitCircleDiameter(CS) / 2.0f;
 
 	// ****************************************************************************************************************************************** //
 
-	// based on tom94's osu!tp aimod
 
-	// how much strains decay per interval (if the previous interval's peak
-	// strains after applying decay are still higher than the current one's,
-	// they will be used as the peak strains).
-	static const double decay_base[] = {0.3, 0.15};
 
-	// almost the normalized circle diameter (104px)
-	static const double almost_diameter = 90;
+	// see setDistances() @ https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Preprocessing/OsuDifficultyHitObject.cs
 
-	// arbitrary tresholds to determine when a stream is spaced enough that is
-	// becomes hard to alternate.
-	static const double stream_spacing = 110;
-	static const double single_spacing = 125;
+	static const float normalized_radius = 52.0f;		// normalization factor
+	static const float circlesize_buff_treshold = 30;	// non-normalized diameter where the circlesize buff starts
 
-	// used to keep speed and aim balanced between eachother
-	static const double weight_scaling[] = {1400, 26.25};
+	// multiplier to normalize positions so that we can calc as if everything was the same circlesize.
+	// also handle high CS bonus
 
-	// non-normalized diameter where the circlesize buff starts
-	static const float circlesize_buff_treshold = 30;
-
-	// multiplier to normalize positions so that we can calc as if everything was the same circlesize. also handle high cs bonus.
-	float radius_scaling_factor = 52.0f / circleRadiusInOsuPixels;
+	float radius_scaling_factor = normalized_radius / circleRadiusInOsuPixels;
 	if (circleRadiusInOsuPixels < circlesize_buff_treshold)
-		radius_scaling_factor *= 1.0f + std::min((circlesize_buff_treshold - circleRadiusInOsuPixels), 5.0f) / 50.f;
+	{
+		const float smallCircleBonus = std::min(circlesize_buff_treshold - circleRadiusInOsuPixels, 5.0f) / 50.0f;
+		radius_scaling_factor *= 1.0f + smallCircleBonus;
+	}
 
-	class cdiff
+
+
+	static const int NUM_SKILLS = 2;
+
+	class Skills
 	{
 	public:
-		enum diff
+		enum class Skill
 		{
-			speed = 0,
-			aim = 1
+			SPEED,
+			AIM
 		};
 
-		static unsigned int diffToIndex(diff d)
+		static int skillToIndex(const Skill skill)
 		{
-			switch (d)
+			switch (skill)
 			{
-			case speed:
+			case Skill::SPEED:
 				return 0;
-			case aim:
+			case Skill::AIM:
 				return 1;
 			}
 
@@ -173,13 +169,22 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<std::
 		}
 	};
 
-	// diffcalc hit object
+
+
+	// see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/Speed.cs
+	// see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/Aim.cs
+
+	static const double decay_base[NUM_SKILLS] = {0.3, 0.15};			// how much strains decay per interval (if the previous interval's peak strains after applying decay are still higher than the current one's, they will be used as the peak strains).
+	static const double weight_scaling[NUM_SKILLS] = {1400.0, 26.25};	// used to keep speed and aim balanced between eachother
+
+
+
 	class DiffObject
 	{
 	public:
 		std::shared_ptr<OsuDifficultyHitObject> ho;
 
-		double strains[2];
+		double strains[NUM_SKILLS];
 
 		Vector2 norm_start;		// start position normalized on radius
 
@@ -199,8 +204,10 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<std::
 			ho = base_object;
 
 			// strains start at 1
-			strains[0] = 1.0;
-			strains[1] = 1.0;
+			for (int i=0; i<NUM_SKILLS; i++)
+			{
+				strains[i] = 1.0;
+			}
 
 			norm_start = ho->pos * radius_scaling_factor;
 
@@ -216,31 +223,30 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<std::
 			lazyTravelDist = 0.0;
 		}
 
-		void calculate_strains(DiffObject &prev)
+		void calculate_strains(const DiffObject &prev)
 		{
-			calculate_strain(prev, cdiff::diff::speed);
-			calculate_strain(prev, cdiff::diff::aim);
+			calculate_strain(prev, Skills::Skill::SPEED);
+			calculate_strain(prev, Skills::Skill::AIM);
 		}
 
-		void calculate_strain(DiffObject &prev, cdiff::diff dtype)
+		void calculate_strain(const DiffObject &prev, const Skills::Skill dtype)
 		{
-			double res = 0;
+			double currentStrainOfDiffObject = 0;
 
 			const long time_elapsed = ho->time - prev.ho->time;
-			const double decay = std::pow(decay_base[cdiff::diffToIndex(dtype)], (double)time_elapsed / 1000.0);
-			const double scaling = weight_scaling[cdiff::diffToIndex(dtype)];
 
 			// update our delta time
-			delta_time = time_elapsed;
+			delta_time = (float)time_elapsed;
 
-			switch (ho->type) {
+			switch (ho->type)
+			{
 				case OsuDifficultyHitObject::TYPE::SLIDER:
 				case OsuDifficultyHitObject::TYPE::CIRCLE:
 
 					if (!osu_stars_xexxar_angles_sliders.getBool())
-						res = spacing_weight1((norm_start - prev.norm_start).length(), dtype);
+						currentStrainOfDiffObject = spacing_weight1((norm_start - prev.norm_start).length(), dtype);
 					else
-						res = spacing_weight2(dtype, jumpDistance, travelDistance, delta_time, prev.jumpDistance, prev.travelDistance, prev.delta_time, angle);
+						currentStrainOfDiffObject = spacing_weight2(dtype, jumpDistance, travelDistance, delta_time, prev.jumpDistance, prev.travelDistance, prev.delta_time, angle);
 
 					break;
 
@@ -252,115 +258,161 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<std::
 					return;
 			}
 
-			res *= scaling;
-
 			if (!osu_stars_xexxar_angles_sliders.getBool())
-				res /= (double)std::max(time_elapsed, (long)50); // this has been removed, see https://github.com/Francesco149/oppai-ng/commit/5a1787ec0bd91b2bf686964b154228c68a99bf73
+				currentStrainOfDiffObject /= (double)std::max(time_elapsed, (long)50); // this has been removed, see https://github.com/Francesco149/oppai-ng/commit/5a1787ec0bd91b2bf686964b154228c68a99bf73
 
-			strains[cdiff::diffToIndex(dtype)] = prev.strains[cdiff::diffToIndex(dtype)] * decay + res;
+			// see Process() @ https://github.com/ppy/osu/blob/master/osu.Game/Rulesets/Difficulty/Skills/Skill.cs
+			double currentStrain = prev.strains[Skills::skillToIndex(dtype)];
+			{
+				currentStrain *= strainDecay(dtype, (double)delta_time);
+				currentStrain += currentStrainOfDiffObject * weight_scaling[Skills::skillToIndex(dtype)];
+			}
+			strains[Skills::skillToIndex(dtype)] = currentStrain;
+		}
+
+		static double calculate_difficulty(const Skills::Skill type, const std::vector<DiffObject> &dobjects)
+		{
+			// see https://github.com/ppy/osu/blob/master/osu.Game/Rulesets/Difficulty/Skills/Skill.cs
+
+			static const double strain_step = 400.0;	// the length of each strain section
+			static const double decay_weight = 0.9;		// max strains are weighted from highest to lowest, and this is how much the weight decays.
+
+			if (dobjects.size() < 1) return 0.0;
+
+			double interval_end = std::ceil((double)dobjects[0].ho->time / strain_step) * strain_step;
+			double max_strain = 0.0;
+
+			std::vector<double> highestStrains;
+			for (size_t i=0; i<dobjects.size(); i++)
+			{
+				const DiffObject &cur = dobjects[i];
+				const DiffObject &prev = dobjects[i > 0 ? i - 1 : i];
+
+				// make previous peak strain decay until the current object
+				while (cur.ho->time > interval_end)
+				{
+					highestStrains.push_back(max_strain);
+
+					if (i < 1) // !prev
+						max_strain = 0.0;
+					else
+						max_strain = prev.strains[Skills::skillToIndex(type)] * strainDecay(type, (interval_end - (double)prev.ho->time));
+
+					interval_end += strain_step;
+				}
+
+				// calculate max strain for this interval
+				max_strain = std::max(max_strain, cur.strains[Skills::skillToIndex(type)]);
+			}
+
+			// the peak strain will not be saved for the last section in the above loop
+			highestStrains.push_back(max_strain);
+
+			// see DifficultyValue() @ https://github.com/ppy/osu/blob/master/osu.Game/Rulesets/Difficulty/Skills/Skill.cs
+			double difficulty = 0.0;
+			double weight = 1.0;
+
+			// sort strains from greatest to lowest
+			std::sort(highestStrains.begin(), highestStrains.end(), std::greater<double>());
+
+			// weigh the top strains
+			for (size_t i=0; i<highestStrains.size(); i++)
+			{
+				difficulty += highestStrains[i] * weight;
+				weight *= decay_weight;
+			}
+
+			return difficulty;
 		}
 
 		// old implementation (ppv2.0)
-		double spacing_weight1(double distance, cdiff::diff diff_type)
+		static double spacing_weight1(const double distance, const Skills::Skill diff_type)
 		{
+			// arbitrary tresholds to determine when a stream is spaced enough that is becomes hard to alternate.
+			static const double single_spacing_threshold = 125.0;
+			static const double stream_spacing = 110.0;
+
+			// almost the normalized circle diameter (104px)
+			static const double almost_diameter = 90.0;
+
 			switch (diff_type)
 			{
-				case cdiff::diff::speed:
-					if (distance > single_spacing)
-					{
+				case Skills::Skill::SPEED:
+					if (distance > single_spacing_threshold)
 						return 2.5;
-					}
 					else if (distance > stream_spacing)
-					{
-						return 1.6 + 0.9 *
-							(distance - stream_spacing) /
-							(single_spacing - stream_spacing);
-					}
+						return 1.6 + 0.9 * (distance - stream_spacing) / (single_spacing_threshold - stream_spacing);
 					else if (distance > almost_diameter)
-					{
-						return 1.2 + 0.4 * (distance - almost_diameter)
-							/ (stream_spacing - almost_diameter);
-					}
+						return 1.2 + 0.4 * (distance - almost_diameter) / (stream_spacing - almost_diameter);
 					else if (distance > almost_diameter / 2.0)
-					{
-						return 0.95 + 0.25 *
-							(distance - almost_diameter / 2.0) /
-							(almost_diameter / 2.0);
-					}
-					return 0.95;
+						return 0.95 + 0.25 * (distance - almost_diameter / 2.0) / (almost_diameter / 2.0);
+					else
+						return 0.95;
 
-				case cdiff::diff::aim:
+				case Skills::Skill::AIM:
 					return std::pow(distance, 0.99);
-
-				default:
-					return 0.0;
 			}
+
+			return 0.0;
 		}
 
 		// new implementation, Xexxar, (ppv2.1), see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/
-		static double spacing_weight2(cdiff::diff diff_type, float jump_distance, float travel_distance, float delta_time, float prev_jump_distance, float prev_travel_distance, float prev_delta_time, float angle)
+		static double spacing_weight2(const Skills::Skill diff_type, float jump_distance, float travel_distance, float delta_time, float prev_jump_distance, float prev_travel_distance, float prev_delta_time, float angle)
 		{
-			const double pi_over_4 = PI / 4.0;
-			const double pi_over_2 = PI / 2.0;
+			static const double single_spacing_threshold = 125.0;
 
-			const double max_speed_bonus = 45.0; /* ~330BPM 1/4 streams */
-			const double min_speed_bonus = 75.0; /* ~200BPM 1/4 streams */
-			const double speed_balancing_factor = 40.0;
+			static const double pi_over_4 = PI / 4.0;
+			static const double pi_over_2 = PI / 2.0;
 
-			const double angle_bonus_scale = 90.0;
-			const double aim_timing_threshold = 107.0;
-			const double speed_angle_bonus_begin = (5.0 * PI / 6.0);
-			const double aim_angle_bonus_begin = (PI / 3.0);
+			static const double max_speed_bonus = 45.0; /* ~330BPM 1/4 streams */
+			static const double min_speed_bonus = 75.0; /* ~200BPM 1/4 streams */
+			static const double speed_balancing_factor = 40.0;
 
+			static const double angle_bonus_scale = 90.0;
+			static const double aim_timing_threshold = 107.0;
+			static const double speed_angle_bonus_begin = (5.0 * PI / 6.0);
+			static const double aim_angle_bonus_begin = (PI / 3.0);
+
+			// "Every strain interval is hard capped at the equivalent of 375 BPM streaming speed as a safety measure"
 			const double strain_time = std::max(delta_time, 50.0f);
+			const double prev_strain_time = std::max(prev_delta_time, 50.0f);
 
 			double angle_bonus = 1.0;
 
 			switch (diff_type)
 			{
-				case cdiff::diff::speed:
+				case Skills::Skill::SPEED:
 					{
-						double speed_bonus = 1.0;
+						// see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/Speed.cs
 
-						const double distance = std::min((float)single_spacing, travel_distance + jump_distance);
+						const double distance = std::min((float)single_spacing_threshold, travel_distance + jump_distance);
 						delta_time = std::max(delta_time, (float)max_speed_bonus);
 
+						double speed_bonus = 1.0;
 						if (delta_time < min_speed_bonus)
 							speed_bonus = 1.0 + std::pow((min_speed_bonus - delta_time) / speed_balancing_factor, 2.0);
 
 						if (!std::isnan(angle) && angle < speed_angle_bonus_begin)
 						{
-							const double s = std::sin(1.5 * (speed_angle_bonus_begin - angle));
-
-							angle_bonus = 1.0 + std::pow((double)s, 2.0) / 3.57;
+							angle_bonus = 1.0 + std::pow(std::sin(1.5 * (speed_angle_bonus_begin - angle)), 2.0) / 3.57;
 
 							if (angle < pi_over_2)
 							{
 								angle_bonus = 1.28;
 								if (distance < angle_bonus_scale && angle < pi_over_4)
-								{
-									angle_bonus += (1.0 - angle_bonus)
-											* std::min((angle_bonus_scale - distance) / 10.0, 1.0);
-								}
+									angle_bonus += (1.0 - angle_bonus) * std::min((angle_bonus_scale - distance) / 10.0, 1.0);
 								else if (distance < angle_bonus_scale)
-								{
-									angle_bonus += (1.0 - angle_bonus)
-											* std::min((angle_bonus_scale - distance) / 10.0, 1.0)
-											* std::sin((pi_over_2 - angle) / pi_over_4);
-								}
+									angle_bonus += (1.0 - angle_bonus) * std::min((angle_bonus_scale - distance) / 10.0, 1.0) * std::sin((pi_over_2 - angle) / pi_over_4);
 							}
 						}
 
-						return (1.0 + (speed_bonus - 1.0) * 0.75)
-								* angle_bonus
-								* (0.95 + speed_bonus * std::pow(distance / single_spacing, 3.5))
-								/ strain_time;
+						return (1.0 + (speed_bonus - 1.0) * 0.75) * angle_bonus * (0.95 + speed_bonus * std::pow(distance / single_spacing_threshold, 3.5)) / strain_time;
 					}
 					break;
 
-				case cdiff::diff::aim:
+				case Skills::Skill::AIM:
 					{
-						const double prev_strain_time = std::max(prev_delta_time, 50.0f);
+						// see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/Aim.cs
 
 						double result = 0.0;
 
@@ -372,11 +424,11 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<std::
 									* std::max(jump_distance - angle_bonus_scale, 0.0)
 							);
 
-							result = 1.5 * std::pow((double)std::max(0.0, angle_bonus), 0.99) / std::max(aim_timing_threshold, prev_strain_time);
+							result = 1.5 * applyDiminishingExp((double)std::max(0.0, angle_bonus)) / std::max(aim_timing_threshold, prev_strain_time);
 						}
 
-						const double jumpDistanceExp = std::pow((double)jump_distance, 0.99);
-						const double travelDistanceExp = std::pow((double)travel_distance, 0.99);
+						const double jumpDistanceExp = applyDiminishingExp((double)jump_distance);
+						const double travelDistanceExp = applyDiminishingExp((double)travel_distance);
 
 						const double sqrtTravelMulJump = std::sqrt(travelDistanceExp * jumpDistanceExp);
 
@@ -390,81 +442,23 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<std::
 
 			return 0.0;
 		}
-	};
 
-	// ****************************************************************************************************************************************** //
-
-	static const double star_scaling_factor = 0.0675;
-
-	// strains are calculated by analyzing the map in chunks and then taking the peak strains in each chunk.
-	// this is the length of a strain interval in milliseconds.
-	static const double strain_step = 400.0;
-
-	// max strains are weighted from highest to lowest, and this is how much the weight decays.
-	static const double decay_weight = 0.9;
-
-	class DiffCalc
-	{
-	public:
-		static double calculate_difficulty(cdiff::diff type, std::vector<DiffObject> &dobjects)
+		inline static double applyDiminishingExp(double val)
 		{
-			if (dobjects.size() < 1) return 0.0;
+			return std::pow(val, 0.99);
+		}
 
-			std::vector<double> highestStrains;
-
-			// see Calculate() @ https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/OsuDifficultyCalculator.cs
-			double interval_end = std::ceil((double)dobjects[0].ho->time / strain_step) * strain_step;
-			double max_strain = 0.0;
-
-			for (size_t i=0; i<dobjects.size(); i++)
-			{
-				DiffObject &cur = dobjects[i];
-				DiffObject &prev = dobjects[i > 0 ? i - 1 : i];
-
-				// make previous peak strain decay until the current object
-				while (cur.ho->time > interval_end)
-				{
-					highestStrains.push_back(max_strain);
-
-					if (i < 1) // !prev
-						max_strain = 0.0;
-					else
-					{
-						const double decay = std::pow(decay_base[cdiff::diffToIndex(type)], (interval_end - (double)prev.ho->time) / 1000.0);
-						max_strain = prev.strains[cdiff::diffToIndex(type)] * decay;
-					}
-
-					interval_end += strain_step;
-				}
-
-				// calculate max strain for this interval
-				max_strain = std::max(max_strain, cur.strains[cdiff::diffToIndex(type)]);
-			}
-
-			// the peak strain will not be saved for the last section in the above loop
-			highestStrains.push_back(max_strain);
-
-			// see difficultyValue() @ https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/Skill.cs
-			double difficulty = 0.0;
-			double weight = 1.0;
-
-			// sort strains from greatest to lowest
-			std::sort(highestStrains.begin(), highestStrains.end(), std::greater<double>());
-
-			// weigh the top strains
-			for (size_t i=0; i<highestStrains.size(); i++)
-			{
-				difficulty += weight * highestStrains[i];
-				weight *= decay_weight;
-			}
-
-			return difficulty;
+		inline static double strainDecay(Skills::Skill type, double ms)
+		{
+			return std::pow(decay_base[Skills::skillToIndex(type)], ms / 1000.0);
 		}
 	};
 
 	// ****************************************************************************************************************************************** //
 
-	class DistanceCalc // see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Preprocessing/OsuDifficultyHitObject.cs
+	// see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Preprocessing/OsuDifficultyHitObject.cs
+
+	class DistanceCalc
 	{
 	public:
 		static void computeSliderCursorPosition(DiffObject &slider, float circleRadius)
@@ -474,8 +468,8 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<std::
 			// (slider.lazyEndPos is already initialized to ho->pos in DiffObject constructor)
 			const float approxFollowCircleRadius = (float)(circleRadius * 3.0f); // NOTE: this should actually be * 2.4, i.e. osu_slider_followcircle_size_multiplier
 
-			const int numScoringTimes = slider.ho->scoringTimes.size();
-			for (int i=0; i<numScoringTimes; i++)
+			const size_t numScoringTimes = slider.ho->scoringTimes.size();
+			for (size_t i=0; i<numScoringTimes; i++)
 			{
                 float progress = (float)(clamp<long>(slider.ho->scoringTimes[i] - slider.ho->time, 0, slider.ho->getDuration())) / slider.ho->spanDuration;
                 if (std::fmod(progress, 2.0f) >= 1.0f)
@@ -529,6 +523,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<std::
 		for (size_t i=0; i<numDiffObjects; i++)
 		{
 			// see setDistances() @ https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Preprocessing/OsuDifficultyHitObject.cs
+
 			if (i > 0)
 			{
 				// calculate travel/jump distances
@@ -566,15 +561,17 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<std::
 		}
 	}
 
-	// calculate strains
-	for (size_t i=1; i<numDiffObjects; i++) // start at 1
+	// calculate strains/skills
+	for (size_t i=1; i<numDiffObjects; i++) // NOTE: start at 1
 	{
 		diffObjects[i].calculate_strains(diffObjects[i - 1]);
 	}
 
-	// calculate diff
-	*aim = DiffCalc::calculate_difficulty(cdiff::diff::aim, diffObjects);
-	*speed = DiffCalc::calculate_difficulty(cdiff::diff::speed, diffObjects);
+	// calculate final difficulty (weigh strains)
+	*aim = DiffObject::calculate_difficulty(Skills::Skill::AIM, diffObjects);
+	*speed = DiffObject::calculate_difficulty(Skills::Skill::SPEED, diffObjects);
+
+	static const double star_scaling_factor = 0.0675;
 
 	*aim = std::sqrt(*aim) * star_scaling_factor;
 	*speed = std::sqrt(*speed) * star_scaling_factor;
