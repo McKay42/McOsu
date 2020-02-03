@@ -42,7 +42,7 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha313x.changes.push_back("- Added ConVars (2): osu_hud_hiterrorbar_entry_alpha, osu_hud_hiterrorbar_entry_300/100/50/miss_r/g/b");
 	alpha313x.changes.push_back("- Added ConVars (3): osu_hud_hiterrorbar_centerline_r/g/b, osu_hud_hiterrorbar_max_entries");
 	alpha313x.changes.push_back("- Added ConVars (4): osu_hud_hiterrorbar_entry_hit/miss_fade_time, osu_hud_hiterrorbar_offset_percent");
-	alpha313x.changes.push_back("- Added ConVars (5): osu_draw_hiterrorbar_bottom/top/left/right");
+	alpha313x.changes.push_back("- Added ConVars (5): osu_draw_hiterrorbar_bottom/top/left/right, osu_hud_hiterrorbar_offset_bottom/top/left/right_percent");
 	alpha313x.changes.push_back("- FPoSu: Rotated/Flipped/Mirrored background cube UV coordinates to wrap horizontally as expected");
 	alpha313x.changes.push_back("- Relaxed notelock (1) to unlock 2B circles at the exact end of sliders (previously unlocked after slider end)");
 	alpha313x.changes.push_back("- Relaxed notelock (2) to allow mashing both buttons within the same frame (previously did not update lock)");

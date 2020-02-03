@@ -99,6 +99,10 @@ ConVar osu_hud_hiterrorbar_width_percent_with_misswindow("osu_hud_hiterrorbar_wi
 ConVar osu_hud_hiterrorbar_width_percent("osu_hud_hiterrorbar_width_percent", 0.15f);
 ConVar osu_hud_hiterrorbar_height_percent("osu_hud_hiterrorbar_height_percent", 0.007f);
 ConVar osu_hud_hiterrorbar_offset_percent("osu_hud_hiterrorbar_offset_percent", 0.0f);
+ConVar osu_hud_hiterrorbar_offset_bottom_percent("osu_hud_hiterrorbar_offset_bottom_percent", 0.0f);
+ConVar osu_hud_hiterrorbar_offset_top_percent("osu_hud_hiterrorbar_offset_top_percent", 0.0f);
+ConVar osu_hud_hiterrorbar_offset_left_percent("osu_hud_hiterrorbar_offset_left_percent", 0.0f);
+ConVar osu_hud_hiterrorbar_offset_right_percent("osu_hud_hiterrorbar_offset_right_percent", 0.0f);
 ConVar osu_hud_hiterrorbar_bar_width_scale("osu_hud_hiterrorbar_bar_width_scale", 0.6f);
 ConVar osu_hud_hiterrorbar_bar_height_scale("osu_hud_hiterrorbar_bar_height_scale", 3.4f);
 ConVar osu_hud_hiterrorbar_max_entries("osu_hud_hiterrorbar_max_entries", 32, "maximum number of entries/lines");
@@ -1861,7 +1865,7 @@ void OsuHUD::drawHitErrorBar(Graphics *g, float hitWindow300, float hitWindow100
 	{
 		g->pushTransform();
 		{
-			g->translate(center.x, center.y);
+			g->translate(center.x, center.y - (m_osu->getScreenHeight() * osu_hud_hiterrorbar_offset_bottom_percent.getFloat()));
 			drawHitErrorBarInt(g, hitWindow300, hitWindow100, hitWindow50, hitWindowMiss);
 		}
 		g->popTransform();
@@ -1872,7 +1876,7 @@ void OsuHUD::drawHitErrorBar(Graphics *g, float hitWindow300, float hitWindow100
 		g->pushTransform();
 		{
 			g->scale(1, -1);
-			g->translate(center.x, m_osu->getScreenHeight() - center.y);
+			g->translate(center.x, m_osu->getScreenHeight() - center.y + (m_osu->getScreenHeight() * osu_hud_hiterrorbar_offset_top_percent.getFloat()));
 			drawHitErrorBarInt(g, hitWindow300, hitWindow100, hitWindow50, hitWindowMiss);
 		}
 		g->popTransform();
@@ -1883,7 +1887,7 @@ void OsuHUD::drawHitErrorBar(Graphics *g, float hitWindow300, float hitWindow100
 		g->pushTransform();
 		{
 			g->rotate(90);
-			g->translate(m_osu->getScreenHeight() - center.y, m_osu->getScreenHeight()/2.0f);
+			g->translate(m_osu->getScreenHeight() - center.y + (m_osu->getScreenWidth() * osu_hud_hiterrorbar_offset_left_percent.getFloat()), m_osu->getScreenHeight()/2.0f);
 			drawHitErrorBarInt(g, hitWindow300, hitWindow100, hitWindow50, hitWindowMiss);
 		}
 		g->popTransform();
@@ -1895,7 +1899,7 @@ void OsuHUD::drawHitErrorBar(Graphics *g, float hitWindow300, float hitWindow100
 		{
 			g->scale(-1, 1);
 			g->rotate(-90);
-			g->translate(m_osu->getScreenWidth() - (m_osu->getScreenHeight() - center.y), m_osu->getScreenHeight()/2.0f);
+			g->translate(m_osu->getScreenWidth() - (m_osu->getScreenHeight() - center.y) - (m_osu->getScreenWidth() * osu_hud_hiterrorbar_offset_right_percent.getFloat()), m_osu->getScreenHeight()/2.0f);
 			drawHitErrorBarInt(g, hitWindow300, hitWindow100, hitWindow50, hitWindowMiss);
 		}
 		g->popTransform();
