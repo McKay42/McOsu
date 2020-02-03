@@ -35,7 +35,7 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	std::vector<CHANGELOG> changelogs;
 
 	CHANGELOG alpha313x;
-	alpha313x.title = UString::format("30.13 (3) (Build Date: %s, %s)", __DATE__, __TIME__);
+	alpha313x.title = UString::format("30.13 (4) (Build Date: %s, %s)", __DATE__, __TIME__);
 	alpha313x.changes.push_back("- Added \"Toggle Mod Selection Screen\" keybind (Options > Input > Keyboard > Keys - Song Select)");
 	alpha313x.changes.push_back("- Added \"Random Beatmap\" keybind (Options > Input > Keyboard > Keys - Song Select)");
 	alpha313x.changes.push_back("- Added ConVars (1): osu_hud_hiterrorbar_alpha, osu_hud_hiterrorbar_bar_alpha, osu_hud_hiterrorbar_centerline_alpha");
@@ -45,6 +45,7 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha313x.changes.push_back("- Added ConVars (5): osu_draw_hiterrorbar_bottom/top/left/right");
 	alpha313x.changes.push_back("- Moved hiterrorbar behind hitobjects");
 	alpha313x.changes.push_back("- Updated SHIFT + TAB and SHIFT scoreboard toggle behavior");
+	alpha313x.changes.push_back("- FPoSu: Rotated/Flipped/Mirrored background cube UV coordinates to wrap horizontally as expected");
 	alpha313x.changes.push_back("- Fixed kinetic tablet scrolling at very high framerates (> ~600 fps)");
 	alpha313x.changes.push_back("- Fixed ranking screen layout partially for weird skins (long grade overflow)");
 	alpha313x.changes.push_back("- Fixed enabling \"Ignore Beatmap Sample Volume\" not immediately updating sample volume");

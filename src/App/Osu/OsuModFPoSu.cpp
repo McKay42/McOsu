@@ -358,39 +358,56 @@ void OsuModFPoSu::makeBackgroundCube()
 {
 	m_vaoCube->clear();
 
-	m_vaoCube->addVertex(-2.5f, -2.5f, -2.5f);  m_vaoCube->addTexcoord(0.0f, 0.0f);
-	m_vaoCube->addVertex( 2.5f, -2.5f, -2.5f);  m_vaoCube->addTexcoord(1.0f, 0.0f);
-	m_vaoCube->addVertex( 2.5f,  2.5f, -2.5f);  m_vaoCube->addTexcoord(1.0f, 1.0f);
-	m_vaoCube->addVertex( 2.5f,  2.5f, -2.5f);  m_vaoCube->addTexcoord(1.0f, 1.0f);
-	m_vaoCube->addVertex(-2.5f,  2.5f, -2.5f);  m_vaoCube->addTexcoord(0.0f, 1.0f);
-	m_vaoCube->addVertex(-2.5f, -2.5f, -2.5f);  m_vaoCube->addTexcoord(0.0f, 0.0f);
-	m_vaoCube->addVertex(-2.5f, -2.5f,  2.5f);  m_vaoCube->addTexcoord(0.0f, 0.0f);
-	m_vaoCube->addVertex( 2.5f, -2.5f,  2.5f);  m_vaoCube->addTexcoord(1.0f, 0.0f);
-	m_vaoCube->addVertex( 2.5f,  2.5f,  2.5f);  m_vaoCube->addTexcoord(1.0f, 1.0f);
-	m_vaoCube->addVertex( 2.5f,  2.5f,  2.5f);  m_vaoCube->addTexcoord(1.0f, 1.0f);
-	m_vaoCube->addVertex(-2.5f,  2.5f,  2.5f);  m_vaoCube->addTexcoord(0.0f, 1.0f);
-	m_vaoCube->addVertex(-2.5f, -2.5f,  2.5f);  m_vaoCube->addTexcoord(0.0f, 0.0f);
-	m_vaoCube->addVertex(-2.5f,  2.5f,  2.5f);  m_vaoCube->addTexcoord(1.0f, 0.0f);
-	m_vaoCube->addVertex(-2.5f,  2.5f, -2.5f);  m_vaoCube->addTexcoord(1.0f, 1.0f);
-	m_vaoCube->addVertex(-2.5f, -2.5f, -2.5f);  m_vaoCube->addTexcoord(0.0f, 1.0f);
-	m_vaoCube->addVertex(-2.5f, -2.5f, -2.5f);  m_vaoCube->addTexcoord(0.0f, 1.0f);
-	m_vaoCube->addVertex(-2.5f, -2.5f,  2.5f);  m_vaoCube->addTexcoord(0.0f, 0.0f);
-	m_vaoCube->addVertex(-2.5f,  2.5f,  2.5f);  m_vaoCube->addTexcoord(1.0f, 0.0f);
-	m_vaoCube->addVertex( 2.5f,  2.5f,  2.5f);  m_vaoCube->addTexcoord(1.0f, 0.0f);
-	m_vaoCube->addVertex( 2.5f,  2.5f, -2.5f);  m_vaoCube->addTexcoord(1.0f, 1.0f);
-	m_vaoCube->addVertex( 2.5f, -2.5f, -2.5f);  m_vaoCube->addTexcoord(0.0f, 1.0f);
-	m_vaoCube->addVertex( 2.5f, -2.5f, -2.5f);  m_vaoCube->addTexcoord(0.0f, 1.0f);
-	m_vaoCube->addVertex( 2.5f, -2.5f,  2.5f);  m_vaoCube->addTexcoord(0.0f, 0.0f);
-	m_vaoCube->addVertex( 2.5f,  2.5f,  2.5f);  m_vaoCube->addTexcoord(1.0f, 0.0f);
+	// front
 	m_vaoCube->addVertex(-2.5f, -2.5f, -2.5f);  m_vaoCube->addTexcoord(0.0f, 1.0f);
 	m_vaoCube->addVertex( 2.5f, -2.5f, -2.5f);  m_vaoCube->addTexcoord(1.0f, 1.0f);
-	m_vaoCube->addVertex( 2.5f, -2.5f,  2.5f);  m_vaoCube->addTexcoord(1.0f, 0.0f);
-	m_vaoCube->addVertex( 2.5f, -2.5f,  2.5f);  m_vaoCube->addTexcoord(1.0f, 0.0f);
-	m_vaoCube->addVertex(-2.5f, -2.5f,  2.5f);  m_vaoCube->addTexcoord(0.0f, 0.0f);
+	m_vaoCube->addVertex( 2.5f,  2.5f, -2.5f);  m_vaoCube->addTexcoord(1.0f, 0.0f);
+
+	m_vaoCube->addVertex( 2.5f,  2.5f, -2.5f);  m_vaoCube->addTexcoord(1.0f, 0.0f);
+	m_vaoCube->addVertex(-2.5f,  2.5f, -2.5f);  m_vaoCube->addTexcoord(0.0f, 0.0f);
 	m_vaoCube->addVertex(-2.5f, -2.5f, -2.5f);  m_vaoCube->addTexcoord(0.0f, 1.0f);
+
+	// back
+	m_vaoCube->addVertex(-2.5f, -2.5f,  2.5f);  m_vaoCube->addTexcoord(1.0f, 1.0f);
+	m_vaoCube->addVertex( 2.5f, -2.5f,  2.5f);  m_vaoCube->addTexcoord(0.0f, 1.0f);
+	m_vaoCube->addVertex( 2.5f,  2.5f,  2.5f);  m_vaoCube->addTexcoord(0.0f, 0.0f);
+
+	m_vaoCube->addVertex( 2.5f,  2.5f,  2.5f);  m_vaoCube->addTexcoord(0.0f, 0.0f);
+	m_vaoCube->addVertex(-2.5f,  2.5f,  2.5f);  m_vaoCube->addTexcoord(1.0f, 0.0f);
+	m_vaoCube->addVertex(-2.5f, -2.5f,  2.5f);  m_vaoCube->addTexcoord(1.0f, 1.0f);
+
+	// left
+	m_vaoCube->addVertex(-2.5f,  2.5f,  2.5f);  m_vaoCube->addTexcoord(0.0f, 0.0f);
+	m_vaoCube->addVertex(-2.5f,  2.5f, -2.5f);  m_vaoCube->addTexcoord(1.0f, 0.0f);
+	m_vaoCube->addVertex(-2.5f, -2.5f, -2.5f);  m_vaoCube->addTexcoord(1.0f, 1.0f);
+
+	m_vaoCube->addVertex(-2.5f, -2.5f, -2.5f);  m_vaoCube->addTexcoord(1.0f, 1.0f);
+	m_vaoCube->addVertex(-2.5f, -2.5f,  2.5f);  m_vaoCube->addTexcoord(0.0f, 1.0f);
+	m_vaoCube->addVertex(-2.5f,  2.5f,  2.5f);  m_vaoCube->addTexcoord(0.0f, 0.0f);
+
+	// right
+	m_vaoCube->addVertex( 2.5f,  2.5f,  2.5f);  m_vaoCube->addTexcoord(1.0f, 0.0f);
+	m_vaoCube->addVertex( 2.5f,  2.5f, -2.5f);  m_vaoCube->addTexcoord(0.0f, 0.0f);
+	m_vaoCube->addVertex( 2.5f, -2.5f, -2.5f);  m_vaoCube->addTexcoord(0.0f, 1.0f);
+
+	m_vaoCube->addVertex( 2.5f, -2.5f, -2.5f);  m_vaoCube->addTexcoord(0.0f, 1.0f);
+	m_vaoCube->addVertex( 2.5f, -2.5f,  2.5f);  m_vaoCube->addTexcoord(1.0f, 1.0f);
+	m_vaoCube->addVertex( 2.5f,  2.5f,  2.5f);  m_vaoCube->addTexcoord(1.0f, 0.0f);
+
+	// bottom
+	m_vaoCube->addVertex(-2.5f, -2.5f, -2.5f);  m_vaoCube->addTexcoord(0.0f, 0.0f);
+	m_vaoCube->addVertex( 2.5f, -2.5f, -2.5f);  m_vaoCube->addTexcoord(1.0f, 0.0f);
+	m_vaoCube->addVertex( 2.5f, -2.5f,  2.5f);  m_vaoCube->addTexcoord(1.0f, 1.0f);
+
+	m_vaoCube->addVertex( 2.5f, -2.5f,  2.5f);  m_vaoCube->addTexcoord(1.0f, 1.0f);
+	m_vaoCube->addVertex(-2.5f, -2.5f,  2.5f);  m_vaoCube->addTexcoord(0.0f, 1.0f);
+	m_vaoCube->addVertex(-2.5f, -2.5f, -2.5f);  m_vaoCube->addTexcoord(0.0f, 0.0f);
+
+	// top
 	m_vaoCube->addVertex(-2.5f,  2.5f, -2.5f);  m_vaoCube->addTexcoord(0.0f, 1.0f);
 	m_vaoCube->addVertex( 2.5f,  2.5f, -2.5f);  m_vaoCube->addTexcoord(1.0f, 1.0f);
 	m_vaoCube->addVertex( 2.5f,  2.5f,  2.5f);  m_vaoCube->addTexcoord(1.0f, 0.0f);
+
 	m_vaoCube->addVertex( 2.5f,  2.5f,  2.5f);  m_vaoCube->addTexcoord(1.0f, 0.0f);
 	m_vaoCube->addVertex(-2.5f,  2.5f,  2.5f);  m_vaoCube->addTexcoord(0.0f, 0.0f);
 	m_vaoCube->addVertex(-2.5f,	 2.5f, -2.5f);	m_vaoCube->addTexcoord(0.0f, 1.0f);
