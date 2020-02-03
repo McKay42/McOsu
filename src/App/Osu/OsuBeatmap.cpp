@@ -561,7 +561,7 @@ void OsuBeatmap::update()
 			// main hitobject update
 			m_hitobjects[i]->update(m_iCurMusicPosWithOffsets);
 
-			// note blocking / notelock
+			// note blocking / notelock (1)
 			if (osu_note_blocking.getBool())
 			{
 				m_hitobjects[i]->setBlocked(blockNextNotes);
@@ -596,7 +596,7 @@ void OsuBeatmap::update()
 						{
 							if (i + 1 < m_hitobjects.size())
 							{
-								if ((isSpinner || sliderPointer->isStartCircleFinished()) && m_hitobjects[i + 1]->getTime() < m_hitobjects[i]->getTime() + m_hitobjects[i]->getDuration())
+								if ((isSpinner || sliderPointer->isStartCircleFinished()) && m_hitobjects[i + 1]->getTime() <= m_hitobjects[i]->getTime() + m_hitobjects[i]->getDuration())
 									blockNextNotes = false;
 							}
 						}
@@ -607,11 +607,19 @@ void OsuBeatmap::update()
 				m_hitobjects[i]->setBlocked(false);
 
 			// click events (this also handles hitsounds!)
-			if (m_clicks.size() > 0)
-				m_hitobjects[i]->onClickEvent(m_clicks);
+			const bool isCurrentHitObjectFinishedBeforeClickEvents = m_hitobjects[i]->isFinished();
+			{
+				if (m_clicks.size() > 0)
+					m_hitobjects[i]->onClickEvent(m_clicks);
 
-			if (m_keyUps.size() > 0)
-				m_hitobjects[i]->onKeyUpEvent(m_keyUps);
+				if (m_keyUps.size() > 0)
+					m_hitobjects[i]->onKeyUpEvent(m_keyUps);
+			}
+			const bool isCurrentHitObjectFinishedAfterClickEvents = m_hitobjects[i]->isFinished();
+
+			// note blocking / notelock (2)
+			if (!isCurrentHitObjectFinishedBeforeClickEvents && isCurrentHitObjectFinishedAfterClickEvents)
+				blockNextNotes = false;
 
 			// ************ live pp block start ************ //
 			if (isCircle && m_hitobjects[i]->isFinished())

@@ -43,9 +43,11 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha313x.changes.push_back("- Added ConVars (3): osu_hud_hiterrorbar_centerline_r/g/b, osu_hud_hiterrorbar_max_entries");
 	alpha313x.changes.push_back("- Added ConVars (4): osu_hud_hiterrorbar_entry_hit/miss_fade_time, osu_hud_hiterrorbar_offset_percent");
 	alpha313x.changes.push_back("- Added ConVars (5): osu_draw_hiterrorbar_bottom/top/left/right");
+	alpha313x.changes.push_back("- FPoSu: Rotated/Flipped/Mirrored background cube UV coordinates to wrap horizontally as expected");
+	alpha313x.changes.push_back("- Relaxed notelock (1) to unlock 2B circles at the exact end of sliders (previously unlocked after slider end)");
+	alpha313x.changes.push_back("- Relaxed notelock (2) to allow mashing both buttons within the same frame (previously did not update lock)");
 	alpha313x.changes.push_back("- Moved hiterrorbar behind hitobjects");
 	alpha313x.changes.push_back("- Updated SHIFT + TAB and SHIFT scoreboard toggle behavior");
-	alpha313x.changes.push_back("- FPoSu: Rotated/Flipped/Mirrored background cube UV coordinates to wrap horizontally as expected");
 	alpha313x.changes.push_back("- Fixed kinetic tablet scrolling at very high framerates (> ~600 fps)");
 	alpha313x.changes.push_back("- Fixed ranking screen layout partially for weird skins (long grade overflow)");
 	alpha313x.changes.push_back("- Fixed enabling \"Ignore Beatmap Sample Volume\" not immediately updating sample volume");
