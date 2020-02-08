@@ -1238,7 +1238,10 @@ UString OsuModSelector::getOverrideSliderLabelText(OsuModSelector::OVERRIDE_SLID
 				convarValue = std::round(convarValue * 100.0f) / 100.0f;
 		}
 		else if (s.label->getName().find("HP") != -1)
-			beatmapValue = m_osu->getSelectedBeatmap()->getSelectedDifficulty()->HP;
+		{
+			beatmapValue = clamp<float>(m_osu->getSelectedBeatmap()->getSelectedDifficulty()->HP*m_osu->getDifficultyMultiplier(), 0.0f, 10.0f);
+			convarValue = m_osu->getSelectedBeatmap()->getHP();
+		}
 		else if (s.label->getName().find("BPM") != -1)
 		{
 			/*
