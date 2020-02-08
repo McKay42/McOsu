@@ -243,7 +243,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	{
 		osu_skin.setValue("defaultvr");
 		convar->getConVarByName("osu_drain_enabled")->setValue(true);
-		convar->getConVarByName("osu_draw_hpbar")->setValue(true);
+		convar->getConVarByName("osu_drain_type")->setValue(1);
 		env->setWindowResizable(true);
 	}
 	else
@@ -383,6 +383,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	// exec the main config file (this must be right here!)
 	if (m_iInstanceID < 2)
 	{
+		Console::execConfigFile("underride"); // same as override, but for defaults
 		Console::execConfigFile(isInVRMode() ? "osuvr" : "osu");
 		Console::execConfigFile("override"); // used for quickfixing live builds without redeploying/recompiling
 	}
@@ -1246,14 +1247,18 @@ void Osu::onKeyDown(KeyboardEvent &key)
 			{
 				m_bKeyboardKey1Down = true;
 				onKey1Change(true, false);
-				key.consume();
+
+				if (!getSelectedBeatmap()->hasFailed())
+					key.consume();
 			}
 
 			if (!m_bKeyboardKey2Down && key == (KEYCODE)OsuKeyBindings::RIGHT_CLICK.getInt())
 			{
 				m_bKeyboardKey2Down = true;
 				onKey2Change(true, false);
-				key.consume();
+
+				if (!getSelectedBeatmap()->hasFailed())
+					key.consume();
 			}
 
 			// handle skipping
