@@ -1556,6 +1556,7 @@ OsuScore::HIT OsuBeatmap::addHitResult(OsuHitObject *hitObject, OsuScore::HIT hi
 	{
 		if (!hitErrorBarOnly
 			&& hit != OsuScore::HIT::HIT_300
+			&& hit != OsuScore::HIT::HIT_300G
 			&& hit != OsuScore::HIT::HIT_SLIDER10
 			&& hit != OsuScore::HIT::HIT_SLIDER30
 			&& hit != OsuScore::HIT::HIT_SPINNERSPIN
