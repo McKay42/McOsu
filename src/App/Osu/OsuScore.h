@@ -14,24 +14,30 @@ class ConVar;
 
 class Osu;
 class OsuBeatmap;
+class OsuHitObject;
 
 class OsuScore
 {
 public:
 	enum class HIT
 	{
+		// score
 		HIT_NULL,
 		HIT_MISS,
 		HIT_50,
 		HIT_100,
 		HIT_300,
-		/*
+
+		// only used for health + SS/PF mods
+		HIT_MISS_SLIDERBREAK,
+		HIT_MU,
 		HIT_100K,
 		HIT_300K,
 		HIT_300G,
-		*/
-		HIT_SLIDER10,
-		HIT_SLIDER30
+		HIT_SLIDER10,	// tick
+		HIT_SLIDER30,	// repeat
+		HIT_SPINNERSPIN,
+		HIT_SPINNERBONUS
 	};
 
 	enum class GRADE
@@ -56,9 +62,11 @@ public:
 
 	void reset(); // only OsuBeatmap may call this function!
 
-	void addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignoreOnHitErrorBar, bool hitErrorBarOnly, bool ignoreCombo, bool ignoreScore); // only OsuBeatmap may call this function!
+	void addHitResult(OsuBeatmap *beatmap, OsuScore::HIT hit, long delta, bool ignoreOnHitErrorBar, bool hitErrorBarOnly, bool ignoreCombo, bool ignoreScore); // only OsuBeatmap may call this function!
+	void addHitResultComboEnd(OsuScore::HIT hit);
 	void addSliderBreak(); // only OsuBeatmap may call this function!
 	void addPoints(int points, bool isSpinner);
+	void setComboEndBitmask(int comboEndBitmask) {m_iComboEndBitmask = comboEndBitmask;}
 	void setDead(bool dead);
 
 	void addKeyCount(int key);
@@ -68,6 +76,8 @@ public:
 	void setStarsTomSpeed(float starsTomSpeed) {m_fStarsTomSpeed = starsTomSpeed;}
 	void setPPv2(float ppv2) {m_fPPv2 = ppv2;}
 	void setIndex(int index) {m_iIndex = index;}
+
+	void setNumEZRetries(int numEZRetries) {m_iNumEZRetries = numEZRetries;}
 
 	inline float getStarsTomTotal() const {return m_fStarsTomTotal;}
 	inline float getStarsTomAim() const {return m_fStarsTomAim;}
@@ -79,6 +89,7 @@ public:
 	inline GRADE getGrade() const {return m_grade;}
 	inline int getCombo() const {return m_iCombo;}
 	inline int getComboMax() const {return m_iComboMax;}
+	inline int getComboEndBitmask() const {return m_iComboEndBitmask;}
 	inline float getAccuracy() const {return m_fAccuracy;}
 	inline float getUnstableRate() const {return m_fUnstableRate;}
 	inline float getHitErrorAvgMin() const {return m_fHitErrorAvgMin;}
@@ -93,18 +104,23 @@ public:
 	inline int getNum300s() const {return m_iNum300s;}
 	inline int getNum300gs() const {return m_iNum300gs;}
 
+	inline int getNumEZRetries() const {return m_iNumEZRetries;}
+
 	inline bool isDead() const {return m_bDead;}
 	inline bool hasDied() const {return m_bDied;}
 
 	inline bool isUnranked() const {return m_bIsUnranked;}
 
-	int getKeyCount(int key);
+	static float getHealthIncrease(OsuBeatmap *beatmap, OsuScore::HIT hit);
+	static float getHealthIncrease(OsuScore::HIT hit, float HP = 5.0f, float hpMultiplierNormal = 1.0f, float hpMultiplierComboEnd = 1.0f, float hpBarMaximumForNormalization = 200.0f);
 
+	int getKeyCount(int key);
 	int getModsLegacy();
 	UString getModsString();
 
 private:
-	static ConVar *m_osu_draw_statistics_pp;
+	static ConVar *m_osu_draw_statistics_pp_ref;
+	static ConVar *m_osu_drain_type_ref;
 
 	void onScoreChange();
 
@@ -128,6 +144,7 @@ private:
 	int m_iCombo;
 	int m_iComboMax;
 	int m_iComboFull;
+	int m_iComboEndBitmask;
 	float m_fAccuracy;
 	float m_fHitErrorAvgMin;
 	float m_fHitErrorAvgMax;
@@ -152,6 +169,7 @@ private:
 	int m_iNumM2;
 
 	// custom
+	int m_iNumEZRetries;
 	bool m_bIsUnranked;
 };
 

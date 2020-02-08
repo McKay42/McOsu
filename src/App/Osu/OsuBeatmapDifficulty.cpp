@@ -1014,7 +1014,7 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 	};
 	std::sort(hitobjects->begin(), hitobjects->end(), HitObjectSortComparator());
 
-	// precalculate Score v2 combo portion maximum
+	// set isEndOfCombo + precalculate Score v2 combo portion maximum
 	if (beatmapStandard != NULL)
 	{
 		if (hitobjects->size() > 0)
@@ -1023,11 +1023,14 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 		int combo = 0;
 		for (int i=0; i<hitobjects->size(); i++)
 		{
-			int scoreComboMultiplier = std::max(combo-1, 0);
+			OsuHitObject *currentHitObject = (*(hitobjects))[i];
+			const OsuHitObject *nextHitObject = (i + 1 < hitobjects->size() ? (*(hitobjects))[i + 1] : NULL);
 
-			OsuCircle *circlePointer = dynamic_cast<OsuCircle*>((*(hitobjects))[i]);
-			OsuSlider *sliderPointer = dynamic_cast<OsuSlider*>((*(hitobjects))[i]);
-			OsuSpinner *spinnerPointer = dynamic_cast<OsuSpinner*>((*(hitobjects))[i]);
+			const OsuCircle *circlePointer = dynamic_cast<OsuCircle*>(currentHitObject);
+			const OsuSlider *sliderPointer = dynamic_cast<OsuSlider*>(currentHitObject);
+			const OsuSpinner *spinnerPointer = dynamic_cast<OsuSpinner*>(currentHitObject);
+
+			int scoreComboMultiplier = std::max(combo-1, 0);
 
 			if (circlePointer != NULL || spinnerPointer != NULL)
 			{
@@ -1041,6 +1044,9 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 				m_fScoreV2ComboPortionMaximum += (unsigned long long)(300.0 * (1.0 + (double)scoreComboMultiplier / 10.0));
 				combo++;
 			}
+
+			if (nextHitObject == NULL || nextHitObject->getComboNumber() == 1)
+				currentHitObject->setIsEndOfCombo(true);
 		}
 	}
 
@@ -1180,7 +1186,7 @@ void OsuBeatmapDifficulty::buildStandardHitObjects(OsuBeatmapStandard *beatmap, 
 			c->y = clamp<int>(c->y - (int)(((rand() % OsuGameRules::OSU_COORD_HEIGHT) / 8.0f) * osu_mod_random_circle_offset_y_percent.getFloat()), 0, OsuGameRules::OSU_COORD_HEIGHT);
 		}
 
-		hitobjects->push_back(new OsuCircle(c->x, c->y, c->time, c->sampleType, c->number, c->colorCounter, c->colorOffset, beatmap));
+		hitobjects->push_back(new OsuCircle(c->x, c->y, c->time, c->sampleType, c->number, false, c->colorCounter, c->colorOffset, beatmap));
 
 		// potential convert-all-circles-to-sliders mod, have to play around more with this
 		/*
@@ -1241,7 +1247,7 @@ void OsuBeatmapDifficulty::buildStandardHitObjects(OsuBeatmapStandard *beatmap, 
 		if (osu_mod_reverse_sliders.getBool())
 			std::reverse(s->points.begin(), s->points.end());
 
-		hitobjects->push_back(new OsuSlider(s->type, s->repeat, s->pixelLength, s->points, s->hitSounds, s->ticks, s->sliderTime, s->sliderTimeWithoutRepeats, s->time, s->sampleType, s->number, s->colorCounter, s->colorOffset, beatmap));
+		hitobjects->push_back(new OsuSlider(s->type, s->repeat, s->pixelLength, s->points, s->hitSounds, s->ticks, s->sliderTime, s->sliderTimeWithoutRepeats, s->time, s->sampleType, s->number, false, s->colorCounter, s->colorOffset, beatmap));
 
 		const int repeats = std::max((s->repeat - 1), 0);
 		m_iMaxCombo += 2 + repeats + (repeats+1)*s->ticks.size(); // start/end + repeat arrow + ticks
@@ -1257,7 +1263,7 @@ void OsuBeatmapDifficulty::buildStandardHitObjects(OsuBeatmapStandard *beatmap, 
 			s->y = clamp<int>(s->y - (int)(((rand() % OsuGameRules::OSU_COORD_HEIGHT) / 1.25f) * (rand() % 2 == 0 ? 1.0f : -1.0f) * osu_mod_random_spinner_offset_y_percent.getFloat()), 0, OsuGameRules::OSU_COORD_HEIGHT);
 		}
 
-		hitobjects->push_back(new OsuSpinner(s->x, s->y, s->time, s->sampleType, s->endTime, beatmap));
+		hitobjects->push_back(new OsuSpinner(s->x, s->y, s->time, s->sampleType, false, s->endTime, beatmap));
 	}
 	m_iMaxCombo += spinners.size();
 

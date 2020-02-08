@@ -25,15 +25,33 @@ ConVar osu_debug_pp("osu_debug_pp", false);
 
 ConVar osu_hud_statistics_hitdelta_chunksize("osu_hud_statistics_hitdelta_chunksize", 30, "how many recent hit deltas to average (-1 = all)");
 
-ConVar *OsuScore::m_osu_draw_statistics_pp = NULL;
+ConVar osu_drain_vr_multiplier("osu_drain_vr_multiplier", 1.0f);
+ConVar osu_drain_vr_300("osu_drain_vr_300", 0.035f);
+ConVar osu_drain_vr_100("osu_drain_vr_100", -0.10f);
+ConVar osu_drain_vr_50("osu_drain_vr_50", -0.125f);
+ConVar osu_drain_vr_miss("osu_drain_vr_miss", -0.15f);
+ConVar osu_drain_vr_sliderbreak("osu_drain_vr_sliderbreak", -0.10f);
+
+ConVar osu_drain_stable_hpbar_maximum("osu_drain_stable_hpbar_maximum", 200.0f);
+
+ConVar osu_drain_lazer_multiplier("osu_drain_lazer_multiplier", 0.05f, "DEFAULT_MAX_HEALTH_INCREASE, expressed as a percentage of full health");
+ConVar osu_drain_lazer_300("osu_drain_lazer_300", 1.0f);
+ConVar osu_drain_lazer_100("osu_drain_lazer_100", 0.3f);
+ConVar osu_drain_lazer_50("osu_drain_lazer_50", -0.05f);
+ConVar osu_drain_lazer_miss("osu_drain_lazer_miss", -1.0f);
+
+ConVar *OsuScore::m_osu_draw_statistics_pp_ref = NULL;
+ConVar *OsuScore::m_osu_drain_type_ref = NULL;
 
 OsuScore::OsuScore(Osu *osu)
 {
 	m_osu = osu;
 	reset();
 
-	if (m_osu_draw_statistics_pp == NULL)
-		m_osu_draw_statistics_pp = convar->getConVarByName("osu_draw_statistics_pp");
+	if (m_osu_draw_statistics_pp_ref == NULL)
+		m_osu_draw_statistics_pp_ref = convar->getConVarByName("osu_draw_statistics_pp");
+	if (m_osu_drain_type_ref == NULL)
+		m_osu_drain_type_ref = convar->getConVarByName("osu_drain_type");
 }
 
 void OsuScore::reset()
@@ -56,6 +74,7 @@ void OsuScore::reset()
 	m_iCombo = 0;
 	m_iComboMax = 0;
 	m_iComboFull = 0;
+	m_iComboEndBitmask = 0;
 	m_fAccuracy = 1.0f;
 	m_fHitErrorAvgMin = 0.0f;
 	m_fHitErrorAvgMax = 0.0f;
@@ -79,6 +98,7 @@ void OsuScore::reset()
 	m_iNumM1 = 0;
 	m_iNumM2 = 0;
 
+	m_iNumEZRetries = 2;
 	m_bIsUnranked = false;
 
 	onScoreChange();
@@ -125,15 +145,21 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignor
 		{
 		case OsuScore::HIT::HIT_MISS:
 			m_iNumMisses++;
+			m_iComboEndBitmask |= 2;
 			break;
+
 		case OsuScore::HIT::HIT_50:
 			m_iNum50s++;
 			hitValue = 50;
+			m_iComboEndBitmask |= 2;
 			break;
+
 		case OsuScore::HIT::HIT_100:
 			m_iNum100s++;
 			hitValue = 100;
+			m_iComboEndBitmask |= 1;
 			break;
+
 		case OsuScore::HIT::HIT_300:
 			m_iNum300s++;
 			hitValue = 300;
@@ -268,7 +294,7 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignor
 		m_iComboMax = m_iCombo;
 
 	// recalculate pp
-	if (m_osu_draw_statistics_pp->getBool()) // sanity + performance
+	if (m_osu_draw_statistics_pp_ref->getBool()) // sanity + performance
 	{
 		OsuBeatmapStandard *standardPointer = dynamic_cast<OsuBeatmapStandard*>(beatmap);
 		if (standardPointer != NULL && beatmap->getSelectedDifficulty() != NULL)
@@ -301,6 +327,21 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignor
 	}
 
 	onScoreChange();
+}
+
+void OsuScore::addHitResultComboEnd(OsuScore::HIT hit)
+{
+	switch (hit)
+	{
+	case OsuScore::HIT::HIT_100K:
+	case OsuScore::HIT::HIT_300K:
+		m_iNum100ks++;
+		break;
+
+	case OsuScore::HIT::HIT_300G:
+		m_iNum300gs++;
+		break;
+	}
 }
 
 void OsuScore::addSliderBreak()
@@ -350,6 +391,109 @@ void OsuScore::addKeyCount(int key)
 		m_iNumM2++;
 		break;
 	}
+}
+
+float OsuScore::getHealthIncrease(OsuBeatmap *beatmap, HIT hit)
+{
+	return getHealthIncrease(hit, beatmap->getHP(), beatmap->getHPMultiplierNormal(), beatmap->getHPMultiplierComboEnd(), osu_drain_stable_hpbar_maximum.getFloat());
+}
+
+float OsuScore::getHealthIncrease(OsuScore::HIT hit, float HP, float hpMultiplierNormal, float hpMultiplierComboEnd, float hpBarMaximumForNormalization)
+{
+	const int drainType = m_osu_drain_type_ref->getInt();
+
+	if (drainType == 1) // VR
+	{
+		switch (hit)
+		{
+		case OsuScore::HIT::HIT_MISS:
+			return osu_drain_vr_miss.getFloat() * osu_drain_vr_multiplier.getFloat();
+
+		case OsuScore::HIT::HIT_50:
+			return osu_drain_vr_50.getFloat() * osu_drain_vr_multiplier.getFloat();
+
+		case OsuScore::HIT::HIT_100:
+			return osu_drain_vr_100.getFloat() * osu_drain_vr_multiplier.getFloat();
+
+		case OsuScore::HIT::HIT_300:
+			return osu_drain_vr_300.getFloat() * osu_drain_vr_multiplier.getFloat();
+
+
+
+		case OsuScore::HIT::HIT_MISS_SLIDERBREAK:
+			return osu_drain_vr_sliderbreak.getFloat() * osu_drain_vr_multiplier.getFloat();
+		}
+	}
+	else if (drainType == 2) // osu!stable
+	{
+		switch (hit)
+		{
+		case OsuScore::HIT::HIT_MISS:
+			return (OsuGameRules::mapDifficultyRange(HP, -6.0f, -25.0f, -40.0f) / hpBarMaximumForNormalization);
+
+		case OsuScore::HIT::HIT_50:
+			return (hpMultiplierNormal * OsuGameRules::mapDifficultyRange(HP, 0.4f * 8.0f, 0.4f, 0.4f) / hpBarMaximumForNormalization);
+
+		case OsuScore::HIT::HIT_100:
+			return (hpMultiplierNormal * OsuGameRules::mapDifficultyRange(HP, 2.2f * 8.0f, 2.2f, 2.2f) / hpBarMaximumForNormalization);
+
+		case OsuScore::HIT::HIT_300:
+			return (hpMultiplierNormal * 6.0f / hpBarMaximumForNormalization);
+
+
+
+		case OsuScore::HIT::HIT_MISS_SLIDERBREAK:
+			return (OsuGameRules::mapDifficultyRange(HP, -4.0f, -15.0f, -28.0f) / hpBarMaximumForNormalization);
+
+		case OsuScore::HIT::HIT_MU:
+			return (hpMultiplierComboEnd * 6.0f / hpBarMaximumForNormalization);
+
+		case OsuScore::HIT::HIT_100K:
+			return (hpMultiplierComboEnd * 10.0f / hpBarMaximumForNormalization);
+
+		case OsuScore::HIT::HIT_300K:
+			return (hpMultiplierComboEnd * 10.0f / hpBarMaximumForNormalization);
+
+		case OsuScore::HIT::HIT_300G:
+			return (hpMultiplierComboEnd * 14.0f / hpBarMaximumForNormalization);
+
+
+
+		case OsuScore::HIT::HIT_SLIDER10:
+			return (hpMultiplierNormal * 3.0f / hpBarMaximumForNormalization);
+
+		case OsuScore::HIT::HIT_SLIDER30:
+			return (hpMultiplierNormal * 4.0f / hpBarMaximumForNormalization);
+
+		case OsuScore::HIT::HIT_SPINNERSPIN:
+			return (hpMultiplierNormal * 1.7f * 2.0 / hpBarMaximumForNormalization);
+
+		case OsuScore::HIT::HIT_SPINNERBONUS:
+			return (hpMultiplierNormal * 2.0f * 2.0 / hpBarMaximumForNormalization);
+		}
+	}
+	else if (drainType == 3) // osu!lazer
+	{
+		switch (hit)
+		{
+		case HIT::HIT_MISS:
+		case HIT::HIT_MISS_SLIDERBREAK:
+			return osu_drain_lazer_miss.getFloat() * osu_drain_lazer_multiplier.getFloat();
+
+		case HIT::HIT_50:
+			return osu_drain_lazer_50.getFloat() * osu_drain_lazer_multiplier.getFloat();
+
+		case HIT::HIT_100:
+			return osu_drain_lazer_100.getFloat() * osu_drain_lazer_multiplier.getFloat();
+
+		case HIT::HIT_300:
+		case HIT::HIT_SLIDER10:
+		case HIT::HIT_SLIDER30:
+			return osu_drain_lazer_300.getFloat() * osu_drain_lazer_multiplier.getFloat();
+		}
+	}
+
+	return 0.0f;
 }
 
 int OsuScore::getKeyCount(int key)
@@ -456,6 +600,7 @@ float OsuScore::calculateAccuracy(int num300s, int num100s, int num50s, int numM
 
 	if (totalNumHits > 0.0f)
 		return (totalHitPoints / totalNumHits);
+
 	return 0.0f;
 }
 

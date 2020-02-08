@@ -32,7 +32,7 @@ public:
 	static ConVar *m_osu_relax_offset_ref;
 
 public:
-	OsuHitObject(long time, int sampleType, int comboNumber, int colorCounter, int colorOffset, OsuBeatmap *beatmap);
+	OsuHitObject(long time, int sampleType, int comboNumber, bool isEndOfCombo, int colorCounter, int colorOffset, OsuBeatmap *beatmap);
 	virtual ~OsuHitObject() {;}
 
 	virtual void draw(Graphics *g);
@@ -44,9 +44,10 @@ public:
 	virtual void updateStackPosition(float stackOffset) = 0;
 	virtual int getCombo() {return 1;} // how much combo this hitobject is "worth"
 	virtual bool isCircle() {return false;} // HACKHACK:
-	void addHitResult(OsuScore::HIT result, long delta, Vector2 posRaw, float targetDelta = 0.0f, float targetAngle = 0.0f, bool ignoreOnHitErrorBar = false, bool ignoreCombo = false);
+	void addHitResult(OsuScore::HIT result, long delta, bool isEndOfCombo, Vector2 posRaw, float targetDelta = 0.0f, float targetAngle = 0.0f, bool ignoreOnHitErrorBar = false, bool ignoreCombo = false, bool ignoreHealth = false);
 	void misAimed() {m_bMisAim = true;}
 
+	void setIsEndOfCombo(bool isEndOfCombo) {m_bIsEndOfCombo = isEndOfCombo;}
 	void setStack(int stack) {m_iStack = stack;}
 	void setForceDrawApproachCircle(bool firstNote) {m_bOverrideHDApproachCircle = firstNote;}
 	void setAutopilotDelta(long delta) {m_iAutopilotDelta = delta;}
@@ -60,6 +61,7 @@ public:
 	inline long getDuration() const {return m_iObjectDuration;}
 	inline int getStack() const {return m_iStack;}
 	inline int getComboNumber() const {return m_iComboNumber;}
+	inline bool isEndOfCombo() const {return m_bIsEndOfCombo;}
 	inline long getAutopilotDelta() const {return m_iAutopilotDelta;}
 	inline unsigned long long getSortHack() const {return m_iSortHack;}
 
@@ -81,6 +83,7 @@ protected:
 	long m_iTime; // the time at which this object must be clicked
 	int m_iSampleType;
 	int m_iComboNumber;
+	bool m_bIsEndOfCombo;
 	int m_iColorCounter;
 	int m_iColorOffset;
 

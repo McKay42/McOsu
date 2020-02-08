@@ -21,7 +21,7 @@
 #include "OsuGameRules.h"
 #include "OsuBeatmapStandard.h"
 
-OsuSpinner::OsuSpinner(int x, int y, long time, int sampleType, long endTime, OsuBeatmapStandard *beatmap) : OsuHitObject(time, sampleType, -1, -1, -1, beatmap)
+OsuSpinner::OsuSpinner(int x, int y, long time, int sampleType, bool isEndOfCombo, long endTime, OsuBeatmapStandard *beatmap) : OsuHitObject(time, sampleType, -1, isEndOfCombo, -1, -1, beatmap)
 {
 	m_vOriginalRawPos = Vector2(x,y);
 	m_vRawPos = m_vOriginalRawPos;
@@ -476,7 +476,7 @@ void OsuSpinner::onHit()
 	}
 
 	// add it, and we are finished
-	addHitResult(result, 0, m_vRawPos, -1.0f);
+	addHitResult(result, 0, m_bIsEndOfCombo, m_vRawPos, -1.0f);
 	m_bFinished = true;
 
 	m_beatmap->getSkin()->stopSpinnerSpinSound();
@@ -489,17 +489,22 @@ void OsuSpinner::rotate(float rad)
 	rad = std::abs(rad);
 	const float newRotations = m_fRotations + rad2deg(rad);
 
-	// added one whole rotation...
+	// added one whole rotation
 	if (std::floor(newRotations/360.0f) > m_fRotations/360.0f)
 	{
-		// TODO seems to give 1100 points per spin but also an extra 100 for some spinners
 		if ((int)(newRotations/360.0f) > (int)(m_fRotationsNeeded)+1)
 		{
 			// extra rotations and bonus sound
-			m_beatmap->addScorePoints(1000, true);
 			m_beatmap->getSkin()->playSpinnerBonusSound();
+			m_beatmap->addHitResult(this, OsuScore::HIT::HIT_SPINNERBONUS, 0, false, true, true, true, true, false); // only increase health
+			m_beatmap->addScorePoints(1100, true);
 		}
-		m_beatmap->addScorePoints(100, true);
+		else
+		{
+			// normal whole rotation
+			m_beatmap->addHitResult(this, OsuScore::HIT::HIT_SPINNERSPIN, 0, false, true, true, true, true, false); // only increase health
+			m_beatmap->addScorePoints(100, true);
+		}
 	}
 
 	// spinner sound

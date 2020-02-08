@@ -19,7 +19,7 @@
 ConVar osu_mania_note_height("osu_mania_note_height", 20.0f);
 ConVar osu_mania_speed("osu_mania_speed", 1.0f);
 
-OsuManiaNote::OsuManiaNote(int column, long sliderTime, long time, int sampleType, int comboNumber, int colorCounter, OsuBeatmapMania *beatmap) : OsuHitObject(time, sampleType, comboNumber, colorCounter, -1, beatmap)
+OsuManiaNote::OsuManiaNote(int column, long sliderTime, long time, int sampleType, int comboNumber, int colorCounter, OsuBeatmapMania *beatmap) : OsuHitObject(time, sampleType, comboNumber, false, colorCounter, -1, beatmap)
 {
 	m_iColumn = column;
 	m_beatmap = beatmap;
@@ -276,7 +276,7 @@ void OsuManiaNote::onHit(OsuScore::HIT result, long delta, bool start, bool igno
 
 	// add it, and we are finished
 	Vector2 hitResultPos = m_beatmap->getPlayfieldCenter() + Vector2(0, m_beatmap->getPlayfieldSize().y*0.2f);
-	addHitResult(result, delta, hitResultPos, 0.0f, 0.0f, ignoreOnHitErrorBar);
+	addHitResult(result, delta, false, hitResultPos, 0.0f, 0.0f, ignoreOnHitErrorBar);
 
 	if (!start || !isHoldNote())
 	{
