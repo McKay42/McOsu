@@ -263,8 +263,9 @@ public:
 	}
 	static float getSpinnerRotationsForSpeedMultiplier(OsuBeatmap *beatmap, long spinnerDuration, float speedMultiplier)
 	{
-		// HACKHACK: added 0.5 multiplier until i fix the rotation logic frametime bullshit code from opsu
-		return (int)(((float)spinnerDuration / 1000.0f * getSpinnerSpins(beatmap))*0.5f) * (std::min(1.0f / speedMultiplier, 1.0f));
+		const float spinsPerMinute = 100.0f + (beatmap->getOD() * 15.0f);
+		return (int)((spinsPerMinute * (float)spinnerDuration / 60000.0f) * (std::min(1.0f / speedMultiplier, 1.0f)));
+		///return (int)(((float)spinnerDuration / 1000.0f * getSpinnerSpins(beatmap))*0.5f) * (std::min(1.0f / speedMultiplier, 1.0f));
 	}
 	static float getSpinnerRotationsForSpeedMultiplier(OsuBeatmap *beatmap, long spinnerDuration) // spinner length compensated rotations // respect all mods and overrides
 	{
