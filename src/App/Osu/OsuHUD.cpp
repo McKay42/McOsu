@@ -129,7 +129,7 @@ ConVar osu_hud_fps_smoothing("osu_hud_fps_smoothing", true);
 ConVar osu_draw_cursor_trail("osu_draw_cursor_trail", true);
 ConVar osu_draw_cursor_ripples("osu_draw_cursor_ripples", false);
 ConVar osu_draw_hud("osu_draw_hud", true);
-ConVar osu_draw_hpbar("osu_draw_hpbar", false);
+ConVar osu_draw_hpbar("osu_draw_hpbar", true);
 ConVar osu_draw_hiterrorbar("osu_draw_hiterrorbar", true);
 ConVar osu_draw_hiterrorbar_bottom("osu_draw_hiterrorbar_bottom", true);
 ConVar osu_draw_hiterrorbar_top("osu_draw_hiterrorbar_top", false);
@@ -257,6 +257,8 @@ OsuHUD::OsuHUD(Osu *osu) : OsuScreen(osu)
 	onVolumeOverlaySizeChange(UString::format("%f", osu_hud_volume_size_multiplier.getFloat()), UString::format("%f", osu_hud_volume_size_multiplier.getFloat()));
 
 	m_fCursorExpandAnim = 1.0f;
+
+	m_fHealth = 1.0f;
 }
 
 OsuHUD::~OsuHUD()
@@ -315,7 +317,7 @@ void OsuHUD::draw(Graphics *g)
 		g->popTransform();
 
 		if (osu_draw_hpbar.getBool())
-			drawHP(g, beatmap->getHealth());
+			drawHP(g, m_fHealth);
 
 		// NOTE: moved to draw behind hitobjects in OsuBeatmapStandard::draw()
 		/*
@@ -410,6 +412,21 @@ void OsuHUD::draw(Graphics *g)
 
 void OsuHUD::update()
 {
+	OsuBeatmap *beatmap = m_osu->getSelectedBeatmap();
+
+	if (beatmap != NULL)
+	{
+		// health anim
+		const float currentHealth = beatmap->getHealth();
+		const double elapsedMS = engine->getFrameTime() * 1000.0;
+		const double frameAimTime = 1000.0 / 60.0;
+		const double frameRatio = elapsedMS / frameAimTime;
+		if (m_fHealth < currentHealth)
+			m_fHealth = std::min(1.0f, m_fHealth + std::abs(currentHealth - m_fHealth) / 4.0f * (float)frameRatio);
+		else if (m_fHealth > currentHealth)
+			m_fHealth = std::max(0.0f, m_fHealth - std::abs(m_fHealth - currentHealth) / 6.0f * (float)frameRatio);
+	}
+
 	// dynamic hud scaling updates
 	m_fScoreHeight = m_osu->getSkin()->getScore0()->getHeight() * getScoreScale();
 
@@ -603,7 +620,7 @@ void OsuHUD::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 			vr->getShaderUntexturedLegacyGeneric()->setUniformMatrix4fv("matrix", mvp);
 			{
 				if (osu_draw_hpbar.getBool() && !m_osu->getModNF())
-					drawHP(g, beatmap->getHealth());
+					drawHP(g, m_fHealth);
 			}
 			vr->getShaderUntexturedLegacyGeneric()->disable();
 			vr->getShaderTexturedLegacyGeneric()->enable();
@@ -1373,7 +1390,10 @@ void OsuHUD::drawHP(Graphics *g, float health)
 			greenBlueFactor = 0.0f;
 	}
 	g->setColor(COLORf(1.0f, 1.0f, greenBlueFactor, greenBlueFactor));
-	g->fillRect(0, 0, m_osu->getScreenWidth()*0.5f*health, m_osu->getScreenHeight()*0.015f);
+	g->fillRect(0, 0, m_osu->getScreenWidth()*0.485f*health, m_osu->getScreenHeight()*0.015f);
+
+	// TODO: implement properly
+
 	/*
 	g->pushTransform();
 		g->translate(100, 100);

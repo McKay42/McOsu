@@ -239,6 +239,9 @@ private:
 
 	// target heatmap
 	std::vector<TARGET> m_targets;
+
+	// health
+	float m_fHealth;
 };
 
 #endif
