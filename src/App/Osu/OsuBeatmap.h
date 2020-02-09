@@ -109,10 +109,10 @@ public:
 	float getOD();
 
 	// health
-	inline float getHealth() {return m_fHealth;}
+	inline double getHealth() {return m_fHealth;}
 	inline bool hasFailed() {return m_bFailed;}
-	inline float getHPMultiplierNormal() {return m_fHpMultiplierNormal;}
-	inline float getHPMultiplierComboEnd() {return m_fHpMultiplierComboEnd;}
+	inline double getHPMultiplierNormal() {return m_fHpMultiplierNormal;}
+	inline double getHPMultiplierComboEnd() {return m_fHpMultiplierComboEnd;}
 
 	// generic
 	inline OsuBeatmapDifficulty *getSelectedDifficulty() {return m_selectedDifficulty;}
@@ -140,7 +140,7 @@ public:
 	OsuScore::HIT addHitResult(OsuHitObject *hitObject, OsuScore::HIT hit, long delta, bool isEndOfCombo = false, bool ignoreOnHitErrorBar = false, bool hitErrorBarOnly = false, bool ignoreCombo = false, bool ignoreScore = false, bool ignoreHealth = false);
 	void addSliderBreak();
 	void addScorePoints(int points, bool isSpinner = false);
-	void addHealth(float percent);
+	void addHealth(double percent);
 	void updateTimingPoints(long curPos);
 
 	// ILLEGAL:
@@ -223,13 +223,13 @@ protected:
 	// health
 	bool m_bFailed;
 	float m_fFailTime;
-	float m_fHealth;
+	double m_fHealth;
 	float m_fHealth2;
 
 	// drain
-	float m_fDrainRate;
-	float m_fHpMultiplierNormal;
-	float m_fHpMultiplierComboEnd;
+	double m_fDrainRate;
+	double m_fHpMultiplierNormal;
+	double m_fHpMultiplierComboEnd;
 
 	// breaks
 	float m_fBreakBackgroundFade;

@@ -144,7 +144,7 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen(osu)
 	m_bShowOverrideSliderALTHint = true;
 
 	// convar refs
-	m_osu_drain_enabled_ref = convar->getConVarByName("osu_drain_enabled");
+	m_osu_drain_type_ref = convar->getConVarByName("osu_drain_type");
 	m_osu_mod_touchdevice_ref = convar->getConVarByName("osu_mod_touchdevice");
 
 	// build mod grid buttons
@@ -242,7 +242,7 @@ void OsuModSelector::updateButtons(bool initial)
 {
 	m_modButtonEasy = setModButtonOnGrid(0, 0, 0, initial && m_osu->getModEZ(), "ez", "Reduces overall difficulty - larger circles, more forgiving HP drain, less accuracy required.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModEasy();});
 	m_modButtonNofail = setModButtonOnGrid(1, 0, 0, initial && m_osu->getModNF(), "nf", "You can't fail. No matter what.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModNoFail();});
-	m_modButtonNofail->setAvailable(m_osu_drain_enabled_ref->getBool());
+	m_modButtonNofail->setAvailable(m_osu_drain_type_ref->getInt() > 0);
 	m_modButtonHalftime = setModButtonOnGrid(2, 0, 0, initial && m_osu->getModHT(), "ht", "Less zoom.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModHalfTime();});
 	setModButtonOnGrid(2, 0, 1, initial && m_osu->getModDC(), "dc", "A E S T H E T I C", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModDayCore();});
 	setModButtonOnGrid(4, 0, 0, initial && m_osu->getModNM(), "nm", "Unnecessary clicks count as misses.\nMassively reduced slider follow circle radius.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModNightmare();});

@@ -1809,9 +1809,9 @@ void OsuBeatmapStandard::calculateStacks()
 
 void OsuBeatmapStandard::computeDrainRate()
 {
-	m_fDrainRate = 0.0f;
-	m_fHpMultiplierNormal = 1.0f;
-	m_fHpMultiplierComboEnd = 1.0f;
+	m_fDrainRate = 0.0;
+	m_fHpMultiplierNormal = 1.0;
+	m_fHpMultiplierComboEnd = 1.0;
 
 	if (m_osu->isInVRMode() || m_hitobjects.size() < 1 || m_selectedDifficulty == NULL) return;
 
@@ -1885,9 +1885,9 @@ void OsuBeatmapStandard::computeDrainRate()
 			double hpMultiplierNormal;
 			double hpMultiplierComboEnd;
 		};
-		TestPlayer testPlayer(m_osu_drain_stable_hpbar_maximum_ref->getFloat());
+		TestPlayer testPlayer((double)m_osu_drain_stable_hpbar_maximum_ref->getFloat());
 
-		const float HP = getHP();
+		const double HP = getHP();
 		const int version = m_selectedDifficulty->version;
 
 		double testDrop = 0.05;
@@ -1904,7 +1904,7 @@ void OsuBeatmapStandard::computeDrainRate()
 			testPlayer.resetHealth();
 
 			double lowestHp = testPlayer.health;
-			int lastTime = m_hitobjects[0]->getTime() - OsuGameRules::getApproachTime(this);
+			int lastTime = (int)(m_hitobjects[0]->getTime() - (long)OsuGameRules::getApproachTime(this));
 			fail = false;
 
 			const int breakCount = m_selectedDifficulty->breaks.size();
@@ -1934,7 +1934,7 @@ void OsuBeatmapStandard::computeDrainRate()
 
 				testPlayer.decreaseHealth(testDrop*(h->getTime() - lastTime - breakTime));
 
-				lastTime = h->getTime() + h->getDuration();
+				lastTime = (int)(h->getTime() + h->getDuration());
 
 				if (testPlayer.health < lowestHp)
 					lowestHp = testPlayer.health;
@@ -1950,7 +1950,7 @@ void OsuBeatmapStandard::computeDrainRate()
 					if (sliderPointer != NULL)
 					{
 						// startcircle
-						testPlayer.increaseHealth(OsuScore::getHealthIncrease(OsuScore::HIT::HIT_SLIDER30, HP, testPlayer.hpMultiplierNormal, testPlayer.hpMultiplierComboEnd, 1.0f)); // slider30
+						testPlayer.increaseHealth(OsuScore::getHealthIncrease(OsuScore::HIT::HIT_SLIDER30, HP, testPlayer.hpMultiplierNormal, testPlayer.hpMultiplierComboEnd, 1.0)); // slider30
 
 						// ticks + repeats + repeat ticks
 						const std::vector<OsuSlider::SLIDERCLICK> &clicks = sliderPointer->getClicks();
@@ -1959,33 +1959,36 @@ void OsuBeatmapStandard::computeDrainRate()
 							switch (clicks[c].type)
 							{
 							case 0: // repeat
-								testPlayer.increaseHealth(OsuScore::getHealthIncrease(OsuScore::HIT::HIT_SLIDER30, HP, testPlayer.hpMultiplierNormal, testPlayer.hpMultiplierComboEnd, 1.0f)); // slider30
+								testPlayer.increaseHealth(OsuScore::getHealthIncrease(OsuScore::HIT::HIT_SLIDER30, HP, testPlayer.hpMultiplierNormal, testPlayer.hpMultiplierComboEnd, 1.0)); // slider30
 								break;
 							case 1: // tick
-								testPlayer.increaseHealth(OsuScore::getHealthIncrease(OsuScore::HIT::HIT_SLIDER10, HP, testPlayer.hpMultiplierNormal, testPlayer.hpMultiplierComboEnd, 1.0f)); // slider10
+								testPlayer.increaseHealth(OsuScore::getHealthIncrease(OsuScore::HIT::HIT_SLIDER10, HP, testPlayer.hpMultiplierNormal, testPlayer.hpMultiplierComboEnd, 1.0)); // slider10
 								break;
 							}
 						}
+
+						// endcircle
+						testPlayer.increaseHealth(OsuScore::getHealthIncrease(OsuScore::HIT::HIT_SLIDER30, HP, testPlayer.hpMultiplierNormal, testPlayer.hpMultiplierComboEnd, 1.0)); // slider30
 					}
 					else if (spinnerPointer != NULL)
 					{
 						const double spinsPerMinute = 100 + (getOD() * 15);
-						const int rotationsNeeded = (int)(spinsPerMinute * (h->getDuration()) / 60000.0);
+						const int rotationsNeeded = (int)(spinsPerMinute * (spinnerPointer->getDuration()) / 60000.0);
 						for (int r=0; r<rotationsNeeded; r++)
 						{
-							testPlayer.increaseHealth(OsuScore::getHealthIncrease(OsuScore::HIT::HIT_SPINNERSPIN, HP, testPlayer.hpMultiplierNormal, testPlayer.hpMultiplierComboEnd, 1.0f)); // spinnerspin
+							testPlayer.increaseHealth(OsuScore::getHealthIncrease(OsuScore::HIT::HIT_SPINNERSPIN, HP, testPlayer.hpMultiplierNormal, testPlayer.hpMultiplierComboEnd, 1.0)); // spinnerspin
 						}
 					}
 
 					if (!(maxLongObjectDrop > 0.0) || (testPlayer.health - maxLongObjectDrop) > lowestHpEver)
 					{
 						// regular hit (for every hitobject)
-						testPlayer.increaseHealth(OsuScore::getHealthIncrease(OsuScore::HIT::HIT_300, HP, testPlayer.hpMultiplierNormal, testPlayer.hpMultiplierComboEnd, 1.0f)); // 300
+						testPlayer.increaseHealth(OsuScore::getHealthIncrease(OsuScore::HIT::HIT_300, HP, testPlayer.hpMultiplierNormal, testPlayer.hpMultiplierComboEnd, 1.0)); // 300
 
 						// end of combo (new combo starts at next hitobject)
 						if ((i == m_hitobjects.size() - 1) || m_hitobjects[i]->isEndOfCombo())
 						{
-							testPlayer.increaseHealth(OsuScore::getHealthIncrease(OsuScore::HIT::HIT_300G, HP, testPlayer.hpMultiplierNormal, testPlayer.hpMultiplierComboEnd, 1.0f)); // geki
+							testPlayer.increaseHealth(OsuScore::getHealthIncrease(OsuScore::HIT::HIT_300G, HP, testPlayer.hpMultiplierNormal, testPlayer.hpMultiplierComboEnd, 1.0)); // geki
 
 							if (testPlayer.health < lowestHpComboEnd)
 							{
@@ -2040,7 +2043,7 @@ void OsuBeatmapStandard::computeDrainRate()
 		// build healthIncreases
 		std::vector<std::pair<double, double>> healthIncreases; // [first = time, second = health]
 		healthIncreases.reserve(m_hitobjects.size());
-		const float healthIncreaseForHit300 = OsuScore::getHealthIncrease(OsuScore::HIT::HIT_300);
+		const double healthIncreaseForHit300 = OsuScore::getHealthIncrease(OsuScore::HIT::HIT_300);
 		for (int i=0; i<m_hitobjects.size(); i++)
 		{
 			// nested hitobjects

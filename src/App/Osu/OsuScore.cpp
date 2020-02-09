@@ -393,12 +393,12 @@ void OsuScore::addKeyCount(int key)
 	}
 }
 
-float OsuScore::getHealthIncrease(OsuBeatmap *beatmap, HIT hit)
+double OsuScore::getHealthIncrease(OsuBeatmap *beatmap, HIT hit)
 {
-	return getHealthIncrease(hit, beatmap->getHP(), beatmap->getHPMultiplierNormal(), beatmap->getHPMultiplierComboEnd(), osu_drain_stable_hpbar_maximum.getFloat());
+	return getHealthIncrease(hit, beatmap->getHP(), beatmap->getHPMultiplierNormal(), beatmap->getHPMultiplierComboEnd(), (double)osu_drain_stable_hpbar_maximum.getFloat());
 }
 
-float OsuScore::getHealthIncrease(OsuScore::HIT hit, float HP, float hpMultiplierNormal, float hpMultiplierComboEnd, float hpBarMaximumForNormalization)
+double OsuScore::getHealthIncrease(OsuScore::HIT hit, double HP, double hpMultiplierNormal, double hpMultiplierComboEnd, double hpBarMaximumForNormalization)
 {
 	const int drainType = m_osu_drain_type_ref->getInt();
 
@@ -429,47 +429,47 @@ float OsuScore::getHealthIncrease(OsuScore::HIT hit, float HP, float hpMultiplie
 		switch (hit)
 		{
 		case OsuScore::HIT::HIT_MISS:
-			return (OsuGameRules::mapDifficultyRange(HP, -6.0f, -25.0f, -40.0f) / hpBarMaximumForNormalization);
+			return (OsuGameRules::mapDifficultyRange(HP, -6.0, -25.0, -40.0) / hpBarMaximumForNormalization);
 
 		case OsuScore::HIT::HIT_50:
-			return (hpMultiplierNormal * OsuGameRules::mapDifficultyRange(HP, 0.4f * 8.0f, 0.4f, 0.4f) / hpBarMaximumForNormalization);
+			return (hpMultiplierNormal * OsuGameRules::mapDifficultyRange(HP, 0.4 * 8.0, 0.4, 0.4) / hpBarMaximumForNormalization);
 
 		case OsuScore::HIT::HIT_100:
-			return (hpMultiplierNormal * OsuGameRules::mapDifficultyRange(HP, 2.2f * 8.0f, 2.2f, 2.2f) / hpBarMaximumForNormalization);
+			return (hpMultiplierNormal * OsuGameRules::mapDifficultyRange(HP, 2.2 * 8.0, 2.2, 2.2) / hpBarMaximumForNormalization);
 
 		case OsuScore::HIT::HIT_300:
-			return (hpMultiplierNormal * 6.0f / hpBarMaximumForNormalization);
+			return (hpMultiplierNormal * 6.0 / hpBarMaximumForNormalization);
 
 
 
 		case OsuScore::HIT::HIT_MISS_SLIDERBREAK:
-			return (OsuGameRules::mapDifficultyRange(HP, -4.0f, -15.0f, -28.0f) / hpBarMaximumForNormalization);
+			return (OsuGameRules::mapDifficultyRange(HP, -4.0, -15.0, -28.0) / hpBarMaximumForNormalization);
 
 		case OsuScore::HIT::HIT_MU:
-			return (hpMultiplierComboEnd * 6.0f / hpBarMaximumForNormalization);
+			return (hpMultiplierComboEnd * 6.0 / hpBarMaximumForNormalization);
 
 		case OsuScore::HIT::HIT_100K:
-			return (hpMultiplierComboEnd * 10.0f / hpBarMaximumForNormalization);
+			return (hpMultiplierComboEnd * 10.0 / hpBarMaximumForNormalization);
 
 		case OsuScore::HIT::HIT_300K:
-			return (hpMultiplierComboEnd * 10.0f / hpBarMaximumForNormalization);
+			return (hpMultiplierComboEnd * 10.0 / hpBarMaximumForNormalization);
 
 		case OsuScore::HIT::HIT_300G:
-			return (hpMultiplierComboEnd * 14.0f / hpBarMaximumForNormalization);
+			return (hpMultiplierComboEnd * 14.0 / hpBarMaximumForNormalization);
 
 
 
 		case OsuScore::HIT::HIT_SLIDER10:
-			return (hpMultiplierNormal * 3.0f / hpBarMaximumForNormalization);
+			return (hpMultiplierNormal * 3.0 / hpBarMaximumForNormalization);
 
 		case OsuScore::HIT::HIT_SLIDER30:
-			return (hpMultiplierNormal * 4.0f / hpBarMaximumForNormalization);
+			return (hpMultiplierNormal * 4.0 / hpBarMaximumForNormalization);
 
 		case OsuScore::HIT::HIT_SPINNERSPIN:
-			return (hpMultiplierNormal * 1.7f * 2.0 / hpBarMaximumForNormalization);
+			return (hpMultiplierNormal * 1.7 * 2.0 / hpBarMaximumForNormalization);
 
 		case OsuScore::HIT::HIT_SPINNERBONUS:
-			return (hpMultiplierNormal * 2.0f * 2.0 / hpBarMaximumForNormalization);
+			return (hpMultiplierNormal * 2.0 * 2.0 / hpBarMaximumForNormalization);
 		}
 	}
 	else if (drainType == 3) // osu!lazer

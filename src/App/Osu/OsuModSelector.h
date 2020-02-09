@@ -161,7 +161,7 @@ private:
 	OsuUIButton *m_closeButton;
 
 	// convar refs
-	ConVar *m_osu_drain_enabled_ref;
+	ConVar *m_osu_drain_type_ref;
 	ConVar *m_osu_mod_touchdevice_ref;
 };
 

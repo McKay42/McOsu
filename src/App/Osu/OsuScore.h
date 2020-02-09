@@ -111,8 +111,8 @@ public:
 
 	inline bool isUnranked() const {return m_bIsUnranked;}
 
-	static float getHealthIncrease(OsuBeatmap *beatmap, OsuScore::HIT hit);
-	static float getHealthIncrease(OsuScore::HIT hit, float HP = 5.0f, float hpMultiplierNormal = 1.0f, float hpMultiplierComboEnd = 1.0f, float hpBarMaximumForNormalization = 200.0f);
+	static double getHealthIncrease(OsuBeatmap *beatmap, OsuScore::HIT hit);
+	static double getHealthIncrease(OsuScore::HIT hit, double HP = 5.0f, double hpMultiplierNormal = 1.0f, double hpMultiplierComboEnd = 1.0f, double hpBarMaximumForNormalization = 200.0f);
 
 	int getKeyCount(int key);
 	int getModsLegacy();

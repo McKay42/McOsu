@@ -106,6 +106,8 @@ ConVar osu_hud_hiterrorbar_offset_right_percent("osu_hud_hiterrorbar_offset_righ
 ConVar osu_hud_hiterrorbar_bar_width_scale("osu_hud_hiterrorbar_bar_width_scale", 0.6f);
 ConVar osu_hud_hiterrorbar_bar_height_scale("osu_hud_hiterrorbar_bar_height_scale", 3.4f);
 ConVar osu_hud_hiterrorbar_max_entries("osu_hud_hiterrorbar_max_entries", 32, "maximum number of entries/lines");
+ConVar osu_hud_hpbar_hide_during_breaks("osu_hud_hpbar_hide_during_breaks", true);
+ConVar osu_hud_hpbar_hide_anim_duration("osu_hud_hpbar_hide_anim_duration", 0.5f);
 ConVar osu_hud_combo_scale("osu_hud_combo_scale", 1.0f);
 ConVar osu_hud_score_scale("osu_hud_score_scale", 1.0f);
 ConVar osu_hud_accuracy_scale("osu_hud_accuracy_scale", 1.0f);
@@ -259,6 +261,7 @@ OsuHUD::OsuHUD(Osu *osu) : OsuScreen(osu)
 	m_fCursorExpandAnim = 1.0f;
 
 	m_fHealth = 1.0f;
+	m_fHPBarBreakAnim = 0.0f;
 }
 
 OsuHUD::~OsuHUD()
@@ -317,7 +320,7 @@ void OsuHUD::draw(Graphics *g)
 		g->popTransform();
 
 		if (osu_draw_hpbar.getBool())
-			drawHP(g, m_fHealth);
+			drawHPBar(g, m_fHealth, m_fHPBarBreakAnim);
 
 		// NOTE: moved to draw behind hitobjects in OsuBeatmapStandard::draw()
 		/*
@@ -417,14 +420,27 @@ void OsuHUD::update()
 	if (beatmap != NULL)
 	{
 		// health anim
-		const float currentHealth = beatmap->getHealth();
+		const double currentHealth = beatmap->getHealth();
 		const double elapsedMS = engine->getFrameTime() * 1000.0;
 		const double frameAimTime = 1000.0 / 60.0;
 		const double frameRatio = elapsedMS / frameAimTime;
 		if (m_fHealth < currentHealth)
-			m_fHealth = std::min(1.0f, m_fHealth + std::abs(currentHealth - m_fHealth) / 4.0f * (float)frameRatio);
+			m_fHealth = std::min(1.0, m_fHealth + std::abs(currentHealth - m_fHealth) / 4.0 * frameRatio);
 		else if (m_fHealth > currentHealth)
-			m_fHealth = std::max(0.0f, m_fHealth - std::abs(m_fHealth - currentHealth) / 6.0f * (float)frameRatio);
+			m_fHealth = std::max(0.0, m_fHealth - std::abs(m_fHealth - currentHealth) / 6.0 * frameRatio);
+
+		if (osu_hud_hpbar_hide_during_breaks.getBool())
+		{
+			if (!anim->isAnimating(&m_fHPBarBreakAnim))
+			{
+				if (m_fHPBarBreakAnim == 0.0f && beatmap->isInBreak())
+					anim->moveLinear(&m_fHPBarBreakAnim, 1.0f, osu_hud_hpbar_hide_anim_duration.getFloat(), true);
+				else if (m_fHPBarBreakAnim == 1.0f && !beatmap->isInBreak())
+					anim->moveLinear(&m_fHPBarBreakAnim, 0.0f, osu_hud_hpbar_hide_anim_duration.getFloat(), true);
+			}
+		}
+		else
+			m_fHPBarBreakAnim = 0.0f;
 	}
 
 	// dynamic hud scaling updates
@@ -620,7 +636,7 @@ void OsuHUD::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 			vr->getShaderUntexturedLegacyGeneric()->setUniformMatrix4fv("matrix", mvp);
 			{
 				if (osu_draw_hpbar.getBool() && !m_osu->getModNF())
-					drawHP(g, m_fHealth);
+					drawHPBar(g, m_fHealth, m_fHPBarBreakAnim);
 			}
 			vr->getShaderUntexturedLegacyGeneric()->disable();
 			vr->getShaderTexturedLegacyGeneric()->enable();
@@ -675,7 +691,7 @@ void OsuHUD::drawVRDummy(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 		vr->getShaderUntexturedLegacyGeneric()->setUniformMatrix4fv("matrix", mvp);
 		{
 			if (osu_draw_hpbar.getBool())
-				drawHP(g, 1.0f);
+				drawHPBar(g, 1.0, 0.0f);
 		}
 		vr->getShaderUntexturedLegacyGeneric()->disable();
 		vr->getShaderTexturedLegacyGeneric()->enable();
@@ -1375,10 +1391,8 @@ void OsuHUD::drawScore(Graphics *g, unsigned long long score)
 	g->popTransform();
 }
 
-void OsuHUD::drawHP(Graphics *g, float health)
+void OsuHUD::drawHPBar(Graphics *g, double health, float breakAnim)
 {
-	if (health <= 0.0f) return;
-
 	float fadeStartPercent = 0.40f;
 	float fadeFinishPercent = 0.25f;
 	float greenBlueFactor = 1.0f;
@@ -1389,8 +1403,8 @@ void OsuHUD::drawHP(Graphics *g, float health)
 		else
 			greenBlueFactor = 0.0f;
 	}
-	g->setColor(COLORf(1.0f, 1.0f, greenBlueFactor, greenBlueFactor));
-	g->fillRect(0, 0, m_osu->getScreenWidth()*0.485f*health, m_osu->getScreenHeight()*0.015f);
+	g->setColor(COLORf(1.0f - breakAnim, 1.0f, greenBlueFactor, greenBlueFactor));
+	g->fillRect(12, -breakAnim * 50, m_osu->getScreenWidth()*0.472f*health, m_osu->getScreenHeight()*0.015f);
 
 	// TODO: implement properly
 

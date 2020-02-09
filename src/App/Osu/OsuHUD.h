@@ -147,7 +147,7 @@ private:
 	void drawAccuracy(Graphics *g, float accuracy);
 	void drawCombo(Graphics *g, int combo);
 	void drawScore(Graphics *g, unsigned long long score);
-	void drawHP(Graphics *g, float health);
+	void drawHPBar(Graphics *g, double health, float breakAnim);
 	void drawScoreBoardInt(Graphics *g, const std::vector<SCORE_ENTRY> &scoreEntries);
 
 	void drawWarningArrows(Graphics *g, float hitcircleDiameter = 0.0f);
@@ -241,7 +241,8 @@ private:
 	std::vector<TARGET> m_targets;
 
 	// health
-	float m_fHealth;
+	double m_fHealth;
+	float m_fHPBarBreakAnim;
 };
 
 #endif

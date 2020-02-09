@@ -742,7 +742,6 @@ void OsuMultiplayer::onServerModUpdate()
 		}
 
 		// drain
-		simpleModConVars.push_back("osu_drain_enabled");
 		simpleModConVars.push_back("osu_drain_type");
 
 		simpleModConVars.push_back("osu_drain_vr_duration");
@@ -752,6 +751,8 @@ void OsuMultiplayer::onServerModUpdate()
 		simpleModConVars.push_back("osu_drain_vr_50");
 		simpleModConVars.push_back("osu_drain_vr_miss");
 		simpleModConVars.push_back("osu_drain_vr_sliderbreak");
+
+		simpleModConVars.push_back("osu_drain_stable_hpbar_maximum");
 
 		simpleModConVars.push_back("osu_drain_lazer_multiplier");
 		simpleModConVars.push_back("osu_drain_lazer_300");
