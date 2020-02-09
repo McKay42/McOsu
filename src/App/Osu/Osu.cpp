@@ -212,6 +212,13 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	steam->setRichPresence("steam_display", "#Status");
 	steam->setRichPresence("status", "...");
 
+#ifdef MCENGINE_FEATURE_SOUND
+
+	// starting with bass 2020 2.4.15.2 which has all offset problems fixed, this is the non-dsound backend compensation
+	convar->getConVarByName("osu_universal_offset_hardcoded")->setValue(15.0f);
+
+#endif
+
 #ifdef MCENGINE_FEATURE_BASS_WASAPI
 
 	// since we use the newer bass/fx dlls for wasapi builds anyway (which have different time handling)
@@ -242,7 +249,6 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	if (isInVRMode())
 	{
 		osu_skin.setValue("defaultvr");
-		convar->getConVarByName("osu_drain_enabled")->setValue(true);
 		convar->getConVarByName("osu_drain_type")->setValue(1);
 		env->setWindowResizable(true);
 	}
