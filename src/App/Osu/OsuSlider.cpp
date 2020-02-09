@@ -1412,7 +1412,7 @@ void OsuSlider::onHit(OsuScore::HIT result, long delta, bool startOrEnd, float t
 			m_iDownKey = 1;
 
 		if (!m_beatmap->getOsu()->getModTarget())
-			m_beatmap->addHitResult(this, result, delta, false, false, true, false, true, true); // not end of combo, show in hiterrorbar, ignore for accuracy, increase combo, don't count towards score, ignore for health
+			m_beatmap->addHitResult(this, result, delta, false, false, true, false, true, true); // not end of combo, show in hiterrorbar, ignore for accuracy, increase combo, don't count towards score, depending on scorev2 ignore for health or not
 		else
 			addHitResult(result, delta, false, m_curve->pointAt(0.0f), targetDelta, targetAngle, false, false, true); // not end of combo, show in hiterrorbar, use for accuracy, increase combo, increase score, ignore for health
 
@@ -1436,11 +1436,19 @@ void OsuSlider::onHit(OsuScore::HIT result, long delta, bool startOrEnd, float t
 		m_bEndFinished = true;
 		m_bFinished = true;
 
-		addHitResult(result, delta, m_bIsEndOfCombo, getRawPosAt(m_iTime + m_iObjectDuration), -1.0f, 0.0f, true, !m_bHeldTillEnd); // end of combo, ignore in hiterrorbar, depending on heldTillEnd increase combo or not, increase score, increase health
+		addHitResult(result, delta, m_bIsEndOfCombo, getRawPosAt(m_iTime + m_iObjectDuration), -1.0f, 0.0f, true, !m_bHeldTillEnd, false); // end of combo, ignore in hiterrorbar, depending on heldTillEnd increase combo or not, increase score, increase health
 
-		// add bonus score manually
-		if (result != OsuScore::HIT::HIT_MISS)
+		// add bonus score + extra health manually
+		if (m_bHeldTillEnd)
+		{
+			m_beatmap->addHitResult(this, OsuScore::HIT::HIT_SLIDER30, 0, false, true, true, true, true, false); // only increase health
 			m_beatmap->addScorePoints(30);
+		}
+		else
+		{
+			// special case: missing the endcircle drains HIT_MISS_SLIDERBREAK health (and not HIT_MISS health)
+			m_beatmap->addHitResult(this, OsuScore::HIT::HIT_MISS_SLIDERBREAK, 0, false, true, true, true, true, false); // only decrease health
+		}
 	}
 
 	m_iCurRepeatCounterForHitSounds++;
@@ -1535,9 +1543,6 @@ void OsuSlider::onTickHit(bool successful, int tickIndex)
 
 		m_fFollowCircleTickAnimationScale = 0.0f;
 		anim->moveLinear(&m_fFollowCircleTickAnimationScale, 1.0f, OsuGameRules::osu_slider_followcircle_tick_pulse_time.getFloat(), true);
-
-		// add score manually
-
 	}
 
 	// add score
