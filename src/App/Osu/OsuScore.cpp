@@ -429,13 +429,13 @@ double OsuScore::getHealthIncrease(OsuScore::HIT hit, double HP, double hpMultip
 		switch (hit)
 		{
 		case OsuScore::HIT::HIT_MISS:
-			return (OsuGameRules::mapDifficultyRange(HP, -6.0, -25.0, -40.0) / hpBarMaximumForNormalization);
+			return (OsuGameRules::mapDifficultyRangeDouble(HP, -6.0, -25.0, -40.0) / hpBarMaximumForNormalization);
 
 		case OsuScore::HIT::HIT_50:
-			return (hpMultiplierNormal * OsuGameRules::mapDifficultyRange(HP, 0.4 * 8.0, 0.4, 0.4) / hpBarMaximumForNormalization);
+			return (hpMultiplierNormal * OsuGameRules::mapDifficultyRangeDouble(HP, 0.4 * 8.0, 0.4, 0.4) / hpBarMaximumForNormalization);
 
 		case OsuScore::HIT::HIT_100:
-			return (hpMultiplierNormal * OsuGameRules::mapDifficultyRange(HP, 2.2 * 8.0, 2.2, 2.2) / hpBarMaximumForNormalization);
+			return (hpMultiplierNormal * OsuGameRules::mapDifficultyRangeDouble(HP, 2.2 * 8.0, 2.2, 2.2) / hpBarMaximumForNormalization);
 
 		case OsuScore::HIT::HIT_300:
 			return (hpMultiplierNormal * 6.0 / hpBarMaximumForNormalization);
@@ -443,7 +443,7 @@ double OsuScore::getHealthIncrease(OsuScore::HIT hit, double HP, double hpMultip
 
 
 		case OsuScore::HIT::HIT_MISS_SLIDERBREAK:
-			return (OsuGameRules::mapDifficultyRange(HP, -4.0, -15.0, -28.0) / hpBarMaximumForNormalization);
+			return (OsuGameRules::mapDifficultyRangeDouble(HP, -4.0, -15.0, -28.0) / hpBarMaximumForNormalization);
 
 		case OsuScore::HIT::HIT_MU:
 			return (hpMultiplierComboEnd * 6.0 / hpBarMaximumForNormalization);

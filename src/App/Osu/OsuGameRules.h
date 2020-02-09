@@ -142,6 +142,17 @@ public:
 	    return mid;
 	}
 
+	static double mapDifficultyRangeDouble(double scaledDiff, double min, double mid, double max)
+	{
+	    if (scaledDiff > 5.0)
+	        return mid + (max - mid) * (scaledDiff - 5.0) / 5.0;
+
+	    if (scaledDiff < 5.0)
+	        return mid - (mid - min) * (5.0 - scaledDiff) / 5.0;
+
+	    return mid;
+	}
+
 	// 1200 ms -> AR 5
 	static float mapDifficultyRangeInv(float val, float min, float mid, float max)
 	{

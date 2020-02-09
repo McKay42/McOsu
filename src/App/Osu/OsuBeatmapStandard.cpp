@@ -1892,10 +1892,10 @@ void OsuBeatmapStandard::computeDrainRate()
 
 		double testDrop = 0.05;
 
-		const double lowestHpEver = OsuGameRules::mapDifficultyRange(HP, 195.0f, 160.0f, 60.0f);
-		const double lowestHpComboEnd = OsuGameRules::mapDifficultyRange(HP, 198.0f, 170.0f, 80.0f);
-		const double lowestHpEnd = OsuGameRules::mapDifficultyRange(HP, 198.0f, 180.0f, 80.0f);
-		const double HpRecoveryAvailable = OsuGameRules::mapDifficultyRange(HP, 8.0f, 4.0f, 0.0f);
+		const double lowestHpEver = OsuGameRules::mapDifficultyRangeDouble(HP, 195.0, 160.0, 60.0);
+		const double lowestHpComboEnd = OsuGameRules::mapDifficultyRangeDouble(HP, 198.0, 170.0, 80.0);
+		const double lowestHpEnd = OsuGameRules::mapDifficultyRangeDouble(HP, 198.0, 180.0, 80.0);
+		const double HpRecoveryAvailable = OsuGameRules::mapDifficultyRangeDouble(HP, 8.0, 4.0, 0.0);
 
 		bool fail = false;
 
