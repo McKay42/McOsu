@@ -103,7 +103,10 @@ ConVar osu_mod_suddendeath_restart("osu_mod_suddendeath_restart", false, "osu! h
 ConVar osu_drain_type("osu_drain_type", 0, "which hp drain algorithm to use (0 = None, 1 = VR, 2 = osu!stable, 3 = osu!lazer)");
 
 ConVar osu_drain_vr_duration("osu_drain_vr_duration", 0.35f);
+ConVar osu_drain_stable_passive_fail("osu_drain_stable_passive_fail", false, "whether to fail the player instantly if health = 0, or only once a negative judgement occurs");
+ConVar osu_drain_lazer_passive_fail("osu_drain_lazer_passive_fail", false, "whether to fail the player instantly if health = 0, or only once a negative judgement occurs");
 ConVar osu_drain_stable_spinner_nerf("osu_drain_stable_spinner_nerf", 0.25f, "drain gets multiplied with this while a spinner is active");
+ConVar osu_drain_stable_hpbar_recovery("osu_drain_stable_hpbar_recovery", 160.0f, "hp gets set to this value when failing with ez and causing a recovery");
 
 ConVar osu_play_hitsound_on_click_while_playing("osu_play_hitsound_on_click_while_playing", false);
 
@@ -120,6 +123,7 @@ ConVar *OsuBeatmap::m_osu_early_note_time_ref = &osu_early_note_time;
 ConVar *OsuBeatmap::m_osu_fail_time_ref = &osu_fail_time;
 ConVar *OsuBeatmap::m_osu_drain_type_ref = &osu_drain_type;
 
+ConVar *OsuBeatmap::m_osu_drain_stable_hpbar_maximum_ref = NULL;
 ConVar *OsuBeatmap::m_osu_volume_music_ref = NULL;
 
 #ifdef MCENGINE_FEATURE_MULTITHREADING
@@ -133,6 +137,8 @@ OsuBeatmap::OsuBeatmap(Osu *osu)
 	// convar refs
 	if (m_snd_speed_compensate_pitch_ref == NULL)
 		m_snd_speed_compensate_pitch_ref = convar->getConVarByName("snd_speed_compensate_pitch");
+	if (m_osu_drain_stable_hpbar_maximum_ref == NULL)
+		m_osu_drain_stable_hpbar_maximum_ref = convar->getConVarByName("osu_drain_stable_hpbar_maximum");
 	if (m_osu_volume_music_ref == NULL)
 		m_osu_volume_music_ref = convar->getConVarByName("osu_volume_music");
 
@@ -758,35 +764,30 @@ void OsuBeatmap::update()
 		{
 			if (m_fDrainRate > 0.0)
 			{
-				if (m_hitobjects.size() > 0 && m_hitobjectsSortedByEndTime.size() > 0)
+				if (m_bIsPlaying 					// not paused
+					&& !m_bInBreak					// not in a break
+					&& !m_bIsInSkippableSection)	// not in a skippable section
 				{
-					const OsuHitObject *firstHitObject = m_hitobjects[0];
-					const OsuHitObject *lastHitObject = m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size() - 1];
+					// TODO: stable doesn't drain before first hitobject start after break, but lazer does
+					// TODO: stable doesn't drain after last hitobject end before break (except if beatmap version is < 8!), but lazer does
 
-					// NOTE: this matches lazer drain, and starts draining after break ends before the next hitobject is even clickable
-					if (m_bIsPlaying && !m_bInBreak && !m_bIsInSkippableSection && m_iCurMusicPosWithOffsets >= firstHitObject->getTime() && m_iCurMusicPosWithOffsets <= (lastHitObject->getTime() + lastHitObject->getDuration()))
+					double spinnerDrainNerf = 1.0;
+					if (drainType == 2) // osu!stable
 					{
-						// TODO: stable doesn't drain before first hitobject start after break, but lazer does
-						// TODO: stable doesn't drain after last hitobject end before break (except if beatmap version is < 8!), but lazer does
-						// TODO: only kill player on first judgement after 0 health (and only if that judgement is negative!), make that a convar
-
-						double spinnerDrainNerf = 1.0;
-						if (drainType == 2) // osu!stable
-						{
-							OsuBeatmapStandard *standardPointer = dynamic_cast<OsuBeatmapStandard*>(this);
-							if (standardPointer != NULL && standardPointer->isSpinnerActive())
-								spinnerDrainNerf = osu_drain_stable_spinner_nerf.getFloat();
-						}
-
-						addHealth(-m_fDrainRate * engine->getFrameTime() * (double)getSpeedMultiplier() * spinnerDrainNerf);
+						OsuBeatmapStandard *standardPointer = dynamic_cast<OsuBeatmapStandard*>(this);
+						if (standardPointer != NULL && standardPointer->isSpinnerActive())
+							spinnerDrainNerf = (double)osu_drain_stable_spinner_nerf.getFloat();
 					}
+
+					addHealth(-m_fDrainRate * engine->getFrameTime() * (double)getSpeedMultiplier() * spinnerDrainNerf, false);
 				}
 			}
 		}
 
-		// handle generic fail state
+		// handle generic fail state (1) (see addHealth())
 		{
 			bool hasFailed = false;
+
 			switch (drainType)
 			{
 			case 1: // VR
@@ -794,23 +795,20 @@ void OsuBeatmap::update()
 				break;
 
 			case 2: // osu!stable
+				hasFailed = (m_fHealth < 0.001) && osu_drain_stable_passive_fail.getBool();
+				break;
+
 			case 3: // osu!lazer
-				hasFailed = m_fHealth < 0.001;
+				hasFailed = (m_fHealth < 0.001) && osu_drain_lazer_passive_fail.getBool();
+				break;
+
+			default:
+				hasFailed = (m_fHealth < 0.001);
 				break;
 			}
 
 			if (hasFailed && !m_osu->getModNF())
-			{
-				// 2 retries with ez
-				if (m_osu->getModEZ() && m_osu->getScore()->getNumEZRetries() > 0)
-				{
-					m_fHealth = 1.0;
-					m_fHealth2 = 1.0f;
-					m_osu->getScore()->setNumEZRetries(m_osu->getScore()->getNumEZRetries() - 1);
-				}
-				else
-					fail();
-			}
+				fail();
 		}
 
 		// revive in mp
@@ -1605,7 +1603,7 @@ OsuScore::HIT OsuBeatmap::addHitResult(OsuHitObject *hitObject, OsuScore::HIT hi
 	OsuScore::HIT returnedHit = OsuScore::HIT::HIT_MISS;
 	if (!ignoreHealth)
 	{
-		addHealth(m_osu->getScore()->getHealthIncrease(this, hit));
+		addHealth(m_osu->getScore()->getHealthIncrease(this, hit), true);
 
 		// geki/katu handling
 		if (isEndOfCombo)
@@ -1615,7 +1613,7 @@ OsuScore::HIT OsuBeatmap::addHitResult(OsuHitObject *hitObject, OsuScore::HIT hi
 			if (comboEndBitmask == 0)
 			{
 				returnedHit = OsuScore::HIT::HIT_300G;
-				addHealth(m_osu->getScore()->getHealthIncrease(this, returnedHit));
+				addHealth(m_osu->getScore()->getHealthIncrease(this, returnedHit), true);
 				m_osu->getScore()->addHitResultComboEnd(returnedHit);
 			}
 			else if ((comboEndBitmask & 2) == 0)
@@ -1624,19 +1622,19 @@ OsuScore::HIT OsuBeatmap::addHitResult(OsuHitObject *hitObject, OsuScore::HIT hi
 				{
 				case OsuScore::HIT::HIT_100:
 					returnedHit = OsuScore::HIT::HIT_100K;
-					addHealth(m_osu->getScore()->getHealthIncrease(this, returnedHit));
+					addHealth(m_osu->getScore()->getHealthIncrease(this, returnedHit), true);
 					m_osu->getScore()->addHitResultComboEnd(returnedHit);
 					break;
 
 				case OsuScore::HIT::HIT_300:
 					returnedHit = OsuScore::HIT::HIT_300K;
-					addHealth(m_osu->getScore()->getHealthIncrease(this, returnedHit));
+					addHealth(m_osu->getScore()->getHealthIncrease(this, returnedHit), true);
 					m_osu->getScore()->addHitResultComboEnd(returnedHit);
 					break;
 				}
 			}
 			else if (hit != OsuScore::HIT::HIT_MISS)
-				addHealth(m_osu->getScore()->getHealthIncrease(this, OsuScore::HIT::HIT_MU));
+				addHealth(m_osu->getScore()->getHealthIncrease(this, OsuScore::HIT::HIT_MU), true);
 
 			m_osu->getScore()->setComboEndBitmask(0);
 		}
@@ -1675,29 +1673,73 @@ void OsuBeatmap::addScorePoints(int points, bool isSpinner)
 	m_osu->getScore()->addPoints(points, isSpinner);
 }
 
-void OsuBeatmap::addHealth(double percent)
+void OsuBeatmap::addHealth(double percent, bool isFromHitResult)
 {
 	if (osu_drain_type.getInt() < 1) return;
-	if (m_hitobjectsSortedByEndTime.size() > 0 && m_iCurMusicPosWithOffsets >= (m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size() - 1]->getTime() + m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size() - 1]->getDuration())) return;
+
+	// never drain before first hitobject
+	if (m_hitobjects.size() > 0 && m_iCurMusicPosWithOffsets < m_hitobjects[0]->getTime()) return;
+
+	// never drain after last hitobject
+	if (m_hitobjectsSortedByEndTime.size() > 0 && m_iCurMusicPosWithOffsets > (m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size() - 1]->getTime() + m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size() - 1]->getDuration())) return;
 
 	if (m_bFailed)
 	{
 		anim->deleteExistingAnimation(&m_fHealth2);
+
 		m_fHealth = 0.0;
 		m_fHealth2 = 0.0f;
+
 		return;
 	}
 
 	const int drainType = osu_drain_type.getInt();
 
-	if (drainType == 1)
+	switch (drainType)
 	{
-		const float targetHealth = clamp<float>(m_fHealth2 + percent, -0.1f, 1.0f);
-		m_fHealth = targetHealth;
-		anim->moveQuadOut(&m_fHealth2, targetHealth, osu_drain_vr_duration.getFloat(), true);
-	}
-	else if (drainType == 2 || drainType == 3)
+	case 1: // VR
+		{
+			const float targetHealth = clamp<float>(m_fHealth2 + percent, -0.1f, 1.0f);
+			m_fHealth = targetHealth;
+			anim->moveQuadOut(&m_fHealth2, targetHealth, osu_drain_vr_duration.getFloat(), true);
+		}
+		break;
+
+	default:
 		m_fHealth = clamp<double>(m_fHealth + percent, 0.0, 1.0);
+		break;
+	}
+
+	// handle generic fail state (2)
+	const bool isDead = m_fHealth < 0.001;
+	if (isDead && !m_osu->getModNF())
+	{
+		if (m_osu->getModEZ() && m_osu->getScore()->getNumEZRetries() > 0) // retries with ez
+		{
+			m_osu->getScore()->setNumEZRetries(m_osu->getScore()->getNumEZRetries() - 1);
+
+			// special case: set health to 160/200 (osu!stable behavior, seems fine for all drains)
+			m_fHealth = osu_drain_stable_hpbar_recovery.getFloat() / m_osu_drain_stable_hpbar_maximum_ref->getFloat();
+			m_fHealth2 = (float)m_fHealth;
+
+			anim->deleteExistingAnimation(&m_fHealth2);
+		}
+		else if (isFromHitResult && percent < 0.0) // judgement fail
+		{
+			switch (drainType)
+			{
+			case 2: // osu!stable
+				if (!osu_drain_stable_passive_fail.getBool())
+					fail();
+				break;
+
+			case 3: // osu!lazer
+				if (!osu_drain_lazer_passive_fail.getBool())
+					fail();
+				break;
+			}
+		}
+	}
 }
 
 void OsuBeatmap::updateTimingPoints(long curPos)

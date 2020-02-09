@@ -140,7 +140,7 @@ public:
 	OsuScore::HIT addHitResult(OsuHitObject *hitObject, OsuScore::HIT hit, long delta, bool isEndOfCombo = false, bool ignoreOnHitErrorBar = false, bool hitErrorBarOnly = false, bool ignoreCombo = false, bool ignoreScore = false, bool ignoreHealth = false);
 	void addSliderBreak();
 	void addScorePoints(int points, bool isSpinner = false);
-	void addHealth(double percent);
+	void addHealth(double percent, bool isFromHitResult);
 	void updateTimingPoints(long curPos);
 
 	// ILLEGAL:
@@ -158,6 +158,7 @@ protected:
 	static ConVar *m_osu_fail_time_ref;
 	static ConVar *m_osu_drain_type_ref;
 
+	static ConVar *m_osu_drain_stable_hpbar_maximum_ref;
 	static ConVar *m_osu_volume_music_ref;
 
 	// overridable child events
