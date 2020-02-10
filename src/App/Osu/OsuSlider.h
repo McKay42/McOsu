@@ -62,8 +62,9 @@ private:
 	static ConVar *m_osu_playfield_rotation_ref;
 	static ConVar *m_osu_mod_fps_ref;
 	static ConVar *m_osu_slider_border_size_multiplier_ref;
-	static ConVar *m_epilepsy;
-	static ConVar *m_osu_auto_cursordance;
+	static ConVar *m_epilepsy_ref;
+	static ConVar *m_osu_auto_cursordance_ref;
+	static ConVar *m_osu_drain_type_ref;
 
 	void drawStartCircle(Graphics *g, float alpha);
 	void drawEndCircle(Graphics *g, float alpha, float sliderSnake = 1.0f);

@@ -53,8 +53,9 @@ ConVar *OsuSlider::m_osu_playfield_mirror_vertical_ref = NULL;
 ConVar *OsuSlider::m_osu_playfield_rotation_ref = NULL;
 ConVar *OsuSlider::m_osu_mod_fps_ref = NULL;
 ConVar *OsuSlider::m_osu_slider_border_size_multiplier_ref = NULL;
-ConVar *OsuSlider::m_epilepsy = NULL;
-ConVar *OsuSlider::m_osu_auto_cursordance = NULL;
+ConVar *OsuSlider::m_epilepsy_ref = NULL;
+ConVar *OsuSlider::m_osu_auto_cursordance_ref = NULL;
+ConVar *OsuSlider::m_osu_drain_type_ref = NULL;
 
 OsuSlider::OsuSlider(char type, int repeat, float pixelLength, std::vector<Vector2> points, std::vector<int> hitSounds, std::vector<float> ticks, float sliderTime, float sliderTimeWithoutRepeats, long time, int sampleType, int comboNumber, bool isEndOfCombo, int colorCounter, int colorOffset, OsuBeatmapStandard *beatmap) : OsuHitObject(time, sampleType, comboNumber, isEndOfCombo, colorCounter, colorOffset, beatmap)
 {
@@ -68,10 +69,12 @@ OsuSlider::OsuSlider(char type, int repeat, float pixelLength, std::vector<Vecto
 		m_osu_mod_fps_ref = convar->getConVarByName("osu_mod_fps");
 	if (m_osu_slider_border_size_multiplier_ref == NULL)
 		m_osu_slider_border_size_multiplier_ref = convar->getConVarByName("osu_slider_border_size_multiplier");
-	if (m_epilepsy == NULL)
-		m_epilepsy = convar->getConVarByName("epilepsy");
-	if (m_osu_auto_cursordance == NULL)
-		m_osu_auto_cursordance = convar->getConVarByName("osu_auto_cursordance");
+	if (m_epilepsy_ref == NULL)
+		m_epilepsy_ref = convar->getConVarByName("epilepsy");
+	if (m_osu_auto_cursordance_ref == NULL)
+		m_osu_auto_cursordance_ref = convar->getConVarByName("osu_auto_cursordance");
+	if (m_osu_drain_type_ref == NULL)
+		m_osu_drain_type_ref = convar->getConVarByName("osu_drain_type");
 
 	m_cType = type;
 	m_iRepeat = repeat;
@@ -885,7 +888,7 @@ void OsuSlider::update(long curPos)
 	if (m_fSliderBreakRapeTime != 0.0f && engine->getTime() > m_fSliderBreakRapeTime)
 	{
 		m_fSliderBreakRapeTime = 0.0f;
-		m_epilepsy->setValue(0.0f);
+		m_epilepsy_ref->setValue(0.0f);
 	}
 
 	// stop slide sound while paused
@@ -981,7 +984,7 @@ void OsuSlider::update(long curPos)
 
 	// handle dynamic followradius
 	float followRadius = m_bCursorLeft ? m_beatmap->getHitcircleDiameter() / 2.0f : m_beatmap->getSliderFollowCircleDiameter() / 2.0f;
-	m_bCursorInside = (m_beatmap->getOsu()->getModAuto() && (!m_osu_auto_cursordance->getBool() || ((m_beatmap->getCursorPos() - m_vCurPoint).length() < followRadius))) || ((m_beatmap->getCursorPos() - m_vCurPoint).length() < followRadius);
+	m_bCursorInside = (m_beatmap->getOsu()->getModAuto() && (!m_osu_auto_cursordance_ref->getBool() || ((m_beatmap->getCursorPos() - m_vCurPoint).length() < followRadius))) || ((m_beatmap->getCursorPos() - m_vCurPoint).length() < followRadius);
 	m_bCursorLeft = !m_bCursorInside;
 
 	if (m_beatmap->getOsu()->isInVRMode())
@@ -1419,7 +1422,14 @@ void OsuSlider::onHit(OsuScore::HIT result, long delta, bool startOrEnd, float t
 		// add bonus score + health manually
 		if (result != OsuScore::HIT::HIT_MISS)
 		{
-			m_beatmap->addHitResult(this, OsuScore::HIT::HIT_SLIDER30, 0, false, true, true, true, true, false); // only increase health
+			OsuScore::HIT resultForHealth = OsuScore::HIT::HIT_SLIDER30;
+
+			if (m_osu_drain_type_ref->getInt() == 1) // VR
+			{
+				resultForHealth = result;
+			}
+
+			m_beatmap->addHitResult(this, resultForHealth, 0, false, true, true, true, true, false); // only increase health
 			m_beatmap->addScorePoints(30);
 		}
 		else
@@ -1569,7 +1579,7 @@ void OsuSlider::onSliderBreak()
 	if (osu_slider_break_epilepsy.getBool())
 	{
 		m_fSliderBreakRapeTime = engine->getTime() + 0.15f;
-		m_epilepsy->setValue(1.0f);
+		m_epilepsy_ref->setValue(1.0f);
 	}
 }
 
@@ -1651,7 +1661,7 @@ void OsuSlider::onReset(long curPos)
 	}
 
 	m_fSliderBreakRapeTime = 0.0f;
-	m_epilepsy->setValue(0.0f);
+	m_epilepsy_ref->setValue(0.0f);
 }
 
 void OsuSlider::rebuildVertexBuffer()
