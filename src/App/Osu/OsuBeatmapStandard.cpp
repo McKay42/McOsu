@@ -497,6 +497,7 @@ void OsuBeatmapStandard::draw(Graphics *g)
 		}
 	}
 
+	/*
 	if (m_bFailed)
 	{
 		const float failTimePercentInv = 1.0f - clamp<float>((m_fFailTime - engine->getTime()) / m_osu_fail_time_ref->getFloat(), 0.0f, 1.0f); // goes from 0 to 1 over the duration of osu_fail_time
@@ -508,6 +509,7 @@ void OsuBeatmapStandard::draw(Graphics *g)
 		g->setAlpha(failTimePercentInv);
 		g->fillRect(playfieldBorderTopLeft.x, playfieldBorderTopLeft.y, playfieldBorderSize.x, playfieldBorderSize.y);
 	}
+	*/
 
 	// debug stuff
 	if (osu_debug_hiterrorbar_misaims.getBool())
@@ -831,11 +833,11 @@ void OsuBeatmapStandard::update()
 	if (m_osu->getModAuto() || m_osu->getModAutopilot())
 		updateAutoCursorPos();
 
-	// spinner detection (used temporarily by OsuHUD for not drawing the hiterrorbar)
+	// spinner detection (used by osu!stable drain, and by OsuHUD for not drawing the hiterrorbar)
 	if (m_currentHitObject != NULL)
 	{
 		OsuSpinner *spinnerPointer = dynamic_cast<OsuSpinner*>(m_currentHitObject);
-		if (spinnerPointer != NULL)
+		if (spinnerPointer != NULL && m_iCurMusicPosWithOffsets > m_currentHitObject->getTime() && m_iCurMusicPosWithOffsets < m_currentHitObject->getTime() + m_currentHitObject->getDuration())
 			m_bIsSpinnerActive = true;
 		else
 			m_bIsSpinnerActive = false;
@@ -1972,8 +1974,7 @@ void OsuBeatmapStandard::computeDrainRate()
 					}
 					else if (spinnerPointer != NULL)
 					{
-						const double spinsPerMinute = 100 + (getOD() * 15);
-						const int rotationsNeeded = (int)(spinsPerMinute * (spinnerPointer->getDuration()) / 60000.0);
+						const int rotationsNeeded = (int)((float)spinnerPointer->getDuration() / 1000.0f * OsuGameRules::getSpinnerSpinsPerSecond(this));
 						for (int r=0; r<rotationsNeeded; r++)
 						{
 							testPlayer.increaseHealth(OsuScore::getHealthIncrease(OsuScore::HIT::HIT_SPINNERSPIN, HP, testPlayer.hpMultiplierNormal, testPlayer.hpMultiplierComboEnd, 1.0)); // spinnerspin

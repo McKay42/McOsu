@@ -416,6 +416,7 @@ double OsuScore::getHealthIncrease(OsuScore::HIT hit, double HP, double hpMultip
 			return osu_drain_vr_100.getFloat() * osu_drain_vr_multiplier.getFloat();
 
 		case OsuScore::HIT::HIT_300:
+		case OsuScore::HIT::HIT_SLIDER30:
 			return osu_drain_vr_300.getFloat() * osu_drain_vr_multiplier.getFloat();
 
 
@@ -466,10 +467,10 @@ double OsuScore::getHealthIncrease(OsuScore::HIT hit, double HP, double hpMultip
 			return (hpMultiplierNormal * 4.0 / hpBarMaximumForNormalization);
 
 		case OsuScore::HIT::HIT_SPINNERSPIN:
-			return (hpMultiplierNormal * 1.7 * 2.0 / hpBarMaximumForNormalization);
+			return (hpMultiplierNormal * 1.7 / hpBarMaximumForNormalization);
 
 		case OsuScore::HIT::HIT_SPINNERBONUS:
-			return (hpMultiplierNormal * 2.0 * 2.0 / hpBarMaximumForNormalization);
+			return (hpMultiplierNormal * 2.0 / hpBarMaximumForNormalization);
 		}
 	}
 	else if (drainType == 3) // osu!lazer

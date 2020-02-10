@@ -10,6 +10,7 @@
 #include "Engine.h"
 #include "ResourceManager.h"
 #include "SoundEngine.h"
+#include "AnimationHandler.h"
 #include "OpenVRInterface.h"
 #include "OpenVRController.h"
 #include "Mouse.h"
@@ -63,7 +64,7 @@ OsuSpinner::OsuSpinner(int x, int y, long time, int sampleType, bool isEndOfComb
 
 OsuSpinner::~OsuSpinner()
 {
-	m_beatmap->getSkin()->stopSpinnerSpinSound();
+	onReset(0);
 
 	delete[] m_storedDeltaAngles;
 	m_storedDeltaAngles = NULL;
@@ -394,8 +395,6 @@ void OsuSpinner::update(long curPos)
 
 				if (std::abs(rotationAngle) > 0.0001f)
 					rotate(rotationAngle);
-				///if (std::abs(rotationAngle) > 0.00001f)
-				///	data.changeHealth(DELTA_UPDATE_TIME * m_beatmap->getSelectedDifficulty()->OD);
 			}
 
 

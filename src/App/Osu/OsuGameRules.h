@@ -268,15 +268,14 @@ public:
 		return osu_hitwindow_miss.getFloat(); // opsu is using this here: (500.0f - (beatmap->getOD() * 10.0f)), while osu is just using 400 absolute ms hardcoded, not sure why
 	}
 
-	static float getSpinnerSpins(OsuBeatmap *beatmap) // raw spins
+	static float getSpinnerSpinsPerSecond(OsuBeatmap *beatmap) // raw spins required per second
 	{
 		return mapDifficultyRange(beatmap->getOD(), 3.0f, 5.0f, 7.5f);
 	}
 	static float getSpinnerRotationsForSpeedMultiplier(OsuBeatmap *beatmap, long spinnerDuration, float speedMultiplier)
 	{
-		const float spinsPerMinute = 100.0f + (beatmap->getOD() * 15.0f);
-		return (int)((spinsPerMinute * (float)spinnerDuration / 60000.0f) * (std::min(1.0f / speedMultiplier, 1.0f)));
-		///return (int)(((float)spinnerDuration / 1000.0f * getSpinnerSpins(beatmap))*0.5f) * (std::min(1.0f / speedMultiplier, 1.0f));
+		///return (int)((float)spinnerDuration / 1000.0f * getSpinnerSpinsPerSecond(beatmap)); // actual
+		return (int)((((float)spinnerDuration / 1000.0f * getSpinnerSpinsPerSecond(beatmap)) * 0.5f) * (std::min(1.0f / speedMultiplier, 1.0f))); // Mc
 	}
 	static float getSpinnerRotationsForSpeedMultiplier(OsuBeatmap *beatmap, long spinnerDuration) // spinner length compensated rotations // respect all mods and overrides
 	{

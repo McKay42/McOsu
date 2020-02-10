@@ -186,7 +186,7 @@ void OsuUISongBrowserInfoLabel::update()
 			m_osu->getTooltipOverlay()->addLine(UString::format("300: +-%.2fms", hitWindow300RoundedCompensated));
 			m_osu->getTooltipOverlay()->addLine(UString::format("100: +-%.2fms", hitWindow100RoundedCompensated));
 			m_osu->getTooltipOverlay()->addLine(UString::format(" 50: +-%.2fms", hitWindow50RoundedCompensated));
-			m_osu->getTooltipOverlay()->addLine(UString::format("Spinner difficulty: %.2f", OsuGameRules::getSpinnerSpins(beatmap)));
+			m_osu->getTooltipOverlay()->addLine(UString::format("Spinner difficulty: %.2f", OsuGameRules::getSpinnerSpinsPerSecond(beatmap)));
 			m_osu->getTooltipOverlay()->addLine(UString::format("Hit object radius: %.2f", hitobjectRadiusRoundedCompensated));
 			m_osu->getTooltipOverlay()->end();
 		}
