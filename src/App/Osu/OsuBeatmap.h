@@ -126,6 +126,8 @@ public:
 	inline bool isInSkippableSection() {return m_bIsInSkippableSection;}
 	inline bool isInBreak() {return m_bInBreak;}
 	inline bool shouldFlashWarningArrows() {return m_bShouldFlashWarningArrows;}
+	inline float shouldFlashSectionPass() {return m_fShouldFlashSectionPass;}
+	inline float shouldFlashSectionFail() {return m_fShouldFlashSectionFail;}
 	bool isClickHeld(); // is any key currently being held down
 	inline bool isKey1Down() {return m_bClick1Held;}
 	inline bool isKey2Down() {return m_bClick2Held;}
@@ -145,6 +147,7 @@ public:
 
 	// ILLEGAL:
 	inline const std::vector<OsuHitObject*> &getHitObjectsPointer() {return m_hitobjects;}
+	inline float getBreakBackgroundFadeAnim() const {return m_fBreakBackgroundFade;}
 
 protected:
 	static ConVar *m_snd_speed_compensate_pitch_ref;
@@ -158,6 +161,8 @@ protected:
 	static ConVar *m_osu_fail_time_ref;
 	static ConVar *m_osu_drain_type_ref;
 
+	static ConVar *m_osu_draw_scorebarbg_ref;
+	static ConVar *m_osu_hud_scorebar_hide_during_breaks_ref;
 	static ConVar *m_osu_drain_stable_hpbar_maximum_ref;
 	static ConVar *m_osu_volume_music_ref;
 
@@ -201,6 +206,8 @@ protected:
 
 	bool m_bIsInSkippableSection;
 	bool m_bShouldFlashWarningArrows;
+	float m_fShouldFlashSectionPass;
+	float m_fShouldFlashSectionFail;
 	int m_iSelectedDifficulty;
 	float m_fWaitTime;
 	bool m_bContinueScheduled;
@@ -238,6 +245,7 @@ protected:
 	OsuHitObject *m_currentHitObject;
 	long m_iNextHitObjectTime;
 	long m_iPreviousHitObjectTime;
+	long m_iPreviousSectionPassFailTime;
 
 	// player
 	bool m_bClick1Held;
