@@ -368,6 +368,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_osu_skin_workshop_id_ref = convar->getConVarByName("osu_skin_workshop_id");
 	m_osu_skin_random_ref = convar->getConVarByName("osu_skin_random");
 	m_osu_ui_scale_ref = convar->getConVarByName("osu_ui_scale");
+	m_osu_drain_type_ref = convar->getConVarByName("osu_drain_type");
 
 	m_win_snd_wasapi_buffer_size_ref = convar->getConVarByName("win_snd_wasapi_buffer_size", false);
 	m_win_snd_wasapi_period_size_ref = convar->getConVarByName("win_snd_wasapi_period_size", false);
@@ -406,6 +407,9 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_skinSelectWorkshopButton = NULL;
 	m_uiScaleSlider = NULL;
 	m_uiScaleResetButton = NULL;
+	m_hpDrainSelectButton = NULL;
+	m_hpDrainSelectLabel = NULL;
+	m_hpDrainSelectResetButton = NULL;
 
 	m_fOsuFolderTextboxInvalidAnim = 0.0f;
 	m_fVibrationStrengthExampleTimer = 0.0f;
@@ -423,6 +427,11 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_iManiaKey = 0;
 
 	m_fSearchOnCharKeybindHackTime = 0.0f;
+
+	m_drainTypes.push_back("None");
+	m_drainTypes.push_back("VR");
+	m_drainTypes.push_back("osu!stable");
+	m_drainTypes.push_back("osu!lazer");
 
 	m_container = new CBaseUIContainer(-1, 0, 0, 0, "");
 
@@ -877,8 +886,23 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Show Skip Button during Intro", "Skip intro to first hitobject.", convar->getConVarByName("osu_skip_intro_enabled"));
 	addCheckbox("Show Skip Button during Breaks", "Skip breaks in the middle of beatmaps.", convar->getConVarByName("osu_skip_breaks_enabled"));
 	addSpacer();
-	addCheckbox("Note Blocking/Locking", "NOTE: osu! has this always enabled, so leave it enabled for practicing.\n\"Protects\" you by only allowing circles to be clicked in order.", convar->getConVarByName("osu_note_blocking"));
+	addSubSection("Mechanics");
+	addCheckbox("Notelock (note blocking/locking)", "NOTE: osu! has this always enabled, so leave it enabled for practicing.\n\"Protects\" you by only allowing circles to be clicked in order.", convar->getConVarByName("osu_note_blocking"));
+	addLabel("");
+	OPTIONS_ELEMENT drainSelect = addButton("Select HP Drain", "None", true);
+	((CBaseUIButton*)drainSelect.elements[0])->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onHPDrainSelect) );
+	m_hpDrainSelectButton = drainSelect.elements[0];
+	m_hpDrainSelectLabel = (CBaseUILabel*)drainSelect.elements[1];
+	m_hpDrainSelectResetButton = drainSelect.resetButton;
+	m_hpDrainSelectResetButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onHPDrainSelectResetClicked) );
+	addLabel("");
+	addLabel("Info about different drain algorithms:")->setTextColor(0xff666666);
+	addLabel("");
+	addLabel("- VR: No constant drain, very hard on accuracy")->setTextColor(0xff666666);
+	addLabel("- osu!stable: Constant drain, moderately hard (default)")->setTextColor(0xff666666);
+	addLabel("- osu!lazer: Constant drain, relatively easy (too easy?)")->setTextColor(0xff666666);
 	addSpacer();
+	addSubSection("Backgrounds");
 	addCheckbox("Load Background Images (!)", "NOTE: Disabling this will disable ALL beatmap images everywhere!", convar->getConVarByName("osu_load_beatmap_background_images"));
 	addCheckbox("Draw Background in Beatmap", convar->getConVarByName("osu_draw_beatmap_background_image"));
 	addCheckbox("Draw Background in SongBrowser", "NOTE: You can disable this if you always want menu-background.", convar->getConVarByName("osu_draw_songbrowser_background_image"));
@@ -898,6 +922,8 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Draw Accuracy", convar->getConVarByName("osu_draw_accuracy"));
 	addCheckbox("Draw ProgressBar", convar->getConVarByName("osu_draw_progressbar"));
 	addCheckbox("Draw HitErrorBar", convar->getConVarByName("osu_draw_hiterrorbar"));
+	addCheckbox("Draw ScoreBar", "Health/HP Bar.", convar->getConVarByName("osu_draw_scorebar"));
+	addCheckbox("Draw ScoreBar-bg", "Some skins abuse this as the playfield background image.\nIt is actually just the background image for the Health/HP Bar.", convar->getConVarByName("osu_draw_scorebarbg"));
 	addCheckbox("Draw ScoreBoard", convar->getConVarByName("osu_draw_scoreboard"));
 	addCheckbox("Draw Key Overlay", convar->getConVarByName("osu_draw_inputoverlay"));
 	addCheckbox("Draw Scrubbing Timeline", convar->getConVarByName("osu_draw_scrubbing_timeline"));
@@ -935,6 +961,9 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_hudProgressbarScaleSlider = addSlider("ProgressBar Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_hud_progressbar_scale"), 165.0f);
 	m_hudProgressbarScaleSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
 	m_hudProgressbarScaleSlider->setKeyDelta(0.01f);
+	m_hudScoreBarScaleSlider = addSlider("ScoreBar Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_hud_scorebar_scale"), 165.0f);
+	m_hudScoreBarScaleSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
+	m_hudScoreBarScaleSlider->setKeyDelta(0.01f);
 	m_hudScoreBoardScaleSlider = addSlider("ScoreBoard Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_hud_scoreboard_scale"), 165.0f);
 	m_hudScoreBoardScaleSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
 	m_hudScoreBoardScaleSlider->setKeyDelta(0.01f);
@@ -947,8 +976,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 
 	addSubSection("Playfield");
 	addCheckbox("Draw FollowPoints", convar->getConVarByName("osu_draw_followpoints"));
-	addCheckbox("Draw scorebar-bg", "Some skins abuse this as the playfield background image.\nIf not, then disable it (otherwise you see an empty health bar all the time).", convar->getConVarByName("osu_draw_scorebarbg"));
-	addCheckbox("Draw Playfield Border", "Compared to the scorebar-bg hack above, this will draw the correct border relative to the current CS.", convar->getConVarByName("osu_draw_playfield_border"));
+	addCheckbox("Draw Playfield Border", "Correct border relative to the current Circle Size.", convar->getConVarByName("osu_draw_playfield_border"));
 	addSpacer();
 	m_playfieldBorderSizeSlider = addSlider("Playfield Border Size:", 0.0f, 500.0f, convar->getConVarByName("osu_hud_playfield_border_size"));
 	m_playfieldBorderSizeSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeInt) );
@@ -1111,7 +1139,7 @@ void OsuOptionsMenu::draw(Graphics *g)
 
 	m_container->draw(g);
 
-	if (m_hudSizeSlider->isActive() || m_hudComboScaleSlider->isActive() || m_hudScoreScaleSlider->isActive() || m_hudAccuracyScaleSlider->isActive() || m_hudHiterrorbarScaleSlider->isActive() || m_hudProgressbarScaleSlider->isActive() || m_hudScoreBoardScaleSlider->isActive() || m_hudInputoverlayScaleSlider->isActive() || m_statisticsOverlayScaleSlider->isActive())
+	if (m_hudSizeSlider->isActive() || m_hudComboScaleSlider->isActive() || m_hudScoreScaleSlider->isActive() || m_hudAccuracyScaleSlider->isActive() || m_hudHiterrorbarScaleSlider->isActive() || m_hudProgressbarScaleSlider->isActive() || m_hudScoreBarScaleSlider->isActive() || m_hudScoreBoardScaleSlider->isActive() || m_hudInputoverlayScaleSlider->isActive() || m_statisticsOverlayScaleSlider->isActive())
 	{
 		if (!isPlayingBeatmap)
 			m_osu->getHUD()->drawDummy(g);
@@ -1666,11 +1694,13 @@ void OsuOptionsMenu::updateLayout()
 
 	updateVRRenderTargetResolutionLabel();
 	updateSkinNameLabel();
+	updateHPDrainSelectLabel();
 
 	if (m_outputDeviceLabel != NULL)
 		m_outputDeviceLabel->setText(engine->getSound()->getOutputDevice());
 
 	onOutputDeviceResetUpdate();
+	onHPDrainSelectResetUpdate();
 
 	//************************************************************************************************************************************//
 
@@ -2157,6 +2187,13 @@ void OsuOptionsMenu::updateSkinNameLabel()
 	m_skinLabel->setTextColor(m_osu_skin_is_from_workshop_ref->getBool() ? 0xff37adff : 0xffffffff);
 }
 
+void OsuOptionsMenu::updateHPDrainSelectLabel()
+{
+	if (m_hpDrainSelectLabel == NULL) return;
+
+	m_hpDrainSelectLabel->setText(m_drainTypes[clamp<int>(m_osu_drain_type_ref->getInt(), 0, m_drainTypes.size() - 1)]);
+}
+
 void OsuOptionsMenu::onFullscreenChange(CBaseUICheckbox *checkbox)
 {
 	if (checkbox->isChecked())
@@ -2606,6 +2643,42 @@ void OsuOptionsMenu::onCM360CalculatorLinkClicked()
 
 	m_osu->getNotificationOverlay()->addNotification("Opening browser, please wait ...", 0xffffffff, false, 0.75f);
 	env->openURLInDefaultBrowser("https://www.mouse-sensitivity.com/");
+}
+
+void OsuOptionsMenu::onHPDrainSelect()
+{
+    // build context menu
+	m_contextMenu->setPos(m_hpDrainSelectButton->getPos());
+	m_contextMenu->setRelPos(m_hpDrainSelectButton->getRelPos());
+	m_contextMenu->begin(m_hpDrainSelectButton->getSize().x);
+	{
+		for (int i=0; i<m_drainTypes.size(); i++)
+		{
+			m_contextMenu->addButton(m_drainTypes[i], i);
+		}
+	}
+	m_contextMenu->end();
+	m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onHPDrainSelect2) );
+}
+
+void OsuOptionsMenu::onHPDrainSelect2(UString hpDrainType, int id)
+{
+	m_osu_drain_type_ref->setValue(id);
+	updateHPDrainSelectLabel();
+
+	// and update the reset button as usual
+	onHPDrainSelectResetUpdate();
+}
+
+void OsuOptionsMenu::onHPDrainSelectResetClicked()
+{
+	onHPDrainSelect2(m_drainTypes[2], 2);
+}
+
+void OsuOptionsMenu::onHPDrainSelectResetUpdate()
+{
+	if (m_hpDrainSelectResetButton != NULL)
+		m_hpDrainSelectResetButton->setEnabled(m_osu_drain_type_ref->getInt() != (int)m_osu_drain_type_ref->getDefaultFloat());
 }
 
 void OsuOptionsMenu::onCheckboxChange(CBaseUICheckbox *checkbox)
@@ -3611,6 +3684,7 @@ void OsuOptionsMenu::save()
 
 	manualConVars.push_back(convar->getConVarByName("osu_songbrowser_sortingtype"));
 	manualConVars.push_back(convar->getConVarByName("osu_songbrowser_scores_sortingtype"));
+	manualConVars.push_back(m_osu_drain_type_ref);
 	if (m_osu->isInVRMode())
 		manualConVars.push_back(convar->getConVarByName("osu_vr_layout_lock"));
 
