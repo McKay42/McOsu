@@ -1488,7 +1488,7 @@ unsigned long OsuBeatmapDifficulty::getBreakDurationTotal()
 	return breakDurationTotal;
 }
 
-bool OsuBeatmapDifficulty::isInBreak(unsigned long positionMS)
+bool OsuBeatmapDifficulty::isInBreak(long positionMS)
 {
 	for (int i=0; i<breaks.size(); i++)
 	{

@@ -64,7 +64,7 @@
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 30.134f);
+ConVar osu_version("osu_version", 31.00f);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr");
 #else
@@ -2192,7 +2192,9 @@ void Osu::updateConfineCursor()
 {
 	if (isInVRMode() || m_iInstanceID > 0) return;
 
-	if ((osu_confine_cursor_fullscreen.getBool() && env->isFullscreen()) || (osu_confine_cursor_windowed.getBool() && !env->isFullscreen()) || (isInPlayMode() && !getSelectedBeatmap()->isPaused() && !getModAuto() && !getModAutopilot()))
+	if ((osu_confine_cursor_fullscreen.getBool() && env->isFullscreen())
+			|| (osu_confine_cursor_windowed.getBool() && !env->isFullscreen())
+			|| (isInPlayMode() && !m_pauseMenu->isVisible() && !getModAuto() && !getModAutopilot()))
 		env->setCursorClip(true, McRect());
 	else
 		env->setCursorClip(false, McRect());
