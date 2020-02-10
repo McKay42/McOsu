@@ -106,8 +106,9 @@ ConVar osu_hud_hiterrorbar_offset_right_percent("osu_hud_hiterrorbar_offset_righ
 ConVar osu_hud_hiterrorbar_bar_width_scale("osu_hud_hiterrorbar_bar_width_scale", 0.6f);
 ConVar osu_hud_hiterrorbar_bar_height_scale("osu_hud_hiterrorbar_bar_height_scale", 3.4f);
 ConVar osu_hud_hiterrorbar_max_entries("osu_hud_hiterrorbar_max_entries", 32, "maximum number of entries/lines");
-ConVar osu_hud_hpbar_hide_during_breaks("osu_hud_hpbar_hide_during_breaks", true);
-ConVar osu_hud_hpbar_hide_anim_duration("osu_hud_hpbar_hide_anim_duration", 0.5f);
+ConVar osu_hud_scorebar_scale("osu_hud_scorebar_scale", 1.0f);
+ConVar osu_hud_scorebar_hide_during_breaks("osu_hud_scorebar_hide_during_breaks", true);
+ConVar osu_hud_scorebar_hide_anim_duration("osu_hud_scorebar_hide_anim_duration", 0.5f);
 ConVar osu_hud_combo_scale("osu_hud_combo_scale", 1.0f);
 ConVar osu_hud_score_scale("osu_hud_score_scale", 1.0f);
 ConVar osu_hud_accuracy_scale("osu_hud_accuracy_scale", 1.0f);
@@ -131,7 +132,8 @@ ConVar osu_hud_fps_smoothing("osu_hud_fps_smoothing", true);
 ConVar osu_draw_cursor_trail("osu_draw_cursor_trail", true);
 ConVar osu_draw_cursor_ripples("osu_draw_cursor_ripples", false);
 ConVar osu_draw_hud("osu_draw_hud", true);
-ConVar osu_draw_hpbar("osu_draw_hpbar", true);
+ConVar osu_draw_scorebar("osu_draw_scorebar", true);
+ConVar osu_draw_scorebarbg("osu_draw_scorebarbg", true);
 ConVar osu_draw_hiterrorbar("osu_draw_hiterrorbar", true);
 ConVar osu_draw_hiterrorbar_bottom("osu_draw_hiterrorbar_bottom", true);
 ConVar osu_draw_hiterrorbar_top("osu_draw_hiterrorbar_top", false);
@@ -261,7 +263,8 @@ OsuHUD::OsuHUD(Osu *osu) : OsuScreen(osu)
 	m_fCursorExpandAnim = 1.0f;
 
 	m_fHealth = 1.0f;
-	m_fHPBarBreakAnim = 0.0f;
+	m_fScoreBarBreakAnim = 0.0f;
+	m_fKiScaleAnim = 0.8f;
 }
 
 OsuHUD::~OsuHUD()
@@ -319,8 +322,8 @@ void OsuHUD::draw(Graphics *g)
 		}
 		g->popTransform();
 
-		if (osu_draw_hpbar.getBool())
-			drawHPBar(g, m_fHealth, m_fHPBarBreakAnim);
+		if (osu_draw_scorebar.getBool())
+			drawHPBar(g, m_fHealth, osu_hud_scorebar_hide_during_breaks.getBool() ? (1.0f - beatmap->getBreakBackgroundFadeAnim()) : 1.0f, m_fScoreBarBreakAnim);
 
 		// NOTE: moved to draw behind hitobjects in OsuBeatmapStandard::draw()
 		/*
@@ -368,6 +371,11 @@ void OsuHUD::draw(Graphics *g)
 		}
 		*/
 	}
+
+	if (beatmap->shouldFlashSectionPass())
+		drawSectionPass(g, beatmap->shouldFlashSectionPass());
+	if (beatmap->shouldFlashSectionFail())
+		drawSectionFail(g, beatmap->shouldFlashSectionFail());
 
 	if (beatmap->shouldFlashWarningArrows())
 		drawWarningArrows(g, beatmapStd != NULL ? beatmapStd->getHitcircleDiameter() : 0);
@@ -429,18 +437,18 @@ void OsuHUD::update()
 		else if (m_fHealth > currentHealth)
 			m_fHealth = std::max(0.0, m_fHealth - std::abs(m_fHealth - currentHealth) / 6.0 * frameRatio);
 
-		if (osu_hud_hpbar_hide_during_breaks.getBool())
+		if (osu_hud_scorebar_hide_during_breaks.getBool())
 		{
-			if (!anim->isAnimating(&m_fHPBarBreakAnim))
+			if (!anim->isAnimating(&m_fScoreBarBreakAnim) && !beatmap->isWaiting())
 			{
-				if (m_fHPBarBreakAnim == 0.0f && beatmap->isInBreak())
-					anim->moveLinear(&m_fHPBarBreakAnim, 1.0f, osu_hud_hpbar_hide_anim_duration.getFloat(), true);
-				else if (m_fHPBarBreakAnim == 1.0f && !beatmap->isInBreak())
-					anim->moveLinear(&m_fHPBarBreakAnim, 0.0f, osu_hud_hpbar_hide_anim_duration.getFloat(), true);
+				if (m_fScoreBarBreakAnim == 0.0f && beatmap->isInBreak())
+					anim->moveLinear(&m_fScoreBarBreakAnim, 1.0f, osu_hud_scorebar_hide_anim_duration.getFloat(), true);
+				else if (m_fScoreBarBreakAnim == 1.0f && !beatmap->isInBreak())
+					anim->moveLinear(&m_fScoreBarBreakAnim, 0.0f, osu_hud_scorebar_hide_anim_duration.getFloat(), true);
 			}
 		}
 		else
-			m_fHPBarBreakAnim = 0.0f;
+			m_fScoreBarBreakAnim = 0.0f;
 	}
 
 	// dynamic hud scaling updates
@@ -555,6 +563,12 @@ void OsuHUD::drawDummy(Graphics *g)
 {
 	drawPlayfieldBorder(g, OsuGameRules::getPlayfieldCenter(m_osu), OsuGameRules::getPlayfieldSize(m_osu), 0);
 
+	if (osu_draw_scorebarbg.getBool())
+		drawScorebarBg(g, 1.0f, 0.0f);
+
+	if (osu_draw_scorebar.getBool())
+		drawHPBar(g, 1.0, 1.0f, 0.0);
+
 	if (osu_draw_inputoverlay.getBool())
 		drawInputOverlay(g, 0, 0, 0, 0);
 
@@ -606,6 +620,12 @@ void OsuHUD::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 	{
 		if (osu_draw_hud.getBool())
 		{
+			if (osu_draw_scorebarbg.getBool())
+				drawScorebarBg(g, 1.0f, m_fScoreBarBreakAnim);
+
+			if (osu_draw_scorebar.getBool())
+				drawHPBar(g, m_fHealth, osu_hud_scorebar_hide_during_breaks.getBool() ? (1.0f - beatmap->getBreakBackgroundFadeAnim()) : 1.0f, m_fScoreBarBreakAnim);
+
 			if (osu_draw_scoreboard.getBool())
 			{
 				if (m_osu->isInMultiplayer())
@@ -632,15 +652,6 @@ void OsuHUD::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 					m_osu->getScore()->getHitErrorAvgCustomMin(),
 					m_osu->getScore()->getHitErrorAvgCustomMax());
 
-			vr->getShaderUntexturedLegacyGeneric()->enable();
-			vr->getShaderUntexturedLegacyGeneric()->setUniformMatrix4fv("matrix", mvp);
-			{
-				if (osu_draw_hpbar.getBool() && !m_osu->getModNF())
-					drawHPBar(g, m_fHealth, m_fHPBarBreakAnim);
-			}
-			vr->getShaderUntexturedLegacyGeneric()->disable();
-			vr->getShaderTexturedLegacyGeneric()->enable();
-
 			if (osu_draw_score.getBool())
 				drawScore(g, m_osu->getScore()->getScore());
 
@@ -653,6 +664,11 @@ void OsuHUD::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 			if (osu_draw_accuracy.getBool())
 				drawAccuracy(g, m_osu->getScore()->getAccuracy()*100.0f);
 		}
+
+		if (beatmap->shouldFlashSectionPass())
+			drawSectionPass(g, beatmap->shouldFlashSectionPass());
+		if (beatmap->shouldFlashSectionFail())
+			drawSectionFail(g, beatmap->shouldFlashSectionFail());
 
 		if (beatmap->shouldFlashWarningArrows())
 			drawWarningArrows(g, beatmap->getHitcircleDiameter());
@@ -668,6 +684,12 @@ void OsuHUD::drawVRDummy(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 	vr->getShaderTexturedLegacyGeneric()->enable();
 	vr->getShaderTexturedLegacyGeneric()->setUniformMatrix4fv("matrix", mvp);
 	{
+		if (osu_draw_scorebarbg.getBool())
+			drawScorebarBg(g, 1.0f, 0.0f);
+
+		if (osu_draw_scorebar.getBool())
+			drawHPBar(g, 1.0, 1.0f, 0.0f);
+
 		SCORE_ENTRY scoreEntry;
 		scoreEntry.name = m_name_ref->getString();
 		scoreEntry.combo = 1234;
@@ -686,15 +708,6 @@ void OsuHUD::drawVRDummy(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 		drawSkip(g);
 
 		drawStatistics(g, 0, 0, 180, 9.0f, 4.0f, 8.0f, 4, 6, 90.0f, 123, 25, -5, 15);
-
-		vr->getShaderUntexturedLegacyGeneric()->enable();
-		vr->getShaderUntexturedLegacyGeneric()->setUniformMatrix4fv("matrix", mvp);
-		{
-			if (osu_draw_hpbar.getBool())
-				drawHPBar(g, 1.0, 0.0f);
-		}
-		vr->getShaderUntexturedLegacyGeneric()->disable();
-		vr->getShaderTexturedLegacyGeneric()->enable();
 
 		if (osu_draw_score.getBool())
 			drawScore(g, scoreEntry.score);
@@ -1391,34 +1404,102 @@ void OsuHUD::drawScore(Graphics *g, unsigned long long score)
 	g->popTransform();
 }
 
-void OsuHUD::drawHPBar(Graphics *g, double health, float breakAnim)
+void OsuHUD::drawScorebarBg(Graphics *g, float alpha, float breakAnim)
 {
-	float fadeStartPercent = 0.40f;
-	float fadeFinishPercent = 0.25f;
-	float greenBlueFactor = 1.0f;
-	if (health < fadeStartPercent)
+	if (m_osu->getSkin()->getScorebarBg()->isMissingTexture()) return;
+
+	const float scale = osu_hud_scale.getFloat() * osu_hud_scorebar_scale.getFloat();
+	const float ratio = Osu::getImageScale(m_osu, Vector2(1, 1), 1.0f);
+
+	const Vector2 breakAnimOffset = Vector2(0, -20.0f * breakAnim) * ratio;
+
+	g->setColor(0xffffffff);
+	g->setAlpha(alpha * (1.0f - breakAnim));
+	m_osu->getSkin()->getScorebarBg()->draw(g, (m_osu->getSkin()->getScorebarBg()->getSize() / 2.0f) * scale + (breakAnimOffset * scale), scale);
+}
+
+void OsuHUD::drawSectionPass(Graphics *g, float alpha)
+{
+	if (!m_osu->getSkin()->getSectionPassImage()->isMissingTexture())
 	{
-		if (health > fadeFinishPercent)
-			greenBlueFactor = (health - fadeFinishPercent) / std::abs(fadeStartPercent - fadeFinishPercent);
-		else
-			greenBlueFactor = 0.0f;
+		g->setColor(0xffffffff);
+		g->setAlpha(alpha);
+		m_osu->getSkin()->getSectionPassImage()->draw(g, m_osu->getScreenSize() / 2);
 	}
-	g->setColor(COLORf(1.0f - breakAnim, 1.0f, greenBlueFactor, greenBlueFactor));
-	g->fillRect(12, -breakAnim * 50, m_osu->getScreenWidth()*0.472f*health, m_osu->getScreenHeight()*0.015f);
+}
 
-	// TODO: implement properly
+void OsuHUD::drawSectionFail(Graphics *g, float alpha)
+{
+	if (!m_osu->getSkin()->getSectionFailImage()->isMissingTexture())
+	{
+		g->setColor(0xffffffff);
+		g->setAlpha(alpha);
+		m_osu->getSkin()->getSectionFailImage()->draw(g, m_osu->getScreenSize() / 2);
+	}
+}
 
-	/*
-	g->pushTransform();
-		g->translate(100, 100);
-		g->drawString(m_tempFont, UString::format("HP: %i", (int)(health*100.0f)));
-		if (health < 0.01f)
+void OsuHUD::drawHPBar(Graphics *g, double health, float alpha, float breakAnim)
+{
+	const bool useNewDefault = !m_osu->getSkin()->getScorebarMarker()->isMissingTexture(); // NOTE: additionally, don't useNewDefault if marker is loaded from default skin
+
+	const float scale = osu_hud_scale.getFloat() * osu_hud_scorebar_scale.getFloat();
+	const float ratio = Osu::getImageScale(m_osu, Vector2(1, 1), 1.0f);
+
+	const Vector2 colourOffset = (useNewDefault ? Vector2(7.5f, 7.8f) : Vector2(3.0f, 10.0f)) * ratio;
+	const float currentXPosition = (colourOffset.x + (health * m_osu->getSkin()->getScorebarColour()->getSize().x));
+	const Vector2 markerOffset = (useNewDefault ? Vector2(currentXPosition, (8.125f + 2.5f) * ratio) : Vector2(currentXPosition, 10.0f * ratio));
+	const Vector2 breakAnimOffset = Vector2(0, -20.0f * breakAnim) * ratio;
+
+	// lerp color depending on health
+	if (useNewDefault)
+	{
+		if (health < 0.2)
 		{
-			g->translate(0, m_tempFont->getHeight());
-			g->drawString(m_tempFont, "RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP RIP");
+			const float factor = std::max(0.0, (0.2 - health) / 0.2);
+			const float value = lerp<float>(0.0f, 1.0f, factor);
+			g->setColor(COLORf(1.0f, value, 0.0f, 0.0f));
 		}
-	g->popTransform();
-	*/
+		else if (health < 0.5)
+		{
+			const float factor = std::max(0.0, (0.5 - health) / 0.5);
+			const float value = lerp<float>(1.0f, 0.0f, factor);
+			g->setColor(COLORf(1.0f, value, value, value));
+		}
+		else
+			g->setColor(0xffffffff);
+	}
+	else
+		g->setColor(0xffffffff);
+
+	if (breakAnim != 0.0f || alpha != 1.0f)
+		g->setAlpha(alpha * (1.0f - breakAnim));
+
+	// draw health bar fill
+	m_osu->getSkin()->getScorebarColour()->setDrawClipWidthPercent(health);
+	m_osu->getSkin()->getScorebarColour()->draw(g, (m_osu->getSkin()->getScorebarColour()->getSize() / 2.0f * scale) + (colourOffset * scale) + (breakAnimOffset * scale), scale);
+
+	// draw ki
+	{
+		OsuSkinImage *ki = NULL;
+
+		if (useNewDefault)
+			ki = m_osu->getSkin()->getScorebarMarker();
+		else
+		{
+			if (health < 0.2)
+				ki = m_osu->getSkin()->getScorebarKiDanger2();
+			else if (health < 0.5)
+				ki = m_osu->getSkin()->getScorebarKiDanger();
+			else
+				ki = m_osu->getSkin()->getScorebarKi();
+		}
+
+		if (!ki->isMissingTexture())
+		{
+			if (!useNewDefault || health >= 0.2)
+				ki->draw(g, (markerOffset * scale) + (breakAnimOffset * scale), scale * m_fKiScaleAnim);
+		}
+	}
 }
 
 void OsuHUD::drawAccuracySimple(Graphics *g, float accuracy, float scale)
@@ -2763,6 +2844,19 @@ void OsuHUD::animateCursorExpand()
 void OsuHUD::animateCursorShrink()
 {
 	anim->moveQuadOut(&m_fCursorExpandAnim, 1.0f, osu_cursor_expand_duration.getFloat(), 0.0f, true);
+}
+
+void OsuHUD::animateKiBulge()
+{
+	m_fKiScaleAnim = 1.2f;
+	anim->moveLinear(&m_fKiScaleAnim, 0.8f, 0.150f, true);
+}
+
+void OsuHUD::animateKiExplode()
+{
+	// TODO: scale + fadeout of extra ki image additive, duration = 0.120, quad out:
+	// if additive: fade from 0.5 alpha to 0, scale from 1.0 to 2.0
+	// if not additive: fade from 1.0 alpha to 0, scale from 1.0 to 1.6
 }
 
 void OsuHUD::addCursorTrailPosition(std::vector<CURSORTRAIL> &trail, Vector2 pos, bool empty)

@@ -98,6 +98,13 @@ public:
 	inline OsuSkinImage *getPlayWarningArrow2() {return m_playWarningArrow2;}
 	inline Image *getCircularmetre() {return m_circularmetre;}
 	inline OsuSkinImage *getScorebarBg() {return m_scorebarBg;}
+	inline OsuSkinImage *getScorebarColour() {return m_scorebarColour;}
+	inline OsuSkinImage *getScorebarMarker() {return m_scorebarMarker;}
+	inline OsuSkinImage *getScorebarKi() {return m_scorebarKi;}
+	inline OsuSkinImage *getScorebarKiDanger() {return m_scorebarKiDanger;}
+	inline OsuSkinImage *getScorebarKiDanger2() {return m_scorebarKiDanger2;}
+	inline OsuSkinImage *getSectionPassImage() {return m_sectionPassImage;}
+	inline OsuSkinImage *getSectionFailImage() {return m_sectionFailImage;}
 	inline OsuSkinImage *getInputoverlayBackground() {return m_inputoverlayBackground;}
 	inline OsuSkinImage *getInputoverlayKey() {return m_inputoverlayKey;}
 
@@ -230,6 +237,8 @@ public:
 	inline Sound *getCheckOn() {return m_checkOn;}
 	inline Sound *getCheckOff() {return m_checkOff;}
 	inline Sound *getShutter() {return m_shutter;}
+	inline Sound *getSectionPassSound() {return m_sectionPassSound;}
+	inline Sound *getSectionFailSound() {return m_sectionFailSound;}
 
 	inline bool isCursor2x() {return m_bCursor2x;}
 	inline bool isCursorTrail2x() {return m_bCursorTrail2x;}
@@ -379,6 +388,13 @@ private:
 	OsuSkinImage *m_playWarningArrow2;
 	Image *m_circularmetre;
 	OsuSkinImage *m_scorebarBg;
+	OsuSkinImage *m_scorebarColour;
+	OsuSkinImage *m_scorebarMarker;
+	OsuSkinImage *m_scorebarKi;
+	OsuSkinImage *m_scorebarKiDanger;
+	OsuSkinImage *m_scorebarKiDanger2;
+	OsuSkinImage *m_sectionPassImage;
+	OsuSkinImage *m_sectionFailImage;
 	OsuSkinImage *m_inputoverlayBackground;
 	OsuSkinImage *m_inputoverlayKey;
 
@@ -541,8 +557,9 @@ private:
 	Sound *m_checkOn;
 	Sound *m_checkOff;
 	Sound *m_shutter;
-	Sound *m_sectionFail;
-	Sound *m_sectionPass;
+	Sound *m_sectionPassSound;
+	Sound *m_sectionFailSound;
+
 
 	// colors
 	std::vector<Color> m_comboColors;

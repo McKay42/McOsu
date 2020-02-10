@@ -58,6 +58,9 @@ public:
 	void drawWarningArrow(Graphics *g, Vector2 pos, bool flipVertically, bool originLeft = true);
 	void drawScoreBoard(Graphics *g, std::string &beatmapMD5Hash, OsuScore *currentScore);
 	void drawScoreBoardMP(Graphics *g);
+	void drawScorebarBg(Graphics *g, float alpha, float breakAnim);
+	void drawSectionPass(Graphics *g, float alpha);
+	void drawSectionFail(Graphics *g, float alpha);
 
 	void animateCombo();
 	void addHitError(long delta, bool miss = false, bool misaim = false);
@@ -68,6 +71,8 @@ public:
 	void addCursorRipple(Vector2 pos);
 	void animateCursorExpand();
 	void animateCursorShrink();
+	void animateKiBulge();
+	void animateKiExplode();
 
 	void selectVolumePrev();
 	void selectVolumeNext();
@@ -84,6 +89,9 @@ public:
 	OsuUIVolumeSlider *getVolumeMusicSlider() {return m_volumeMusic;}
 
 	void drawSkip(Graphics *g);
+
+	// ILLEGAL:
+	inline float getScoreBarBreakAnim() const {return m_fScoreBarBreakAnim;}
 
 private:
 	struct CURSORTRAIL
@@ -147,7 +155,7 @@ private:
 	void drawAccuracy(Graphics *g, float accuracy);
 	void drawCombo(Graphics *g, int combo);
 	void drawScore(Graphics *g, unsigned long long score);
-	void drawHPBar(Graphics *g, double health, float breakAnim);
+	void drawHPBar(Graphics *g, double health, float alpha, float breakAnim);
 	void drawScoreBoardInt(Graphics *g, const std::vector<SCORE_ENTRY> &scoreEntries);
 
 	void drawWarningArrows(Graphics *g, float hitcircleDiameter = 0.0f);
@@ -242,7 +250,8 @@ private:
 
 	// health
 	double m_fHealth;
-	float m_fHPBarBreakAnim;
+	float m_fScoreBarBreakAnim;
+	float m_fKiScaleAnim;
 };
 
 #endif

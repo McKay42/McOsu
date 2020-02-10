@@ -223,8 +223,8 @@ OsuSkin::OsuSkin(Osu *osu, UString name, UString filepath, bool isDefaultSkin, b
 	m_checkOn = NULL;
 	m_checkOff = NULL;
 	m_shutter = NULL;
-	m_sectionFail = NULL;
-	m_sectionPass = NULL;
+	m_sectionPassSound = NULL;
+	m_sectionFailSound = NULL;
 
 	m_spinnerApproachCircleColor = 0xffffffff;
 	m_sliderBorderColor = 0xffffffff;
@@ -547,7 +547,16 @@ void OsuSkin::load()
 	randomizeFilePath();
 	checkLoadImage(&m_circularmetre, "circularmetre", "OSU_SKIN_CIRCULARMETRE");
 	randomizeFilePath();
-	m_scorebarBg = createOsuSkinImage("scorebar-bg", Vector2(695, 144), 90);
+	m_scorebarBg = createOsuSkinImage("scorebar-bg", Vector2(695, 44), 27.5f);
+	m_scorebarColour = createOsuSkinImage("scorebar-colour", Vector2(645, 10), 6.25f);
+	m_scorebarMarker = createOsuSkinImage("scorebar-marker", Vector2(24, 24), 15.0f);
+	m_scorebarKi = createOsuSkinImage("scorebar-ki", Vector2(116, 116), 72.0f);
+	m_scorebarKiDanger = createOsuSkinImage("scorebar-kidanger", Vector2(116, 116), 72.0f);
+	m_scorebarKiDanger2 = createOsuSkinImage("scorebar-kidanger2", Vector2(116, 116), 72.0f);
+	randomizeFilePath();
+	m_sectionPassImage = createOsuSkinImage("section-pass", Vector2(650, 650), 400.0f);
+	randomizeFilePath();
+	m_sectionFailImage = createOsuSkinImage("section-fail", Vector2(650, 650), 400.0f);
 	randomizeFilePath();
 	m_inputoverlayBackground = createOsuSkinImage("inputoverlay-background", Vector2(193, 55), 34.25f);
 	m_inputoverlayKey = createOsuSkinImage("inputoverlay-key", Vector2(43, 46), 26.75f);
@@ -749,8 +758,8 @@ void OsuSkin::load()
 	checkLoadSound(&m_checkOn, "check-on", "OSU_SKIN_CHECKON_SND", true);
 	checkLoadSound(&m_checkOff, "check-off", "OSU_SKIN_CHECKOFF_SND", true);
 	checkLoadSound(&m_shutter, "shutter", "OSU_SKIN_SHUTTER_SND", true);
-	checkLoadSound(&m_sectionFail, "sectionfail", "OSU_SKIN_SECTIONFAIL_SND", true);
-	checkLoadSound(&m_sectionPass, "sectionpass", "OSU_SKIN_SECTIONPASS_SND", true);
+	checkLoadSound(&m_sectionPassSound, "sectionpass", "OSU_SKIN_SECTIONPASS_SND", true);
+	checkLoadSound(&m_sectionFailSound, "sectionfail", "OSU_SKIN_SECTIONFAIL_SND", true);
 
 	// scaling
 	// HACKHACK: this is pure cancer
