@@ -29,6 +29,8 @@ public:
 	void setAnimationFrameForce(int frame); // force set a frame, before drawing (e.g. for hitresults in OsuUIRankingScreenRankingPanel)
 	void setAnimationFrameClampUp(); // force stop the animation after the last frame, before drawing
 
+	void setDrawClipWidthPercent(float drawClipWidthPercent) {m_fDrawClipWidthPercent = drawClipWidthPercent;}
+
 	Vector2 getSize(); // absolute size scaled to the current resolution (depending on the osuSize as defined when loaded in OsuSkin.cpp)
 	Vector2 getSizeBase(); // default assumed size scaled to the current resolution. this is the base resolution which is used for all scaling calculations (to allow skins to overscale or underscale objects)
 	Vector2 getSizeBaseRaw(); // default assumed size UNSCALED. that means that e.g. hitcircles will return either 128x128 or 256x256 depending on the @2x flag in the filename
@@ -82,6 +84,7 @@ private:
 	bool m_bIsMissingTexture;
 
 	// custom
+	float m_fDrawClipWidthPercent;
 	std::vector<UString> m_filepathsForExport;
 };
 

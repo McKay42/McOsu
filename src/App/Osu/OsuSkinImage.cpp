@@ -38,6 +38,8 @@ OsuSkinImage::OsuSkinImage(OsuSkin *skin, UString skinElementName, Vector2 baseS
 
 	m_bIsMissingTexture = false;
 
+	m_fDrawClipWidthPercent = 1.0f;
+
 	// logic: first load user skin (true), and if no image could be found then load the default skin (false)
 	// this is necessary so that all elements can be correctly overridden with a user skin (e.g. if the user skin only has sliderb.png, but the default skin has sliderb0.png!)
 	if (!load(skinElementName, animationSeparator, true))
@@ -261,7 +263,42 @@ void OsuSkinImage::draw(Graphics *g, Vector2 pos, float scale)
 	{
 		g->scale(scale, scale);
 		g->translate(pos.x, pos.y);
-		g->drawImage(getImageForCurrentFrame().img);
+
+		Image *img = getImageForCurrentFrame().img;
+
+		if (m_fDrawClipWidthPercent == 1.0f)
+			g->drawImage(img);
+		else
+		{
+			const float realWidth = img->getWidth();
+			const float realHeight = img->getHeight();
+
+			const float width = realWidth * m_fDrawClipWidthPercent;
+			const float height = realHeight;
+
+			const float x = -realWidth/2;
+			const float y = -realHeight/2;
+
+			VertexArrayObject vao(Graphics::PRIMITIVE::PRIMITIVE_QUADS);
+
+			vao.addVertex(x, y);
+			vao.addTexcoord(0, 0);
+
+			vao.addVertex(x, (y + height));
+			vao.addTexcoord(0, 1);
+
+			vao.addVertex((x + width), (y + height));
+			vao.addTexcoord(m_fDrawClipWidthPercent, 1);
+
+			vao.addVertex((x + width), y);
+			vao.addTexcoord(m_fDrawClipWidthPercent, 0);
+
+			img->bind();
+			{
+				g->drawVAO(&vao);
+			}
+			img->unbind();
+		}
 	}
 	g->popTransform();
 }
@@ -274,7 +311,42 @@ void OsuSkinImage::drawRaw(Graphics *g, Vector2 pos, float scale)
 	{
 		g->scale(scale, scale);
 		g->translate(pos.x, pos.y);
-		g->drawImage(getImageForCurrentFrame().img);
+
+		Image *img = getImageForCurrentFrame().img;
+
+		if (m_fDrawClipWidthPercent == 1.0f)
+			g->drawImage(img);
+		else
+		{
+			const float realWidth = img->getWidth();
+			const float realHeight = img->getHeight();
+
+			const float width = realWidth * m_fDrawClipWidthPercent;
+			const float height = realHeight;
+
+			const float x = -realWidth/2;
+			const float y = -realHeight/2;
+
+			VertexArrayObject vao(Graphics::PRIMITIVE::PRIMITIVE_QUADS);
+
+			vao.addVertex(x, y);
+			vao.addTexcoord(0, 0);
+
+			vao.addVertex(x, (y + height));
+			vao.addTexcoord(0, 1);
+
+			vao.addVertex((x + width), (y + height));
+			vao.addTexcoord(m_fDrawClipWidthPercent, 1);
+
+			vao.addVertex((x + width), y);
+			vao.addTexcoord(m_fDrawClipWidthPercent, 0);
+
+			img->bind();
+			{
+				g->drawVAO(&vao);
+			}
+			img->unbind();
+		}
 	}
 	g->popTransform();
 }
