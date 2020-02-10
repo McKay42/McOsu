@@ -496,12 +496,14 @@ void OsuSpinner::rotate(float rad)
 			// extra rotations and bonus sound
 			m_beatmap->getSkin()->playSpinnerBonusSound();
 			m_beatmap->addHitResult(this, OsuScore::HIT::HIT_SPINNERBONUS, 0, false, true, true, true, true, false); // only increase health
+			m_beatmap->addHitResult(this, OsuScore::HIT::HIT_SPINNERBONUS, 0, false, true, true, true, true, false); // HACKHACK: compensating for rotation logic differences
 			m_beatmap->addScorePoints(1100, true);
 		}
 		else
 		{
 			// normal whole rotation
 			m_beatmap->addHitResult(this, OsuScore::HIT::HIT_SPINNERSPIN, 0, false, true, true, true, true, false); // only increase health
+			m_beatmap->addHitResult(this, OsuScore::HIT::HIT_SPINNERSPIN, 0, false, true, true, true, true, false); // HACKHACK: compensating for rotation logic differences
 			m_beatmap->addScorePoints(100, true);
 		}
 	}
