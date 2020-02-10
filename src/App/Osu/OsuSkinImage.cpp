@@ -268,7 +268,7 @@ void OsuSkinImage::draw(Graphics *g, Vector2 pos, float scale)
 
 		if (m_fDrawClipWidthPercent == 1.0f)
 			g->drawImage(img);
-		else
+		else if (img->isReady())
 		{
 			const float realWidth = img->getWidth();
 			const float realHeight = img->getHeight();
@@ -316,7 +316,7 @@ void OsuSkinImage::drawRaw(Graphics *g, Vector2 pos, float scale)
 
 		if (m_fDrawClipWidthPercent == 1.0f)
 			g->drawImage(img);
-		else
+		else if (img->isReady())
 		{
 			const float realWidth = img->getWidth();
 			const float realHeight = img->getHeight();
