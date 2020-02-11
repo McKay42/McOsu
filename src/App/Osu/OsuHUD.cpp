@@ -1422,9 +1422,20 @@ void OsuHUD::drawSectionPass(Graphics *g, float alpha)
 {
 	if (!m_osu->getSkin()->getSectionPassImage()->isMissingTexture())
 	{
+		if (m_osu->isInVRDraw())
+		{
+			g->pushTransform();
+			g->translate(0.0f, 0.0f, 0.2f);
+		}
+
 		g->setColor(0xffffffff);
 		g->setAlpha(alpha);
 		m_osu->getSkin()->getSectionPassImage()->draw(g, m_osu->getScreenSize() / 2);
+
+		if (m_osu->isInVRDraw())
+		{
+			g->popTransform();
+		}
 	}
 }
 
@@ -1432,9 +1443,20 @@ void OsuHUD::drawSectionFail(Graphics *g, float alpha)
 {
 	if (!m_osu->getSkin()->getSectionFailImage()->isMissingTexture())
 	{
+		if (m_osu->isInVRDraw())
+		{
+			g->pushTransform();
+			g->translate(0.0f, 0.0f, 0.2f);
+		}
+
 		g->setColor(0xffffffff);
 		g->setAlpha(alpha);
 		m_osu->getSkin()->getSectionFailImage()->draw(g, m_osu->getScreenSize() / 2);
+
+		if (m_osu->isInVRDraw())
+		{
+			g->popTransform();
+		}
 	}
 }
 
@@ -1474,9 +1496,21 @@ void OsuHUD::drawHPBar(Graphics *g, double health, float alpha, float breakAnim)
 	if (breakAnim != 0.0f || alpha != 1.0f)
 		g->setAlpha(alpha * (1.0f - breakAnim));
 
+	if (m_osu->isInVRDraw())
+	{
+		g->pushTransform();
+	}
+
 	// draw health bar fill
-	m_osu->getSkin()->getScorebarColour()->setDrawClipWidthPercent(health);
-	m_osu->getSkin()->getScorebarColour()->draw(g, (m_osu->getSkin()->getScorebarColour()->getSize() / 2.0f * scale) + (colourOffset * scale) + (breakAnimOffset * scale), scale);
+	{
+		if (m_osu->isInVRDraw())
+		{
+			g->translate(0.0f, 0.0f, 0.15f);
+		}
+
+		m_osu->getSkin()->getScorebarColour()->setDrawClipWidthPercent(health);
+		m_osu->getSkin()->getScorebarColour()->draw(g, (m_osu->getSkin()->getScorebarColour()->getSize() / 2.0f * scale) + (colourOffset * scale) + (breakAnimOffset * scale), scale);
+	}
 
 	// draw ki
 	{
@@ -1497,8 +1531,20 @@ void OsuHUD::drawHPBar(Graphics *g, double health, float alpha, float breakAnim)
 		if (!ki->isMissingTexture())
 		{
 			if (!useNewDefault || health >= 0.2)
+			{
+				if (m_osu->isInVRDraw())
+				{
+					g->translate(0.0f, 0.0f, 0.15f);
+				}
+
 				ki->draw(g, (markerOffset * scale) + (breakAnimOffset * scale), scale * m_fKiScaleAnim);
+			}
 		}
+	}
+
+	if (m_osu->isInVRDraw())
+	{
+		g->popTransform();
 	}
 }
 
