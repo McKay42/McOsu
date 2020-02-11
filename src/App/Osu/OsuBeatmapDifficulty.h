@@ -179,9 +179,8 @@ public:
 
 	// timing (points) + breaks
 	TIMING_INFO getTimingInfoForTime(unsigned long positionMS);
-	unsigned long getBreakDuration(unsigned long positionMS);
 	unsigned long getBreakDurationTotal();
-	bool isInBreak(long positionMS);
+	BREAK getBreakForTimeRange(long startMS, long positionMS, long endMS);
 
 	// for score v2
 	inline int getMaxCombo() {return m_iMaxCombo;}

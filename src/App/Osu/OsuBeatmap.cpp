@@ -103,7 +103,12 @@ ConVar osu_drain_type("osu_drain_type", 2, "which hp drain algorithm to use (0 =
 
 ConVar osu_drain_vr_duration("osu_drain_vr_duration", 0.35f);
 ConVar osu_drain_stable_passive_fail("osu_drain_stable_passive_fail", false, "whether to fail the player instantly if health = 0, or only once a negative judgement occurs");
+ConVar osu_drain_stable_break_before("osu_drain_stable_break_before", false, "drain after last hitobject before a break actually starts");
+ConVar osu_drain_stable_break_before_old("osu_drain_stable_break_before_old", true, "for beatmap versions < 8, drain after last hitobject before a break actually starts");
+ConVar osu_drain_stable_break_after("osu_drain_stable_break_after", false, "drain after a break before the next hitobject can be clicked");
 ConVar osu_drain_lazer_passive_fail("osu_drain_lazer_passive_fail", false, "whether to fail the player instantly if health = 0, or only once a negative judgement occurs");
+ConVar osu_drain_lazer_break_before("osu_drain_lazer_break_before", true, "drain after last hitobject before a break actually starts");
+ConVar osu_drain_lazer_break_after("osu_drain_lazer_break_after", true, "drain after a break before the next hitobject can be clicked");
 ConVar osu_drain_stable_spinner_nerf("osu_drain_stable_spinner_nerf", 0.25f, "drain gets multiplied with this while a spinner is active");
 ConVar osu_drain_stable_hpbar_recovery("osu_drain_stable_hpbar_recovery", 160.0f, "hp gets set to this value when failing with ez and causing a recovery");
 
@@ -553,8 +558,8 @@ void OsuBeatmap::update()
 				else
 				{
 					m_currentHitObject = m_hitobjects[i];
-					long actualPrevHitObjectTime = m_hitobjects[i]->getTime() + m_hitobjects[i]->getDuration();
-					m_iPreviousHitObjectTime = actualPrevHitObjectTime + 1000; // why is there +1000 here again? wtf
+					const long actualPrevHitObjectTime = m_hitobjects[i]->getTime() + m_hitobjects[i]->getDuration();
+					m_iPreviousHitObjectTime = actualPrevHitObjectTime;
 
 					if (m_iCurMusicPos > actualPrevHitObjectTime + (long)osu_followpoints_prevfadetime.getFloat())
 						m_iPreviousFollowPointObjectIndex = i;
@@ -725,19 +730,23 @@ void OsuBeatmap::update()
 	}
 
 	// empty section detection & skipping
-	long nextHitObjectDelta = m_iNextHitObjectTime - (long)m_iCurMusicPos;
-	if (nextHitObjectDelta > 0 && nextHitObjectDelta > (long)osu_skip_time.getInt() && m_iCurMusicPos > m_iPreviousHitObjectTime)
-		m_bIsInSkippableSection = true;
-	else
-		m_bIsInSkippableSection = false;
+	{
+		const long legacyOffset = 1000; // Mc
+		const long nextHitObjectDelta = m_iNextHitObjectTime - (long)m_iCurMusicPos;
+		if (nextHitObjectDelta > 0 && nextHitObjectDelta > (long)osu_skip_time.getInt() && m_iCurMusicPos > (m_iPreviousHitObjectTime + legacyOffset))
+			m_bIsInSkippableSection = true;
+		else
+			m_bIsInSkippableSection = false;
+	}
 
 	// warning arrow logic
 	{
+		const long legacyOffset = 1000; // Mc
 		const long minGapSize = 1000;
 		const long lastVisibleMin = 400;
 		const long blinkDelta = 100;
 
-		const long gapSize = m_iNextHitObjectTime - m_iPreviousHitObjectTime;
+		const long gapSize = m_iNextHitObjectTime - (m_iPreviousHitObjectTime + legacyOffset);
 		const long nextDelta = (m_iNextHitObjectTime - m_iCurMusicPos);
 		const bool drawWarningArrows = gapSize > minGapSize && nextDelta > 0;
 		if (drawWarningArrows && ((nextDelta <= lastVisibleMin+blinkDelta*13 && nextDelta > lastVisibleMin+blinkDelta*12)
@@ -811,7 +820,9 @@ void OsuBeatmap::update()
 	}
 
 	// break time detection, and background fade during breaks
-	if (m_selectedDifficulty->isInBreak(m_iCurMusicPos) != m_bInBreak)
+	const OsuBeatmapDifficulty::BREAK breakEvent = m_selectedDifficulty->getBreakForTimeRange(m_iPreviousHitObjectTime, m_iCurMusicPos, m_iNextHitObjectTime);
+	const bool isInBreak = ((int)m_iCurMusicPos >= breakEvent.startTime && (int)m_iCurMusicPos <= breakEvent.endTime);
+	if (isInBreak != m_bInBreak)
 	{
 		m_bInBreak = !m_bInBreak;
 
@@ -819,7 +830,8 @@ void OsuBeatmap::update()
 		{
 			if (m_bInBreak && !osu_background_dont_fade_during_breaks.getBool())
 			{
-				if (m_selectedDifficulty->getBreakDuration(m_iCurMusicPos) > (unsigned long)(osu_background_fade_min_duration.getFloat()*1000.0f))
+				const int breakDuration = breakEvent.endTime - breakEvent.startTime;
+				if (breakDuration > (int)(osu_background_fade_min_duration.getFloat()*1000.0f))
 					anim->moveLinear(&m_fBreakBackgroundFade, 1.0f, osu_background_fade_in_duration.getFloat(), true);
 			}
 			else
@@ -833,7 +845,7 @@ void OsuBeatmap::update()
 		const int drainType = osu_drain_type.getInt();
 
 		// handle constant drain
-		if (drainType == 2 || drainType == 3)
+		if (drainType == 2 || drainType == 3) // osu!stable + osu!lazer
 		{
 			if (m_fDrainRate > 0.0)
 			{
@@ -841,20 +853,41 @@ void OsuBeatmap::update()
 					&& !m_bInBreak					// not in a break
 					&& !m_bIsInSkippableSection)	// not in a skippable section
 				{
+					// special case: break drain edge cases
+					bool drainAfterLastHitobjectBeforeBreakStart = false;
+					bool drainBeforeFirstHitobjectAfterBreakEnd = false;
 
-
-					// TODO: stable doesn't drain before first hitobject start after break, but lazer does
-					// TODO: stable doesn't drain after last hitobject end before break (except if beatmap version is < 8!), but lazer does
-
-					double spinnerDrainNerf = 1.0;
 					if (drainType == 2) // osu!stable
 					{
-						OsuBeatmapStandard *standardPointer = dynamic_cast<OsuBeatmapStandard*>(this);
-						if (standardPointer != NULL && standardPointer->isSpinnerActive())
-							spinnerDrainNerf = (double)osu_drain_stable_spinner_nerf.getFloat();
+						drainAfterLastHitobjectBeforeBreakStart = (m_selectedDifficulty->version < 8 ? osu_drain_stable_break_before_old.getBool() : osu_drain_stable_break_before.getBool());
+						drainBeforeFirstHitobjectAfterBreakEnd = osu_drain_stable_break_after.getBool();
+					}
+					else if (drainType == 3) // osu!lazer
+					{
+						drainAfterLastHitobjectBeforeBreakStart = osu_drain_lazer_break_before.getBool();
+						drainBeforeFirstHitobjectAfterBreakEnd = osu_drain_lazer_break_after.getBool();
 					}
 
-					addHealth(-m_fDrainRate * engine->getFrameTime() * (double)getSpeedMultiplier() * spinnerDrainNerf, false);
+					const bool isBetweenHitobjectsAndBreak = (int)m_iPreviousHitObjectTime <= breakEvent.startTime && (int)m_iNextHitObjectTime >= breakEvent.endTime && m_iCurMusicPos > m_iPreviousHitObjectTime;
+					const bool isLastHitobjectBeforeBreakStart = isBetweenHitobjectsAndBreak && (int)m_iCurMusicPos <= breakEvent.startTime;
+					const bool isFirstHitobjectAfterBreakEnd = isBetweenHitobjectsAndBreak && (int)m_iCurMusicPos >= breakEvent.endTime;
+
+					if (!isBetweenHitobjectsAndBreak
+						|| (drainAfterLastHitobjectBeforeBreakStart && isLastHitobjectBeforeBreakStart)
+						|| (drainBeforeFirstHitobjectAfterBreakEnd && isFirstHitobjectAfterBreakEnd))
+					{
+						// special case: spinner nerf
+						double spinnerDrainNerf = 1.0;
+
+						if (drainType == 2) // osu!stable
+						{
+							OsuBeatmapStandard *standardPointer = dynamic_cast<OsuBeatmapStandard*>(this);
+							if (standardPointer != NULL && standardPointer->isSpinnerActive())
+								spinnerDrainNerf = (double)osu_drain_stable_spinner_nerf.getFloat();
+						}
+
+						addHealth(-m_fDrainRate * engine->getFrameTime() * (double)getSpeedMultiplier() * spinnerDrainNerf, false);
+					}
 				}
 			}
 		}

@@ -1466,17 +1466,6 @@ OsuBeatmapDifficulty::TIMING_INFO OsuBeatmapDifficulty::getTimingInfoForTime(uns
 	return ti;
 }
 
-unsigned long OsuBeatmapDifficulty::getBreakDuration(unsigned long positionMS)
-{
-	for (int i=0; i<breaks.size(); i++)
-	{
-		if ((int)positionMS > breaks[i].startTime && (int)positionMS < breaks[i].endTime)
-			return (unsigned long)(breaks[i].endTime - breaks[i].startTime);
-	}
-
-	return 0;
-}
-
 unsigned long OsuBeatmapDifficulty::getBreakDurationTotal()
 {
 	unsigned long breakDurationTotal = 0;
@@ -1488,15 +1477,23 @@ unsigned long OsuBeatmapDifficulty::getBreakDurationTotal()
 	return breakDurationTotal;
 }
 
-bool OsuBeatmapDifficulty::isInBreak(long positionMS)
+OsuBeatmapDifficulty::BREAK OsuBeatmapDifficulty::getBreakForTimeRange(long startMS, long positionMS, long endMS)
 {
+	BREAK curBreak;
+
+	curBreak.startTime = -1;
+	curBreak.endTime = -1;
+
 	for (int i=0; i<breaks.size(); i++)
 	{
-		if ((int)positionMS > breaks[i].startTime && (int)positionMS < breaks[i].endTime)
-			return true;
+		if (breaks[i].startTime >= (int)startMS && breaks[i].endTime <= (int)endMS)
+		{
+			if ((int)positionMS >= curBreak.startTime)
+				curBreak = breaks[i];
+		}
 	}
 
-	return false;
+	return curBreak;
 }
 
 std::vector<std::shared_ptr<OsuDifficultyHitObject>> OsuBeatmapDifficulty::generateDifficultyHitObjectsForBeatmap(OsuBeatmap *beatmap, bool calculateStarsInaccurately)
