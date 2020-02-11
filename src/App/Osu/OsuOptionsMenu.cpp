@@ -973,6 +973,13 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_statisticsOverlayScaleSlider = addSlider("Statistics Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_hud_statistics_scale"), 165.0f);
 	m_statisticsOverlayScaleSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
 	m_statisticsOverlayScaleSlider->setKeyDelta(0.01f);
+	addSpacer();
+	m_statisticsOverlayXOffsetSlider = addSlider("Statistics X Offset:", 0.0f, 1000.0f, convar->getConVarByName("osu_hud_statistics_offset_x"), 165.0f, true);
+	m_statisticsOverlayXOffsetSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeInt) );
+	m_statisticsOverlayXOffsetSlider->setKeyDelta(1.0f);
+	m_statisticsOverlayYOffsetSlider = addSlider("Statistics Y Offset:", 0.0f, 1000.0f, convar->getConVarByName("osu_hud_statistics_offset_y"), 165.0f, true);
+	m_statisticsOverlayYOffsetSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeInt) );
+	m_statisticsOverlayYOffsetSlider->setKeyDelta(1.0f);
 
 	addSubSection("Playfield");
 	addCheckbox("Draw FollowPoints", convar->getConVarByName("osu_draw_followpoints"));
@@ -1139,7 +1146,18 @@ void OsuOptionsMenu::draw(Graphics *g)
 
 	m_container->draw(g);
 
-	if (m_hudSizeSlider->isActive() || m_hudComboScaleSlider->isActive() || m_hudScoreScaleSlider->isActive() || m_hudAccuracyScaleSlider->isActive() || m_hudHiterrorbarScaleSlider->isActive() || m_hudProgressbarScaleSlider->isActive() || m_hudScoreBarScaleSlider->isActive() || m_hudScoreBoardScaleSlider->isActive() || m_hudInputoverlayScaleSlider->isActive() || m_statisticsOverlayScaleSlider->isActive())
+	if (m_hudSizeSlider->isActive()
+		|| m_hudComboScaleSlider->isActive()
+		|| m_hudScoreScaleSlider->isActive()
+		|| m_hudAccuracyScaleSlider->isActive()
+		|| m_hudHiterrorbarScaleSlider->isActive()
+		|| m_hudProgressbarScaleSlider->isActive()
+		|| m_hudScoreBarScaleSlider->isActive()
+		|| m_hudScoreBoardScaleSlider->isActive()
+		|| m_hudInputoverlayScaleSlider->isActive()
+		|| m_statisticsOverlayScaleSlider->isActive()
+		|| m_statisticsOverlayXOffsetSlider->isActive()
+		|| m_statisticsOverlayYOffsetSlider->isActive())
 	{
 		if (!isPlayingBeatmap)
 			m_osu->getHUD()->drawDummy(g);

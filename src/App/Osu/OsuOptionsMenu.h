@@ -226,6 +226,8 @@ private:
 	CBaseUISlider *m_hudInputoverlayScaleSlider;
 	CBaseUISlider *m_playfieldBorderSizeSlider;
 	CBaseUISlider *m_statisticsOverlayScaleSlider;
+	CBaseUISlider *m_statisticsOverlayXOffsetSlider;
+	CBaseUISlider *m_statisticsOverlayYOffsetSlider;
 	CBaseUISlider *m_cursorSizeSlider;
 	CBaseUILabel *m_skinLabel;
 	CBaseUIElement *m_skinSelectLocalButton;

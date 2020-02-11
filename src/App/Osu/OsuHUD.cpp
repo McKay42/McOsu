@@ -116,7 +116,7 @@ ConVar osu_hud_progressbar_scale("osu_hud_progressbar_scale", 1.0f);
 ConVar osu_hud_playfield_border_size("osu_hud_playfield_border_size", 5.0f);
 ConVar osu_hud_statistics_scale("osu_hud_statistics_scale", 1.0f);
 ConVar osu_hud_statistics_offset_x("osu_hud_statistics_offset_x", 5.0f);
-ConVar osu_hud_statistics_offset_y("osu_hud_statistics_offset_y", 0.0f);
+ConVar osu_hud_statistics_offset_y("osu_hud_statistics_offset_y", 50.0f);
 ConVar osu_hud_statistics_pp_decimal_places("osu_hud_statistics_pp_decimal_places", 0, "number of decimal places for the live pp counter (min = 0, max = 2)");
 ConVar osu_hud_volume_duration("osu_hud_volume_duration", 1.0f);
 ConVar osu_hud_volume_size_multiplier("osu_hud_volume_size_multiplier", 1.5f);
@@ -2283,8 +2283,10 @@ void OsuHUD::drawStatistics(Graphics *g, int misses, int sliderbreaks, int bpm, 
 {
 	g->pushTransform();
 	{
+		const float offsetScale = Osu::getImageScale(m_osu, Vector2(1.0f, 1.0f), 1.0f);
+
 		g->scale(osu_hud_statistics_scale.getFloat()*osu_hud_scale.getFloat(), osu_hud_statistics_scale.getFloat()*osu_hud_scale.getFloat());
-		g->translate(osu_hud_statistics_offset_x.getInt(), (int)((m_osu->getTitleFont()->getHeight())*osu_hud_scale.getFloat()*osu_hud_statistics_scale.getFloat()) + osu_hud_statistics_offset_y.getInt());
+		g->translate(osu_hud_statistics_offset_x.getInt()/* * offsetScale*/, (int)((m_osu->getTitleFont()->getHeight())*osu_hud_scale.getFloat()*osu_hud_statistics_scale.getFloat()) + (osu_hud_statistics_offset_y.getInt() * offsetScale));
 
 		const int yDelta = (int)((m_osu->getTitleFont()->getHeight() + 10)*osu_hud_scale.getFloat()*osu_hud_statistics_scale.getFloat());
 		if (osu_draw_statistics_pp.getBool())
