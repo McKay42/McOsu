@@ -196,7 +196,7 @@ OsuBeatmap::OsuBeatmap(Osu *osu)
 	m_currentHitObject = NULL;
 	m_iNextHitObjectTime = 0;
 	m_iPreviousHitObjectTime = 0;
-	m_iPreviousSectionPassFailTime = 0;
+	m_iPreviousSectionPassFailTime = -1;
 
 	m_bClick1Held = false;
 	m_bClick2Held = false;
@@ -402,6 +402,8 @@ void OsuBeatmap::update()
 	// update current music position (this variable does not include any offsets!)
 	m_iCurMusicPos = getMusicPositionMSInterpolated();
 	m_iContinueMusicPos = m_music->getPositionMS();
+	const bool wasSeekFrame = m_bWasSeekFrame;
+	m_bWasSeekFrame = false;
 
 	// handle timewarp
 	if (osu_mod_timewarp.getBool())
@@ -811,10 +813,14 @@ void OsuBeatmap::update()
 					|| (!passing && nextDelta >= 130)))
 			{
 				m_iPreviousSectionPassFailTime = start;
-				if (passing)
-					engine->getSound()->play(m_osu->getSkin()->getSectionPassSound());
-				else
-					engine->getSound()->play(m_osu->getSkin()->getSectionFailSound());
+
+				if (!wasSeekFrame)
+				{
+					if (passing)
+						engine->getSound()->play(m_osu->getSkin()->getSectionPassSound());
+					else
+						engine->getSound()->play(m_osu->getSkin()->getSectionFailSound());
+				}
 			}
 		}
 	}
@@ -1192,6 +1198,7 @@ bool OsuBeatmap::play()
 	m_bInBreak = osu_background_fade_after_load.getBool();
 	anim->deleteExistingAnimation(&m_fBreakBackgroundFade);
 	m_fBreakBackgroundFade = osu_background_fade_after_load.getBool() ? 1.0f : 0.0f;
+	m_iPreviousSectionPassFailTime = -1;
 
 	m_music->setPosition(0.0);
 	m_iCurMusicPos = 0;
@@ -1255,6 +1262,7 @@ void OsuBeatmap::actualRestart()
 	m_bInBreak = false;
 	anim->deleteExistingAnimation(&m_fBreakBackgroundFade);
 	m_fBreakBackgroundFade = 0.0f;
+	m_iPreviousSectionPassFailTime = -1;
 
 	onModUpdate(); // sanity
 
@@ -1421,6 +1429,8 @@ void OsuBeatmap::seekPercent(double percent)
 	resetHitObjects(m_music->getPositionMS());
 	resetScore();
 
+	m_iPreviousSectionPassFailTime = -1;
+
 	if (m_bIsWaiting)
 	{
 		m_bIsWaiting = false;
@@ -1461,6 +1471,8 @@ void OsuBeatmap::seekMS(unsigned long ms)
 
 	resetHitObjects(m_music->getPositionMS());
 	resetScore();
+
+	m_iPreviousSectionPassFailTime = -1;
 
 	if (m_bIsWaiting)
 	{
@@ -2086,8 +2098,6 @@ unsigned long OsuBeatmap::getMusicPositionMSInterpolated()
 		}
 		else // no interpolation
 		{
-			m_bWasSeekFrame = false;
-
 			returnPos = curPos;
 			m_fInterpolatedMusicPos = (unsigned long)returnPos;
 			m_fLastAudioTimeAccurateSet = realTime;
