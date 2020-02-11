@@ -249,7 +249,9 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	if (isInVRMode())
 	{
 		osu_skin.setValue("defaultvr");
-		convar->getConVarByName("osu_drain_type")->setValue(1);
+		ConVar *osu_drain_type_ref = convar->getConVarByName("osu_drain_type");
+		osu_drain_type_ref->setDefaultFloat(1.0f);
+		osu_drain_type_ref->setValue(1.0f);
 		env->setWindowResizable(true);
 	}
 	else
