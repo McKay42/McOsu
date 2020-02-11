@@ -33,7 +33,7 @@ public:
 	static void drawHitCircleNumber(Graphics *g, OsuSkin *skin, float numberScale, float overlapScale, Vector2 pos, int number, float numberAlpha);
 
 public:
-	OsuCircle(int x, int y, long time, int sampleType, int comboNumber, int colorCounter, int colorOffset, OsuBeatmapStandard *beatmap);
+	OsuCircle(int x, int y, long time, int sampleType, int comboNumber, bool isEndOfCombo, int colorCounter, int colorOffset, OsuBeatmapStandard *beatmap);
 	virtual ~OsuCircle();
 
 	virtual void draw(Graphics *g);

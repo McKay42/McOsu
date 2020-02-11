@@ -108,15 +108,15 @@ public:
 	float getRawOD();
 	float getOD();
 
-	// player
-	inline float getHealth() {return m_fHealth;}
+	// health
+	inline double getHealth() {return m_fHealth;}
 	inline bool hasFailed() {return m_bFailed;}
+	inline double getHPMultiplierNormal() {return m_fHpMultiplierNormal;}
+	inline double getHPMultiplierComboEnd() {return m_fHpMultiplierComboEnd;}
 
 	// generic
 	inline OsuBeatmapDifficulty *getSelectedDifficulty() {return m_selectedDifficulty;}
 	inline const std::vector<OsuBeatmapDifficulty*> &getDifficulties() {return m_difficulties;}
-	inline std::vector<OsuBeatmapDifficulty*> *getDifficultiesPointer() {return &m_difficulties;}
-	inline int getNumDifficulties() {return m_difficulties.size();}
 
 	inline bool isPlaying() {return m_bIsPlaying;}
 	inline bool isPaused() {return m_bIsPaused;}
@@ -124,7 +124,10 @@ public:
 	inline bool isContinueScheduled() {return m_bContinueScheduled;}
 	inline bool isWaiting() {return m_bIsWaiting;}
 	inline bool isInSkippableSection() {return m_bIsInSkippableSection;}
+	inline bool isInBreak() {return m_bInBreak;}
 	inline bool shouldFlashWarningArrows() {return m_bShouldFlashWarningArrows;}
+	inline float shouldFlashSectionPass() {return m_fShouldFlashSectionPass;}
+	inline float shouldFlashSectionFail() {return m_fShouldFlashSectionFail;}
 	bool isClickHeld(); // is any key currently being held down
 	inline bool isKey1Down() {return m_bClick1Held;}
 	inline bool isKey2Down() {return m_bClick2Held;}
@@ -136,15 +139,15 @@ public:
 	// OsuHitObject and other helper functions
 	void consumeClickEvent();
 	void consumeKeyUpEvent();
-	void addHitResult(OsuScore::HIT hit, long delta, bool ignoreOnHitErrorBar = false, bool hitErrorBarOnly = false, bool ignoreCombo = false, bool ignoreScore = false);
+	OsuScore::HIT addHitResult(OsuHitObject *hitObject, OsuScore::HIT hit, long delta, bool isEndOfCombo = false, bool ignoreOnHitErrorBar = false, bool hitErrorBarOnly = false, bool ignoreCombo = false, bool ignoreScore = false, bool ignoreHealth = false);
 	void addSliderBreak();
 	void addScorePoints(int points, bool isSpinner = false);
-	void addHealth(float percent);
-	void playMissSound();
+	void addHealth(double percent, bool isFromHitResult);
 	void updateTimingPoints(long curPos);
 
 	// ILLEGAL:
-	inline std::vector<OsuHitObject*> *getHitObjectsPointer() {return &m_hitobjects;}
+	inline const std::vector<OsuHitObject*> &getHitObjectsPointer() {return m_hitobjects;}
+	inline float getBreakBackgroundFadeAnim() const {return m_fBreakBackgroundFade;}
 
 protected:
 	static ConVar *m_snd_speed_compensate_pitch_ref;
@@ -156,7 +159,11 @@ protected:
 	static ConVar *m_osu_universal_offset_ref;
 	static ConVar *m_osu_early_note_time_ref;
 	static ConVar *m_osu_fail_time_ref;
+	static ConVar *m_osu_drain_type_ref;
 
+	static ConVar *m_osu_draw_scorebarbg_ref;
+	static ConVar *m_osu_hud_scorebar_hide_during_breaks_ref;
+	static ConVar *m_osu_drain_stable_hpbar_maximum_ref;
 	static ConVar *m_osu_volume_music_ref;
 
 	// overridable child events
@@ -169,6 +176,7 @@ protected:
 	virtual void onUnpaused() {;}
 	virtual void onRestart(bool quick) {;}
 
+	// internal
 	bool canDraw();
 	bool canUpdate();
 
@@ -179,8 +187,11 @@ protected:
 	void unloadMusic();
 	void unloadDiffs();
 	void unloadHitObjects();
+
 	void resetHitObjects(long curPos = 0);
 	void resetScore();
+
+	void playMissSound();
 
 	unsigned long getMusicPositionMSInterpolated();
 
@@ -195,6 +206,8 @@ protected:
 
 	bool m_bIsInSkippableSection;
 	bool m_bShouldFlashWarningArrows;
+	float m_fShouldFlashSectionPass;
+	float m_fShouldFlashSectionFail;
 	int m_iSelectedDifficulty;
 	float m_fWaitTime;
 	bool m_bContinueScheduled;
@@ -202,9 +215,9 @@ protected:
 
 	std::vector<OsuBeatmapDifficulty*> m_difficulties;
 	OsuBeatmapDifficulty *m_selectedDifficulty;
-	Sound *m_music;
 
 	// sound
+	Sound *m_music;
 	float m_fMusicFrequencyBackup;
 	long m_iCurMusicPos;
 	long m_iCurMusicPosWithOffsets;
@@ -215,17 +228,26 @@ protected:
 	int m_iResourceLoadUpdateDelayHack;
 	bool m_bForceStreamPlayback;
 
-	// gameplay & state
+	// health
 	bool m_bFailed;
 	float m_fFailTime;
-	float m_fHealth;
-	float m_fHealthReal;
+	double m_fHealth;
+	float m_fHealth2;
+
+	// drain
+	double m_fDrainRate;
+	double m_fHpMultiplierNormal;
+	double m_fHpMultiplierComboEnd;
+
+	// breaks
 	float m_fBreakBackgroundFade;
 	bool m_bInBreak;
 	OsuHitObject *m_currentHitObject;
 	long m_iNextHitObjectTime;
 	long m_iPreviousHitObjectTime;
+	long m_iPreviousSectionPassFailTime;
 
+	// player
 	bool m_bClick1Held;
 	bool m_bClick2Held;
 	bool m_bClickedContinue;
@@ -234,6 +256,7 @@ protected:
 	std::vector<CLICK> m_clicks;
 	std::vector<CLICK> m_keyUps;
 
+	// hitobjects
 	std::vector<OsuHitObject*> m_hitobjects;
 	std::vector<OsuHitObject*> m_hitobjectsSortedByEndTime;
 	std::vector<OsuHitObject*> m_misaimObjects;

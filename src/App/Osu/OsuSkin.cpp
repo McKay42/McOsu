@@ -223,8 +223,8 @@ OsuSkin::OsuSkin(Osu *osu, UString name, UString filepath, bool isDefaultSkin, b
 	m_checkOn = NULL;
 	m_checkOff = NULL;
 	m_shutter = NULL;
-	m_sectionFail = NULL;
-	m_sectionPass = NULL;
+	m_sectionPassSound = NULL;
+	m_sectionFailSound = NULL;
 
 	m_spinnerApproachCircleColor = 0xffffffff;
 	m_sliderBorderColor = 0xffffffff;
@@ -300,6 +300,7 @@ OsuSkin::OsuSkin(Osu *osu, UString name, UString filepath, bool isDefaultSkin, b
 
 	// convar callbacks
 	osu_volume_effects.setCallback( fastdelegate::MakeDelegate(this, &OsuSkin::onEffectVolumeChange) );
+	osu_ignore_beatmap_sample_volume.setCallback( fastdelegate::MakeDelegate(this, &OsuSkin::onIgnoreBeatmapSampleVolumeChange) );
 	osu_export_skin.setCallback( fastdelegate::MakeDelegate(this, &OsuSkin::onExport) );
 	osu_skin_export.setCallback( fastdelegate::MakeDelegate(this, &OsuSkin::onExport) );
 }
@@ -546,7 +547,16 @@ void OsuSkin::load()
 	randomizeFilePath();
 	checkLoadImage(&m_circularmetre, "circularmetre", "OSU_SKIN_CIRCULARMETRE");
 	randomizeFilePath();
-	m_scorebarBg = createOsuSkinImage("scorebar-bg", Vector2(695, 144), 90);
+	m_scorebarBg = createOsuSkinImage("scorebar-bg", Vector2(695, 44), 27.5f);
+	m_scorebarColour = createOsuSkinImage("scorebar-colour", Vector2(645, 10), 6.25f);
+	m_scorebarMarker = createOsuSkinImage("scorebar-marker", Vector2(24, 24), 15.0f);
+	m_scorebarKi = createOsuSkinImage("scorebar-ki", Vector2(116, 116), 72.0f);
+	m_scorebarKiDanger = createOsuSkinImage("scorebar-kidanger", Vector2(116, 116), 72.0f);
+	m_scorebarKiDanger2 = createOsuSkinImage("scorebar-kidanger2", Vector2(116, 116), 72.0f);
+	randomizeFilePath();
+	m_sectionPassImage = createOsuSkinImage("section-pass", Vector2(650, 650), 400.0f);
+	randomizeFilePath();
+	m_sectionFailImage = createOsuSkinImage("section-fail", Vector2(650, 650), 400.0f);
 	randomizeFilePath();
 	m_inputoverlayBackground = createOsuSkinImage("inputoverlay-background", Vector2(193, 55), 34.25f);
 	m_inputoverlayKey = createOsuSkinImage("inputoverlay-key", Vector2(43, 46), 26.75f);
@@ -748,8 +758,8 @@ void OsuSkin::load()
 	checkLoadSound(&m_checkOn, "check-on", "OSU_SKIN_CHECKON_SND", true);
 	checkLoadSound(&m_checkOff, "check-off", "OSU_SKIN_CHECKOFF_SND", true);
 	checkLoadSound(&m_shutter, "shutter", "OSU_SKIN_SHUTTER_SND", true);
-	checkLoadSound(&m_sectionFail, "sectionfail", "OSU_SKIN_SECTIONFAIL_SND", true);
-	checkLoadSound(&m_sectionPass, "sectionpass", "OSU_SKIN_SECTIONPASS_SND", true);
+	checkLoadSound(&m_sectionPassSound, "sectionpass", "OSU_SKIN_SECTIONPASS_SND", true);
+	checkLoadSound(&m_sectionFailSound, "sectionfail", "OSU_SKIN_SECTIONFAIL_SND", true);
 
 	// scaling
 	// HACKHACK: this is pure cancer
@@ -1004,6 +1014,12 @@ void OsuSkin::onEffectVolumeChange(UString oldValue, UString newValue)
 	setSampleVolume(clamp<float>((float)m_iSampleVolume / 100.0f, 0.0f, 1.0f), true);
 }
 
+void OsuSkin::onIgnoreBeatmapSampleVolumeChange(UString oldValue, UString newValue)
+{
+	// restore sample volumes
+	setSampleVolume(clamp<float>((float)m_iSampleVolume / 100.0f, 0.0f, 1.0f), true);
+}
+
 void OsuSkin::onExport(UString folderName)
 {
 	if (folderName.length() < 1)
@@ -1090,17 +1106,17 @@ void OsuSkin::setSampleSet(int sampleSet)
 
 void OsuSkin::setSampleVolume(float volume, bool force)
 {
-	if (osu_ignore_beatmap_sample_volume.getBool()) return;
+	if (osu_ignore_beatmap_sample_volume.getBool() && (int)(osu_volume_effects.getFloat() * 100.0f) == m_iSampleVolume) return;
 
-	float sampleVolume = volume*osu_volume_effects.getFloat();
-	if (!force && m_iSampleVolume == (int)(sampleVolume*100.0f))
-		return;
+	const float newSampleVolume = (!osu_ignore_beatmap_sample_volume.getBool() ? volume : 1.0f) * osu_volume_effects.getFloat();
 
-	m_iSampleVolume = (int)(sampleVolume*100.0f);
+	if (!force && m_iSampleVolume == (int)(newSampleVolume * 100.0f)) return;
+
+	m_iSampleVolume = (int)(newSampleVolume * 100.0f);
 	///debugLog("sample volume = %f\n", sampleVolume);
 	for (int i=0; i<m_soundSamples.size(); i++)
 	{
-		m_soundSamples[i].sound->setVolume(sampleVolume * m_soundSamples[i].hardcodedVolumeMultiplier);
+		m_soundSamples[i].sound->setVolume(newSampleVolume * m_soundSamples[i].hardcodedVolumeMultiplier);
 	}
 }
 

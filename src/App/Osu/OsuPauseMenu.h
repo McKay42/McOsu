@@ -62,6 +62,8 @@ private:
 	bool m_bContinueEnabled;
 	bool m_bClick1Down;
 	bool m_bClick2Down;
+
+	float m_fDimAnim;
 };
 
 #endif

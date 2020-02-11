@@ -745,9 +745,10 @@ OsuBeatmap *OsuDatabase::getBeatmap(std::string md5hash)
 	for (int i=0; i<m_beatmaps.size(); i++)
 	{
 		OsuBeatmap *beatmap = m_beatmaps[i];
-		for (int d=0; d<beatmap->getDifficultiesPointer()->size(); d++)
+		const std::vector<OsuBeatmapDifficulty*> &diffs = beatmap->getDifficulties();
+		for (int d=0; d<diffs.size(); d++)
 		{
-			OsuBeatmapDifficulty *diff = (*beatmap->getDifficultiesPointer())[d];
+			const OsuBeatmapDifficulty *diff = diffs[d];
 
 			bool uuidMatches = (diff->md5hash.length() > 0);
 			for (int u=0; u<32 && u<diff->md5hash.length(); u++)
@@ -772,9 +773,10 @@ OsuBeatmapDifficulty *OsuDatabase::getBeatmapDifficulty(std::string md5hash)
 	for (int i=0; i<m_beatmaps.size(); i++)
 	{
 		OsuBeatmap *beatmap = m_beatmaps[i];
-		for (int d=0; d<beatmap->getDifficultiesPointer()->size(); d++)
+		const std::vector<OsuBeatmapDifficulty*> &diffs = beatmap->getDifficulties();
+		for (int d=0; d<diffs.size(); d++)
 		{
-			OsuBeatmapDifficulty *diff = (*beatmap->getDifficultiesPointer())[d];
+			OsuBeatmapDifficulty *diff = diffs[d];
 
 			bool uuidMatches = (diff->md5hash.length() > 0);
 			for (int u=0; u<32 && u<diff->md5hash.length(); u++)
@@ -1308,7 +1310,7 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 							existsAlready = true;
 
 							// we have found a matching beatmap, add ourself to its diffs
-							m_beatmaps[e]->getDifficultiesPointer()->push_back(diff);
+							const_cast<std::vector<OsuBeatmapDifficulty*>&>(m_beatmaps[e]->getDifficulties()).push_back(diff);
 
 							// and add an entry in our hashmap
 							if (diff->md5hash.length() == 32)

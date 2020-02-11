@@ -53,10 +53,11 @@ ConVar *OsuSlider::m_osu_playfield_mirror_vertical_ref = NULL;
 ConVar *OsuSlider::m_osu_playfield_rotation_ref = NULL;
 ConVar *OsuSlider::m_osu_mod_fps_ref = NULL;
 ConVar *OsuSlider::m_osu_slider_border_size_multiplier_ref = NULL;
-ConVar *OsuSlider::m_epilepsy = NULL;
-ConVar *OsuSlider::m_osu_auto_cursordance = NULL;
+ConVar *OsuSlider::m_epilepsy_ref = NULL;
+ConVar *OsuSlider::m_osu_auto_cursordance_ref = NULL;
+ConVar *OsuSlider::m_osu_drain_type_ref = NULL;
 
-OsuSlider::OsuSlider(char type, int repeat, float pixelLength, std::vector<Vector2> points, std::vector<int> hitSounds, std::vector<float> ticks, float sliderTime, float sliderTimeWithoutRepeats, long time, int sampleType, int comboNumber, int colorCounter, int colorOffset, OsuBeatmapStandard *beatmap) : OsuHitObject(time, sampleType, comboNumber, colorCounter, colorOffset, beatmap)
+OsuSlider::OsuSlider(char type, int repeat, float pixelLength, std::vector<Vector2> points, std::vector<int> hitSounds, std::vector<float> ticks, float sliderTime, float sliderTimeWithoutRepeats, long time, int sampleType, int comboNumber, bool isEndOfCombo, int colorCounter, int colorOffset, OsuBeatmapStandard *beatmap) : OsuHitObject(time, sampleType, comboNumber, isEndOfCombo, colorCounter, colorOffset, beatmap)
 {
 	if (m_osu_playfield_mirror_horizontal_ref == NULL)
 		m_osu_playfield_mirror_horizontal_ref = convar->getConVarByName("osu_playfield_mirror_horizontal");
@@ -68,10 +69,12 @@ OsuSlider::OsuSlider(char type, int repeat, float pixelLength, std::vector<Vecto
 		m_osu_mod_fps_ref = convar->getConVarByName("osu_mod_fps");
 	if (m_osu_slider_border_size_multiplier_ref == NULL)
 		m_osu_slider_border_size_multiplier_ref = convar->getConVarByName("osu_slider_border_size_multiplier");
-	if (m_epilepsy == NULL)
-		m_epilepsy = convar->getConVarByName("epilepsy");
-	if (m_osu_auto_cursordance == NULL)
-		m_osu_auto_cursordance = convar->getConVarByName("osu_auto_cursordance");
+	if (m_epilepsy_ref == NULL)
+		m_epilepsy_ref = convar->getConVarByName("epilepsy");
+	if (m_osu_auto_cursordance_ref == NULL)
+		m_osu_auto_cursordance_ref = convar->getConVarByName("osu_auto_cursordance");
+	if (m_osu_drain_type_ref == NULL)
+		m_osu_drain_type_ref = convar->getConVarByName("osu_drain_type");
 
 	m_cType = type;
 	m_iRepeat = repeat;
@@ -832,6 +835,10 @@ void OsuSlider::drawBody(Graphics *g, float alpha, float from, float to)
 		// as the base mesh is centered at (0, 0, 0) and in raw osu coordinates, we have to scale and translate it to make it fit the actual desktop playfield
 		const float scale = OsuGameRules::getPlayfieldScaleFactor(m_beatmap->getOsu());
 		Vector2 translation = OsuGameRules::getPlayfieldCenter(m_beatmap->getOsu());
+
+		if (m_beatmap->hasFailed())
+			translation = m_beatmap->osuCoords2Pixels(Vector2(OsuGameRules::OSU_COORD_WIDTH/2, OsuGameRules::OSU_COORD_HEIGHT/2));
+
 		if (m_osu_mod_fps_ref->getBool())
 			translation += m_beatmap->getFirstPersonCursorDelta();
 
@@ -881,7 +888,7 @@ void OsuSlider::update(long curPos)
 	if (m_fSliderBreakRapeTime != 0.0f && engine->getTime() > m_fSliderBreakRapeTime)
 	{
 		m_fSliderBreakRapeTime = 0.0f;
-		m_epilepsy->setValue(0.0f);
+		m_epilepsy_ref->setValue(0.0f);
 	}
 
 	// stop slide sound while paused
@@ -923,7 +930,7 @@ void OsuSlider::update(long curPos)
 		}
 	}
 
-	// if this slider is active
+	// if this slider is active, recalculate sliding/curve position and general state
 	if (m_fSlidePercent > 0.0f || m_bVisible)
 	{
 		// handle reverse sliders
@@ -977,7 +984,7 @@ void OsuSlider::update(long curPos)
 
 	// handle dynamic followradius
 	float followRadius = m_bCursorLeft ? m_beatmap->getHitcircleDiameter() / 2.0f : m_beatmap->getSliderFollowCircleDiameter() / 2.0f;
-	m_bCursorInside = (m_beatmap->getOsu()->getModAuto() && (!m_osu_auto_cursordance->getBool() || ((m_beatmap->getCursorPos() - m_vCurPoint).length() < followRadius))) || ((m_beatmap->getCursorPos() - m_vCurPoint).length() < followRadius);
+	m_bCursorInside = (m_beatmap->getOsu()->getModAuto() && (!m_osu_auto_cursordance_ref->getBool() || ((m_beatmap->getCursorPos() - m_vCurPoint).length() < followRadius))) || ((m_beatmap->getCursorPos() - m_vCurPoint).length() < followRadius);
 	m_bCursorLeft = !m_bCursorInside;
 
 	if (m_beatmap->getOsu()->isInVRMode())
@@ -1142,23 +1149,29 @@ void OsuSlider::update(long curPos)
 		{
 			if (curPos >= m_iTime + m_iObjectDuration)
 			{
+				// handle leftover startcircle
+				{
+					// this may happen (if the slider time is shorter than the miss window of the startcircle)
+					if (m_startResult == OsuScore::HIT::HIT_NULL)
+					{
+						// we still want to cause a sliderbreak in this case!
+						onSliderBreak();
+
+						// special case: missing the startcircle drains HIT_MISS_SLIDERBREAK health (and not HIT_MISS health)
+						m_beatmap->addHitResult(this, OsuScore::HIT::HIT_MISS_SLIDERBREAK, 0, false, true, true, true, true, false); // only decrease health
+
+						m_startResult = OsuScore::HIT::HIT_MISS;
+					}
+				}
+
 				// handle endcircle
 
 				m_bHeldTillEnd = m_bHeldTillEndForLenienceHack;
 				m_endResult = m_bHeldTillEnd ? OsuScore::HIT::HIT_300 : OsuScore::HIT::HIT_MISS;
 
-
-				if (m_startResult == OsuScore::HIT::HIT_NULL) // this may happen (if the slider time is shorter than the miss window of the startcircle)
-				{
-					// we still want to cause a sliderbreak in this case!
-					onSliderBreak();
-					m_startResult = OsuScore::HIT::HIT_MISS;
-				}
-
-
 				// handle total slider result (currently startcircle + repeats + ticks + endcircle)
 				// clicks = (repeats + ticks)
-				float numMaxPossibleHits = 1 + m_clicks.size() + 1;
+				const float numMaxPossibleHits = 1 + m_clicks.size() + 1;
 				float numActualHits = 0;
 
 				if (m_startResult != OsuScore::HIT::HIT_MISS)
@@ -1172,10 +1185,10 @@ void OsuSlider::update(long curPos)
 						numActualHits++;
 				}
 
-				float percent = numActualHits / numMaxPossibleHits;
+				const float percent = numActualHits / numMaxPossibleHits;
 
-				bool allow300 = (osu_slider_scorev2.getBool() || m_beatmap->getOsu()->getModScorev2()) ? (m_startResult == OsuScore::HIT::HIT_300) : true;
-				bool allow100 = (osu_slider_scorev2.getBool() || m_beatmap->getOsu()->getModScorev2()) ? (m_startResult == OsuScore::HIT::HIT_300 || m_startResult == OsuScore::HIT::HIT_100) : true;
+				const bool allow300 = (osu_slider_scorev2.getBool() || m_beatmap->getOsu()->getModScorev2()) ? (m_startResult == OsuScore::HIT::HIT_300) : true;
+				const bool allow100 = (osu_slider_scorev2.getBool() || m_beatmap->getOsu()->getModScorev2()) ? (m_startResult == OsuScore::HIT::HIT_300 || m_startResult == OsuScore::HIT::HIT_100) : true;
 
 				if (percent >= 0.999f && allow300)
 					m_endResult = OsuScore::HIT::HIT_300;
@@ -1188,7 +1201,7 @@ void OsuSlider::update(long curPos)
 
 				//debugLog("percent = %f\n", percent);
 
-				onHit(m_endResult, 0, true); // delta doesn't matter here
+				onHit(m_endResult, 0, true);
 			}
 		}
 
@@ -1338,51 +1351,61 @@ void OsuSlider::onHit(OsuScore::HIT result, long delta, bool startOrEnd, float t
 	//debugLog("startOrEnd = %i,    m_iCurRepeat = %i\n", (int)startOrEnd, m_iCurRepeat);
 
 	// sound and hit animation
-	if (result == OsuScore::HIT::HIT_MISS)
-		onSliderBreak();
-	else
 	{
-		if (m_osu_timingpoints_force->getBool())
-			m_beatmap->updateTimingPoints(m_iTime + (!startOrEnd ? 0 : m_iObjectDuration));
-
-		const Vector2 osuCoords = m_beatmap->pixels2OsuCoords(m_beatmap->osuCoords2Pixels(m_vCurPointRaw));
-
-		m_beatmap->getSkin()->playHitCircleSound(m_iCurRepeatCounterForHitSounds < m_hitSounds.size() ? m_hitSounds[m_iCurRepeatCounterForHitSounds] : m_iSampleType, OsuGameRules::osuCoords2Pan(osuCoords.x));
-
-		if (!startOrEnd)
-		{
-			m_fStartHitAnimation = 0.001f; // quickfix for 1 frame missing images
-			anim->moveQuadOut(&m_fStartHitAnimation, 1.0f, OsuGameRules::getFadeOutTime(m_beatmap), true);
-		}
+		if (result == OsuScore::HIT::HIT_MISS)
+			onSliderBreak();
 		else
 		{
-			if (m_iRepeat % 2 != 0)
-			{
-				m_fEndHitAnimation = 0.001f; // quickfix for 1 frame missing images
-				anim->moveQuadOut(&m_fEndHitAnimation, 1.0f, OsuGameRules::getFadeOutTime(m_beatmap), true);
-			}
-			else
+			if (m_osu_timingpoints_force->getBool())
+				m_beatmap->updateTimingPoints(m_iTime + (!startOrEnd ? 0 : m_iObjectDuration));
+
+			const Vector2 osuCoords = m_beatmap->pixels2OsuCoords(m_beatmap->osuCoords2Pixels(m_vCurPointRaw));
+
+			m_beatmap->getSkin()->playHitCircleSound(m_iCurRepeatCounterForHitSounds < m_hitSounds.size() ? m_hitSounds[m_iCurRepeatCounterForHitSounds] : m_iSampleType, OsuGameRules::osuCoords2Pan(osuCoords.x));
+
+			if (!startOrEnd)
 			{
 				m_fStartHitAnimation = 0.001f; // quickfix for 1 frame missing images
 				anim->moveQuadOut(&m_fStartHitAnimation, 1.0f, OsuGameRules::getFadeOutTime(m_beatmap), true);
 			}
-		}
-
-		if (m_beatmap->getOsu()->isInVRMode())
-		{
-			if (m_bOnHitVRLeftControllerHapticFeedback)
-				openvr->getLeftController()->triggerHapticPulse(m_beatmap->getOsu()->getVR()->getHapticPulseStrength());
 			else
-				openvr->getRightController()->triggerHapticPulse(m_beatmap->getOsu()->getVR()->getHapticPulseStrength());
+			{
+				if (m_iRepeat % 2 != 0)
+				{
+					m_fEndHitAnimation = 0.001f; // quickfix for 1 frame missing images
+					anim->moveQuadOut(&m_fEndHitAnimation, 1.0f, OsuGameRules::getFadeOutTime(m_beatmap), true);
+				}
+				else
+				{
+					m_fStartHitAnimation = 0.001f; // quickfix for 1 frame missing images
+					anim->moveQuadOut(&m_fStartHitAnimation, 1.0f, OsuGameRules::getFadeOutTime(m_beatmap), true);
+				}
+			}
+
+			if (m_beatmap->getOsu()->isInVRMode())
+			{
+				if (m_bOnHitVRLeftControllerHapticFeedback)
+					openvr->getLeftController()->triggerHapticPulse(m_beatmap->getOsu()->getVR()->getHapticPulseStrength());
+				else
+					openvr->getRightController()->triggerHapticPulse(m_beatmap->getOsu()->getVR()->getHapticPulseStrength());
+			}
 		}
 
-		// add score
-		m_beatmap->addScorePoints(30);
+		// end body fadeout
+		if (startOrEnd)
+		{
+			m_fEndSliderBodyFadeAnimation = 0.001f; // quickfix for 1 frame missing images
+			anim->moveQuadOut(&m_fEndSliderBodyFadeAnimation, 1.0f, OsuGameRules::getFadeOutTime(m_beatmap) * osu_slider_body_fade_out_time_multiplier.getFloat(), true);
+
+			m_beatmap->getSkin()->stopSliderSlideSound();
+		}
 	}
 
-	// add it, and we are finished
+	// add score, and we are finished
 	if (!startOrEnd)
 	{
+		// startcircle
+
 		m_bStartFinished = true;
 
 		// remember which key this slider was started with
@@ -1392,21 +1415,50 @@ void OsuSlider::onHit(OsuScore::HIT result, long delta, bool startOrEnd, float t
 			m_iDownKey = 1;
 
 		if (!m_beatmap->getOsu()->getModTarget())
-			m_beatmap->addHitResult(result, delta, false, true);
+			m_beatmap->addHitResult(this, result, delta, false, false, true, false, true, true); // not end of combo, show in hiterrorbar, ignore for accuracy, increase combo, don't count towards score, depending on scorev2 ignore for health or not
 		else
-			addHitResult(result, delta, m_curve->pointAt(0.0f), targetDelta, targetAngle, false);
+			addHitResult(result, delta, false, m_curve->pointAt(0.0f), targetDelta, targetAngle, false, false, true); // not end of combo, show in hiterrorbar, use for accuracy, increase combo, increase score, ignore for health
+
+		// add bonus score + health manually
+		if (result != OsuScore::HIT::HIT_MISS)
+		{
+			OsuScore::HIT resultForHealth = OsuScore::HIT::HIT_SLIDER30;
+
+			if (m_osu_drain_type_ref->getInt() == 1) // VR
+			{
+				resultForHealth = result;
+			}
+
+			m_beatmap->addHitResult(this, resultForHealth, 0, false, true, true, true, true, false); // only increase health
+			m_beatmap->addScorePoints(30);
+		}
+		else
+		{
+			// special case: missing the startcircle drains HIT_MISS_SLIDERBREAK health (and not HIT_MISS health)
+			m_beatmap->addHitResult(this, OsuScore::HIT::HIT_MISS_SLIDERBREAK, 0, false, true, true, true, true, false); // only decrease health
+		}
 	}
 	else
 	{
-		addHitResult(result, delta, getRawPosAt(m_iTime + m_iObjectDuration), -1.0f, 0.0f, true, !m_bHeldTillEnd);
+		// endcircle
+
 		m_bStartFinished = true;
 		m_bEndFinished = true;
 		m_bFinished = true;
 
-		m_fEndSliderBodyFadeAnimation = 0.001f; // quickfix for 1 frame missing images
-		anim->moveQuadOut(&m_fEndSliderBodyFadeAnimation, 1.0f, OsuGameRules::getFadeOutTime(m_beatmap) * osu_slider_body_fade_out_time_multiplier.getFloat(), true);
+		addHitResult(result, delta, m_bIsEndOfCombo, getRawPosAt(m_iTime + m_iObjectDuration), -1.0f, 0.0f, true, !m_bHeldTillEnd, false); // end of combo, ignore in hiterrorbar, depending on heldTillEnd increase combo or not, increase score, increase health
 
-		m_beatmap->getSkin()->stopSliderSlideSound();
+		// add bonus score + extra health manually
+		if (m_bHeldTillEnd)
+		{
+			m_beatmap->addHitResult(this, OsuScore::HIT::HIT_SLIDER30, 0, false, true, true, true, true, false); // only increase health
+			m_beatmap->addScorePoints(30);
+		}
+		else
+		{
+			// special case: missing the endcircle drains HIT_MISS_SLIDERBREAK health (and not HIT_MISS health)
+			m_beatmap->addHitResult(this, OsuScore::HIT::HIT_MISS_SLIDERBREAK, 0, false, true, true, true, true, false); // only decrease health
+		}
 	}
 
 	m_iCurRepeatCounterForHitSounds++;
@@ -1433,8 +1485,6 @@ void OsuSlider::onRepeatHit(bool successful, bool sliderend)
 		m_fFollowCircleTickAnimationScale = 0.0f;
 		anim->moveLinear(&m_fFollowCircleTickAnimationScale, 1.0f, OsuGameRules::osu_slider_followcircle_tick_pulse_time.getFloat(), true);
 
-		m_beatmap->addHitResult(OsuScore::HIT::HIT_300, 0, true, true, false, true); // ignore in hiterrorbar, ignore for accuracy, increase combo, but don't count towards score!
-
 		if (sliderend)
 		{
 			m_fEndHitAnimation = 0.001f; // quickfix for 1 frame missing images
@@ -1453,8 +1503,20 @@ void OsuSlider::onRepeatHit(bool successful, bool sliderend)
 			else
 				openvr->getRightController()->triggerHapticPulse(m_beatmap->getOsu()->getVR()->getHapticPulseStrength());
 		}
+	}
 
-		// add score
+	// add score
+	if (!successful)
+	{
+		// add health manually
+		// special case: missing a repeat drains HIT_MISS_SLIDERBREAK health (and not HIT_MISS health)
+		m_beatmap->addHitResult(this, OsuScore::HIT::HIT_MISS_SLIDERBREAK, 0, false, true, true, true, true, false); // only decrease health
+	}
+	else
+	{
+		m_beatmap->addHitResult(this, OsuScore::HIT::HIT_SLIDER30, 0, false, true, true, false, true, false); // not end of combo, ignore in hiterrorbar, ignore for accuracy, increase combo, don't count towards score, increase health
+
+		// add bonus score manually
 		m_beatmap->addScorePoints(30);
 	}
 
@@ -1491,10 +1553,20 @@ void OsuSlider::onTickHit(bool successful, int tickIndex)
 
 		m_fFollowCircleTickAnimationScale = 0.0f;
 		anim->moveLinear(&m_fFollowCircleTickAnimationScale, 1.0f, OsuGameRules::osu_slider_followcircle_tick_pulse_time.getFloat(), true);
+	}
 
-		m_beatmap->addHitResult(OsuScore::HIT::HIT_SLIDER30, 0, true);
+	// add score
+	if (!successful)
+	{
+		// add health manually
+		// special case: missing a tick drains HIT_MISS_SLIDERBREAK health (and not HIT_MISS health)
+		m_beatmap->addHitResult(this, OsuScore::HIT::HIT_MISS_SLIDERBREAK, 0, false, true, true, true, true, false); // only decrease health
+	}
+	else
+	{
+		m_beatmap->addHitResult(this, OsuScore::HIT::HIT_SLIDER10, 0, false, true, true, false, true, false); // not end of combo, ignore in hiterrorbar, ignore for accuracy, increase combo, don't count towards score, increase health
 
-		// add score
+		// add bonus score manually
 		m_beatmap->addScorePoints(10);
 	}
 }
@@ -1507,7 +1579,7 @@ void OsuSlider::onSliderBreak()
 	if (osu_slider_break_epilepsy.getBool())
 	{
 		m_fSliderBreakRapeTime = engine->getTime() + 0.15f;
-		m_epilepsy->setValue(1.0f);
+		m_epilepsy_ref->setValue(1.0f);
 	}
 }
 
@@ -1589,7 +1661,7 @@ void OsuSlider::onReset(long curPos)
 	}
 
 	m_fSliderBreakRapeTime = 0.0f;
-	m_epilepsy->setValue(0.0f);
+	m_epilepsy_ref->setValue(0.0f);
 }
 
 void OsuSlider::rebuildVertexBuffer()

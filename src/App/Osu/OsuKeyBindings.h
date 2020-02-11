@@ -36,6 +36,9 @@ public:
 	static ConVar DISABLE_MOUSE_BUTTONS;
 	static ConVar BOSS_KEY;
 
+	static ConVar TOGGLE_MODSELECT;
+	static ConVar RANDOM_BEATMAP;
+
 	static ConVar MOD_EASY;
 	static ConVar MOD_NOFAIL;
 	static ConVar MOD_HALFTIME;

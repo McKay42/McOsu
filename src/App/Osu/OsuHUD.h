@@ -13,6 +13,7 @@
 class Osu;
 class OsuVR;
 class OsuScore;
+class OsuBeatmapStandard;
 
 class McFont;
 class ConVar;
@@ -45,6 +46,7 @@ public:
 	void drawCursorVR1(Graphics *g, Matrix4 &mvp, Vector2 pos, float alphaMultiplier = 1.0f);
 	void drawCursorVR2(Graphics *g, Matrix4 &mvp, Vector2 pos, float alphaMultiplier = 1.0f);
 	void drawFps(Graphics *g) {drawFps(g, m_tempFont, m_fCurFps);}
+	void drawHitErrorBar(Graphics *g, OsuBeatmapStandard *beatmapStd);
 	void drawPlayfieldBorder(Graphics *g, Vector2 playfieldCenter, Vector2 playfieldSize, float hitcircleDiameter);
 	void drawPlayfieldBorder(Graphics *g, Vector2 playfieldCenter, Vector2 playfieldSize, float hitcircleDiameter, float borderSize);
 	void drawLoadingSmall(Graphics *g);
@@ -56,6 +58,9 @@ public:
 	void drawWarningArrow(Graphics *g, Vector2 pos, bool flipVertically, bool originLeft = true);
 	void drawScoreBoard(Graphics *g, std::string &beatmapMD5Hash, OsuScore *currentScore);
 	void drawScoreBoardMP(Graphics *g);
+	void drawScorebarBg(Graphics *g, float alpha, float breakAnim);
+	void drawSectionPass(Graphics *g, float alpha);
+	void drawSectionFail(Graphics *g, float alpha);
 
 	void animateCombo();
 	void addHitError(long delta, bool miss = false, bool misaim = false);
@@ -66,6 +71,8 @@ public:
 	void addCursorRipple(Vector2 pos);
 	void animateCursorExpand();
 	void animateCursorShrink();
+	void animateKiBulge();
+	void animateKiExplode();
 
 	void selectVolumePrev();
 	void selectVolumeNext();
@@ -82,6 +89,9 @@ public:
 	OsuUIVolumeSlider *getVolumeMusicSlider() {return m_volumeMusic;}
 
 	void drawSkip(Graphics *g);
+
+	// ILLEGAL:
+	inline float getScoreBarBreakAnim() const {return m_fScoreBarBreakAnim;}
 
 private:
 	struct CURSORTRAIL
@@ -145,12 +155,13 @@ private:
 	void drawAccuracy(Graphics *g, float accuracy);
 	void drawCombo(Graphics *g, int combo);
 	void drawScore(Graphics *g, unsigned long long score);
-	void drawHP(Graphics *g, float health);
+	void drawHPBar(Graphics *g, double health, float alpha, float breakAnim);
 	void drawScoreBoardInt(Graphics *g, const std::vector<SCORE_ENTRY> &scoreEntries);
 
 	void drawWarningArrows(Graphics *g, float hitcircleDiameter = 0.0f);
 	void drawContinue(Graphics *g, Vector2 cursor, float hitcircleDiameter = 0.0f);
 	void drawHitErrorBar(Graphics *g, float hitWindow300, float hitWindow100, float hitWindow50, float hitWindowMiss);
+	void drawHitErrorBarInt(Graphics *g, float hitWindow300, float hitWindow100, float hitWindow50, float hitWindowMiss);
 	void drawProgressBar(Graphics *g, float percent, bool waiting);
 	void drawProgressBarVR(Graphics *g, Matrix4 &mvp, OsuVR *vr, float percent, bool waiting);
 	void drawStatistics(Graphics *g, int misses, int sliderbreaks, int bpm, float ar, float cs, float od, int nps, int nd, int ur, float pp, float hitWindow300, int hitdeltaMin, int hitdeltaMax);
@@ -236,6 +247,11 @@ private:
 
 	// target heatmap
 	std::vector<TARGET> m_targets;
+
+	// health
+	double m_fHealth;
+	float m_fScoreBarBreakAnim;
+	float m_fKiScaleAnim;
 };
 
 #endif

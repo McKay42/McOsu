@@ -109,6 +109,7 @@ private:
 	void updateFposuCMper360();
 	void updateVRRenderTargetResolutionLabel();
 	void updateSkinNameLabel();
+	void updateHPDrainSelectLabel();
 
 	// options
 	void onFullscreenChange(CBaseUICheckbox *checkbox);
@@ -134,6 +135,10 @@ private:
 	void onManuallyManageBeatmapsClicked();
 	void onLIVReloadCalibrationClicked();
 	void onCM360CalculatorLinkClicked();
+	void onHPDrainSelect();
+	void onHPDrainSelect2(UString hpDrainType, int id = -1);
+	void onHPDrainSelectResetClicked();
+	void onHPDrainSelectResetUpdate();
 
 	void onCheckboxChange(CBaseUICheckbox *checkbox);
 	void onSliderChange(CBaseUISlider *slider);
@@ -216,10 +221,13 @@ private:
 	CBaseUISlider *m_hudAccuracyScaleSlider;
 	CBaseUISlider *m_hudHiterrorbarScaleSlider;
 	CBaseUISlider *m_hudProgressbarScaleSlider;
+	CBaseUISlider *m_hudScoreBarScaleSlider;
 	CBaseUISlider *m_hudScoreBoardScaleSlider;
 	CBaseUISlider *m_hudInputoverlayScaleSlider;
 	CBaseUISlider *m_playfieldBorderSizeSlider;
 	CBaseUISlider *m_statisticsOverlayScaleSlider;
+	CBaseUISlider *m_statisticsOverlayXOffsetSlider;
+	CBaseUISlider *m_statisticsOverlayYOffsetSlider;
 	CBaseUISlider *m_cursorSizeSlider;
 	CBaseUILabel *m_skinLabel;
 	CBaseUIElement *m_skinSelectLocalButton;
@@ -251,6 +259,9 @@ private:
 	CBaseUIElement *m_skinSection;
 	CBaseUISlider *m_uiScaleSlider;
 	OsuOptionsMenuResetButton *m_uiScaleResetButton;
+	CBaseUIElement *m_hpDrainSelectButton;
+	CBaseUILabel *m_hpDrainSelectLabel;
+	OsuOptionsMenuResetButton *m_hpDrainSelectResetButton;
 
 	ConVar *m_waitingKey;
 	ConVar *m_osu_slider_curve_points_separation_ref;
@@ -265,6 +276,7 @@ private:
 	ConVar *m_osu_ui_scale_ref;
 	ConVar *m_win_snd_wasapi_buffer_size_ref;
 	ConVar *m_win_snd_wasapi_period_size_ref;
+	ConVar *m_osu_drain_type_ref;
 
 	float m_fOsuFolderTextboxInvalidAnim;
 	float m_fVibrationStrengthExampleTimer;
@@ -286,6 +298,9 @@ private:
 	// search
 	UString m_sSearchString;
 	float m_fSearchOnCharKeybindHackTime;
+
+	// drain
+	std::vector<UString> m_drainTypes;
 };
 
 #endif

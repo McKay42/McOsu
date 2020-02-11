@@ -22,6 +22,7 @@ class OsuUISongBrowserScoreButton : public CBaseUIButton
 {
 public:
 	static OsuSkinImage *getGradeImage(Osu *osu, OsuScore::GRADE grade);
+	static UString getModsString(int mods);
 
 	enum class STYLE
 	{
@@ -68,9 +69,6 @@ private:
 
 	bool isContextMenuVisible();
 
-
-	UString getModsString(int mods);
-
 	Osu *m_osu;
 	OsuUIContextMenu *m_contextMenu;
 	STYLE m_style;
@@ -82,7 +80,6 @@ private:
 
 	// score data
 	OsuDatabase::Score m_score;
-
 
 	int m_iScoreIndexNumber;
 	uint64_t m_iScoreUnixTimestamp;

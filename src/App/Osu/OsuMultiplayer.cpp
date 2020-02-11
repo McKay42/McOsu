@@ -262,9 +262,10 @@ bool OsuMultiplayer::onClientReceiveInt(uint32_t id, void *data, uint32_t size, 
 					for (int i=0; i<beatmaps.size(); i++)
 					{
 						OsuBeatmap *beatmap = beatmaps[i];
-						for (int d=0; d<beatmap->getDifficultiesPointer()->size(); d++)
+						const std::vector<OsuBeatmapDifficulty*> &diffs = beatmap->getDifficulties();
+						for (int d=0; d<diffs.size(); d++)
 						{
-							OsuBeatmapDifficulty *diff = (*beatmap->getDifficultiesPointer())[d];
+							OsuBeatmapDifficulty *diff = diffs[d];
 							bool uuidMatches = (diff->md5hash.length() > 0);
 							for (int u=0; u<32 && u<diff->md5hash.length(); u++)
 							{
@@ -741,14 +742,26 @@ void OsuMultiplayer::onServerModUpdate()
 		}
 
 		// drain
-		simpleModConVars.push_back("osu_drain_enabled");
-		simpleModConVars.push_back("osu_draw_hpbar");
-		simpleModConVars.push_back("osu_drain_duration");
-		simpleModConVars.push_back("osu_drain_multiplier");
-		simpleModConVars.push_back("osu_drain_300");
-		simpleModConVars.push_back("osu_drain_100");
-		simpleModConVars.push_back("osu_drain_50");
-		simpleModConVars.push_back("osu_drain_miss");
+		simpleModConVars.push_back("osu_drain_type");
+
+		simpleModConVars.push_back("osu_drain_vr_duration");
+		simpleModConVars.push_back("osu_drain_vr_multiplier");
+		simpleModConVars.push_back("osu_drain_vr_300");
+		simpleModConVars.push_back("osu_drain_vr_100");
+		simpleModConVars.push_back("osu_drain_vr_50");
+		simpleModConVars.push_back("osu_drain_vr_miss");
+		simpleModConVars.push_back("osu_drain_vr_sliderbreak");
+
+		simpleModConVars.push_back("osu_drain_stable_hpbar_maximum");
+
+		simpleModConVars.push_back("osu_drain_lazer_multiplier");
+		simpleModConVars.push_back("osu_drain_lazer_300");
+		simpleModConVars.push_back("osu_drain_lazer_100");
+		simpleModConVars.push_back("osu_drain_lazer_50");
+		simpleModConVars.push_back("osu_drain_lazer_miss");
+		simpleModConVars.push_back("osu_drain_lazer_health_min");
+		simpleModConVars.push_back("osu_drain_lazer_health_mid");
+		simpleModConVars.push_back("osu_drain_lazer_health_max");
 	}
 
 	// build final string

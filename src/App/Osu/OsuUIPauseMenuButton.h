@@ -25,6 +25,7 @@ public:
 	virtual void onMouseOutside();
 
 	void setBaseScale(float xScale, float yScale);
+	void setAlpha(float alpha) {m_fAlpha = alpha;}
 
 	Image *getImage() {return getImageFunc != NULL ? getImageFunc() : NULL;}
 
@@ -34,6 +35,8 @@ private:
 	Vector2 m_vScale;
 	Vector2 m_vBaseScale;
 	float m_fScaleMultiplier;
+
+	float m_fAlpha;
 
 	std::function<Image*()> getImageFunc;
 };

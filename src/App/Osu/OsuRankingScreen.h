@@ -91,6 +91,7 @@ private:
 	float m_fOD;
 	float m_fHP;
 
+	UString m_sMods;
 	bool m_bModSS;
 	bool m_bModSD;
 	bool m_bModEZ;

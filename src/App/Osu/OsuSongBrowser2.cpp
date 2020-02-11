@@ -182,18 +182,18 @@ struct SortByBPM : public OsuSongBrowser2::SORTING_COMPARATOR
 
 		int bpm1 = 0;
 		int bpm2 = 0;
-		std::vector<OsuBeatmapDifficulty*> *aDiffs = a->getBeatmap()->getDifficultiesPointer();
-		for (int i=0; i<aDiffs->size(); i++)
+		const std::vector<OsuBeatmapDifficulty*> &aDiffs = a->getBeatmap()->getDifficulties();
+		for (int i=0; i<aDiffs.size(); i++)
 		{
-			if ((*aDiffs)[i]->maxBPM > bpm1)
-				bpm1 = (*aDiffs)[i]->maxBPM;
+			if (aDiffs[i]->maxBPM > bpm1)
+				bpm1 = aDiffs[i]->maxBPM;
 		}
 
-		std::vector<OsuBeatmapDifficulty*> *bDiffs = b->getBeatmap()->getDifficultiesPointer();
-		for (int i=0; i<bDiffs->size(); i++)
+		const std::vector<OsuBeatmapDifficulty*> &bDiffs = b->getBeatmap()->getDifficulties();
+		for (int i=0; i<bDiffs.size(); i++)
 		{
-			if ((*bDiffs)[i]->maxBPM > bpm2)
-				bpm2 = (*bDiffs)[i]->maxBPM;
+			if (bDiffs[i]->maxBPM > bpm2)
+				bpm2 = bDiffs[i]->maxBPM;
 		}
 
 		// strict weak ordering!
@@ -213,13 +213,13 @@ struct SortByCreator : public OsuSongBrowser2::SORTING_COMPARATOR
 
 		std::wstring creatorLowercase1;
 		std::wstring creatorLowercase2;
-		std::vector<OsuBeatmapDifficulty*> *aDiffs = a->getBeatmap()->getDifficultiesPointer();
-		if (aDiffs->size() > 0)
-			creatorLowercase1 = std::wstring(((*aDiffs)[aDiffs->size()-1]->creator.wc_str() == NULL || (*aDiffs)[aDiffs->size()-1]->creator.length() < 1) ? L"" : (*aDiffs)[aDiffs->size()-1]->creator.wc_str());
+		const std::vector<OsuBeatmapDifficulty*> &aDiffs = a->getBeatmap()->getDifficulties();
+		if (aDiffs.size() > 0)
+			creatorLowercase1 = std::wstring((aDiffs[aDiffs.size()-1]->creator.wc_str() == NULL || aDiffs[aDiffs.size()-1]->creator.length() < 1) ? L"" : aDiffs[aDiffs.size()-1]->creator.wc_str());
 
-		std::vector<OsuBeatmapDifficulty*> *bDiffs = b->getBeatmap()->getDifficultiesPointer();
-		if (bDiffs->size() > 0)
-			creatorLowercase2 = std::wstring(((*bDiffs)[bDiffs->size()-1]->creator.wc_str() == NULL || (*bDiffs)[bDiffs->size()-1]->creator.length() < 1) ? L"" : (*bDiffs)[bDiffs->size()-1]->creator.wc_str());
+		const std::vector<OsuBeatmapDifficulty*> &bDiffs = b->getBeatmap()->getDifficulties();
+		if (bDiffs.size() > 0)
+			creatorLowercase2 = std::wstring((bDiffs[bDiffs.size()-1]->creator.wc_str() == NULL || bDiffs[bDiffs.size()-1]->creator.length() < 1) ? L"" : bDiffs[bDiffs.size()-1]->creator.wc_str());
 
 		std::transform(creatorLowercase1.begin(), creatorLowercase1.end(), creatorLowercase1.begin(), std::towlower);
 		std::transform(creatorLowercase2.begin(), creatorLowercase2.end(), creatorLowercase2.begin(), std::towlower);
@@ -241,18 +241,18 @@ struct SortByDateAdded : public OsuSongBrowser2::SORTING_COMPARATOR
 
 		long long time1 = std::numeric_limits<long long>::min();
 		long long time2 = std::numeric_limits<long long>::min();
-		std::vector<OsuBeatmapDifficulty*> *aDiffs = a->getBeatmap()->getDifficultiesPointer();
-		for (int i=0; i<aDiffs->size(); i++)
+		const std::vector<OsuBeatmapDifficulty*> &aDiffs = a->getBeatmap()->getDifficulties();
+		for (int i=0; i<aDiffs.size(); i++)
 		{
-			if ((*aDiffs)[i]->lastModificationTime > time1)
-				time1 = (*aDiffs)[i]->lastModificationTime;
+			if (aDiffs[i]->lastModificationTime > time1)
+				time1 = aDiffs[i]->lastModificationTime;
 		}
 
-		std::vector<OsuBeatmapDifficulty*> *bDiffs = b->getBeatmap()->getDifficultiesPointer();
-		for (int i=0; i<bDiffs->size(); i++)
+		const std::vector<OsuBeatmapDifficulty*> &bDiffs = b->getBeatmap()->getDifficulties();
+		for (int i=0; i<bDiffs.size(); i++)
 		{
-			if ((*bDiffs)[i]->lastModificationTime > time2)
-				time2 = (*bDiffs)[i]->lastModificationTime;
+			if (bDiffs[i]->lastModificationTime > time2)
+				time2 = bDiffs[i]->lastModificationTime;
 		}
 
 		// strict weak ordering!
@@ -272,10 +272,10 @@ struct SortByDifficulty : public OsuSongBrowser2::SORTING_COMPARATOR
 
 		float diff1 = 0.0f;
 		float stars1 = 0.0f;
-		std::vector<OsuBeatmapDifficulty*> *aDiffs = a->getBeatmap()->getDifficultiesPointer();
-		for (int i=0; i<aDiffs->size(); i++)
+		const std::vector<OsuBeatmapDifficulty*> &aDiffs = a->getBeatmap()->getDifficulties();
+		for (int i=0; i<aDiffs.size(); i++)
 		{
-			OsuBeatmapDifficulty *d = (*aDiffs)[i];
+			const OsuBeatmapDifficulty *d = aDiffs[i];
 			if (d->starsNoMod > stars1)
 				stars1 = d->starsNoMod;
 
@@ -286,10 +286,10 @@ struct SortByDifficulty : public OsuSongBrowser2::SORTING_COMPARATOR
 
 		float diff2 = 0.0f;
 		float stars2 = 0.0f;
-		std::vector<OsuBeatmapDifficulty*> *bDiffs = b->getBeatmap()->getDifficultiesPointer();
-		for (int i=0; i<bDiffs->size(); i++)
+		const std::vector<OsuBeatmapDifficulty*> &bDiffs = b->getBeatmap()->getDifficulties();
+		for (int i=0; i<bDiffs.size(); i++)
 		{
-			OsuBeatmapDifficulty *d = (*bDiffs)[i];
+			const OsuBeatmapDifficulty *d = bDiffs[i];
 			if (d->starsNoMod > stars2)
 				stars2 = d->starsNoMod;
 
@@ -325,18 +325,18 @@ struct SortByLength : public OsuSongBrowser2::SORTING_COMPARATOR
 
 		unsigned long length1 = 0;
 		unsigned long length2 = 0;
-		std::vector<OsuBeatmapDifficulty*> *aDiffs = a->getBeatmap()->getDifficultiesPointer();
-		for (int i=0; i<aDiffs->size(); i++)
+		const std::vector<OsuBeatmapDifficulty*> &aDiffs = a->getBeatmap()->getDifficulties();
+		for (int i=0; i<aDiffs.size(); i++)
 		{
-			if ((*aDiffs)[i]->lengthMS > length1)
-				length1 = (*aDiffs)[i]->lengthMS;
+			if (aDiffs[i]->lengthMS > length1)
+				length1 = aDiffs[i]->lengthMS;
 		}
 
-		std::vector<OsuBeatmapDifficulty*> *bDiffs = b->getBeatmap()->getDifficultiesPointer();
-		for (int i=0; i<bDiffs->size(); i++)
+		const std::vector<OsuBeatmapDifficulty*> &bDiffs = b->getBeatmap()->getDifficulties();
+		for (int i=0; i<bDiffs.size(); i++)
 		{
-			if ((*bDiffs)[i]->lengthMS > length2)
-				length2 = (*bDiffs)[i]->lengthMS;
+			if (bDiffs[i]->lengthMS > length2)
+				length2 = bDiffs[i]->lengthMS;
 		}
 
 		// strict weak ordering!
@@ -920,9 +920,10 @@ void OsuSongBrowser2::update()
 			bool canMoveToNextBeatmap = true;
 			if (m_iBackgroundStarCalculationIndex < m_beatmaps.size())
 			{
-				for (int i=0; i<m_beatmaps[m_iBackgroundStarCalculationIndex]->getDifficultiesPointer()->size(); i++)
+				const std::vector<OsuBeatmapDifficulty*> &diffs = m_beatmaps[m_iBackgroundStarCalculationIndex]->getDifficulties();
+				for (int i=0; i<diffs.size(); i++)
 				{
-					OsuBeatmapDifficulty *diff = (*m_beatmaps[m_iBackgroundStarCalculationIndex]->getDifficultiesPointer())[i];
+					OsuBeatmapDifficulty *diff = diffs[i];
 					if (!diff->isBackgroundLoaderActive() && diff->starsNoMod == 0.0f)
 					{
 						diff->semaphore = true; // NOTE: this is used by the BackgroundImagePathLoader to wait until the main thread is done, and then recalculate accurately
@@ -972,8 +973,8 @@ void OsuSongBrowser2::onKeyDown(KeyboardEvent &key)
 		key.consume();
 		return;
 	}
-	if (m_bBeatmapRefreshScheduled)
-		return;
+
+	if (m_bBeatmapRefreshScheduled) return;
 
 	// searching text delete & escape key handling
 	if (m_sSearchString.length() > 0)
@@ -1040,13 +1041,13 @@ void OsuSongBrowser2::onKeyDown(KeyboardEvent &key)
 		m_bShiftPressed = true;
 
 	// function hotkeys
-	if (key == KEY_F1 && !m_bF1Pressed)
+	if ((key == KEY_F1 || key == (KEYCODE)OsuKeyBindings::TOGGLE_MODSELECT.getInt()) && !m_bF1Pressed)
 	{
 		m_bF1Pressed = true;
 		m_bottombarNavButtons[m_bottombarNavButtons.size() > 2 ? 1 : 0]->keyboardPulse();
 		onSelectionMods();
 	}
-	if (key == KEY_F2 && !m_bF2Pressed)
+	if ((key == KEY_F2 || key == (KEYCODE)OsuKeyBindings::RANDOM_BEATMAP.getInt()) && !m_bF2Pressed)
 	{
 		m_bF2Pressed = true;
 		m_bottombarNavButtons[m_bottombarNavButtons.size() > 2 ? 2 : 1]->keyboardPulse();
@@ -1215,15 +1216,16 @@ void OsuSongBrowser2::onKeyUp(KeyboardEvent &key)
 	if (key == KEY_RIGHT)
 		m_bRight = false;
 
-	if (key == KEY_F1)
+	if (key == KEY_F1 || key == (KEYCODE)OsuKeyBindings::TOGGLE_MODSELECT.getInt())
 		m_bF1Pressed = false;
-	if (key == KEY_F2)
+	if (key == KEY_F2 || key == (KEYCODE)OsuKeyBindings::RANDOM_BEATMAP.getInt())
 		m_bF2Pressed = false;
 }
 
 void OsuSongBrowser2::onChar(KeyboardEvent &e)
 {
 	if (e.getCharCode() < 32 || !m_bVisible || m_bBeatmapRefreshScheduled || (engine->getKeyboard()->isControlDown() && !engine->getKeyboard()->isAltDown())) return;
+	if (m_bF1Pressed || m_bF2Pressed) return;
 
 	// handle searching
 	KEYCODE charCode = e.getCharCode();
@@ -1539,6 +1541,8 @@ void OsuSongBrowser2::setVisible(bool visible)
 		// update user name/stats
 		onUserButtonChange(m_name_ref->getString(), -1);
 	}
+	else
+		m_contextMenu->setVisible2(false);
 }
 
 bool OsuSongBrowser2::searchMatcher(OsuBeatmap *beatmap, UString searchString)
@@ -2146,7 +2150,7 @@ void OsuSongBrowser2::onDatabaseLoadingFinished()
 					}
 
 					// HACKHACK: fuck/laziness
-					if (matchingDiffs.size() != beatmap->getDifficultiesPointer()->size())
+					if (matchingDiffs.size() != beatmap->getDifficulties().size())
 					{
 						for (int md=0; md<matchingDiffs.size(); md++)
 						{

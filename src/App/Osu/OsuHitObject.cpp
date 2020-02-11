@@ -52,6 +52,7 @@ ConVar *OsuHitObject::m_osu_vr_draw_approach_circles = &osu_vr_draw_approach_cir
 ConVar *OsuHitObject::m_osu_vr_approach_circles_on_playfield = &osu_vr_approach_circles_on_playfield;
 ConVar *OsuHitObject::m_osu_vr_approach_circles_on_top = &osu_vr_approach_circles_on_top;
 ConVar *OsuHitObject::m_osu_relax_offset_ref = &osu_relax_offset;
+
 unsigned long long OsuHitObject::sortHackCounter = 0;
 
 void OsuHitObject::drawHitResult(Graphics *g, OsuBeatmapStandard *beatmap, Vector2 rawPos, OsuScore::HIT result, float animPercent, float defaultAnimPercent)
@@ -75,14 +76,31 @@ void OsuHitObject::drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiam
 		case OsuScore::HIT::HIT_MISS:
 			hitImageScale = (rawHitcircleDiameter / skin->getHit0()->getSizeBaseRaw().x) * osuCoordScaleMultiplier;
 			break;
+
 		case OsuScore::HIT::HIT_50:
 			hitImageScale = (rawHitcircleDiameter / skin->getHit50()->getSizeBaseRaw().x) * osuCoordScaleMultiplier;
 			break;
+
 		case OsuScore::HIT::HIT_100:
 			hitImageScale = (rawHitcircleDiameter / skin->getHit100()->getSizeBaseRaw().x) * osuCoordScaleMultiplier;
 			break;
+
 		case OsuScore::HIT::HIT_300:
 			hitImageScale = (rawHitcircleDiameter / skin->getHit300()->getSizeBaseRaw().x) * osuCoordScaleMultiplier;
+			break;
+
+
+
+		case OsuScore::HIT::HIT_100K:
+			hitImageScale = (rawHitcircleDiameter / skin->getHit100k()->getSizeBaseRaw().x) * osuCoordScaleMultiplier;
+			break;
+
+		case OsuScore::HIT::HIT_300K:
+			hitImageScale = (rawHitcircleDiameter / skin->getHit300k()->getSizeBaseRaw().x) * osuCoordScaleMultiplier;
+			break;
+
+		case OsuScore::HIT::HIT_300G:
+			hitImageScale = (rawHitcircleDiameter / skin->getHit300g()->getSizeBaseRaw().x) * osuCoordScaleMultiplier;
 			break;
 		}
 
@@ -105,16 +123,39 @@ void OsuHitObject::drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiam
 
 			skin->getHit0()->drawRaw(g, rawPos, hitImageScale*osu_hitresult_scale.getFloat());
 			break;
+
 		case OsuScore::HIT::HIT_50:
 			skin->getHit50()->drawRaw(g, rawPos, hitImageScale*osu_hitresult_scale.getFloat());
 			break;
+
 		case OsuScore::HIT::HIT_100:
 			skin->getHit100()->drawRaw(g, rawPos, hitImageScale*osu_hitresult_scale.getFloat());
 			break;
+
 		case OsuScore::HIT::HIT_300:
 			if (osu_hitresult_draw_300s.getBool())
 			{
 				skin->getHit300()->drawRaw(g, rawPos, hitImageScale*osu_hitresult_scale.getFloat());
+			}
+			break;
+
+
+
+		case OsuScore::HIT::HIT_100K:
+			skin->getHit100k()->drawRaw(g, rawPos, hitImageScale*osu_hitresult_scale.getFloat());
+			break;
+
+		case OsuScore::HIT::HIT_300K:
+			if (osu_hitresult_draw_300s.getBool())
+			{
+				skin->getHit300k()->drawRaw(g, rawPos, hitImageScale*osu_hitresult_scale.getFloat());
+			}
+			break;
+
+		case OsuScore::HIT::HIT_300G:
+			if (osu_hitresult_draw_300s.getBool())
+			{
+				skin->getHit300g()->drawRaw(g, rawPos, hitImageScale*osu_hitresult_scale.getFloat());
 			}
 			break;
 		}
@@ -124,11 +165,12 @@ void OsuHitObject::drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiam
 
 
 
-OsuHitObject::OsuHitObject(long time, int sampleType, int comboNumber, int colorCounter, int colorOffset, OsuBeatmap *beatmap)
+OsuHitObject::OsuHitObject(long time, int sampleType, int comboNumber, bool isEndOfCombo, int colorCounter, int colorOffset, OsuBeatmap *beatmap)
 {
 	m_iTime = time;
 	m_iSampleType = sampleType;
 	m_iComboNumber = comboNumber;
+	m_bIsEndOfCombo = isEndOfCombo;
 	m_iColorCounter = colorCounter;
 	m_iColorOffset = colorOffset;
 	m_beatmap = beatmap;
@@ -241,7 +283,7 @@ void OsuHitObject::update(long curPos)
 		m_hitResults.erase(m_hitResults.begin());
 }
 
-void OsuHitObject::addHitResult(OsuScore::HIT result, long delta, Vector2 posRaw, float targetDelta, float targetAngle, bool ignoreOnHitErrorBar, bool ignoreCombo)
+void OsuHitObject::addHitResult(OsuScore::HIT result, long delta, bool isEndOfCombo, Vector2 posRaw, float targetDelta, float targetAngle, bool ignoreOnHitErrorBar, bool ignoreCombo, bool ignoreHealth)
 {
 	if (m_beatmap->getOsu()->getModTarget() && result != OsuScore::HIT::HIT_MISS && targetDelta >= 0.0f)
 	{
@@ -257,10 +299,10 @@ void OsuHitObject::addHitResult(OsuScore::HIT result, long delta, Vector2 posRaw
 		m_beatmap->getOsu()->getHUD()->addTarget(targetDelta, targetAngle);
 	}
 
-	m_beatmap->addHitResult(result, delta, ignoreOnHitErrorBar, false, ignoreCombo);
+	const OsuScore::HIT returnedHit = m_beatmap->addHitResult(this, result, delta, isEndOfCombo, ignoreOnHitErrorBar, false, ignoreCombo, false, ignoreHealth);
 
 	HITRESULTANIM hitresult;
-	hitresult.result = result;
+	hitresult.result = (returnedHit != OsuScore::HIT::HIT_MISS ? returnedHit : result);
 	hitresult.rawPos = posRaw;
 	hitresult.delta = delta;
 	hitresult.defaultduration = osu_hitresult_duration.getFloat();

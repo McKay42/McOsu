@@ -29,8 +29,8 @@
 #include "OsuUIPauseMenuButton.h"
 
 ConVar osu_pause_dim_background("osu_pause_dim_background", true);
-
-
+ConVar osu_pause_dim_alpha("osu_pause_dim_alpha", 0.58f);
+ConVar osu_pause_anim_duration("osu_pause_anim_duration", 0.15f);
 
 OsuPauseMenu::OsuPauseMenu(Osu *osu) : OsuScreen(osu)
 {
@@ -47,6 +47,8 @@ OsuPauseMenu::OsuPauseMenu(Osu *osu) : OsuScreen(osu)
 	m_bContinueEnabled = true;
 	m_bClick1Down = false;
 	m_bClick2Down = false;
+
+	m_fDimAnim = 0.0f;
 
 	m_container = new CBaseUIContainer(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight(), "");
 
@@ -68,29 +70,60 @@ OsuPauseMenu::~OsuPauseMenu()
 
 void OsuPauseMenu::draw(Graphics *g)
 {
-	if (!m_bVisible) return;
+	const bool isAnimating = anim->isAnimating(&m_fDimAnim);
+	if (!m_bVisible && !isAnimating) return;
 
-	if (osu_pause_dim_background.getBool())
+	if (m_bVisible || isAnimating)
 	{
-		g->setColor(COLOR(150, 20, 20, 20));
-		g->fillRect(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight());
-	}
-
-	// draw overlay
-	if (m_osu->getSkin()->getPauseOverlay() != m_osu->getSkin()->getMissingTexture())
-	{
-		const float scale = Osu::getImageScaleToFillResolution(m_osu->getSkin()->getPauseOverlay(), m_osu->getScreenSize());
-		const Vector2 centerTrans = (m_osu->getScreenSize()/2);
-
-		g->setColor(COLOR(255, 255, 255, 255));
-		g->pushTransform();
+		// draw dim
+		if (osu_pause_dim_background.getBool())
 		{
-			g->scale(scale, scale);
-			g->translate((int)centerTrans.x, (int)centerTrans.y);
-			g->drawImage(m_osu->getSkin()->getPauseOverlay());
+			g->setColor(COLORf(m_fDimAnim * osu_pause_dim_alpha.getFloat(), 0.078f, 0.078f, 0.078f));
+			g->fillRect(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight());
 		}
-		g->popTransform();
+
+		// draw overlay
+		if ((m_bVisible || isAnimating) && m_osu->getSkin()->getPauseOverlay() != m_osu->getSkin()->getMissingTexture())
+		{
+			const float scale = Osu::getImageScaleToFillResolution(m_osu->getSkin()->getPauseOverlay(), m_osu->getScreenSize());
+			const Vector2 centerTrans = (m_osu->getScreenSize() / 2);
+
+			g->setColor(COLORf(m_fDimAnim, 1.0f, 1.0f, 1.0f));
+			g->pushTransform();
+			{
+				g->scale(scale, scale);
+				g->translate((int)centerTrans.x, (int)centerTrans.y);
+				g->drawImage(m_osu->getSkin()->getPauseOverlay());
+			}
+			g->popTransform();
+		}
+
+		// draw buttons
+		for (int i=0; i<m_buttons.size(); i++)
+		{
+			m_buttons[i]->setAlpha(1.0f - (1.0f - m_fDimAnim)*(1.0f - m_fDimAnim)*(1.0f - m_fDimAnim));
+		}
+		m_container->draw(g);
+
+		// draw selection arrows
+		if (m_selectedButton != NULL)
+		{
+			const Color arrowColor = COLOR(255, 0, 114, 255);
+			float animation = fmod((float)(engine->getTime()-m_fWarningArrowsAnimStartTime)*3.2f, 2.0f);
+			if (animation > 1.0f)
+				animation = 2.0f - animation;
+
+			animation =  -animation*(animation-2); // quad out
+			const float offset = m_osu->getUIScale(m_osu, 20.0f + 45.0f*animation);
+
+			g->setColor(arrowColor);
+			g->setAlpha(m_fWarningArrowsAnimAlpha * m_fDimAnim);
+			m_osu->getHUD()->drawWarningArrow(g, Vector2(m_fWarningArrowsAnimX, m_fWarningArrowsAnimY) + Vector2(0, m_selectedButton->getSize().y/2) - Vector2(offset, 0), false, false);
+			m_osu->getHUD()->drawWarningArrow(g, Vector2(m_osu->getScreenWidth() - m_fWarningArrowsAnimX, m_fWarningArrowsAnimY) + Vector2(0, m_selectedButton->getSize().y/2) + Vector2(offset, 0), true, false);
+		}
 	}
+
+	if (!m_bVisible) return;
 
 	/*
 	g->setColor(0xffff0000);
@@ -98,24 +131,6 @@ void OsuPauseMenu::draw(Graphics *g)
 	g->drawLine(0, (m_osu->getScreenHeight()/3.0f)*2, m_osu->getScreenWidth(), (m_osu->getScreenHeight()/3.0f)*2);
 	g->drawLine(0, (m_osu->getScreenHeight()/3.0f)*3, m_osu->getScreenWidth(), (m_osu->getScreenHeight()/3.0f)*3);
 	*/
-
-	m_container->draw(g);
-
-	if (m_selectedButton != NULL)
-	{
-		const Color arrowColor = COLOR(255, 0, 114, 255);
-		float animation = fmod((float)(engine->getTime()-m_fWarningArrowsAnimStartTime)*3.2f, 2.0f);
-		if (animation > 1.0f)
-			animation = 2.0f - animation;
-
-		animation =  -animation*(animation-2); // quad out
-		const float offset = m_osu->getUIScale(m_osu, 20.0f + 45.0f*animation);
-
-		g->setColor(arrowColor);
-		g->setAlpha(m_fWarningArrowsAnimAlpha);
-		m_osu->getHUD()->drawWarningArrow(g, Vector2(m_fWarningArrowsAnimX, m_fWarningArrowsAnimY) + Vector2(0, m_selectedButton->getSize().y/2) - Vector2(offset, 0), false, false);
-		m_osu->getHUD()->drawWarningArrow(g, Vector2(m_osu->getScreenWidth() - m_fWarningArrowsAnimX, m_fWarningArrowsAnimY) + Vector2(0, m_selectedButton->getSize().y/2) + Vector2(offset, 0), true, false);
-	}
 }
 
 void OsuPauseMenu::update()
@@ -151,6 +166,7 @@ void OsuPauseMenu::update()
 void OsuPauseMenu::onContinueClicked()
 {
 	if (!m_bContinueEnabled) return;
+	if (anim->isAnimating(&m_fDimAnim)) return;
 
 	engine->getSound()->play(m_osu->getSkin()->getMenuHit());
 
@@ -162,6 +178,8 @@ void OsuPauseMenu::onContinueClicked()
 
 void OsuPauseMenu::onRetryClicked()
 {
+	if (anim->isAnimating(&m_fDimAnim)) return;
+
 	engine->getSound()->play(m_osu->getSkin()->getMenuHit());
 
 	if (m_osu->getSelectedBeatmap() != NULL)
@@ -172,6 +190,8 @@ void OsuPauseMenu::onRetryClicked()
 
 void OsuPauseMenu::onBackClicked()
 {
+	if (anim->isAnimating(&m_fDimAnim)) return;
+
 	engine->getSound()->play(m_osu->getSkin()->getMenuHit());
 
 	if (m_osu->getSelectedBeatmap() != NULL)
@@ -412,6 +432,8 @@ void OsuPauseMenu::setVisible(bool visible)
 
 	m_osu->updateConfineCursor();
 	m_osu->updateWindowsKeyDisable();
+
+	anim->moveQuadOut(&m_fDimAnim, (m_bVisible ? 1.0f : 0.0f), osu_pause_anim_duration.getFloat() * (m_bVisible ? 1.0f - m_fDimAnim : m_fDimAnim), true);
 }
 
 void OsuPauseMenu::setContinueEnabled(bool continueEnabled)

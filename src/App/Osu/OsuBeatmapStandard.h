@@ -63,6 +63,7 @@ public:
 private:
 	static ConVar *m_osu_draw_statistics_pp_ref;
 	static ConVar *m_osu_mod_fullalternate_ref;
+	static ConVar *m_osu_drain_stable_hpbar_maximum_ref;
 
 	virtual void onBeforeLoad();
 	virtual void onLoad();
@@ -81,6 +82,7 @@ private:
 	void updateSliderVertexBuffers();
 
 	void calculateStacks();
+	void computeDrainRate();
 
 	void updateStarCache();
 	void stopStarCacheLoader();

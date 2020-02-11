@@ -13,7 +13,7 @@
 class OsuSpinner : public OsuHitObject
 {
 public:
-	OsuSpinner(int x, int y, long time, int sampleType, long endTime, OsuBeatmapStandard *beatmap);
+	OsuSpinner(int x, int y, long time, int sampleType, bool isEndOfCombo, long endTime, OsuBeatmapStandard *beatmap);
 	virtual ~OsuSpinner();
 
 	virtual void draw(Graphics *g);

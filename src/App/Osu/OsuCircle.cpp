@@ -370,7 +370,7 @@ void OsuCircle::drawHitCircleNumber(Graphics *g, OsuSkin *skin, float numberScal
 
 
 
-OsuCircle::OsuCircle(int x, int y, long time, int sampleType, int comboNumber, int colorCounter, int colorOffset, OsuBeatmapStandard *beatmap) : OsuHitObject(time, sampleType, comboNumber, colorCounter, colorOffset, beatmap)
+OsuCircle::OsuCircle(int x, int y, long time, int sampleType, int comboNumber, bool isEndOfCombo, int colorCounter, int colorOffset, OsuBeatmapStandard *beatmap) : OsuHitObject(time, sampleType, comboNumber, isEndOfCombo, colorCounter, colorOffset, beatmap)
 {
 	m_vOriginalRawPos = Vector2(x,y);
 	m_vRawPos = m_vOriginalRawPos;
@@ -653,7 +653,7 @@ void OsuCircle::onHit(OsuScore::HIT result, long delta, float targetDelta, float
 	}
 
 	// add it, and we are finished
-	addHitResult(result, delta, m_vRawPos, targetDelta, targetAngle);
+	addHitResult(result, delta, m_bIsEndOfCombo, m_vRawPos, targetDelta, targetAngle);
 	m_bFinished = true;
 }
 

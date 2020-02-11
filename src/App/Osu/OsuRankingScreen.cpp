@@ -36,6 +36,7 @@
 
 #include "OsuUIRankingScreenInfoLabel.h"
 #include "OsuUIRankingScreenRankingPanel.h"
+#include "OsuUISongBrowserScoreButton.h"
 
 ConVar osu_rankingscreen_topbar_height_percent("osu_rankingscreen_topbar_height_percent", 0.785f);
 ConVar osu_rankingscreen_pp("osu_rankingscreen_pp", true);
@@ -283,7 +284,8 @@ void OsuRankingScreen::draw(Graphics *g)
 	m_rankings->draw(g);
 
 	// draw active mods
-	Vector2 modPos = m_rankingGrade->getPos() + Vector2(m_rankingGrade->getSize().x*0.925f, m_rankingGrade->getSize().y*0.7f);
+	const Vector2 modPosStart = Vector2(m_rankings->getSize().x - m_osu->getUIScale(m_osu, 20), m_rankings->getScrollPosY() + m_osu->getUIScale(m_osu, 260));
+	Vector2 modPos = modPosStart;
 	Vector2 modPosMax;
 	if (m_bModTD)
 		drawModImage(g, m_osu->getSkin()->getSelectionModTD(), modPos, modPosMax);
@@ -336,10 +338,10 @@ void OsuRankingScreen::draw(Graphics *g)
 				maxStringWidth = width;
 		}
 
+		const int backgroundMargin = 6;
 		const float heightMultiplier = 1.25f;
 		const int experimentalModHeight = (experimentalModFont->getHeight() * heightMultiplier);
-		const Vector2 experimentalModPos = Vector2(m_rankingGrade->getPos().x + m_rankingGrade->getSize().x*0.925f - maxStringWidth, std::max(m_rankingGrade->getPos().y + m_rankingGrade->getSize().y*0.85f, modPosMax.y + experimentalModFont->getHeight()*heightMultiplier));
-		const int backgroundMargin = 6;
+		const Vector2 experimentalModPos = Vector2(modPosStart.x - maxStringWidth - backgroundMargin, std::max(modPosStart.y, modPosMax.y) + m_osu->getUIScale(m_osu, 10) + experimentalModFont->getHeight()*heightMultiplier);
 		const int backgroundWidth = maxStringWidth + 2*backgroundMargin;
 		const int backgroundHeight = experimentalModHeight*m_enabledExperimentalMods.size() + 2*backgroundMargin;
 
@@ -371,15 +373,18 @@ void OsuRankingScreen::draw(Graphics *g)
 	// draw pp
 	if (osu_rankingscreen_pp.getBool() && !m_bIsLegacyScore)
 	{
-		UString ppString = getPPString();
-		Vector2 ppPos = getPPPosRaw() + m_vPPCursorMagnetAnimation;
+		const UString ppString = getPPString();
+		const Vector2 ppPos = getPPPosRaw() + m_vPPCursorMagnetAnimation;
+
 		g->pushTransform();
-		g->translate((int)ppPos.x + 2, (int)ppPos.y + 2);
-		g->setColor(0xff000000);
-		g->drawString(m_osu->getTitleFont(), ppString);
-		g->translate(-2, -2);
-		g->setColor(0xffffffff);
-		g->drawString(m_osu->getTitleFont(), ppString);
+		{
+			g->translate((int)ppPos.x + 2, (int)ppPos.y + 2);
+			g->setColor(0xff000000);
+			g->drawString(m_osu->getTitleFont(), ppString);
+			g->translate(-2, -2);
+			g->setColor(0xffffffff);
+			g->drawString(m_osu->getTitleFont(), ppString);
+		}
 		g->popTransform();
 	}
 
@@ -401,7 +406,7 @@ void OsuRankingScreen::drawModImage(Graphics *g, OsuSkinImage *image, Vector2 &p
 	g->setColor(0xffffffff);
 	image->draw(g, Vector2(pos.x - image->getSize().x/2.0f, pos.y));
 
-	pos.x -= image->getSize().x/2.0f;
+	pos.x -= m_osu->getUIScale(m_osu, 20);
 
 	if (pos.y + image->getSize().y/2 > max.y)
 		max.y = pos.y + image->getSize().y/2;
@@ -426,7 +431,7 @@ void OsuRankingScreen::update()
 		m_container->stealFocus();
 
 	// tooltip (pp + accuracy + unstable rate)
-	if (m_rankingPanel->isMouseInside() && !m_bIsLegacyScore)
+	if (!m_osu->getOptionsMenu()->isMouseInside() && !m_bIsLegacyScore)
 	{
 		m_osu->getTooltipOverlay()->begin();
 		m_osu->getTooltipOverlay()->addLine(UString::format("%.2fpp", m_fPPv2));
@@ -434,6 +439,10 @@ void OsuRankingScreen::update()
 		m_osu->getTooltipOverlay()->addLine(UString::format("Stars: %.2f (%.2f aim, %.2f speed)", m_fStarsTomTotal, m_fStarsTomAim, m_fStarsTomSpeed));
 		m_osu->getTooltipOverlay()->addLine(UString::format("Speed: %.3gx", m_fSpeedMultiplier));
 		m_osu->getTooltipOverlay()->addLine(UString::format("CS:%.4g AR:%.4g OD:%.4g HP:%.4g", m_fCS, m_fAR, m_fOD, m_fHP));
+
+		if (m_sMods.length() > 0)
+			m_osu->getTooltipOverlay()->addLine(m_sMods);
+
 		m_osu->getTooltipOverlay()->addLine("Accuracy:");
 		m_osu->getTooltipOverlay()->addLine(UString::format("Error: %.2fms - %.2fms avg", m_fHitErrorAvgMin, m_fHitErrorAvgMax));
 		m_osu->getTooltipOverlay()->addLine(UString::format("Unstable Rate: %.2f", m_fUnstableRate));
@@ -494,6 +503,15 @@ void OsuRankingScreen::setScore(OsuScore *score)
 	m_fStarsTomSpeed = score->getStarsTomSpeed();
 	m_fPPv2 = score->getPPv2();
 
+	const UString modsString = OsuUISongBrowserScoreButton::getModsString(score->getModsLegacy());
+	if (modsString.length() > 0)
+	{
+		m_sMods = "Mods: ";
+		m_sMods.append(modsString);
+	}
+	else
+		m_sMods = "";
+
 	m_bModSS = m_osu->getModSS();
 	m_bModSD = m_osu->getModSD();
 	m_bModEZ = m_osu->getModEZ();
@@ -547,6 +565,15 @@ void OsuRankingScreen::setScore(OsuDatabase::Score score, UString dateTime)
 	m_fAR = std::round(OsuGameRules::getRawApproachRateForSpeedMultiplier(OsuGameRules::getRawApproachTime(score.AR), score.speedMultiplier) * 100.0f) / 100.0f;
 	m_fOD = std::round(OsuGameRules::getRawOverallDifficultyForSpeedMultiplier(OsuGameRules::getRawHitWindow300(score.OD), score.speedMultiplier) * 100.0f) / 100.0f;
 	m_fHP = std::round(score.HP * 100.0f) / 100.0f;
+
+	const UString modsString = OsuUISongBrowserScoreButton::getModsString(score.modsLegacy);
+	if (modsString.length() > 0)
+	{
+		m_sMods = "Mods: ";
+		m_sMods.append(modsString);
+	}
+	else
+		m_sMods = "";
 
 	m_bModSS = score.modsLegacy & OsuReplay::Mods::Perfect;
 	m_bModSD = score.modsLegacy & OsuReplay::Mods::SuddenDeath;
@@ -696,9 +723,13 @@ void OsuRankingScreen::setGrade(OsuScore::GRADE grade)
 
 	const float uiScale = /*Osu::ui_scale->getFloat()*/1.0f; // NOTE: no uiScale for rankingPanel and rankingGrade, doesn't really work due to legacy layout expectations
 
-	m_rankingGrade->setScale(Osu::getImageScale(m_osu, hardcodedOsuRankingGradeImageSize, 230.0f) * uiScale, Osu::getImageScale(m_osu, hardcodedOsuRankingGradeImageSize, 230.0f) * uiScale);
+	const float rankingGradeImageScale = Osu::getImageScale(m_osu, hardcodedOsuRankingGradeImageSize, 230.0f) * uiScale;
+	m_rankingGrade->setScale(rankingGradeImageScale, rankingGradeImageScale);
 	m_rankingGrade->setSize(m_rankingGrade->getImage()->getWidth()*m_rankingGrade->getScale().x, m_rankingGrade->getImage()->getHeight()*m_rankingGrade->getScale().y);
-	m_rankingGrade->setRelPos(m_rankings->getSize().x - m_rankingGrade->getSize().x - m_osu->getUIScale(m_osu, 5), m_rankingPanel->getRelPos().y + m_osu->getUIScale(m_osu, 5));
+	m_rankingGrade->setRelPos(
+		m_rankings->getSize().x - m_osu->getUIScale(m_osu, 120) - m_rankingGrade->getImage()->getWidth()*m_rankingGrade->getScale().x/2.0f,
+		-m_rankings->getRelPos().y + m_osu->getUIScale(m_osu, m_osu->getSkin()->getVersion() > 1.0f ? 200 : 170) - m_rankingGrade->getImage()->getHeight()*m_rankingGrade->getScale().x/2.0f
+	);
 }
 
 void OsuRankingScreen::setIndex(int index)
@@ -728,12 +759,12 @@ UString OsuRankingScreen::getPPString()
 
 Vector2 OsuRankingScreen::getPPPosRaw()
 {
-	UString ppString = getPPString();
+	const UString ppString = getPPString();
 	float ppStringWidth = m_osu->getTitleFont()->getStringWidth(ppString);
-	return m_rankingGrade->getPos() + Vector2(m_rankingGrade->getSize().x/2 - ppStringWidth/2, m_rankingGrade->getSize().y + m_osu->getTitleFont()->getHeight() + 25);
+	return Vector2(m_rankingGrade->getPos().x, 0) + Vector2(m_rankingGrade->getSize().x/2 - ppStringWidth/2, m_rankings->getScrollPosY() + m_osu->getUIScale(m_osu, 400) + m_osu->getTitleFont()->getHeight()/2);
 }
 
 Vector2 OsuRankingScreen::getPPPosCenterRaw()
 {
-	return m_rankingGrade->getPos() + Vector2(m_rankingGrade->getSize().x/2, m_rankingGrade->getSize().y + m_osu->getTitleFont()->getHeight()/2 + 25);
+	return Vector2(m_rankingGrade->getPos().x, 0) + Vector2(m_rankingGrade->getSize().x/2, m_rankings->getScrollPosY() + m_osu->getUIScale(m_osu, 400) + m_osu->getTitleFont()->getHeight()/2);
 }

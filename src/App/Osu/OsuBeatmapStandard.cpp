@@ -70,6 +70,10 @@ ConVar osu_playfield_rotation("osu_playfield_rotation", 0.0f, "rotates the entir
 ConVar osu_playfield_stretch_x("osu_playfield_stretch_x", 0.0f, "offsets/multiplies all hitobject coordinates by it (0 = default 1x playfield size, -1 = on a line, -0.5 = 0.5x playfield size, 0.5 = 1.5x playfield size)");
 ConVar osu_playfield_stretch_y("osu_playfield_stretch_y", 0.0f, "offsets/multiplies all hitobject coordinates by it (0 = default 1x playfield size, -1 = on a line, -0.5 = 0.5x playfield size, 0.5 = 1.5x playfield size)");
 
+ConVar osu_drain_lazer_health_min("osu_drain_lazer_health_min", 0.95f);
+ConVar osu_drain_lazer_health_mid("osu_drain_lazer_health_mid", 0.70f);
+ConVar osu_drain_lazer_health_max("osu_drain_lazer_health_max", 0.30f);
+
 ConVar osu_mod_wobble("osu_mod_wobble", false);
 ConVar osu_mod_wobble2("osu_mod_wobble2", false);
 ConVar osu_mod_wobble_strength("osu_mod_wobble_strength", 25.0f);
@@ -143,6 +147,7 @@ private:
 
 ConVar *OsuBeatmapStandard::m_osu_draw_statistics_pp_ref = NULL;
 ConVar *OsuBeatmapStandard::m_osu_mod_fullalternate_ref = NULL;
+ConVar *OsuBeatmapStandard::m_osu_drain_stable_hpbar_maximum_ref = NULL;
 
 OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 {
@@ -198,6 +203,8 @@ OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 		m_osu_draw_statistics_pp_ref = convar->getConVarByName("osu_draw_statistics_pp");
 	if (m_osu_mod_fullalternate_ref == NULL)
 		m_osu_mod_fullalternate_ref = convar->getConVarByName("osu_mod_fullalternate");
+	if (m_osu_drain_stable_hpbar_maximum_ref == NULL)
+		m_osu_drain_stable_hpbar_maximum_ref = convar->getConVarByName("osu_drain_stable_hpbar_maximum");
 }
 
 OsuBeatmapStandard::~OsuBeatmapStandard()
@@ -254,6 +261,13 @@ void OsuBeatmapStandard::draw(Graphics *g)
 
 	if (isLoading()) return; // only start drawing the rest of the playfield if everything has loaded
 
+	// draw playfield border
+	if (osu_draw_playfield_border.getBool() && !OsuGameRules::osu_mod_fps.getBool())
+		m_osu->getHUD()->drawPlayfieldBorder(g, m_vPlayfieldCenter, m_vPlayfieldSize, m_fHitcircleDiameter);
+
+	// draw hiterrorbar
+	m_osu->getHUD()->drawHitErrorBar(g, this);
+
 	// draw first person crosshair
 	if (OsuGameRules::osu_mod_fps.getBool())
 	{
@@ -263,10 +277,6 @@ void OsuBeatmapStandard::draw(Graphics *g)
 		g->drawLine(center.x, (int)(center.y - length), center.x, (int)(center.y + length + 1));
 		g->drawLine((int)(center.x - length), center.y, (int)(center.x + length + 1), center.y);
 	}
-
-	// draw playfield border
-	if (osu_draw_playfield_border.getBool() && !OsuGameRules::osu_mod_fps.getBool())
-		m_osu->getHUD()->drawPlayfieldBorder(g, m_vPlayfieldCenter, m_vPlayfieldSize, m_fHitcircleDiameter);
 
 	// allow players to not draw all hitobjects twice if in VR
 	if (m_osu->isInVRMode() && !m_osu_vr_draw_desktop_playfield_ref->getBool())
@@ -487,9 +497,11 @@ void OsuBeatmapStandard::draw(Graphics *g)
 		}
 	}
 
+	/*
 	if (m_bFailed)
 	{
-		float failTimePercentInv = 1.0f - clamp<float>((m_fFailTime - engine->getTime()) / m_osu_fail_time_ref->getFloat(), 0.0f, 1.0f); // goes from 0 to 1 over the duration of osu_fail_time
+		const float failTimePercentInv = 1.0f - clamp<float>((m_fFailTime - engine->getTime()) / m_osu_fail_time_ref->getFloat(), 0.0f, 1.0f); // goes from 0 to 1 over the duration of osu_fail_time
+
 		Vector2 playfieldBorderTopLeft = Vector2((int)(m_vPlayfieldCenter.x - m_vPlayfieldSize.x/2 - m_fHitcircleDiameter/2), (int)(m_vPlayfieldCenter.y - m_vPlayfieldSize.y/2 - m_fHitcircleDiameter/2));
 		Vector2 playfieldBorderSize = Vector2((int)(m_vPlayfieldSize.x + m_fHitcircleDiameter), (int)(m_vPlayfieldSize.y + m_fHitcircleDiameter));
 
@@ -497,6 +509,7 @@ void OsuBeatmapStandard::draw(Graphics *g)
 		g->setAlpha(failTimePercentInv);
 		g->fillRect(playfieldBorderTopLeft.x, playfieldBorderTopLeft.y, playfieldBorderSize.x, playfieldBorderSize.y);
 	}
+	*/
 
 	// debug stuff
 	if (osu_debug_hiterrorbar_misaims.getBool())
@@ -820,11 +833,11 @@ void OsuBeatmapStandard::update()
 	if (m_osu->getModAuto() || m_osu->getModAutopilot())
 		updateAutoCursorPos();
 
-	// spinner detection (used temporarily by OsuHUD for not drawing the hiterrorbar)
+	// spinner detection (used by osu!stable drain, and by OsuHUD for not drawing the hiterrorbar)
 	if (m_currentHitObject != NULL)
 	{
 		OsuSpinner *spinnerPointer = dynamic_cast<OsuSpinner*>(m_currentHitObject);
-		if (spinnerPointer != NULL)
+		if (spinnerPointer != NULL && m_iCurMusicPosWithOffsets > m_currentHitObject->getTime() && m_iCurMusicPosWithOffsets < m_currentHitObject->getTime() + m_currentHitObject->getDuration())
 			m_bIsSpinnerActive = true;
 		else
 			m_bIsSpinnerActive = false;
@@ -876,6 +889,8 @@ void OsuBeatmapStandard::onModUpdate(bool rebuildSliderVertexBuffers)
 
 	updatePlayfieldMetrics();
 	updateHitobjectMetrics();
+
+	computeDrainRate();
 
 	if (m_music != NULL)
 	{
@@ -1047,6 +1062,7 @@ Vector2 OsuBeatmapStandard::osuCoords2Pixels(Vector2 coords)
 	if (m_bFailed)
 	{
 		float failTimePercentInv = 1.0f - clamp<float>((m_fFailTime - engine->getTime()) / m_osu_fail_time_ref->getFloat(), 0.0f, 1.0f); // goes from 0 to 1 over the duration of osu_fail_time
+		failTimePercentInv *= failTimePercentInv;
 
 		coords.x -= OsuGameRules::OSU_COORD_WIDTH/2;
 		coords.y -= OsuGameRules::OSU_COORD_HEIGHT/2;
@@ -1150,6 +1166,7 @@ Vector2 OsuBeatmapStandard::osuCoords2VRPixels(Vector2 coords)
 	if (m_bFailed)
 	{
 		float failTimePercentInv = 1.0f - clamp<float>((m_fFailTime - engine->getTime()) / m_osu_fail_time_ref->getFloat(), 0.0f, 1.0f); // goes from 0 to 1 over the duration of osu_fail_time
+		failTimePercentInv *= failTimePercentInv;
 
 		coords.x -= OsuGameRules::OSU_COORD_WIDTH/2;
 		coords.y -= OsuGameRules::OSU_COORD_HEIGHT/2;
@@ -1267,6 +1284,7 @@ void OsuBeatmapStandard::onLoad()
 
 	// after the hitobjects have been loaded we can calculate the stacks
 	calculateStacks();
+	computeDrainRate();
 
 	// start preloading (delays the play start until it's set to false, see isLoading())
 	m_bIsPreLoading = true;
@@ -1350,25 +1368,7 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 				score.numMisses = m_osu->getScore()->getNumMisses();
 				score.score = m_osu->getScore()->getScore();
 				score.comboMax = m_osu->getScore()->getComboMax();
-				score.modsLegacy = 0;
-				score.modsLegacy |= (m_osu->getModAuto() ? OsuReplay::Mods::Autoplay : 0);
-				score.modsLegacy |= (m_osu->getModAutopilot() ? OsuReplay::Mods::Relax2 : 0);
-				score.modsLegacy |= (m_osu->getModRelax() ? OsuReplay::Mods::Relax : 0);
-				score.modsLegacy |= (m_osu->getModSpunout() ? OsuReplay::Mods::SpunOut : 0);
-				score.modsLegacy |= (m_osu->getModTarget() ? OsuReplay::Mods::Target : 0);
-				score.modsLegacy |= (m_osu->getModScorev2() ? OsuReplay::Mods::ScoreV2 : 0);
-				score.modsLegacy |= (m_osu->getModDT() ? OsuReplay::Mods::DoubleTime : 0);
-				score.modsLegacy |= (m_osu->getModNC() ? OsuReplay::Mods::Nightcore : 0);
-				score.modsLegacy |= (m_osu->getModNF() ? OsuReplay::Mods::NoFail : 0);
-				score.modsLegacy |= (m_osu->getModHT() ? OsuReplay::Mods::HalfTime : 0);
-				score.modsLegacy |= (m_osu->getModDC() ? OsuReplay::Mods::HalfTime : 0);
-				score.modsLegacy |= (m_osu->getModHD() ? OsuReplay::Mods::Hidden : 0);
-				score.modsLegacy |= (m_osu->getModHR() ? OsuReplay::Mods::HardRock : 0);
-				score.modsLegacy |= (m_osu->getModEZ() ? OsuReplay::Mods::Easy : 0);
-				score.modsLegacy |= (m_osu->getModSD() ? OsuReplay::Mods::SuddenDeath : 0);
-				score.modsLegacy |= (m_osu->getModSS() ? OsuReplay::Mods::Perfect : 0);
-				score.modsLegacy |= (m_osu->getModNM() ? OsuReplay::Mods::Nightmare : 0);
-				score.modsLegacy |= (m_osu->getModTD() ? OsuReplay::Mods::TouchDevice : 0);
+				score.modsLegacy = m_osu->getScore()->getModsLegacy();
 
 				// custom
 				score.numSliderBreaks = m_osu->getScore()->getNumSliderBreaks();
@@ -1505,7 +1505,7 @@ void OsuBeatmapStandard::updateAutoCursorPos()
 						OsuSlider *sliderPointer = dynamic_cast<OsuSlider*>(o);
 						if (sliderPointer != NULL)
 						{
-							std::vector<OsuSlider::SLIDERCLICK> clicks = sliderPointer->getClicks();
+							const std::vector<OsuSlider::SLIDERCLICK> &clicks = sliderPointer->getClicks();
 
 							// start
 							prevTime = o->getTime();
@@ -1806,6 +1806,329 @@ void OsuBeatmapStandard::calculateStacks()
 	{
 		if (m_hitobjects[i]->getStack() != 0)
 			m_hitobjects[i]->updateStackPosition(stackOffset);
+	}
+}
+
+void OsuBeatmapStandard::computeDrainRate()
+{
+	m_fDrainRate = 0.0;
+	m_fHpMultiplierNormal = 1.0;
+	m_fHpMultiplierComboEnd = 1.0;
+
+	if (m_osu->isInVRMode() || m_hitobjects.size() < 1 || m_selectedDifficulty == NULL) return;
+
+	debugLog("OsuBeatmapStandard: Calculating drain ...\n");
+
+	const int drainType = m_osu_drain_type_ref->getInt();
+
+	if (drainType == 2) // osu!stable
+	{
+		// see https://github.com/ppy/osu-iPhone/blob/master/Classes/OsuPlayer.m
+		// see calcHPDropRate() @ https://github.com/ppy/osu-iPhone/blob/master/Classes/OsuFiletype.m#L661
+
+		// NOTE: all drain changes between 2014 and today have been fixed here (the link points to an old version of the algorithm!)
+		// these changes include: passive spinner nerf (drain * 0.25 while spinner is active), and clamping the object length drain to 0 + an extra check for that (see maxLongObjectDrop)
+		// see https://osu.ppy.sh/home/changelog/stable40/20190513.2
+
+		struct TestPlayer
+		{
+			TestPlayer(double hpBarMaximum)
+			{
+				this->hpBarMaximum = hpBarMaximum;
+
+				hpMultiplierNormal = 1.0;
+				hpMultiplierComboEnd = 1.0;
+
+				resetHealth();
+			}
+
+			void resetHealth()
+			{
+				health = hpBarMaximum;
+				healthUncapped = hpBarMaximum;
+			}
+
+			void increaseHealth(double amount)
+			{
+				healthUncapped += amount;
+				health += amount;
+
+				if (health > hpBarMaximum)
+					health = hpBarMaximum;
+
+				if (health < 0.0)
+					health = 0.0;
+
+				if (healthUncapped < 0.0)
+					healthUncapped = 0.0;
+			}
+
+			void decreaseHealth(double amount)
+			{
+				health -= amount;
+
+				if (health < 0.0)
+					health = 0.0;
+
+				if (health > hpBarMaximum)
+					health = hpBarMaximum;
+
+				healthUncapped -= amount;
+
+				if (healthUncapped < 0.0)
+					healthUncapped = 0.0;
+			}
+
+			double hpBarMaximum;
+
+			double health;
+			double healthUncapped;
+
+			double hpMultiplierNormal;
+			double hpMultiplierComboEnd;
+		};
+		TestPlayer testPlayer((double)m_osu_drain_stable_hpbar_maximum_ref->getFloat());
+
+		const double HP = getHP();
+		const int version = m_selectedDifficulty->version;
+
+		double testDrop = 0.05;
+
+		const double lowestHpEver = OsuGameRules::mapDifficultyRangeDouble(HP, 195.0, 160.0, 60.0);
+		const double lowestHpComboEnd = OsuGameRules::mapDifficultyRangeDouble(HP, 198.0, 170.0, 80.0);
+		const double lowestHpEnd = OsuGameRules::mapDifficultyRangeDouble(HP, 198.0, 180.0, 80.0);
+		const double HpRecoveryAvailable = OsuGameRules::mapDifficultyRangeDouble(HP, 8.0, 4.0, 0.0);
+
+		bool fail = false;
+
+		do
+		{
+			testPlayer.resetHealth();
+
+			double lowestHp = testPlayer.health;
+			int lastTime = (int)(m_hitobjects[0]->getTime() - (long)OsuGameRules::getApproachTime(this));
+			fail = false;
+
+			const int breakCount = m_selectedDifficulty->breaks.size();
+			int breakNumber = 0;
+
+			int comboTooLowCount = 0;
+
+			for (int i=0; i<m_hitobjects.size(); i++)
+			{
+				const OsuHitObject *h = m_hitobjects[i];
+				const OsuSlider *sliderPointer = dynamic_cast<const OsuSlider*>(h);
+				const OsuSpinner *spinnerPointer = dynamic_cast<const OsuSpinner*>(h);
+
+				const int localLastTime = lastTime;
+
+				int breakTime = 0;
+				if (breakCount > 0 && breakNumber < breakCount)
+				{
+					const OsuBeatmapDifficulty::BREAK &e = m_selectedDifficulty->breaks[breakNumber];
+					if (e.startTime >= localLastTime && e.endTime <= h->getTime())
+					{
+						// consider break start equal to object end time for version 8+ since drain stops during this time
+						breakTime = (version < 8) ? (e.endTime - e.startTime) : (e.endTime - localLastTime);
+						breakNumber++;
+					}
+				}
+
+				testPlayer.decreaseHealth(testDrop*(h->getTime() - lastTime - breakTime));
+
+				lastTime = (int)(h->getTime() + h->getDuration());
+
+				if (testPlayer.health < lowestHp)
+					lowestHp = testPlayer.health;
+
+				if (testPlayer.health > lowestHpEver)
+				{
+					const double longObjectDrop = testDrop * (double)h->getDuration();
+					const double maxLongObjectDrop = std::max(0.0, longObjectDrop - testPlayer.health);
+
+					testPlayer.decreaseHealth(longObjectDrop);
+
+					// nested hitobjects
+					if (sliderPointer != NULL)
+					{
+						// startcircle
+						testPlayer.increaseHealth(OsuScore::getHealthIncrease(OsuScore::HIT::HIT_SLIDER30, HP, testPlayer.hpMultiplierNormal, testPlayer.hpMultiplierComboEnd, 1.0)); // slider30
+
+						// ticks + repeats + repeat ticks
+						const std::vector<OsuSlider::SLIDERCLICK> &clicks = sliderPointer->getClicks();
+						for (int c=0; c<clicks.size(); c++)
+						{
+							switch (clicks[c].type)
+							{
+							case 0: // repeat
+								testPlayer.increaseHealth(OsuScore::getHealthIncrease(OsuScore::HIT::HIT_SLIDER30, HP, testPlayer.hpMultiplierNormal, testPlayer.hpMultiplierComboEnd, 1.0)); // slider30
+								break;
+							case 1: // tick
+								testPlayer.increaseHealth(OsuScore::getHealthIncrease(OsuScore::HIT::HIT_SLIDER10, HP, testPlayer.hpMultiplierNormal, testPlayer.hpMultiplierComboEnd, 1.0)); // slider10
+								break;
+							}
+						}
+
+						// endcircle
+						testPlayer.increaseHealth(OsuScore::getHealthIncrease(OsuScore::HIT::HIT_SLIDER30, HP, testPlayer.hpMultiplierNormal, testPlayer.hpMultiplierComboEnd, 1.0)); // slider30
+					}
+					else if (spinnerPointer != NULL)
+					{
+						const int rotationsNeeded = (int)((float)spinnerPointer->getDuration() / 1000.0f * OsuGameRules::getSpinnerSpinsPerSecond(this));
+						for (int r=0; r<rotationsNeeded; r++)
+						{
+							testPlayer.increaseHealth(OsuScore::getHealthIncrease(OsuScore::HIT::HIT_SPINNERSPIN, HP, testPlayer.hpMultiplierNormal, testPlayer.hpMultiplierComboEnd, 1.0)); // spinnerspin
+						}
+					}
+
+					if (!(maxLongObjectDrop > 0.0) || (testPlayer.health - maxLongObjectDrop) > lowestHpEver)
+					{
+						// regular hit (for every hitobject)
+						testPlayer.increaseHealth(OsuScore::getHealthIncrease(OsuScore::HIT::HIT_300, HP, testPlayer.hpMultiplierNormal, testPlayer.hpMultiplierComboEnd, 1.0)); // 300
+
+						// end of combo (new combo starts at next hitobject)
+						if ((i == m_hitobjects.size() - 1) || m_hitobjects[i]->isEndOfCombo())
+						{
+							testPlayer.increaseHealth(OsuScore::getHealthIncrease(OsuScore::HIT::HIT_300G, HP, testPlayer.hpMultiplierNormal, testPlayer.hpMultiplierComboEnd, 1.0)); // geki
+
+							if (testPlayer.health < lowestHpComboEnd)
+							{
+								if (++comboTooLowCount > 2)
+								{
+									testPlayer.hpMultiplierComboEnd *= 1.07;
+									testPlayer.hpMultiplierNormal *= 1.03;
+									fail = true;
+									break;
+								}
+							}
+						}
+
+						continue;
+					}
+
+					fail = true;
+					testDrop *= 0.96;
+					break;
+				}
+
+				fail = true;
+				testDrop *= 0.96;
+				break;
+			}
+
+			if (!fail && testPlayer.health < lowestHpEnd)
+			{
+				fail = true;
+				testDrop *= 0.94;
+				testPlayer.hpMultiplierComboEnd *= 1.01;
+				testPlayer.hpMultiplierNormal *= 1.01;
+			}
+
+			const double recovery = (testPlayer.healthUncapped - testPlayer.hpBarMaximum) / (double)m_hitobjects.size();
+			if (!fail && recovery < HpRecoveryAvailable)
+			{
+				fail = true;
+				testDrop *= 0.96;
+				testPlayer.hpMultiplierComboEnd *= 1.02;
+				testPlayer.hpMultiplierNormal *= 1.01;
+			}
+		}
+		while (fail);
+
+		m_fDrainRate = (testDrop / testPlayer.hpBarMaximum) * 1000.0; // from [0, 200] to [0, 1], and from ms to seconds
+		m_fHpMultiplierComboEnd = testPlayer.hpMultiplierComboEnd;
+		m_fHpMultiplierNormal = testPlayer.hpMultiplierNormal;
+	}
+	else if (drainType == 3) // osu!lazer
+	{
+		// build healthIncreases
+		std::vector<std::pair<double, double>> healthIncreases; // [first = time, second = health]
+		healthIncreases.reserve(m_hitobjects.size());
+		const double healthIncreaseForHit300 = OsuScore::getHealthIncrease(OsuScore::HIT::HIT_300);
+		for (int i=0; i<m_hitobjects.size(); i++)
+		{
+			// nested hitobjects
+			const OsuSlider *sliderPointer = dynamic_cast<OsuSlider*>(m_hitobjects[i]);
+			if (sliderPointer != NULL)
+			{
+				// startcircle
+				healthIncreases.push_back(std::pair<double, double>((double)m_hitobjects[i]->getTime(), healthIncreaseForHit300));
+
+				// ticks + repeats + repeat ticks
+				const std::vector<OsuSlider::SLIDERCLICK> &clicks = sliderPointer->getClicks();
+				for (int c=0; c<clicks.size(); c++)
+				{
+					healthIncreases.push_back(std::pair<double, double>((double)clicks[c].time, healthIncreaseForHit300));
+				}
+			}
+
+			// regular hitobject
+			healthIncreases.push_back(std::pair<double, double>(m_hitobjects[i]->getTime() + m_hitobjects[i]->getDuration(), healthIncreaseForHit300));
+		}
+
+		const int numHealthIncreases = healthIncreases.size();
+		const int numBreaks = m_selectedDifficulty->breaks.size();
+		const double drainStartTime = m_hitobjects[0]->getTime();
+
+		// see computeDrainRate() & https://github.com/ppy/osu/blob/master/osu.Game/Rulesets/Scoring/DrainingHealthProcessor.cs
+
+		const double minimum_health_error = 0.01;
+
+		const double min_health_target = osu_drain_lazer_health_min.getFloat();
+		const double mid_health_target = osu_drain_lazer_health_mid.getFloat();
+		const double max_health_target = osu_drain_lazer_health_max.getFloat();
+
+		const double targetMinimumHealth = OsuGameRules::mapDifficultyRange(getHP(), min_health_target, mid_health_target, max_health_target);
+
+		int adjustment = 1;
+		double result = 1.0;
+
+		// Although we expect the following loop to converge within 30 iterations (health within 1/2^31 accuracy of the target),
+		// we'll still keep a safety measure to avoid infinite loops by detecting overflows.
+		while (adjustment > 0)
+		{
+			double currentHealth = 1.0;
+			double lowestHealth = 1.0;
+			int currentBreak = -1;
+
+			for (int i=0; i<numHealthIncreases; i++)
+			{
+				double currentTime = healthIncreases[i].first;
+				double lastTime = i > 0 ? healthIncreases[i - 1].first : drainStartTime;
+
+				// Subtract any break time from the duration since the last object
+				if (numBreaks > 0)
+				{
+					// Advance the last break occuring before the current time
+					while (currentBreak + 1 < numBreaks && (double)m_selectedDifficulty->breaks[currentBreak + 1].endTime < currentTime)
+					{
+						currentBreak++;
+					}
+
+					if (currentBreak >= 0)
+						lastTime = std::max(lastTime, (double)m_selectedDifficulty->breaks[currentBreak].endTime);
+				}
+
+				// Apply health adjustments
+				currentHealth -= (healthIncreases[i].first - lastTime) * result;
+				lowestHealth = std::min(lowestHealth, currentHealth);
+				currentHealth = std::min(1.0, currentHealth + healthIncreases[i].second);
+
+				// Common scenario for when the drain rate is definitely too harsh
+				if (lowestHealth < 0)
+					break;
+			}
+
+			// Stop if the resulting health is within a reasonable offset from the target
+			if (std::abs(lowestHealth - targetMinimumHealth) <= minimum_health_error)
+				break;
+
+			// This effectively works like a binary search - each iteration the search space moves closer to the target, but may exceed it.
+			adjustment *= 2;
+			result += 1.0 / adjustment * sign<double>(lowestHealth - targetMinimumHealth);
+		}
+
+		m_fDrainRate = result * 1000.0; // from ms to seconds
 	}
 }
 

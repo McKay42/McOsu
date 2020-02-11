@@ -21,6 +21,8 @@ OsuUIPauseMenuButton::OsuUIPauseMenuButton(Osu *osu, std::function<Image*()> get
 
 	m_vScale = Vector2(1, 1);
 	m_fScaleMultiplier = 1.1f;
+
+	m_fAlpha = 1.0f;
 }
 
 void OsuUIPauseMenuButton::draw(Graphics *g)
@@ -31,7 +33,7 @@ void OsuUIPauseMenuButton::draw(Graphics *g)
 	Image *image = getImageFunc();
 	if (image != NULL)
 	{
-		g->setColor(0xffffffff);
+		g->setColor(COLORf(m_fAlpha, 1.0f, 1.0f, 1.0f));
 		g->pushTransform();
 		{
 			// scale

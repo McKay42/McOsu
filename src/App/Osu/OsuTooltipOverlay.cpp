@@ -59,6 +59,14 @@ void OsuTooltipOverlay::draw(Graphics *g)
 		if (cursorPos.y + height + offset.y + 2*margin > m_osu->getScreenHeight())
 			cursorPos.y -= (cursorPos.y + height + offset.y + 2*margin) - m_osu->getScreenHeight() + 1;
 
+		// clamp to left edge
+		if (cursorPos.x < 0)
+			cursorPos.x += std::abs(cursorPos.x);
+
+		// clamp to top edge
+		if (cursorPos.y < 0)
+			cursorPos.y += std::abs(cursorPos.y);
+
 		// draw background
 		g->setColor(0xff000000);
 		g->setAlpha(alpha);

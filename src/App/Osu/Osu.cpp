@@ -64,7 +64,7 @@
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 30.13f);
+ConVar osu_version("osu_version", 31.00f);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr");
 #else
@@ -212,6 +212,13 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	steam->setRichPresence("steam_display", "#Status");
 	steam->setRichPresence("status", "...");
 
+#ifdef MCENGINE_FEATURE_SOUND
+
+	// starting with bass 2020 2.4.15.2 which has all offset problems fixed, this is the non-dsound backend compensation
+	convar->getConVarByName("osu_universal_offset_hardcoded")->setValue(15.0f);
+
+#endif
+
 #ifdef MCENGINE_FEATURE_BASS_WASAPI
 
 	// since we use the newer bass/fx dlls for wasapi builds anyway (which have different time handling)
@@ -242,8 +249,9 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	if (isInVRMode())
 	{
 		osu_skin.setValue("defaultvr");
-		convar->getConVarByName("osu_drain_enabled")->setValue(true);
-		convar->getConVarByName("osu_draw_hpbar")->setValue(true);
+		ConVar *osu_drain_type_ref = convar->getConVarByName("osu_drain_type");
+		osu_drain_type_ref->setDefaultFloat(1.0f);
+		osu_drain_type_ref->setValue(1.0f);
 		env->setWindowResizable(true);
 	}
 	else
@@ -383,6 +391,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	// exec the main config file (this must be right here!)
 	if (m_iInstanceID < 2)
 	{
+		Console::execConfigFile("underride"); // same as override, but for defaults
 		Console::execConfigFile(isInVRMode() ? "osuvr" : "osu");
 		Console::execConfigFile("override"); // used for quickfixing live builds without redeploying/recompiling
 	}
@@ -1246,14 +1255,18 @@ void Osu::onKeyDown(KeyboardEvent &key)
 			{
 				m_bKeyboardKey1Down = true;
 				onKey1Change(true, false);
-				key.consume();
+
+				if (!getSelectedBeatmap()->hasFailed())
+					key.consume();
 			}
 
 			if (!m_bKeyboardKey2Down && key == (KEYCODE)OsuKeyBindings::RIGHT_CLICK.getInt())
 			{
 				m_bKeyboardKey2Down = true;
 				onKey2Change(true, false);
-				key.consume();
+
+				if (!getSelectedBeatmap()->hasFailed())
+					key.consume();
 			}
 
 			// handle skipping
@@ -1261,37 +1274,41 @@ void Osu::onKeyDown(KeyboardEvent &key)
 				m_bSkipScheduled = true;
 
 			// toggle ui
-			if (key == KEY_SHIFT)
 			{
-				if (m_bTab && !m_bUIToggleCheck)
+				if (key == KEY_SHIFT)
 				{
-					m_bUIToggleCheck = true;
-					m_osu_draw_hud_ref->setValue(!m_osu_draw_hud_ref->getBool());
+					if (m_bTab && !m_bUIToggleCheck)
+					{
+						m_bUIToggleCheck = true;
+						m_osu_draw_hud_ref->setValue(!m_osu_draw_hud_ref->getBool());
+
+						key.consume();
+					}
+				}
+				if (key == KEY_TAB)
+				{
+					m_bTab = true;
+					if (engine->getKeyboard()->isShiftDown() && !m_bUIToggleCheck)
+					{
+						m_bUIToggleCheck = true;
+						m_osu_draw_hud_ref->setValue(!m_osu_draw_hud_ref->getBool());
+
+						key.consume();
+					}
+				}
+
+				if (!key.isConsumed() && key == (KEYCODE)OsuKeyBindings::TOGGLE_SCOREBOARD.getInt() && !m_bScoreboardToggleCheck)
+				{
+					m_bScoreboardToggleCheck = true;
+					m_osu_draw_scoreboard->setValue(!m_osu_draw_scoreboard->getBool());
+					m_notificationOverlay->addNotification(m_osu_draw_scoreboard->getBool() ? "Scoreboard is shown." : "Scoreboard is hidden.", 0xffffffff, false, 0.1f);
 
 					key.consume();
 				}
-			}
-			if (key == KEY_TAB)
-			{
-				m_bTab = true;
-				if (engine->getKeyboard()->isShiftDown() && !m_bUIToggleCheck)
-				{
-					m_bUIToggleCheck = true;
-					m_osu_draw_hud_ref->setValue(!m_osu_draw_hud_ref->getBool());
-
-					key.consume();
-				}
-			}
-			if (key == (KEYCODE)OsuKeyBindings::TOGGLE_SCOREBOARD.getInt() && !m_bScoreboardToggleCheck)
-			{
-				m_bScoreboardToggleCheck = true;
-				m_osu_draw_scoreboard->setValue(!m_osu_draw_scoreboard->getBool());
-
-				key.consume();
 			}
 
 			// allow live mod changing while playing
-			if (!key.isConsumed() && key == KEY_F1 && !m_bF1 && !getSelectedBeatmap()->hasFailed()) // only if not failed though
+			if (!key.isConsumed() && (key == KEY_F1 || key == (KEYCODE)OsuKeyBindings::TOGGLE_MODSELECT.getInt()) && !m_bF1 && !getSelectedBeatmap()->hasFailed()) // only if not failed though
 			{
 				m_bF1 = true;
 				toggleModSelection(true);
@@ -1457,7 +1474,7 @@ void Osu::onKeyUp(KeyboardEvent &key)
 	}
 
 	// misc hotkeys release
-	if (key == KEY_F1)
+	if (key == KEY_F1 || key == (KEYCODE)OsuKeyBindings::TOGGLE_MODSELECT.getInt())
 		m_bF1 = false;
 	if (key == (KEYCODE)OsuKeyBindings::GAME_PAUSE.getInt() || key == KEY_ESCAPE)
 		m_bEscape = false;
@@ -2177,7 +2194,9 @@ void Osu::updateConfineCursor()
 {
 	if (isInVRMode() || m_iInstanceID > 0) return;
 
-	if ((osu_confine_cursor_fullscreen.getBool() && env->isFullscreen()) || (osu_confine_cursor_windowed.getBool() && !env->isFullscreen()) || (isInPlayMode() && !getSelectedBeatmap()->isPaused() && !getModAuto() && !getModAutopilot()))
+	if ((osu_confine_cursor_fullscreen.getBool() && env->isFullscreen())
+			|| (osu_confine_cursor_windowed.getBool() && !env->isFullscreen())
+			|| (isInPlayMode() && !m_pauseMenu->isVisible() && !getModAuto() && !getModAutopilot()))
 		env->setCursorClip(true, McRect());
 	else
 		env->setCursorClip(false, McRect());

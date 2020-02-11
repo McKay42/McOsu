@@ -17,7 +17,18 @@ class VertexArrayObject;
 class OsuSlider : public OsuHitObject
 {
 public:
-	OsuSlider(char type, int repeat, float pixelLength, std::vector<Vector2> points, std::vector<int> hitSounds, std::vector<float> ticks, float sliderTime, float sliderTimeWithoutRepeats, long time, int sampleType, int comboNumber, int colorCounter, int colorOffset, OsuBeatmapStandard *beatmap);
+	struct SLIDERCLICK
+	{
+		long time;
+		bool finished;
+		bool successful;
+		bool sliderend;
+		int type;
+		int tickIndex;
+	};
+
+public:
+	OsuSlider(char type, int repeat, float pixelLength, std::vector<Vector2> points, std::vector<int> hitSounds, std::vector<float> ticks, float sliderTime, float sliderTimeWithoutRepeats, long time, int sampleType, int comboNumber, bool isEndOfCombo, int colorCounter, int colorOffset, OsuBeatmapStandard *beatmap);
 	virtual ~OsuSlider();
 
 	virtual void draw(Graphics *g);
@@ -43,18 +54,7 @@ public:
 	inline int getRepeat() const {return m_iRepeat;}
 	inline std::vector<Vector2> getRawPoints() const {return m_points;}
 	inline float getPixelLength() const {return m_fPixelLength;}
-
-	// TEMP: auto cursordance
-	struct SLIDERCLICK
-	{
-		long time;
-		bool finished;
-		bool successful;
-		bool sliderend;
-		int type;
-		int tickIndex;
-	};
-	std::vector<SLIDERCLICK> getClicks() {return std::vector<SLIDERCLICK>(m_clicks);}
+	inline const std::vector<SLIDERCLICK> &getClicks() const {return m_clicks;}
 
 private:
 	static ConVar *m_osu_playfield_mirror_horizontal_ref;
@@ -62,8 +62,9 @@ private:
 	static ConVar *m_osu_playfield_rotation_ref;
 	static ConVar *m_osu_mod_fps_ref;
 	static ConVar *m_osu_slider_border_size_multiplier_ref;
-	static ConVar *m_epilepsy;
-	static ConVar *m_osu_auto_cursordance;
+	static ConVar *m_epilepsy_ref;
+	static ConVar *m_osu_auto_cursordance_ref;
+	static ConVar *m_osu_drain_type_ref;
 
 	void drawStartCircle(Graphics *g, float alpha);
 	void drawEndCircle(Graphics *g, float alpha, float sliderSnake = 1.0f);
