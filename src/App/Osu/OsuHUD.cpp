@@ -156,6 +156,7 @@ ConVar osu_draw_statistics_bpm("osu_draw_statistics_bpm", false);
 ConVar osu_draw_statistics_ar("osu_draw_statistics_ar", false);
 ConVar osu_draw_statistics_cs("osu_draw_statistics_cs", false);
 ConVar osu_draw_statistics_od("osu_draw_statistics_od", false);
+ConVar osu_draw_statistics_hp("osu_draw_statistics_hp", false);
 ConVar osu_draw_statistics_nps("osu_draw_statistics_nps", false);
 ConVar osu_draw_statistics_nd("osu_draw_statistics_nd", false);
 ConVar osu_draw_statistics_ur("osu_draw_statistics_ur", false);
@@ -312,6 +313,7 @@ void OsuHUD::draw(Graphics *g)
 					OsuGameRules::getApproachRateForSpeedMultiplier(beatmap, beatmap->getSpeedMultiplier()),
 					beatmap->getCS(),
 					OsuGameRules::getOverallDifficultyForSpeedMultiplier(beatmap, beatmap->getSpeedMultiplier()),
+					beatmap->getHP(),
 					beatmap->getNPS(),
 					beatmap->getND(),
 					m_osu->getScore()->getUnstableRate(),
@@ -590,7 +592,7 @@ void OsuHUD::drawDummy(Graphics *g)
 
 	drawSkip(g);
 
-	drawStatistics(g, 0, 0, 180, 9.0f, 4.0f, 8.0f, 4, 6, 90.0f, 123, 25, -5, 15);
+	drawStatistics(g, 0, 0, 180, 9.0f, 4.0f, 8.0f, 6.0f, 4, 6, 90.0f, 123, 25, -5, 15);
 
 	drawWarningArrows(g);
 
@@ -644,6 +646,7 @@ void OsuHUD::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 					OsuGameRules::getApproachRateForSpeedMultiplier(beatmap, beatmap->getSpeedMultiplier()),
 					beatmap->getCS(),
 					OsuGameRules::getOverallDifficultyForSpeedMultiplier(beatmap, beatmap->getSpeedMultiplier()),
+					beatmap->getHP(),
 					beatmap->getNPS(),
 					beatmap->getND(),
 					m_osu->getScore()->getUnstableRate(),
@@ -707,7 +710,7 @@ void OsuHUD::drawVRDummy(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 
 		drawSkip(g);
 
-		drawStatistics(g, 0, 0, 180, 9.0f, 4.0f, 8.0f, 4, 6, 90.0f, 123, 25, -5, 15);
+		drawStatistics(g, 0, 0, 180, 9.0f, 4.0f, 8.0f, 6.0f, 4, 6, 90.0f, 123, 25, -5, 15);
 
 		if (osu_draw_score.getBool())
 			drawScore(g, scoreEntry.score);
@@ -2325,7 +2328,7 @@ void OsuHUD::drawProgressBarVR(Graphics *g, Matrix4 &mvp, OsuVR *vr, float perce
 	}
 }
 
-void OsuHUD::drawStatistics(Graphics *g, int misses, int sliderbreaks, int bpm, float ar, float cs, float od, int nps, int nd, int ur, float pp, float hitWindow300, int hitdeltaMin, int hitdeltaMax)
+void OsuHUD::drawStatistics(Graphics *g, int misses, int sliderbreaks, int bpm, float ar, float cs, float od, float hp, int nps, int nd, int ur, float pp, float hitWindow300, int hitdeltaMin, int hitdeltaMax)
 {
 	g->pushTransform();
 	{
@@ -2371,6 +2374,12 @@ void OsuHUD::drawStatistics(Graphics *g, int misses, int sliderbreaks, int bpm, 
 		{
 			od = std::round(od * 100.0f) / 100.0f;
 			drawStatisticText(g, UString::format("OD: %g", od));
+			g->translate(0, yDelta);
+		}
+		if (osu_draw_statistics_hp.getBool())
+		{
+			hp = std::round(hp * 100.0f) / 100.0f;
+			drawStatisticText(g, UString::format("HP: %g", hp));
 			g->translate(0, yDelta);
 		}
 		if (osu_draw_statistics_hitwindow300.getBool())

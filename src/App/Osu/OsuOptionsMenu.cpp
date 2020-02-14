@@ -950,6 +950,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Draw Stats: AR", convar->getConVarByName("osu_draw_statistics_ar"));
 	addCheckbox("Draw Stats: CS", convar->getConVarByName("osu_draw_statistics_cs"));
 	addCheckbox("Draw Stats: OD", convar->getConVarByName("osu_draw_statistics_od"));
+	addCheckbox("Draw Stats: HP", convar->getConVarByName("osu_draw_statistics_hp"));
 	addCheckbox("Draw Stats: 300 hitwindow", "Timing window for hitting a 300 (e.g. +-25ms).", convar->getConVarByName("osu_draw_statistics_hitwindow300"));
 	addCheckbox("Draw Stats: Notes Per Second", "How many clicks per second are currently required.", convar->getConVarByName("osu_draw_statistics_nps"));
 	addCheckbox("Draw Stats: Note Density", "How many objects are visible at the same time.", convar->getConVarByName("osu_draw_statistics_nd"));
