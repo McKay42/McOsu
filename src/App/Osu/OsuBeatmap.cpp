@@ -748,8 +748,9 @@ void OsuBeatmap::update()
 	}
 
 	// empty section detection & skipping
+	if (m_hitobjects.size() > 0)
 	{
-		const long legacyOffset = 1000; // Mc
+		const long legacyOffset = (m_iPreviousHitObjectTime < m_hitobjects[0]->getTime() ? 0 : 1000); // Mc
 		const long nextHitObjectDelta = m_iNextHitObjectTime - (long)m_iCurMusicPos;
 		if (nextHitObjectDelta > 0 && nextHitObjectDelta > (long)osu_skip_time.getInt() && m_iCurMusicPos > (m_iPreviousHitObjectTime + legacyOffset))
 			m_bIsInSkippableSection = true;
@@ -758,8 +759,9 @@ void OsuBeatmap::update()
 	}
 
 	// warning arrow logic
+	if (m_hitobjects.size() > 0)
 	{
-		const long legacyOffset = 1000; // Mc
+		const long legacyOffset = (m_iPreviousHitObjectTime < m_hitobjects[0]->getTime() ? 0 : 1000); // Mc
 		const long minGapSize = 1000;
 		const long lastVisibleMin = 400;
 		const long blinkDelta = 100;
