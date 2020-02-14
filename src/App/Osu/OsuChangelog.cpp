@@ -34,8 +34,17 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 
 	std::vector<CHANGELOG> changelogs;
 
+	CHANGELOG alpha315;
+	alpha315.title = UString::format("31.01 (Build Date: %s, %s)", __DATE__, __TIME__);
+	alpha315.changes.push_back("Windows: Added option \"Audio compatibility mode\" (Options > Audio > Devices)");
+	alpha315.changes.push_back("Added option \"Draw Stats: HP\" (Options > Gameplay > HUD)");
+	alpha315.changes.push_back("Added support for fail-background (skin element)");
+	alpha315.changes.push_back("Fixed skip intro button appearing 1 second later than usual");
+	alpha315.changes.push_back("Fixed warning arrows appearing 1 second later than usual");
+	changelogs.push_back(alpha315);
+
 	CHANGELOG alpha314;
-	alpha314.title = UString::format("31 (Build Date: %s, %s)", __DATE__, __TIME__);
+	alpha314.title = "31 (11.02.2020)";
 	alpha314.changes.push_back("- Added HP drain support");
 	alpha314.changes.push_back("- Added 4 different HP drain algorithms: None, VR, osu!stable, osu!lazer");
 	alpha314.changes.push_back("- Added option \"Select HP Drain\" (Options > Gameplay > Mechanics)");
