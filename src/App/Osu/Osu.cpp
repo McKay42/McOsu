@@ -215,6 +215,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 #ifdef MCENGINE_FEATURE_SOUND
 
 	// starting with bass 2020 2.4.15.2 which has all offset problems fixed, this is the non-dsound backend compensation
+	// NOTE: this depends on BASS_CONFIG_UPDATEPERIOD/BASS_CONFIG_DEV_BUFFER
 	convar->getConVarByName("osu_universal_offset_hardcoded")->setValue(15.0f);
 
 #endif
@@ -222,6 +223,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 #ifdef MCENGINE_FEATURE_BASS_WASAPI
 
 	// since we use the newer bass/fx dlls for wasapi builds anyway (which have different time handling)
+	// NOTE: this overwrites the above modification
 	convar->getConVarByName("osu_universal_offset_hardcoded")->setValue(-25.0f);
 
 #endif

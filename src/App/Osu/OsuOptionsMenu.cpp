@@ -368,10 +368,10 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_osu_skin_workshop_id_ref = convar->getConVarByName("osu_skin_workshop_id");
 	m_osu_skin_random_ref = convar->getConVarByName("osu_skin_random");
 	m_osu_ui_scale_ref = convar->getConVarByName("osu_ui_scale");
-	m_osu_drain_type_ref = convar->getConVarByName("osu_drain_type");
-
+	m_win_snd_fallback_dsound_ref = convar->getConVarByName("win_snd_fallback_dsound");
 	m_win_snd_wasapi_buffer_size_ref = convar->getConVarByName("win_snd_wasapi_buffer_size", false);
 	m_win_snd_wasapi_period_size_ref = convar->getConVarByName("win_snd_wasapi_period_size", false);
+	m_osu_drain_type_ref = convar->getConVarByName("osu_drain_type");
 
 	// convar callbacks
 	convar->getConVarByName("osu_skin_use_skin_hitsounds")->setCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onUseSkinsSoundSamplesChange) );
@@ -662,6 +662,20 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 		OPTIONS_ELEMENT outputDeviceSelect = addButton("Select Output Device", "Default", true);
 		((CBaseUIButton*)outputDeviceSelect.elements[0])->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onOutputDeviceSelect) );
 		outputDeviceSelect.resetButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onOutputDeviceResetClicked) );
+
+		if (env->getOS() == Environment::OS::OS_WINDOWS)
+		{
+#ifndef MCENGINE_FEATURE_BASS_WASAPI
+
+			CBaseUICheckbox *audioCompatibilityModeCheckbox = addCheckbox("Audio compatibility mode", "Use legacy audio engine (higher latency but more compatible)", m_win_snd_fallback_dsound_ref);
+			audioCompatibilityModeCheckbox->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onAudioCompatibilityModeChange) );
+
+			// HACKHACK: force manual change if user has enabled it (don't use convar callback)
+			if (m_win_snd_fallback_dsound_ref->getBool())
+				onAudioCompatibilityModeChange(audioCompatibilityModeCheckbox);
+
+#endif
+		}
 
 		m_outputDeviceResetButton = outputDeviceSelect.resetButton;
 		m_outputDeviceSelectButton = outputDeviceSelect.elements[0];
@@ -2591,7 +2605,7 @@ void OsuOptionsMenu::onOutputDeviceSelect2(UString outputDeviceName, int id)
 {
 	engine->getSound()->setOutputDevice(outputDeviceName);
 	m_outputDeviceLabel->setText(engine->getSound()->getOutputDevice());
-	m_osu->reloadSkin(); // needed to reload sounds
+	m_osu->getSkin()->reloadSounds();
 
 	// and update reset button as usual
 	onOutputDeviceResetUpdate();
@@ -2613,13 +2627,21 @@ void OsuOptionsMenu::onOutputDeviceRestart()
 {
 #ifdef MCENGINE_FEATURE_BASS_WASAPI
 
-	engine->getSound()->setOutputDeviceForce("Default");
+	engine->getSound()->setOutputDeviceForce(engine->getSound()->getOutputDevice());
 
 #else
 
-	engine->getSound()->setOutputDevice("Default");
+	engine->getSound()->setOutputDevice("Default"); // TODO: horizon fallback?
 
 #endif
+}
+
+void OsuOptionsMenu::onAudioCompatibilityModeChange(CBaseUICheckbox *checkbox)
+{
+	onCheckboxChange(checkbox);
+	engine->getSound()->setOutputDeviceForce(engine->getSound()->getOutputDevice());
+	checkbox->setChecked(m_win_snd_fallback_dsound_ref->getBool(), false);
+	m_osu->getSkin()->reloadSounds();
 }
 
 void OsuOptionsMenu::onDownloadOsuClicked()

@@ -37,6 +37,7 @@ public:
 
 	void load();
 	void loadBeatmapOverride(UString filepath);
+	void reloadSounds();
 
 	// samples
 	void setSampleSet(int sampleSet);

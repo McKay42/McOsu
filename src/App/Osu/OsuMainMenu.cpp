@@ -175,6 +175,8 @@ ConVar osu_draw_main_menu_workshop_button("osu_draw_main_menu_workshop_button", 
 ConVar *OsuMainMenu::m_osu_universal_offset_ref = NULL;
 ConVar *OsuMainMenu::m_osu_universal_offset_hardcoded_ref = NULL;
 ConVar *OsuMainMenu::m_osu_old_beatmap_offset_ref = NULL;
+ConVar *OsuMainMenu::m_win_snd_fallback_dsound_ref = NULL;
+ConVar *OsuMainMenu::m_osu_universal_offset_hardcoded_fallback_dsound_ref = NULL;
 
 void OsuMainMenu::openSteamWorkshopInGameOverlay(Osu *osu, bool launchInSteamIfOverlayDisabled)
 {
@@ -215,6 +217,10 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen(osu)
 		m_osu_universal_offset_hardcoded_ref = convar->getConVarByName("osu_universal_offset_hardcoded");
 	if (m_osu_old_beatmap_offset_ref == NULL)
 		m_osu_old_beatmap_offset_ref = convar->getConVarByName("osu_old_beatmap_offset");
+	if (m_win_snd_fallback_dsound_ref == NULL)
+		m_win_snd_fallback_dsound_ref = convar->getConVarByName("win_snd_fallback_dsound");
+	if (m_osu_universal_offset_hardcoded_fallback_dsound_ref == NULL)
+		m_osu_universal_offset_hardcoded_fallback_dsound_ref = convar->getConVarByName("osu_universal_offset_hardcoded_fallback_dsound");
 
 	osu_toggle_preview_music.setCallback( fastdelegate::MakeDelegate(this, &OsuMainMenu::onPausePressed) );
 
@@ -358,6 +364,7 @@ void OsuMainMenu::draw(Graphics *g)
 		const long curMusicPos = (long)m_osu->getSelectedBeatmap()->getMusic()->getPositionMS()
 			+ (long)m_osu_universal_offset_ref->getInt()
 			+ (long)m_osu_universal_offset_hardcoded_ref->getInt()
+			+ (m_win_snd_fallback_dsound_ref->getBool() ? (long)m_osu_universal_offset_hardcoded_fallback_dsound_ref->getInt() : 0)
 			- m_osu->getSelectedBeatmap()->getSelectedDifficulty()->localoffset
 			- m_osu->getSelectedBeatmap()->getSelectedDifficulty()->onlineOffset
 			- (m_osu->getSelectedBeatmap()->getSelectedDifficulty()->version < 5 ? m_osu_old_beatmap_offset_ref->getInt() : 0);

@@ -131,6 +131,7 @@ private:
 	void onOutputDeviceResetClicked();
 	void onOutputDeviceResetUpdate();
 	void onOutputDeviceRestart();
+	void onAudioCompatibilityModeChange(CBaseUICheckbox *checkbox);
 	void onDownloadOsuClicked();
 	void onManuallyManageBeatmapsClicked();
 	void onLIVReloadCalibrationClicked();
@@ -274,6 +275,7 @@ private:
 	ConVar *m_osu_skin_workshop_id_ref;
 	ConVar *m_osu_skin_random_ref;
 	ConVar *m_osu_ui_scale_ref;
+	ConVar *m_win_snd_fallback_dsound_ref;
 	ConVar *m_win_snd_wasapi_buffer_size_ref;
 	ConVar *m_win_snd_wasapi_period_size_ref;
 	ConVar *m_osu_drain_type_ref;

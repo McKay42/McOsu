@@ -879,6 +879,14 @@ void OsuSkin::loadBeatmapOverride(UString filepath)
 	// TODO: beatmap skin support
 }
 
+void OsuSkin::reloadSounds()
+{
+	for (int i=0; i<m_sounds.size(); i++)
+	{
+		m_sounds[i]->reload();
+	}
+}
+
 bool OsuSkin::parseSkinINI(UString filepath)
 {
 	File file(filepath);
