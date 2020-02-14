@@ -141,6 +141,7 @@ OsuSkin::OsuSkin(Osu *osu, UString name, UString filepath, bool isDefaultSkin, b
 	m_pauseRetry = m_missingTexture;
 	m_pauseBack = m_missingTexture;
 	m_pauseOverlay = m_missingTexture;
+	m_failBackground = m_missingTexture;
 	m_unpause = m_missingTexture;
 
 	m_buttonLeft = m_missingTexture;
@@ -648,6 +649,7 @@ void OsuSkin::load()
 	checkLoadImage(&m_pauseRetry, "pause-retry", "OSU_SKIN_PAUSE_RETRY");
 	checkLoadImage(&m_pauseBack, "pause-back", "OSU_SKIN_PAUSE_BACK");
 	checkLoadImage(&m_pauseOverlay, "pause-overlay", "OSU_SKIN_PAUSE_OVERLAY"); if (m_pauseOverlay == m_missingTexture) checkLoadImage(&m_pauseOverlay, "pause-overlay", "OSU_SKIN_PAUSE_OVERLAY", true, "jpg");
+	checkLoadImage(&m_failBackground, "fail-background", "OSU_SKIN_FAIL_BACKGROUND"); if (m_failBackground == m_missingTexture) checkLoadImage(&m_failBackground, "fail-background", "OSU_SKIN_FAIL_BACKGROUND", true, "jpg");
 	checkLoadImage(&m_unpause, "unpause", "OSU_SKIN_UNPAUSE");
 
 	randomizeFilePath();

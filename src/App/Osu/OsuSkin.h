@@ -173,6 +173,7 @@ public:
 	inline Image *getPauseRetry() {return m_pauseRetry;}
 	inline Image *getPauseBack() {return m_pauseBack;}
 	inline Image *getPauseOverlay() {return m_pauseOverlay;}
+	inline Image *getFailBackground() {return m_failBackground;}
 	inline Image *getUnpause() {return m_unpause;}
 
 	inline Image *getButtonLeft() {return m_buttonLeft;}
@@ -465,6 +466,7 @@ private:
 	Image *m_pauseRetry;
 	Image *m_pauseBack;
 	Image *m_pauseOverlay;
+	Image *m_failBackground;
 	Image *m_unpause;
 
 	Image *m_buttonLeft;
