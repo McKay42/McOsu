@@ -22,8 +22,8 @@ public:
 	virtual void drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr);
 	virtual void update();
 
-	virtual void onModUpdate() {onModUpdate(true);}
-	void onModUpdate(bool rebuildSliderVertexBuffers = true); // this seems very dangerous compiler-wise, but it works
+	virtual void onModUpdate() {onModUpdate(true, true);}
+	void onModUpdate(bool rebuildSliderVertexBuffers = true, bool recomputeDrainRate = true); // this seems very dangerous compiler-wise, but it works
 	virtual bool isLoading();
 
 	Vector2 pixels2OsuCoords(Vector2 pixelCoords); // only used for positional audio atm

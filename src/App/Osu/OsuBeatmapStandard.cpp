@@ -881,7 +881,7 @@ void OsuBeatmapStandard::update()
 	}
 }
 
-void OsuBeatmapStandard::onModUpdate(bool rebuildSliderVertexBuffers)
+void OsuBeatmapStandard::onModUpdate(bool rebuildSliderVertexBuffers, bool recomputeDrainRate)
 {
 	debugLog("OsuBeatmapStandard::onModUpdate() @ %f\n", engine->getTime());
 
@@ -890,7 +890,8 @@ void OsuBeatmapStandard::onModUpdate(bool rebuildSliderVertexBuffers)
 	updatePlayfieldMetrics();
 	updateHitobjectMetrics();
 
-	computeDrainRate();
+	if (recomputeDrainRate)
+		computeDrainRate();
 
 	if (m_music != NULL)
 	{
@@ -1301,7 +1302,7 @@ void OsuBeatmapStandard::onPlayStart()
 {
 	debugLog("OsuBeatmapStandard::onPlayStart()\n");
 
-	onModUpdate(false); // if there are calculations in there that need the hitobjects to be loaded
+	onModUpdate(false, false); // if there are calculations in there that need the hitobjects to be loaded
 }
 
 void OsuBeatmapStandard::onBeforeStop(bool quit)
