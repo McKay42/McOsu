@@ -1416,9 +1416,20 @@ void OsuHUD::drawScorebarBg(Graphics *g, float alpha, float breakAnim)
 
 	const Vector2 breakAnimOffset = Vector2(0, -20.0f * breakAnim) * ratio;
 
+	if (m_osu->isInVRDraw())
+	{
+		g->pushTransform();
+		g->translate(0.0f, 0.0f, -0.2f);
+	}
+
 	g->setColor(0xffffffff);
 	g->setAlpha(alpha * (1.0f - breakAnim));
 	m_osu->getSkin()->getScorebarBg()->draw(g, (m_osu->getSkin()->getScorebarBg()->getSize() / 2.0f) * scale + (breakAnimOffset * scale), scale);
+
+	if (m_osu->isInVRDraw())
+	{
+		g->popTransform();
+	}
 }
 
 void OsuHUD::drawSectionPass(Graphics *g, float alpha)
