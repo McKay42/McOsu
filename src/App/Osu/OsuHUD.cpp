@@ -1476,7 +1476,7 @@ void OsuHUD::drawSectionFail(Graphics *g, float alpha)
 
 void OsuHUD::drawHPBar(Graphics *g, double health, float alpha, float breakAnim)
 {
-	const bool useNewDefault = !m_osu->getSkin()->getScorebarMarker()->isMissingTexture(); // NOTE: additionally, don't useNewDefault if marker is loaded from default skin
+	const bool useNewDefault = !m_osu->getSkin()->getScorebarMarker()->isMissingTexture();
 
 	const float scale = osu_hud_scale.getFloat() * osu_hud_scorebar_scale.getFloat();
 	const float ratio = Osu::getImageScale(m_osu, Vector2(1, 1), 1.0f);
@@ -1532,7 +1532,7 @@ void OsuHUD::drawHPBar(Graphics *g, double health, float alpha, float breakAnim)
 
 		if (useNewDefault)
 			ki = m_osu->getSkin()->getScorebarMarker();
-		else
+		else if (m_osu->getSkin()->getScorebarColour()->isFromDefaultSkin() || !m_osu->getSkin()->getScorebarKi()->isFromDefaultSkin())
 		{
 			if (health < 0.2)
 				ki = m_osu->getSkin()->getScorebarKiDanger2();
@@ -1542,7 +1542,7 @@ void OsuHUD::drawHPBar(Graphics *g, double health, float alpha, float breakAnim)
 				ki = m_osu->getSkin()->getScorebarKi();
 		}
 
-		if (!ki->isMissingTexture())
+		if (ki != NULL && !ki->isMissingTexture())
 		{
 			if (!useNewDefault || health >= 0.2)
 			{

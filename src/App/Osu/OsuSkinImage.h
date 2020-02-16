@@ -43,6 +43,7 @@ public:
 	inline float getFrameDuration() const {return m_fFrameDuration;}
 	inline unsigned int getFrameNumber() const {return m_iFrameCounter;}
 	inline bool isMissingTexture() const {return m_bIsMissingTexture;}
+	inline bool isFromDefaultSkin() const {return m_bIsFromDefaultSkin;}
 
 	inline std::vector<UString> getFilepathsForExport() const {return m_filepathsForExport;}
 
@@ -82,6 +83,7 @@ private:
 	// raw files
 	std::vector<IMAGE> m_images;
 	bool m_bIsMissingTexture;
+	bool m_bIsFromDefaultSkin;
 
 	// custom
 	float m_fDrawClipWidthPercent;
