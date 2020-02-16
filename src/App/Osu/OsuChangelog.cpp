@@ -35,10 +35,13 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	std::vector<CHANGELOG> changelogs;
 
 	CHANGELOG alpha315;
-	alpha315.title = UString::format("31.01 (Build Date: %s, %s)", __DATE__, __TIME__);
+	alpha315.title = UString::format("31.02 (Build Date: %s, %s)", __DATE__, __TIME__);
+	alpha315.changes.push_back("- Added new HP drain algorithm: osu!lazer 2018");
 	alpha315.changes.push_back("- Windows: Added option \"Audio compatibility mode\" (Options > Audio > Devices)");
 	alpha315.changes.push_back("- Added option \"Draw Stats: HP\" (Options > Gameplay > HUD)");
 	alpha315.changes.push_back("- Added support for fail-background (skin element)");
+	alpha315.changes.push_back("- VR: Fixed oversized scorebar-bg skin elements z-fighting with other HUD elements (like score)");
+	alpha315.changes.push_back("- Fixed scorebar-ki always being drawn for legacy skins (unwanted default skin fallback)");
 	alpha315.changes.push_back("- Fixed skip intro button appearing 1 second later than usual");
 	alpha315.changes.push_back("- Fixed warning arrows appearing 1 second later than usual");
 	changelogs.push_back(alpha315);
