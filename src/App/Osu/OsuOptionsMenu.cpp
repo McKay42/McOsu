@@ -430,8 +430,9 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 
 	m_drainTypes.push_back("None");
 	m_drainTypes.push_back("VR");
-	m_drainTypes.push_back("osu!stable");
-	m_drainTypes.push_back("osu!lazer");
+	m_drainTypes.push_back("osu!stable (default)");
+	m_drainTypes.push_back("osu!lazer 2020");
+	m_drainTypes.push_back("osu!lazer 2018");
 
 	m_container = new CBaseUIContainer(-1, 0, 0, 0, "");
 
@@ -914,7 +915,8 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addLabel("");
 	addLabel("- VR: No constant drain, very hard on accuracy")->setTextColor(0xff666666);
 	addLabel("- osu!stable: Constant drain, moderately hard (default)")->setTextColor(0xff666666);
-	addLabel("- osu!lazer: Constant drain, relatively easy (too easy?)")->setTextColor(0xff666666);
+	addLabel("- osu!lazer 2020: Constant drain, very easy (too easy?)")->setTextColor(0xff666666);
+	addLabel("- osu!lazer 2018: No constant drain, scales with HP")->setTextColor(0xff666666);
 	addSpacer();
 	addSubSection("Backgrounds");
 	addCheckbox("Load Background Images (!)", "NOTE: Disabling this will disable ALL beatmap images everywhere!", convar->getConVarByName("osu_load_beatmap_background_images"));

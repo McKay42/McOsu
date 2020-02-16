@@ -2039,7 +2039,7 @@ void OsuBeatmapStandard::computeDrainRate()
 		m_fHpMultiplierComboEnd = testPlayer.hpMultiplierComboEnd;
 		m_fHpMultiplierNormal = testPlayer.hpMultiplierNormal;
 	}
-	else if (drainType == 3) // osu!lazer
+	else if (drainType == 3) // osu!lazer 2020
 	{
 		// build healthIncreases
 		std::vector<std::pair<double, double>> healthIncreases; // [first = time, second = health]

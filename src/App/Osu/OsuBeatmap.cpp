@@ -100,7 +100,7 @@ ConVar osu_fail_time("osu_fail_time", 2.25f, "Timeframe in s for the slowdown ef
 ConVar osu_note_blocking("osu_note_blocking", true, "Whether to use note blocking or not");
 ConVar osu_mod_suddendeath_restart("osu_mod_suddendeath_restart", false, "osu! has this set to false (i.e. you fail after missing). if set to true, then behave like SS/PF, instantly restarting the map");
 
-ConVar osu_drain_type("osu_drain_type", 2, "which hp drain algorithm to use (0 = None, 1 = VR, 2 = osu!stable, 3 = osu!lazer)");
+ConVar osu_drain_type("osu_drain_type", 2, "which hp drain algorithm to use (0 = None, 1 = VR, 2 = osu!stable, 3 = osu!lazer 2020, 4 = osu!lazer 2018)");
 
 ConVar osu_drain_vr_duration("osu_drain_vr_duration", 0.35f);
 ConVar osu_drain_stable_passive_fail("osu_drain_stable_passive_fail", false, "whether to fail the player instantly if health = 0, or only once a negative judgement occurs");
@@ -869,7 +869,7 @@ void OsuBeatmap::update()
 		const int drainType = osu_drain_type.getInt();
 
 		// handle constant drain
-		if (drainType == 2 || drainType == 3) // osu!stable + osu!lazer
+		if (drainType == 2 || drainType == 3) // osu!stable + osu!lazer 2020
 		{
 			if (m_fDrainRate > 0.0)
 			{
@@ -886,7 +886,7 @@ void OsuBeatmap::update()
 						drainAfterLastHitobjectBeforeBreakStart = (m_selectedDifficulty->version < 8 ? osu_drain_stable_break_before_old.getBool() : osu_drain_stable_break_before.getBool());
 						drainBeforeFirstHitobjectAfterBreakEnd = osu_drain_stable_break_after.getBool();
 					}
-					else if (drainType == 3) // osu!lazer
+					else if (drainType == 3) // osu!lazer 2020
 					{
 						drainAfterLastHitobjectBeforeBreakStart = osu_drain_lazer_break_before.getBool();
 						drainBeforeFirstHitobjectAfterBreakEnd = osu_drain_lazer_break_after.getBool();
@@ -930,7 +930,7 @@ void OsuBeatmap::update()
 				hasFailed = (m_fHealth < 0.001) && osu_drain_stable_passive_fail.getBool();
 				break;
 
-			case 3: // osu!lazer
+			case 3: // osu!lazer 2020
 				hasFailed = (m_fHealth < 0.001) && osu_drain_lazer_passive_fail.getBool();
 				break;
 
@@ -1879,9 +1879,13 @@ void OsuBeatmap::addHealth(double percent, bool isFromHitResult)
 					fail();
 				break;
 
-			case 3: // osu!lazer
+			case 3: // osu!lazer 2020
 				if (!osu_drain_lazer_passive_fail.getBool())
 					fail();
+				break;
+
+			case 4: // osu!lazer 2018
+				fail();
 				break;
 			}
 		}
