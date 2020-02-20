@@ -148,6 +148,7 @@ private:
 ConVar *OsuBeatmapStandard::m_osu_draw_statistics_pp_ref = NULL;
 ConVar *OsuBeatmapStandard::m_osu_mod_fullalternate_ref = NULL;
 ConVar *OsuBeatmapStandard::m_osu_drain_stable_hpbar_maximum_ref = NULL;
+ConVar *OsuBeatmapStandard::m_osu_mod_fposu_ref = NULL;
 
 OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 {
@@ -205,6 +206,8 @@ OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 		m_osu_mod_fullalternate_ref = convar->getConVarByName("osu_mod_fullalternate");
 	if (m_osu_drain_stable_hpbar_maximum_ref == NULL)
 		m_osu_drain_stable_hpbar_maximum_ref = convar->getConVarByName("osu_drain_stable_hpbar_maximum");
+	if (m_osu_mod_fposu_ref == NULL)
+		m_osu_mod_fposu_ref = convar->getConVarByName("osu_mod_fposu");
 }
 
 OsuBeatmapStandard::~OsuBeatmapStandard()
@@ -266,7 +269,8 @@ void OsuBeatmapStandard::draw(Graphics *g)
 		m_osu->getHUD()->drawPlayfieldBorder(g, m_vPlayfieldCenter, m_vPlayfieldSize, m_fHitcircleDiameter);
 
 	// draw hiterrorbar
-	m_osu->getHUD()->drawHitErrorBar(g, this);
+	if (!m_osu_mod_fposu_ref->getBool())
+		m_osu->getHUD()->drawHitErrorBar(g, this);
 
 	// draw first person crosshair
 	if (OsuGameRules::osu_mod_fps.getBool())

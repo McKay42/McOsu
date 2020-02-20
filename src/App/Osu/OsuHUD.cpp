@@ -183,6 +183,7 @@ OsuHUD::OsuHUD(Osu *osu) : OsuScreen(osu)
 	m_osu_mod_target_300_percent_ref = convar->getConVarByName("osu_mod_target_300_percent");
 	m_osu_mod_target_100_percent_ref = convar->getConVarByName("osu_mod_target_100_percent");
 	m_osu_mod_target_50_percent_ref = convar->getConVarByName("osu_mod_target_50_percent");
+	m_osu_mod_fposu_ref = convar->getConVarByName("osu_mod_fposu");
 	m_osu_playfield_stretch_x_ref = convar->getConVarByName("osu_playfield_stretch_x");
 	m_osu_playfield_stretch_y_ref = convar->getConVarByName("osu_playfield_stretch_y");
 	m_osu_mp_win_condition_accuracy_ref = convar->getConVarByName("osu_mp_win_condition_accuracy");
@@ -279,7 +280,7 @@ void OsuHUD::draw(Graphics *g)
 	if (beatmap == NULL) return; // sanity check
 
 	OsuBeatmapStandard *beatmapStd = dynamic_cast<OsuBeatmapStandard*>(beatmap);
-	//OsuBeatmapMania *beatmapMania = dynamic_cast<OsuBeatmapMania*>(beatmap);
+	OsuBeatmapMania *beatmapMania = dynamic_cast<OsuBeatmapMania*>(beatmap);
 
 	if (osu_draw_hud.getBool())
 	{
@@ -328,15 +329,16 @@ void OsuHUD::draw(Graphics *g)
 			drawHPBar(g, m_fHealth, osu_hud_scorebar_hide_during_breaks.getBool() ? (1.0f - beatmap->getBreakBackgroundFadeAnim()) : 1.0f, m_fScoreBarBreakAnim);
 
 		// NOTE: moved to draw behind hitobjects in OsuBeatmapStandard::draw()
-		/*
-		if (osu_draw_hiterrorbar.getBool() && (beatmapStd == NULL || !beatmapStd->isSpinnerActive()) && !beatmap->isLoading())
+		if (m_osu_mod_fposu_ref->getBool())
 		{
-			if (beatmapStd != NULL)
-				drawHitErrorBar(g, OsuGameRules::getHitWindow300(beatmap), OsuGameRules::getHitWindow100(beatmap), OsuGameRules::getHitWindow50(beatmap), OsuGameRules::getHitWindowMiss(beatmap));
-			else if (beatmapMania != NULL)
-				drawHitErrorBar(g, OsuGameRulesMania::getHitWindow300(beatmap), OsuGameRulesMania::getHitWindow100(beatmap), OsuGameRulesMania::getHitWindow50(beatmap), OsuGameRulesMania::getHitWindowMiss(beatmap));
+			if (osu_draw_hiterrorbar.getBool() && (beatmapStd == NULL || !beatmapStd->isSpinnerActive()) && !beatmap->isLoading())
+			{
+				if (beatmapStd != NULL)
+					drawHitErrorBar(g, OsuGameRules::getHitWindow300(beatmap), OsuGameRules::getHitWindow100(beatmap), OsuGameRules::getHitWindow50(beatmap), OsuGameRules::getHitWindowMiss(beatmap));
+				else if (beatmapMania != NULL)
+					drawHitErrorBar(g, OsuGameRulesMania::getHitWindow300(beatmap), OsuGameRulesMania::getHitWindow100(beatmap), OsuGameRulesMania::getHitWindow50(beatmap), OsuGameRulesMania::getHitWindowMiss(beatmap));
+			}
 		}
-		*/
 
 		if (osu_draw_score.getBool())
 			drawScore(g, m_osu->getScore()->getScore());
@@ -363,15 +365,16 @@ void OsuHUD::draw(Graphics *g)
 		}
 
 		// NOTE: moved to draw behind hitobjects in OsuBeatmapStandard::draw()
-		/*
-		if (osu_draw_hiterrorbar.getBool() && (beatmapStd == NULL || !beatmapStd->isSpinnerActive()) && !beatmap->isLoading())
+		if (m_osu_mod_fposu_ref->getBool())
 		{
-			if (beatmapStd != NULL)
-				drawHitErrorBar(g, OsuGameRules::getHitWindow300(beatmap), OsuGameRules::getHitWindow100(beatmap), OsuGameRules::getHitWindow50(beatmap), OsuGameRules::getHitWindowMiss(beatmap));
-			else if (beatmapMania != NULL)
-				drawHitErrorBar(g, OsuGameRulesMania::getHitWindow300(beatmap), OsuGameRulesMania::getHitWindow100(beatmap), OsuGameRulesMania::getHitWindow50(beatmap), OsuGameRulesMania::getHitWindowMiss(beatmap));
+			if (osu_draw_hiterrorbar.getBool() && (beatmapStd == NULL || !beatmapStd->isSpinnerActive()) && !beatmap->isLoading())
+			{
+				if (beatmapStd != NULL)
+					drawHitErrorBar(g, OsuGameRules::getHitWindow300(beatmap), OsuGameRules::getHitWindow100(beatmap), OsuGameRules::getHitWindow50(beatmap), OsuGameRules::getHitWindowMiss(beatmap));
+				else if (beatmapMania != NULL)
+					drawHitErrorBar(g, OsuGameRulesMania::getHitWindow300(beatmap), OsuGameRulesMania::getHitWindow100(beatmap), OsuGameRulesMania::getHitWindow50(beatmap), OsuGameRulesMania::getHitWindowMiss(beatmap));
+			}
 		}
-		*/
 	}
 
 	if (beatmap->shouldFlashSectionPass())
