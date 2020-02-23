@@ -35,15 +35,19 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	std::vector<CHANGELOG> changelogs;
 
 	CHANGELOG alpha315;
-	alpha315.title = UString::format("31.02 (Build Date: %s, %s)", __DATE__, __TIME__);
+	alpha315.title = UString::format("31.03 (Build Date: %s, %s)", __DATE__, __TIME__);
+	alpha315.changes.push_back("- Added option \"Kill Player upon Failing\" (Options > Gameplay > Mechanics)");
 	alpha315.changes.push_back("- Added new HP drain algorithm: osu!lazer 2018");
-	alpha315.changes.push_back("- Windows: Added option \"Audio compatibility mode\" (Options > Audio > Devices)");
 	alpha315.changes.push_back("- Added option \"Draw Stats: HP\" (Options > Gameplay > HUD)");
 	alpha315.changes.push_back("- Added support for fail-background (skin element)");
+	alpha315.changes.push_back("- Added ConVars: osu_drain_kill_notification_duration, snd_play_interp_duration, snd_play_interp_ratio");
+	alpha315.changes.push_back("- Windows: Added option \"Audio compatibility mode\" (Options > Audio > Devices)");
 	alpha315.changes.push_back("- VR: Fixed oversized scorebar-bg skin elements z-fighting with other HUD elements (like score)");
+	alpha315.changes.push_back("- FPoSu: Fixed hiterrorbar being drawn on the playfield instead of the HUD overlay");
 	alpha315.changes.push_back("- Fixed scorebar-ki always being drawn for legacy skins (unwanted default skin fallback)");
 	alpha315.changes.push_back("- Fixed skip intro button appearing 1 second later than usual");
 	alpha315.changes.push_back("- Fixed warning arrows appearing 1 second later than usual");
+	alpha315.changes.push_back("- Fixed section-pass/fail appearing in empty sections which are not break events");
 	changelogs.push_back(alpha315);
 
 	CHANGELOG alpha314;
