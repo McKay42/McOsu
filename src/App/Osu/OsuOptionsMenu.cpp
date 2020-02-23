@@ -903,6 +903,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSpacer();
 	addSubSection("Mechanics");
 	addCheckbox("Notelock (note blocking/locking)", "NOTE: osu! has this always enabled, so leave it enabled for practicing.\n\"Protects\" you by only allowing circles to be clicked in order.", convar->getConVarByName("osu_note_blocking"));
+	addCheckbox("Kill Player upon Failing", "Enabled: Singleplayer default. You die upon failing and the beatmap stops.\nDisabled: Multiplayer default. Allows you to keep playing even after failing.", convar->getConVarByName("osu_drain_kill"));
 	addLabel("");
 	OPTIONS_ELEMENT drainSelect = addButton("Select HP Drain", "None", true);
 	((CBaseUIButton*)drainSelect.elements[0])->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onHPDrainSelect) );

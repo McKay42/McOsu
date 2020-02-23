@@ -743,6 +743,7 @@ void OsuMultiplayer::onServerModUpdate()
 
 		// drain
 		simpleModConVars.push_back("osu_drain_type");
+		simpleModConVars.push_back("osu_drain_kill");
 
 		simpleModConVars.push_back("osu_drain_vr_duration");
 		simpleModConVars.push_back("osu_drain_vr_multiplier");
