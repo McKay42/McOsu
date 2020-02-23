@@ -2633,7 +2633,7 @@ void OsuHUD::drawScrubbingTimeline(Graphics *g, unsigned long beatmapTime, unsig
 	}
 
 	// current time hover text
-	const unsigned long hoverTimeMS = (cursorPos.x / (float)m_osu->getScreenWidth()) * endTimeMS;
+	const unsigned long hoverTimeMS = clamp<float>((cursorPos.x / (float)m_osu->getScreenWidth()), 0.0f, 1.0f) * endTimeMS;
 	UString hoverTimeText = UString::format("%i:%02i", (hoverTimeMS/1000) / 60, (hoverTimeMS/1000) % 60);
 	triangleTip = Vector2(cursorPos.x, cursorPos.y);
 	g->pushTransform();
