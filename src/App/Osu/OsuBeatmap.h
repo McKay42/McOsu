@@ -231,7 +231,7 @@ protected:
 
 	// health
 	bool m_bFailed;
-	float m_fFailTime;
+	float m_fFailAnim;
 	double m_fHealth;
 	float m_fHealth2;
 

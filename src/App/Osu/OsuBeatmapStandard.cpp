@@ -504,7 +504,7 @@ void OsuBeatmapStandard::draw(Graphics *g)
 	/*
 	if (m_bFailed)
 	{
-		const float failTimePercentInv = 1.0f - clamp<float>((m_fFailTime - engine->getTime()) / m_osu_fail_time_ref->getFloat(), 0.0f, 1.0f); // goes from 0 to 1 over the duration of osu_fail_time
+		const float failTimePercentInv = 1.0f - m_fFailAnim; // goes from 0 to 1 over the duration of osu_fail_time
 
 		Vector2 playfieldBorderTopLeft = Vector2((int)(m_vPlayfieldCenter.x - m_vPlayfieldSize.x/2 - m_fHitcircleDiameter/2), (int)(m_vPlayfieldCenter.y - m_vPlayfieldSize.y/2 - m_fHitcircleDiameter/2));
 		Vector2 playfieldBorderSize = Vector2((int)(m_vPlayfieldSize.x + m_fHitcircleDiameter), (int)(m_vPlayfieldSize.y + m_fHitcircleDiameter));
@@ -623,7 +623,7 @@ void OsuBeatmapStandard::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 					Vector2 vrPlayfieldSize = Vector2(OsuGameRules::OSU_COORD_WIDTH, OsuGameRules::OSU_COORD_HEIGHT);
 					float vrHitcircleDiameter = getHitcircleDiameter();
 
-					float failTimePercentInv = 1.0f - clamp<float>((m_fFailTime - engine->getTime()) / m_osu_fail_time_ref->getFloat(), 0.0f, 1.0f); // goes from 0 to 1 over the duration of osu_fail_time
+					float failTimePercentInv = 1.0f - m_fFailAnim; // goes from 0 to 1 over the duration of osu_fail_time
 					Vector2 playfieldBorderTopLeft = Vector2((int)(vrPlayfieldCenter.x - vrPlayfieldSize.x/2 - vrHitcircleDiameter/2), (int)(vrPlayfieldCenter.y - vrPlayfieldSize.y/2 - vrHitcircleDiameter/2));
 					Vector2 playfieldBorderSize = Vector2((int)(vrPlayfieldSize.x + vrHitcircleDiameter), (int)(vrPlayfieldSize.y + vrHitcircleDiameter));
 
@@ -1066,7 +1066,7 @@ Vector2 OsuBeatmapStandard::osuCoords2Pixels(Vector2 coords)
 
 	if (m_bFailed)
 	{
-		float failTimePercentInv = 1.0f - clamp<float>((m_fFailTime - engine->getTime()) / m_osu_fail_time_ref->getFloat(), 0.0f, 1.0f); // goes from 0 to 1 over the duration of osu_fail_time
+		float failTimePercentInv = 1.0f - m_fFailAnim; // goes from 0 to 1 over the duration of osu_fail_time
 		failTimePercentInv *= failTimePercentInv;
 
 		coords.x -= OsuGameRules::OSU_COORD_WIDTH/2;
@@ -1170,7 +1170,7 @@ Vector2 OsuBeatmapStandard::osuCoords2VRPixels(Vector2 coords)
 
 	if (m_bFailed)
 	{
-		float failTimePercentInv = 1.0f - clamp<float>((m_fFailTime - engine->getTime()) / m_osu_fail_time_ref->getFloat(), 0.0f, 1.0f); // goes from 0 to 1 over the duration of osu_fail_time
+		float failTimePercentInv = 1.0f - m_fFailAnim; // goes from 0 to 1 over the duration of osu_fail_time
 		failTimePercentInv *= failTimePercentInv;
 
 		coords.x -= OsuGameRules::OSU_COORD_WIDTH/2;
