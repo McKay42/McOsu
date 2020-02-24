@@ -35,7 +35,8 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	std::vector<CHANGELOG> changelogs;
 
 	CHANGELOG alpha315;
-	alpha315.title = UString::format("31.03 (Build Date: %s, %s)", __DATE__, __TIME__);
+	alpha315.title = UString::format("31.04 (Build Date: %s, %s)", __DATE__, __TIME__);
+	alpha315.changes.push_back("- Improved osu!.db database loading speed");
 	alpha315.changes.push_back("- Added option \"Kill Player upon Failing\" (Options > Gameplay > Mechanics)");
 	alpha315.changes.push_back("- Added new HP drain algorithm: osu!lazer 2018");
 	alpha315.changes.push_back("- Added option \"Draw Stats: HP\" (Options > Gameplay > HUD)");
