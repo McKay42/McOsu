@@ -901,7 +901,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Show Skip Button during Intro", "Skip intro to first hitobject.", convar->getConVarByName("osu_skip_intro_enabled"));
 	addCheckbox("Show Skip Button during Breaks", "Skip breaks in the middle of beatmaps.", convar->getConVarByName("osu_skip_breaks_enabled"));
 	addSpacer();
-	addSubSection("Mechanics");
+	addSubSection("Mechanics", "health drain notelock lock");
 	addCheckbox("Notelock (note blocking/locking)", "NOTE: osu! has this always enabled, so leave it enabled for practicing.\n\"Protects\" you by only allowing circles to be clicked in order.", convar->getConVarByName("osu_note_blocking"));
 	addCheckbox("Kill Player upon Failing", "Enabled: Singleplayer default. You die upon failing and the beatmap stops.\nDisabled: Multiplayer default. Allows you to keep playing even after failing.", convar->getConVarByName("osu_drain_kill"));
 	addLabel("");
@@ -1801,12 +1801,14 @@ void OsuOptionsMenu::updateLayout()
 
 		if (m_sSearchString.length() > 0)
 		{
+			const std::string searchTags = m_elements[i].searchTags.toUtf8();
+
 			// if this is a section
 			if (m_elements[i].type == 1)
 			{
 				bool sectionMatch = false;
 
-				std::string sectionTitle = m_elements[i].elements[0]->getName().toUtf8();
+				const std::string sectionTitle = m_elements[i].elements[0]->getName().toUtf8();
 				sectionTitleMatch = Osu::findIgnoreCase(sectionTitle, search);
 
 				subSectionTitleMatch = false;
@@ -1843,8 +1845,8 @@ void OsuOptionsMenu::updateLayout()
 			{
 				bool subSectionMatch = false;
 
-				std::string subSectionTitle = m_elements[i].elements[0]->getName().toUtf8();
-				subSectionTitleMatch = Osu::findIgnoreCase(subSectionTitle, search);
+				const std::string subSectionTitle = m_elements[i].elements[0]->getName().toUtf8();
+				subSectionTitleMatch = Osu::findIgnoreCase(subSectionTitle, search) || Osu::findIgnoreCase(searchTags, search);
 
 				if (inSkipSubSection)
 					inSkipSubSection = false;
@@ -3378,7 +3380,7 @@ CBaseUILabel *OsuOptionsMenu::addSection(UString text)
 	return label;
 }
 
-CBaseUILabel *OsuOptionsMenu::addSubSection(UString text)
+CBaseUILabel *OsuOptionsMenu::addSubSection(UString text, UString searchTags)
 {
 	CBaseUILabel *label = new CBaseUILabel(0, 0, m_options->getSize().x, 25, text, text);
 	label->setFont(m_osu->getSubTitleFont());
@@ -3391,6 +3393,7 @@ CBaseUILabel *OsuOptionsMenu::addSubSection(UString text)
 	e.elements.push_back(label);
 	e.type = 2;
 	e.cvar = NULL;
+	e.searchTags = searchTags;
 	m_elements.push_back(e);
 
 	return label;

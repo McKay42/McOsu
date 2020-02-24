@@ -95,6 +95,8 @@ private:
 
 		bool allowOverscale;
 		bool allowUnderscale;
+
+		UString searchTags;
 	};
 
 	virtual void updateLayout();
@@ -178,7 +180,7 @@ private:
 	// options
 	void addSpacer();
 	CBaseUILabel *addSection(UString text);
-	CBaseUILabel *addSubSection(UString text);
+	CBaseUILabel *addSubSection(UString text, UString searchTags = "");
 	CBaseUILabel *addLabel(UString text);
 	OsuUIButton *addButton(UString text);
 	OPTIONS_ELEMENT addButton(UString text, UString labelText, bool withResetButton = false);
