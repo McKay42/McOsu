@@ -36,7 +36,7 @@ ConVar osu_drain_stable_hpbar_maximum("osu_drain_stable_hpbar_maximum", 200.0f);
 
 ConVar osu_drain_lazer_multiplier("osu_drain_lazer_multiplier", 0.05f, "DEFAULT_MAX_HEALTH_INCREASE, expressed as a percentage of full health");
 ConVar osu_drain_lazer_300("osu_drain_lazer_300", 1.0f);
-ConVar osu_drain_lazer_100("osu_drain_lazer_100", 0.3f);
+ConVar osu_drain_lazer_100("osu_drain_lazer_100", 0.5f);
 ConVar osu_drain_lazer_50("osu_drain_lazer_50", -0.05f);
 ConVar osu_drain_lazer_miss("osu_drain_lazer_miss", -1.0f);
 
