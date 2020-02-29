@@ -57,6 +57,8 @@ ConVar osu_auto_cursordance("osu_auto_cursordance", false);
 ConVar osu_autopilot_snapping_strength("osu_autopilot_snapping_strength", 2.0f, "How many iterations of quadratic interpolation to use, more = snappier, 0 = linear");
 ConVar osu_autopilot_lenience("osu_autopilot_lenience", 0.75f);
 
+ConVar osu_followpoints_clamp("osu_followpoints_clamp", false, "clamp followpoint approach time to current circle approach time (instead of using the hardcoded default 800 ms raw)");
+ConVar osu_followpoints_anim("osu_followpoints_anim", false, "scale + move animation while fading in followpoints (osu only does this when its internal default skin is being used)");
 ConVar osu_followpoints_connect_combos("osu_followpoints_connect_combos", false, "connect followpoints even if a new combo has started");
 ConVar osu_followpoints_approachtime("osu_followpoints_approachtime", 800.0f);
 ConVar osu_followpoints_scale_multiplier("osu_followpoints_scale_multiplier", 1.0f);
@@ -648,7 +650,11 @@ void OsuBeatmapStandard::drawFollowPoints(Graphics *g)
 	OsuSkin *skin = m_osu->getSkin();
 
 	const long curPos = m_iCurMusicPosWithOffsets;
-	const long approachTime = std::min((long)OsuGameRules::getApproachTime(this), (long)osu_followpoints_approachtime.getFloat());
+
+	// I absolutely hate this, followpoints can be abused for cheesing high AR reading since they always fade in with a fixed 800 ms custom approach time
+	// capping it at the current approach rate seems sensible, but unfortunately that's not what osu is doing
+	// it was non-osu-compliant-clamped since this client existed, but let's see how many people notice a change after all this time (26.02.2020)
+	const long followPointApproachTime = osu_followpoints_clamp.getBool() ? std::min((long)OsuGameRules::getApproachTime(this), (long)osu_followpoints_approachtime.getFloat()) : (long)osu_followpoints_approachtime.getFloat();
 
 	const bool followPointsConnectCombos = osu_followpoints_connect_combos.getBool();
 	const float followPointSeparationMultiplier = std::max(osu_followpoints_separation_multiplier.getFloat(), 0.1f);
@@ -704,7 +710,7 @@ void OsuBeatmapStandard::drawFollowPoints(Graphics *g)
 				const Vector2 animPosStart = startPoint + (animRatio - 0.1f) * diff;
 				const Vector2 finalPos = startPoint + animRatio * diff;
 
-				const long fadeInTime = (long)(lastObjectEndTime + animRatio * timeDiff) - approachTime;
+				const long fadeInTime = (long)(lastObjectEndTime + animRatio * timeDiff) - followPointApproachTime;
 				const long fadeOutTime = (long)(lastObjectEndTime + animRatio * timeDiff);
 
 				// draw
@@ -712,8 +718,9 @@ void OsuBeatmapStandard::drawFollowPoints(Graphics *g)
 				float followAnimPercent = clamp<float>((float)(curPos - fadeInTime) / (float)followPointPrevFadeTime, 0.0f, 1.0f);
 				followAnimPercent = -followAnimPercent*(followAnimPercent - 2.0f); // quad out
 
-				const float scale = 1.5f - 0.5f*followAnimPercent;
-				const Vector2 followPos = animPosStart + (finalPos - animPosStart)*followAnimPercent;
+				// NOTE: only internal osu default skin uses scale + move transforms here, it is impossible to achieve this effect with user skins
+				const float scale = osu_followpoints_anim.getBool() ? 1.5f - 0.5f*followAnimPercent : 1.0f;
+				const Vector2 followPos = osu_followpoints_anim.getBool() ? animPosStart + (finalPos - animPosStart)*followAnimPercent : finalPos;
 
 				// bullshit performance optimization: only draw followpoints if within screen bounds (plus a bit of a margin)
 				// there is only one beatmap where this matters currently: https://osu.ppy.sh/b/1145513
@@ -725,7 +732,7 @@ void OsuBeatmapStandard::drawFollowPoints(Graphics *g)
 				{
 					// future trail
 					const float delta = curPos - fadeInTime;
-					alpha = (float)delta / (float)approachTime;
+					alpha = (float)delta / (float)followPointApproachTime;
 				}
 				else if (curPos >= fadeOutTime && curPos < (fadeOutTime + (long)followPointPrevFadeTime))
 				{
@@ -743,8 +750,7 @@ void OsuBeatmapStandard::drawFollowPoints(Graphics *g)
 				{
 					g->rotate(rad2deg(std::atan2(yDiff, xDiff)));
 
-					// HACKHACK: hardcoded 150 ms is good enough, was approachTime/2.5 (osu! allows followpoints to finish before hitobject fadein (!), fuck that)
-					skin->getFollowPoint2()->setAnimationTimeOffset(fadeInTime - 150);
+					skin->getFollowPoint2()->setAnimationTimeOffset(fadeInTime);
 
 					// NOTE: getSizeBaseRaw() depends on the current animation time being set correctly beforehand! (otherwise you get incorrect scales, e.g. for animated elements with inconsistent @2x mixed in)
 					// the followpoints are scaled by one eighth of the hitcirclediameter (not the raw diameter, but the scaled diameter)
@@ -760,7 +766,7 @@ void OsuBeatmapStandard::drawFollowPoints(Graphics *g)
 		lastObjectIndex = index;
 
 		// iterate up until the "nextest" element
-		if (m_hitobjects[index]->getTime() >= curPos + approachTime)
+		if (m_hitobjects[index]->getTime() >= curPos + followPointApproachTime)
 			break;
 	}
 }

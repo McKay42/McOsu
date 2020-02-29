@@ -78,7 +78,7 @@ ConVar osu_background_fade_out_duration("osu_background_fade_out_duration", 0.25
 ConVar osu_background_brightness("osu_background_brightness", 0.0f);
 ConVar osu_hiterrorbar_misaims("osu_hiterrorbar_misaims", true);
 
-ConVar osu_followpoints_prevfadetime("osu_followpoints_prevfadetime", 200.0f); // TODO: this shouldn't be in this class
+ConVar osu_followpoints_prevfadetime("osu_followpoints_prevfadetime", 400.0f); // TODO: this shouldn't be in this class
 
 ConVar osu_mod_timewarp("osu_mod_timewarp", false);
 ConVar osu_mod_timewarp_multiplier("osu_mod_timewarp_multiplier", 1.5f);
@@ -705,15 +705,15 @@ void OsuBeatmap::update()
 			{
 				if (!m_hitobjects[i]->isFinished())
 				{
-					if (m_iCurMusicPos >= m_hitobjects[i]->getTime())
+					if (m_iCurMusicPosWithOffsets >= m_hitobjects[i]->getTime())
 						lastUnfinishedHitObject = m_hitobjects[i];
-					else if (std::abs(m_hitobjects[i]->getTime()-m_iCurMusicPos)  < hitWindow50)
+					else if (std::abs(m_hitobjects[i]->getTime() - m_iCurMusicPosWithOffsets) < hitWindow50)
 						m_misaimObjects.push_back(m_hitobjects[i]);
 					else
 						break;
 				}
 			}
-			if (lastUnfinishedHitObject != NULL && std::abs(lastUnfinishedHitObject->getTime()-m_iCurMusicPos)  < hitWindow50)
+			if (lastUnfinishedHitObject != NULL && std::abs(lastUnfinishedHitObject->getTime() - m_iCurMusicPosWithOffsets) < hitWindow50)
 				m_misaimObjects.insert(m_misaimObjects.begin(), lastUnfinishedHitObject);
 
 			// now, go through the remaining clicks, and go through the unfinished hitobjects.
@@ -727,7 +727,7 @@ void OsuBeatmap::update()
 						continue;
 
 					m_misaimObjects[i]->misAimed();
-					long delta = (long)m_clicks[c].musicPos - (long)m_misaimObjects[i]->getTime();
+					const long delta = (long)m_clicks[c].musicPos - (long)m_misaimObjects[i]->getTime();
 					m_osu->getHUD()->addHitError(delta, false, true);
 
 					break; // the current click has been dealt with (and the hitobject has been misaimed)
