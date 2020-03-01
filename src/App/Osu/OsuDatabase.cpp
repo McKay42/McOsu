@@ -1006,6 +1006,7 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 		std::vector<OsuBeatmapDifficulty*> diffs;
 	};
 	std::vector<BeatmapSet> beatmapSets;
+	std::unordered_map<int, size_t> setIDToIndex;
 	std::unordered_map<std::string, OsuBeatmapDifficulty*> hashToDiff;
 	std::unordered_map<std::string, OsuBeatmap*> hashToBeatmap;
 	for (int i=0; i<m_iNumBeatmapsToLoad; i++)
@@ -1229,25 +1230,44 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 				diff->timingpoints.push_back(tp);
 			}
 
+			// special case: legacy fallback behavior for invalid beatmapSetID, try to parse the ID from the path
+			if (beatmapSetID < 1 && path.length() > 0)
+			{
+				const std::vector<UString> pathTokens = path.split("\\"); // NOTE: this is hardcoded to backslash since osu is windows only
+				if (pathTokens.size() > 0 && pathTokens[0].length() > 0)
+				{
+					const std::vector<UString> spaceTokens = pathTokens[0].split(" ");
+					if (spaceTokens.size() > 0 && spaceTokens[0].length() > 0)
+					{
+						try
+						{
+							beatmapSetID = spaceTokens[0].toInt();
+						}
+						catch (...)
+						{
+							beatmapSetID = -1;
+						}
+					}
+				}
+			}
+
 			// (the diff is now fully built)
 
 			// now, search if the current set (to which this diff would belong) already exists and add it there, or if it doesn't exist then create the set
-			bool beatmapSetExists = false;
-			for (int s=0; s<beatmapSets.size(); s++)
+			const auto result = setIDToIndex.find(beatmapSetID);
+			const bool beatmapSetExists = (result != setIDToIndex.end());
+			if (beatmapSetExists)
+				beatmapSets[result->second].diffs.push_back(diff);
+			else
 			{
-				if (beatmapSets[s].setID == beatmapSetID)
-				{
-					beatmapSetExists = true;
-					beatmapSets[s].diffs.push_back(diff);
-					break;
-				}
-			}
-			if (!beatmapSetExists)
-			{
+				setIDToIndex[beatmapSetID] = beatmapSets.size();
+
 				BeatmapSet s;
+
 				s.setID = beatmapSetID;
 				s.path = beatmapPath;
 				s.diffs.push_back(diff);
+
 				beatmapSets.push_back(s);
 			}
 
@@ -1259,6 +1279,7 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 
 	// we now have a collection of BeatmapSets (where one set is equal to one beatmap and all of its diffs), build the actual OsuBeatmap objects
 	// first, build all beatmaps which have a valid setID (trusting the values from the osu database)
+	std::unordered_map<std::string, OsuBeatmap*> titleArtistToBeatmap;
 	for (int i=0; i<beatmapSets.size(); i++)
 	{
 		if (m_bInterruptLoad.load()) break; // cancellation point
@@ -1280,9 +1301,16 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 					if (md5hash.length() == 32)
 						hashToBeatmap[md5hash] = bm;
 				}
+
+				// and in the other hashmap
+				UString titleArtist = bm->getTitle();
+				titleArtist.append(bm->getArtist());
+				if (titleArtist.length() > 0)
+					titleArtistToBeatmap[std::string(titleArtist.toUtf8())] = bm;
 			}
 		}
 	}
+
 	// second, handle all diffs which have an invalid setID, and group them exclusively by artist and title (diffs with the same artist and title will end up in the same beatmap object)
 	// this goes through every individual diff in a "set" (not really a set because its ID is either 0 or -1) instead of trusting the ID values from the osu database
 	for (int i=0; i<beatmapSets.size(); i++)
@@ -1299,8 +1327,11 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 
 					OsuBeatmapDifficulty *diff = beatmapSets[i].diffs[b];
 
-					// try finding an already existing beatmap with matching artist and title
+					// try finding an already existing beatmap with matching artist and title (into which we could inject this lone diff)
 					bool existsAlready = false;
+
+					// old: go through every beatmap, way too slow
+					/*
 					for (int e=0; e<m_beatmaps.size(); e++)
 					{
 						if (m_bInterruptLoad.load()) break; // cancellation point
@@ -1317,6 +1348,26 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 								hashToBeatmap[diff->md5hash] = m_beatmaps[e];
 
 							break;
+						}
+					}
+					*/
+
+					// new: use hashmap
+					UString titleArtist = diff->title;
+					titleArtist.append(diff->artist);
+					if (titleArtist.length() > 0)
+					{
+						const auto result = titleArtistToBeatmap.find(std::string(titleArtist.toUtf8()));
+						if (result != titleArtistToBeatmap.end())
+						{
+							existsAlready = true;
+
+							// we have found a matching beatmap, add ourself to its diffs
+							const_cast<std::vector<OsuBeatmapDifficulty*>&>(result->second->getDifficulties()).push_back(diff);
+
+							// and add an entry in our hashmap
+							if (diff->md5hash.length() == 32)
+								hashToBeatmap[diff->md5hash] = result->second;
 						}
 					}
 

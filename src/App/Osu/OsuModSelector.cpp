@@ -241,7 +241,7 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen(osu)
 void OsuModSelector::updateButtons(bool initial)
 {
 	m_modButtonEasy = setModButtonOnGrid(0, 0, 0, initial && m_osu->getModEZ(), "ez", "Reduces overall difficulty - larger circles, more forgiving HP drain, less accuracy required.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModEasy();});
-	m_modButtonNofail = setModButtonOnGrid(1, 0, 0, initial && m_osu->getModNF(), "nf", "You can't fail. No matter what.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModNoFail();});
+	m_modButtonNofail = setModButtonOnGrid(1, 0, 0, initial && m_osu->getModNF(), "nf", "You can't fail. No matter what.\nNOTE: To disable drain completely:\nOptions > Gameplay > Mechanics > \"Select HP Drain\" > \"None\".", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModNoFail();});
 	m_modButtonNofail->setAvailable(m_osu_drain_type_ref->getInt() > 0);
 	m_modButtonHalftime = setModButtonOnGrid(2, 0, 0, initial && m_osu->getModHT(), "ht", "Less zoom.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModHalfTime();});
 	setModButtonOnGrid(2, 0, 1, initial && m_osu->getModDC(), "dc", "A E S T H E T I C", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModDayCore();});

@@ -57,6 +57,8 @@ ConVar osu_auto_cursordance("osu_auto_cursordance", false);
 ConVar osu_autopilot_snapping_strength("osu_autopilot_snapping_strength", 2.0f, "How many iterations of quadratic interpolation to use, more = snappier, 0 = linear");
 ConVar osu_autopilot_lenience("osu_autopilot_lenience", 0.75f);
 
+ConVar osu_followpoints_clamp("osu_followpoints_clamp", false, "clamp followpoint approach time to current circle approach time (instead of using the hardcoded default 800 ms raw)");
+ConVar osu_followpoints_anim("osu_followpoints_anim", false, "scale + move animation while fading in followpoints (osu only does this when its internal default skin is being used)");
 ConVar osu_followpoints_connect_combos("osu_followpoints_connect_combos", false, "connect followpoints even if a new combo has started");
 ConVar osu_followpoints_approachtime("osu_followpoints_approachtime", 800.0f);
 ConVar osu_followpoints_scale_multiplier("osu_followpoints_scale_multiplier", 1.0f);
@@ -148,6 +150,7 @@ private:
 ConVar *OsuBeatmapStandard::m_osu_draw_statistics_pp_ref = NULL;
 ConVar *OsuBeatmapStandard::m_osu_mod_fullalternate_ref = NULL;
 ConVar *OsuBeatmapStandard::m_osu_drain_stable_hpbar_maximum_ref = NULL;
+ConVar *OsuBeatmapStandard::m_osu_mod_fposu_ref = NULL;
 
 OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 {
@@ -205,6 +208,8 @@ OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 		m_osu_mod_fullalternate_ref = convar->getConVarByName("osu_mod_fullalternate");
 	if (m_osu_drain_stable_hpbar_maximum_ref == NULL)
 		m_osu_drain_stable_hpbar_maximum_ref = convar->getConVarByName("osu_drain_stable_hpbar_maximum");
+	if (m_osu_mod_fposu_ref == NULL)
+		m_osu_mod_fposu_ref = convar->getConVarByName("osu_mod_fposu");
 }
 
 OsuBeatmapStandard::~OsuBeatmapStandard()
@@ -266,7 +271,8 @@ void OsuBeatmapStandard::draw(Graphics *g)
 		m_osu->getHUD()->drawPlayfieldBorder(g, m_vPlayfieldCenter, m_vPlayfieldSize, m_fHitcircleDiameter);
 
 	// draw hiterrorbar
-	m_osu->getHUD()->drawHitErrorBar(g, this);
+	if (!m_osu_mod_fposu_ref->getBool())
+		m_osu->getHUD()->drawHitErrorBar(g, this);
 
 	// draw first person crosshair
 	if (OsuGameRules::osu_mod_fps.getBool())
@@ -500,7 +506,7 @@ void OsuBeatmapStandard::draw(Graphics *g)
 	/*
 	if (m_bFailed)
 	{
-		const float failTimePercentInv = 1.0f - clamp<float>((m_fFailTime - engine->getTime()) / m_osu_fail_time_ref->getFloat(), 0.0f, 1.0f); // goes from 0 to 1 over the duration of osu_fail_time
+		const float failTimePercentInv = 1.0f - m_fFailAnim; // goes from 0 to 1 over the duration of osu_fail_time
 
 		Vector2 playfieldBorderTopLeft = Vector2((int)(m_vPlayfieldCenter.x - m_vPlayfieldSize.x/2 - m_fHitcircleDiameter/2), (int)(m_vPlayfieldCenter.y - m_vPlayfieldSize.y/2 - m_fHitcircleDiameter/2));
 		Vector2 playfieldBorderSize = Vector2((int)(m_vPlayfieldSize.x + m_fHitcircleDiameter), (int)(m_vPlayfieldSize.y + m_fHitcircleDiameter));
@@ -619,7 +625,7 @@ void OsuBeatmapStandard::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 					Vector2 vrPlayfieldSize = Vector2(OsuGameRules::OSU_COORD_WIDTH, OsuGameRules::OSU_COORD_HEIGHT);
 					float vrHitcircleDiameter = getHitcircleDiameter();
 
-					float failTimePercentInv = 1.0f - clamp<float>((m_fFailTime - engine->getTime()) / m_osu_fail_time_ref->getFloat(), 0.0f, 1.0f); // goes from 0 to 1 over the duration of osu_fail_time
+					float failTimePercentInv = 1.0f - m_fFailAnim; // goes from 0 to 1 over the duration of osu_fail_time
 					Vector2 playfieldBorderTopLeft = Vector2((int)(vrPlayfieldCenter.x - vrPlayfieldSize.x/2 - vrHitcircleDiameter/2), (int)(vrPlayfieldCenter.y - vrPlayfieldSize.y/2 - vrHitcircleDiameter/2));
 					Vector2 playfieldBorderSize = Vector2((int)(vrPlayfieldSize.x + vrHitcircleDiameter), (int)(vrPlayfieldSize.y + vrHitcircleDiameter));
 
@@ -644,7 +650,11 @@ void OsuBeatmapStandard::drawFollowPoints(Graphics *g)
 	OsuSkin *skin = m_osu->getSkin();
 
 	const long curPos = m_iCurMusicPosWithOffsets;
-	const long approachTime = std::min((long)OsuGameRules::getApproachTime(this), (long)osu_followpoints_approachtime.getFloat());
+
+	// I absolutely hate this, followpoints can be abused for cheesing high AR reading since they always fade in with a fixed 800 ms custom approach time
+	// capping it at the current approach rate seems sensible, but unfortunately that's not what osu is doing
+	// it was non-osu-compliant-clamped since this client existed, but let's see how many people notice a change after all this time (26.02.2020)
+	const long followPointApproachTime = osu_followpoints_clamp.getBool() ? std::min((long)OsuGameRules::getApproachTime(this), (long)osu_followpoints_approachtime.getFloat()) : (long)osu_followpoints_approachtime.getFloat();
 
 	const bool followPointsConnectCombos = osu_followpoints_connect_combos.getBool();
 	const float followPointSeparationMultiplier = std::max(osu_followpoints_separation_multiplier.getFloat(), 0.1f);
@@ -700,7 +710,7 @@ void OsuBeatmapStandard::drawFollowPoints(Graphics *g)
 				const Vector2 animPosStart = startPoint + (animRatio - 0.1f) * diff;
 				const Vector2 finalPos = startPoint + animRatio * diff;
 
-				const long fadeInTime = (long)(lastObjectEndTime + animRatio * timeDiff) - approachTime;
+				const long fadeInTime = (long)(lastObjectEndTime + animRatio * timeDiff) - followPointApproachTime;
 				const long fadeOutTime = (long)(lastObjectEndTime + animRatio * timeDiff);
 
 				// draw
@@ -708,8 +718,9 @@ void OsuBeatmapStandard::drawFollowPoints(Graphics *g)
 				float followAnimPercent = clamp<float>((float)(curPos - fadeInTime) / (float)followPointPrevFadeTime, 0.0f, 1.0f);
 				followAnimPercent = -followAnimPercent*(followAnimPercent - 2.0f); // quad out
 
-				const float scale = 1.5f - 0.5f*followAnimPercent;
-				const Vector2 followPos = animPosStart + (finalPos - animPosStart)*followAnimPercent;
+				// NOTE: only internal osu default skin uses scale + move transforms here, it is impossible to achieve this effect with user skins
+				const float scale = osu_followpoints_anim.getBool() ? 1.5f - 0.5f*followAnimPercent : 1.0f;
+				const Vector2 followPos = osu_followpoints_anim.getBool() ? animPosStart + (finalPos - animPosStart)*followAnimPercent : finalPos;
 
 				// bullshit performance optimization: only draw followpoints if within screen bounds (plus a bit of a margin)
 				// there is only one beatmap where this matters currently: https://osu.ppy.sh/b/1145513
@@ -721,7 +732,7 @@ void OsuBeatmapStandard::drawFollowPoints(Graphics *g)
 				{
 					// future trail
 					const float delta = curPos - fadeInTime;
-					alpha = (float)delta / (float)approachTime;
+					alpha = (float)delta / (float)followPointApproachTime;
 				}
 				else if (curPos >= fadeOutTime && curPos < (fadeOutTime + (long)followPointPrevFadeTime))
 				{
@@ -739,8 +750,7 @@ void OsuBeatmapStandard::drawFollowPoints(Graphics *g)
 				{
 					g->rotate(rad2deg(std::atan2(yDiff, xDiff)));
 
-					// HACKHACK: hardcoded 150 ms is good enough, was approachTime/2.5 (osu! allows followpoints to finish before hitobject fadein (!), fuck that)
-					skin->getFollowPoint2()->setAnimationTimeOffset(fadeInTime - 150);
+					skin->getFollowPoint2()->setAnimationTimeOffset(fadeInTime);
 
 					// NOTE: getSizeBaseRaw() depends on the current animation time being set correctly beforehand! (otherwise you get incorrect scales, e.g. for animated elements with inconsistent @2x mixed in)
 					// the followpoints are scaled by one eighth of the hitcirclediameter (not the raw diameter, but the scaled diameter)
@@ -756,7 +766,7 @@ void OsuBeatmapStandard::drawFollowPoints(Graphics *g)
 		lastObjectIndex = index;
 
 		// iterate up until the "nextest" element
-		if (m_hitobjects[index]->getTime() >= curPos + approachTime)
+		if (m_hitobjects[index]->getTime() >= curPos + followPointApproachTime)
 			break;
 	}
 }
@@ -881,7 +891,7 @@ void OsuBeatmapStandard::update()
 	}
 }
 
-void OsuBeatmapStandard::onModUpdate(bool rebuildSliderVertexBuffers)
+void OsuBeatmapStandard::onModUpdate(bool rebuildSliderVertexBuffers, bool recomputeDrainRate)
 {
 	debugLog("OsuBeatmapStandard::onModUpdate() @ %f\n", engine->getTime());
 
@@ -890,7 +900,8 @@ void OsuBeatmapStandard::onModUpdate(bool rebuildSliderVertexBuffers)
 	updatePlayfieldMetrics();
 	updateHitobjectMetrics();
 
-	computeDrainRate();
+	if (recomputeDrainRate)
+		computeDrainRate();
 
 	if (m_music != NULL)
 	{
@@ -1061,7 +1072,7 @@ Vector2 OsuBeatmapStandard::osuCoords2Pixels(Vector2 coords)
 
 	if (m_bFailed)
 	{
-		float failTimePercentInv = 1.0f - clamp<float>((m_fFailTime - engine->getTime()) / m_osu_fail_time_ref->getFloat(), 0.0f, 1.0f); // goes from 0 to 1 over the duration of osu_fail_time
+		float failTimePercentInv = 1.0f - m_fFailAnim; // goes from 0 to 1 over the duration of osu_fail_time
 		failTimePercentInv *= failTimePercentInv;
 
 		coords.x -= OsuGameRules::OSU_COORD_WIDTH/2;
@@ -1165,7 +1176,7 @@ Vector2 OsuBeatmapStandard::osuCoords2VRPixels(Vector2 coords)
 
 	if (m_bFailed)
 	{
-		float failTimePercentInv = 1.0f - clamp<float>((m_fFailTime - engine->getTime()) / m_osu_fail_time_ref->getFloat(), 0.0f, 1.0f); // goes from 0 to 1 over the duration of osu_fail_time
+		float failTimePercentInv = 1.0f - m_fFailAnim; // goes from 0 to 1 over the duration of osu_fail_time
 		failTimePercentInv *= failTimePercentInv;
 
 		coords.x -= OsuGameRules::OSU_COORD_WIDTH/2;
@@ -1301,7 +1312,7 @@ void OsuBeatmapStandard::onPlayStart()
 {
 	debugLog("OsuBeatmapStandard::onPlayStart()\n");
 
-	onModUpdate(false); // if there are calculations in there that need the hitobjects to be loaded
+	onModUpdate(false, false); // if there are calculations in there that need the hitobjects to be loaded
 }
 
 void OsuBeatmapStandard::onBeforeStop(bool quit)
@@ -2039,7 +2050,7 @@ void OsuBeatmapStandard::computeDrainRate()
 		m_fHpMultiplierComboEnd = testPlayer.hpMultiplierComboEnd;
 		m_fHpMultiplierNormal = testPlayer.hpMultiplierNormal;
 	}
-	else if (drainType == 3) // osu!lazer
+	else if (drainType == 3) // osu!lazer 2020
 	{
 		// build healthIncreases
 		std::vector<std::pair<double, double>> healthIncreases; // [first = time, second = health]

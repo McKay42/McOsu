@@ -368,10 +368,10 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_osu_skin_workshop_id_ref = convar->getConVarByName("osu_skin_workshop_id");
 	m_osu_skin_random_ref = convar->getConVarByName("osu_skin_random");
 	m_osu_ui_scale_ref = convar->getConVarByName("osu_ui_scale");
-	m_osu_drain_type_ref = convar->getConVarByName("osu_drain_type");
-
+	m_win_snd_fallback_dsound_ref = convar->getConVarByName("win_snd_fallback_dsound");
 	m_win_snd_wasapi_buffer_size_ref = convar->getConVarByName("win_snd_wasapi_buffer_size", false);
 	m_win_snd_wasapi_period_size_ref = convar->getConVarByName("win_snd_wasapi_period_size", false);
+	m_osu_drain_type_ref = convar->getConVarByName("osu_drain_type");
 
 	// convar callbacks
 	convar->getConVarByName("osu_skin_use_skin_hitsounds")->setCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onUseSkinsSoundSamplesChange) );
@@ -430,8 +430,9 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 
 	m_drainTypes.push_back("None");
 	m_drainTypes.push_back("VR");
-	m_drainTypes.push_back("osu!stable");
-	m_drainTypes.push_back("osu!lazer");
+	m_drainTypes.push_back("osu!stable (default)");
+	m_drainTypes.push_back("osu!lazer 2020");
+	m_drainTypes.push_back("osu!lazer 2018");
 
 	m_container = new CBaseUIContainer(-1, 0, 0, 0, "");
 
@@ -663,6 +664,20 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 		((CBaseUIButton*)outputDeviceSelect.elements[0])->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onOutputDeviceSelect) );
 		outputDeviceSelect.resetButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onOutputDeviceResetClicked) );
 
+		if (env->getOS() == Environment::OS::OS_WINDOWS)
+		{
+#ifndef MCENGINE_FEATURE_BASS_WASAPI
+
+			CBaseUICheckbox *audioCompatibilityModeCheckbox = addCheckbox("Audio compatibility mode", "Use legacy audio engine (higher latency but more compatible)", m_win_snd_fallback_dsound_ref);
+			audioCompatibilityModeCheckbox->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onAudioCompatibilityModeChange) );
+
+			// HACKHACK: force manual change if user has enabled it (don't use convar callback)
+			if (m_win_snd_fallback_dsound_ref->getBool())
+				onAudioCompatibilityModeChange(audioCompatibilityModeCheckbox);
+
+#endif
+		}
+
 		m_outputDeviceResetButton = outputDeviceSelect.resetButton;
 		m_outputDeviceSelectButton = outputDeviceSelect.elements[0];
 		m_outputDeviceLabel = (CBaseUILabel*)outputDeviceSelect.elements[1];
@@ -886,8 +901,9 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Show Skip Button during Intro", "Skip intro to first hitobject.", convar->getConVarByName("osu_skip_intro_enabled"));
 	addCheckbox("Show Skip Button during Breaks", "Skip breaks in the middle of beatmaps.", convar->getConVarByName("osu_skip_breaks_enabled"));
 	addSpacer();
-	addSubSection("Mechanics");
+	addSubSection("Mechanics", "health drain notelock lock");
 	addCheckbox("Notelock (note blocking/locking)", "NOTE: osu! has this always enabled, so leave it enabled for practicing.\n\"Protects\" you by only allowing circles to be clicked in order.", convar->getConVarByName("osu_note_blocking"));
+	addCheckbox("Kill Player upon Failing", "Enabled: Singleplayer default. You die upon failing and the beatmap stops.\nDisabled: Multiplayer default. Allows you to keep playing even after failing.", convar->getConVarByName("osu_drain_kill"));
 	addLabel("");
 	OPTIONS_ELEMENT drainSelect = addButton("Select HP Drain", "None", true);
 	((CBaseUIButton*)drainSelect.elements[0])->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onHPDrainSelect) );
@@ -900,7 +916,8 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addLabel("");
 	addLabel("- VR: No constant drain, very hard on accuracy")->setTextColor(0xff666666);
 	addLabel("- osu!stable: Constant drain, moderately hard (default)")->setTextColor(0xff666666);
-	addLabel("- osu!lazer: Constant drain, relatively easy (too easy?)")->setTextColor(0xff666666);
+	addLabel("- osu!lazer 2020: Constant drain, very easy (too easy?)")->setTextColor(0xff666666);
+	addLabel("- osu!lazer 2018: No constant drain, scales with HP")->setTextColor(0xff666666);
 	addSpacer();
 	addSubSection("Backgrounds");
 	addCheckbox("Load Background Images (!)", "NOTE: Disabling this will disable ALL beatmap images everywhere!", convar->getConVarByName("osu_load_beatmap_background_images"));
@@ -936,6 +953,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Draw Stats: AR", convar->getConVarByName("osu_draw_statistics_ar"));
 	addCheckbox("Draw Stats: CS", convar->getConVarByName("osu_draw_statistics_cs"));
 	addCheckbox("Draw Stats: OD", convar->getConVarByName("osu_draw_statistics_od"));
+	addCheckbox("Draw Stats: HP", convar->getConVarByName("osu_draw_statistics_hp"));
 	addCheckbox("Draw Stats: 300 hitwindow", "Timing window for hitting a 300 (e.g. +-25ms).", convar->getConVarByName("osu_draw_statistics_hitwindow300"));
 	addCheckbox("Draw Stats: Notes Per Second", "How many clicks per second are currently required.", convar->getConVarByName("osu_draw_statistics_nps"));
 	addCheckbox("Draw Stats: Note Density", "How many objects are visible at the same time.", convar->getConVarByName("osu_draw_statistics_nd"));
@@ -1783,12 +1801,14 @@ void OsuOptionsMenu::updateLayout()
 
 		if (m_sSearchString.length() > 0)
 		{
+			const std::string searchTags = m_elements[i].searchTags.toUtf8();
+
 			// if this is a section
 			if (m_elements[i].type == 1)
 			{
 				bool sectionMatch = false;
 
-				std::string sectionTitle = m_elements[i].elements[0]->getName().toUtf8();
+				const std::string sectionTitle = m_elements[i].elements[0]->getName().toUtf8();
 				sectionTitleMatch = Osu::findIgnoreCase(sectionTitle, search);
 
 				subSectionTitleMatch = false;
@@ -1825,8 +1845,8 @@ void OsuOptionsMenu::updateLayout()
 			{
 				bool subSectionMatch = false;
 
-				std::string subSectionTitle = m_elements[i].elements[0]->getName().toUtf8();
-				subSectionTitleMatch = Osu::findIgnoreCase(subSectionTitle, search);
+				const std::string subSectionTitle = m_elements[i].elements[0]->getName().toUtf8();
+				subSectionTitleMatch = Osu::findIgnoreCase(subSectionTitle, search) || Osu::findIgnoreCase(searchTags, search);
 
 				if (inSkipSubSection)
 					inSkipSubSection = false;
@@ -2591,7 +2611,7 @@ void OsuOptionsMenu::onOutputDeviceSelect2(UString outputDeviceName, int id)
 {
 	engine->getSound()->setOutputDevice(outputDeviceName);
 	m_outputDeviceLabel->setText(engine->getSound()->getOutputDevice());
-	m_osu->reloadSkin(); // needed to reload sounds
+	m_osu->getSkin()->reloadSounds();
 
 	// and update reset button as usual
 	onOutputDeviceResetUpdate();
@@ -2613,13 +2633,21 @@ void OsuOptionsMenu::onOutputDeviceRestart()
 {
 #ifdef MCENGINE_FEATURE_BASS_WASAPI
 
-	engine->getSound()->setOutputDeviceForce("Default");
+	engine->getSound()->setOutputDeviceForce(engine->getSound()->getOutputDevice());
 
 #else
 
-	engine->getSound()->setOutputDevice("Default");
+	engine->getSound()->setOutputDevice("Default"); // TODO: horizon fallback?
 
 #endif
+}
+
+void OsuOptionsMenu::onAudioCompatibilityModeChange(CBaseUICheckbox *checkbox)
+{
+	onCheckboxChange(checkbox);
+	engine->getSound()->setOutputDeviceForce(engine->getSound()->getOutputDevice());
+	checkbox->setChecked(m_win_snd_fallback_dsound_ref->getBool(), false);
+	m_osu->getSkin()->reloadSounds();
 }
 
 void OsuOptionsMenu::onDownloadOsuClicked()
@@ -3352,7 +3380,7 @@ CBaseUILabel *OsuOptionsMenu::addSection(UString text)
 	return label;
 }
 
-CBaseUILabel *OsuOptionsMenu::addSubSection(UString text)
+CBaseUILabel *OsuOptionsMenu::addSubSection(UString text, UString searchTags)
 {
 	CBaseUILabel *label = new CBaseUILabel(0, 0, m_options->getSize().x, 25, text, text);
 	label->setFont(m_osu->getSubTitleFont());
@@ -3365,6 +3393,7 @@ CBaseUILabel *OsuOptionsMenu::addSubSection(UString text)
 	e.elements.push_back(label);
 	e.type = 2;
 	e.cvar = NULL;
+	e.searchTags = searchTags;
 	m_elements.push_back(e);
 
 	return label;

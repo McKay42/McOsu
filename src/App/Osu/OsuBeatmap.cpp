@@ -53,6 +53,7 @@ ConVar osu_vr_draw_desktop_playfield("osu_vr_draw_desktop_playfield", true);
 
 ConVar osu_universal_offset("osu_universal_offset", 0.0f);
 ConVar osu_universal_offset_hardcoded("osu_universal_offset_hardcoded", 0.0f);
+ConVar osu_universal_offset_hardcoded_fallback_dsound("osu_universal_offset_hardcoded_fallback_dsound", -15.0f);
 ConVar osu_old_beatmap_offset("osu_old_beatmap_offset", 24.0f, "offset in ms which is added to beatmap versions < 5 (default value is hardcoded 24 ms in stable)");
 ConVar osu_timingpoints_offset("osu_timingpoints_offset", 5.0f, "Offset in ms which is added before determining the active timingpoint for the sample type and sample volume (hitsounds) of the current frame");
 ConVar osu_interpolate_music_pos("osu_interpolate_music_pos", true, "Interpolate song position with engine time if the audio library reports the same position more than once");
@@ -77,7 +78,7 @@ ConVar osu_background_fade_out_duration("osu_background_fade_out_duration", 0.25
 ConVar osu_background_brightness("osu_background_brightness", 0.0f);
 ConVar osu_hiterrorbar_misaims("osu_hiterrorbar_misaims", true);
 
-ConVar osu_followpoints_prevfadetime("osu_followpoints_prevfadetime", 200.0f); // TODO: this shouldn't be in this class
+ConVar osu_followpoints_prevfadetime("osu_followpoints_prevfadetime", 400.0f); // TODO: this shouldn't be in this class
 
 ConVar osu_mod_timewarp("osu_mod_timewarp", false);
 ConVar osu_mod_timewarp_multiplier("osu_mod_timewarp_multiplier", 1.5f);
@@ -99,7 +100,9 @@ ConVar osu_fail_time("osu_fail_time", 2.25f, "Timeframe in s for the slowdown ef
 ConVar osu_note_blocking("osu_note_blocking", true, "Whether to use note blocking or not");
 ConVar osu_mod_suddendeath_restart("osu_mod_suddendeath_restart", false, "osu! has this set to false (i.e. you fail after missing). if set to true, then behave like SS/PF, instantly restarting the map");
 
-ConVar osu_drain_type("osu_drain_type", 2, "which hp drain algorithm to use (0 = None, 1 = VR, 2 = osu!stable, 3 = osu!lazer)");
+ConVar osu_drain_type("osu_drain_type", 2, "which hp drain algorithm to use (0 = None, 1 = VR, 2 = osu!stable, 3 = osu!lazer 2020, 4 = osu!lazer 2018)");
+ConVar osu_drain_kill("osu_drain_kill", true, "whether to kill the player upon failing");
+ConVar osu_drain_kill_notification_duration("osu_drain_kill_notification_duration", 1.0f, "how long to display the \"You have failed, but you can keep playing!\" notification (0 = disabled)");
 
 ConVar osu_drain_vr_duration("osu_drain_vr_duration", 0.35f);
 ConVar osu_drain_stable_passive_fail("osu_drain_stable_passive_fail", false, "whether to fail the player instantly if health = 0, or only once a negative judgement occurs");
@@ -117,6 +120,7 @@ ConVar osu_play_hitsound_on_click_while_playing("osu_play_hitsound_on_click_whil
 ConVar osu_debug_draw_timingpoints("osu_debug_draw_timingpoints", false);
 
 ConVar *OsuBeatmap::m_snd_speed_compensate_pitch_ref = NULL;
+ConVar *OsuBeatmap::m_win_snd_fallback_dsound_ref = NULL;
 
 ConVar *OsuBeatmap::m_osu_pvs = &osu_pvs;
 ConVar *OsuBeatmap::m_osu_draw_hitobjects_ref = &osu_draw_hitobjects;
@@ -143,6 +147,8 @@ OsuBeatmap::OsuBeatmap(Osu *osu)
 	// convar refs
 	if (m_snd_speed_compensate_pitch_ref == NULL)
 		m_snd_speed_compensate_pitch_ref = convar->getConVarByName("snd_speed_compensate_pitch");
+	if (m_win_snd_fallback_dsound_ref == NULL)
+		m_win_snd_fallback_dsound_ref = convar->getConVarByName("win_snd_fallback_dsound");
 	if (m_osu_draw_scorebarbg_ref == NULL)
 		m_osu_draw_scorebarbg_ref = convar->getConVarByName("osu_draw_scorebarbg");
 	if (m_osu_hud_scorebar_hide_during_breaks_ref == NULL)
@@ -183,7 +189,7 @@ OsuBeatmap::OsuBeatmap(Osu *osu)
 	m_bForceStreamPlayback = true; // if this is set to true here, then the music will always be loaded as a stream (meaning slow disk access could cause audio stalling/stuttering)
 
 	m_bFailed = false;
-	m_fFailTime = 0.0;
+	m_fFailAnim = 1.0f;
 	m_fHealth = 1.0;
 	m_fHealth2 = 1.0f;
 
@@ -214,6 +220,10 @@ OsuBeatmap::OsuBeatmap(Osu *osu)
 
 OsuBeatmap::~OsuBeatmap()
 {
+	anim->deleteExistingAnimation(&m_fBreakBackgroundFade);
+	anim->deleteExistingAnimation(&m_fHealth2);
+	anim->deleteExistingAnimation(&m_fFailAnim);
+
 	unloadHitObjects();
 	engine->getResourceManager()->destroyResource(engine->getResourceManager()->getSound("OSU_BEATMAP_MUSIC"));
 
@@ -459,7 +469,13 @@ void OsuBeatmap::update()
 		}
 
 		// ugh. force update all hitobjects while waiting (necessary because of pvs optimization)
-		long curPos = m_iCurMusicPos + (long)osu_universal_offset.getInt() + (long)osu_universal_offset_hardcoded.getInt() - m_selectedDifficulty->localoffset - m_selectedDifficulty->onlineOffset - (m_selectedDifficulty->version < 5 ? osu_old_beatmap_offset.getInt() : 0);
+		long curPos = m_iCurMusicPos
+			+ (long)osu_universal_offset.getInt()
+			+ (long)osu_universal_offset_hardcoded.getInt()
+			+ (m_win_snd_fallback_dsound_ref->getBool() ? (long)osu_universal_offset_hardcoded_fallback_dsound.getInt() : 0)
+			- m_selectedDifficulty->localoffset
+			- m_selectedDifficulty->onlineOffset
+			- (m_selectedDifficulty->version < 5 ? osu_old_beatmap_offset.getInt() : 0);
 		if (curPos > -1) // otherwise auto would already click elements that start at exactly 0 (while the map has not even started)
 			curPos = -1;
 
@@ -504,7 +520,13 @@ void OsuBeatmap::update()
 	}
 
 	// update timing (points)
-	m_iCurMusicPosWithOffsets = m_iCurMusicPos + (long)osu_universal_offset.getInt() + (long)osu_universal_offset_hardcoded.getInt() - m_selectedDifficulty->localoffset - m_selectedDifficulty->onlineOffset - (m_selectedDifficulty->version < 5 ? osu_old_beatmap_offset.getInt() : 0);
+	m_iCurMusicPosWithOffsets = m_iCurMusicPos
+		+ (long)osu_universal_offset.getInt()
+		+ (long)osu_universal_offset_hardcoded.getInt()
+		+ (m_win_snd_fallback_dsound_ref->getBool() ? (long)osu_universal_offset_hardcoded_fallback_dsound.getInt() : 0)
+		- m_selectedDifficulty->localoffset
+		- m_selectedDifficulty->onlineOffset
+		- (m_selectedDifficulty->version < 5 ? osu_old_beatmap_offset.getInt() : 0);
 	updateTimingPoints(m_iCurMusicPosWithOffsets);
 
 	// for performance reasons, a lot of operations are crammed into 1 loop over all hitobjects:
@@ -683,15 +705,15 @@ void OsuBeatmap::update()
 			{
 				if (!m_hitobjects[i]->isFinished())
 				{
-					if (m_iCurMusicPos >= m_hitobjects[i]->getTime())
+					if (m_iCurMusicPosWithOffsets >= m_hitobjects[i]->getTime())
 						lastUnfinishedHitObject = m_hitobjects[i];
-					else if (std::abs(m_hitobjects[i]->getTime()-m_iCurMusicPos)  < hitWindow50)
+					else if (std::abs(m_hitobjects[i]->getTime() - m_iCurMusicPosWithOffsets) < hitWindow50)
 						m_misaimObjects.push_back(m_hitobjects[i]);
 					else
 						break;
 				}
 			}
-			if (lastUnfinishedHitObject != NULL && std::abs(lastUnfinishedHitObject->getTime()-m_iCurMusicPos)  < hitWindow50)
+			if (lastUnfinishedHitObject != NULL && std::abs(lastUnfinishedHitObject->getTime() - m_iCurMusicPosWithOffsets) < hitWindow50)
 				m_misaimObjects.insert(m_misaimObjects.begin(), lastUnfinishedHitObject);
 
 			// now, go through the remaining clicks, and go through the unfinished hitobjects.
@@ -705,7 +727,7 @@ void OsuBeatmap::update()
 						continue;
 
 					m_misaimObjects[i]->misAimed();
-					long delta = (long)m_clicks[c].musicPos - (long)m_misaimObjects[i]->getTime();
+					const long delta = (long)m_clicks[c].musicPos - (long)m_misaimObjects[i]->getTime();
 					m_osu->getHUD()->addHitError(delta, false, true);
 
 					break; // the current click has been dealt with (and the hitobject has been misaimed)
@@ -732,8 +754,9 @@ void OsuBeatmap::update()
 	}
 
 	// empty section detection & skipping
+	if (m_hitobjects.size() > 0)
 	{
-		const long legacyOffset = 1000; // Mc
+		const long legacyOffset = (m_iPreviousHitObjectTime < m_hitobjects[0]->getTime() ? 0 : 1000); // Mc
 		const long nextHitObjectDelta = m_iNextHitObjectTime - (long)m_iCurMusicPos;
 		if (nextHitObjectDelta > 0 && nextHitObjectDelta > (long)osu_skip_time.getInt() && m_iCurMusicPos > (m_iPreviousHitObjectTime + legacyOffset))
 			m_bIsInSkippableSection = true;
@@ -742,8 +765,9 @@ void OsuBeatmap::update()
 	}
 
 	// warning arrow logic
+	if (m_hitobjects.size() > 0)
 	{
-		const long legacyOffset = 1000; // Mc
+		const long legacyOffset = (m_iPreviousHitObjectTime < m_hitobjects[0]->getTime() ? 0 : 1000); // Mc
 		const long minGapSize = 1000;
 		const long lastVisibleMin = 400;
 		const long blinkDelta = 100;
@@ -763,6 +787,26 @@ void OsuBeatmap::update()
 			m_bShouldFlashWarningArrows = false;
 	}
 
+	// break time detection, and background fade during breaks
+	const OsuBeatmapDifficulty::BREAK breakEvent = m_selectedDifficulty->getBreakForTimeRange(m_iPreviousHitObjectTime, m_iCurMusicPos, m_iNextHitObjectTime);
+	const bool isInBreak = ((int)m_iCurMusicPos >= breakEvent.startTime && (int)m_iCurMusicPos <= breakEvent.endTime);
+	if (isInBreak != m_bInBreak)
+	{
+		m_bInBreak = !m_bInBreak;
+
+		if (!osu_background_dont_fade_during_breaks.getBool() || m_fBreakBackgroundFade != 0.0f)
+		{
+			if (m_bInBreak && !osu_background_dont_fade_during_breaks.getBool())
+			{
+				const int breakDuration = breakEvent.endTime - breakEvent.startTime;
+				if (breakDuration > (int)(osu_background_fade_min_duration.getFloat()*1000.0f))
+					anim->moveLinear(&m_fBreakBackgroundFade, 1.0f, osu_background_fade_in_duration.getFloat(), true);
+			}
+			else
+				anim->moveLinear(&m_fBreakBackgroundFade, 0.0f, osu_background_fade_out_duration.getFloat(), true);
+		}
+	}
+
 	// section pass/fail logic
 	if (m_hitobjects.size() > 0)
 	{
@@ -776,7 +820,8 @@ void OsuBeatmap::update()
 		const bool inSectionPassFail = (gapSize > minGapSize && nextDelta > 0)
 				&& m_iCurMusicPos > m_hitobjects[0]->getTime()
 				&& m_iCurMusicPos < (m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size() - 1]->getTime() + m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size() - 1]->getDuration())
-				&& !m_bFailed;
+				&& !m_bFailed
+				&& m_bInBreak;
 
 		const bool passing = (m_fHealth >= 0.5);
 
@@ -825,33 +870,13 @@ void OsuBeatmap::update()
 		}
 	}
 
-	// break time detection, and background fade during breaks
-	const OsuBeatmapDifficulty::BREAK breakEvent = m_selectedDifficulty->getBreakForTimeRange(m_iPreviousHitObjectTime, m_iCurMusicPos, m_iNextHitObjectTime);
-	const bool isInBreak = ((int)m_iCurMusicPos >= breakEvent.startTime && (int)m_iCurMusicPos <= breakEvent.endTime);
-	if (isInBreak != m_bInBreak)
-	{
-		m_bInBreak = !m_bInBreak;
-
-		if (!osu_background_dont_fade_during_breaks.getBool() || m_fBreakBackgroundFade != 0.0f)
-		{
-			if (m_bInBreak && !osu_background_dont_fade_during_breaks.getBool())
-			{
-				const int breakDuration = breakEvent.endTime - breakEvent.startTime;
-				if (breakDuration > (int)(osu_background_fade_min_duration.getFloat()*1000.0f))
-					anim->moveLinear(&m_fBreakBackgroundFade, 1.0f, osu_background_fade_in_duration.getFloat(), true);
-			}
-			else
-				anim->moveLinear(&m_fBreakBackgroundFade, 0.0f, osu_background_fade_out_duration.getFloat(), true);
-		}
-	}
-
 	// hp drain & failing
 	if (osu_drain_type.getInt() > 0)
 	{
 		const int drainType = osu_drain_type.getInt();
 
 		// handle constant drain
-		if (drainType == 2 || drainType == 3) // osu!stable + osu!lazer
+		if (drainType == 2 || drainType == 3) // osu!stable + osu!lazer 2020
 		{
 			if (m_fDrainRate > 0.0)
 			{
@@ -868,7 +893,7 @@ void OsuBeatmap::update()
 						drainAfterLastHitobjectBeforeBreakStart = (m_selectedDifficulty->version < 8 ? osu_drain_stable_break_before_old.getBool() : osu_drain_stable_break_before.getBool());
 						drainBeforeFirstHitobjectAfterBreakEnd = osu_drain_stable_break_after.getBool();
 					}
-					else if (drainType == 3) // osu!lazer
+					else if (drainType == 3) // osu!lazer 2020
 					{
 						drainAfterLastHitobjectBeforeBreakStart = osu_drain_lazer_break_before.getBool();
 						drainBeforeFirstHitobjectAfterBreakEnd = osu_drain_lazer_break_after.getBool();
@@ -912,7 +937,7 @@ void OsuBeatmap::update()
 				hasFailed = (m_fHealth < 0.001) && osu_drain_stable_passive_fail.getBool();
 				break;
 
-			case 3: // osu!lazer
+			case 3: // osu!lazer 2020
 				hasFailed = (m_fHealth < 0.001) && osu_drain_lazer_passive_fail.getBool();
 				break;
 
@@ -932,9 +957,7 @@ void OsuBeatmap::update()
 		// handle fail animation
 		if (m_bFailed)
 		{
-			const float failTimePercent = clamp<float>((m_fFailTime - engine->getTime()) / osu_fail_time.getFloat(), 0.0f, 1.0f); // goes from 1 to 0 over the duration of osu_fail_time
-
-			if (failTimePercent <= 0.0f)
+			if (m_fFailAnim <= 0.0f)
 			{
 				if (m_music->isPlaying() || !m_osu->getPauseMenu()->isVisible())
 				{
@@ -945,7 +968,7 @@ void OsuBeatmap::update()
 				}
 			}
 			else
-				m_music->setFrequency(m_fMusicFrequencyBackup*failTimePercent > 100 ? m_fMusicFrequencyBackup*failTimePercent : 100);
+				m_music->setFrequency(m_fMusicFrequencyBackup*m_fFailAnim > 100 ? m_fMusicFrequencyBackup*m_fFailAnim : 100);
 		}
 	}
 }
@@ -1328,6 +1351,10 @@ void OsuBeatmap::pause(bool quitIfWaiting)
 	// don't kill VR players while paused
 	if (m_osu_drain_type_ref->getInt() == 1)
 		anim->deleteExistingAnimation(&m_fHealth2);
+
+	// if we have failed, and the user early exits to the pause menu, stop the failing animation
+	if (m_bFailed)
+		anim->deleteExistingAnimation(&m_fFailAnim);
 }
 
 void OsuBeatmap::pausePreviewMusic(bool toggle)
@@ -1375,12 +1402,13 @@ void OsuBeatmap::fail()
 {
 	if (m_bFailed) return;
 
-	if (!m_osu->isInMultiplayer())
+	if (!m_osu->isInMultiplayer() && osu_drain_kill.getBool())
 	{
 		engine->getSound()->play(getSkin()->getFailsound());
 
 		m_bFailed = true;
-		m_fFailTime = engine->getTime() + osu_fail_time.getFloat(); // trigger music slowdown and delayed menu, see update()
+		m_fFailAnim = 1.0f;
+		anim->moveLinear(&m_fFailAnim, 0.0f, osu_fail_time.getFloat(), true); // trigger music slowdown and delayed menu, see update()
 	}
 	else if (!m_osu->getScore()->isDead())
 	{
@@ -1388,8 +1416,11 @@ void OsuBeatmap::fail()
 		m_fHealth = 0.0;
 		m_fHealth2 = 0.0f;
 
-		if (!m_osu->getScore()->hasDied())
-			m_osu->getNotificationOverlay()->addNotification("You have failed, but you can keep playing!");
+		if (osu_drain_kill_notification_duration.getFloat() > 0.0f)
+		{
+			if (!m_osu->getScore()->hasDied())
+				m_osu->getNotificationOverlay()->addNotification("You have failed, but you can keep playing!", 0xffffffff, false, osu_drain_kill_notification_duration.getFloat());
+		}
 	}
 
 	if (!m_osu->getScore()->isDead())
@@ -1861,9 +1892,13 @@ void OsuBeatmap::addHealth(double percent, bool isFromHitResult)
 					fail();
 				break;
 
-			case 3: // osu!lazer
+			case 3: // osu!lazer 2020
 				if (!osu_drain_lazer_passive_fail.getBool())
 					fail();
+				break;
+
+			case 4: // osu!lazer 2018
+				fail();
 				break;
 			}
 		}
@@ -2023,6 +2058,8 @@ void OsuBeatmap::resetScore()
 	m_fHealth = 1.0;
 	m_fHealth2 = 1.0f;
 	m_bFailed = false;
+	m_fFailAnim = 1.0f;
+	anim->deleteExistingAnimation(&m_fFailAnim);
 
 	m_osu->getScore()->reset();
 }

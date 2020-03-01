@@ -151,6 +151,7 @@ public:
 
 protected:
 	static ConVar *m_snd_speed_compensate_pitch_ref;
+	static ConVar *m_win_snd_fallback_dsound_ref;
 
 	static ConVar *m_osu_pvs;
 	static ConVar *m_osu_draw_hitobjects_ref;
@@ -230,7 +231,7 @@ protected:
 
 	// health
 	bool m_bFailed;
-	float m_fFailTime;
+	float m_fFailAnim;
 	double m_fHealth;
 	float m_fHealth2;
 

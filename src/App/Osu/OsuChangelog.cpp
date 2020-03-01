@@ -34,8 +34,37 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 
 	std::vector<CHANGELOG> changelogs;
 
+	CHANGELOG alpha315;
+	alpha315.title = UString::format("31.05 (Build Date: %s, %s)", __DATE__, __TIME__);
+	alpha315.changes.push_back("- Improved osu!.db database loading speed (2)");
+	alpha315.changes.push_back("- Improved beatmap grouping for beatmaps with invalid SetID (find ID in folder name before falling back to artist/title)");
+	alpha315.changes.push_back("- Unhappily bring followpoint behavior back in line with osu!");
+	alpha315.changes.push_back("- NOTE (1): I hate osu!'s followpoint behavior, because it allows cheesing high AR reading. You WILL develop bad habits.");
+	alpha315.changes.push_back("- NOTE (2): osu! draws followpoints with a fixed hardcoded AR of ~7.68 (800 ms).");
+	alpha315.changes.push_back("- NOTE (3): Up until now, McOsu has clamped this to the real AR. To go back, use \"osu_followpoints_clamp 1\".");
+	alpha315.changes.push_back("- NOTE (4): This is more of an experiment, and the change may be reverted, we will see.");
+	alpha315.changes.push_back("- Fixed quick retry sometimes causing weird small speedup/slowdown at start (fixed snd_play_interp* ignoring time skips)");
+	alpha315.changes.push_back("");
+	alpha315.changes.push_back("- Improved osu!.db database loading speed (1)");
+	alpha315.changes.push_back("");
+	alpha315.changes.push_back("- Added option \"Kill Player upon Failing\" (Options > Gameplay > Mechanics)");
+	alpha315.changes.push_back("- Added ConVars: osu_drain_kill_notification_duration, snd_play_interp_duration, snd_play_interp_ratio");
+	alpha315.changes.push_back("- FPoSu: Fixed hiterrorbar being drawn on the playfield instead of the HUD overlay");
+	alpha315.changes.push_back("- Fixed section-pass/fail appearing in empty sections which are not break events");
+	alpha315.changes.push_back("");
+	alpha315.changes.push_back("- Added new HP drain algorithm: osu!lazer 2018");
+	alpha315.changes.push_back("- Windows: Added option \"Audio compatibility mode\" (Options > Audio > Devices)");
+	alpha315.changes.push_back("- VR: Fixed oversized scorebar-bg skin elements z-fighting with other HUD elements (like score)");
+	alpha315.changes.push_back("- Fixed scorebar-ki always being drawn for legacy skins (unwanted default skin fallback)");
+	alpha315.changes.push_back("");
+	alpha315.changes.push_back("- Added option \"Draw Stats: HP\" (Options > Gameplay > HUD)");
+	alpha315.changes.push_back("- Added support for fail-background (skin element)");
+	alpha315.changes.push_back("- Fixed skip intro button appearing 1 second later than usual");
+	alpha315.changes.push_back("- Fixed warning arrows appearing 1 second later than usual");
+	changelogs.push_back(alpha315);
+
 	CHANGELOG alpha314;
-	alpha314.title = UString::format("31 (Build Date: %s, %s)", __DATE__, __TIME__);
+	alpha314.title = "31 (11.02.2020)";
 	alpha314.changes.push_back("- Added HP drain support");
 	alpha314.changes.push_back("- Added 4 different HP drain algorithms: None, VR, osu!stable, osu!lazer");
 	alpha314.changes.push_back("- Added option \"Select HP Drain\" (Options > Gameplay > Mechanics)");

@@ -22,8 +22,8 @@ public:
 	virtual void drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr);
 	virtual void update();
 
-	virtual void onModUpdate() {onModUpdate(true);}
-	void onModUpdate(bool rebuildSliderVertexBuffers = true); // this seems very dangerous compiler-wise, but it works
+	virtual void onModUpdate() {onModUpdate(true, true);}
+	void onModUpdate(bool rebuildSliderVertexBuffers = true, bool recomputeDrainRate = true); // this seems very dangerous compiler-wise, but it works
 	virtual bool isLoading();
 
 	Vector2 pixels2OsuCoords(Vector2 pixelCoords); // only used for positional audio atm
@@ -64,6 +64,7 @@ private:
 	static ConVar *m_osu_draw_statistics_pp_ref;
 	static ConVar *m_osu_mod_fullalternate_ref;
 	static ConVar *m_osu_drain_stable_hpbar_maximum_ref;
+	static ConVar *m_osu_mod_fposu_ref;
 
 	virtual void onBeforeLoad();
 	virtual void onLoad();

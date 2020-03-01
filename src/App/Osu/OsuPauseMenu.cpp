@@ -82,20 +82,29 @@ void OsuPauseMenu::draw(Graphics *g)
 			g->fillRect(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight());
 		}
 
-		// draw overlay
-		if ((m_bVisible || isAnimating) && m_osu->getSkin()->getPauseOverlay() != m_osu->getSkin()->getMissingTexture())
+		// draw background image
+		if ((m_bVisible || isAnimating))
 		{
-			const float scale = Osu::getImageScaleToFillResolution(m_osu->getSkin()->getPauseOverlay(), m_osu->getScreenSize());
-			const Vector2 centerTrans = (m_osu->getScreenSize() / 2);
+			Image *image = NULL;
+			if (m_bContinueEnabled)
+				image = m_osu->getSkin()->getPauseOverlay();
+			else
+				image = m_osu->getSkin()->getFailBackground();
 
-			g->setColor(COLORf(m_fDimAnim, 1.0f, 1.0f, 1.0f));
-			g->pushTransform();
+			if (image != m_osu->getSkin()->getMissingTexture())
 			{
-				g->scale(scale, scale);
-				g->translate((int)centerTrans.x, (int)centerTrans.y);
-				g->drawImage(m_osu->getSkin()->getPauseOverlay());
+				const float scale = Osu::getImageScaleToFillResolution(image, m_osu->getScreenSize());
+				const Vector2 centerTrans = (m_osu->getScreenSize() / 2);
+
+				g->setColor(COLORf(m_fDimAnim, 1.0f, 1.0f, 1.0f));
+				g->pushTransform();
+				{
+					g->scale(scale, scale);
+					g->translate((int)centerTrans.x, (int)centerTrans.y);
+					g->drawImage(image);
+				}
+				g->popTransform();
 			}
-			g->popTransform();
 		}
 
 		// draw buttons

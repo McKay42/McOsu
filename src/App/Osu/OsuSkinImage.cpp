@@ -37,6 +37,7 @@ OsuSkinImage::OsuSkinImage(OsuSkin *skin, UString skinElementName, Vector2 baseS
 	m_iBeatmapAnimationTimeStartOffset = 0;
 
 	m_bIsMissingTexture = false;
+	m_bIsFromDefaultSkin = false;
 
 	m_fDrawClipWidthPercent = 1.0f;
 
@@ -186,6 +187,8 @@ bool OsuSkinImage::loadImage(UString skinElementName, bool ignoreDefaultSkin)
 	if (ignoreDefaultSkin) return false;
 
 	// load default skin
+
+	m_bIsFromDefaultSkin = true;
 
 	// check if an @2x version of this image exists
 	if (OsuSkin::m_osu_skin_hd->getBool())

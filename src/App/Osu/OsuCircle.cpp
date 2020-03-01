@@ -597,8 +597,7 @@ void OsuCircle::updateStackPosition(float stackOffset)
 
 void OsuCircle::onClickEvent(std::vector<OsuBeatmap::CLICK> &clicks)
 {
-	if (m_bFinished)
-		return;
+	if (m_bFinished) return;
 
 	const Vector2 cursorPos = m_beatmap->getCursorPos();
 

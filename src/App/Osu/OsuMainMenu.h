@@ -61,6 +61,8 @@ private:
 	static ConVar *m_osu_universal_offset_ref;
 	static ConVar *m_osu_universal_offset_hardcoded_ref;
 	static ConVar *m_osu_old_beatmap_offset_ref;
+	static ConVar *m_win_snd_fallback_dsound_ref;
+	static ConVar *m_osu_universal_offset_hardcoded_fallback_dsound_ref;
 
 	void drawVersionInfo(Graphics *g);
 	void updateLayout();

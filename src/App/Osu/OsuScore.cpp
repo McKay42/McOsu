@@ -36,9 +36,15 @@ ConVar osu_drain_stable_hpbar_maximum("osu_drain_stable_hpbar_maximum", 200.0f);
 
 ConVar osu_drain_lazer_multiplier("osu_drain_lazer_multiplier", 0.05f, "DEFAULT_MAX_HEALTH_INCREASE, expressed as a percentage of full health");
 ConVar osu_drain_lazer_300("osu_drain_lazer_300", 1.0f);
-ConVar osu_drain_lazer_100("osu_drain_lazer_100", 0.3f);
+ConVar osu_drain_lazer_100("osu_drain_lazer_100", 0.5f);
 ConVar osu_drain_lazer_50("osu_drain_lazer_50", -0.05f);
 ConVar osu_drain_lazer_miss("osu_drain_lazer_miss", -1.0f);
+
+ConVar osu_drain_lazer_2018_multiplier("osu_drain_lazer_2018_multiplier", 1.0f);
+ConVar osu_drain_lazer_2018_300("osu_drain_lazer_2018_300", 0.01f);
+ConVar osu_drain_lazer_2018_100("osu_drain_lazer_2018_100", 0.01f);
+ConVar osu_drain_lazer_2018_50("osu_drain_lazer_2018_50", 0.01f);
+ConVar osu_drain_lazer_2018_miss("osu_drain_lazer_2018_miss", -0.02f);
 
 ConVar *OsuScore::m_osu_draw_statistics_pp_ref = NULL;
 ConVar *OsuScore::m_osu_drain_type_ref = NULL;
@@ -473,7 +479,7 @@ double OsuScore::getHealthIncrease(OsuScore::HIT hit, double HP, double hpMultip
 			return (hpMultiplierNormal * 2.0 / hpBarMaximumForNormalization);
 		}
 	}
-	else if (drainType == 3) // osu!lazer
+	else if (drainType == 3) // osu!lazer 2020
 	{
 		switch (hit)
 		{
@@ -491,6 +497,26 @@ double OsuScore::getHealthIncrease(OsuScore::HIT hit, double HP, double hpMultip
 		case HIT::HIT_SLIDER10:
 		case HIT::HIT_SLIDER30:
 			return osu_drain_lazer_300.getFloat() * osu_drain_lazer_multiplier.getFloat();
+		}
+	}
+	else if (drainType == 4) // osu!lazer 2018
+	{
+		switch (hit)
+		{
+		case HIT::HIT_MISS:
+		case HIT::HIT_MISS_SLIDERBREAK:
+			return (HP) * osu_drain_lazer_2018_miss.getFloat() * osu_drain_lazer_2018_multiplier.getFloat();
+
+		case HIT::HIT_50:
+			return (4.0 - HP) * osu_drain_lazer_2018_50.getFloat() * osu_drain_lazer_2018_multiplier.getFloat();
+
+		case HIT::HIT_100:
+			return (8.0 - HP) * osu_drain_lazer_2018_100.getFloat() * osu_drain_lazer_2018_multiplier.getFloat();
+
+		case HIT::HIT_300:
+		case HIT::HIT_SLIDER10:
+		case HIT::HIT_SLIDER30:
+			return (10.2 - std::min(HP, 10.0)) * osu_drain_lazer_2018_300.getFloat() * osu_drain_lazer_2018_multiplier.getFloat();
 		}
 	}
 
