@@ -35,7 +35,13 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	std::vector<CHANGELOG> changelogs;
 
 	CHANGELOG alpha315;
-	alpha315.title = UString::format("31.05 (Build Date: %s, %s)", __DATE__, __TIME__);
+	alpha315.title = UString::format("31.06 (Build Date: %s, %s)", __DATE__, __TIME__);
+	alpha315.changes.push_back("- Added new search keywords: opm, cpm, spm, objects, circles, sliders (objects/circles/sliders per minute, total count)");
+	alpha315.changes.push_back("- Only show ranking tooltip on left half of screen");
+	alpha315.changes.push_back("- Fixed section-pass/fail appearing in too small breaks");
+	alpha315.changes.push_back("- Fixed F1 as K1/K2 interfering with mod select during gameplay");
+	alpha315.changes.push_back("- Fixed approximate beatmap length (used for search) not getting populated during star calculation if without osu!.db");
+	alpha315.changes.push_back("");
 	alpha315.changes.push_back("- Improved osu!.db database loading speed (2)");
 	alpha315.changes.push_back("- Improved beatmap grouping for beatmaps with invalid SetID (find ID in folder name before falling back to artist/title)");
 	alpha315.changes.push_back("- Unhappily bring followpoint behavior back in line with osu!");

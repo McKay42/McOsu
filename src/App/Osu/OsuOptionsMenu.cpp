@@ -1785,7 +1785,7 @@ void OsuOptionsMenu::updateLayout()
 	bool inSkipSubSection = false;
 	bool sectionTitleMatch = false;
 	bool subSectionTitleMatch = false;
-	std::string search = m_sSearchString.length() > 0 ? m_sSearchString.toUtf8() : "";
+	const std::string search = m_sSearchString.length() > 0 ? m_sSearchString.toUtf8() : "";
 	for (int i=0; i<m_elements.size(); i++)
 	{
 		// searching logic happens here:
