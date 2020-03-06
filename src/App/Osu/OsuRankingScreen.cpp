@@ -431,7 +431,7 @@ void OsuRankingScreen::update()
 		m_container->stealFocus();
 
 	// tooltip (pp + accuracy + unstable rate)
-	if (!m_osu->getOptionsMenu()->isMouseInside() && !m_bIsLegacyScore)
+	if (!m_osu->getOptionsMenu()->isMouseInside() && !m_bIsLegacyScore && engine->getMouse()->getPos().x < m_osu->getScreenWidth() * 0.5f)
 	{
 		m_osu->getTooltipOverlay()->begin();
 		m_osu->getTooltipOverlay()->addLine(UString::format("%.2fpp", m_fPPv2));
