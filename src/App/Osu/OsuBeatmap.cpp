@@ -821,7 +821,7 @@ void OsuBeatmap::update()
 				&& m_iCurMusicPos > m_hitobjects[0]->getTime()
 				&& m_iCurMusicPos < (m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size() - 1]->getTime() + m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size() - 1]->getDuration())
 				&& !m_bFailed
-				&& m_bInBreak;
+				&& m_bInBreak && (breakEvent.endTime - breakEvent.startTime) > minGapSize;
 
 		const bool passing = (m_fHealth >= 0.5);
 
