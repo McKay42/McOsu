@@ -1191,6 +1191,8 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 			diff->localoffset = localOffset;
 			diff->onlineOffset = (long)onlineOffset;
 			diff->numObjects = numCircles + numSliders + numSpinners;
+			diff->numCircles = numCircles;
+			diff->numSliders = numSliders;
 			diff->starsNoMod = numOsuStandardStars;
 			diff->ID = beatmapID;
 			diff->setID = beatmapSetID;

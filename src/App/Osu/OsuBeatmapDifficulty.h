@@ -171,6 +171,8 @@ public:
 	int minBPM;
 	int maxBPM;
 	int numObjects;
+	int numCircles;
+	int numSliders;
 	float starsNoMod;
 	int ID;
 	int setID;
