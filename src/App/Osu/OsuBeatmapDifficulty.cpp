@@ -266,6 +266,7 @@ bool OsuBeatmapDifficulty::loadMetadataRaw(bool calculateStars, bool calculateSt
 	else
 		calculateStars = false;
 
+	long rawLengthMS = 0;
 	if (!loaded) // NOTE: as long as a diff is fully "loaded" (i.e. while playing), we do not have permission to modify any data (reading is fine though)
 	{
 		// reset
@@ -502,6 +503,9 @@ bool OsuBeatmapDifficulty::loadMetadataRaw(bool calculateStars, bool calculateSt
 
 						if (intScan || floatScan)
 						{
+							if (time > rawLengthMS)
+								rawLengthMS = time;
+
 							if (type & 0x1) // circle
 							{
 								HITCIRCLE c;
@@ -648,6 +652,9 @@ bool OsuBeatmapDifficulty::loadMetadataRaw(bool calculateStars, bool calculateSt
 				numObjects = hitcircles.size() + sliders.size() + spinners.size();
 				numCircles = hitcircles.size();
 				numSliders = sliders.size();
+
+				if (lengthMS == 0)
+					lengthMS = rawLengthMS;
 
 				// calculate sliderTimes, and build slider clicks and ticks
 				// NOTE: only necessary since the latest pp changes (Xexxar)
@@ -1021,6 +1028,9 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 	    }
 	};
 	std::sort(hitobjects->begin(), hitobjects->end(), HitObjectSortComparator());
+
+	if (lengthMS == 0 && hitobjects->size() > 0)
+		lengthMS = (*hitobjects)[hitobjects->size() - 1]->getTime();
 
 	// set isEndOfCombo + precalculate Score v2 combo portion maximum
 	if (beatmapStandard != NULL)
