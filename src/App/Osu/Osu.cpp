@@ -1310,7 +1310,12 @@ void Osu::onKeyDown(KeyboardEvent &key)
 			}
 
 			// allow live mod changing while playing
-			if (!key.isConsumed() && (key == KEY_F1 || key == (KEYCODE)OsuKeyBindings::TOGGLE_MODSELECT.getInt()) && !m_bF1 && !getSelectedBeatmap()->hasFailed()) // only if not failed though
+			if (!key.isConsumed()
+				&& (key == KEY_F1 || key == (KEYCODE)OsuKeyBindings::TOGGLE_MODSELECT.getInt())
+				&& (KEY_F1 != (KEYCODE)OsuKeyBindings::LEFT_CLICK.getInt() || !m_bKeyboardKey1Down)
+				&& (KEY_F1 != (KEYCODE)OsuKeyBindings::RIGHT_CLICK.getInt() || !m_bKeyboardKey2Down)
+				&& !m_bF1
+				&& !getSelectedBeatmap()->hasFailed()) // only if not failed though
 			{
 				m_bF1 = true;
 				toggleModSelection(true);
@@ -1851,6 +1856,8 @@ bool Osu::shouldFallBackToLegacySliderRenderer()
 
 void Osu::onResolutionChanged(Vector2 newResolution)
 {
+	debugLog("Osu::onResolutionChanged(%i, %i), minimized = %i\n", (int)newResolution.x, (int)newResolution.y, (int)engine->isMinimized());
+
 	if (engine->isMinimized()) return; // ignore if minimized
 
 	if (m_iInstanceID < 1)
@@ -1942,6 +1949,8 @@ void Osu::reloadFonts()
 
 void Osu::updateMouseSettings()
 {
+	debugLog("Osu::updateMouseSettings()\n");
+
 	// mouse scaling & offset
 	Vector2 offset = Vector2(0, 0);
 	Vector2 scale = Vector2(1, 1);
@@ -1965,6 +1974,8 @@ void Osu::updateMouseSettings()
 
 void Osu::updateWindowsKeyDisable()
 {
+	debugLog("Osu::updateWindowsKeyDisable()\n");
+
 	if (isInVRMode()) return;
 
 	if (osu_win_disable_windows_key_while_playing.getBool())
@@ -2194,6 +2205,8 @@ void Osu::onLetterboxingChange(UString oldValue, UString newValue)
 
 void Osu::updateConfineCursor()
 {
+	debugLog("Osu::updateConfineCursor()\n");
+
 	if (isInVRMode() || m_iInstanceID > 0) return;
 
 	if ((osu_confine_cursor_fullscreen.getBool() && env->isFullscreen())
