@@ -182,12 +182,24 @@ void OsuUISongBrowserInfoLabel::update()
 			const float hitobjectRadiusRoundedCompensated = (OsuGameRules::getRawHitCircleDiameter(beatmap->getCS()) / 2.0f);
 
 			m_osu->getTooltipOverlay()->begin();
-			m_osu->getTooltipOverlay()->addLine(UString::format("Approach time: %.2fms", approachTimeRoundedCompensated));
-			m_osu->getTooltipOverlay()->addLine(UString::format("300: +-%.2fms", hitWindow300RoundedCompensated));
-			m_osu->getTooltipOverlay()->addLine(UString::format("100: +-%.2fms", hitWindow100RoundedCompensated));
-			m_osu->getTooltipOverlay()->addLine(UString::format(" 50: +-%.2fms", hitWindow50RoundedCompensated));
-			m_osu->getTooltipOverlay()->addLine(UString::format("Spinner difficulty: %.2f", OsuGameRules::getSpinnerSpinsPerSecond(beatmap)));
-			m_osu->getTooltipOverlay()->addLine(UString::format("Hit object radius: %.2f", hitobjectRadiusRoundedCompensated));
+			{
+				m_osu->getTooltipOverlay()->addLine(UString::format("Approach time: %.2fms", approachTimeRoundedCompensated));
+				m_osu->getTooltipOverlay()->addLine(UString::format("300: +-%.2fms", hitWindow300RoundedCompensated));
+				m_osu->getTooltipOverlay()->addLine(UString::format("100: +-%.2fms", hitWindow100RoundedCompensated));
+				m_osu->getTooltipOverlay()->addLine(UString::format(" 50: +-%.2fms", hitWindow50RoundedCompensated));
+				m_osu->getTooltipOverlay()->addLine(UString::format("Spinner difficulty: %.2f", OsuGameRules::getSpinnerSpinsPerSecond(beatmap)));
+				m_osu->getTooltipOverlay()->addLine(UString::format("Hit object radius: %.2f", hitobjectRadiusRoundedCompensated));
+
+				if (beatmap->getSelectedDifficulty() != NULL)
+				{
+					const float opm = beatmap->getSelectedDifficulty()->lengthMS > 0 ? ((float)beatmap->getSelectedDifficulty()->numObjects / (float)(beatmap->getSelectedDifficulty()->lengthMS / 1000.0f / 60.0f)) : 0.0f;
+					const float cpm = beatmap->getSelectedDifficulty()->lengthMS > 0 ? ((float)beatmap->getSelectedDifficulty()->numCircles / (float)(beatmap->getSelectedDifficulty()->lengthMS / 1000.0f / 60.0f)) : 0.0f;
+					const float spm = beatmap->getSelectedDifficulty()->lengthMS > 0 ? ((float)beatmap->getSelectedDifficulty()->numSliders / (float)(beatmap->getSelectedDifficulty()->lengthMS / 1000.0f / 60.0f)) : 0.0f;
+
+					m_osu->getTooltipOverlay()->addLine(UString::format("Circles: %i, Sliders: %i", beatmap->getSelectedDifficulty()->numCircles, beatmap->getSelectedDifficulty()->numSliders));
+					m_osu->getTooltipOverlay()->addLine(UString::format("OPM: %i, CPM: %i, SPM: %i", (int)opm, (int)cpm, (int)spm));
+				}
+			}
 			m_osu->getTooltipOverlay()->end();
 		}
 	}

@@ -1582,8 +1582,14 @@ bool OsuSongBrowser2::searchMatcher(OsuBeatmap *beatmap, UString searchString)
 		OD,
 		HP,
 		BPM,
+		OPM,
+		CPM,
+		SPM,
+		OBJECTS,
+		CIRCLES,
+		SLIDERS,
 		LENGTH,
-		STARS
+		STARS,
 	};
 	const std::vector<std::pair<UString, keywordId>> keywords =
 	{
@@ -1592,6 +1598,15 @@ bool OsuSongBrowser2::searchMatcher(OsuBeatmap *beatmap, UString searchString)
 		std::pair<UString, keywordId>("od", OD),
 		std::pair<UString, keywordId>("hp", HP),
 		std::pair<UString, keywordId>("bpm",BPM),
+		std::pair<UString, keywordId>("opm",OPM),
+		std::pair<UString, keywordId>("cpm",CPM),
+		std::pair<UString, keywordId>("spm",SPM),
+		std::pair<UString, keywordId>("object",OBJECTS),
+		std::pair<UString, keywordId>("objects",OBJECTS),
+		std::pair<UString, keywordId>("circle",CIRCLES),
+		std::pair<UString, keywordId>("circles",CIRCLES),
+		std::pair<UString, keywordId>("slider",SLIDERS),
+		std::pair<UString, keywordId>("sliders",SLIDERS),
 		std::pair<UString, keywordId>("length", LENGTH),
 		std::pair<UString, keywordId>("len", LENGTH),
 		std::pair<UString, keywordId>("stars", STARS),
@@ -1652,6 +1667,24 @@ bool OsuSongBrowser2::searchMatcher(OsuBeatmap *beatmap, UString searchString)
 									break;
 								case BPM:
 									compareValue = diffs[d]->maxBPM;
+									break;
+								case OPM:
+									compareValue = diffs[d]->lengthMS > 0 ? ((float)diffs[d]->numObjects / (float)(diffs[d]->lengthMS / 1000.0f / 60.0f)) : 0.0f;
+									break;
+								case CPM:
+									compareValue = diffs[d]->lengthMS > 0 ? ((float)diffs[d]->numCircles / (float)(diffs[d]->lengthMS / 1000.0f / 60.0f)) : 0.0f;
+									break;
+								case SPM:
+									compareValue = diffs[d]->lengthMS > 0 ? ((float)diffs[d]->numSliders / (float)(diffs[d]->lengthMS / 1000.0f / 60.0f)) : 0.0f;
+									break;
+								case OBJECTS:
+									compareValue = diffs[d]->numObjects;
+									break;
+								case CIRCLES:
+									compareValue = diffs[d]->numCircles;
+									break;
+								case SLIDERS:
+									compareValue = diffs[d]->numSliders;
 									break;
 								case LENGTH:
 									compareValue = diffs[d]->lengthMS / 1000;
