@@ -35,7 +35,9 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	std::vector<CHANGELOG> changelogs;
 
 	CHANGELOG alpha315;
-	alpha315.title = UString::format("31.06 (Build Date: %s, %s)", __DATE__, __TIME__);
+	alpha315.title = UString::format("31.07 (Build Date: %s, %s)", __DATE__, __TIME__);
+	alpha315.changes.push_back("- Fixed quick retry sometimes causing weird small speedup/slowdown at start (2)");
+	alpha315.changes.push_back("");
 	alpha315.changes.push_back("- Added new search keywords: opm, cpm, spm, objects, circles, sliders (objects/circles/sliders per minute, total count)");
 	alpha315.changes.push_back("- Only show ranking tooltip on left half of screen");
 	alpha315.changes.push_back("- Fixed section-pass/fail appearing in too small breaks");
@@ -49,7 +51,7 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha315.changes.push_back("- NOTE (2): osu! draws followpoints with a fixed hardcoded AR of ~7.68 (800 ms).");
 	alpha315.changes.push_back("- NOTE (3): Up until now, McOsu has clamped this to the real AR. To go back, use \"osu_followpoints_clamp 1\".");
 	alpha315.changes.push_back("- NOTE (4): This is more of an experiment, and the change may be reverted, we will see.");
-	alpha315.changes.push_back("- Fixed quick retry sometimes causing weird small speedup/slowdown at start (fixed snd_play_interp* ignoring time skips)");
+	alpha315.changes.push_back("- Fixed quick retry sometimes causing weird small speedup/slowdown at start (1)");
 	alpha315.changes.push_back("");
 	alpha315.changes.push_back("- Improved osu!.db database loading speed (1)");
 	alpha315.changes.push_back("");
