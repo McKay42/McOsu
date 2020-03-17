@@ -64,7 +64,7 @@
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 31.07f);
+ConVar osu_version("osu_version", 31.08f);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr");
 #else
@@ -236,6 +236,8 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 		convar->getConVarByName("osu_scores_legacy_enabled")->setValue(0.0f); // would collide
 		convar->getConVarByName("osu_mod_mafham_render_livesize")->setValue(7.0f);
 		convar->getConVarByName("osu_mod_mafham_render_chunksize")->setValue(12.0f);
+		convar->getConVarByName("osu_mod_touchdevice")->setDefaultFloat(1.0f);
+		convar->getConVarByName("osu_mod_touchdevice")->setValue(1.0f);
 		convar->getConVarByName("osu_volume_music")->setValue(0.3f);
 		convar->getConVarByName("osu_universal_offset_hardcoded")->setValue(-45.0f);
 		convar->getConVarByName("osu_key_quick_retry")->setValue(15.0f);	// L, SDL_SCANCODE_L
@@ -775,6 +777,10 @@ void Osu::draw(Graphics *g)
 				const Vector2 backupResolution = engine->getGraphics()->getResolution();
 				g->onResolutionChange(Vector2(1920, 1080));
 				{
+					// NOTE: apparently, after testing with libnx 3.0.0, it now requires half 720p offset when undocked?
+					if (backupResolution.y < 722)
+						offset.y = 720 / 2;
+
 					m_backBuffer->draw(g, offset.x*(1.0f + osu_letterboxing_offset_x.getFloat()), offset.y*(1.0f + osu_letterboxing_offset_y.getFloat()), g_vInternalResolution.x, g_vInternalResolution.y);
 				}
 				g->onResolutionChange(backupResolution);

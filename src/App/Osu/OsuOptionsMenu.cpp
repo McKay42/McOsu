@@ -723,8 +723,11 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	offsetSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeIntMS) );
 	offsetSlider->setKeyDelta(1);
 
-	addSubSection("Songbrowser");
-	addCheckbox("Apply speed/pitch mods while browsing", "Whether to always apply all mods, or keep the preview music normal.", convar->getConVarByName("osu_beatmap_preview_mods_live"));
+	if (env->getOS() != Environment::OS::OS_HORIZON)
+	{
+		addSubSection("Songbrowser");
+		addCheckbox("Apply speed/pitch mods while browsing", "Whether to always apply all mods, or keep the preview music normal.", convar->getConVarByName("osu_beatmap_preview_mods_live"));
+	}
 
 	//**************************************************************************************************************************//
 

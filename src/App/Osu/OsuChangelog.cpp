@@ -35,7 +35,10 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	std::vector<CHANGELOG> changelogs;
 
 	CHANGELOG alpha315;
-	alpha315.title = UString::format("31.07 (Build Date: %s, %s)", __DATE__, __TIME__);
+	alpha315.title = UString::format("31.08 (Build Date: %s, %s)", __DATE__, __TIME__);
+	alpha315.changes.push_back("- Increased maximum file size limit from 200 MB to 512 MB (giant osu!.db support)");
+	alpha315.changes.push_back("- Fixed quick retry sometimes causing weird small speedup/slowdown at start (3)");
+	alpha315.changes.push_back("");
 	alpha315.changes.push_back("- Fixed quick retry sometimes causing weird small speedup/slowdown at start (2)");
 	alpha315.changes.push_back("");
 	alpha315.changes.push_back("- Added new search keywords: opm, cpm, spm, objects, circles, sliders (objects/circles/sliders per minute, total count)");
