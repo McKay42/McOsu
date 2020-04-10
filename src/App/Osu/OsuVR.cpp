@@ -58,6 +58,7 @@ ConVar osu_vr_slider_controller_vibration_strength("osu_vr_slider_controller_vib
 
 ConVar osu_vr_draw_playfield("osu_vr_draw_playfield", true);
 ConVar osu_vr_draw_floor("osu_vr_draw_floor", true);
+ConVar osu_vr_draw_laser("osu_vr_draw_laser", true);
 
 ConVar osu_vr_ui_offset("osu_vr_ui_offset", 0.1f);
 
@@ -373,7 +374,7 @@ void OsuVR::drawVR(Graphics *g, Matrix4 &mvp, RenderTarget *screen)
 	}
 
 	// draw controller laser
-	if (m_bDrawLaser && openvr->hasInputFocus())
+	if (m_bDrawLaser && openvr->hasInputFocus() && osu_vr_draw_laser.getBool())
 	{
 		m_shaderGenericUntextured->enable();
 		{
