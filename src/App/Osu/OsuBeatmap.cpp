@@ -1214,7 +1214,6 @@ bool OsuBeatmap::play()
 	loadMusic(false, m_bForceStreamPlayback);
 
 	m_music->setLoop(false);
-	m_music->setEnablePitchAndSpeedShiftingHack(true && !m_bForceStreamPlayback);
 	m_bIsPaused = false;
 	m_bContinueScheduled = false;
 
@@ -1278,7 +1277,6 @@ void OsuBeatmap::actualRestart()
 	m_music->setFrequency(0);
 
 	m_music->setLoop(false);
-	m_music->setEnablePitchAndSpeedShiftingHack(true && !m_bForceStreamPlayback);
 	m_bIsPaused = false;
 	m_bContinueScheduled = false;
 
