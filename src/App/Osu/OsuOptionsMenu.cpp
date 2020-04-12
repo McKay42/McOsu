@@ -641,7 +641,8 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 		addSpacer();
 		addCheckbox("Draw HMD to Window (!)", "If this is disabled, then nothing will be drawn to the window.", convar->getConVarByName("vr_draw_hmd_to_window"));
 		addCheckbox("Draw Both Eyes to Window", "Only applies if \"Draw HMD to Window\" is enabled, see above.", convar->getConVarByName("vr_draw_hmd_to_window_draw_both_eyes"));
-		addCheckbox("Draw Laser", convar->getConVarByName("osu_vr_draw_laser"));
+		addCheckbox("Draw Laser in Game", convar->getConVarByName("osu_vr_draw_laser_game"));
+		addCheckbox("Draw Laser in Menu", convar->getConVarByName("osu_vr_draw_laser_menu"));
 		addCheckbox("Draw Floor", convar->getConVarByName("osu_vr_draw_floor"));
 		addCheckbox("Draw Controller Models", convar->getConVarByName("vr_draw_controller_models"));
 		addCheckbox("Draw Lighthouse Models", convar->getConVarByName("vr_draw_lighthouse_models"));
