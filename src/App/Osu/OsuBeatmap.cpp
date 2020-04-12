@@ -999,6 +999,11 @@ void OsuBeatmap::skipEmptySection()
 
 void OsuBeatmap::keyPressed1(bool mouse)
 {
+	if (m_bContinueScheduled)
+		m_bClickedContinue = true;
+
+	if (m_osu->isInVRMode() && !m_osu_vr_draw_desktop_playfield_ref->getBool()) return;
+
 	if (osu_mod_fullalternate.getBool() && m_bPrevKeyWasKey1)
 	{
 		if (m_iCurrentHitObjectIndex > m_iAllowAnyNextKeyForFullAlternateUntilHitObjectIndex)
@@ -1023,9 +1028,6 @@ void OsuBeatmap::keyPressed1(bool mouse)
 	m_bPrevKeyWasKey1 = true;
 	m_bClick1Held = true;
 
-	if (m_bContinueScheduled)
-		m_bClickedContinue = true;
-
 	//debugLog("async music pos = %lu, curMusicPos = %lu\n", m_music->getPositionMS(), m_iCurMusicPos);
 	//long curMusicPos = getMusicPositionMSInterpolated(); // this would only be useful if we also played hitsounds async! combined with checking which musicPos is bigger
 
@@ -1038,6 +1040,11 @@ void OsuBeatmap::keyPressed1(bool mouse)
 
 void OsuBeatmap::keyPressed2(bool mouse)
 {
+	if (m_bContinueScheduled)
+		m_bClickedContinue = true;
+
+	if (m_osu->isInVRMode() && !m_osu_vr_draw_desktop_playfield_ref->getBool()) return;
+
 	if (osu_mod_fullalternate.getBool() && !m_bPrevKeyWasKey1)
 	{
 		if (m_iCurrentHitObjectIndex > m_iAllowAnyNextKeyForFullAlternateUntilHitObjectIndex)
@@ -1062,9 +1069,6 @@ void OsuBeatmap::keyPressed2(bool mouse)
 	m_bPrevKeyWasKey1 = false;
 	m_bClick2Held = true;
 
-	if (m_bContinueScheduled)
-		m_bClickedContinue = true;
-
 	//debugLog("async music pos = %lu, curMusicPos = %lu\n", m_music->getPositionMS(), m_iCurMusicPos);
 	//long curMusicPos = getMusicPositionMSInterpolated(); // this would only be useful if we also played hitsounds async! combined with checking which musicPos is bigger
 
@@ -1077,6 +1081,8 @@ void OsuBeatmap::keyPressed2(bool mouse)
 
 void OsuBeatmap::keyReleased1(bool mouse)
 {
+	if (m_osu->isInVRMode() && !m_osu_vr_draw_desktop_playfield_ref->getBool()) return;
+
 	// key overlay
 	m_osu->getHUD()->animateInputoverlay(1, false);
 	m_osu->getHUD()->animateInputoverlay(3, false);
@@ -1086,6 +1092,8 @@ void OsuBeatmap::keyReleased1(bool mouse)
 
 void OsuBeatmap::keyReleased2(bool mouse)
 {
+	if (m_osu->isInVRMode() && !m_osu_vr_draw_desktop_playfield_ref->getBool()) return;
+
 	// key overlay
 	m_osu->getHUD()->animateInputoverlay(2, false);
 	m_osu->getHUD()->animateInputoverlay(4, false);
@@ -1680,7 +1688,7 @@ float OsuBeatmap::getOD()
 
 bool OsuBeatmap::isClickHeld()
 {
-	 return m_bClick1Held || m_bClick2Held || (m_osu->isInVRMode() && !m_osu->getVR()->isVirtualCursorOnScreen()); // a bit shit, but whatever
+	 return m_bClick1Held || m_bClick2Held || (m_osu->isInVRMode() && (!m_osu->getVR()->isVirtualCursorOnScreen() || !m_osu_vr_draw_desktop_playfield_ref->getBool())); // a bit shit, but whatever
 }
 
 UString OsuBeatmap::getTitle()

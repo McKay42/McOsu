@@ -53,6 +53,8 @@ ConVar *OsuHitObject::m_osu_vr_approach_circles_on_playfield = &osu_vr_approach_
 ConVar *OsuHitObject::m_osu_vr_approach_circles_on_top = &osu_vr_approach_circles_on_top;
 ConVar *OsuHitObject::m_osu_relax_offset_ref = &osu_relax_offset;
 
+ConVar *OsuHitObject::m_osu_vr_draw_desktop_playfield = NULL;
+
 unsigned long long OsuHitObject::sortHackCounter = 0;
 
 void OsuHitObject::drawHitResult(Graphics *g, OsuBeatmapStandard *beatmap, Vector2 rawPos, OsuScore::HIT result, float animPercent, float defaultAnimPercent)
@@ -174,6 +176,9 @@ OsuHitObject::OsuHitObject(long time, int sampleType, int comboNumber, bool isEn
 	m_iColorCounter = colorCounter;
 	m_iColorOffset = colorOffset;
 	m_beatmap = beatmap;
+
+	if (m_osu_vr_draw_desktop_playfield == NULL)
+		m_osu_vr_draw_desktop_playfield = convar->getConVarByName("osu_vr_draw_desktop_playfield");
 
 	m_fAlpha = 0.0f;
 	m_fAlphaWithoutHidden = 0.0f;
