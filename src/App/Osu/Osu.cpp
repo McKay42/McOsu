@@ -64,7 +64,7 @@
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 31.08f);
+ConVar osu_version("osu_version", 31.09f);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr");
 #else
@@ -159,6 +159,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_ui_scrollview_scrollbarwidth_ref = convar->getConVarByName("ui_scrollview_scrollbarwidth");
 	m_mouse_raw_input_absolute_to_window_ref = convar->getConVarByName("mouse_raw_input_absolute_to_window");
 	m_win_disable_windows_key_ref = convar->getConVarByName("win_disable_windows_key");
+	m_osu_vr_draw_desktop_playfield_ref = convar->getConVarByName("osu_vr_draw_desktop_playfield");
 
 	// experimental mods list
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_wobble"));
@@ -657,7 +658,7 @@ void Osu::draw(Graphics *g)
 		}
 
 		// draw player cursor
-		if ((!isAuto || allowDoubleCursor) && allowDrawCursor && (!isInVRMode() || (m_vr->isVirtualCursorOnScreen() || engine->hasFocus())))
+		if ((!isAuto || allowDoubleCursor) && allowDrawCursor && (!isInVRMode() || (m_osu_vr_draw_desktop_playfield_ref->getBool() && (m_vr->isVirtualCursorOnScreen() || engine->hasFocus()))))
 		{
 			Vector2 cursorPos = (beatmapStd != NULL && !isAuto) ? beatmapStd->getCursorPos() : engine->getMouse()->getPos();
 
@@ -668,7 +669,7 @@ void Osu::draw(Graphics *g)
 		}
 
 		// draw projected VR cursors for spectators
-		if (isInVRMode() && isInPlayMode() && !getSelectedBeatmap()->isPaused() && beatmapStd != NULL)
+		if (isInVRMode() && isInPlayMode() && !getSelectedBeatmap()->isPaused() && m_osu_vr_draw_desktop_playfield_ref->getBool() && beatmapStd != NULL)
 		{
 			m_hud->drawCursorSpectator1(g, beatmapStd->osuCoords2RawPixels(m_vr->getCursorPos1() + Vector2(OsuGameRules::OSU_COORD_WIDTH/2, OsuGameRules::OSU_COORD_HEIGHT/2)), 1.0f);
 			m_hud->drawCursorSpectator2(g, beatmapStd->osuCoords2RawPixels(m_vr->getCursorPos2() + Vector2(OsuGameRules::OSU_COORD_WIDTH/2, OsuGameRules::OSU_COORD_HEIGHT/2)), 1.0f);
@@ -824,6 +825,10 @@ void Osu::drawVR(Graphics *g)
 	if (isInPlayMode()) // if we are playing a beatmap
 	{
 		m_vr->drawVRHUD(g, mvp, m_hud);
+
+		// all beatmap elements are more important than anything else, so reset depth buffer to always draw on top
+		g->clearDepthBuffer();
+
 		m_vr->drawVRBeatmap(g, mvp, getSelectedBeatmap());
 	}
 	else // not playing
