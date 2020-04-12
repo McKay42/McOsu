@@ -35,7 +35,16 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	std::vector<CHANGELOG> changelogs;
 
 	CHANGELOG alpha315;
-	alpha315.title = UString::format("31.08 (Build Date: %s, %s)", __DATE__, __TIME__);
+	alpha315.title = UString::format("31.09 (Build Date: %s, %s)", __DATE__, __TIME__);
+	alpha315.changes.push_back("- Windows: Workaround for Windows 10 bug in \"OS TabletPC Support\" in combination with raw mouse input:");
+	alpha315.changes.push_back("- Windows: Everyone who uses Windows 10 and plays with a mouse should DISABLE \"OS TabletPC Support\"!");
+	alpha315.changes.push_back("- VR: Updated option \"Draw Desktop Game (2D)\" to ignore screen clicks during gameplay if disabled");
+	alpha315.changes.push_back("- VR: Updated option \"Draw Desktop Game (2D)\" to not draw spectator/desktop cursors if disabled");
+	alpha315.changes.push_back("- VR: Added option \"Draw Laser in Game\" (Options > Virtual Reality > Miscellaneous)");
+	alpha315.changes.push_back("- VR: Added option \"Draw Laser in Menu\" (Options > Virtual Reality > Miscellaneous)");
+	alpha315.changes.push_back("- VR: Added option \"Head Model Brightness\" (Options > Virtual Reality > Play Area / Playfield)");
+	alpha315.changes.push_back("- VR: Fixed slider bodies not being drawn on top of virtual screen (reversed depth buffer)");
+	alpha315.changes.push_back("");
 	alpha315.changes.push_back("- Increased maximum file size limit from 200 MB to 512 MB (giant osu!.db support)");
 	alpha315.changes.push_back("- Linux: Added _NET_WM_BYPASS_COMPOSITOR extended window manager hint (avoids vsync)");
 	alpha315.changes.push_back("- Fixed quick retry sometimes causing weird small speedup/slowdown at start (3)");

@@ -842,7 +842,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	if (env->getOS() == Environment::OS::OS_WINDOWS)
 	{
 		addSubSection("Tablet");
-		addCheckbox("OS TabletPC Support (!)", "WARNING: Do not enable this with a mouse (will break right click)!\nEnable this if your tablet clicks aren't handled correctly.", convar->getConVarByName("win_realtimestylus"));
+		addCheckbox("OS TabletPC Support (!)", "WARNING: Windows 10 may break raw mouse input if this is enabled!\nWARNING: Do not enable this with a mouse (will break right click)!\nEnable this if your tablet clicks aren't handled correctly.", convar->getConVarByName("win_realtimestylus"));
 		addCheckbox("Windows Ink Workaround", "Enable this if your tablet cursor is stuck in a tiny area on the top left of the screen.\nIf this doesn't fix it, use \"Ignore Sensitivity & Raw Input\" below.", convar->getConVarByName("win_ink_workaround"));
 		addCheckbox("Ignore Sensitivity & Raw Input", "Only use this if nothing else works.\nIf this is enabled, then the in-game sensitivity slider will no longer work for tablets!\n(You can then instead use your tablet configuration software to change the tablet area.)", convar->getConVarByName("tablet_sensitivity_ignore"));
 	}
