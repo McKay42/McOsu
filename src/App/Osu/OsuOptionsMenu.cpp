@@ -606,6 +606,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 		addSlider("RenderModel Brightness", 0.1f, 10.0f, convar->getConVarByName("vr_controller_model_brightness_multiplier"))->setKeyDelta(0.1f);
 		addSlider("Background Brightness", 0.0f, 1.0f, convar->getConVarByName("vr_background_brightness"))->setKeyDelta(0.05f);
 		addSlider("VR Cursor Opacity", 0.0f, 1.0f, convar->getConVarByName("osu_vr_cursor_alpha"))->setKeyDelta(0.1f);
+		addSlider("Head RenderModel Brightness", 0.0f, 1.5f, convar->getConVarByName("vr_head_rendermodel_brightness"))->setKeyDelta(0.01f);
 		addSpacer();
 		m_vrApproachDistanceSlider = addSlider("Approach Distance", 0.0f, 50.0f, convar->getConVarByName("osu_vr_approach_distance"), 175.0f);
 		m_vrApproachDistanceSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeOneDecimalPlaceMeters) );
