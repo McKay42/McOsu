@@ -375,9 +375,9 @@ void OsuVR::drawVR(Graphics *g, Matrix4 &mvp, RenderTarget *screen)
 	}
 
 	// draw controller laser
-	bool drawInGame = m_osu->isInPlayMode() && osu_vr_draw_laser_game.getBool();
-	bool drawInMenu = m_osu->isNotInPlayModeOrPaused() && osu_vr_draw_laser_menu.getBool();
-	if (m_bDrawLaser && openvr->hasInputFocus() && (drawInGame || drawInMenu))
+	const bool drawLaserInGame = m_osu->isInPlayMode() && osu_vr_draw_laser_game.getBool();
+	const bool drawLaserInMenu = m_osu->isNotInPlayModeOrPaused() && osu_vr_draw_laser_menu.getBool();
+	if (m_bDrawLaser && openvr->hasInputFocus() && (drawLaserInGame || drawLaserInMenu))
 	{
 		m_shaderGenericUntextured->enable();
 		{
