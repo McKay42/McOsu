@@ -1707,18 +1707,6 @@ UString OsuBeatmap::getArtist()
 		return m_difficulties[0]->artist;
 }
 
-void OsuBeatmap::consumeClickEvent()
-{
-	// NOTE: don't need a lock_guard in here because this is only called during the hitobject update(), and there is already a lock there!
-	m_clicks.erase(m_clicks.begin());
-}
-
-void OsuBeatmap::consumeKeyUpEvent()
-{
-	// NOTE: don't need a lock_guard in here because this is only called during the hitobject update(), and there is already a lock there!
-	m_keyUps.erase(m_keyUps.begin());
-}
-
 OsuScore::HIT OsuBeatmap::addHitResult(OsuHitObject *hitObject, OsuScore::HIT hit, long delta, bool isEndOfCombo, bool ignoreOnHitErrorBar, bool hitErrorBarOnly, bool ignoreCombo, bool ignoreScore, bool ignoreHealth)
 {
 	// handle perfect & sudden death

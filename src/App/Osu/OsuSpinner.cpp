@@ -411,8 +411,8 @@ void OsuSpinner::onClickEvent(std::vector<OsuBeatmap::CLICK> &clicks)
 	// needed for nightmare mod
 	if (m_bVisible && !m_bClickedOnce)
 	{
+		clicks.erase(clicks.begin());
 		m_bClickedOnce = true;
-		m_beatmap->consumeClickEvent();
 	}
 }
 
