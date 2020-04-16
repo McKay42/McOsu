@@ -202,43 +202,53 @@ void OsuManiaNote::update(long curPos)
 
 void OsuManiaNote::onClickEvent(std::vector<OsuBeatmap::CLICK> &clicks)
 {
-	if (m_bFinished)
-		return;
-	if (clicks[0].maniaColumn != m_iColumn)
-		return;
+	if (m_bFinished) return;
 
-	if (!m_bStartFinished || (!m_bFinished && !isHoldNote()))
+	for (int i=0; i<clicks.size(); i++)
 	{
-		const long delta = clicks[0].musicPos - m_iTime;
-
-		OsuScore::HIT result = OsuGameRulesMania::getHitResult(delta, m_beatmap);
-		if (result != OsuScore::HIT::HIT_NULL)
+		if (clicks[i].maniaColumn == m_iColumn)
 		{
-			m_beatmap->consumeClickEvent();
-			onHit(result, delta, !m_bStartFinished);
+			if (!m_bStartFinished || (!m_bFinished && !isHoldNote()))
+			{
+				const long delta = clicks[i].musicPos - m_iTime;
+
+				OsuScore::HIT result = OsuGameRulesMania::getHitResult(delta, m_beatmap);
+				if (result != OsuScore::HIT::HIT_NULL)
+				{
+					clicks.erase(clicks.begin() + i);
+					onHit(result, delta, !m_bStartFinished);
+				}
+			}
+
+			break;
 		}
 	}
 }
 
 void OsuManiaNote::onKeyUpEvent(std::vector<OsuBeatmap::CLICK> &keyUps)
 {
-	if (!isHoldNote() || m_bFinished)
-		return;
-	if (keyUps[0].maniaColumn != m_iColumn)
-		return;
+	if (!isHoldNote() || m_bFinished) return;
 
-	if (!m_bFinished && m_bStartFinished)
+	for (int i=0; i<keyUps.size(); i++)
 	{
-		const long delta = keyUps[0].musicPos - (m_iTime + m_iObjectDuration);
+		if (keyUps[i].maniaColumn == m_iColumn)
+		{
+			if (!m_bFinished && m_bStartFinished)
+			{
+				const long delta = keyUps[i].musicPos - (m_iTime + m_iObjectDuration);
 
-		OsuScore::HIT result = OsuGameRulesMania::getHitResult(delta, m_beatmap);
+				OsuScore::HIT result = OsuGameRulesMania::getHitResult(delta, m_beatmap);
 
-		// if we released extremely early, so early that we're not even within miss-range, it should still count as a miss
-		if (result == OsuScore::HIT::HIT_NULL)
-			result = OsuScore::HIT::HIT_MISS;
+				// if we released extremely early, so early that we're not even within miss-range, it should still count as a miss
+				if (result == OsuScore::HIT::HIT_NULL)
+					result = OsuScore::HIT::HIT_MISS;
 
-		m_beatmap->consumeKeyUpEvent();
-		onHit(result, delta, false);
+				keyUps.erase(keyUps.begin() + i);
+				onHit(result, delta, false);
+			}
+
+			break;
+		}
 	}
 }
 
