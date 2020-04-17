@@ -18,6 +18,12 @@
 #include "OsuSkin.h"
 #include "OsuBeatmapStandard.h"
 
+#ifdef FPOSU_FEATURE_MAP3D
+
+#include "Map3DLoaderVBSP.h"
+
+#endif
+
 ConVar osu_mod_fposu("osu_mod_fposu", false);
 
 ConVar fposu_mouse_dpi("fposu_mouse_dpi", 400);
@@ -48,6 +54,12 @@ OsuModFPoSu::OsuModFPoSu(Osu *osu)
 	m_fCircumLength = 0.0f;
 	m_camera = new Camera(Vector3(0, 0, 0),Vector3(0, 0, -1));
 
+#ifdef FPOSU_FEATURE_MAP3D
+
+	m_map = NULL;
+
+#endif
+
 	// load resources
 	m_vao = engine->getResourceManager()->createVertexArrayObject();
 	m_vaoCube = engine->getResourceManager()->createVertexArrayObject();
@@ -55,18 +67,30 @@ OsuModFPoSu::OsuModFPoSu(Osu *osu)
 	// convar callbacks
 	fposu_curved.setCallback( fastdelegate::MakeDelegate(this, &OsuModFPoSu::onCurvedChange) );
 	fposu_distance.setCallback( fastdelegate::MakeDelegate(this, &OsuModFPoSu::onDistanceChange) );
+	ConVar *map = convar->getConVarByName("map", false);
+	if (map != NULL)
+		map->setCallback( fastdelegate::MakeDelegate(this, &OsuModFPoSu::onMap) );
 
 	// init
 	makePlayfield();
 	makeBackgroundCube();
 }
 
+OsuModFPoSu::~OsuModFPoSu()
+{
+#ifdef FPOSU_FEATURE_MAP3D
+
+	SAFE_DELETE(m_map);
+
+#endif
+}
+
 void OsuModFPoSu::draw(Graphics *g)
 {
 	if (!osu_mod_fposu.getBool()) return;
 
-	Matrix4 projectionMatrix = fposu_vertical_fov.getBool() ? Camera::buildMatrixPerspectiveFovVertical(deg2rad(fposu_fov.getFloat()), ((float)m_osu->getScreenWidth()/(float)m_osu->getScreenHeight()), 0.05f, 50.0f)
-															: Camera::buildMatrixPerspectiveFovHorizontal(deg2rad(fposu_fov.getFloat()), ((float)m_osu->getScreenHeight() / (float)m_osu->getScreenWidth()), 0.05f, 50.0f);
+	Matrix4 projectionMatrix = fposu_vertical_fov.getBool() ? Camera::buildMatrixPerspectiveFovVertical(deg2rad(fposu_fov.getFloat()), ((float)m_osu->getScreenWidth()/(float)m_osu->getScreenHeight()), 0.05f, 1000.0f)
+															: Camera::buildMatrixPerspectiveFovHorizontal(deg2rad(fposu_fov.getFloat()), ((float)m_osu->getScreenHeight() / (float)m_osu->getScreenWidth()), 0.05f, 1000.0f);
 	Matrix4 viewMatrix = Camera::buildMatrixLookAt(m_camera->getPos(), m_camera->getViewDirection(), m_camera->getViewUp());
 
 	// HACKHACK: there is currently no way to directly modify the viewport origin, so the only option for rendering non-2d stuff with correct offsets (i.e. top left) is by rendering into a rendertarget
@@ -77,7 +101,6 @@ void OsuModFPoSu::draw(Graphics *g)
 		const Vector2 resolutionBackup = g->getResolution();
 		g->onResolutionChange(m_osu->getSliderFrameBuffer()->getSize()); // set renderer resolution to game resolution (to correctly support letterboxing etc.)
 		{
-			g->setDepthBuffer(true);
 			g->clearDepthBuffer();
 			g->pushTransform();
 			{
@@ -86,7 +109,7 @@ void OsuModFPoSu::draw(Graphics *g)
 
 				g->setBlending(false);
 				{
-					// draw background cube
+					// draw cube/skybox
 					if (fposu_cube.getBool())
 					{
 						m_osu->getSkin()->getBackgroundCube()->bind();
@@ -96,6 +119,18 @@ void OsuModFPoSu::draw(Graphics *g)
 						}
 						m_osu->getSkin()->getBackgroundCube()->unbind();
 					}
+
+					// draw map
+#ifdef FPOSU_FEATURE_MAP3D
+
+					g->setDepthBuffer(true);
+					{
+						if (m_map != NULL)
+							m_map->draw(g);
+					}
+					g->setDepthBuffer(false);
+
+#endif
 
 					// draw playfield mesh
 					g->setWorldMatrixMul(m_modelMatrix);
@@ -111,7 +146,6 @@ void OsuModFPoSu::draw(Graphics *g)
 				g->setBlending(true);
 			}
 			g->popTransform();
-			g->setDepthBuffer(false);
 		}
 		g->onResolutionChange(resolutionBackup);
 	}
@@ -128,6 +162,14 @@ void OsuModFPoSu::draw(Graphics *g)
 void OsuModFPoSu::update()
 {
 	if (!osu_mod_fposu.getBool()) return;
+
+	// lazy load
+#ifdef FPOSU_FEATURE_MAP3D
+
+	if (m_map == NULL)
+		onMap("fposu_home");
+
+#endif
 
 	// laziness, also slightly move back by default to avoid aliasing with background cube
 	m_modelMatrix = Matrix4().translate(0, 0, -0.0015f).scale(1.0f, (m_osu->getPlayfieldBuffer()->getHeight() / m_osu->getPlayfieldBuffer()->getWidth())*(m_fCircumLength), 1.0f);
@@ -162,7 +204,7 @@ void OsuModFPoSu::update()
 		{
 			// special case: force to center of screen if no intersection
 			if (newMousePos.x == 0.0f && newMousePos.y == 0.0f)
-				newMousePos = m_osu->getScreenSize()/2;
+				newMousePos = m_osu->getScreenSize() / 2;
 
 			setMousePosCompensated(newMousePos);
 		}
@@ -358,59 +400,61 @@ void OsuModFPoSu::makeBackgroundCube()
 {
 	m_vaoCube->clear();
 
-	// front
-	m_vaoCube->addVertex(-2.5f, -2.5f, -2.5f);  m_vaoCube->addTexcoord(0.0f, 1.0f);
-	m_vaoCube->addVertex( 2.5f, -2.5f, -2.5f);  m_vaoCube->addTexcoord(1.0f, 1.0f);
-	m_vaoCube->addVertex( 2.5f,  2.5f, -2.5f);  m_vaoCube->addTexcoord(1.0f, 0.0f);
+	const float size = 500.0f;
 
-	m_vaoCube->addVertex( 2.5f,  2.5f, -2.5f);  m_vaoCube->addTexcoord(1.0f, 0.0f);
-	m_vaoCube->addVertex(-2.5f,  2.5f, -2.5f);  m_vaoCube->addTexcoord(0.0f, 0.0f);
-	m_vaoCube->addVertex(-2.5f, -2.5f, -2.5f);  m_vaoCube->addTexcoord(0.0f, 1.0f);
+	// front
+	m_vaoCube->addVertex(-size, -size, -size);  m_vaoCube->addTexcoord(0.0f, 1.0f);
+	m_vaoCube->addVertex( size, -size, -size);  m_vaoCube->addTexcoord(1.0f, 1.0f);
+	m_vaoCube->addVertex( size,  size, -size);  m_vaoCube->addTexcoord(1.0f, 0.0f);
+
+	m_vaoCube->addVertex( size,  size, -size);  m_vaoCube->addTexcoord(1.0f, 0.0f);
+	m_vaoCube->addVertex(-size,  size, -size);  m_vaoCube->addTexcoord(0.0f, 0.0f);
+	m_vaoCube->addVertex(-size, -size, -size);  m_vaoCube->addTexcoord(0.0f, 1.0f);
 
 	// back
-	m_vaoCube->addVertex(-2.5f, -2.5f,  2.5f);  m_vaoCube->addTexcoord(1.0f, 1.0f);
-	m_vaoCube->addVertex( 2.5f, -2.5f,  2.5f);  m_vaoCube->addTexcoord(0.0f, 1.0f);
-	m_vaoCube->addVertex( 2.5f,  2.5f,  2.5f);  m_vaoCube->addTexcoord(0.0f, 0.0f);
+	m_vaoCube->addVertex(-size, -size,  size);  m_vaoCube->addTexcoord(1.0f, 1.0f);
+	m_vaoCube->addVertex( size, -size,  size);  m_vaoCube->addTexcoord(0.0f, 1.0f);
+	m_vaoCube->addVertex( size,  size,  size);  m_vaoCube->addTexcoord(0.0f, 0.0f);
 
-	m_vaoCube->addVertex( 2.5f,  2.5f,  2.5f);  m_vaoCube->addTexcoord(0.0f, 0.0f);
-	m_vaoCube->addVertex(-2.5f,  2.5f,  2.5f);  m_vaoCube->addTexcoord(1.0f, 0.0f);
-	m_vaoCube->addVertex(-2.5f, -2.5f,  2.5f);  m_vaoCube->addTexcoord(1.0f, 1.0f);
+	m_vaoCube->addVertex( size,  size,  size);  m_vaoCube->addTexcoord(0.0f, 0.0f);
+	m_vaoCube->addVertex(-size,  size,  size);  m_vaoCube->addTexcoord(1.0f, 0.0f);
+	m_vaoCube->addVertex(-size, -size,  size);  m_vaoCube->addTexcoord(1.0f, 1.0f);
 
 	// left
-	m_vaoCube->addVertex(-2.5f,  2.5f,  2.5f);  m_vaoCube->addTexcoord(0.0f, 0.0f);
-	m_vaoCube->addVertex(-2.5f,  2.5f, -2.5f);  m_vaoCube->addTexcoord(1.0f, 0.0f);
-	m_vaoCube->addVertex(-2.5f, -2.5f, -2.5f);  m_vaoCube->addTexcoord(1.0f, 1.0f);
+	m_vaoCube->addVertex(-size,  size,  size);  m_vaoCube->addTexcoord(0.0f, 0.0f);
+	m_vaoCube->addVertex(-size,  size, -size);  m_vaoCube->addTexcoord(1.0f, 0.0f);
+	m_vaoCube->addVertex(-size, -size, -size);  m_vaoCube->addTexcoord(1.0f, 1.0f);
 
-	m_vaoCube->addVertex(-2.5f, -2.5f, -2.5f);  m_vaoCube->addTexcoord(1.0f, 1.0f);
-	m_vaoCube->addVertex(-2.5f, -2.5f,  2.5f);  m_vaoCube->addTexcoord(0.0f, 1.0f);
-	m_vaoCube->addVertex(-2.5f,  2.5f,  2.5f);  m_vaoCube->addTexcoord(0.0f, 0.0f);
+	m_vaoCube->addVertex(-size, -size, -size);  m_vaoCube->addTexcoord(1.0f, 1.0f);
+	m_vaoCube->addVertex(-size, -size,  size);  m_vaoCube->addTexcoord(0.0f, 1.0f);
+	m_vaoCube->addVertex(-size,  size,  size);  m_vaoCube->addTexcoord(0.0f, 0.0f);
 
 	// right
-	m_vaoCube->addVertex( 2.5f,  2.5f,  2.5f);  m_vaoCube->addTexcoord(1.0f, 0.0f);
-	m_vaoCube->addVertex( 2.5f,  2.5f, -2.5f);  m_vaoCube->addTexcoord(0.0f, 0.0f);
-	m_vaoCube->addVertex( 2.5f, -2.5f, -2.5f);  m_vaoCube->addTexcoord(0.0f, 1.0f);
+	m_vaoCube->addVertex( size,  size,  size);  m_vaoCube->addTexcoord(1.0f, 0.0f);
+	m_vaoCube->addVertex( size,  size, -size);  m_vaoCube->addTexcoord(0.0f, 0.0f);
+	m_vaoCube->addVertex( size, -size, -size);  m_vaoCube->addTexcoord(0.0f, 1.0f);
 
-	m_vaoCube->addVertex( 2.5f, -2.5f, -2.5f);  m_vaoCube->addTexcoord(0.0f, 1.0f);
-	m_vaoCube->addVertex( 2.5f, -2.5f,  2.5f);  m_vaoCube->addTexcoord(1.0f, 1.0f);
-	m_vaoCube->addVertex( 2.5f,  2.5f,  2.5f);  m_vaoCube->addTexcoord(1.0f, 0.0f);
+	m_vaoCube->addVertex( size, -size, -size);  m_vaoCube->addTexcoord(0.0f, 1.0f);
+	m_vaoCube->addVertex( size, -size,  size);  m_vaoCube->addTexcoord(1.0f, 1.0f);
+	m_vaoCube->addVertex( size,  size,  size);  m_vaoCube->addTexcoord(1.0f, 0.0f);
 
 	// bottom
-	m_vaoCube->addVertex(-2.5f, -2.5f, -2.5f);  m_vaoCube->addTexcoord(0.0f, 0.0f);
-	m_vaoCube->addVertex( 2.5f, -2.5f, -2.5f);  m_vaoCube->addTexcoord(1.0f, 0.0f);
-	m_vaoCube->addVertex( 2.5f, -2.5f,  2.5f);  m_vaoCube->addTexcoord(1.0f, 1.0f);
+	m_vaoCube->addVertex(-size, -size, -size);  m_vaoCube->addTexcoord(0.0f, 0.0f);
+	m_vaoCube->addVertex( size, -size, -size);  m_vaoCube->addTexcoord(1.0f, 0.0f);
+	m_vaoCube->addVertex( size, -size,  size);  m_vaoCube->addTexcoord(1.0f, 1.0f);
 
-	m_vaoCube->addVertex( 2.5f, -2.5f,  2.5f);  m_vaoCube->addTexcoord(1.0f, 1.0f);
-	m_vaoCube->addVertex(-2.5f, -2.5f,  2.5f);  m_vaoCube->addTexcoord(0.0f, 1.0f);
-	m_vaoCube->addVertex(-2.5f, -2.5f, -2.5f);  m_vaoCube->addTexcoord(0.0f, 0.0f);
+	m_vaoCube->addVertex( size, -size,  size);  m_vaoCube->addTexcoord(1.0f, 1.0f);
+	m_vaoCube->addVertex(-size, -size,  size);  m_vaoCube->addTexcoord(0.0f, 1.0f);
+	m_vaoCube->addVertex(-size, -size, -size);  m_vaoCube->addTexcoord(0.0f, 0.0f);
 
 	// top
-	m_vaoCube->addVertex(-2.5f,  2.5f, -2.5f);  m_vaoCube->addTexcoord(0.0f, 1.0f);
-	m_vaoCube->addVertex( 2.5f,  2.5f, -2.5f);  m_vaoCube->addTexcoord(1.0f, 1.0f);
-	m_vaoCube->addVertex( 2.5f,  2.5f,  2.5f);  m_vaoCube->addTexcoord(1.0f, 0.0f);
+	m_vaoCube->addVertex(-size,  size, -size);  m_vaoCube->addTexcoord(0.0f, 1.0f);
+	m_vaoCube->addVertex( size,  size, -size);  m_vaoCube->addTexcoord(1.0f, 1.0f);
+	m_vaoCube->addVertex( size,  size,  size);  m_vaoCube->addTexcoord(1.0f, 0.0f);
 
-	m_vaoCube->addVertex( 2.5f,  2.5f,  2.5f);  m_vaoCube->addTexcoord(1.0f, 0.0f);
-	m_vaoCube->addVertex(-2.5f,  2.5f,  2.5f);  m_vaoCube->addTexcoord(0.0f, 0.0f);
-	m_vaoCube->addVertex(-2.5f,	 2.5f, -2.5f);	m_vaoCube->addTexcoord(0.0f, 1.0f);
+	m_vaoCube->addVertex( size,  size,  size);  m_vaoCube->addTexcoord(1.0f, 0.0f);
+	m_vaoCube->addVertex(-size,  size,  size);  m_vaoCube->addTexcoord(0.0f, 0.0f);
+	m_vaoCube->addVertex(-size,	 size, -size);	m_vaoCube->addTexcoord(0.0f, 1.0f);
 }
 
 void OsuModFPoSu::onCurvedChange(UString oldValue, UString newValue)
@@ -421,6 +465,20 @@ void OsuModFPoSu::onCurvedChange(UString oldValue, UString newValue)
 void OsuModFPoSu::onDistanceChange(UString oldValue, UString newValue)
 {
 	makePlayfield();
+}
+
+void OsuModFPoSu::onMap(UString args)
+{
+	args.insert(0, "maps/");
+	args.append(".bsp");
+
+	// TODO: async load
+#ifdef FPOSU_FEATURE_MAP3D
+
+	SAFE_DELETE(m_map);
+	m_map = new Map3DLoaderVBSP(args);
+
+#endif
 }
 
 float OsuModFPoSu::subdivide(std::list<VertexPair> meshList, const std::list<VertexPair>::iterator begin, const std::list<VertexPair>::iterator end, int n, float edgeDistance)
