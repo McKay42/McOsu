@@ -44,6 +44,8 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha315.changes.push_back("- VR: Added option \"Draw Laser in Menu\" (Options > Virtual Reality > Miscellaneous)");
 	alpha315.changes.push_back("- VR: Added option \"Head Model Brightness\" (Options > Virtual Reality > Play Area / Playfield)");
 	alpha315.changes.push_back("- VR: Fixed slider bodies not being drawn on top of virtual screen (reversed depth buffer)");
+	alpha315.changes.push_back("- Improved scroll wheel scrolling behavior");
+	alpha315.changes.push_back("- General engine improvements");
 	alpha315.changes.push_back("");
 	alpha315.changes.push_back("- Increased maximum file size limit from 200 MB to 512 MB (giant osu!.db support)");
 	alpha315.changes.push_back("- Linux: Added _NET_WM_BYPASS_COMPOSITOR extended window manager hint (avoids vsync)");
