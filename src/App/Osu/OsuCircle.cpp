@@ -621,7 +621,7 @@ void OsuCircle::onClickEvent(std::vector<OsuBeatmap::CLICK> &clicks)
 			const float targetDelta = cursorDelta / (m_beatmap->getHitcircleDiameter()/2.0f);
 			const float targetAngle = rad2deg(atan2(cursorPos.y - pos.y, cursorPos.x - pos.x));
 
-			m_beatmap->consumeClickEvent();
+			clicks.erase(clicks.begin());
 			onHit(result, delta, targetDelta, targetAngle);
 		}
 	}

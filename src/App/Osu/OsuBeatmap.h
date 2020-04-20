@@ -137,8 +137,6 @@ public:
 	UString getArtist();
 
 	// OsuHitObject and other helper functions
-	void consumeClickEvent();
-	void consumeKeyUpEvent();
 	OsuScore::HIT addHitResult(OsuHitObject *hitObject, OsuScore::HIT hit, long delta, bool isEndOfCombo = false, bool ignoreOnHitErrorBar = false, bool hitErrorBarOnly = false, bool ignoreCombo = false, bool ignoreScore = false, bool ignoreHealth = false);
 	void addSliderBreak();
 	void addScorePoints(int points, bool isSpinner = false);

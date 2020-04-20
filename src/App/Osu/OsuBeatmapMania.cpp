@@ -12,6 +12,7 @@
 #include "Keyboard.h"
 #include "Mouse.h"
 #include "AnimationHandler.h"
+#include "ResourceManager.h"
 
 #include "Osu.h"
 #include "OsuScore.h"
@@ -161,8 +162,19 @@ void OsuBeatmapMania::update()
 	}
 }
 
+void OsuBeatmapMania::onModUpdate()
+{
+	if (m_music != NULL)
+	{
+		m_music->setSpeed(m_osu->getSpeedMultiplier());
+		m_music->setPitch(m_osu->getPitchMultiplier());
+	}
+}
+
 void OsuBeatmapMania::onKeyDown(KeyboardEvent &key)
 {
+	OsuBeatmap::onKeyDown(key);
+
 	// lock asap
 #ifdef MCENGINE_FEATURE_MULTITHREADING
 
@@ -170,9 +182,12 @@ void OsuBeatmapMania::onKeyDown(KeyboardEvent &key)
 
 #endif
 
-	int column = getColumnForKey(getNumColumns(), key);
+	const int column = getColumnForKey(getNumColumns(), key);
 	if (column != -1 && !m_bColumnKeyDown[column])
 	{
+		if (m_bContinueScheduled)
+			m_bClickedContinue = true;
+
 		m_bColumnKeyDown[column] = true;
 
 		CLICK click;
@@ -185,6 +200,8 @@ void OsuBeatmapMania::onKeyDown(KeyboardEvent &key)
 
 void OsuBeatmapMania::onKeyUp(KeyboardEvent &key)
 {
+	OsuBeatmap::onKeyUp(key);
+
 	// lock asap
 #ifdef MCENGINE_FEATURE_MULTITHREADING
 
@@ -192,7 +209,7 @@ void OsuBeatmapMania::onKeyUp(KeyboardEvent &key)
 
 #endif
 
-	int column = getColumnForKey(getNumColumns(), key);
+	const int column = getColumnForKey(getNumColumns(), key);
 	if (column != -1 && m_bColumnKeyDown[column])
 	{
 		m_bColumnKeyDown[column] = false;
@@ -203,6 +220,11 @@ void OsuBeatmapMania::onKeyUp(KeyboardEvent &key)
 
 		m_keyUps.push_back(click);
 	}
+}
+
+void OsuBeatmapMania::onPlayStart()
+{
+	onModUpdate(); // if there are calculations in there that need the hitobjects to be loaded, also applies speed/pitch
 }
 
 int OsuBeatmapMania::getNumColumns()
@@ -219,9 +241,10 @@ int OsuBeatmapMania::getColumnForKey(int numColumns, KeyboardEvent &key)
 	{
 		for (int i=0; i<numColumns; i++)
 		{
-			if (key == (KEYCODE)OsuKeyBindings::MANIA[numColumns-1][i]->getInt())
+			if (key == (KEYCODE)OsuKeyBindings::MANIA[numColumns - 1][i]->getInt())
 				return i;
 		}
 	}
+
 	return -1;
 }

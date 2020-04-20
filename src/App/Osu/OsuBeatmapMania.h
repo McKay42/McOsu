@@ -18,6 +18,8 @@ public:
 	virtual void draw(Graphics *g);
 	virtual void update();
 
+	virtual void onModUpdate();
+
 	virtual void onKeyDown(KeyboardEvent &key);
 	virtual void onKeyUp(KeyboardEvent &key);
 
@@ -28,6 +30,8 @@ public:
 
 private:
 	static int getColumnForKey(int numColumns, KeyboardEvent &key);
+
+	virtual void onPlayStart();
 
 	Vector2 m_vPlayfieldSize;
 	Vector2 m_vPlayfieldCenter;

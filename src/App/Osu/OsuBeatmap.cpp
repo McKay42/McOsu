@@ -821,7 +821,7 @@ void OsuBeatmap::update()
 				&& m_iCurMusicPos > m_hitobjects[0]->getTime()
 				&& m_iCurMusicPos < (m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size() - 1]->getTime() + m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size() - 1]->getDuration())
 				&& !m_bFailed
-				&& m_bInBreak;
+				&& m_bInBreak && (breakEvent.endTime - breakEvent.startTime) > minGapSize;
 
 		const bool passing = (m_fHealth >= 0.5);
 
@@ -999,6 +999,11 @@ void OsuBeatmap::skipEmptySection()
 
 void OsuBeatmap::keyPressed1(bool mouse)
 {
+	if (m_bContinueScheduled)
+		m_bClickedContinue = true;
+
+	if (m_osu->isInVRMode() && !m_osu_vr_draw_desktop_playfield_ref->getBool()) return;
+
 	if (osu_mod_fullalternate.getBool() && m_bPrevKeyWasKey1)
 	{
 		if (m_iCurrentHitObjectIndex > m_iAllowAnyNextKeyForFullAlternateUntilHitObjectIndex)
@@ -1023,9 +1028,6 @@ void OsuBeatmap::keyPressed1(bool mouse)
 	m_bPrevKeyWasKey1 = true;
 	m_bClick1Held = true;
 
-	if (m_bContinueScheduled)
-		m_bClickedContinue = true;
-
 	//debugLog("async music pos = %lu, curMusicPos = %lu\n", m_music->getPositionMS(), m_iCurMusicPos);
 	//long curMusicPos = getMusicPositionMSInterpolated(); // this would only be useful if we also played hitsounds async! combined with checking which musicPos is bigger
 
@@ -1038,6 +1040,11 @@ void OsuBeatmap::keyPressed1(bool mouse)
 
 void OsuBeatmap::keyPressed2(bool mouse)
 {
+	if (m_bContinueScheduled)
+		m_bClickedContinue = true;
+
+	if (m_osu->isInVRMode() && !m_osu_vr_draw_desktop_playfield_ref->getBool()) return;
+
 	if (osu_mod_fullalternate.getBool() && !m_bPrevKeyWasKey1)
 	{
 		if (m_iCurrentHitObjectIndex > m_iAllowAnyNextKeyForFullAlternateUntilHitObjectIndex)
@@ -1062,9 +1069,6 @@ void OsuBeatmap::keyPressed2(bool mouse)
 	m_bPrevKeyWasKey1 = false;
 	m_bClick2Held = true;
 
-	if (m_bContinueScheduled)
-		m_bClickedContinue = true;
-
 	//debugLog("async music pos = %lu, curMusicPos = %lu\n", m_music->getPositionMS(), m_iCurMusicPos);
 	//long curMusicPos = getMusicPositionMSInterpolated(); // this would only be useful if we also played hitsounds async! combined with checking which musicPos is bigger
 
@@ -1077,6 +1081,8 @@ void OsuBeatmap::keyPressed2(bool mouse)
 
 void OsuBeatmap::keyReleased1(bool mouse)
 {
+	if (m_osu->isInVRMode() && !m_osu_vr_draw_desktop_playfield_ref->getBool()) return;
+
 	// key overlay
 	m_osu->getHUD()->animateInputoverlay(1, false);
 	m_osu->getHUD()->animateInputoverlay(3, false);
@@ -1086,6 +1092,8 @@ void OsuBeatmap::keyReleased1(bool mouse)
 
 void OsuBeatmap::keyReleased2(bool mouse)
 {
+	if (m_osu->isInVRMode() && !m_osu_vr_draw_desktop_playfield_ref->getBool()) return;
+
 	// key overlay
 	m_osu->getHUD()->animateInputoverlay(2, false);
 	m_osu->getHUD()->animateInputoverlay(4, false);
@@ -1214,7 +1222,6 @@ bool OsuBeatmap::play()
 	loadMusic(false, m_bForceStreamPlayback);
 
 	m_music->setLoop(false);
-	m_music->setEnablePitchAndSpeedShiftingHack(true && !m_bForceStreamPlayback);
 	m_bIsPaused = false;
 	m_bContinueScheduled = false;
 
@@ -1278,7 +1285,6 @@ void OsuBeatmap::actualRestart()
 	m_music->setFrequency(0);
 
 	m_music->setLoop(false);
-	m_music->setEnablePitchAndSpeedShiftingHack(true && !m_bForceStreamPlayback);
 	m_bIsPaused = false;
 	m_bContinueScheduled = false;
 
@@ -1682,7 +1688,7 @@ float OsuBeatmap::getOD()
 
 bool OsuBeatmap::isClickHeld()
 {
-	 return m_bClick1Held || m_bClick2Held || (m_osu->isInVRMode() && !m_osu->getVR()->isVirtualCursorOnScreen()); // a bit shit, but whatever
+	 return m_bClick1Held || m_bClick2Held || (m_osu->isInVRMode() && (!m_osu->getVR()->isVirtualCursorOnScreen() || !m_osu_vr_draw_desktop_playfield_ref->getBool())); // a bit shit, but whatever
 }
 
 UString OsuBeatmap::getTitle()
@@ -1699,18 +1705,6 @@ UString OsuBeatmap::getArtist()
 		return "NULL";
 	else
 		return m_difficulties[0]->artist;
-}
-
-void OsuBeatmap::consumeClickEvent()
-{
-	// NOTE: don't need a lock_guard in here because this is only called during the hitobject update(), and there is already a lock there!
-	m_clicks.erase(m_clicks.begin());
-}
-
-void OsuBeatmap::consumeKeyUpEvent()
-{
-	// NOTE: don't need a lock_guard in here because this is only called during the hitobject update(), and there is already a lock there!
-	m_keyUps.erase(m_keyUps.begin());
 }
 
 OsuScore::HIT OsuBeatmap::addHitResult(OsuHitObject *hitObject, OsuScore::HIT hit, long delta, bool isEndOfCombo, bool ignoreOnHitErrorBar, bool hitErrorBarOnly, bool ignoreCombo, bool ignoreScore, bool ignoreHealth)

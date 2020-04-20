@@ -984,11 +984,17 @@ void OsuSlider::update(long curPos)
 
 	// handle dynamic followradius
 	float followRadius = m_bCursorLeft ? m_beatmap->getHitcircleDiameter() / 2.0f : m_beatmap->getSliderFollowCircleDiameter() / 2.0f;
-	m_bCursorInside = (m_beatmap->getOsu()->getModAuto() && (!m_osu_auto_cursordance_ref->getBool() || ((m_beatmap->getCursorPos() - m_vCurPoint).length() < followRadius))) || ((m_beatmap->getCursorPos() - m_vCurPoint).length() < followRadius);
+	const bool isBeatmapCursorInside = ((m_beatmap->getCursorPos() - m_vCurPoint).length() < followRadius);
+	const bool isAutoCursorInside = (m_beatmap->getOsu()->getModAuto() && (!m_osu_auto_cursordance_ref->getBool() || ((m_beatmap->getCursorPos() - m_vCurPoint).length() < followRadius)));
+	m_bCursorInside = (isAutoCursorInside || isBeatmapCursorInside);
 	m_bCursorLeft = !m_bCursorInside;
 
 	if (m_beatmap->getOsu()->isInVRMode())
 	{
+		// if we are in vr mode, and the user has disabled the desktop playfield, then the desktop cursor should be ignored
+		if (!m_osu_vr_draw_desktop_playfield->getBool())
+			m_bCursorInside = isAutoCursorInside;
+
 		// vr always uses the default (raw!) followradius (don't have to go within circle radius again after leaving the slider, would be too hard otherwise)
 		followRadius = m_beatmap->getRawSliderFollowCircleDiameter()/2.0f;
 		float vrCursor1Delta = (m_beatmap->getOsu()->getVR()->getCursorPos1() - m_beatmap->osuCoords2VRPixels(m_vCurPointRaw)).length();
@@ -1334,7 +1340,7 @@ void OsuSlider::onClickEvent(std::vector<OsuBeatmap::CLICK> &clicks)
 				const float targetDelta = cursorDelta / (m_beatmap->getHitcircleDiameter()/2.0f);
 				const float targetAngle = rad2deg(atan2(cursorPos.y - pos.y, cursorPos.x - pos.x));
 
-				m_beatmap->consumeClickEvent();
+				clicks.erase(clicks.begin());
 				m_startResult = result;
 				onHit(m_startResult, delta, false, targetDelta, targetAngle);
 			}
@@ -1696,5 +1702,5 @@ bool OsuSlider::isClickHeldSlider()
 	// if m_iDownKey is less than 1, then any key being held is enough to slide (either the startcircle was missed, or the opposite key it was clicked with has been released at least once already)
 	// otherwise, that specific key is the only one which counts for sliding
 	const bool mouseDownAcceptable = (m_iDownKey == 1 ? m_beatmap->isKey1Down() : m_beatmap->isKey2Down());
-	return (m_iDownKey < 1 ? m_beatmap->isClickHeld() : mouseDownAcceptable) || (m_beatmap->getOsu()->isInVRMode() && !m_beatmap->getOsu()->getVR()->isVirtualCursorOnScreen()); // a bit shit, but whatever. see OsuBeatmap::isClickHeld()
+	return (m_iDownKey < 1 ? m_beatmap->isClickHeld() : mouseDownAcceptable) || (m_beatmap->getOsu()->isInVRMode() && (!m_beatmap->getOsu()->getVR()->isVirtualCursorOnScreen() || !m_osu_vr_draw_desktop_playfield->getBool())); // a bit shit, but whatever. see OsuBeatmap::isClickHeld()
 }

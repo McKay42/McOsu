@@ -1312,7 +1312,7 @@ void OsuBeatmapStandard::onPlayStart()
 {
 	debugLog("OsuBeatmapStandard::onPlayStart()\n");
 
-	onModUpdate(false, false); // if there are calculations in there that need the hitobjects to be loaded
+	onModUpdate(false, false); // if there are calculations in there that need the hitobjects to be loaded, also applies speed/pitch
 }
 
 void OsuBeatmapStandard::onBeforeStop(bool quit)

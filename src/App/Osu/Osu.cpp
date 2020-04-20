@@ -64,7 +64,7 @@
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 31.05f);
+ConVar osu_version("osu_version", 31.09f);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr");
 #else
@@ -159,6 +159,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_ui_scrollview_scrollbarwidth_ref = convar->getConVarByName("ui_scrollview_scrollbarwidth");
 	m_mouse_raw_input_absolute_to_window_ref = convar->getConVarByName("mouse_raw_input_absolute_to_window");
 	m_win_disable_windows_key_ref = convar->getConVarByName("win_disable_windows_key");
+	m_osu_vr_draw_desktop_playfield_ref = convar->getConVarByName("osu_vr_draw_desktop_playfield");
 
 	// experimental mods list
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_wobble"));
@@ -236,6 +237,8 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 		convar->getConVarByName("osu_scores_legacy_enabled")->setValue(0.0f); // would collide
 		convar->getConVarByName("osu_mod_mafham_render_livesize")->setValue(7.0f);
 		convar->getConVarByName("osu_mod_mafham_render_chunksize")->setValue(12.0f);
+		convar->getConVarByName("osu_mod_touchdevice")->setDefaultFloat(1.0f);
+		convar->getConVarByName("osu_mod_touchdevice")->setValue(1.0f);
 		convar->getConVarByName("osu_volume_music")->setValue(0.3f);
 		convar->getConVarByName("osu_universal_offset_hardcoded")->setValue(-45.0f);
 		convar->getConVarByName("osu_key_quick_retry")->setValue(15.0f);	// L, SDL_SCANCODE_L
@@ -655,7 +658,7 @@ void Osu::draw(Graphics *g)
 		}
 
 		// draw player cursor
-		if ((!isAuto || allowDoubleCursor) && allowDrawCursor && (!isInVRMode() || (m_vr->isVirtualCursorOnScreen() || engine->hasFocus())))
+		if ((!isAuto || allowDoubleCursor) && allowDrawCursor && (!isInVRMode() || (m_osu_vr_draw_desktop_playfield_ref->getBool() && (m_vr->isVirtualCursorOnScreen() || engine->hasFocus()))))
 		{
 			Vector2 cursorPos = (beatmapStd != NULL && !isAuto) ? beatmapStd->getCursorPos() : engine->getMouse()->getPos();
 
@@ -666,7 +669,7 @@ void Osu::draw(Graphics *g)
 		}
 
 		// draw projected VR cursors for spectators
-		if (isInVRMode() && isInPlayMode() && !getSelectedBeatmap()->isPaused() && beatmapStd != NULL)
+		if (isInVRMode() && isInPlayMode() && !getSelectedBeatmap()->isPaused() && m_osu_vr_draw_desktop_playfield_ref->getBool() && beatmapStd != NULL)
 		{
 			m_hud->drawCursorSpectator1(g, beatmapStd->osuCoords2RawPixels(m_vr->getCursorPos1() + Vector2(OsuGameRules::OSU_COORD_WIDTH/2, OsuGameRules::OSU_COORD_HEIGHT/2)), 1.0f);
 			m_hud->drawCursorSpectator2(g, beatmapStd->osuCoords2RawPixels(m_vr->getCursorPos2() + Vector2(OsuGameRules::OSU_COORD_WIDTH/2, OsuGameRules::OSU_COORD_HEIGHT/2)), 1.0f);
@@ -775,6 +778,10 @@ void Osu::draw(Graphics *g)
 				const Vector2 backupResolution = engine->getGraphics()->getResolution();
 				g->onResolutionChange(Vector2(1920, 1080));
 				{
+					// NOTE: apparently, after testing with libnx 3.0.0, it now requires half 720p offset when undocked?
+					if (backupResolution.y < 722)
+						offset.y = 720 / 2;
+
 					m_backBuffer->draw(g, offset.x*(1.0f + osu_letterboxing_offset_x.getFloat()), offset.y*(1.0f + osu_letterboxing_offset_y.getFloat()), g_vInternalResolution.x, g_vInternalResolution.y);
 				}
 				g->onResolutionChange(backupResolution);
@@ -818,6 +825,10 @@ void Osu::drawVR(Graphics *g)
 	if (isInPlayMode()) // if we are playing a beatmap
 	{
 		m_vr->drawVRHUD(g, mvp, m_hud);
+
+		// all beatmap elements are more important than anything else, so reset depth buffer to always draw on top
+		g->clearDepthBuffer();
+
 		m_vr->drawVRBeatmap(g, mvp, getSelectedBeatmap());
 	}
 	else // not playing
@@ -1310,7 +1321,12 @@ void Osu::onKeyDown(KeyboardEvent &key)
 			}
 
 			// allow live mod changing while playing
-			if (!key.isConsumed() && (key == KEY_F1 || key == (KEYCODE)OsuKeyBindings::TOGGLE_MODSELECT.getInt()) && !m_bF1 && !getSelectedBeatmap()->hasFailed()) // only if not failed though
+			if (!key.isConsumed()
+				&& (key == KEY_F1 || key == (KEYCODE)OsuKeyBindings::TOGGLE_MODSELECT.getInt())
+				&& (KEY_F1 != (KEYCODE)OsuKeyBindings::LEFT_CLICK.getInt() || !m_bKeyboardKey1Down)
+				&& (KEY_F1 != (KEYCODE)OsuKeyBindings::RIGHT_CLICK.getInt() || !m_bKeyboardKey2Down)
+				&& !m_bF1
+				&& !getSelectedBeatmap()->hasFailed()) // only if not failed though
 			{
 				m_bF1 = true;
 				toggleModSelection(true);
@@ -1851,6 +1867,8 @@ bool Osu::shouldFallBackToLegacySliderRenderer()
 
 void Osu::onResolutionChanged(Vector2 newResolution)
 {
+	debugLog("Osu::onResolutionChanged(%i, %i), minimized = %i\n", (int)newResolution.x, (int)newResolution.y, (int)engine->isMinimized());
+
 	if (engine->isMinimized()) return; // ignore if minimized
 
 	if (m_iInstanceID < 1)
@@ -1942,6 +1960,8 @@ void Osu::reloadFonts()
 
 void Osu::updateMouseSettings()
 {
+	debugLog("Osu::updateMouseSettings()\n");
+
 	// mouse scaling & offset
 	Vector2 offset = Vector2(0, 0);
 	Vector2 scale = Vector2(1, 1);
@@ -1965,6 +1985,8 @@ void Osu::updateMouseSettings()
 
 void Osu::updateWindowsKeyDisable()
 {
+	debugLog("Osu::updateWindowsKeyDisable()\n");
+
 	if (isInVRMode()) return;
 
 	if (osu_win_disable_windows_key_while_playing.getBool())
@@ -2194,6 +2216,8 @@ void Osu::onLetterboxingChange(UString oldValue, UString newValue)
 
 void Osu::updateConfineCursor()
 {
+	debugLog("Osu::updateConfineCursor()\n");
+
 	if (isInVRMode() || m_iInstanceID > 0) return;
 
 	if ((osu_confine_cursor_fullscreen.getBool() && env->isFullscreen())

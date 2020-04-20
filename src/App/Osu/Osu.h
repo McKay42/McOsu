@@ -258,6 +258,7 @@ private:
 	ConVar *m_ui_scrollview_scrollbarwidth_ref;
 	ConVar *m_mouse_raw_input_absolute_to_window_ref;
 	ConVar *m_win_disable_windows_key_ref;
+	ConVar *m_osu_vr_draw_desktop_playfield_ref;
 
 	// interfaces
 	Osu2 *m_osu2;

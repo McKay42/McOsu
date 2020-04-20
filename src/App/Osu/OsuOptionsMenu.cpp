@@ -603,7 +603,8 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 		addSpacer();
 		addSubSection("Play Area / Playfield");
 		addSpacer();
-		addSlider("RenderModel Brightness", 0.1f, 10.0f, convar->getConVarByName("vr_controller_model_brightness_multiplier"))->setKeyDelta(0.1f);
+		addSlider("Controller Model Brightness", 0.1f, 10.0f, convar->getConVarByName("vr_controller_model_brightness_multiplier"))->setKeyDelta(0.1f);
+		addSlider("Head Model Brightness", 0.0f, 1.5f, convar->getConVarByName("vr_head_rendermodel_brightness"))->setKeyDelta(0.01f);
 		addSlider("Background Brightness", 0.0f, 1.0f, convar->getConVarByName("vr_background_brightness"))->setKeyDelta(0.05f);
 		addSlider("VR Cursor Opacity", 0.0f, 1.0f, convar->getConVarByName("osu_vr_cursor_alpha"))->setKeyDelta(0.1f);
 		addSpacer();
@@ -641,6 +642,8 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 		addSpacer();
 		addCheckbox("Draw HMD to Window (!)", "If this is disabled, then nothing will be drawn to the window.", convar->getConVarByName("vr_draw_hmd_to_window"));
 		addCheckbox("Draw Both Eyes to Window", "Only applies if \"Draw HMD to Window\" is enabled, see above.", convar->getConVarByName("vr_draw_hmd_to_window_draw_both_eyes"));
+		addCheckbox("Draw Laser in Game", convar->getConVarByName("osu_vr_draw_laser_game"));
+		addCheckbox("Draw Laser in Menu", convar->getConVarByName("osu_vr_draw_laser_menu"));
 		addCheckbox("Draw Floor", convar->getConVarByName("osu_vr_draw_floor"));
 		addCheckbox("Draw Controller Models", convar->getConVarByName("vr_draw_controller_models"));
 		addCheckbox("Draw Lighthouse Models", convar->getConVarByName("vr_draw_lighthouse_models"));
@@ -723,8 +726,11 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	offsetSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeIntMS) );
 	offsetSlider->setKeyDelta(1);
 
-	addSubSection("Songbrowser");
-	addCheckbox("Apply speed/pitch mods while browsing", "Whether to always apply all mods, or keep the preview music normal.", convar->getConVarByName("osu_beatmap_preview_mods_live"));
+	if (env->getOS() != Environment::OS::OS_HORIZON)
+	{
+		addSubSection("Songbrowser");
+		addCheckbox("Apply speed/pitch mods while browsing", "Whether to always apply all mods, or keep the preview music normal.", convar->getConVarByName("osu_beatmap_preview_mods_live"));
+	}
 
 	//**************************************************************************************************************************//
 
@@ -836,7 +842,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	if (env->getOS() == Environment::OS::OS_WINDOWS)
 	{
 		addSubSection("Tablet");
-		addCheckbox("OS TabletPC Support (!)", "WARNING: Do not enable this with a mouse (will break right click)!\nEnable this if your tablet clicks aren't handled correctly.", convar->getConVarByName("win_realtimestylus"));
+		addCheckbox("OS TabletPC Support (!)", "WARNING: Windows 10 may break raw mouse input if this is enabled!\nWARNING: Do not enable this with a mouse (will break right click)!\nEnable this if your tablet clicks aren't handled correctly.", convar->getConVarByName("win_realtimestylus"));
 		addCheckbox("Windows Ink Workaround", "Enable this if your tablet cursor is stuck in a tiny area on the top left of the screen.\nIf this doesn't fix it, use \"Ignore Sensitivity & Raw Input\" below.", convar->getConVarByName("win_ink_workaround"));
 		addCheckbox("Ignore Sensitivity & Raw Input", "Only use this if nothing else works.\nIf this is enabled, then the in-game sensitivity slider will no longer work for tablets!\n(You can then instead use your tablet configuration software to change the tablet area.)", convar->getConVarByName("tablet_sensitivity_ignore"));
 	}
@@ -1785,7 +1791,7 @@ void OsuOptionsMenu::updateLayout()
 	bool inSkipSubSection = false;
 	bool sectionTitleMatch = false;
 	bool subSectionTitleMatch = false;
-	std::string search = m_sSearchString.length() > 0 ? m_sSearchString.toUtf8() : "";
+	const std::string search = m_sSearchString.length() > 0 ? m_sSearchString.toUtf8() : "";
 	for (int i=0; i<m_elements.size(); i++)
 	{
 		// searching logic happens here:

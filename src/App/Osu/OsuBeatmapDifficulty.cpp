@@ -204,6 +204,8 @@ OsuBeatmapDifficulty::OsuBeatmapDifficulty(Osu *osu, UString filepath, UString f
 	minBPM = 0;
 	maxBPM = 0;
 	numObjects = 0;
+	numCircles = 0;
+	numSliders = 0;
 	starsNoMod = 0.0f;
 	ID = 0;
 	setID = -1;
@@ -264,6 +266,7 @@ bool OsuBeatmapDifficulty::loadMetadataRaw(bool calculateStars, bool calculateSt
 	else
 		calculateStars = false;
 
+	long rawLengthMS = 0;
 	if (!loaded) // NOTE: as long as a diff is fully "loaded" (i.e. while playing), we do not have permission to modify any data (reading is fine though)
 	{
 		// reset
@@ -500,6 +503,9 @@ bool OsuBeatmapDifficulty::loadMetadataRaw(bool calculateStars, bool calculateSt
 
 						if (intScan || floatScan)
 						{
+							if (time > rawLengthMS)
+								rawLengthMS = time;
+
 							if (type & 0x1) // circle
 							{
 								HITCIRCLE c;
@@ -644,6 +650,11 @@ bool OsuBeatmapDifficulty::loadMetadataRaw(bool calculateStars, bool calculateSt
 			if (!loaded) // NOTE: as long as a diff is fully "loaded" (i.e. while playing), we do not have permission to modify any data (reading is fine though)
 			{
 				numObjects = hitcircles.size() + sliders.size() + spinners.size();
+				numCircles = hitcircles.size();
+				numSliders = sliders.size();
+
+				if (lengthMS == 0)
+					lengthMS = rawLengthMS;
 
 				// calculate sliderTimes, and build slider clicks and ticks
 				// NOTE: only necessary since the latest pp changes (Xexxar)
@@ -985,6 +996,10 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 	// update numObjects
 	if (numObjects == 0)
 		numObjects = hitcircles.size() + sliders.size() + spinners.size();
+	if (numCircles == 0)
+		numCircles = hitcircles.size();
+	if (numSliders == 0)
+		numSliders = sliders.size();
 
 	// sort timingpoints by time
 	std::sort(timingpoints.begin(), timingpoints.end(), TimingPointSortComparator());
@@ -1013,6 +1028,9 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 	    }
 	};
 	std::sort(hitobjects->begin(), hitobjects->end(), HitObjectSortComparator());
+
+	if (lengthMS == 0 && hitobjects->size() > 0)
+		lengthMS = (*hitobjects)[hitobjects->size() - 1]->getTime();
 
 	// set isEndOfCombo + precalculate Score v2 combo portion maximum
 	if (beatmapStandard != NULL)
