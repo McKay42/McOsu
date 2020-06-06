@@ -856,11 +856,12 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	}
 
 	addSpacer();
-	CBaseUIElement *subSectionKeyboard = addSubSection("Keyboard");
-	addSubSection("Keys - osu! Standard Mode");
+	const UString keyboardSectionTags = "keyboard keys binds keybinds";
+	CBaseUIElement *subSectionKeyboard = addSubSection("Keyboard", keyboardSectionTags);
+	addSubSection("Keys - osu! Standard Mode", keyboardSectionTags);
 	addKeyBindButton("Left Click", &OsuKeyBindings::LEFT_CLICK);
 	addKeyBindButton("Right Click", &OsuKeyBindings::RIGHT_CLICK);
-	addSubSection("Keys - In-Game");
+	addSubSection("Keys - In-Game", keyboardSectionTags);
 	addKeyBindButton("Game Pause", &OsuKeyBindings::GAME_PAUSE);
 	addKeyBindButton("Skip Cutscene", &OsuKeyBindings::SKIP_CUTSCENE);
 	addKeyBindButton("Toggle Scoreboard", &OsuKeyBindings::TOGGLE_SCOREBOARD);
@@ -870,16 +871,16 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addKeyBindButton("Quick Retry (hold briefly)", &OsuKeyBindings::QUICK_RETRY);
 	addKeyBindButton("Quick Save", &OsuKeyBindings::QUICK_SAVE);
 	addKeyBindButton("Quick Load", &OsuKeyBindings::QUICK_LOAD);
-	addSubSection("Keys - Universal");
+	addSubSection("Keys - Universal", keyboardSectionTags);
 	addKeyBindButton("Save Screenshot", &OsuKeyBindings::SAVE_SCREENSHOT);
 	addKeyBindButton("Increase Volume", &OsuKeyBindings::INCREASE_VOLUME);
 	addKeyBindButton("Decrease Volume", &OsuKeyBindings::DECREASE_VOLUME);
 	addKeyBindButton("Disable Mouse Buttons", &OsuKeyBindings::DISABLE_MOUSE_BUTTONS);
 	addKeyBindButton("Boss Key (Minimize)", &OsuKeyBindings::BOSS_KEY);
-	addSubSection("Keys - Song Select");
+	addSubSection("Keys - Song Select", keyboardSectionTags);
 	addKeyBindButton("Toggle Mod Selection Screen", &OsuKeyBindings::TOGGLE_MODSELECT)->setTooltipText("(F1 can not be unbound. This is just an additional key.)");
 	addKeyBindButton("Random Beatmap", &OsuKeyBindings::RANDOM_BEATMAP)->setTooltipText("(F2 can not be unbound. This is just an additional key.)");
-	addSubSection("Keys - Mod Select");
+	addSubSection("Keys - Mod Select", keyboardSectionTags);
 	addKeyBindButton("Easy", &OsuKeyBindings::MOD_EASY);
 	addKeyBindButton("No Fail", &OsuKeyBindings::MOD_NOFAIL);
 	addKeyBindButton("Half Time", &OsuKeyBindings::MOD_HALFTIME);
@@ -915,7 +916,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Show Skip Button during Intro", "Skip intro to first hitobject.", convar->getConVarByName("osu_skip_intro_enabled"));
 	addCheckbox("Show Skip Button during Breaks", "Skip breaks in the middle of beatmaps.", convar->getConVarByName("osu_skip_breaks_enabled"));
 	addSpacer();
-	addSubSection("Mechanics", "health drain notelock lock block blocking");
+	addSubSection("Mechanics", "health drain notelock lock block blocking noteblock");
 	addCheckbox("Kill Player upon Failing", "Enabled: Singleplayer default. You die upon failing and the beatmap stops.\nDisabled: Multiplayer default. Allows you to keep playing even after failing.", convar->getConVarByName("osu_drain_kill"));
 	addSpacer();
 	addLabel("");
