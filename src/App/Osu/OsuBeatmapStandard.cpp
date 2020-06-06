@@ -149,7 +149,6 @@ private:
 
 ConVar *OsuBeatmapStandard::m_osu_draw_statistics_pp_ref = NULL;
 ConVar *OsuBeatmapStandard::m_osu_mod_fullalternate_ref = NULL;
-ConVar *OsuBeatmapStandard::m_osu_drain_stable_hpbar_maximum_ref = NULL;
 ConVar *OsuBeatmapStandard::m_osu_mod_fposu_ref = NULL;
 
 OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
@@ -206,8 +205,6 @@ OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 		m_osu_draw_statistics_pp_ref = convar->getConVarByName("osu_draw_statistics_pp");
 	if (m_osu_mod_fullalternate_ref == NULL)
 		m_osu_mod_fullalternate_ref = convar->getConVarByName("osu_mod_fullalternate");
-	if (m_osu_drain_stable_hpbar_maximum_ref == NULL)
-		m_osu_drain_stable_hpbar_maximum_ref = convar->getConVarByName("osu_drain_stable_hpbar_maximum");
 	if (m_osu_mod_fposu_ref == NULL)
 		m_osu_mod_fposu_ref = convar->getConVarByName("osu_mod_fposu");
 }
@@ -1379,6 +1376,7 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 				score.numMisses = m_osu->getScore()->getNumMisses();
 				score.score = m_osu->getScore()->getScore();
 				score.comboMax = m_osu->getScore()->getComboMax();
+				score.perfect = (maxPossibleCombo > 0 && score.comboMax > 0 && score.comboMax >= maxPossibleCombo);
 				score.modsLegacy = m_osu->getScore()->getModsLegacy();
 
 				// custom
@@ -1421,6 +1419,7 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 			debugLog("OsuBeatmapStandard::onBeforeStop() done.\n");
 		}
 		m_osu->getScore()->setIndex(scoreIndex);
+		m_osu->getScore()->setComboFull(maxPossibleCombo); // used in OsuRankingScreen/OsuUIRankingScreenRankingPanel
 
 		// special case: incomplete scores should NEVER show pp, even if auto
 		if (!isComplete)

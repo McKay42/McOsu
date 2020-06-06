@@ -47,6 +47,7 @@ public:
 
 		unsigned long long score;
 		int comboMax;
+		bool perfect;
 		int modsLegacy;
 
 		// custom
@@ -142,6 +143,8 @@ private:
 
 	static ConVar *m_name_ref;
 	static ConVar *m_osu_songbrowser_scores_sortingtype_ref;
+
+	void addScoreRaw(const std::string &beatmapMD5Hash, const OsuDatabase::Score &score);
 
 	UString parseLegacyCfgBeatmapDirectoryParameter();
 	void scheduleLoadRaw();
