@@ -1596,76 +1596,124 @@ std::vector<std::shared_ptr<OsuDifficultyHitObject>> OsuBeatmapDifficulty::gener
 		const float STACK_LENIENCE = 3.0f;
 		const float STACK_OFFSET = 0.05f;
 
-		// peppy's algorithm
-		// https://gist.github.com/peppy/1167470
-
 		const float approachTime = OsuGameRules::getApproachTimeForStacking(finalAR);
-		for (int i=diffHitObjects.size()-1; i>=0; i--)
+
+		if (version > 5)
 		{
-			int n = i;
+			// peppy's algorithm
+			// https://gist.github.com/peppy/1167470
 
-			std::shared_ptr<OsuDifficultyHitObject> objectI = diffHitObjects[i];
-
-			const bool isSpinner = (objectI->type == OsuDifficultyHitObject::TYPE::SPINNER);
-
-			if (objectI->stack != 0 || isSpinner)
-				continue;
-
-			const bool isHitCircle = (objectI->type == OsuDifficultyHitObject::TYPE::CIRCLE);
-			const bool isSlider = (objectI->type == OsuDifficultyHitObject::TYPE::SLIDER);
-
-			if (isHitCircle)
+			for (int i=diffHitObjects.size()-1; i>=0; i--)
 			{
-				while (--n >= 0)
+				int n = i;
+
+				std::shared_ptr<OsuDifficultyHitObject> objectI = diffHitObjects[i];
+
+				const bool isSpinner = (objectI->type == OsuDifficultyHitObject::TYPE::SPINNER);
+
+				if (objectI->stack != 0 || isSpinner)
+					continue;
+
+				const bool isHitCircle = (objectI->type == OsuDifficultyHitObject::TYPE::CIRCLE);
+				const bool isSlider = (objectI->type == OsuDifficultyHitObject::TYPE::SLIDER);
+
+				if (isHitCircle)
 				{
-					std::shared_ptr<OsuDifficultyHitObject> objectN = diffHitObjects[n];
-
-					const bool isSpinnerN = (objectN->type == OsuDifficultyHitObject::TYPE::SPINNER);
-
-					if (isSpinnerN)
-						continue;
-
-					if (objectI->time - (approachTime * stackLeniency) > (objectN->endTime))
-						break;
-
-					Vector2 objectNEndPosition = objectN->getOriginalRawPosAt(objectN->time + objectN->getDuration());
-					if (objectN->getDuration() != 0 && (objectNEndPosition - objectI->getOriginalRawPosAt(objectI->time)).length() < STACK_LENIENCE)
+					while (--n >= 0)
 					{
-						int offset = objectI->stack - objectN->stack + 1;
-						for (int j=n+1; j<=i; j++)
+						std::shared_ptr<OsuDifficultyHitObject> objectN = diffHitObjects[n];
+
+						const bool isSpinnerN = (objectN->type == OsuDifficultyHitObject::TYPE::SPINNER);
+
+						if (isSpinnerN)
+							continue;
+
+						if (objectI->time - (approachTime * stackLeniency) > (objectN->endTime))
+							break;
+
+						Vector2 objectNEndPosition = objectN->getOriginalRawPosAt(objectN->time + objectN->getDuration());
+						if (objectN->getDuration() != 0 && (objectNEndPosition - objectI->getOriginalRawPosAt(objectI->time)).length() < STACK_LENIENCE)
 						{
-							if ((objectNEndPosition - diffHitObjects[j]->getOriginalRawPosAt(diffHitObjects[j]->time)).length() < STACK_LENIENCE)
-								diffHitObjects[j]->stack = (diffHitObjects[j]->stack - offset);
+							int offset = objectI->stack - objectN->stack + 1;
+							for (int j=n+1; j<=i; j++)
+							{
+								if ((objectNEndPosition - diffHitObjects[j]->getOriginalRawPosAt(diffHitObjects[j]->time)).length() < STACK_LENIENCE)
+									diffHitObjects[j]->stack = (diffHitObjects[j]->stack - offset);
+							}
+
+							break;
 						}
 
-						break;
+						if ((objectN->getOriginalRawPosAt(objectN->time) - objectI->getOriginalRawPosAt(objectI->time)).length() < STACK_LENIENCE)
+						{
+							objectN->stack = (objectI->stack + 1);
+							objectI = objectN;
+						}
 					}
-
-					if ((objectN->getOriginalRawPosAt(objectN->time) - objectI->getOriginalRawPosAt(objectI->time)).length() < STACK_LENIENCE)
+				}
+				else if (isSlider)
+				{
+					while (--n >= 0)
 					{
-						objectN->stack = (objectI->stack + 1);
-						objectI = objectN;
+						std::shared_ptr<OsuDifficultyHitObject> objectN = diffHitObjects[n];
+
+						const bool isSpinner = (objectN->type == OsuDifficultyHitObject::TYPE::SPINNER);
+
+						if (isSpinner)
+							continue;
+
+						if (objectI->time - (approachTime * stackLeniency) > objectN->time)
+							break;
+
+						if (((objectN->getDuration() != 0 ? objectN->getOriginalRawPosAt(objectN->time + objectN->getDuration()) : objectN->getOriginalRawPosAt(objectN->time)) - objectI->getOriginalRawPosAt(objectI->time)).length() < STACK_LENIENCE)
+						{
+							objectN->stack = (objectI->stack + 1);
+							objectI = objectN;
+						}
 					}
 				}
 			}
-			else if (isSlider)
+		}
+		else // version < 6
+		{
+			// old stacking algorithm for old beatmaps
+			// https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Beatmaps/OsuBeatmapProcessor.cs
+
+			for (int i=0; i<diffHitObjects.size(); i++)
 			{
-				while (--n >= 0)
+				std::shared_ptr<OsuDifficultyHitObject> currHitObject = diffHitObjects[i];
+
+				const bool isSlider = (currHitObject->type == OsuDifficultyHitObject::TYPE::SLIDER);
+
+				if (currHitObject->stack != 0 && !isSlider)
+					continue;
+
+				long startTime = currHitObject->time + currHitObject->getDuration();
+				int sliderStack = 0;
+
+				for (int j=i+1; j<diffHitObjects.size(); j++)
 				{
-					std::shared_ptr<OsuDifficultyHitObject> objectN = diffHitObjects[n];
+					std::shared_ptr<OsuDifficultyHitObject> objectJ = diffHitObjects[j];
 
-					const bool isSpinner = (objectN->type == OsuDifficultyHitObject::TYPE::SPINNER);
-
-					if (isSpinner)
-						continue;
-
-					if (objectI->time - (approachTime * stackLeniency) > objectN->time)
+					if (objectJ->time - (approachTime * stackLeniency) > startTime)
 						break;
 
-					if (((objectN->getDuration() != 0 ? objectN->getOriginalRawPosAt(objectN->time + objectN->getDuration()) : objectN->getOriginalRawPosAt(objectN->time)) - objectI->getOriginalRawPosAt(objectI->time)).length() < STACK_LENIENCE)
+					// "The start position of the hitobject, or the position at the end of the path if the hitobject is a slider"
+					Vector2 position2 = isSlider
+						? currHitObject->getOriginalRawPosAt(currHitObject->time + currHitObject->getDuration())
+						: currHitObject->getOriginalRawPosAt(currHitObject->time);
+
+					if ((objectJ->getOriginalRawPosAt(objectJ->time) - currHitObject->getOriginalRawPosAt(currHitObject->time)).length() < 3)
 					{
-						objectN->stack = (objectI->stack + 1);
-						objectI = objectN;
+						currHitObject->stack++;
+						startTime = objectJ->time + objectJ->getDuration();
+					}
+					else if ((objectJ->getOriginalRawPosAt(objectJ->time) - position2).length() < 3)
+					{
+						// "Case for sliders - bump notes down and right, rather than up and left."
+						sliderStack++;
+						objectJ->stack -= sliderStack;
+						startTime = objectJ->time + objectJ->getDuration();
 					}
 				}
 			}

@@ -1726,85 +1726,134 @@ void OsuBeatmapStandard::calculateStacks()
 
 	debugLog("OsuBeatmapStandard: Calculating stacks ...\n");
 
-	const float STACK_LENIENCE = 3.0f;
-	const float STACK_OFFSET = 0.05f;
-
 	// reset
 	for (int i=0; i<m_hitobjects.size(); i++)
 	{
 		m_hitobjects[i]->setStack(0);
 	}
 
-	// peppy's algorithm
-	// https://gist.github.com/peppy/1167470
+	const float STACK_LENIENCE = 3.0f;
+	const float STACK_OFFSET = 0.05f;
 
 	const float approachTime = OsuGameRules::getApproachTimeForStacking(this);
-	for (int i=m_hitobjects.size()-1; i>=0; i--)
+
+	if (getSelectedDifficulty()->version > 5)
 	{
-		int n = i;
+		// peppy's algorithm
+		// https://gist.github.com/peppy/1167470
 
-		OsuHitObject *objectI = m_hitobjects[i];
-
-		bool isSpinner = dynamic_cast<OsuSpinner*>(objectI) != NULL;
-
-		if (objectI->getStack() != 0 || isSpinner)
-			continue;
-
-		bool isHitCircle = dynamic_cast<OsuCircle*>(objectI) != NULL;
-		bool isSlider = dynamic_cast<OsuSlider*>(objectI) != NULL;
-
-		if (isHitCircle)
+		for (int i=m_hitobjects.size()-1; i>=0; i--)
 		{
-			while (--n >= 0)
+			int n = i;
+
+			OsuHitObject *objectI = m_hitobjects[i];
+
+			bool isSpinner = dynamic_cast<OsuSpinner*>(objectI) != NULL;
+
+			if (objectI->getStack() != 0 || isSpinner)
+				continue;
+
+			bool isHitCircle = dynamic_cast<OsuCircle*>(objectI) != NULL;
+			bool isSlider = dynamic_cast<OsuSlider*>(objectI) != NULL;
+
+			if (isHitCircle)
 			{
-				OsuHitObject *objectN = m_hitobjects[n];
-
-				bool isSpinnerN = dynamic_cast<OsuSpinner*>(objectN);
-
-				if (isSpinnerN)
-					continue;
-
-				if (objectI->getTime() - (approachTime * m_selectedDifficulty->stackLeniency) > (objectN->getTime() + objectN->getDuration()))
-					break;
-
-				Vector2 objectNEndPosition = objectN->getOriginalRawPosAt(objectN->getTime() + objectN->getDuration());
-				if (objectN->getDuration() != 0 && (objectNEndPosition - objectI->getOriginalRawPosAt(objectI->getTime())).length() < STACK_LENIENCE)
+				while (--n >= 0)
 				{
-					int offset = objectI->getStack() - objectN->getStack() + 1;
-					for (int j=n+1; j<=i; j++)
+					OsuHitObject *objectN = m_hitobjects[n];
+
+					bool isSpinnerN = dynamic_cast<OsuSpinner*>(objectN);
+
+					if (isSpinnerN)
+						continue;
+
+					if (objectI->getTime() - (approachTime * m_selectedDifficulty->stackLeniency) > (objectN->getTime() + objectN->getDuration()))
+						break;
+
+					Vector2 objectNEndPosition = objectN->getOriginalRawPosAt(objectN->getTime() + objectN->getDuration());
+					if (objectN->getDuration() != 0 && (objectNEndPosition - objectI->getOriginalRawPosAt(objectI->getTime())).length() < STACK_LENIENCE)
 					{
-						if ((objectNEndPosition - m_hitobjects[j]->getOriginalRawPosAt(m_hitobjects[j]->getTime())).length() < STACK_LENIENCE)
-							m_hitobjects[j]->setStack(m_hitobjects[j]->getStack() - offset);
+						int offset = objectI->getStack() - objectN->getStack() + 1;
+						for (int j=n+1; j<=i; j++)
+						{
+							if ((objectNEndPosition - m_hitobjects[j]->getOriginalRawPosAt(m_hitobjects[j]->getTime())).length() < STACK_LENIENCE)
+								m_hitobjects[j]->setStack(m_hitobjects[j]->getStack() - offset);
+						}
+
+						break;
 					}
 
-					break;
+					if ((objectN->getOriginalRawPosAt(objectN->getTime()) - objectI->getOriginalRawPosAt(objectI->getTime())).length() < STACK_LENIENCE)
+					{
+						objectN->setStack(objectI->getStack() + 1);
+						objectI = objectN;
+					}
 				}
-
-				if ((objectN->getOriginalRawPosAt(objectN->getTime()) - objectI->getOriginalRawPosAt(objectI->getTime())).length() < STACK_LENIENCE)
+			}
+			else if (isSlider)
+			{
+				while (--n >= 0)
 				{
-					objectN->setStack(objectI->getStack() + 1);
-					objectI = objectN;
+					OsuHitObject *objectN = m_hitobjects[n];
+
+					bool isSpinner = dynamic_cast<OsuSpinner*>(objectN) != NULL;
+
+					if (isSpinner)
+						continue;
+
+					if (objectI->getTime() - (approachTime * m_selectedDifficulty->stackLeniency) > objectN->getTime())
+						break;
+
+					if (((objectN->getDuration() != 0 ? objectN->getOriginalRawPosAt(objectN->getTime() + objectN->getDuration()) : objectN->getOriginalRawPosAt(objectN->getTime())) - objectI->getOriginalRawPosAt(objectI->getTime())).length() < STACK_LENIENCE)
+					{
+						objectN->setStack(objectI->getStack() + 1);
+						objectI = objectN;
+					}
 				}
 			}
 		}
-		else if (isSlider)
+	}
+	else // getSelectedDifficulty()->version < 6
+	{
+		// old stacking algorithm for old beatmaps
+		// https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Beatmaps/OsuBeatmapProcessor.cs
+
+		for (int i=0; i<m_hitobjects.size(); i++)
 		{
-			while (--n >= 0)
+			OsuHitObject *currHitObject = m_hitobjects[i];
+			OsuSlider *sliderPointer = dynamic_cast<OsuSlider*>(currHitObject);
+
+			const bool isSlider = (sliderPointer != NULL);
+
+			if (currHitObject->getStack() != 0 && !isSlider)
+				continue;
+
+			long startTime = currHitObject->getTime() + currHitObject->getDuration();
+			int sliderStack = 0;
+
+			for (int j=i+1; j<m_hitobjects.size(); j++)
 			{
-				OsuHitObject *objectN = m_hitobjects[n];
+				OsuHitObject *objectJ = m_hitobjects[j];
 
-				bool isSpinner = dynamic_cast<OsuSpinner*>(objectN) != NULL;
-
-				if (isSpinner)
-					continue;
-
-				if (objectI->getTime() - (approachTime * m_selectedDifficulty->stackLeniency) > objectN->getTime())
+				if (objectJ->getTime() - (approachTime * m_selectedDifficulty->stackLeniency) > startTime)
 					break;
 
-				if (((objectN->getDuration() != 0 ? objectN->getOriginalRawPosAt(objectN->getTime() + objectN->getDuration()) : objectN->getOriginalRawPosAt(objectN->getTime())) - objectI->getOriginalRawPosAt(objectI->getTime())).length() < STACK_LENIENCE)
+				// "The start position of the hitobject, or the position at the end of the path if the hitobject is a slider"
+				Vector2 position2 = isSlider
+					? sliderPointer->getOriginalRawPosAt(sliderPointer->getTime() + sliderPointer->getDuration())
+					: currHitObject->getOriginalRawPosAt(currHitObject->getTime());
+
+				if ((objectJ->getOriginalRawPosAt(objectJ->getTime()) - currHitObject->getOriginalRawPosAt(currHitObject->getTime())).length() < 3)
 				{
-					objectN->setStack(objectI->getStack() + 1);
-					objectI = objectN;
+					currHitObject->setStack(currHitObject->getStack() + 1);
+					startTime = objectJ->getTime() + objectJ->getDuration();
+				}
+				else if ((objectJ->getOriginalRawPosAt(objectJ->getTime()) - position2).length() < 3)
+				{
+					// "Case for sliders - bump notes down and right, rather than up and left."
+					sliderStack++;
+					objectJ->setStack(objectJ->getStack() - sliderStack);
+					startTime = objectJ->getTime() + objectJ->getDuration();
 				}
 			}
 		}
