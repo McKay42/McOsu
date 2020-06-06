@@ -97,7 +97,7 @@ ConVar osu_end_delay_time("osu_end_delay_time", 1100.0f, "Duration in ms which i
 ConVar osu_end_skip_time("osu_end_skip_time", 400.0f, "Duration in ms which is added to the endTime of the last hitobject, after which pausing the game will immediately jump to the ranking screen");
 ConVar osu_skip_time("osu_skip_time", 5000.0f, "Timeframe in ms within a beatmap which allows skipping if it doesn't contain any hitobjects");
 ConVar osu_fail_time("osu_fail_time", 2.25f, "Timeframe in s for the slowdown effect after failing, before the pause menu is shown");
-ConVar osu_note_blocking("osu_note_blocking", true, "Whether to use note blocking or not");
+ConVar osu_notelock_type("osu_notelock_type", 1, "which notelock algorithm to use (0 = None, 1 = osu!stable, 2 = osu!lazer 2020)");
 ConVar osu_mod_suddendeath_restart("osu_mod_suddendeath_restart", false, "osu! has this set to false (i.e. you fail after missing). if set to true, then behave like SS/PF, instantly restarting the map");
 
 ConVar osu_drain_type("osu_drain_type", 2, "which hp drain algorithm to use (0 = None, 1 = VR, 2 = osu!stable, 3 = osu!lazer 2020, 4 = osu!lazer 2018)");
@@ -110,8 +110,8 @@ ConVar osu_drain_stable_break_before("osu_drain_stable_break_before", false, "dr
 ConVar osu_drain_stable_break_before_old("osu_drain_stable_break_before_old", true, "for beatmap versions < 8, drain after last hitobject before a break actually starts");
 ConVar osu_drain_stable_break_after("osu_drain_stable_break_after", false, "drain after a break before the next hitobject can be clicked");
 ConVar osu_drain_lazer_passive_fail("osu_drain_lazer_passive_fail", false, "whether to fail the player instantly if health = 0, or only once a negative judgement occurs");
-ConVar osu_drain_lazer_break_before("osu_drain_lazer_break_before", true, "drain after last hitobject before a break actually starts");
-ConVar osu_drain_lazer_break_after("osu_drain_lazer_break_after", true, "drain after a break before the next hitobject can be clicked");
+ConVar osu_drain_lazer_break_before("osu_drain_lazer_break_before", false, "drain after last hitobject before a break actually starts");
+ConVar osu_drain_lazer_break_after("osu_drain_lazer_break_after", false, "drain after a break before the next hitobject can be clicked");
 ConVar osu_drain_stable_spinner_nerf("osu_drain_stable_spinner_nerf", 0.25f, "drain gets multiplied with this while a spinner is active");
 ConVar osu_drain_stable_hpbar_recovery("osu_drain_stable_hpbar_recovery", 160.0f, "hp gets set to this value when failing with ez and causing a recovery");
 
@@ -556,6 +556,8 @@ void OsuBeatmap::update()
 		const long pvs = !OsuGameRules::osu_mod_mafham.getBool() ? getPVS() : (m_hitobjects.size() > 0 ? (m_hitobjects[clamp<int>(m_iCurrentHitObjectIndex + OsuGameRules::osu_mod_mafham_render_livesize.getInt() + 1, 0, m_hitobjects.size()-1)]->getTime() - m_iCurMusicPosWithOffsets + 1500) : getPVS());
 		const bool usePVS = m_osu_pvs->getBool();
 
+		const int notelockType = osu_notelock_type.getInt();
+
 		m_iCurrentHitObjectIndex = 0; // reset below here, since it's needed for mafham pvs
 
 		for (int i=0; i<m_hitobjects.size(); i++)
@@ -617,45 +619,52 @@ void OsuBeatmap::update()
 			m_hitobjects[i]->update(m_iCurMusicPosWithOffsets);
 
 			// note blocking / notelock (1)
-			if (osu_note_blocking.getBool())
+			if (notelockType > 0)
 			{
 				m_hitobjects[i]->setBlocked(blockNextNotes);
 
-				if (!m_hitobjects[i]->isFinished())
+				if (notelockType == 1) // osu!stable
 				{
-					blockNextNotes = true;
-
-					// old implementation
-					// sliders are "finished" after their startcircle
-					/*
+					if (!m_hitobjects[i]->isFinished())
 					{
-						OsuSlider *sliderPointer = dynamic_cast<OsuSlider*>(m_hitobjects[i]);
+						blockNextNotes = true;
 
-						// sliders with finished startcircles do not block
-						if (sliderPointer != NULL && sliderPointer->isStartCircleFinished())
-							blockNextNotes = false;
-					}
-					*/
-
-					// new implementation
-					// sliders are "finished" after they end
-					// extra handling for simultaneous/2b hitobjects, as these would now otherwise get blocked completely
-					// NOTE: this will (same as the old implementation) still unlock some simultaneous/2b patterns too early (slider slider circle [circle]), but nobody from that niche has complained so far
-					{
-						OsuSlider *sliderPointer = dynamic_cast<OsuSlider*>(m_hitobjects[i]);
-
-						const bool isSlider = (sliderPointer != NULL);
-						const bool isSpinner = (!isSlider && !isCircle);
-
-						if (isSlider || isSpinner)
+						// old implementation
+						// sliders are "finished" after their startcircle
+						/*
 						{
-							if (i + 1 < m_hitobjects.size())
+							OsuSlider *sliderPointer = dynamic_cast<OsuSlider*>(m_hitobjects[i]);
+
+							// sliders with finished startcircles do not block
+							if (sliderPointer != NULL && sliderPointer->isStartCircleFinished())
+								blockNextNotes = false;
+						}
+						*/
+
+						// new implementation
+						// sliders are "finished" after they end
+						// extra handling for simultaneous/2b hitobjects, as these would now otherwise get blocked completely
+						// NOTE: this will (same as the old implementation) still unlock some simultaneous/2b patterns too early (slider slider circle [circle]), but nobody from that niche has complained so far
+						{
+							OsuSlider *sliderPointer = dynamic_cast<OsuSlider*>(m_hitobjects[i]);
+
+							const bool isSlider = (sliderPointer != NULL);
+							const bool isSpinner = (!isSlider && !isCircle);
+
+							if (isSlider || isSpinner)
 							{
-								if ((isSpinner || sliderPointer->isStartCircleFinished()) && m_hitobjects[i + 1]->getTime() <= m_hitobjects[i]->getTime() + m_hitobjects[i]->getDuration())
-									blockNextNotes = false;
+								if (i + 1 < m_hitobjects.size())
+								{
+									if ((isSpinner || sliderPointer->isStartCircleFinished()) && m_hitobjects[i + 1]->getTime() <= m_hitobjects[i]->getTime() + m_hitobjects[i]->getDuration())
+										blockNextNotes = false;
+								}
 							}
 						}
 					}
+				}
+				else if (notelockType == 2) // osu!lazer 2020
+				{
+					// TODO: implement
 				}
 			}
 			else

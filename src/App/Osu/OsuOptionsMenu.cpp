@@ -371,6 +371,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_win_snd_fallback_dsound_ref = convar->getConVarByName("win_snd_fallback_dsound");
 	m_win_snd_wasapi_buffer_size_ref = convar->getConVarByName("win_snd_wasapi_buffer_size", false);
 	m_win_snd_wasapi_period_size_ref = convar->getConVarByName("win_snd_wasapi_period_size", false);
+	m_osu_notelock_type_ref = convar->getConVarByName("osu_notelock_type");
 	m_osu_drain_type_ref = convar->getConVarByName("osu_drain_type");
 
 	// convar callbacks
@@ -407,6 +408,9 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_skinSelectWorkshopButton = NULL;
 	m_uiScaleSlider = NULL;
 	m_uiScaleResetButton = NULL;
+	m_notelockSelectButton = NULL;
+	m_notelockSelectLabel = NULL;
+	m_notelockSelectResetButton = NULL;
 	m_hpDrainSelectButton = NULL;
 	m_hpDrainSelectLabel = NULL;
 	m_hpDrainSelectResetButton = NULL;
@@ -427,6 +431,10 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_iManiaKey = 0;
 
 	m_fSearchOnCharKeybindHackTime = 0.0f;
+
+	m_notelockTypes.push_back("None");
+	m_notelockTypes.push_back("osu!stable (default)");
+	m_notelockTypes.push_back("osu!lazer 2020");
 
 	m_drainTypes.push_back("None");
 	m_drainTypes.push_back("VR");
@@ -907,10 +915,12 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Show Skip Button during Intro", "Skip intro to first hitobject.", convar->getConVarByName("osu_skip_intro_enabled"));
 	addCheckbox("Show Skip Button during Breaks", "Skip breaks in the middle of beatmaps.", convar->getConVarByName("osu_skip_breaks_enabled"));
 	addSpacer();
-	addSubSection("Mechanics", "health drain notelock lock");
-	addCheckbox("Notelock (note blocking/locking)", "NOTE: osu! has this always enabled, so leave it enabled for practicing.\n\"Protects\" you by only allowing circles to be clicked in order.", convar->getConVarByName("osu_note_blocking"));
+	addSubSection("Mechanics", "health drain notelock lock block blocking");
 	addCheckbox("Kill Player upon Failing", "Enabled: Singleplayer default. You die upon failing and the beatmap stops.\nDisabled: Multiplayer default. Allows you to keep playing even after failing.", convar->getConVarByName("osu_drain_kill"));
+	addSpacer();
 	addLabel("");
+
+	///addCheckbox("Notelock (note blocking/locking)", "NOTE: osu! has this always enabled, so leave it enabled for practicing.\n\"Protects\" you by only allowing circles to be clicked in order.", convar->getConVarByName("osu_note_blocking"));
 	OPTIONS_ELEMENT drainSelect = addButton("Select HP Drain", "None", true);
 	((CBaseUIButton*)drainSelect.elements[0])->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onHPDrainSelect) );
 	m_hpDrainSelectButton = drainSelect.elements[0];
@@ -924,6 +934,20 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addLabel("- osu!stable: Constant drain, moderately hard (default)")->setTextColor(0xff666666);
 	addLabel("- osu!lazer 2020: Constant drain, very easy (too easy?)")->setTextColor(0xff666666);
 	addLabel("- osu!lazer 2018: No constant drain, scales with HP")->setTextColor(0xff666666);
+	addSpacer();
+	addSpacer();
+	OPTIONS_ELEMENT notelockSelect = addButton("Select Notelock", "None", true);
+	((CBaseUIButton*)notelockSelect.elements[0])->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onNotelockSelect) );
+	m_notelockSelectButton = notelockSelect.elements[0];
+	m_notelockSelectLabel = (CBaseUILabel*)notelockSelect.elements[1];
+	m_notelockSelectResetButton = notelockSelect.resetButton;
+	m_notelockSelectResetButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onNotelockSelectResetClicked) );
+	addLabel("");
+	addLabel("Info about different notelock algorithms:")->setTextColor(0xff666666);
+	addLabel("");
+	addLabel("- osu!stable: Locked until previous circle is miss.")->setTextColor(0xff666666);
+	addLabel("- osu!lazer 2020: Auto miss previous circle if > time.")->setTextColor(0xff666666);
+	addLabel("");
 	addSpacer();
 	addSubSection("Backgrounds");
 	addCheckbox("Load Background Images (!)", "NOTE: Disabling this will disable ALL beatmap images everywhere!", convar->getConVarByName("osu_load_beatmap_background_images"));
@@ -1736,12 +1760,14 @@ void OsuOptionsMenu::updateLayout()
 
 	updateVRRenderTargetResolutionLabel();
 	updateSkinNameLabel();
+	updateNotelockSelectLabel();
 	updateHPDrainSelectLabel();
 
 	if (m_outputDeviceLabel != NULL)
 		m_outputDeviceLabel->setText(engine->getSound()->getOutputDevice());
 
 	onOutputDeviceResetUpdate();
+	onNotelockSelectResetUpdate();
 	onHPDrainSelectResetUpdate();
 
 	//************************************************************************************************************************************//
@@ -2231,6 +2257,13 @@ void OsuOptionsMenu::updateSkinNameLabel()
 	m_skinLabel->setTextColor(m_osu_skin_is_from_workshop_ref->getBool() ? 0xff37adff : 0xffffffff);
 }
 
+void OsuOptionsMenu::updateNotelockSelectLabel()
+{
+	if (m_notelockSelectLabel == NULL) return;
+
+	m_notelockSelectLabel->setText(m_notelockTypes[clamp<int>(m_osu_notelock_type_ref->getInt(), 0, m_notelockTypes.size() - 1)]);
+}
+
 void OsuOptionsMenu::updateHPDrainSelectLabel()
 {
 	if (m_hpDrainSelectLabel == NULL) return;
@@ -2361,14 +2394,25 @@ void OsuOptionsMenu::onSkinSelect()
 		m_contextMenu->setPos(m_skinSelectLocalButton->getPos());
 		m_contextMenu->setRelPos(m_skinSelectLocalButton->getRelPos());
 		m_contextMenu->begin();
-		m_contextMenu->addButton("default");
-		m_contextMenu->addButton("defaultvr");
+
+		const UString defaultText = "default";
+		CBaseUIButton *buttonDefault = m_contextMenu->addButton(defaultText);
+		if (defaultText == m_osu_skin_ref->getString())
+			buttonDefault->setTextBrightColor(0xff00ff00);
+
+		const UString defaultVRText = "defaultvr";
+		CBaseUIButton *buttonDefaultVR = m_contextMenu->addButton(defaultVRText);
+		if (defaultVRText == m_osu_skin_ref->getString())
+			buttonDefaultVR->setTextBrightColor(0xff00ff00);
+
 		for (int i=0; i<skinFolders.size(); i++)
 		{
 			if (skinFolders[i] == "." || skinFolders[i] == "..") // is this universal in every file system? too lazy to check. should probably fix this in the engine and not here
 				continue;
 
-			m_contextMenu->addButton(skinFolders[i]);
+			CBaseUIButton *button = m_contextMenu->addButton(skinFolders[i]);
+			if (skinFolders[i] == m_osu_skin_ref->getString())
+				button->setTextBrightColor(0xff00ff00);
 		}
 		m_contextMenu->end();
 		m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSkinSelect2) );
@@ -2579,7 +2623,10 @@ void OsuOptionsMenu::onResolutionSelect()
 		if (resolutions[i].x > nativeResolution.x || resolutions[i].y > nativeResolution.y)
 			continue;
 
-		m_contextMenu->addButton(UString::format("%ix%i", (int)std::round(resolutions[i].x), (int)std::round(resolutions[i].y)));
+		const UString resolution = UString::format("%ix%i", (int)std::round(resolutions[i].x), (int)std::round(resolutions[i].y));
+		CBaseUIButton *button = m_contextMenu->addButton(resolution);
+		if (m_resolutionLabel != NULL && resolution == m_resolutionLabel->getText())
+			button->setTextBrightColor(0xff00ff00);
 	}
 	for (int i=0; i<customResolutions.size(); i++)
 	{
@@ -2607,7 +2654,9 @@ void OsuOptionsMenu::onOutputDeviceSelect()
 	m_contextMenu->begin();
 	for (int i=0; i<outputDevices.size(); i++)
 	{
-		m_contextMenu->addButton(outputDevices[i]);
+		CBaseUIButton *button = m_contextMenu->addButton(outputDevices[i]);
+		if (outputDevices[i] == engine->getSound()->getOutputDevice())
+			button->setTextBrightColor(0xff00ff00);
 	}
 	m_contextMenu->end();
 	m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onOutputDeviceSelect2) );
@@ -2697,6 +2746,45 @@ void OsuOptionsMenu::onCM360CalculatorLinkClicked()
 	env->openURLInDefaultBrowser("https://www.mouse-sensitivity.com/");
 }
 
+void OsuOptionsMenu::onNotelockSelect()
+{
+    // build context menu
+	m_contextMenu->setPos(m_notelockSelectButton->getPos());
+	m_contextMenu->setRelPos(m_notelockSelectButton->getRelPos());
+	m_contextMenu->begin(m_notelockSelectButton->getSize().x);
+	{
+		for (int i=0; i<m_notelockTypes.size(); i++)
+		{
+			CBaseUIButton *button = m_contextMenu->addButton(m_notelockTypes[i], i);
+			if (i == m_osu_notelock_type_ref->getInt())
+				button->setTextBrightColor(0xff00ff00);
+		}
+	}
+	m_contextMenu->end();
+	m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onNotelockSelect2) );
+}
+
+void OsuOptionsMenu::onNotelockSelect2(UString notelockType, int id)
+{
+	m_osu_notelock_type_ref->setValue(id);
+	updateNotelockSelectLabel();
+
+	// and update the reset button as usual
+	onNotelockSelectResetUpdate();
+}
+
+void OsuOptionsMenu::onNotelockSelectResetClicked()
+{
+	if (m_notelockTypes.size() > 1)
+		onNotelockSelect2(m_notelockTypes[1], 1);
+}
+
+void OsuOptionsMenu::onNotelockSelectResetUpdate()
+{
+	if (m_notelockSelectResetButton != NULL)
+		m_notelockSelectResetButton->setEnabled(m_osu_notelock_type_ref->getInt() != (int)m_osu_notelock_type_ref->getDefaultFloat());
+}
+
 void OsuOptionsMenu::onHPDrainSelect()
 {
     // build context menu
@@ -2706,7 +2794,9 @@ void OsuOptionsMenu::onHPDrainSelect()
 	{
 		for (int i=0; i<m_drainTypes.size(); i++)
 		{
-			m_contextMenu->addButton(m_drainTypes[i], i);
+			CBaseUIButton *button = m_contextMenu->addButton(m_drainTypes[i], i);
+			if (i == m_osu_drain_type_ref->getInt())
+				button->setTextBrightColor(0xff00ff00);
 		}
 	}
 	m_contextMenu->end();
@@ -2724,7 +2814,8 @@ void OsuOptionsMenu::onHPDrainSelect2(UString hpDrainType, int id)
 
 void OsuOptionsMenu::onHPDrainSelectResetClicked()
 {
-	onHPDrainSelect2(m_drainTypes[2], 2);
+	if (m_drainTypes.size() > 2)
+		onHPDrainSelect2(m_drainTypes[2], 2);
 }
 
 void OsuOptionsMenu::onHPDrainSelectResetUpdate()
@@ -3737,6 +3828,7 @@ void OsuOptionsMenu::save()
 
 	manualConVars.push_back(convar->getConVarByName("osu_songbrowser_sortingtype"));
 	manualConVars.push_back(convar->getConVarByName("osu_songbrowser_scores_sortingtype"));
+	manualConVars.push_back(m_osu_notelock_type_ref);
 	manualConVars.push_back(m_osu_drain_type_ref);
 	if (m_osu->isInVRMode())
 		manualConVars.push_back(convar->getConVarByName("osu_vr_layout_lock"));
