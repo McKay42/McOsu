@@ -882,6 +882,11 @@ void Osu::update()
 					if (mousePosX != m_fPrevSeekMousePosX || !osu_scrubbing_smooth.getBool())
 					{
 						m_fPrevSeekMousePosX = mousePosX;
+
+						// special case: allow cancelling the failing animation here
+						if (getSelectedBeatmap()->hasFailed())
+							getSelectedBeatmap()->cancelFailing();
+
 						getSelectedBeatmap()->seekPercentPlayable(percent);
 					}
 				}
@@ -1337,8 +1342,15 @@ void Osu::onKeyDown(KeyboardEvent &key)
 			{
 				if (key == (KEYCODE)OsuKeyBindings::QUICK_SAVE.getInt())
 					m_fQuickSaveTime = getSelectedBeatmap()->getPercentFinished();
+
 				if (key == (KEYCODE)OsuKeyBindings::QUICK_LOAD.getInt())
+				{
+					// special case: allow cancelling the failing animation here
+					if (getSelectedBeatmap()->hasFailed())
+						getSelectedBeatmap()->cancelFailing();
+
 					getSelectedBeatmap()->seekPercent(m_fQuickSaveTime);
+				}
 			}
 		}
 

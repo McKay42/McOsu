@@ -971,6 +971,7 @@ void OsuBeatmap::update()
 				if (m_music->isPlaying() || !m_osu->getPauseMenu()->isVisible())
 				{
 					engine->getSound()->pause(m_music);
+					m_bIsPaused = true;
 
 					m_osu->getPauseMenu()->setVisible(true);
 					m_osu->updateConfineCursor();
@@ -1440,6 +1441,19 @@ void OsuBeatmap::fail()
 
 	if (!m_osu->getScore()->isDead())
 		m_osu->getScore()->setDead(true);
+}
+
+void OsuBeatmap::cancelFailing()
+{
+	if (!m_bFailed || m_fFailAnim <= 0.0f) return;
+
+	m_bFailed = false;
+
+	anim->deleteExistingAnimation(&m_fFailAnim);
+	m_fFailAnim = 1.0f;
+
+	if (m_music != NULL)
+		m_music->setFrequency(0.0f);
 }
 
 void OsuBeatmap::setVolume(float volume)

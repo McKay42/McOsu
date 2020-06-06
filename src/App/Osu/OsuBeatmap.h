@@ -70,6 +70,7 @@ public:
 	bool isPreviewMusicPlaying();
 	void stop(bool quit = true);
 	void fail();
+	void cancelFailing();
 
 	// music/sound
 	void setVolume(float volume);
