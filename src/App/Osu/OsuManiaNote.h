@@ -21,6 +21,7 @@ public:
 	virtual void update(long curPos);
 
 	virtual void updateStackPosition(float stackOffset) {;}
+	virtual void miss(long curPos) {;}
 
 	virtual void onClickEvent(std::vector<OsuBeatmap::CLICK> &clicks);
 	virtual void onKeyUpEvent(std::vector<OsuBeatmap::CLICK> &keyUps);

@@ -45,6 +45,7 @@ public:
 	virtual bool isCircle() {return true;}
 
 	void updateStackPosition(float stackOffset);
+	void miss(long curPos);
 
 	Vector2 getRawPosAt(long pos) {return m_vRawPos;}
 	Vector2 getOriginalRawPosAt(long pos) {return m_vOriginalRawPos;}

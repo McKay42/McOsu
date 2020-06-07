@@ -199,7 +199,9 @@ void OsuSlider::draw(Graphics *g)
 
 	OsuSkin *skin = m_beatmap->getSkin();
 
-	if (m_bVisible || (m_bStartFinished && !m_bFinished)) // extra possibility to avoid flicker between OsuHitObject::m_bVisible delay and the fadeout animation below this if block
+	const bool isCompletelyFinished = m_bStartFinished && m_bEndFinished && m_bFinished;
+
+	if ((m_bVisible || (m_bStartFinished && !m_bFinished)) && !isCompletelyFinished) // extra possibility to avoid flicker between OsuHitObject::m_bVisible delay and the fadeout animation below this if block
 	{
 		float alpha = (osu_mod_hd_slider_fast_fade.getBool() ? m_fAlpha : m_fBodyAlpha);
 		float sliderSnake = osu_snaking_sliders.getBool() ? m_fSliderSnakePercent : 1.0f;
@@ -355,6 +357,7 @@ void OsuSlider::draw(Graphics *g)
 	}
 
 	// slider body fade animation, draw start/end circle hit animation
+
 	if (m_fEndSliderBodyFadeAnimation > 0.0f && m_fEndSliderBodyFadeAnimation != 1.0f && !m_beatmap->getOsu()->getModHD())
 	{
 		std::vector<Vector2> emptyVector;
@@ -523,8 +526,10 @@ void OsuSlider::draw2(Graphics *g, bool drawApproachCircle, bool drawOnlyApproac
 		skin->getSliderFollowCircle2()->drawRaw(g, point, (m_beatmap->getSliderFollowCircleDiameter() / skin->getSliderFollowCircle2()->getSizeBaseRaw().x)*tickAnimationScale*m_fFollowCircleAnimationScale*0.85f); // this is a bit strange, but seems to work perfectly with 0.85
 	}
 
+	const bool isCompletelyFinished = m_bStartFinished && m_bEndFinished && m_bFinished;
+
 	// draw sliderb on top of everything
-	if (m_bVisible || (m_bStartFinished && !m_bFinished)) // extra possibility in the if-block to avoid flicker between OsuHitObject::m_bVisible delay and the fadeout animation below this if-block
+	if ((m_bVisible || (m_bStartFinished && !m_bFinished)) && !isCompletelyFinished) // extra possibility in the if-block to avoid flicker between OsuHitObject::m_bVisible delay and the fadeout animation below this if-block
 	{
 		if (m_fSlidePercent > 0.0f)
 		{
@@ -908,7 +913,6 @@ void OsuSlider::update(long curPos)
 {
 	OsuHitObject::update(curPos);
 
-	// TEMP:
 	if (m_fSliderBreakRapeTime != 0.0f && engine->getTime() > m_fSliderBreakRapeTime)
 	{
 		m_fSliderBreakRapeTime = 0.0f;
@@ -1301,6 +1305,52 @@ void OsuSlider::updateStackPosition(float stackOffset)
 		m_curve->updateStackPosition(m_iStack * stackOffset, m_beatmap->getOsu()->getModHR());
 }
 
+void OsuSlider::miss(long curPos)
+{
+	if (m_bFinished) return;
+
+	const long delta = curPos - m_iTime;
+
+	// startcircle
+	if (!m_bStartFinished)
+	{
+		m_startResult = OsuScore::HIT::HIT_MISS;
+		onHit(m_startResult, delta, false);
+	}
+
+	// endcircle, repeats, ticks
+	if (!m_bEndFinished)
+	{
+		// repeats, ticks
+		{
+			for (int i=0; i<m_clicks.size(); i++)
+			{
+				if (!m_clicks[i].finished)
+				{
+					m_clicks[i].finished = true;
+					m_clicks[i].successful = false;
+
+					if (m_clicks[i].type == 0)
+						onRepeatHit(m_clicks[i].successful, m_clicks[i].sliderend);
+					else
+						onTickHit(m_clicks[i].successful, m_clicks[i].tickIndex);
+				}
+			}
+		}
+
+		// endcircle
+		{
+			m_bHeldTillEnd = m_bHeldTillEndForLenienceHack;
+
+			if (!m_bHeldTillEnd && osu_slider_end_miss_breaks_combo.getBool())
+				onSliderBreak();
+
+			m_endResult = OsuScore::HIT::HIT_MISS;
+			onHit(m_endResult, 0, true);
+		}
+	}
+}
+
 Vector2 OsuSlider::getRawPosAt(long pos)
 {
 	if (m_curve == NULL) return Vector2(0, 0);
@@ -1349,7 +1399,7 @@ float OsuSlider::getT(long pos, bool raw)
 
 void OsuSlider::onClickEvent(std::vector<OsuBeatmap::CLICK> &clicks)
 {
-	if (m_points.size() == 0 || m_bBlocked) return; // also handle note blocking here (doesn't need fancy shake logic, since sliders don't shake)
+	if (m_points.size() == 0 || m_bBlocked) return; // also handle note blocking here (doesn't need fancy shake logic, since sliders don't shake in osu!stable)
 
 	if (!m_bStartFinished)
 	{
@@ -1613,7 +1663,6 @@ void OsuSlider::onSliderBreak()
 {
 	m_beatmap->addSliderBreak();
 
-	// TEMP:
 	if (osu_slider_break_epilepsy.getBool())
 	{
 		m_fSliderBreakRapeTime = engine->getTime() + 0.15f;

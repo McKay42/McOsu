@@ -595,6 +595,15 @@ void OsuCircle::updateStackPosition(float stackOffset)
 	m_vRawPos = m_vOriginalRawPos - Vector2(m_iStack * stackOffset, m_iStack * stackOffset * (m_beatmap->getOsu()->getModHR() ? -1.0f : 1.0f));
 }
 
+void OsuCircle::miss(long curPos)
+{
+	if (m_bFinished) return;
+
+	const long delta = curPos - m_iTime;
+
+	onHit(OsuScore::HIT::HIT_MISS, delta);
+}
+
 void OsuCircle::onClickEvent(std::vector<OsuBeatmap::CLICK> &clicks)
 {
 	if (m_bFinished) return;
