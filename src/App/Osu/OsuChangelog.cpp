@@ -35,7 +35,18 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	std::vector<CHANGELOG> changelogs;
 
 	CHANGELOG alpha315;
-	alpha315.title = UString::format("31.09 (Build Date: %s, %s)", __DATE__, __TIME__);
+	alpha315.title = UString::format("31.10 (Build Date: %s, %s)", __DATE__, __TIME__);
+	alpha315.changes.push_back("- Added 2 new notelock algorithms: McOsu, osu!lazer 2020 (Karoo13's algorithm)");
+	alpha315.changes.push_back("- Added option \"Select Notelock\" (Options > Gameplay > Mechanics)");
+	alpha315.changes.push_back("- Added support for ranking-perfect (skin element for full combo on ranking screen)");
+	alpha315.changes.push_back("- Added \"FC\" text after 123x to indicate a perfect full combo on highscore and top ranks list");
+	alpha315.changes.push_back("- Added ConVar: osu_slider_end_miss_breaks_combo");
+	alpha315.changes.push_back("- Updated osu_drain_lazer_break_before and osu_drain_lazer_break_after to match recent updates (Lazer 2020.602.0)");
+	alpha315.changes.push_back("- Updated hp drain type \"osu!lazer 2020\" for slider tails to match recent updates (Lazer 2020.603.0)");
+	alpha315.changes.push_back("- Updated scrubbing to cancel the failing animation");
+	alpha315.changes.push_back("- Fixed \"Quick Load\" keybind not working while in failing animation");
+	alpha315.changes.push_back("- Fixed very old beatmaps not using the old stacking algorithm (version < 6)");
+	alpha315.changes.push_back("");
 	alpha315.changes.push_back("- Windows: Workaround for Windows 10 bug in \"OS TabletPC Support\" in combination with raw mouse input:");
 	alpha315.changes.push_back("- Windows: Everyone who uses Windows 10 and plays with a mouse should DISABLE \"OS TabletPC Support\"!");
 	alpha315.changes.push_back("- VR: Updated option \"Draw Desktop Game (2D)\" to ignore screen clicks during gameplay if disabled");
