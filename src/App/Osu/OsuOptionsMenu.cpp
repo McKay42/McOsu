@@ -433,6 +433,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_fSearchOnCharKeybindHackTime = 0.0f;
 
 	m_notelockTypes.push_back("None");
+	m_notelockTypes.push_back("McOsu");
 	m_notelockTypes.push_back("osu!stable (default)");
 	m_notelockTypes.push_back("osu!lazer 2020");
 
@@ -922,7 +923,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addLabel("");
 
 	///addCheckbox("Notelock (note blocking/locking)", "NOTE: osu! has this always enabled, so leave it enabled for practicing.\n\"Protects\" you by only allowing circles to be clicked in order.", convar->getConVarByName("osu_note_blocking"));
-	OPTIONS_ELEMENT drainSelect = addButton("Select HP Drain", "None", true);
+	OPTIONS_ELEMENT drainSelect = addButton("Select [HP Drain]", "None", true);
 	((CBaseUIButton*)drainSelect.elements[0])->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onHPDrainSelect) );
 	m_hpDrainSelectButton = drainSelect.elements[0];
 	m_hpDrainSelectLabel = (CBaseUILabel*)drainSelect.elements[1];
@@ -931,13 +932,13 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addLabel("");
 	addLabel("Info about different drain algorithms:")->setTextColor(0xff666666);
 	addLabel("");
-	addLabel("- VR: No constant drain, very hard on accuracy")->setTextColor(0xff666666);
-	addLabel("- osu!stable: Constant drain, moderately hard (default)")->setTextColor(0xff666666);
-	addLabel("- osu!lazer 2020: Constant drain, very easy (too easy?)")->setTextColor(0xff666666);
-	addLabel("- osu!lazer 2018: No constant drain, scales with HP")->setTextColor(0xff666666);
+	addLabel("- VR: No constant drain, very hard on accuracy.")->setTextColor(0xff666666);
+	addLabel("- osu!stable: Constant drain, moderately hard (default).")->setTextColor(0xff666666);
+	addLabel("- osu!lazer 2020: Constant drain, very easy (too easy?).")->setTextColor(0xff666666);
+	addLabel("- osu!lazer 2018: No constant drain, scales with HP.")->setTextColor(0xff666666);
 	addSpacer();
 	addSpacer();
-	OPTIONS_ELEMENT notelockSelect = addButton("Select Notelock", "None", true);
+	OPTIONS_ELEMENT notelockSelect = addButton("Select [Notelock]", "None", true);
 	((CBaseUIButton*)notelockSelect.elements[0])->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onNotelockSelect) );
 	m_notelockSelectButton = notelockSelect.elements[0];
 	m_notelockSelectLabel = (CBaseUILabel*)notelockSelect.elements[1];
@@ -946,6 +947,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addLabel("");
 	addLabel("Info about different notelock algorithms:")->setTextColor(0xff666666);
 	addLabel("");
+	addLabel("- McOsu: Auto miss previous circle, always.")->setTextColor(0xff666666);
 	addLabel("- osu!stable: Locked until previous circle is miss.")->setTextColor(0xff666666);
 	addLabel("- osu!lazer 2020: Auto miss previous circle if > time.")->setTextColor(0xff666666);
 	addLabel("");
@@ -2776,8 +2778,8 @@ void OsuOptionsMenu::onNotelockSelect2(UString notelockType, int id)
 
 void OsuOptionsMenu::onNotelockSelectResetClicked()
 {
-	if (m_notelockTypes.size() > 1)
-		onNotelockSelect2(m_notelockTypes[1], 1);
+	if (m_notelockTypes.size() > 1 && (size_t)m_osu_notelock_type_ref->getDefaultFloat() < m_notelockTypes.size())
+		onNotelockSelect2(m_notelockTypes[(size_t)m_osu_notelock_type_ref->getDefaultFloat()], (int)m_osu_notelock_type_ref->getDefaultFloat());
 }
 
 void OsuOptionsMenu::onNotelockSelectResetUpdate()
@@ -2815,8 +2817,8 @@ void OsuOptionsMenu::onHPDrainSelect2(UString hpDrainType, int id)
 
 void OsuOptionsMenu::onHPDrainSelectResetClicked()
 {
-	if (m_drainTypes.size() > 2)
-		onHPDrainSelect2(m_drainTypes[2], 2);
+	if (m_drainTypes.size() > 1 && (size_t)m_osu_drain_type_ref->getDefaultFloat() < m_drainTypes.size())
+		onHPDrainSelect2(m_drainTypes[(size_t)m_osu_drain_type_ref->getDefaultFloat()], (size_t)m_osu_drain_type_ref->getDefaultFloat());
 }
 
 void OsuOptionsMenu::onHPDrainSelectResetUpdate()

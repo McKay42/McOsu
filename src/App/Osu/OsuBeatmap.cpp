@@ -97,7 +97,7 @@ ConVar osu_end_delay_time("osu_end_delay_time", 1100.0f, "Duration in ms which i
 ConVar osu_end_skip_time("osu_end_skip_time", 400.0f, "Duration in ms which is added to the endTime of the last hitobject, after which pausing the game will immediately jump to the ranking screen");
 ConVar osu_skip_time("osu_skip_time", 5000.0f, "Timeframe in ms within a beatmap which allows skipping if it doesn't contain any hitobjects");
 ConVar osu_fail_time("osu_fail_time", 2.25f, "Timeframe in s for the slowdown effect after failing, before the pause menu is shown");
-ConVar osu_notelock_type("osu_notelock_type", 1, "which notelock algorithm to use (0 = None, 1 = osu!stable, 2 = osu!lazer 2020)");
+ConVar osu_notelock_type("osu_notelock_type", 2, "which notelock algorithm to use (0 = None, 1 = McOsu, 2 = osu!stable, 3 = osu!lazer 2020)");
 ConVar osu_mod_suddendeath_restart("osu_mod_suddendeath_restart", false, "osu! has this set to false (i.e. you fail after missing). if set to true, then behave like SS/PF, instantly restarting the map");
 
 ConVar osu_drain_type("osu_drain_type", 2, "which hp drain algorithm to use (0 = None, 1 = VR, 2 = osu!stable, 3 = osu!lazer 2020, 4 = osu!lazer 2018)");
@@ -623,7 +623,11 @@ void OsuBeatmap::update()
 			{
 				m_hitobjects[i]->setBlocked(blockNextNotes);
 
-				if (notelockType == 1) // osu!stable
+				if (notelockType == 1) // McOsu
+				{
+					// (nothing, handled in (2) block)
+				}
+				else if (notelockType == 2) // osu!stable
 				{
 					if (!m_hitobjects[i]->isFinished())
 					{
@@ -646,7 +650,7 @@ void OsuBeatmap::update()
 						// extra handling for simultaneous/2b hitobjects, as these would now otherwise get blocked completely
 						// NOTE: this will (same as the old implementation) still unlock some simultaneous/2b patterns too early (slider slider circle [circle]), but nobody from that niche has complained so far
 						{
-							OsuSlider *sliderPointer = dynamic_cast<OsuSlider*>(m_hitobjects[i]);
+							const OsuSlider *sliderPointer = dynamic_cast<OsuSlider*>(m_hitobjects[i]);
 
 							const bool isSlider = (sliderPointer != NULL);
 							const bool isSpinner = (!isSlider && !isCircle);
@@ -662,9 +666,27 @@ void OsuBeatmap::update()
 						}
 					}
 				}
-				else if (notelockType == 2) // osu!lazer 2020
+				else if (notelockType == 3) // osu!lazer 2020
 				{
-					// TODO: implement
+					if (!m_hitobjects[i]->isFinished())
+					{
+						const OsuSlider *sliderPointer = dynamic_cast<OsuSlider*>(m_hitobjects[i]);
+
+						const bool isSlider = (sliderPointer != NULL);
+						const bool isSpinner = (!isSlider && !isCircle);
+
+						if (!isSpinner) // spinners are completely ignored (transparent)
+						{
+							blockNextNotes = (m_iCurMusicPos <= m_hitobjects[i]->getTime());
+
+							// sliders are "finished" after their startcircle
+							{
+								// sliders with finished startcircles do not block
+								if (sliderPointer != NULL && sliderPointer->isStartCircleFinished())
+									blockNextNotes = false;
+							}
+						}
+					}
 				}
 			}
 			else
@@ -683,7 +705,61 @@ void OsuBeatmap::update()
 
 			// note blocking / notelock (2)
 			if (!isCurrentHitObjectFinishedBeforeClickEvents && isCurrentHitObjectFinishedAfterClickEvents)
+			{
+				// in here if a hitobject has been clicked successfully in this update iteration
+
 				blockNextNotes = false;
+
+				if (notelockType == 1) // McOsu
+				{
+					// auto miss all previous unfinished hitobjects, always
+					// (can stop reverse iteration once we get to the first finished hitobject)
+
+					for (int m=i-1; m>=0; m--)
+					{
+						if (!m_hitobjects[m]->isFinished())
+						{
+							const OsuSlider *sliderPointer = dynamic_cast<OsuSlider*>(m_hitobjects[m]);
+
+							const bool isSlider = (sliderPointer != NULL);
+							const bool isSpinner = (!isSlider && !isCircle);
+
+							if (!isSpinner) // spinners are completely ignored (transparent)
+								m_hitobjects[m]->miss(m_iCurMusicPos);
+						}
+						else
+							break;
+					}
+				}
+				else if (notelockType == 2) // osu!stable
+				{
+					// (nothing, handled in (1) block)
+				}
+				else if (notelockType == 3) // osu!lazer 2020
+				{
+					// auto miss all previous unfinished hitobjects if the current music time is > their time (center)
+					// (can stop reverse iteration once we get to the first finished hitobject)
+
+					for (int m=i-1; m>=0; m--)
+					{
+						if (!m_hitobjects[m]->isFinished())
+						{
+							const OsuSlider *sliderPointer = dynamic_cast<OsuSlider*>(m_hitobjects[m]);
+
+							const bool isSlider = (sliderPointer != NULL);
+							const bool isSpinner = (!isSlider && !isCircle);
+
+							if (!isSpinner) // spinners are completely ignored (transparent)
+							{
+								if (m_iCurMusicPos > m_hitobjects[m]->getTime())
+									m_hitobjects[m]->miss(m_iCurMusicPos);
+							}
+						}
+						else
+							break;
+					}
+				}
+			}
 
 			// ************ live pp block start ************ //
 			if (isCircle && m_hitobjects[i]->isFinished())
