@@ -1530,6 +1530,9 @@ void OsuBeatmap::cancelFailing()
 
 	if (m_music != NULL)
 		m_music->setFrequency(0.0f);
+
+	if (getSkin()->getFailsound()->isPlaying())
+		engine->getSound()->stop(getSkin()->getFailsound());
 }
 
 void OsuBeatmap::setVolume(float volume)
