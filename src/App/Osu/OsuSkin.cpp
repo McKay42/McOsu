@@ -700,6 +700,8 @@ void OsuSkin::load()
 	m_rankingXsmall = createOsuSkinImage("ranking-X-small", Vector2(34, 40), 128);
 	m_rankingXHsmall = createOsuSkinImage("ranking-XH-small", Vector2(34, 41), 128);
 
+	m_rankingPerfect = createOsuSkinImage("ranking-perfect", Vector2(478, 150), 128);
+
 	randomizeFilePath();
 	checkLoadImage(&m_beatmapImportSpinner, "beatmapimport-spinner", "OSU_SKIN_BEATMAP_IMPORT_SPINNER");
 	{

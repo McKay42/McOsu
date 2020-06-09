@@ -39,6 +39,7 @@ public:
 	virtual void update(long curPos);
 
 	virtual void updateStackPosition(float stackOffset);
+	virtual void miss(long curPos);
 	virtual int getCombo() {return 2 + std::max((m_iRepeat - 1), 0) + (std::max((m_iRepeat - 1), 0)+1)*m_ticks.size();}
 
 	Vector2 getRawPosAt(long pos);
@@ -138,7 +139,6 @@ private:
 	bool m_bInReverse;
 	bool m_bHideNumberAfterFirstRepeatHit;
 
-	// TEMP:
 	float m_fSliderBreakRapeTime;
 
 	bool m_bOnHitVRLeftControllerHapticFeedback;

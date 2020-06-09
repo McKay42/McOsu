@@ -470,7 +470,7 @@ int OsuDatabase::addScore(std::string beatmapMD5Hash, OsuDatabase::Score score)
 		return -1;
 	}
 
-	m_scores[beatmapMD5Hash].push_back(score);
+	addScoreRaw(beatmapMD5Hash, score);
 	sortScores(beatmapMD5Hash);
 
 	m_bDidScoresChangeForSave = true;
@@ -487,6 +487,43 @@ int OsuDatabase::addScore(std::string beatmapMD5Hash, OsuDatabase::Score score)
 	}
 
 	return -1;
+}
+
+void OsuDatabase::addScoreRaw(const std::string &beatmapMD5Hash, const OsuDatabase::Score &score)
+{
+	m_scores[beatmapMD5Hash].push_back(score);
+
+	// cheap dynamic recalculations for mcosu scores
+	if (!score.isLegacyScore)
+	{
+		// as soon as we have >= 1 score with maxPossibleCombo info, all scores of that beatmap (even older ones without the info) can get the 'perfect' flag set
+		// all scores >= 20180722 already have this populated during load, so this only affects the brief period where pp was stored without maxPossibleCombo info
+		{
+			// find score with maxPossibleCombo info
+			int maxPossibleCombo = -1;
+			for (const OsuDatabase::Score &s : m_scores[beatmapMD5Hash])
+			{
+				if (s.version > 20180722)
+				{
+					if (s.maxPossibleCombo > 0)
+					{
+						maxPossibleCombo = s.maxPossibleCombo;
+						break;
+					}
+				}
+			}
+
+			// set 'perfect' flag on all relevant old scores of that same beatmap
+			if (maxPossibleCombo > 0)
+			{
+				for (OsuDatabase::Score &s : m_scores[beatmapMD5Hash])
+				{
+					if (s.version <= 20180722)
+						s.perfect = (s.comboMax > 0 && s.comboMax >= maxPossibleCombo);
+				}
+			}
+		}
+	}
 }
 
 void OsuDatabase::deleteScore(std::string beatmapMD5Hash, uint64_t scoreUnixTimestamp)
@@ -1657,7 +1694,7 @@ void OsuDatabase::loadScores()
 
 					const int score = db.readInt();
 					const short maxCombo = db.readShort();
-					/*const bool perfect = */db.readBool();
+					const bool perfect = db.readBool();
 
 					const int mods = db.readInt();
 					const UString hpGraphString = db.readString();
@@ -1690,6 +1727,7 @@ void OsuDatabase::loadScores()
 						sc.numMisses = numMisses;
 						sc.score = (score < 0 ? 0 : score);
 						sc.comboMax = maxCombo;
+						sc.perfect = perfect;
 						sc.modsLegacy = mods;
 
 						// custom
@@ -1711,7 +1749,7 @@ void OsuDatabase::loadScores()
 						// temp
 						sc.sortHack = m_iSortHackCounter++;
 
-						m_scores[md5hash].push_back(sc);
+						addScoreRaw(md5hash, sc);
 						scoreCounter++;
 					}
 				}
@@ -1820,6 +1858,7 @@ void OsuDatabase::loadScores()
 						sc.numMisses = numMisses;
 						sc.score = score;
 						sc.comboMax = maxCombo;
+						sc.perfect = (maxPossibleCombo > 0 && sc.comboMax > 0 && sc.comboMax >= maxPossibleCombo);
 						sc.modsLegacy = modsLegacy;
 
 						// custom
@@ -1841,7 +1880,7 @@ void OsuDatabase::loadScores()
 						// temp
 						sc.sortHack = m_iSortHackCounter++;
 
-						m_scores[md5hash].push_back(sc);
+						addScoreRaw(md5hash, sc);
 						scoreCounter++;
 					}
 				}

@@ -33,6 +33,7 @@ OsuUIRankingScreenRankingPanel::OsuUIRankingScreenRankingPanel(Osu *osu) : CBase
 	m_iNumMisses = 0;
 	m_iCombo = 0;
 	m_fAccuracy = 0.0f;
+	m_bPerfect = false;
 }
 
 void OsuUIRankingScreenRankingPanel::draw(Graphics *g)
@@ -126,6 +127,13 @@ void OsuUIRankingScreenRankingPanel::draw(Graphics *g)
 		g->drawImage(m_osu->getSkin()->getRankingAccuracy());
 	}
 	g->popTransform();
+
+	// draw perfect
+	if (m_bPerfect)
+	{
+		scale = m_osu->getImageScale(m_osu, m_osu->getSkin()->getRankingPerfect()->getSizeBaseRaw(), 94.0f) * uiScale;
+		m_osu->getSkin()->getRankingPerfect()->drawRaw(g, m_vPos + Vector2(m_osu->getUIScale(m_osu, m_osu->getSkin()->getVersion() > 1.0f ? 260 : 200), m_osu->getUIScale(m_osu, 430.0f) + globalYOffset) * Vector2(1.0f, 0.97f) * uiScale - Vector2(0, m_osu->getSkin()->getRankingPerfect()->getSizeBaseRaw().y)*scale*0.5f, scale);
+	}
 }
 
 void OsuUIRankingScreenRankingPanel::drawHitImage(Graphics *g, OsuSkinImage *img, float scale, Vector2 pos)
@@ -160,6 +168,7 @@ void OsuUIRankingScreenRankingPanel::setScore(OsuScore *score)
 	m_iNumMisses = score->getNumMisses();
 	m_iCombo = score->getComboMax();
 	m_fAccuracy = score->getAccuracy();
+	m_bPerfect = (score->getComboFull() > 0 && m_iCombo >= score->getComboFull());
 }
 
 void OsuUIRankingScreenRankingPanel::setScore(OsuDatabase::Score score)
@@ -173,6 +182,7 @@ void OsuUIRankingScreenRankingPanel::setScore(OsuDatabase::Score score)
 	m_iNumMisses = score.numMisses;
 	m_iCombo = score.comboMax;
 	m_fAccuracy = OsuScore::calculateAccuracy(score.num300s, score.num100s, score.num50s, score.numMisses);
+	m_bPerfect = score.perfect;
 
 	// round acc up from two decimal places
 	if (m_fAccuracy > 0.0f)

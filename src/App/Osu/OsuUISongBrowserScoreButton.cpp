@@ -232,20 +232,22 @@ void OsuUISongBrowserScoreButton::draw(Graphics *g)
 	McFont *accFont = m_osu->getSubTitleFont();
 	g->pushTransform();
 	{
+		const UString &scoreAccuracy = (m_style == STYLE::TOP_RANKS ? m_sScoreAccuracyFC : m_sScoreAccuracy);
+
 		const float height = rightSideThirdHeight;
 		const float paddingTopPercent = (1.0f - modScale)*0.45f;
 		const float paddingTop = height*paddingTopPercent;
 		const float scale = (height / accFont->getHeight())*accScale;
 
 		g->scale(scale, scale);
-		g->translate((int)(m_vPos.x + m_vSize.x - accFont->getStringWidth(m_sScoreAccuracy)*scale - rightSidePaddingRight), (int)(yPos + height*1.5f + accFont->getHeight()*scale/2.0f + paddingTop));
+		g->translate((int)(m_vPos.x + m_vSize.x - accFont->getStringWidth(scoreAccuracy)*scale - rightSidePaddingRight), (int)(yPos + height*1.5f + accFont->getHeight()*scale/2.0f + paddingTop));
 		g->translate(0.75f, 0.75f);
 		g->setColor(0xff000000);
 		g->setAlpha(0.75f);
-		g->drawString(accFont, m_sScoreAccuracy);
+		g->drawString(accFont, scoreAccuracy);
 		g->translate(-0.75f, -0.75f);
 		g->setColor((m_style == STYLE::TOP_RANKS ? 0xffffcc22 : 0xffffffff));
-		g->drawString(accFont, m_sScoreAccuracy);
+		g->drawString(accFont, scoreAccuracy);
 	}
 	g->popTransform();
 
@@ -548,9 +550,10 @@ void OsuUISongBrowserScoreButton::setScore(OsuDatabase::Score score, int index, 
 	// display
 	m_scoreGrade = OsuScore::calculateGrade(score.num300s, score.num100s, score.num50s, score.numMisses, modHidden, modFlashlight);
 	m_sScoreUsername = score.playerName;
-	m_sScoreScore = UString::format("Score: %llu (%ix)", score.score, score.comboMax);
-	m_sScoreScorePP = UString::format("PP: %ipp (%ix)", (int)std::round(score.pp), score.comboMax);
+	m_sScoreScore = UString::format((score.perfect ? "Score: %llu (%ix FC)" : "Score: %llu (%ix)"), score.score, score.comboMax);
+	m_sScoreScorePP = UString::format((score.perfect ? "PP: %ipp (%ix FC)" : "PP: %ipp (%ix)"), (int)std::round(score.pp), score.comboMax);
 	m_sScoreAccuracy = UString::format("%.2f%%", accuracy);
+	m_sScoreAccuracyFC = UString::format((score.perfect ? "FC %.2f%%" : "%.2f%%"), accuracy);
 	m_sScoreMods = getModsString(score.modsLegacy);
 	if (score.experimentalModsConVars.length() > 0)
 	{

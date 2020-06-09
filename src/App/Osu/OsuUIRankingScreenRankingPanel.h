@@ -41,6 +41,7 @@ private:
 	int m_iNumMisses;
 	int m_iCombo;
 	float m_fAccuracy;
+	bool m_bPerfect;
 };
 
 #endif

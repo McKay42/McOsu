@@ -66,6 +66,7 @@ public:
 	void addHitResultComboEnd(OsuScore::HIT hit);
 	void addSliderBreak(); // only OsuBeatmap may call this function!
 	void addPoints(int points, bool isSpinner);
+	void setComboFull(int comboFull) {m_iComboFull = comboFull;}
 	void setComboEndBitmask(int comboEndBitmask) {m_iComboEndBitmask = comboEndBitmask;}
 	void setDead(bool dead);
 
@@ -89,6 +90,7 @@ public:
 	inline GRADE getGrade() const {return m_grade;}
 	inline int getCombo() const {return m_iCombo;}
 	inline int getComboMax() const {return m_iComboMax;}
+	inline int getComboFull() const {return m_iComboFull;}
 	inline int getComboEndBitmask() const {return m_iComboEndBitmask;}
 	inline float getAccuracy() const {return m_fAccuracy;}
 	inline float getUnstableRate() const {return m_fUnstableRate;}

@@ -111,6 +111,7 @@ private:
 	void updateFposuCMper360();
 	void updateVRRenderTargetResolutionLabel();
 	void updateSkinNameLabel();
+	void updateNotelockSelectLabel();
 	void updateHPDrainSelectLabel();
 
 	// options
@@ -138,6 +139,10 @@ private:
 	void onManuallyManageBeatmapsClicked();
 	void onLIVReloadCalibrationClicked();
 	void onCM360CalculatorLinkClicked();
+	void onNotelockSelect();
+	void onNotelockSelect2(UString notelockType, int id = -1);
+	void onNotelockSelectResetClicked();
+	void onNotelockSelectResetUpdate();
 	void onHPDrainSelect();
 	void onHPDrainSelect2(UString hpDrainType, int id = -1);
 	void onHPDrainSelectResetClicked();
@@ -262,6 +267,9 @@ private:
 	CBaseUIElement *m_skinSection;
 	CBaseUISlider *m_uiScaleSlider;
 	OsuOptionsMenuResetButton *m_uiScaleResetButton;
+	CBaseUIElement *m_notelockSelectButton;
+	CBaseUILabel *m_notelockSelectLabel;
+	OsuOptionsMenuResetButton *m_notelockSelectResetButton;
 	CBaseUIElement *m_hpDrainSelectButton;
 	CBaseUILabel *m_hpDrainSelectLabel;
 	OsuOptionsMenuResetButton *m_hpDrainSelectResetButton;
@@ -280,6 +288,7 @@ private:
 	ConVar *m_win_snd_fallback_dsound_ref;
 	ConVar *m_win_snd_wasapi_buffer_size_ref;
 	ConVar *m_win_snd_wasapi_period_size_ref;
+	ConVar *m_osu_notelock_type_ref;
 	ConVar *m_osu_drain_type_ref;
 
 	float m_fOsuFolderTextboxInvalidAnim;
@@ -302,6 +311,9 @@ private:
 	// search
 	UString m_sSearchString;
 	float m_fSearchOnCharKeybindHackTime;
+
+	// notelock
+	std::vector<UString> m_notelockTypes;
 
 	// drain
 	std::vector<UString> m_drainTypes;

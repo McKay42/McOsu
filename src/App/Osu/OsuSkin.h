@@ -218,6 +218,7 @@ public:
 	inline OsuSkinImage *getRankingSHsmall() {return m_rankingSHsmall;}
 	inline OsuSkinImage *getRankingXsmall() {return m_rankingXsmall;}
 	inline OsuSkinImage *getRankingXHsmall() {return m_rankingXHsmall;}
+	inline OsuSkinImage *getRankingPerfect() {return m_rankingPerfect;}
 
 	inline Image *getBeatmapImportSpinner() {return m_beatmapImportSpinner;}
 	inline Image *getLoadingSpinner() {return m_loadingSpinner;}
@@ -511,6 +512,7 @@ private:
 	OsuSkinImage *m_rankingSHsmall;
 	OsuSkinImage *m_rankingXsmall;
 	OsuSkinImage *m_rankingXHsmall;
+	OsuSkinImage *m_rankingPerfect;
 
 	Image *m_beatmapImportSpinner;
 	Image *m_loadingSpinner;

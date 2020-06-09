@@ -92,6 +92,7 @@ private:
 	UString m_sScoreScore;
 	UString m_sScoreScorePP;
 	UString m_sScoreAccuracy;
+	UString m_sScoreAccuracyFC;
 	UString m_sScoreMods;
 	UString m_sCustom;
 
