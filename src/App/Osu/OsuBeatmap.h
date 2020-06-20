@@ -90,7 +90,7 @@ public:
 
 	// live statistics
 	int getBPM();
-	float getSpeedMultiplier();
+	float getSpeedMultiplier() const;
 	inline int getNPS() {return m_iNPS;}
 	inline int getND() {return m_iND;}
 	inline int getHitObjectIndexForCurrentTime() {return m_iCurrentHitObjectIndex;}
