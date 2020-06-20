@@ -17,8 +17,8 @@ class OsuBeatmapStandard;
 class OsuHitObject
 {
 public:
-	static void drawHitResult(Graphics *g, OsuBeatmapStandard *beatmap, Vector2 rawPos, OsuScore::HIT result, float animPercent, float defaultAnimPercent);
-	static void drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiameter, float rawHitcircleDiameter, Vector2 rawPos, OsuScore::HIT result, float animPercent, float defaultAnimPercent);
+	static void drawHitResult(Graphics *g, OsuBeatmapStandard *beatmap, Vector2 rawPos, OsuScore::HIT result, float animPercentInv);
+	static void drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiameter, float rawHitcircleDiameter, Vector2 rawPos, OsuScore::HIT result, float animPercentInv);
 
 	static ConVar *m_osu_approach_scale_multiplier_ref;
 	static ConVar *m_osu_timingpoints_force;
@@ -110,16 +110,13 @@ private:
 
 	struct HITRESULTANIM
 	{
-		float anim;
-		float duration;
-		float defaultanim;
-		float defaultduration;
+		float time;
 		Vector2 rawPos;
 		OsuScore::HIT result;
 		long delta;
 	};
 
-	std::vector<HITRESULTANIM> m_hitResults;
+	HITRESULTANIM m_hitresultanim1;
 
 	unsigned long long m_iSortHack;
 };
