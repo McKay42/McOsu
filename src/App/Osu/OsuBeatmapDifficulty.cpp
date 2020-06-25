@@ -1477,11 +1477,14 @@ OsuBeatmapDifficulty::TIMING_INFO OsuBeatmapDifficulty::getTimingInfoForTime(uns
 
 		int point = 0;
 		int samplePoint = 0;
+		int audioPoint = 0;
 
 		for (int i=0; i<timingpoints.size(); i++)
 		{
 			if (timingpoints[i].offset <= positionMS)
 			{
+				audioPoint = i;
+
 				if (timingpoints[i].timingChange)
 					point = i;
 				else
@@ -1505,9 +1508,9 @@ OsuBeatmapDifficulty::TIMING_INFO OsuBeatmapDifficulty::getTimingInfoForTime(uns
 		ti.isNaN = std::isnan(timingpoints[samplePoint].msPerBeat) || std::isnan(timingpoints[point].msPerBeat);
 		ti.beatLength = ti.beatLengthBase * mult;
 
-		ti.volume = timingpoints[point].volume;
-		ti.sampleType = timingpoints[point].sampleType;
-		ti.sampleSet = timingpoints[point].sampleSet;
+		ti.volume = timingpoints[audioPoint].volume;
+		ti.sampleType = timingpoints[audioPoint].sampleType;
+		ti.sampleSet = timingpoints[audioPoint].sampleSet;
 	}
 
 
