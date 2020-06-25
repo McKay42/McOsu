@@ -107,7 +107,7 @@ Vector2 OsuDifficultyHitObject::getOriginalRawPosAt(long pos)
 
 ConVar *OsuDifficultyCalculator::m_osu_slider_scorev2_ref = NULL;
 
-double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<std::shared_ptr<OsuDifficultyHitObject>> &sortedHitObjects, float CS, double *aim, double *speed, int upToObjectIndex)
+double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<std::shared_ptr<OsuDifficultyHitObject>> &sortedHitObjects, float CS, double *aim, double *speed, int upToObjectIndex, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains)
 {
 	// NOTE: depends on speed multiplier + CS
 
@@ -270,7 +270,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<std::
 			strains[Skills::skillToIndex(dtype)] = currentStrain;
 		}
 
-		static double calculate_difficulty(const Skills::Skill type, const std::vector<DiffObject> &dobjects)
+		static double calculate_difficulty(const Skills::Skill type, const std::vector<DiffObject> &dobjects, std::vector<double> *outStrains = NULL)
 		{
 			// see https://github.com/ppy/osu/blob/master/osu.Game/Rulesets/Difficulty/Skills/Skill.cs
 
@@ -307,6 +307,9 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<std::
 
 			// the peak strain will not be saved for the last section in the above loop
 			highestStrains.push_back(max_strain);
+
+			if (outStrains != NULL)
+				(*outStrains) = highestStrains; // save a copy
 
 			// see DifficultyValue() @ https://github.com/ppy/osu/blob/master/osu.Game/Rulesets/Difficulty/Skills/Skill.cs
 			double difficulty = 0.0;
@@ -568,8 +571,8 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<std::
 	}
 
 	// calculate final difficulty (weigh strains)
-	*aim = DiffObject::calculate_difficulty(Skills::Skill::AIM, diffObjects);
-	*speed = DiffObject::calculate_difficulty(Skills::Skill::SPEED, diffObjects);
+	*aim = DiffObject::calculate_difficulty(Skills::Skill::AIM, diffObjects, outAimStrains);
+	*speed = DiffObject::calculate_difficulty(Skills::Skill::SPEED, diffObjects, outSpeedStrains);
 
 	static const double star_scaling_factor = 0.0675;
 

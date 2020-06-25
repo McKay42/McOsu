@@ -1265,6 +1265,7 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 				OsuBeatmapDifficulty::TIMINGPOINT tp;
 				tp.offset = timingPoints[t].offset;
 				tp.msPerBeat = timingPoints[t].msPerBeat;
+				tp.timingChange = timingPoints[t].timingChange;
 				tp.kiai = false;
 				diff->timingpoints.push_back(tp);
 			}

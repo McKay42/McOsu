@@ -279,8 +279,8 @@ OsuFile::TIMINGPOINT OsuFile::readTimingPoint()
 {
 	const double bpm = readDouble();
 	const double offset = readDouble();
-	const bool notinherited = (bool)readByte();
-	return (struct TIMINGPOINT) {bpm, offset, notinherited};
+	const bool timingChange = (bool)readByte();
+	return (struct TIMINGPOINT) {bpm, offset, timingChange};
 }
 
 void OsuFile::readByteArray()

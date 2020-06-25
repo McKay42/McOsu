@@ -91,6 +91,7 @@ public:
 		int sampleType;
 		int sampleSet;
 		int volume;
+		bool timingChange;
 		bool kiai;
 		unsigned long long sortHack;
 	};
@@ -191,12 +192,16 @@ public:
 	// star calculation
 	// NOTE: calculateStarsInaccurately is only used for initial songbrowser sorting/calculation: as soon as a beatmap is selected it will be recalculated fully (together with the background image loader)
 	std::vector<std::shared_ptr<OsuDifficultyHitObject>> generateDifficultyHitObjectsForBeatmap(OsuBeatmap *beatmap, bool calculateStarsInaccurately = false);
-	double calculateStarDiff(OsuBeatmap *beatmap, double *aim, double *speed, int upToObjectIndex = -1, bool calculateStarsInaccurately = false);
+	double calculateStarDiff(OsuBeatmap *beatmap, double *aim, double *speed, int upToObjectIndex = -1, bool calculateStarsInaccurately = false, std::vector<double> *outAimStrains = NULL, std::vector<double> *outSpeedStrains = NULL);
 
 	// for live pp
 	void rebuildStarCacheForUpToHitObjectIndex(OsuBeatmap *beatmap, std::atomic<bool> &kys, std::atomic<int> &progress);
 	inline double getAimStarsForUpToHitObjectIndex(int upToHitObjectIndex) {return (m_aimStarsForNumHitObjects.size() > 0 ? m_aimStarsForNumHitObjects[clamp<int>(upToHitObjectIndex, 0, m_aimStarsForNumHitObjects.size()-1)] : 0);}
 	inline double getSpeedStarsForUpToHitObjectIndex(int upToHitObjectIndex) {return (m_speedStarsForNumHitObjects.size() > 0 ? m_speedStarsForNumHitObjects[clamp<int>(upToHitObjectIndex, 0, m_speedStarsForNumHitObjects.size()-1)] : 0);}
+	/*
+	inline const std::vector<double> &getAimStrains() const {return m_aimStrains;}
+	inline const std::vector<double> &getSpeedStrains() const {return m_speedStrains;}
+	*/
 
 private:
 	static unsigned long long sortHackCounter;
@@ -232,6 +237,10 @@ private:
 	int m_iMaxCombo;
 	std::vector<double> m_aimStarsForNumHitObjects;
 	std::vector<double> m_speedStarsForNumHitObjects;
+	/*
+	std::vector<double> m_aimStrains;
+	std::vector<double> m_speedStrains;
+	*/
 	unsigned long long m_fScoreV2ComboPortionMaximum;
 };
 

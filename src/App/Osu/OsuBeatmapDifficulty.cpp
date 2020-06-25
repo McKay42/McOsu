@@ -247,6 +247,10 @@ void OsuBeatmapDifficulty::unload()
 
 	m_aimStarsForNumHitObjects = std::vector<double>();
 	m_speedStarsForNumHitObjects = std::vector<double>();
+	/*
+	m_aimStrains = std::vector<double>();
+	m_speedStrains = std::vector<double>();
+	*/
 }
 
 bool OsuBeatmapDifficulty::loadMetadataRaw(bool calculateStars, bool calculateStarsInaccurately)
@@ -448,15 +452,16 @@ bool OsuBeatmapDifficulty::loadMetadataRaw(bool calculateStars, bool calculateSt
 					case 5: // TimingPoints
 
 						// old beatmaps: Offset, Milliseconds per Beat
-						// new beatmaps: Offset, Milliseconds per Beat, Meter, Sample Type, Sample Set, Volume, Inherited, Kiai Mode
+						// new beatmaps: Offset, Milliseconds per Beat, Meter, Sample Type, Sample Set, Volume, !Inherited, Kiai Mode
 
 						double tpOffset;
 						float tpMSPerBeat;
 						int tpMeter;
 						int tpSampleType,tpSampleSet;
 						int tpVolume;
+						int tpTimingChange;
 						int tpKiai;
-						if (sscanf(curLineChar, " %lf , %f , %i , %i , %i , %i , %i", &tpOffset, &tpMSPerBeat, &tpMeter, &tpSampleType, &tpSampleSet, &tpVolume, &tpKiai) == 7)
+						if (sscanf(curLineChar, " %lf , %f , %i , %i , %i , %i , %i , %i", &tpOffset, &tpMSPerBeat, &tpMeter, &tpSampleType, &tpSampleSet, &tpVolume, &tpTimingChange, &tpKiai) == 8)
 						{
 							TIMINGPOINT t;
 							t.offset = (long)std::round(tpOffset);
@@ -464,7 +469,9 @@ bool OsuBeatmapDifficulty::loadMetadataRaw(bool calculateStars, bool calculateSt
 							t.sampleType = tpSampleType;
 							t.sampleSet = tpSampleSet;
 							t.volume = tpVolume;
+							t.timingChange = tpTimingChange == 1;
 							t.kiai = tpKiai > 0;
+
 							t.sortHack = timingPointSortHack++;
 
 							timingpoints.push_back(t);
@@ -478,6 +485,10 @@ bool OsuBeatmapDifficulty::loadMetadataRaw(bool calculateStars, bool calculateSt
 							t.sampleType = 0;
 							t.sampleSet = 0;
 							t.volume = 100;
+
+							t.timingChange = true;
+							t.kiai = false;
+
 							t.sortHack = timingPointSortHack++;
 
 							timingpoints.push_back(t);
@@ -665,6 +676,12 @@ bool OsuBeatmapDifficulty::loadMetadataRaw(bool calculateStars, bool calculateSt
 			double aimStars = 0.0;
 			double speedStars = 0.0;
 
+			/*
+			std::vector<double> aimStrains;
+			std::vector<double> speedStrains;
+			*/
+
+			//starsNoMod = calculateStarDiff(NULL, &aimStars, &speedStars, -1, calculateStarsInaccurately, &aimStrains, &speedStrains);
 			starsNoMod = calculateStarDiff(NULL, &aimStars, &speedStars, -1, calculateStarsInaccurately);
 			starsWereCalculatedAccurately = (!calculateStarsInaccurately || env->getOS() == Environment::OS::OS_HORIZON); // causes too much lag on the switch (2)
 
@@ -673,6 +690,11 @@ bool OsuBeatmapDifficulty::loadMetadataRaw(bool calculateStars, bool calculateSt
 			{
 				unload();
 				combocolors = std::vector<Color>();
+
+				/*
+				m_aimStrains.swap(aimStrains);
+				m_speedStrains.swap(speedStrains);
+				*/
 			}
 
 			if (starsNoMod == 0.0f)
@@ -753,15 +775,16 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 				case 2: // TimingPoints
 
 					// old beatmaps: Offset, Milliseconds per Beat
-					// new beatmaps: Offset, Milliseconds per Beat, Meter, Sample Type, Sample Set, Volume, Inherited, Kiai Mode
+					// new beatmaps: Offset, Milliseconds per Beat, Meter, Sample Type, Sample Set, Volume, !Inherited, Kiai Mode
 
 					double tpOffset;
 					float tpMSPerBeat;
 					int tpMeter;
 					int tpSampleType,tpSampleSet;
 					int tpVolume;
+					int tpTimingChange;
 					int tpKiai;
-					if (sscanf(curLineChar, " %lf , %f , %i , %i , %i , %i , %i", &tpOffset, &tpMSPerBeat, &tpMeter, &tpSampleType, &tpSampleSet, &tpVolume, &tpKiai) == 7)
+					if (sscanf(curLineChar, " %lf , %f , %i , %i , %i , %i , %i , %i", &tpOffset, &tpMSPerBeat, &tpMeter, &tpSampleType, &tpSampleSet, &tpVolume, &tpTimingChange, &tpKiai) == 8)
 					{
 						TIMINGPOINT t;
 						t.offset = (long)std::round(tpOffset);
@@ -769,6 +792,7 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 						t.sampleType = tpSampleType;
 						t.sampleSet = tpSampleSet;
 						t.volume = tpVolume;
+						t.timingChange = tpTimingChange == 1;
 						t.kiai = tpKiai > 0;
 						t.sortHack = timingPointSortHack++;
 
@@ -783,7 +807,10 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 						t.sampleType = 0;
 						t.sampleSet = 0;
 						t.volume = 100;
+
+						t.timingChange = true;
 						t.kiai = false;
+
 						t.sortHack = timingPointSortHack++;
 
 						timingpoints.push_back(t);
@@ -1441,6 +1468,53 @@ OsuBeatmapDifficulty::TIMING_INFO OsuBeatmapDifficulty::getTimingInfoForTime(uns
 	ti.sampleSet = timingpoints[0].sampleSet;
 	ti.sampleType = timingpoints[0].sampleType;
 
+
+
+	// new (peppy's algorithm)
+	// (correctly handles aspire & NaNs)
+	{
+		const bool allowMultiplier = true;
+
+		int point = 0;
+		int samplePoint = 0;
+
+		for (int i=0; i<timingpoints.size(); i++)
+		{
+			if (timingpoints[i].offset <= positionMS)
+			{
+				if (timingpoints[i].timingChange)
+					point = i;
+				else
+					samplePoint = i;
+			}
+		}
+
+		double mult = 1;
+
+		if (allowMultiplier && samplePoint > point && timingpoints[samplePoint].msPerBeat < 0)
+		{
+			if (timingpoints[samplePoint].msPerBeat >= 0)
+				mult = 1;
+			else
+				mult = clamp<float>((float)-timingpoints[samplePoint].msPerBeat, 10.0f, 1000.0f) / 100.0f;
+		}
+
+		ti.beatLengthBase = timingpoints[point].msPerBeat;
+		ti.offset = timingpoints[point].offset;
+
+		ti.isNaN = std::isnan(timingpoints[samplePoint].msPerBeat) || std::isnan(timingpoints[point].msPerBeat);
+		ti.beatLength = ti.beatLengthBase * mult;
+
+		ti.volume = timingpoints[point].volume;
+		ti.sampleType = timingpoints[point].sampleType;
+		ti.sampleSet = timingpoints[point].sampleSet;
+	}
+
+
+
+	// old (McKay's algorithm)
+	// (doesn't work for all aspire maps, e.g. XNOR)
+	/*
 	// initial timing values (get first non-inherited timingpoint as base)
 	for (int i=0; i<timingpoints.size(); i++)
 	{
@@ -1480,6 +1554,9 @@ OsuBeatmapDifficulty::TIMING_INFO OsuBeatmapDifficulty::getTimingInfoForTime(uns
 		ti.sampleType = t->sampleType;
 		ti.sampleSet = t->sampleSet;
 	}
+	*/
+
+
 
 	return ti;
 }
@@ -1754,10 +1831,10 @@ std::vector<std::shared_ptr<OsuDifficultyHitObject>> OsuBeatmapDifficulty::gener
 	return diffHitObjects;
 }
 
-double OsuBeatmapDifficulty::calculateStarDiff(OsuBeatmap *beatmap, double *aim, double *speed, int upToObjectIndex, bool calculateStarsInaccurately)
+double OsuBeatmapDifficulty::calculateStarDiff(OsuBeatmap *beatmap, double *aim, double *speed, int upToObjectIndex, bool calculateStarsInaccurately, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains)
 {
 	std::vector<std::shared_ptr<OsuDifficultyHitObject>> hitObjects = generateDifficultyHitObjectsForBeatmap(beatmap, calculateStarsInaccurately);
-	return OsuDifficultyCalculator::calculateStarDiffForHitObjects(hitObjects, (beatmap != NULL ? beatmap->getCS() : CS), aim, speed, upToObjectIndex);
+	return OsuDifficultyCalculator::calculateStarDiffForHitObjects(hitObjects, (beatmap != NULL ? beatmap->getCS() : CS), aim, speed, upToObjectIndex, outAimStrains, outSpeedStrains);
 }
 
 void OsuBeatmapDifficulty::rebuildStarCacheForUpToHitObjectIndex(OsuBeatmap *beatmap, std::atomic<bool> &interruptLoad, std::atomic<int> &progress)
@@ -1767,6 +1844,10 @@ void OsuBeatmapDifficulty::rebuildStarCacheForUpToHitObjectIndex(OsuBeatmap *bea
 	// reset
 	m_aimStarsForNumHitObjects.clear();
 	m_speedStarsForNumHitObjects.clear();
+	/*
+	m_aimStrains.clear();
+	m_speedStrains.clear();
+	*/
 
 	std::vector<std::shared_ptr<OsuDifficultyHitObject>> hitObjects = generateDifficultyHitObjectsForBeatmap(beatmap);
 	const float CS = beatmap->getCS();
@@ -1776,6 +1857,7 @@ void OsuBeatmapDifficulty::rebuildStarCacheForUpToHitObjectIndex(OsuBeatmap *bea
 		double aimStars = 0.0;
 		double speedStars = 0.0;
 
+		//OsuDifficultyCalculator::calculateStarDiffForHitObjects(hitObjects, CS, &aimStars, &speedStars, i, (i == (hitObjects.size() - 1) ? &m_aimStrains : NULL), (i == (hitObjects.size() - 1) ? &m_speedStrains : NULL));
 		OsuDifficultyCalculator::calculateStarDiffForHitObjects(hitObjects, CS, &aimStars, &speedStars, i);
 
 		m_aimStarsForNumHitObjects.push_back(aimStars);
@@ -1787,6 +1869,10 @@ void OsuBeatmapDifficulty::rebuildStarCacheForUpToHitObjectIndex(OsuBeatmap *bea
 		{
 			m_aimStarsForNumHitObjects.clear();
 			m_speedStarsForNumHitObjects.clear();
+			/*
+			m_aimStrains.clear();
+			m_speedStrains.clear();
+			*/
 
 			return; // stop everything
 		}
