@@ -24,6 +24,7 @@ ConVar osu_hitresult_draw_300s("osu_hitresult_draw_300s", false);
 
 ConVar osu_hitresult_scale("osu_hitresult_scale", 1.0f);
 ConVar osu_hitresult_duration("osu_hitresult_duration", 1.100f, "max duration of the entire hitresult in seconds (this limits all other values)");
+ConVar osu_hitresult_animated("osu_hitresult_animated", true, "whether to animate hitresult scales (depending on particle<SCORE>.png, either scale wobble or smooth scale)");
 ConVar osu_hitresult_fadein_duration("osu_hitresult_fadein_duration", 0.120f);
 ConVar osu_hitresult_fadeout_start_time("osu_hitresult_fadeout_start_time", 0.500f);
 ConVar osu_hitresult_fadeout_duration("osu_hitresult_fadeout_duration", 0.600f);
@@ -136,10 +137,8 @@ void OsuHitObject::drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiam
 
 		// non-misses have a special scale animation (the type of which depends on hasParticle)
 		float scale = 1.0f;
-		if (doScaleOrRotateAnim)
+		if (doScaleOrRotateAnim && osu_hitresult_animated.getBool())
 		{
-			// TODO: add convars for customizing the wobble and linear scale anims here
-
 			if (!hasParticle)
 			{
 				if (animPercent < fadeInEndPercent * 0.8f)
@@ -159,14 +158,14 @@ void OsuHitObject::drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiam
 		{
 		case OsuScore::HIT::HIT_MISS:
 			{
-				// TODO: make convar for down anim amount
-
 				// special case: animated misses don't move down, and skins with version <= 1 also don't move down
 				Vector2 downAnim;
 				if (skin->getHit0()->getNumImages() < 2 && skin->getVersion() > 1.0f)
 					downAnim.y = lerp<float>(-5.0f, 40.0f, clamp<float>(animPercent*animPercent*animPercent, 0.0f, 1.0f)) * osuCoordScaleMultiplier;
 
-				const float missScale = 1.0f + clamp<float>((1.0f - (animPercent / fadeInEndPercent)), 0.0f, 1.0f) * (osu_hitresult_miss_fadein_scale.getFloat() - 1.0f);
+				float missScale = 1.0f + clamp<float>((1.0f - (animPercent / fadeInEndPercent)), 0.0f, 1.0f) * (osu_hitresult_miss_fadein_scale.getFloat() - 1.0f);
+				if (!osu_hitresult_animated.getBool())
+					missScale = 1.0f;
 
 				// TODO: rotation anim (only for all non-animated skins), rot = rng(-0.15f, 0.15f), anim1 = 120 ms to rot, anim2 = rest to rot*2, all ease in
 
