@@ -87,6 +87,7 @@ ConVar osu_skin_workshop_id("osu_skin_workshop_id", "0", "holds the id of the cu
 ConVar osu_skin_reload("osu_skin_reload");
 
 ConVar osu_volume_master("osu_volume_master", 1.0f);
+ConVar osu_volume_master_inactive("osu_volume_master_inactive", 0.25f);
 ConVar osu_volume_music("osu_volume_music", 0.4f);
 ConVar osu_volume_change_interval("osu_volume_change_interval", 0.05f);
 
@@ -370,6 +371,8 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_skinScheduledToLoad = NULL;
 	m_bFontReloadScheduled = false;
 	m_bFireResolutionChangedScheduled = false;
+	m_bVolumeInactiveToActiveScheduled = false;
+	m_fVolumeInactiveToActiveAnim = 0.0f;
 
 	// debug
 	m_windowManager = new CWindowManager();
@@ -501,10 +504,12 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 
 	m_updateHandler->checkForUpdates();
 
+
+
 	/*
 	// DEBUG: immediately start diff of a beatmap
-	UString debugFolder = "C:/Program Files (x86)/osu!/Songs/537048 Erehamonika remixed by kors k - Der Wald (Kors K Remix)/";
-	UString debugDiffFileName = "Erehamonika remixed by kors k - Der Wald (Kors K Remix) (Rucker) [Maze].osu";
+	UString debugFolder = "H:/Program Files (x86)/osu!/Songs/41823 The Quick Brown Fox - The Big Black/";
+	UString debugDiffFileName = "The Quick Brown Fox - The Big Black (Blue Dragon) [WHO'S AFRAID OF THE BIG BLACK].osu";
 	OsuBeatmap *debugBeatmap = new OsuBeatmapStandard(this);
 	UString beatmapPath = debugFolder;
 	beatmapPath.append(debugDiffFileName);
@@ -1124,6 +1129,16 @@ void Osu::update()
 		}
 	}
 
+	// volume inactive to active animation
+	if (m_bVolumeInactiveToActiveScheduled && m_fVolumeInactiveToActiveAnim > 0.0f)
+	{
+		engine->getSound()->setVolume(lerp<float>(osu_volume_master_inactive.getFloat(), osu_volume_master.getFloat(), m_fVolumeInactiveToActiveAnim));
+
+		// check if we're done
+		if (m_fVolumeInactiveToActiveAnim == 1.0f)
+			m_bVolumeInactiveToActiveScheduled = false;
+	}
+
 	// delayed font reloads (must be before layout updates!)
 	if (m_bFontReloadScheduled)
 	{
@@ -1610,6 +1625,11 @@ void Osu::toggleEditor()
 
 void Osu::onVolumeChange(int multiplier)
 {
+	// sanity reset
+	m_bVolumeInactiveToActiveScheduled = false;
+	anim->deleteExistingAnimation(&m_fVolumeInactiveToActiveAnim);
+	m_fVolumeInactiveToActiveAnim = 0.0f;
+
 	// chose which volume to change, depending on the volume overlay, default is master
 	ConVar *volumeConVar = &osu_volume_master;
 	if (m_hud->getVolumeMusicSlider()->isSelected())
@@ -2064,6 +2084,13 @@ void Osu::onFocusGained()
 	}
 
 	updateWindowsKeyDisable();
+
+#ifndef MCENGINE_FEATURE_BASS_WASAPI // NOTE: wasapi exclusive mode controls the system volume, so don't bother
+
+	m_fVolumeInactiveToActiveAnim = 0.0f;
+	anim->moveLinear(&m_fVolumeInactiveToActiveAnim, 1.0f, 0.3f, 0.1f, true);
+
+#endif
 }
 
 void Osu::onFocusLost()
@@ -2082,6 +2109,17 @@ void Osu::onFocusLost()
 
 	// release cursor clip
 	env->setCursorClip(false, McRect());
+
+#ifndef MCENGINE_FEATURE_BASS_WASAPI // NOTE: wasapi exclusive mode controls the system volume, so don't bother
+
+	m_bVolumeInactiveToActiveScheduled = true;
+
+	anim->deleteExistingAnimation(&m_fVolumeInactiveToActiveAnim);
+	m_fVolumeInactiveToActiveAnim = 0.0f;
+
+	engine->getSound()->setVolume(osu_volume_master_inactive.getFloat());
+
+#endif
 }
 
 bool Osu::onShutdown()
@@ -2154,6 +2192,8 @@ void Osu::onSkinChange(UString oldValue, UString newValue)
 
 void Osu::onMasterVolumeChange(UString oldValue, UString newValue)
 {
+	if (m_bVolumeInactiveToActiveScheduled) return; // not very clean, but w/e
+
 	float newVolume = newValue.toFloat();
 	engine->getSound()->setVolume(newVolume);
 }
