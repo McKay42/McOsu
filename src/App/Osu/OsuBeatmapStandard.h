@@ -26,16 +26,16 @@ public:
 	void onModUpdate(bool rebuildSliderVertexBuffers = true, bool recomputeDrainRate = true); // this seems very dangerous compiler-wise, but it works
 	virtual bool isLoading();
 
-	Vector2 pixels2OsuCoords(Vector2 pixelCoords); // only used for positional audio atm
-	Vector2 osuCoords2Pixels(Vector2 coords); // hitobjects should use this one (includes lots of special behaviour)
-	Vector2 osuCoords2RawPixels(Vector2 coords); // raw transform from osu!pixels to absolute screen pixels (without any mods whatsoever)
-	Vector2 osuCoords2VRPixels(Vector2 coords); // this gets called by osuCoords2Pixels() during a VR draw(), for easier backwards compatibility
-	Vector2 osuCoords2LegacyPixels(Vector2 coords); // only applies vanilla osu mods and static mods to the coordinates (used for generating the static slider mesh) centered at (0, 0, 0)
+	Vector2 pixels2OsuCoords(Vector2 pixelCoords) const; // only used for positional audio atm
+	Vector2 osuCoords2Pixels(Vector2 coords) const; // hitobjects should use this one (includes lots of special behaviour)
+	Vector2 osuCoords2RawPixels(Vector2 coords) const; // raw transform from osu!pixels to absolute screen pixels (without any mods whatsoever)
+	Vector2 osuCoords2VRPixels(Vector2 coords) const; // this gets called by osuCoords2Pixels() during a VR draw(), for easier backwards compatibility
+	Vector2 osuCoords2LegacyPixels(Vector2 coords) const; // only applies vanilla osu mods and static mods to the coordinates (used for generating the static slider mesh) centered at (0, 0, 0)
 
 	// cursor
-	Vector2 getCursorPos();
-	Vector2 getFirstPersonCursorDelta();
-	inline Vector2 getContinueCursorPoint() {return m_vContinueCursorPoint;}
+	Vector2 getCursorPos() const;
+	Vector2 getFirstPersonCursorDelta() const;
+	inline Vector2 getContinueCursorPoint() const {return m_vContinueCursorPoint;}
 
 	// playfield
 	inline Vector2 getPlayfieldSize() {return m_vPlayfieldSize;}

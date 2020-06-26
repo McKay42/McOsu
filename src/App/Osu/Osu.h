@@ -372,6 +372,8 @@ private:
 	OsuSkin *m_skinScheduledToLoad;
 	bool m_bFontReloadScheduled;
 	bool m_bFireResolutionChangedScheduled;
+	bool m_bVolumeInactiveToActiveScheduled;
+	float m_fVolumeInactiveToActiveAnim;
 };
 
 #endif

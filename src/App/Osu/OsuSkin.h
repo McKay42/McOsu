@@ -120,6 +120,10 @@ public:
 	inline OsuSkinImage *getHit300g() {return m_hit300g;}
 	inline OsuSkinImage *getHit300k() {return m_hit300k;}
 
+	inline Image *getParticle50() {return m_particle50;}
+	inline Image *getParticle100() {return m_particle100;}
+	inline Image *getParticle300() {return m_particle300;}
+
 	inline Image *getSliderGradient() {return m_sliderGradient;}
 	inline OsuSkinImage *getSliderb() {return m_sliderb;}
 	inline OsuSkinImage *getSliderFollowCircle2() {return m_sliderFollowCircle2;}
@@ -411,6 +415,10 @@ private:
 	OsuSkinImage *m_hit300;
 	OsuSkinImage *m_hit300g;
 	OsuSkinImage *m_hit300k;
+
+	Image *m_particle50;
+	Image *m_particle100;
+	Image *m_particle300;
 
 	Image *m_sliderGradient;
 	OsuSkinImage *m_sliderb;

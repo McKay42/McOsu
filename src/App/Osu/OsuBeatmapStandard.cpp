@@ -995,7 +995,7 @@ bool OsuBeatmapStandard::isLoading()
 	return (isLoadingInt() || (m_osu->isInMultiplayer() && m_osu->getMultiplayer()->isWaitingForPlayers()));
 }
 
-Vector2 OsuBeatmapStandard::pixels2OsuCoords(Vector2 pixelCoords)
+Vector2 OsuBeatmapStandard::pixels2OsuCoords(Vector2 pixelCoords) const
 {
 	// un-first-person
 	if (OsuGameRules::osu_mod_fps.getBool())
@@ -1013,7 +1013,7 @@ Vector2 OsuBeatmapStandard::pixels2OsuCoords(Vector2 pixelCoords)
 	return pixelCoords;
 }
 
-Vector2 OsuBeatmapStandard::osuCoords2Pixels(Vector2 coords)
+Vector2 OsuBeatmapStandard::osuCoords2Pixels(Vector2 coords) const
 {
 	if (m_bIsVRDraw)
 		return osuCoords2VRPixels(coords);
@@ -1111,7 +1111,7 @@ Vector2 OsuBeatmapStandard::osuCoords2Pixels(Vector2 coords)
 	return coords;
 }
 
-Vector2 OsuBeatmapStandard::osuCoords2RawPixels(Vector2 coords)
+Vector2 OsuBeatmapStandard::osuCoords2RawPixels(Vector2 coords) const
 {
 	// scale and offset
 	coords *= m_fScaleFactor;
@@ -1120,7 +1120,7 @@ Vector2 OsuBeatmapStandard::osuCoords2RawPixels(Vector2 coords)
 	return coords;
 }
 
-Vector2 OsuBeatmapStandard::osuCoords2VRPixels(Vector2 coords)
+Vector2 OsuBeatmapStandard::osuCoords2VRPixels(Vector2 coords) const
 {
 	if (m_osu->getModHR())
 		coords.y = OsuGameRules::OSU_COORD_HEIGHT - coords.y;
@@ -1202,7 +1202,7 @@ Vector2 OsuBeatmapStandard::osuCoords2VRPixels(Vector2 coords)
 	return coords;
 }
 
-Vector2 OsuBeatmapStandard::osuCoords2LegacyPixels(Vector2 coords)
+Vector2 OsuBeatmapStandard::osuCoords2LegacyPixels(Vector2 coords) const
 {
 	if (m_osu->getModHR())
 		coords.y = OsuGameRules::OSU_COORD_HEIGHT - coords.y;
@@ -1240,7 +1240,7 @@ Vector2 OsuBeatmapStandard::osuCoords2LegacyPixels(Vector2 coords)
 	return coords;
 }
 
-Vector2 OsuBeatmapStandard::getCursorPos()
+Vector2 OsuBeatmapStandard::getCursorPos() const
 {
 	if (OsuGameRules::osu_mod_fps.getBool() && !m_bIsPaused)
 	{
@@ -1261,7 +1261,7 @@ Vector2 OsuBeatmapStandard::getCursorPos()
 	}
 }
 
-Vector2 OsuBeatmapStandard::getFirstPersonCursorDelta()
+Vector2 OsuBeatmapStandard::getFirstPersonCursorDelta() const
 {
 	return m_vPlayfieldCenter - (m_osu->getModAuto() || m_osu->getModAutopilot() ? m_vAutoCursorPos : engine->getMouse()->getPos());
 }

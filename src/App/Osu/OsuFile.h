@@ -19,7 +19,7 @@ public:
 	{
 		double msPerBeat;
 		double offset;
-		bool notinherited;
+		bool timingChange;
 	};
 
 public:

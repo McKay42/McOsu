@@ -23,8 +23,13 @@
 ConVar osu_hitresult_draw_300s("osu_hitresult_draw_300s", false);
 
 ConVar osu_hitresult_scale("osu_hitresult_scale", 1.0f);
-ConVar osu_hitresult_duration("osu_hitresult_duration", 1.22f);
-ConVar osu_hitresult_fadeout_start_percent("osu_hitresult_fadeout_start_percent", 0.4f, "start fading out after this many percent of osu_hitresult_duration have passed");
+ConVar osu_hitresult_duration("osu_hitresult_duration", 1.100f, "max duration of the entire hitresult in seconds (this limits all other values)");
+ConVar osu_hitresult_animated("osu_hitresult_animated", true, "whether to animate hitresult scales (depending on particle<SCORE>.png, either scale wobble or smooth scale)");
+ConVar osu_hitresult_fadein_duration("osu_hitresult_fadein_duration", 0.120f);
+ConVar osu_hitresult_fadeout_start_time("osu_hitresult_fadeout_start_time", 0.500f);
+ConVar osu_hitresult_fadeout_duration("osu_hitresult_fadeout_duration", 0.600f);
+
+ConVar osu_hitresult_miss_fadein_scale("osu_hitresult_miss_fadein_scale", 2.0f);
 
 ConVar osu_approach_scale_multiplier("osu_approach_scale_multiplier", 3.0f);
 ConVar osu_vr_approach_type("osu_vr_approach_type", 0, "0 = linear (default), 1 = quadratic");
@@ -57,107 +62,149 @@ ConVar *OsuHitObject::m_osu_vr_draw_desktop_playfield = NULL;
 
 unsigned long long OsuHitObject::sortHackCounter = 0;
 
-void OsuHitObject::drawHitResult(Graphics *g, OsuBeatmapStandard *beatmap, Vector2 rawPos, OsuScore::HIT result, float animPercent, float defaultAnimPercent)
+void OsuHitObject::drawHitResult(Graphics *g, OsuBeatmapStandard *beatmap, Vector2 rawPos, OsuScore::HIT result, float animPercentInv)
 {
-	drawHitResult(g, beatmap->getSkin(), beatmap->getHitcircleDiameter(), beatmap->getRawHitcircleDiameter(), rawPos, result, animPercent, defaultAnimPercent);
+	drawHitResult(g, beatmap->getSkin(), beatmap->getHitcircleDiameter(), beatmap->getRawHitcircleDiameter(), rawPos, result, animPercentInv);
 }
 
-void OsuHitObject::drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiameter, float rawHitcircleDiameter, Vector2 rawPos, OsuScore::HIT result, float animPercent, float defaultAnimPercent)
+void OsuHitObject::drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiameter, float rawHitcircleDiameter, Vector2 rawPos, OsuScore::HIT result, float animPercentInv)
 {
-	if (defaultAnimPercent <= 0.0f) return;
+	if (animPercentInv <= 0.0f) return;
 
-	const float osuCoordScaleMultiplier = hitcircleDiameter / rawHitcircleDiameter;
+	const float animPercent = 1.0f - animPercentInv;
+
+	const float fadeInEndPercent = osu_hitresult_fadein_duration.getFloat() / osu_hitresult_duration.getFloat();
 
 	g->setColor(0xffffffff);
-	g->setAlpha(clamp<float>(defaultAnimPercent / (1.0f - osu_hitresult_fadeout_start_percent.getFloat()), 0.0f, 1.0f));
+	{
+		const float fadeOutStartPercent = osu_hitresult_fadeout_start_time.getFloat() / osu_hitresult_duration.getFloat();
+		const float fadeOutDurationPercent = osu_hitresult_fadeout_duration.getFloat() / osu_hitresult_duration.getFloat();
+
+		g->setAlpha(clamp<float>(animPercent < fadeInEndPercent ? animPercent / fadeInEndPercent : 1.0f - ((animPercent - fadeOutStartPercent) / fadeOutDurationPercent), 0.0f, 1.0f));
+	}
 	g->pushTransform();
 	{
+		const float osuCoordScaleMultiplier = hitcircleDiameter / rawHitcircleDiameter;
+
+		bool doScaleOrRotateAnim = true;
+		bool hasParticle = true;
 		float hitImageScale = 1.0f;
 		switch (result)
 		{
 		case OsuScore::HIT::HIT_MISS:
+			doScaleOrRotateAnim = skin->getHit0()->getNumImages() == 1;
 			hitImageScale = (rawHitcircleDiameter / skin->getHit0()->getSizeBaseRaw().x) * osuCoordScaleMultiplier;
 			break;
 
 		case OsuScore::HIT::HIT_50:
+			doScaleOrRotateAnim = skin->getHit50()->getNumImages() == 1;
+			hasParticle = skin->getParticle50() != skin->getMissingTexture();
 			hitImageScale = (rawHitcircleDiameter / skin->getHit50()->getSizeBaseRaw().x) * osuCoordScaleMultiplier;
 			break;
 
 		case OsuScore::HIT::HIT_100:
+			doScaleOrRotateAnim = skin->getHit100()->getNumImages() == 1;
+			hasParticle = skin->getParticle100() != skin->getMissingTexture();
 			hitImageScale = (rawHitcircleDiameter / skin->getHit100()->getSizeBaseRaw().x) * osuCoordScaleMultiplier;
 			break;
 
 		case OsuScore::HIT::HIT_300:
+			doScaleOrRotateAnim = skin->getHit300()->getNumImages() == 1;
+			hasParticle = skin->getParticle300() != skin->getMissingTexture();
 			hitImageScale = (rawHitcircleDiameter / skin->getHit300()->getSizeBaseRaw().x) * osuCoordScaleMultiplier;
 			break;
 
 
 
 		case OsuScore::HIT::HIT_100K:
+			doScaleOrRotateAnim = skin->getHit100k()->getNumImages() == 1;
+			hasParticle = skin->getParticle100() != skin->getMissingTexture();
 			hitImageScale = (rawHitcircleDiameter / skin->getHit100k()->getSizeBaseRaw().x) * osuCoordScaleMultiplier;
 			break;
 
 		case OsuScore::HIT::HIT_300K:
+			doScaleOrRotateAnim = skin->getHit300k()->getNumImages() == 1;
+			hasParticle = skin->getParticle300() != skin->getMissingTexture();
 			hitImageScale = (rawHitcircleDiameter / skin->getHit300k()->getSizeBaseRaw().x) * osuCoordScaleMultiplier;
 			break;
 
 		case OsuScore::HIT::HIT_300G:
+			doScaleOrRotateAnim = skin->getHit300g()->getNumImages() == 1;
+			hasParticle = skin->getParticle300() != skin->getMissingTexture();
 			hitImageScale = (rawHitcircleDiameter / skin->getHit300g()->getSizeBaseRaw().x) * osuCoordScaleMultiplier;
 			break;
+		}
+
+		// non-misses have a special scale animation (the type of which depends on hasParticle)
+		float scale = 1.0f;
+		if (doScaleOrRotateAnim && osu_hitresult_animated.getBool())
+		{
+			if (!hasParticle)
+			{
+				if (animPercent < fadeInEndPercent * 0.8f)
+					scale = lerp<float>(0.6f, 1.1f, clamp<float>(animPercent / (fadeInEndPercent * 0.8f), 0.0f, 1.0f));
+				else if (animPercent < fadeInEndPercent * 1.2f)
+					scale = lerp<float>(1.1f, 0.9f, clamp<float>((animPercent - fadeInEndPercent * 0.8f) / (fadeInEndPercent * 1.2f - fadeInEndPercent * 0.8f), 0.0f, 1.0f));
+				else if (animPercent < fadeInEndPercent * 1.4f)
+					scale = lerp<float>(0.9f, 1.0f, clamp<float>((animPercent - fadeInEndPercent * 1.2f) / (fadeInEndPercent * 1.4f - fadeInEndPercent * 1.2f), 0.0f, 1.0f));
+			}
+			else
+				scale = lerp<float>(0.9f, 1.05f, clamp<float>(animPercent, 0.0f, 1.0f));
+
+			// TODO: osu draws an additive copy of the hitresult on top (?) with 0.5 alpha anim and negative timing, if the skin hasParticle. in this case only the copy does the wobble anim, while the main result just scales
 		}
 
 		switch (result)
 		{
 		case OsuScore::HIT::HIT_MISS:
-			// special case: animated misses don't move down, and skins with version <= 1 also don't move down
-			if (skin->getHit0()->getNumImages() < 2 && skin->getVersion() > 1.0f)
-				g->translate(0, (1.0f-defaultAnimPercent)*(1.0f-defaultAnimPercent)*(1.0f-defaultAnimPercent)*skin->getHit0()->getSize().y*1.25f);
+			{
+				// special case: animated misses don't move down, and skins with version <= 1 also don't move down
+				Vector2 downAnim;
+				if (skin->getHit0()->getNumImages() < 2 && skin->getVersion() > 1.0f)
+					downAnim.y = lerp<float>(-5.0f, 40.0f, clamp<float>(animPercent*animPercent*animPercent, 0.0f, 1.0f)) * osuCoordScaleMultiplier;
 
-			// TODO: rotation (only for all non-animated skins), rot = rng(-0.15f, 0.15f), anim1 = 120 ms to rot, anim2 = rest to rot*2, all ease in
+				float missScale = 1.0f + clamp<float>((1.0f - (animPercent / fadeInEndPercent)), 0.0f, 1.0f) * (osu_hitresult_miss_fadein_scale.getFloat() - 1.0f);
+				if (!osu_hitresult_animated.getBool())
+					missScale = 1.0f;
 
-			/*
-			g->pushTransform();
-			g->translate(rawPos.x, rawPos.y);
-			g->setColor(0xffffffff);
-			g->drawString(engine->getResourceManager()->getFont("FONT_DEFAULT"), UString::format("animPercent = %f, frame = %i\n", animPercent, skin->getHit0()->getFrameNumber()));
-			g->popTransform();
-			*/
+				// TODO: rotation anim (only for all non-animated skins), rot = rng(-0.15f, 0.15f), anim1 = 120 ms to rot, anim2 = rest to rot*2, all ease in
 
-			skin->getHit0()->drawRaw(g, rawPos, hitImageScale*osu_hitresult_scale.getFloat());
+				skin->getHit0()->drawRaw(g, rawPos + downAnim, (doScaleOrRotateAnim ? missScale : 1.0f) * hitImageScale * osu_hitresult_scale.getFloat());
+			}
 			break;
 
 		case OsuScore::HIT::HIT_50:
-			skin->getHit50()->drawRaw(g, rawPos, hitImageScale*osu_hitresult_scale.getFloat());
+			skin->getHit50()->drawRaw(g, rawPos, (doScaleOrRotateAnim ? scale : 1.0f) * hitImageScale * osu_hitresult_scale.getFloat());
 			break;
 
 		case OsuScore::HIT::HIT_100:
-			skin->getHit100()->drawRaw(g, rawPos, hitImageScale*osu_hitresult_scale.getFloat());
+			skin->getHit100()->drawRaw(g, rawPos, (doScaleOrRotateAnim ? scale : 1.0f) * hitImageScale * osu_hitresult_scale.getFloat());
 			break;
 
 		case OsuScore::HIT::HIT_300:
 			if (osu_hitresult_draw_300s.getBool())
 			{
-				skin->getHit300()->drawRaw(g, rawPos, hitImageScale*osu_hitresult_scale.getFloat());
+				skin->getHit300()->drawRaw(g, rawPos, (doScaleOrRotateAnim ? scale : 1.0f) * hitImageScale * osu_hitresult_scale.getFloat());
 			}
 			break;
 
 
 
 		case OsuScore::HIT::HIT_100K:
-			skin->getHit100k()->drawRaw(g, rawPos, hitImageScale*osu_hitresult_scale.getFloat());
+			skin->getHit100k()->drawRaw(g, rawPos, (doScaleOrRotateAnim ? scale : 1.0f) * hitImageScale * osu_hitresult_scale.getFloat());
 			break;
 
 		case OsuScore::HIT::HIT_300K:
 			if (osu_hitresult_draw_300s.getBool())
 			{
-				skin->getHit300k()->drawRaw(g, rawPos, hitImageScale*osu_hitresult_scale.getFloat());
+				skin->getHit300k()->drawRaw(g, rawPos, (doScaleOrRotateAnim ? scale : 1.0f) * hitImageScale * osu_hitresult_scale.getFloat());
 			}
 			break;
 
 		case OsuScore::HIT::HIT_300G:
 			if (osu_hitresult_draw_300s.getBool())
 			{
-				skin->getHit300g()->drawRaw(g, rawPos, hitImageScale*osu_hitresult_scale.getFloat());
+				skin->getHit300g()->drawRaw(g, rawPos, (doScaleOrRotateAnim ? scale : 1.0f) * hitImageScale * osu_hitresult_scale.getFloat());
 			}
 			break;
 		}
@@ -199,40 +246,43 @@ OsuHitObject::OsuHitObject(long time, int sampleType, int comboNumber, bool isEn
 
 	m_iStack = 0;
 
+	m_hitresultanim1.time = 0.0f;
+
 	m_iSortHack = sortHackCounter++;
 }
 
 void OsuHitObject::draw(Graphics *g)
 {
-	if (m_hitResults.size() > 0)
+	if ((m_hitresultanim1.time - osu_hitresult_duration.getFloat()) < engine->getTime())
 	{
 		OsuBeatmapStandard *beatmapStd = dynamic_cast<OsuBeatmapStandard*>(m_beatmap);
-		OsuBeatmapMania *beatmapMania = dynamic_cast<OsuBeatmapMania*>(m_beatmap);
+		const OsuBeatmapMania *beatmapMania = dynamic_cast<OsuBeatmapMania*>(m_beatmap);
 
 		OsuSkin *skin = m_beatmap->getSkin();
-		for (int i=0; i<m_hitResults.size(); i++)
 		{
-			const long offset = m_iTime + m_iObjectDuration + m_hitResults[i].delta;
+			const long skinAnimationTimeStartOffset = m_iTime + m_iObjectDuration + m_hitresultanim1.delta;
 
-			skin->getHit0()->setAnimationTimeOffset(offset);
+			skin->getHit0()->setAnimationTimeOffset(skinAnimationTimeStartOffset);
 			skin->getHit0()->setAnimationFrameClampUp();
-			skin->getHit50()->setAnimationTimeOffset(offset);
+			skin->getHit50()->setAnimationTimeOffset(skinAnimationTimeStartOffset);
 			skin->getHit50()->setAnimationFrameClampUp();
-			skin->getHit100()->setAnimationTimeOffset(offset);
+			skin->getHit100()->setAnimationTimeOffset(skinAnimationTimeStartOffset);
 			skin->getHit100()->setAnimationFrameClampUp();
-			skin->getHit100k()->setAnimationTimeOffset(offset);
+			skin->getHit100k()->setAnimationTimeOffset(skinAnimationTimeStartOffset);
 			skin->getHit100k()->setAnimationFrameClampUp();
-			skin->getHit300()->setAnimationTimeOffset(offset);
+			skin->getHit300()->setAnimationTimeOffset(skinAnimationTimeStartOffset);
 			skin->getHit300()->setAnimationFrameClampUp();
-			skin->getHit300g()->setAnimationTimeOffset(offset);
+			skin->getHit300g()->setAnimationTimeOffset(skinAnimationTimeStartOffset);
 			skin->getHit300g()->setAnimationFrameClampUp();
-			skin->getHit300k()->setAnimationTimeOffset(offset);
+			skin->getHit300k()->setAnimationTimeOffset(skinAnimationTimeStartOffset);
 			skin->getHit300k()->setAnimationFrameClampUp();
 
+			const float animPercentInv = 1.0f - (((engine->getTime() - m_hitresultanim1.time) * m_beatmap->getSpeedMultiplier()) / osu_hitresult_duration.getFloat());
+
 			if (beatmapStd != NULL)
-				drawHitResult(g, beatmapStd, beatmapStd->osuCoords2Pixels(m_hitResults[i].rawPos), m_hitResults[i].result, clamp<float>(((m_hitResults[i].anim - engine->getTime()) / m_hitResults[i].duration), 0.0f, 1.0f), ((m_hitResults[i].defaultanim - engine->getTime()) / m_hitResults[i].defaultduration));
+				drawHitResult(g, beatmapStd, beatmapStd->osuCoords2Pixels(m_hitresultanim1.rawPos), m_hitresultanim1.result, animPercentInv);
 			else if (beatmapMania != NULL)
-				drawHitResult(g, skin, 200.0f, 150.0f, m_hitResults[i].rawPos, m_hitResults[i].result, clamp<float>(((m_hitResults[i].anim - engine->getTime()) / m_hitResults[i].duration), 0.0f, 1.0f), ((m_hitResults[i].defaultanim - engine->getTime()) / m_hitResults[i].defaultduration));
+				drawHitResult(g, skin, 200.0f, 150.0f, m_hitresultanim1.rawPos, m_hitresultanim1.result, animPercentInv);
 		}
 	}
 }
@@ -283,9 +333,6 @@ void OsuHitObject::update(long curPos)
 		m_fApproachScale = 1.0f;
 		m_bVisible = false;
 	}
-
-	if (m_hitResults.size() > 0 && engine->getTime() > m_hitResults[0].anim)
-		m_hitResults.erase(m_hitResults.begin());
 }
 
 void OsuHitObject::addHitResult(OsuScore::HIT result, long delta, bool isEndOfCombo, Vector2 posRaw, float targetDelta, float targetAngle, bool ignoreOnHitErrorBar, bool ignoreCombo, bool ignoreHealth)
@@ -306,16 +353,16 @@ void OsuHitObject::addHitResult(OsuScore::HIT result, long delta, bool isEndOfCo
 
 	const OsuScore::HIT returnedHit = m_beatmap->addHitResult(this, result, delta, isEndOfCombo, ignoreOnHitErrorBar, false, ignoreCombo, false, ignoreHealth);
 
-	HITRESULTANIM hitresult;
-	hitresult.result = (returnedHit != OsuScore::HIT::HIT_MISS ? returnedHit : result);
-	hitresult.rawPos = posRaw;
-	hitresult.delta = delta;
-	hitresult.defaultduration = osu_hitresult_duration.getFloat();
-	hitresult.defaultanim = engine->getTime() + hitresult.defaultduration;
-	hitresult.duration = hitresult.defaultduration;
-	hitresult.anim = engine->getTime() + hitresult.duration;
+	HITRESULTANIM hitresultanim;
+	{
+		hitresultanim.result = (returnedHit != OsuScore::HIT::HIT_MISS ? returnedHit : result);
+		hitresultanim.rawPos = posRaw;
+		hitresultanim.delta = delta;
+		hitresultanim.time = engine->getTime();
+	}
+	m_hitresultanim1 = hitresultanim;
 
-	m_hitResults.push_back(hitresult);
+	// NOTE: in the future, can easily support 2 results for e.g. slider headcircle scorev2 stuff (2 results should be enough for any hitobject)
 }
 
 void OsuHitObject::onReset(long curPos)
@@ -323,5 +370,5 @@ void OsuHitObject::onReset(long curPos)
 	m_bMisAim = false;
 	m_iAutopilotDelta = 0;
 
-	m_hitResults.clear();
+	m_hitresultanim1.time = 0.0f;
 }

@@ -111,6 +111,10 @@ OsuSkin::OsuSkin(Osu *osu, UString name, UString filepath, bool isDefaultSkin, b
 	m_playWarningArrow = m_missingTexture;
 	m_circularmetre = m_missingTexture;
 
+	m_particle50 = m_missingTexture;
+	m_particle100 = m_missingTexture;
+	m_particle300 = m_missingTexture;
+
 	m_sliderGradient = m_missingTexture;
 	m_sliderScorePoint = m_missingTexture;
 	m_sliderStartCircle = m_missingTexture;
@@ -581,6 +585,11 @@ void OsuSkin::load()
 	m_hit300g->setAnimationFramerate(60);
 	m_hit300k = createOsuSkinImage("hit300k", Vector2(128, 128), 42);
 	m_hit300k->setAnimationFramerate(60);
+
+	randomizeFilePath();
+	checkLoadImage(&m_particle50, "particle50", "OSU_SKIN_PARTICLE50", true);
+	checkLoadImage(&m_particle100, "particle100", "OSU_SKIN_PARTICLE100", true);
+	checkLoadImage(&m_particle300, "particle300", "OSU_SKIN_PARTICLE300", true);
 
 	randomizeFilePath();
 	checkLoadImage(&m_sliderGradient, "slidergradient", "OSU_SKIN_SLIDERGRADIENT");

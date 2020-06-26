@@ -1694,7 +1694,7 @@ int OsuBeatmap::getBPM()
 		return 0;
 }
 
-float OsuBeatmap::getSpeedMultiplier()
+float OsuBeatmap::getSpeedMultiplier() const
 {
 	if (m_music != NULL)
 		return std::max(m_music->getSpeed(), 0.05f);

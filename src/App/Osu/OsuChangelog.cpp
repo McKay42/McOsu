@@ -35,7 +35,15 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	std::vector<CHANGELOG> changelogs;
 
 	CHANGELOG alpha315;
-	alpha315.title = UString::format("31.10 (Build Date: %s, %s)", __DATE__, __TIME__);
+	alpha315.title = UString::format("31.11 (Build Date: %s, %s)", __DATE__, __TIME__);
+	alpha315.changes.push_back("- Added option \"Inactive\" (Options > Audio > Volume)");
+	alpha315.changes.push_back("- Added hitresult fadein + scale wobble animations (previously became visible instantly as is)");
+	alpha315.changes.push_back("- Added ConVars (1): osu_hitresult_fadein_duration, osu_hitresult_fadeout_start_time, osu_hitresult_fadeout_duration");
+	alpha315.changes.push_back("- Added ConVars (2): osu_hitresult_miss_fadein_scale, osu_hitresult_animated, osu_volume_master_inactive");
+	alpha315.changes.push_back("- Improved hitresult animation timing and movement accuracy to exactly match osu!stable (fadein, fadeout, scaleanim)");
+	alpha315.changes.push_back("- Fixed hitresult animations not respecting speed multiplier (previously always faded at 1x time)");
+	alpha315.changes.push_back("- Fixed aspire timingpoint handling (e.g. XNOR) (2)");
+	alpha315.changes.push_back("");
 	alpha315.changes.push_back("- Added 2 new notelock algorithms: McOsu, osu!lazer 2020 (Karoo13's algorithm)");
 	alpha315.changes.push_back("- Added option \"Select Notelock\" (Options > Gameplay > Mechanics)");
 	alpha315.changes.push_back("- Added support for ranking-perfect (skin element for full combo on ranking screen)");
