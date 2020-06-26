@@ -1132,7 +1132,7 @@ void Osu::update()
 	// volume inactive to active animation
 	if (m_bVolumeInactiveToActiveScheduled && m_fVolumeInactiveToActiveAnim > 0.0f)
 	{
-		engine->getSound()->setVolume(lerp<float>(osu_volume_master_inactive.getFloat(), osu_volume_master.getFloat(), m_fVolumeInactiveToActiveAnim));
+		engine->getSound()->setVolume(lerp<float>(osu_volume_master_inactive.getFloat() * osu_volume_master.getFloat(), osu_volume_master.getFloat(), m_fVolumeInactiveToActiveAnim));
 
 		// check if we're done
 		if (m_fVolumeInactiveToActiveAnim == 1.0f)
@@ -2117,7 +2117,7 @@ void Osu::onFocusLost()
 	anim->deleteExistingAnimation(&m_fVolumeInactiveToActiveAnim);
 	m_fVolumeInactiveToActiveAnim = 0.0f;
 
-	engine->getSound()->setVolume(osu_volume_master_inactive.getFloat());
+	engine->getSound()->setVolume(osu_volume_master_inactive.getFloat() * osu_volume_master.getFloat());
 
 #endif
 }
