@@ -40,8 +40,6 @@ ConVar osu_mod_reverse_sliders("osu_mod_reverse_sliders", false);
 ConVar osu_show_approach_circle_on_first_hidden_object("osu_show_approach_circle_on_first_hidden_object", true);
 ConVar osu_load_beatmap_background_images("osu_load_beatmap_background_images", true);
 
-ConVar osu_slider_curve_max_length("osu_slider_curve_max_length", 65536/2, "maximum slider length in osu!pixels (i.e. pixelLength). also used to clamp all controlpoint coordinates to sane values.");
-
 ConVar osu_stars_stacking("osu_stars_stacking", true, "respect hitobject stacking before calculating stars/pp");
 
 
@@ -154,6 +152,7 @@ ConVar *OsuBeatmapDifficulty::m_osu_debug_pp = NULL;
 ConVar *OsuBeatmapDifficulty::m_osu_database_dynamic_star_calculation = NULL;
 ConVar *OsuBeatmapDifficulty::m_osu_slider_end_inside_check_offset = NULL;
 ConVar *OsuBeatmapDifficulty::m_osu_stars_xexxar_angles_sliders = NULL;
+ConVar *OsuBeatmapDifficulty::m_osu_slider_curve_max_length = NULL;
 unsigned long long OsuBeatmapDifficulty::sortHackCounter = 0;
 
 OsuBeatmapDifficulty::OsuBeatmapDifficulty(Osu *osu, UString filepath, UString folder)
@@ -178,6 +177,8 @@ OsuBeatmapDifficulty::OsuBeatmapDifficulty(Osu *osu, UString filepath, UString f
 		m_osu_slider_end_inside_check_offset = convar->getConVarByName("osu_slider_end_inside_check_offset");
 	if (m_osu_stars_xexxar_angles_sliders == NULL)
 		m_osu_stars_xexxar_angles_sliders = convar->getConVarByName("osu_stars_xexxar_angles_sliders");
+	if (m_osu_slider_curve_max_length == NULL)
+		m_osu_slider_curve_max_length = convar->getConVarByName("osu_slider_curve_max_length");
 
 	// default values
 	version = 14;
@@ -542,9 +543,8 @@ bool OsuBeatmapDifficulty::loadMetadataRaw(bool calculateStars, bool calculateSt
 									if (sliderTokens.size() < 1)
 										continue;
 
-									const float sanityRange = osu_slider_curve_max_length.getFloat();
+									const float sanityRange = m_osu_slider_curve_max_length->getFloat();
 									std::vector<Vector2> points;
-									points.push_back(Vector2(clamp<float>(x, -sanityRange, sanityRange), clamp<float>(y, -sanityRange, sanityRange)));
 									for (int i=1; i<sliderTokens.size(); i++)
 									{
 										std::vector<UString> sliderXY = sliderTokens[i].split(":");
@@ -552,6 +552,18 @@ bool OsuBeatmapDifficulty::loadMetadataRaw(bool calculateStars, bool calculateSt
 											continue;
 
 										points.push_back(Vector2((int)clamp<float>(sliderXY[0].toFloat(), -sanityRange, sanityRange), (int)clamp<float>(sliderXY[1].toFloat(), -sanityRange, sanityRange)));
+									}
+
+									// special case: osu! logic for handling the hitobject point vs the controlpoints (since sliders have both, and older beatmaps store the start point inside the control points)
+									{
+										const Vector2 xy = Vector2(clamp<float>(x, -sanityRange, sanityRange), clamp<float>(y, -sanityRange, sanityRange));
+										if (points.size() > 0)
+										{
+						                    if (points[0] != xy)
+						                    	points.insert(points.begin(), xy);
+										}
+										else
+											points.push_back(xy);
 									}
 
 									if (sliderTokens.size() < 2 && points.size() > 0)
@@ -898,10 +910,9 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 								//return false;
 							}
 
-							const float sanityRange = osu_slider_curve_max_length.getInt(); // infinity sanity check, same as before
+							const float sanityRange = m_osu_slider_curve_max_length->getFloat(); // infinity sanity check, same as before
 							std::vector<Vector2> points;
-							points.push_back(Vector2(clamp<float>(x, -sanityRange, sanityRange), clamp<float>(y, -sanityRange, sanityRange)));
-							for (int i=1; i<sliderTokens.size(); i++)
+							for (int i=1; i<sliderTokens.size(); i++) // NOTE: starting at 1 due to slider type char
 							{
 								std::vector<UString> sliderXY = sliderTokens[i].split(":");
 
@@ -917,6 +928,18 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 								}
 
 								points.push_back(Vector2((int)clamp<float>(sliderXY[0].toFloat(), -sanityRange, sanityRange), (int)clamp<float>(sliderXY[1].toFloat(), -sanityRange, sanityRange)));
+							}
+
+							// special case: osu! logic for handling the hitobject point vs the controlpoints (since sliders have both, and older beatmaps store the start point inside the control points)
+							{
+								const Vector2 xy = Vector2(clamp<float>(x, -sanityRange, sanityRange), clamp<float>(y, -sanityRange, sanityRange));
+								if (points.size() > 0)
+								{
+				                    if (points[0] != xy)
+				                    	points.insert(points.begin(), xy);
+								}
+								else
+									points.push_back(xy);
 							}
 
 							// partially allow bullshit sliders (add second point to make valid), e.g. https://osu.ppy.sh/beatmapsets/791900#osu/1676490

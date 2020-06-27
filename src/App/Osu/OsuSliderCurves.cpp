@@ -13,6 +13,7 @@
 
 ConVar osu_slider_curve_points_separation("osu_slider_curve_points_separation", 2.5f, "slider body curve approximation step width in osu!pixels, don't set this lower than around 1.5");
 ConVar osu_slider_curve_max_points("osu_slider_curve_max_points", 9999.0f, "maximum number of allowed interpolated curve points. quality will be forced to go down if a slider has more steps than this");
+ConVar osu_slider_curve_max_length("osu_slider_curve_max_length", 65536/2, "maximum slider length in osu!pixels (i.e. pixelLength). also used to clamp all (control-)point coordinates to sane values.");
 
 
 
@@ -552,7 +553,9 @@ OsuSliderCurveCircumscribedCircle::OsuSliderCurveCircumscribedCircle(std::vector
 			m_fCalculationEndAngle -= 2*PI;
 		else
 		{
-			debugLog("OsuSliderCurveCircumscribedCircle() Error: Cannot find angles between midAng (%.3f %.3f %.3f).", m_fCalculationStartAngle, midAng, m_fCalculationEndAngle);
+			debugLog("OsuSliderCurveCircumscribedCircle() Error: Cannot find angles between midAng (%.3f %.3f %.3f)\n", m_fCalculationStartAngle, midAng, m_fCalculationEndAngle);
+			m_curvePoints.push_back(start);
+			m_curvePoints.push_back(end);
 			return;
 		}
 	}
@@ -597,18 +600,20 @@ void OsuSliderCurveCircumscribedCircle::updateStackPosition(float stackMulStackO
 
 Vector2 OsuSliderCurveCircumscribedCircle::pointAt(float t)
 {
+	const float sanityRange = osu_slider_curve_max_length.getFloat(); // NOTE: added to fix some aspire problems (endless drawFollowPoints and star calc etc.)
 	const float ang = lerp(m_fCalculationStartAngle, m_fCalculationEndAngle, t);
 
-	return Vector2(std::cos(ang) * m_fRadius + m_vCircleCenter.x,
-				   std::sin(ang) * m_fRadius + m_vCircleCenter.y);
+	return Vector2(clamp<float>(std::cos(ang) * m_fRadius + m_vCircleCenter.x, -sanityRange, sanityRange),
+				   clamp<float>(std::sin(ang) * m_fRadius + m_vCircleCenter.y, -sanityRange, sanityRange));
 }
 
 Vector2 OsuSliderCurveCircumscribedCircle::originalPointAt(float t)
 {
+	const float sanityRange = osu_slider_curve_max_length.getFloat(); // NOTE: added to fix some aspire problems (endless drawFollowPoints and star calc etc.)
 	const float ang = lerp(m_fCalculationStartAngle, m_fCalculationEndAngle, t);
 
-	return Vector2(std::cos(ang) * m_fRadius + m_vOriginalCircleCenter.x,
-				   std::sin(ang) * m_fRadius + m_vOriginalCircleCenter.y);
+	return Vector2(clamp<float>(std::cos(ang) * m_fRadius + m_vOriginalCircleCenter.x, -sanityRange, sanityRange),
+				   clamp<float>(std::sin(ang) * m_fRadius + m_vOriginalCircleCenter.y, -sanityRange, sanityRange));
 }
 
 Vector2 OsuSliderCurveCircumscribedCircle::intersect(Vector2 a, Vector2 ta, Vector2 b, Vector2 tb)

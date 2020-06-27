@@ -30,6 +30,7 @@ public:
 	static ConVar *m_osu_database_dynamic_star_calculation;
 	static ConVar *m_osu_slider_end_inside_check_offset;
 	static ConVar *m_osu_stars_xexxar_angles_sliders;
+	static ConVar *m_osu_slider_curve_max_length;
 
 	struct HITCIRCLE
 	{
