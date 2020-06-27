@@ -42,6 +42,7 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha315.changes.push_back("- Added ConVars (2): osu_hitresult_miss_fadein_scale, osu_hitresult_animated, osu_volume_master_inactive");
 	alpha315.changes.push_back("- Improved hitresult animation timing and movement accuracy to exactly match osu!stable (fadein, fadeout, scaleanim)");
 	alpha315.changes.push_back("- Fixed hitresult animations not respecting speed multiplier (previously always faded at 1x time)");
+	alpha315.changes.push_back("- Fixed aspire freeze on mangled 3-point sliders (e.g. Ping)");
 	alpha315.changes.push_back("- Fixed aspire timingpoint handling (e.g. XNOR) (2)");
 	alpha315.changes.push_back("");
 	alpha315.changes.push_back("- Added 2 new notelock algorithms: McOsu, osu!lazer 2020 (Karoo13's algorithm)");
