@@ -554,8 +554,6 @@ OsuSliderCurveCircumscribedCircle::OsuSliderCurveCircumscribedCircle(std::vector
 		else
 		{
 			debugLog("OsuSliderCurveCircumscribedCircle() Error: Cannot find angles between midAng (%.3f %.3f %.3f)\n", m_fCalculationStartAngle, midAng, m_fCalculationEndAngle);
-			m_curvePoints.push_back(start);
-			m_curvePoints.push_back(end);
 			return;
 		}
 	}
