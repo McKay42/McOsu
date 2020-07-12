@@ -173,6 +173,15 @@ private:
 	ConVar *m_osu_scores_enabled;
 	ConVar *m_name_ref;
 
+	ConVar *m_osu_hud_scrubbing_timeline_strains_height_ref;
+	ConVar *m_osu_hud_scrubbing_timeline_strains_alpha_ref;
+	ConVar *m_osu_hud_scrubbing_timeline_strains_aim_color_r_ref;
+	ConVar *m_osu_hud_scrubbing_timeline_strains_aim_color_g_ref;
+	ConVar *m_osu_hud_scrubbing_timeline_strains_aim_color_b_ref;
+	ConVar *m_osu_hud_scrubbing_timeline_strains_speed_color_r_ref;
+	ConVar *m_osu_hud_scrubbing_timeline_strains_speed_color_g_ref;
+	ConVar *m_osu_hud_scrubbing_timeline_strains_speed_color_b_ref;
+
 	Osu *m_osu;
 	std::mt19937 m_rngalg;
 	GROUP m_group;

@@ -266,6 +266,7 @@ OsuRankingScreen::OsuRankingScreen(Osu *osu) : OsuScreenBackable(osu)
 	m_bModTD = false;
 
 	m_bIsLegacyScore = false;
+	m_bIsUnranked = false;
 }
 
 OsuRankingScreen::~OsuRankingScreen()
@@ -539,11 +540,13 @@ void OsuRankingScreen::setScore(OsuScore *score)
 	}
 
 	m_bIsLegacyScore = false;
+	m_bIsUnranked = score->isUnranked();
 }
 
 void OsuRankingScreen::setScore(OsuDatabase::Score score, UString dateTime)
 {
 	m_bIsLegacyScore = score.isLegacyScore;
+	m_bIsUnranked = false;
 
 	m_songInfo->setDate(dateTime);
 	m_songInfo->setPlayer(score.playerName);
@@ -612,7 +615,7 @@ void OsuRankingScreen::setScore(OsuDatabase::Score score, UString dateTime)
 void OsuRankingScreen::setBeatmapInfo(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff)
 {
 	m_songInfo->setFromBeatmap(beatmap, diff);
-	m_songInfo->setPlayer(convar->getConVarByName("name")->getString());
+	m_songInfo->setPlayer(m_bIsUnranked ? "McOsu" : convar->getConVarByName("name")->getString());
 
 	// round all here to 2 decimal places
 	m_fSpeedMultiplier = std::round(m_osu->getSpeedMultiplier() * 100.0f) / 100.0f;

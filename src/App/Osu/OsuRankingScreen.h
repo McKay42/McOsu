@@ -115,6 +115,7 @@ private:
 	// custom
 	Vector2 m_vPPCursorMagnetAnimation;
 	bool m_bIsLegacyScore;
+	bool m_bIsUnranked;
 };
 
 #endif
