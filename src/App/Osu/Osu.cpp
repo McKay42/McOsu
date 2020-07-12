@@ -2122,6 +2122,20 @@ void Osu::onFocusLost()
 #endif
 }
 
+void Osu::onMinimized()
+{
+#ifndef MCENGINE_FEATURE_BASS_WASAPI // NOTE: wasapi exclusive mode controls the system volume, so don't bother
+
+	m_bVolumeInactiveToActiveScheduled = true;
+
+	anim->deleteExistingAnimation(&m_fVolumeInactiveToActiveAnim);
+	m_fVolumeInactiveToActiveAnim = 0.0f;
+
+	engine->getSound()->setVolume(osu_volume_master_inactive.getFloat() * osu_volume_master.getFloat());
+
+#endif
+}
+
 bool Osu::onShutdown()
 {
 	debugLog("Osu::onShutdown()\n");
