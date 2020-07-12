@@ -116,6 +116,7 @@ private:
 
 	// custom
 	float m_fMainMenuAnimTime;
+	float m_fMainMenuAnimDuration;
 	float m_fMainMenuAnim;
 	float m_fMainMenuAnim1;
 	float m_fMainMenuAnim2;
@@ -124,7 +125,15 @@ private:
 	float m_fMainMenuAnim2Target;
 	float m_fMainMenuAnim3Target;
 	bool m_bInMainMenuRandomAnim;
-	int m_bMainMenuRandomAnimType;
+	int m_iMainMenuRandomAnimType;
+	unsigned int m_iMainMenuAnimBeatCounter;
+
+	bool m_bMainMenuAnimFriend;
+	bool m_bMainMenuAnimFadeToFriendForNextAnim;
+	bool m_bMainMenuAnimFriendScheduled;
+	float m_fMainMenuAnimFriendPercent;
+	float m_fMainMenuAnimFriendEyeFollowX;
+	float m_fMainMenuAnimFriendEyeFollowY;
 
 	float m_fShutdownScheduledTime;
 	bool m_bWasCleanShutdown;
