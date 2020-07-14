@@ -35,7 +35,13 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	std::vector<CHANGELOG> changelogs;
 
 	CHANGELOG alpha315;
-	alpha315.title = UString::format("31.11 (Build Date: %s, %s)", __DATE__, __TIME__);
+	alpha315.title = UString::format("31.12 (Build Date: %s, %s)", __DATE__, __TIME__);
+	alpha315.changes.push_back("- Updated mod selection screen to display two digits after comma for non-1.0x speed multipliers");
+	alpha315.changes.push_back("- Updated CPM/SPM/OPM metric calculations to multiply with speed multiplier (search, tooltip)");
+	alpha315.changes.push_back("- Fixed \"Inactive\" volume not applying when minimizing in windowed mode");
+	alpha315.changes.push_back("- Fixed disabled \"Show pp instead of score in scorebrowser\" applying to Top Ranks screen");
+	alpha315.changes.push_back("- Fixed aspire regression breaking timingpoints on old osu file format v5 beatmaps");
+	alpha315.changes.push_back("");
 	alpha315.changes.push_back("- Added option \"Inactive\" (Options > Audio > Volume)");
 	alpha315.changes.push_back("- Added hitresult fadein + scale wobble animations (previously became visible instantly as is)");
 	alpha315.changes.push_back("- Added ConVars (1): osu_hitresult_fadein_duration, osu_hitresult_fadeout_start_time, osu_hitresult_fadeout_duration");

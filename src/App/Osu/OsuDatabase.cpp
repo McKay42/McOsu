@@ -1709,6 +1709,9 @@ void OsuDatabase::loadScores()
 		            else if (scoreVersion >= 20121008)
 		            	/*onlineScoreID = */db.readInt();
 
+		            if (mods & OsuReplay::Mods::Target)
+		            	/*double totalAccuracy = */db.readDouble();
+
 		            if (gamemode == 0x0) // gamemode filter (osu!standard)
 					{
 						Score sc;

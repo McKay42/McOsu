@@ -91,6 +91,7 @@ public:
 	virtual void onResolutionChanged(Vector2 newResolution);
 	virtual void onFocusGained();
 	virtual void onFocusLost();
+	virtual void onMinimized();
 	virtual bool onShutdown();
 
 	void onBeforePlayStart();			// called just before OsuBeatmap->play()

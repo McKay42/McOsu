@@ -166,7 +166,7 @@ private:
 	void drawProgressBarVR(Graphics *g, Matrix4 &mvp, OsuVR *vr, float percent, bool waiting);
 	void drawStatistics(Graphics *g, int misses, int sliderbreaks, int bpm, float ar, float cs, float od, float hp, int nps, int nd, int ur, float pp, float hitWindow300, int hitdeltaMin, int hitdeltaMax);
 	void drawTargetHeatmap(Graphics *g, float hitcircleDiameter);
-	void drawScrubbingTimeline(Graphics *g, unsigned long beatmapTime, unsigned long beatmapLength, unsigned long beatmapLengthPlayable, unsigned long beatmapStartTimePlayable, float beatmapPercentFinishedPlayable, const std::vector<BREAK> &breaks);
+	void drawScrubbingTimeline(Graphics *g, unsigned long beatmapTime, unsigned long beatmapLength, unsigned long beatmapLengthPlayable, unsigned long beatmapStartTimePlayable, float beatmapPercentFinishedPlayable, const std::vector<BREAK> &breaks/*, const std::vector<double> &aimStrains, const std::vector<double> &speedStrains, float speedMultiplier = 1.0f*/);
 	void drawInputOverlay(Graphics *g, int numK1, int numK2, int numM1, int numM2);
 
 	void drawStatisticText(Graphics *g, const UString text);

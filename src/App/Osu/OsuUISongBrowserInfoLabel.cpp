@@ -192,11 +192,11 @@ void OsuUISongBrowserInfoLabel::update()
 
 				if (beatmap->getSelectedDifficulty() != NULL)
 				{
-					const float opm = beatmap->getSelectedDifficulty()->lengthMS > 0 ? ((float)beatmap->getSelectedDifficulty()->numObjects / (float)(beatmap->getSelectedDifficulty()->lengthMS / 1000.0f / 60.0f)) : 0.0f;
-					const float cpm = beatmap->getSelectedDifficulty()->lengthMS > 0 ? ((float)beatmap->getSelectedDifficulty()->numCircles / (float)(beatmap->getSelectedDifficulty()->lengthMS / 1000.0f / 60.0f)) : 0.0f;
-					const float spm = beatmap->getSelectedDifficulty()->lengthMS > 0 ? ((float)beatmap->getSelectedDifficulty()->numSliders / (float)(beatmap->getSelectedDifficulty()->lengthMS / 1000.0f / 60.0f)) : 0.0f;
+					const float opm = (beatmap->getSelectedDifficulty()->lengthMS > 0 ? ((float)beatmap->getSelectedDifficulty()->numObjects / (float)(beatmap->getSelectedDifficulty()->lengthMS / 1000.0f / 60.0f)) : 0.0f) * m_osu->getSpeedMultiplier();
+					const float cpm = (beatmap->getSelectedDifficulty()->lengthMS > 0 ? ((float)beatmap->getSelectedDifficulty()->numCircles / (float)(beatmap->getSelectedDifficulty()->lengthMS / 1000.0f / 60.0f)) : 0.0f) * m_osu->getSpeedMultiplier();
+					const float spm = (beatmap->getSelectedDifficulty()->lengthMS > 0 ? ((float)beatmap->getSelectedDifficulty()->numSliders / (float)(beatmap->getSelectedDifficulty()->lengthMS / 1000.0f / 60.0f)) : 0.0f) * m_osu->getSpeedMultiplier();
 
-					m_osu->getTooltipOverlay()->addLine(UString::format("Circles: %i, Sliders: %i", beatmap->getSelectedDifficulty()->numCircles, beatmap->getSelectedDifficulty()->numSliders));
+					m_osu->getTooltipOverlay()->addLine(UString::format("Circles: %i, Sliders: %i, Spinners: %i", beatmap->getSelectedDifficulty()->numCircles, beatmap->getSelectedDifficulty()->numSliders, (beatmap->getSelectedDifficulty()->numObjects - beatmap->getSelectedDifficulty()->numCircles - beatmap->getSelectedDifficulty()->numSliders)));
 					m_osu->getTooltipOverlay()->addLine(UString::format("OPM: %i, CPM: %i, SPM: %i", (int)opm, (int)cpm, (int)spm));
 				}
 			}

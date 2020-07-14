@@ -395,6 +395,15 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	m_osu_scores_enabled = convar->getConVarByName("osu_scores_enabled");
 	m_name_ref = convar->getConVarByName("name");
 
+	m_osu_hud_scrubbing_timeline_strains_height_ref = convar->getConVarByName("osu_hud_scrubbing_timeline_strains_height");
+	m_osu_hud_scrubbing_timeline_strains_alpha_ref = convar->getConVarByName("osu_hud_scrubbing_timeline_strains_alpha");
+	m_osu_hud_scrubbing_timeline_strains_aim_color_r_ref = convar->getConVarByName("osu_hud_scrubbing_timeline_strains_aim_color_r");
+	m_osu_hud_scrubbing_timeline_strains_aim_color_g_ref = convar->getConVarByName("osu_hud_scrubbing_timeline_strains_aim_color_g");
+	m_osu_hud_scrubbing_timeline_strains_aim_color_b_ref = convar->getConVarByName("osu_hud_scrubbing_timeline_strains_aim_color_b");
+	m_osu_hud_scrubbing_timeline_strains_speed_color_r_ref = convar->getConVarByName("osu_hud_scrubbing_timeline_strains_speed_color_r");
+	m_osu_hud_scrubbing_timeline_strains_speed_color_g_ref = convar->getConVarByName("osu_hud_scrubbing_timeline_strains_speed_color_g");
+	m_osu_hud_scrubbing_timeline_strains_speed_color_b_ref = convar->getConVarByName("osu_hud_scrubbing_timeline_strains_speed_color_b");
+
 	// convar callbacks
 	osu_gamemode.setCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onModeChange) );
 
@@ -623,6 +632,127 @@ void OsuSongBrowser2::draw(Graphics *g)
 			g->popTransform();
 		}
 	}
+
+	/*
+	// TODO: draw strain graph of currently selected beatmap
+	if (getSelectedBeatmap() != NULL && getSelectedBeatmap()->getSelectedDifficulty() != NULL)
+	{
+		const std::vector<double> &aimStrains = getSelectedBeatmap()->getSelectedDifficulty()->getAimStrains();
+		const std::vector<double> &speedStrains = getSelectedBeatmap()->getSelectedDifficulty()->getSpeedStrains();
+
+		//const unsigned long lengthFullMS = beatmapLength;
+		//const unsigned long lengthMS = getSelectedBeatmap()->getLengthPlayable();
+		//const unsigned long startTimeMS = getSelectedBeatmap()->getStartTimePlayable();
+		//const unsigned long endTimeMS = startTimeMS + lengthMS;
+		//const unsigned long currentTimeMS = beatmapTime;
+
+		if (aimStrains.size() > 0 && aimStrains.size() == speedStrains.size())
+		{
+			const float strainStepMS = 400.0f;
+
+			const unsigned long lengthMS = strainStepMS * aimStrains.size();
+
+			// TODO: multiply height by dpi scale
+			// TODO: add separate aim/speed strain drawing and convars/hotkeys
+
+			// get highest strain values for normalization
+			double highestAimStrain = 0.0;
+			double highestSpeedStrain = 0.0;
+			double highestStrain = 0.0;
+			int highestStrainIndex = -1;
+			double averageStrain = 0.0;
+			for (int i=0; i<aimStrains.size(); i++)
+			{
+				const double aimStrain = aimStrains[i];
+				const double speedStrain = speedStrains[i];
+				const double strain = aimStrain + speedStrain;
+
+				if (strain > highestStrain)
+				{
+					highestStrain = strain;
+					highestStrainIndex = i;
+				}
+				if (aimStrain > highestAimStrain)
+					highestAimStrain = aimStrain;
+				if (speedStrain > highestSpeedStrain)
+					highestSpeedStrain = speedStrain;
+
+				averageStrain += strain;
+			}
+			averageStrain /= (double)aimStrains.size();
+
+			// draw strain bar graph
+			if (highestAimStrain > 0.0 && highestSpeedStrain > 0.0 && highestStrain > 0.0)
+			{
+				const float graphWidth = m_scoreBrowser->getSize().x;
+
+				const float msPerPixel = (float)lengthMS / graphWidth;
+				const float strainWidth = strainStepMS / msPerPixel;
+				const float strainHeightMultiplier = m_osu_hud_scrubbing_timeline_strains_height_ref->getFloat();
+
+				const float alpha = m_osu_hud_scrubbing_timeline_strains_alpha_ref->getFloat();
+
+				const Color aimStrainColor = COLORf(alpha, m_osu_hud_scrubbing_timeline_strains_aim_color_r_ref->getInt() / 255.0f, m_osu_hud_scrubbing_timeline_strains_aim_color_g_ref->getInt() / 255.0f, m_osu_hud_scrubbing_timeline_strains_aim_color_b_ref->getInt() / 255.0f);
+				const Color speedStrainColor = COLORf(alpha, m_osu_hud_scrubbing_timeline_strains_speed_color_r_ref->getInt() / 255.0f, m_osu_hud_scrubbing_timeline_strains_speed_color_g_ref->getInt() / 255.0f, m_osu_hud_scrubbing_timeline_strains_speed_color_b_ref->getInt() / 255.0f);
+
+				g->setDepthBuffer(true);
+				for (int i=0; i<aimStrains.size(); i++)
+				{
+					const double aimStrain = (aimStrains[i]) / highestStrain;
+					const double speedStrain = (speedStrains[i]) / highestStrain;
+					//const double strain = (aimStrains[i] + speedStrains[i]) / highestStrain;
+
+					const double aimStrainHeight = aimStrain * strainHeightMultiplier;
+					const double speedStrainHeight = speedStrain * strainHeightMultiplier;
+					//const double strainHeight = strain * strainHeightMultiplier;
+
+					g->setColor(aimStrainColor);
+					g->fillRect(i*strainWidth, m_bottombar->getPos().y - aimStrainHeight, std::max(1.0f, std::round(strainWidth + 0.5f)), aimStrainHeight);
+
+					g->setColor(speedStrainColor);
+					g->fillRect(i*strainWidth, m_bottombar->getPos().y - aimStrainHeight - speedStrainHeight, std::max(1.0f, std::round(strainWidth + 0.5f)), speedStrainHeight + 1);
+				}
+				g->setDepthBuffer(false);
+
+				// highlight highest total strain value (+- section block)
+				if (highestStrainIndex > -1)
+				{
+					const double aimStrain = (aimStrains[highestStrainIndex]) / highestStrain;
+					const double speedStrain = (speedStrains[highestStrainIndex]) / highestStrain;
+					//const double strain = (aimStrains[i] + speedStrains[i]) / highestStrain;
+
+					const double aimStrainHeight = aimStrain * strainHeightMultiplier;
+					const double speedStrainHeight = speedStrain * strainHeightMultiplier;
+					//const double strainHeight = strain * strainHeightMultiplier;
+
+					Vector2 topLeftCenter = Vector2(highestStrainIndex*strainWidth + strainWidth/2.0f, m_bottombar->getPos().y - aimStrainHeight - speedStrainHeight);
+
+					const float margin = 5.0f;
+
+					g->setColor(0xffffffff);
+					g->setAlpha(alpha);
+					g->drawRect(topLeftCenter.x - margin*strainWidth, topLeftCenter.y - margin*strainWidth, strainWidth*2*margin, aimStrainHeight + speedStrainHeight + 2*margin*strainWidth);
+					g->setAlpha(alpha * 0.5f);
+					g->drawRect(topLeftCenter.x - margin*strainWidth - 2, topLeftCenter.y - margin*strainWidth - 2, strainWidth*2*margin + 4, aimStrainHeight + speedStrainHeight + 2*margin*strainWidth + 4);
+					g->setAlpha(alpha * 0.25f);
+					g->drawRect(topLeftCenter.x - margin*strainWidth - 4, topLeftCenter.y - margin*strainWidth - 4, strainWidth*2*margin + 8, aimStrainHeight + speedStrainHeight + 2*margin*strainWidth + 8);
+				}
+
+				g->pushTransform();
+				{
+					g->translate(10, m_bottombar->getPos().y - 200);
+					g->setColor(0xffffffff);
+					g->drawString(m_osu->getSubTitleFont(), UString::format("avg strain = %i%% (%f)", (int)((averageStrain / highestStrain) * 100.0f), averageStrain));
+					g->translate(0, m_osu->getSubTitleFont()->getHeight());
+					g->drawString(m_osu->getSubTitleFont(), UString::format("top strain = %i%% (%f)", (int)((highestStrain / highestStrain) * 100.0f), highestStrain));
+					g->translate(0, m_osu->getSubTitleFont()->getHeight());
+					g->drawString(m_osu->getSubTitleFont(), UString::format("delta = %i%% (%f)", (int)(((highestStrain - averageStrain) / highestStrain) * 100.0f), (highestStrain - averageStrain)));
+				}
+				g->popTransform();
+			}
+		}
+	}
+	*/
 
 	// draw score browser
 	m_scoreBrowser->draw(g);
@@ -1669,13 +1799,13 @@ bool OsuSongBrowser2::searchMatcher(OsuBeatmap *beatmap, UString searchString)
 									compareValue = diffs[d]->maxBPM;
 									break;
 								case OPM:
-									compareValue = diffs[d]->lengthMS > 0 ? ((float)diffs[d]->numObjects / (float)(diffs[d]->lengthMS / 1000.0f / 60.0f)) : 0.0f;
+									compareValue = (diffs[d]->lengthMS > 0 ? ((float)diffs[d]->numObjects / (float)(diffs[d]->lengthMS / 1000.0f / 60.0f)) : 0.0f) * beatmap->getOsu()->getSpeedMultiplier();
 									break;
 								case CPM:
-									compareValue = diffs[d]->lengthMS > 0 ? ((float)diffs[d]->numCircles / (float)(diffs[d]->lengthMS / 1000.0f / 60.0f)) : 0.0f;
+									compareValue = (diffs[d]->lengthMS > 0 ? ((float)diffs[d]->numCircles / (float)(diffs[d]->lengthMS / 1000.0f / 60.0f)) : 0.0f) * beatmap->getOsu()->getSpeedMultiplier();
 									break;
 								case SPM:
-									compareValue = diffs[d]->lengthMS > 0 ? ((float)diffs[d]->numSliders / (float)(diffs[d]->lengthMS / 1000.0f / 60.0f)) : 0.0f;
+									compareValue = (diffs[d]->lengthMS > 0 ? ((float)diffs[d]->numSliders / (float)(diffs[d]->lengthMS / 1000.0f / 60.0f)) : 0.0f) * beatmap->getOsu()->getSpeedMultiplier();
 									break;
 								case OBJECTS:
 									compareValue = diffs[d]->numObjects;
@@ -2622,8 +2752,8 @@ void OsuSongBrowser2::onScoreClicked(CBaseUIButton *button)
 {
 	OsuUISongBrowserScoreButton *scoreButton = (OsuUISongBrowserScoreButton*)button;
 
-	m_osu->getRankingScreen()->setBeatmapInfo(getSelectedBeatmap(), getSelectedBeatmap()->getSelectedDifficulty());
 	m_osu->getRankingScreen()->setScore(scoreButton->getScore(), scoreButton->getDateTime());
+	m_osu->getRankingScreen()->setBeatmapInfo(getSelectedBeatmap(), getSelectedBeatmap()->getSelectedDifficulty());
 	m_osu->getSongBrowser()->setVisible(false);
 	m_osu->getRankingScreen()->setVisible(true);
 }

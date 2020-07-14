@@ -183,10 +183,10 @@ void OsuUISongBrowserScoreButton::draw(Graphics *g)
 		g->translate(0.75f, 0.75f);
 		g->setColor(0xff000000);
 		g->setAlpha(0.75f);
-		g->drawString(scoreFont, (m_osu_scores_sort_by_pp->getBool() && !m_score.isLegacyScore ? string : m_sScoreScore));
+		g->drawString(scoreFont, (m_osu_scores_sort_by_pp->getBool() && !m_score.isLegacyScore ? string : (m_style == STYLE::TOP_RANKS ? string : m_sScoreScore)));
 		g->translate(-0.75f, -0.75f);
 		g->setColor((m_style == STYLE::TOP_RANKS ? 0xffdeff87 : 0xffffffff));
-		g->drawString(scoreFont, (m_osu_scores_sort_by_pp->getBool() && !m_score.isLegacyScore ? string : m_sScoreScore));
+		g->drawString(scoreFont, (m_osu_scores_sort_by_pp->getBool() && !m_score.isLegacyScore ? string : (m_style == STYLE::TOP_RANKS ? string : m_sScoreScore)));
 
 		if (m_style == STYLE::TOP_RANKS)
 		{

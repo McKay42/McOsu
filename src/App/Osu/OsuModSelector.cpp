@@ -1207,6 +1207,9 @@ UString OsuModSelector::getOverrideSliderLabelText(OsuModSelector::OVERRIDE_SLID
 		// to keep the AR/OD display correct
 		const float speedMultiplierLive = m_osu->isInPlayMode() ? m_osu->getSelectedBeatmap()->getSpeedMultiplier() : m_osu->getSpeedMultiplier();
 
+		// for relevant values (AR/OD), any non-1.0x speed multiplier should show the fractional parts caused by such a speed multiplier
+		const bool forceDisplayTwoDecimalDigits = speedMultiplierLive != 1.0f;
+
 		// HACKHACK: dirty
 		bool wasBPMslider = false;
 		float beatmapValue = 1.0f;
@@ -1221,7 +1224,7 @@ UString OsuModSelector::getOverrideSliderLabelText(OsuModSelector::OVERRIDE_SLID
 
 			// compensate and round
 			convarValue = OsuGameRules::getApproachRateForSpeedMultiplier(m_osu->getSelectedBeatmap(), speedMultiplierLive);
-			if (!engine->getKeyboard()->isAltDown())
+			if (!engine->getKeyboard()->isAltDown() && !forceDisplayTwoDecimalDigits)
 				convarValue = std::round(convarValue * 10.0f) / 10.0f;
 			else
 				convarValue = std::round(convarValue * 100.0f) / 100.0f;
@@ -1232,7 +1235,7 @@ UString OsuModSelector::getOverrideSliderLabelText(OsuModSelector::OVERRIDE_SLID
 
 			// compensate and round
 			convarValue = OsuGameRules::getOverallDifficultyForSpeedMultiplier(m_osu->getSelectedBeatmap(), speedMultiplierLive);
-			if (!engine->getKeyboard()->isAltDown())
+			if (!engine->getKeyboard()->isAltDown() && !forceDisplayTwoDecimalDigits)
 				convarValue = std::round(convarValue * 10.0f) / 10.0f;
 			else
 				convarValue = std::round(convarValue * 100.0f) / 100.0f;
@@ -1315,10 +1318,15 @@ UString OsuModSelector::getOverrideSliderLabelText(OsuModSelector::OVERRIDE_SLID
 			}
 		}
 
-		// always round beatmapValue to 1 decimal digit, except for the speed slider
+		// always round beatmapValue to 1 decimal digit, except for the speed slider, and except for non-1.0x speed multipliers
 		// HACKHACK: dirty
 		if (s.desc->getText().find("Speed") == -1)
-			beatmapValue = std::round(beatmapValue * 10.0f) / 10.0f;
+		{
+			if (forceDisplayTwoDecimalDigits)
+				beatmapValue = std::round(beatmapValue * 100.0f) / 100.0f;
+			else
+				beatmapValue = std::round(beatmapValue * 10.0f) / 10.0f;
+		}
 
 		// update label
 		if (!wasBPMslider)

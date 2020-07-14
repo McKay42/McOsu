@@ -64,7 +64,7 @@
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 31.11f);
+ConVar osu_version("osu_version", 31.12f);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr");
 #else
@@ -2110,6 +2110,20 @@ void Osu::onFocusLost()
 	// release cursor clip
 	env->setCursorClip(false, McRect());
 
+#ifndef MCENGINE_FEATURE_BASS_WASAPI // NOTE: wasapi exclusive mode controls the system volume, so don't bother
+
+	m_bVolumeInactiveToActiveScheduled = true;
+
+	anim->deleteExistingAnimation(&m_fVolumeInactiveToActiveAnim);
+	m_fVolumeInactiveToActiveAnim = 0.0f;
+
+	engine->getSound()->setVolume(osu_volume_master_inactive.getFloat() * osu_volume_master.getFloat());
+
+#endif
+}
+
+void Osu::onMinimized()
+{
 #ifndef MCENGINE_FEATURE_BASS_WASAPI // NOTE: wasapi exclusive mode controls the system volume, so don't bother
 
 	m_bVolumeInactiveToActiveScheduled = true;

@@ -232,6 +232,7 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen(osu)
 	m_bMenuElementsVisible = false;
 
 	m_fMainMenuAnimTime = 0.0f;
+	m_fMainMenuAnimDuration = 0.0f;
 	m_fMainMenuAnim = 0.0f;
 	m_fMainMenuAnim1 = 0.0f;
 	m_fMainMenuAnim2 = 0.0f;
@@ -240,7 +241,15 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen(osu)
 	m_fMainMenuAnim2Target = 0.0f;
 	m_fMainMenuAnim3Target = 0.0f;
 	m_bInMainMenuRandomAnim = false;
-	m_bMainMenuRandomAnimType = 0;
+	m_iMainMenuRandomAnimType = 0;
+	m_iMainMenuAnimBeatCounter = 0;
+
+	m_bMainMenuAnimFriend = false;
+	m_bMainMenuAnimFadeToFriendForNextAnim = false;
+	m_bMainMenuAnimFriendScheduled = false;
+	m_fMainMenuAnimFriendPercent = 0.0f;
+	m_fMainMenuAnimFriendEyeFollowX = 0.0f;
+	m_fMainMenuAnimFriendEyeFollowY = 0.0f;
 
 	m_fShutdownScheduledTime = 0.0f;
 	m_bWasCleanShutdown = false;
@@ -374,6 +383,7 @@ void OsuMainMenu::draw(Graphics *g)
 		if (t.beatLengthBase == 0.0f) // bah
 			t.beatLengthBase = 1.0f;
 
+		m_iMainMenuAnimBeatCounter = (curMusicPos - t.offset - (long)(std::max((long)t.beatLengthBase, (long)1)*0.5f)) / std::max((long)t.beatLengthBase, (long)1);
 		pulse = (float)((curMusicPos - t.offset) % std::max((long)t.beatLengthBase, (long)1)) / t.beatLengthBase; // modulo must be >= 1
 		pulse = clamp<float>(pulse, -1.0f, 1.0f);
 		if (pulse < 0.0f)
@@ -491,9 +501,9 @@ void OsuMainMenu::draw(Graphics *g)
 
 	// draw main button
 	float inset = 0.0f;
-	if (m_fMainMenuAnim > 0.0f && m_fMainMenuAnim != 1.0f)
+	if ((m_fMainMenuAnim > 0.0f && m_fMainMenuAnim != 1.0f) || (haveTimingpoints && m_fMainMenuAnimFriendPercent > 0.0f))
 	{
-		inset = 1.0f;
+		inset = 1.0f - 0.5*m_fMainMenuAnimFriendPercent;
 
 		g->setDepthBuffer(true);
 		g->clearDepthBuffer();
@@ -501,7 +511,34 @@ void OsuMainMenu::draw(Graphics *g)
 		g->push3DScene(mainButtonRect);
 		g->offset3DScene(0, 0, mainButtonRect.getWidth()/2);
 
-		g->rotate3DScene(m_fMainMenuAnim1*360.0f, m_fMainMenuAnim2*360.0f, m_fMainMenuAnim3*360.0f);
+		float friendRotation = 0.0f;
+		float friendTranslationX = 0.0f;
+		float friendTranslationY = 0.0f;
+		if (haveTimingpoints && m_fMainMenuAnimFriendPercent > 0.0f)
+		{
+			float customPulse = 0.0f;
+			if (pulse > 0.5f)
+				customPulse = (pulse - 0.5f) / 0.5f;
+			else
+				customPulse = (0.5f - pulse) / 0.5f;
+
+			customPulse = 1.0f - customPulse;
+
+			const float anim = lerp<float>((1.0f - customPulse)*(1.0f - customPulse), (1.0f - customPulse), 0.25f);
+			const float anim2 = anim * (m_iMainMenuAnimBeatCounter % 2 == 1 ? 1.0f : -1.0f);
+			const float anim3 = anim;
+
+			friendRotation = anim2*13;
+			friendTranslationX = -anim2*mainButtonRect.getWidth()*0.175;
+			friendTranslationY = anim3*mainButtonRect.getWidth()*0.10;
+
+			friendRotation *= m_fMainMenuAnimFriendPercent;
+			friendTranslationX *= m_fMainMenuAnimFriendPercent;
+			friendTranslationY *= m_fMainMenuAnimFriendPercent;
+		}
+
+		g->translate3DScene(friendTranslationX, friendTranslationY, 0);
+		g->rotate3DScene(m_fMainMenuAnim1*360.0f, m_fMainMenuAnim2*360.0f, m_fMainMenuAnim3*360.0f + friendRotation);
 
 		//g->rotate3DScene(engine->getMouse()->getPos().y, engine->getMouse()->getPos().x, 0);
 
@@ -511,40 +548,267 @@ void OsuMainMenu::draw(Graphics *g)
 		*/
 	}
 
+	const Color cubeColor = COLORf(1.0f, lerp<float>(0.0f, 0.5f, m_fMainMenuAnimFriendPercent), lerp<float>(0.0f, 0.768f, m_fMainMenuAnimFriendPercent), lerp<float>(0.0f, 0.965f, m_fMainMenuAnimFriendPercent));
+	const Color cubeBorderColor = COLORf(1.0f, lerp<float>(1.0f, 0.5f, m_fMainMenuAnimFriendPercent), lerp<float>(1.0f, 0.768f, m_fMainMenuAnimFriendPercent), lerp<float>(1.0f, 0.965f, m_fMainMenuAnimFriendPercent));
+
 	// front side
-	g->setColor(0xff000000);
+	g->setColor(cubeColor);
 	g->pushTransform();
 	{
 		g->translate(0, 0, inset);
 		g->fillRect(mainButtonRect.getX() + inset, mainButtonRect.getY() + inset, mainButtonRect.getWidth() - 2*inset, mainButtonRect.getHeight() - 2*inset);
 	}
 	g->popTransform();
-	g->setColor(0xffffffff);
+	g->setColor(cubeBorderColor);
 	g->drawRect(mainButtonRect.getX(), mainButtonRect.getY(), mainButtonRect.getWidth(), mainButtonRect.getHeight());
 	{
 		// front side pulse border
 		/*
-		if (haveTimingpoints)
+		if (haveTimingpoints && !anim->isAnimating(&m_fMainMenuAnim))
 		{
 			const int pulseSizeMax = mainButtonRect.getWidth()*0.25f;
 			const int pulseOffset = (1.0f - (1.0f - pulse)*(1.0f - pulse))*pulseSizeMax;
 			g->setColor(0xffffffff);
-			g->setAlpha((1.0f - pulse)*0.4f);
+			g->setAlpha((1.0f - pulse)*0.4f*m_fMainMenuAnimFriendPercent);
 			g->drawRect(mainButtonRect.getX() - pulseOffset/2, mainButtonRect.getY() - pulseOffset/2, mainButtonRect.getWidth() + pulseOffset, mainButtonRect.getHeight() + pulseOffset);
 		}
 		*/
 	}
 
+	// friend
+	if (m_fMainMenuAnimFriendPercent > 0.0f)
+	{
+		// ears
+		{
+			const float width = mainButtonRect.getWidth() * 0.11f * 2.0f * (1.0f - pulse*0.05f);
+
+			const float margin = width * 0.4f;
+
+			const float offset = mainButtonRect.getWidth() * 0.02f;
+
+			VertexArrayObject vao;
+			{
+				const Vector2 pos = Vector2(mainButtonRect.getX(), mainButtonRect.getY() - offset);
+
+				Vector2 left = pos + Vector2(0, 0);
+				Vector2 top = pos + Vector2(width/2, -width*std::sqrt(3.0f)/2.0f);
+				Vector2 right = pos + Vector2(width, 0);
+
+				Vector2 topRightDir = (top - right);
+				{
+					const float temp = topRightDir.x;
+					topRightDir.x = -topRightDir.y;
+					topRightDir.y = temp;
+				}
+
+				Vector2 innerLeft = left + topRightDir.normalize() * margin;
+
+				vao.addVertex(left.x, left.y);
+				vao.addVertex(top.x, top.y);
+				vao.addVertex(innerLeft.x, innerLeft.y);
+
+				Vector2 leftRightDir = (right - left);
+				{
+					const float temp = leftRightDir.x;
+					leftRightDir.x = -leftRightDir.y;
+					leftRightDir.y = temp;
+				}
+
+				Vector2 innerTop = top + leftRightDir.normalize() * margin;
+
+				vao.addVertex(top.x, top.y);
+				vao.addVertex(innerTop.x, innerTop.y);
+				vao.addVertex(innerLeft.x, innerLeft.y);
+
+				Vector2 leftTopDir = (left - top);
+				{
+					const float temp = leftTopDir.x;
+					leftTopDir.x = -leftTopDir.y;
+					leftTopDir.y = temp;
+				}
+
+				Vector2 innerRight = right + leftTopDir.normalize() * margin;
+
+				vao.addVertex(top.x, top.y);
+				vao.addVertex(innerRight.x, innerRight.y);
+				vao.addVertex(innerTop.x, innerTop.y);
+
+				vao.addVertex(top.x, top.y);
+				vao.addVertex(right.x, right.y);
+				vao.addVertex(innerRight.x, innerRight.y);
+
+				vao.addVertex(left.x, left.y);
+				vao.addVertex(innerLeft.x, innerLeft.y);
+				vao.addVertex(innerRight.x, innerRight.y);
+
+				vao.addVertex(left.x, left.y);
+				vao.addVertex(innerRight.x, innerRight.y);
+				vao.addVertex(right.x, right.y);
+			}
+
+			// HACKHACK: disable GL_TEXTURE_2D
+			// DEPRECATED LEGACY
+			g->setColor(0x00000000);
+			g->drawPixel(-1, -1);
+
+			// left
+			g->setColor(0xffc8faf1);
+			g->setAlpha(m_fMainMenuAnimFriendPercent);
+			g->drawVAO(&vao);
+
+			// right
+			g->pushTransform();
+			{
+				g->translate(mainButtonRect.getWidth() - width, 0);
+				g->drawVAO(&vao);
+			}
+			g->popTransform();
+		}
+
+		float headBob = 0.0f;
+		{
+			float customPulse = 0.0f;
+			if (pulse > 0.5f)
+				customPulse = (pulse - 0.5f) / 0.5f;
+			else
+				customPulse = (0.5f - pulse) / 0.5f;
+
+			customPulse = 1.0f - customPulse;
+
+			if (!haveTimingpoints)
+				customPulse = 1.0f;
+
+			headBob = (customPulse) * (customPulse);
+			headBob *= m_fMainMenuAnimFriendPercent;
+		}
+
+		const float mouthEyeOffsetY = mainButtonRect.getWidth() * 0.18f + headBob*mainButtonRect.getWidth()*0.075f;
+
+		// mouth
+		{
+			const float width = mainButtonRect.getWidth() * 0.10f;
+			const float height = mainButtonRect.getHeight() * 0.03f * 1.75;
+
+			const float length = width * std::sqrt(2.0f) * 2;
+
+			const float offsetY = mainButtonRect.getHeight()/2.0f + mouthEyeOffsetY;
+
+			g->pushTransform();
+			{
+				g->rotate(135);
+				g->translate(mainButtonRect.getX() + length/2 + mainButtonRect.getWidth()/2 - m_fMainMenuAnimFriendEyeFollowX*mainButtonRect.getWidth()*0.5f, mainButtonRect.getY() + offsetY - m_fMainMenuAnimFriendEyeFollowY*mainButtonRect.getWidth()*0.5f);
+
+				g->setColor(0xff000000);
+				g->fillRect(0, 0, width, height);
+				g->fillRect(width - height/2.0f, 0, height, width);
+				g->fillRect(width - height/2.0f, width - height/2.0f, width, height);
+				g->fillRect(width*2 - height, width - height/2.0f, height, width + height/2);
+			}
+			g->popTransform();
+		}
+
+		// eyes
+		{
+			const float width = mainButtonRect.getWidth() * 0.22f;
+			const float height = mainButtonRect.getHeight() * 0.03f * 2;
+
+			const float offsetX = mainButtonRect.getWidth() * 0.18f;
+			const float offsetY = mainButtonRect.getHeight() * 0.21f + mouthEyeOffsetY;
+
+			const float rotation = 25.0f;
+
+			// left
+			g->pushTransform();
+			{
+				g->translate(-width, 0);
+				g->rotate(-rotation);
+				g->translate(width, 0);
+				g->translate(mainButtonRect.getX() + offsetX - m_fMainMenuAnimFriendEyeFollowX*mainButtonRect.getWidth(), mainButtonRect.getY() + offsetY - m_fMainMenuAnimFriendEyeFollowY*mainButtonRect.getWidth());
+
+				g->setColor(0xff000000);
+				g->fillRect(0, 0, width, height);
+			}
+			g->popTransform();
+
+			// right
+			g->pushTransform();
+			{
+				g->rotate(rotation);
+				g->translate(mainButtonRect.getX() + mainButtonRect.getWidth() - offsetX - width - m_fMainMenuAnimFriendEyeFollowX*mainButtonRect.getWidth(), mainButtonRect.getY() + offsetY - m_fMainMenuAnimFriendEyeFollowY*mainButtonRect.getWidth());
+
+				g->setColor(0xff000000);
+				g->fillRect(0, 0, width, height);
+			}
+			g->popTransform();
+
+			// tear
+			g->setColor(0xff000000);
+			g->fillRect(mainButtonRect.getX() + offsetX + width*0.375f - m_fMainMenuAnimFriendEyeFollowX*mainButtonRect.getWidth(), mainButtonRect.getY() + offsetY + width/2.0f - m_fMainMenuAnimFriendEyeFollowY*mainButtonRect.getWidth(), height*0.75f, width*0.375f);
+		}
+
+		// hands
+		{
+			const float size = mainButtonRect.getWidth()*0.2f;
+
+			const float offset = -size*0.75f;
+
+			float customPulse = 0.0f;
+			if (pulse > 0.5f)
+				customPulse = (pulse - 0.5f) / 0.5f;
+			else
+				customPulse = (0.5f - pulse) / 0.5f;
+
+			customPulse = 1.0f - customPulse;
+
+			if (!haveTimingpoints)
+				customPulse = 1.0f;
+
+			const float animLeftMultiplier = (m_iMainMenuAnimBeatCounter % 2 == 0 ? 1.0f : 0.1f);
+			const float animRightMultiplier = (m_iMainMenuAnimBeatCounter % 2 == 1 ? 1.0f : 0.1f);
+
+			const float animMoveUp = lerp<float>((1.0f - customPulse)*(1.0f - customPulse), (1.0f - customPulse), 0.35f) * m_fMainMenuAnimFriendPercent;
+
+			const float animLeftMoveUp = animMoveUp * animLeftMultiplier;
+			const float animRightMoveUp = animMoveUp * animRightMultiplier;
+
+			const float animLeftMoveLeft = animRightMoveUp * (m_iMainMenuAnimBeatCounter % 2 == 1 ? 1.0f : 0.0f);
+			const float animRightMoveRight = animLeftMoveUp * (m_iMainMenuAnimBeatCounter % 2 == 0 ? 1.0f : 0.0f);
+
+			// left
+			g->setColor(0xffd5f6fd);
+			g->setAlpha(m_fMainMenuAnimFriendPercent);
+			g->pushTransform();
+			{
+				g->rotate(40 - (1.0f - customPulse)*10 + animLeftMoveLeft*animLeftMoveLeft*20);
+				g->translate(mainButtonRect.getX() - size - offset - animLeftMoveLeft*mainButtonRect.getWidth()*-0.025f - animLeftMoveUp*mainButtonRect.getWidth()*0.25f, mainButtonRect.getY() + mainButtonRect.getHeight() - size - animLeftMoveUp*mainButtonRect.getHeight()*0.85f, -0.5f);
+				g->fillRect(0, 0, size, size);
+			}
+			g->popTransform();
+
+			// right
+			g->pushTransform();
+			{
+				g->rotate(50 + (1.0f - customPulse)*10 - animRightMoveRight*animRightMoveRight*20);
+				g->translate(mainButtonRect.getX() + mainButtonRect.getWidth() + size + offset + animRightMoveRight*mainButtonRect.getWidth()*-0.025f + animRightMoveUp*mainButtonRect.getWidth()*0.25f, mainButtonRect.getY() + mainButtonRect.getHeight() - size - animRightMoveUp*mainButtonRect.getHeight()*0.85f, -0.5f);
+				g->fillRect(0, 0, size, size);
+			}
+			g->popTransform();
+		}
+	}
+
 	// main text
 	const float fontScale = (1.0f - pulseSub + m_fSizeAddAnim);
-	g->setColor(0xffffffff);
-	g->pushTransform();
 	{
-		g->scale(fontScale, fontScale);
-		g->translate(m_vCenter.x - m_fCenterOffsetAnim - (titleFont->getStringWidth(MCOSU_MAIN_BUTTON_TEXT)/2.0f)*fontScale, m_vCenter.y + (titleFont->getHeight()*fontScale)/2.25f, -1.0f);
-		g->drawString(titleFont, MCOSU_MAIN_BUTTON_TEXT);
+		g->setColor(0xffffffff);
+		g->setAlpha((1.0f - m_fMainMenuAnimFriendPercent)*(1.0f - m_fMainMenuAnimFriendPercent)*(1.0f - m_fMainMenuAnimFriendPercent));
+		g->pushTransform();
+		{
+			g->scale(fontScale, fontScale);
+			g->translate(m_vCenter.x - m_fCenterOffsetAnim - (titleFont->getStringWidth(MCOSU_MAIN_BUTTON_TEXT)/2.0f)*fontScale, m_vCenter.y + (titleFont->getHeight()*fontScale)/2.25f, -1.0f);
+			g->drawString(titleFont, MCOSU_MAIN_BUTTON_TEXT);
+		}
+		g->popTransform();
 	}
-	g->popTransform();
 
 	// subtitle
 	if (MCOSU_MAIN_BUTTON_SUBTEXT.length() > 0)
@@ -556,25 +820,29 @@ void OsuMainMenu::draw(Graphics *g)
 		else
 			g->setColor(0xff444444);
 
+		g->setAlpha((1.0f - m_fMainMenuAnimFriendPercent)*(1.0f - m_fMainMenuAnimFriendPercent)*(1.0f - m_fMainMenuAnimFriendPercent));
+
 		g->pushTransform();
-		g->scale(fontScale, fontScale);
-		g->translate(m_vCenter.x - m_fCenterOffsetAnim - (smallFont->getStringWidth(MCOSU_MAIN_BUTTON_SUBTEXT)/2.0f)*fontScale, m_vCenter.y + (mainButtonRect.getHeight()/2.0f)/2.0f + (smallFont->getHeight()*fontScale)/2.0f, -1.0f);
-		g->drawString(smallFont, MCOSU_MAIN_BUTTON_SUBTEXT);
+		{
+			g->scale(fontScale, fontScale);
+			g->translate(m_vCenter.x - m_fCenterOffsetAnim - (smallFont->getStringWidth(MCOSU_MAIN_BUTTON_SUBTEXT)/2.0f)*fontScale, m_vCenter.y + (mainButtonRect.getHeight()/2.0f)/2.0f + (smallFont->getHeight()*fontScale)/2.0f, -1.0f);
+			g->drawString(smallFont, MCOSU_MAIN_BUTTON_SUBTEXT);
+		}
 		g->popTransform();
 	}
 
-	if (m_fMainMenuAnim > 0.0f && m_fMainMenuAnim != 1.0f)
+	if ((m_fMainMenuAnim > 0.0f && m_fMainMenuAnim != 1.0f) || (haveTimingpoints && m_fMainMenuAnimFriendPercent > 0.0f))
 	{
 		// back side
 		g->rotate3DScene(0, -180, 0);
-		g->setColor(0xff000000);
+		g->setColor(cubeColor);
 		g->pushTransform();
 		{
 			g->translate(0, 0, inset);
 			g->fillRect(mainButtonRect.getX() + inset, mainButtonRect.getY() + inset, mainButtonRect.getWidth() - 2*inset, mainButtonRect.getHeight() - 2*inset);
 		}
 		g->popTransform();
-		g->setColor(0xffffffff);
+		g->setColor(cubeBorderColor);
 		g->drawRect(mainButtonRect.getX(), mainButtonRect.getY(), mainButtonRect.getWidth(), mainButtonRect.getHeight());
 
 		// right side
@@ -582,7 +850,7 @@ void OsuMainMenu::draw(Graphics *g)
 		g->rotate3DScene(0, 90, 0);
 		{
 			//g->setColor(0xff00ff00);
-			g->setColor(0xff000000);
+			g->setColor(cubeColor);
 			g->pushTransform();
 			{
 				g->translate(0, 0, inset);
@@ -590,7 +858,7 @@ void OsuMainMenu::draw(Graphics *g)
 			}
 			g->popTransform();
 
-			g->setColor(0xffffffff);
+			g->setColor(cubeBorderColor);
 			g->drawRect(mainButtonRect.getX(), mainButtonRect.getY(), mainButtonRect.getWidth(), mainButtonRect.getHeight());
 		}
 		g->rotate3DScene(0, -90, 0);
@@ -601,7 +869,7 @@ void OsuMainMenu::draw(Graphics *g)
 		g->rotate3DScene(0, -90, 0);
 		{
 			//g->setColor(0xffffff00);
-			g->setColor(0xff000000);
+			g->setColor(cubeColor);
 			g->pushTransform();
 			{
 				g->translate(0, 0, inset);
@@ -609,7 +877,7 @@ void OsuMainMenu::draw(Graphics *g)
 			}
 			g->popTransform();
 
-			g->setColor(0xffffffff);
+			g->setColor(cubeBorderColor);
 			g->drawRect(mainButtonRect.getX(), mainButtonRect.getY(), mainButtonRect.getWidth(), mainButtonRect.getHeight());
 		}
 		g->rotate3DScene(0, 90, 0);
@@ -620,7 +888,7 @@ void OsuMainMenu::draw(Graphics *g)
 		g->rotate3DScene(90, 0, 0);
 		{
 			//g->setColor(0xff00ffff);
-			g->setColor(0xff000000);
+			g->setColor(cubeColor);
 			g->pushTransform();
 			{
 				g->translate(0, 0, inset);
@@ -628,7 +896,7 @@ void OsuMainMenu::draw(Graphics *g)
 			}
 			g->popTransform();
 
-			g->setColor(0xffffffff);
+			g->setColor(cubeBorderColor);
 			g->drawRect(mainButtonRect.getX(), mainButtonRect.getY(), mainButtonRect.getWidth(), mainButtonRect.getHeight());
 		}
 		g->rotate3DScene(-90, 0, 0);
@@ -639,7 +907,7 @@ void OsuMainMenu::draw(Graphics *g)
 		g->rotate3DScene(-90, 0, 0);
 		{
 			//g->setColor(0xffff0000);
-			g->setColor(0xff000000);
+			g->setColor(cubeColor);
 			g->pushTransform();
 			{
 				g->translate(0, 0, inset);
@@ -647,7 +915,7 @@ void OsuMainMenu::draw(Graphics *g)
 			}
 			g->popTransform();
 
-			g->setColor(0xffffffff);
+			g->setColor(cubeBorderColor);
 			g->drawRect(mainButtonRect.getX(), mainButtonRect.getY(), mainButtonRect.getWidth(), mainButtonRect.getHeight());
 		}
 		g->rotate3DScene(90, 0, 0);
@@ -655,6 +923,7 @@ void OsuMainMenu::draw(Graphics *g)
 
 		// back text
 		g->setColor(0xffffffff);
+		g->setAlpha((1.0f - m_fMainMenuAnimFriendPercent)*(1.0f - m_fMainMenuAnimFriendPercent)*(1.0f - m_fMainMenuAnimFriendPercent));
 		g->pushTransform();
 		{
 			g->scale(fontScale, fontScale);
@@ -727,14 +996,23 @@ void OsuMainMenu::update()
 
 	// main button autohide + anim
 	if (m_bMenuElementsVisible)
-		m_fMainMenuAnimTime = engine->getTime() + 15.0f;
+	{
+		m_fMainMenuAnimDuration = 15.0f;
+		m_fMainMenuAnimTime = engine->getTime() + m_fMainMenuAnimDuration;
+	}
 	if (engine->getTime() > m_fMainMenuAnimTime)
 	{
-		m_fMainMenuAnimTime = engine->getTime() + 10.0f + (static_cast<float>(rand())/static_cast<float>(RAND_MAX))*5.0f;
+		if (m_bMainMenuAnimFriendScheduled)
+			m_bMainMenuAnimFriend = true;
+		if (m_bMainMenuAnimFadeToFriendForNextAnim)
+			m_bMainMenuAnimFriendScheduled = true;
+
+		m_fMainMenuAnimDuration = 10.0f + (static_cast<float>(rand())/static_cast<float>(RAND_MAX))*5.0f;
+		m_fMainMenuAnimTime = engine->getTime() + m_fMainMenuAnimDuration;
 		animMainButton();
 	}
 
-	if (m_bInMainMenuRandomAnim && m_bMainMenuRandomAnimType == 1 && anim->isAnimating(&m_fMainMenuAnim))
+	if (m_bInMainMenuRandomAnim && m_iMainMenuRandomAnimType == 1 && anim->isAnimating(&m_fMainMenuAnim))
 	{
 		Vector2 mouseDelta = (m_mainButton->getPos() + m_mainButton->getSize()/2) - engine->getMouse()->getPos();
 		mouseDelta.x = clamp<float>(mouseDelta.x, -engine->getScreenSize().x/2, engine->getScreenSize().x/2);
@@ -751,6 +1029,26 @@ void OsuMainMenu::update()
 		anim->moveQuadOut(&m_fMainMenuAnim2, pushAngle.y, 0.15f, true);
 
 		anim->moveQuadOut(&m_fMainMenuAnim3, 0.0f, 0.15f, true);
+	}
+
+	{
+		m_fMainMenuAnimFriendPercent = 1.0f - clamp<float>((m_fMainMenuAnimDuration > 0.0f ? (m_fMainMenuAnimTime - engine->getTime()) / m_fMainMenuAnimDuration : 0.0f), 0.0f, 1.0f);
+		m_fMainMenuAnimFriendPercent = clamp<float>((m_fMainMenuAnimFriendPercent - 0.5f)/0.5f, 0.0f, 1.0f);
+		if (m_bMainMenuAnimFriend)
+			m_fMainMenuAnimFriendPercent = 1.0f;
+		if (!m_bMainMenuAnimFriendScheduled)
+			m_fMainMenuAnimFriendPercent = 0.0f;
+
+		Vector2 mouseDelta = (m_mainButton->getPos() + m_mainButton->getSize()/2) - engine->getMouse()->getPos();
+		mouseDelta.x = clamp<float>(mouseDelta.x, -engine->getScreenSize().x/2, engine->getScreenSize().x/2);
+		mouseDelta.y = clamp<float>(mouseDelta.y, -engine->getScreenSize().y/2, engine->getScreenSize().y/2);
+		mouseDelta.x /= engine->getScreenSize().x;
+		mouseDelta.y /= engine->getScreenSize().y;
+
+		const Vector2 pushAngle = Vector2(mouseDelta.x, mouseDelta.y) * 0.1f;
+
+		anim->moveLinear(&m_fMainMenuAnimFriendEyeFollowX, pushAngle.x, 0.25f, true);
+		anim->moveLinear(&m_fMainMenuAnimFriendEyeFollowY, pushAngle.y, 0.25f, true);
 	}
 
 	// handle update checker and status text
@@ -836,8 +1134,16 @@ void OsuMainMenu::onMiddleChange(bool down)
 	// debug anims
 	if (down && !anim->isAnimating(&m_fMainMenuAnim) && !m_bMenuElementsVisible)
 	{
+		if (engine->getKeyboard()->isShiftDown())
+		{
+			m_bMainMenuAnimFriend = true;
+			m_bMainMenuAnimFriendScheduled = true;
+			m_bMainMenuAnimFadeToFriendForNextAnim = true;
+		}
+
 		animMainButton();
-		m_fMainMenuAnimTime = engine->getTime() + 15.0f;
+		m_fMainMenuAnimDuration = 15.0f;
+		m_fMainMenuAnimTime = engine->getTime() + m_fMainMenuAnimDuration;
 	}
 }
 
@@ -861,7 +1167,8 @@ void OsuMainMenu::setVisible(bool visible)
 
 		updateLayout();
 
-		m_fMainMenuAnimTime = engine->getTime() + 15.0f;
+		m_fMainMenuAnimDuration = 15.0f;
+		m_fMainMenuAnimTime = engine->getTime() + m_fMainMenuAnimDuration;
 	}
 }
 
@@ -921,13 +1228,15 @@ void OsuMainMenu::animMainButton()
 {
 	m_bInMainMenuRandomAnim = true;
 
-	m_bMainMenuRandomAnimType = (rand() % 4) == 1 ? 1 : 0;
+	m_iMainMenuRandomAnimType = (rand() % 4) == 1 ? 1 : 0;
+	if (!m_bMainMenuAnimFadeToFriendForNextAnim)
+		m_bMainMenuAnimFadeToFriendForNextAnim = (rand() % 3) == 1;
 
 	m_fMainMenuAnim = 0.0f;
 	m_fMainMenuAnim1 = 0.0f;
 	m_fMainMenuAnim2 = 0.0f;
 
-	if (m_bMainMenuRandomAnimType == 0)
+	if (m_iMainMenuRandomAnimType == 0)
 	{
 		m_fMainMenuAnim3 = 1.0f;
 
@@ -1087,6 +1396,10 @@ void OsuMainMenu::onMainMenuButtonPressed()
 
 void OsuMainMenu::onPlayButtonPressed()
 {
+	m_bMainMenuAnimFriend = false;
+	m_bMainMenuAnimFadeToFriendForNextAnim = false;
+	m_bMainMenuAnimFriendScheduled = false;
+
 	if (m_osu->getInstanceID() > 1) return;
 
 	m_osu->toggleSongBrowser();
