@@ -524,7 +524,7 @@ void OsuMainMenu::draw(Graphics *g)
 
 			customPulse = 1.0f - customPulse;
 
-			const float anim = (1.0f - customPulse)*(1.0f - customPulse);
+			const float anim = lerp<float>((1.0f - customPulse)*(1.0f - customPulse), (1.0f - customPulse), 0.25f);
 			const float anim2 = anim * (m_iMainMenuAnimBeatCounter % 2 == 1 ? 1.0f : -1.0f);
 			const float anim3 = anim;
 
@@ -766,7 +766,7 @@ void OsuMainMenu::draw(Graphics *g)
 			const float animLeftMultiplier = (m_iMainMenuAnimBeatCounter % 2 == 0 ? 1.0f : 0.1f);
 			const float animRightMultiplier = (m_iMainMenuAnimBeatCounter % 2 == 1 ? 1.0f : 0.1f);
 
-			const float animMoveUp = (1.0f - customPulse)*(1.0f - customPulse) * m_fMainMenuAnimFriendPercent;
+			const float animMoveUp = lerp<float>((1.0f - customPulse)*(1.0f - customPulse), (1.0f - customPulse), 0.35f) * m_fMainMenuAnimFriendPercent;
 
 			const float animLeftMoveUp = animMoveUp * animLeftMultiplier;
 			const float animRightMoveUp = animMoveUp * animRightMultiplier;
