@@ -451,48 +451,51 @@ bool OsuBeatmapDifficulty::loadMetadataRaw(bool calculateStars, bool calculateSt
 						}
 						break;
 					case 5: // TimingPoints
-
-						// old beatmaps: Offset, Milliseconds per Beat
-						// new beatmaps: Offset, Milliseconds per Beat, Meter, Sample Type, Sample Set, Volume, !Inherited, Kiai Mode
-
-						double tpOffset;
-						float tpMSPerBeat;
-						int tpMeter;
-						int tpSampleType,tpSampleSet;
-						int tpVolume;
-						int tpTimingChange;
-						int tpKiai;
-						if (sscanf(curLineChar, " %lf , %f , %i , %i , %i , %i , %i , %i", &tpOffset, &tpMSPerBeat, &tpMeter, &tpSampleType, &tpSampleSet, &tpVolume, &tpTimingChange, &tpKiai) == 8)
 						{
-							TIMINGPOINT t;
-							t.offset = (long)std::round(tpOffset);
-							t.msPerBeat = tpMSPerBeat;
-							t.sampleType = tpSampleType;
-							t.sampleSet = tpSampleSet;
-							t.volume = tpVolume;
-							t.timingChange = tpTimingChange == 1;
-							t.kiai = tpKiai > 0;
+							// old beatmaps: Offset, Milliseconds per Beat
+							// old new beatmaps: Offset, Milliseconds per Beat, Meter, Sample Type, Sample Set, Volume, !Inherited
+							// new new beatmaps: Offset, Milliseconds per Beat, Meter, Sample Type, Sample Set, Volume, !Inherited, Kiai Mode
 
-							t.sortHack = timingPointSortHack++;
+							double tpOffset;
+							float tpMSPerBeat;
+							int tpMeter;
+							int tpSampleType,tpSampleSet;
+							int tpVolume;
+							int tpTimingChange;
+							int tpKiai = 0; // optional
+							if (sscanf(curLineChar, " %lf , %f , %i , %i , %i , %i , %i , %i", &tpOffset, &tpMSPerBeat, &tpMeter, &tpSampleType, &tpSampleSet, &tpVolume, &tpTimingChange, &tpKiai) == 8
+								|| sscanf(curLineChar, " %lf , %f , %i , %i , %i , %i , %i", &tpOffset, &tpMSPerBeat, &tpMeter, &tpSampleType, &tpSampleSet, &tpVolume, &tpTimingChange) == 7)
+							{
+								TIMINGPOINT t;
+								t.offset = (long)std::round(tpOffset);
+								t.msPerBeat = tpMSPerBeat;
+								t.sampleType = tpSampleType;
+								t.sampleSet = tpSampleSet;
+								t.volume = tpVolume;
+								t.timingChange = tpTimingChange == 1;
+								t.kiai = tpKiai > 0;
 
-							timingpoints.push_back(t);
-						}
-						else if (sscanf(curLineChar, " %lf , %f", &tpOffset, &tpMSPerBeat) == 2)
-						{
-							TIMINGPOINT t;
-							t.offset = (long)std::round(tpOffset);
-							t.msPerBeat = tpMSPerBeat;
+								t.sortHack = timingPointSortHack++;
 
-							t.sampleType = 0;
-							t.sampleSet = 0;
-							t.volume = 100;
+								timingpoints.push_back(t);
+							}
+							else if (sscanf(curLineChar, " %lf , %f", &tpOffset, &tpMSPerBeat) == 2)
+							{
+								TIMINGPOINT t;
+								t.offset = (long)std::round(tpOffset);
+								t.msPerBeat = tpMSPerBeat;
 
-							t.timingChange = true;
-							t.kiai = false;
+								t.sampleType = 0;
+								t.sampleSet = 0;
+								t.volume = 100;
 
-							t.sortHack = timingPointSortHack++;
+								t.timingChange = true;
+								t.kiai = false;
 
-							timingpoints.push_back(t);
+								t.sortHack = timingPointSortHack++;
+
+								timingpoints.push_back(t);
+							}
 						}
 						break;
 					case 6: // HitObjects
@@ -785,50 +788,52 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 					}
 					break;
 				case 2: // TimingPoints
-
-					// old beatmaps: Offset, Milliseconds per Beat
-					// new beatmaps: Offset, Milliseconds per Beat, Meter, Sample Type, Sample Set, Volume, !Inherited, Kiai Mode
-
-					double tpOffset;
-					float tpMSPerBeat;
-					int tpMeter;
-					int tpSampleType,tpSampleSet;
-					int tpVolume;
-					int tpTimingChange;
-					int tpKiai;
-					if (sscanf(curLineChar, " %lf , %f , %i , %i , %i , %i , %i , %i", &tpOffset, &tpMSPerBeat, &tpMeter, &tpSampleType, &tpSampleSet, &tpVolume, &tpTimingChange, &tpKiai) == 8)
 					{
-						TIMINGPOINT t;
-						t.offset = (long)std::round(tpOffset);
-						t.msPerBeat = tpMSPerBeat;
-						t.sampleType = tpSampleType;
-						t.sampleSet = tpSampleSet;
-						t.volume = tpVolume;
-						t.timingChange = tpTimingChange == 1;
-						t.kiai = tpKiai > 0;
-						t.sortHack = timingPointSortHack++;
+						// old beatmaps: Offset, Milliseconds per Beat
+						// old new beatmaps: Offset, Milliseconds per Beat, Meter, Sample Type, Sample Set, Volume, !Inherited
+						// new new beatmaps: Offset, Milliseconds per Beat, Meter, Sample Type, Sample Set, Volume, !Inherited, Kiai Mode
 
-						timingpoints.push_back(t);
-					}
-					else if (sscanf(curLineChar, " %lf , %f", &tpOffset, &tpMSPerBeat) == 2)
-					{
-						TIMINGPOINT t;
-						t.offset = (long)std::round(tpOffset);
-						t.msPerBeat = tpMSPerBeat;
+						double tpOffset;
+						float tpMSPerBeat;
+						int tpMeter;
+						int tpSampleType,tpSampleSet;
+						int tpVolume;
+						int tpTimingChange;
+						int tpKiai = 0; // optional
+						if (sscanf(curLineChar, " %lf , %f , %i , %i , %i , %i , %i , %i", &tpOffset, &tpMSPerBeat, &tpMeter, &tpSampleType, &tpSampleSet, &tpVolume, &tpTimingChange, &tpKiai) == 8
+							|| sscanf(curLineChar, " %lf , %f , %i , %i , %i , %i , %i", &tpOffset, &tpMSPerBeat, &tpMeter, &tpSampleType, &tpSampleSet, &tpVolume, &tpTimingChange) == 7)
+						{
+							TIMINGPOINT t;
+							t.offset = (long)std::round(tpOffset);
+							t.msPerBeat = tpMSPerBeat;
+							t.sampleType = tpSampleType;
+							t.sampleSet = tpSampleSet;
+							t.volume = tpVolume;
+							t.timingChange = tpTimingChange == 1;
+							t.kiai = tpKiai > 0;
+							t.sortHack = timingPointSortHack++;
 
-						t.sampleType = 0;
-						t.sampleSet = 0;
-						t.volume = 100;
+							timingpoints.push_back(t);
+						}
+						else if (sscanf(curLineChar, " %lf , %f", &tpOffset, &tpMSPerBeat) == 2)
+						{
+							TIMINGPOINT t;
+							t.offset = (long)std::round(tpOffset);
+							t.msPerBeat = tpMSPerBeat;
 
-						t.timingChange = true;
-						t.kiai = false;
+							t.sampleType = 0;
+							t.sampleSet = 0;
+							t.volume = 100;
 
-						t.sortHack = timingPointSortHack++;
+							t.timingChange = true;
+							t.kiai = false;
 
-						timingpoints.push_back(t);
+							t.sortHack = timingPointSortHack++;
+
+							timingpoints.push_back(t);
+						}
 					}
 					break;
-
 				case 3: // HitObjects
 
 					// circles:
