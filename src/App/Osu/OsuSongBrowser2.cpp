@@ -2752,8 +2752,10 @@ void OsuSongBrowser2::onScoreClicked(CBaseUIButton *button)
 {
 	OsuUISongBrowserScoreButton *scoreButton = (OsuUISongBrowserScoreButton*)button;
 
-	m_osu->getRankingScreen()->setScore(scoreButton->getScore(), scoreButton->getDateTime());
+	// NOTE: the order of these two calls matters (score data overwrites relevant fields, but base values are coming from the beatmap)
 	m_osu->getRankingScreen()->setBeatmapInfo(getSelectedBeatmap(), getSelectedBeatmap()->getSelectedDifficulty());
+	m_osu->getRankingScreen()->setScore(scoreButton->getScore(), scoreButton->getDateTime());
+
 	m_osu->getSongBrowser()->setVisible(false);
 	m_osu->getRankingScreen()->setVisible(true);
 }
