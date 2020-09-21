@@ -1488,6 +1488,11 @@ void OsuSkin::checkLoadSound(Sound **addressOfPointer, UString skinElementName, 
 	defaultpath2.append(skinElementName);
 	defaultpath2.append(".mp3");
 
+	UString defaultpath3 = UString(env->getOS() == Environment::OS::OS_HORIZON ? "romfs:/materials/" : "./materials/");
+	defaultpath3.append(OSUSKIN_DEFAULT_SKIN_PATH);
+	defaultpath3.append(skinElementName);
+	defaultpath3.append(".ogg");
+
 	UString defaultResourceName = resourceName;
 	defaultResourceName.append("_DEFAULT");
 	if (env->fileExists(defaultpath1))
@@ -1504,6 +1509,13 @@ void OsuSkin::checkLoadSound(Sound **addressOfPointer, UString skinElementName, 
 
 		*addressOfPointer = engine->getResourceManager()->loadSoundAbs(defaultpath2, defaultResourceName, false, false, loop);
 	}
+	else if (env->fileExists(defaultpath3))
+	{
+		if (osu_skin_async.getBool())
+			engine->getResourceManager()->requestNextLoadAsync();
+
+		*addressOfPointer = engine->getResourceManager()->loadSoundAbs(defaultpath3, defaultResourceName, false, false, loop);
+	}
 
 	// load user skin
 
@@ -1518,6 +1530,10 @@ void OsuSkin::checkLoadSound(Sound **addressOfPointer, UString skinElementName, 
 		UString filepath2 = m_sFilePath;
 		filepath2.append(skinElementName);
 		filepath2.append(".mp3");
+
+		UString filepath3 = m_sFilePath;
+		filepath3.append(skinElementName);
+		filepath3.append(".ogg");
 
 		// load it
 		if (env->fileExists(filepath1))
@@ -1534,6 +1550,14 @@ void OsuSkin::checkLoadSound(Sound **addressOfPointer, UString skinElementName, 
 				engine->getResourceManager()->requestNextLoadAsync();
 
 			*addressOfPointer = engine->getResourceManager()->loadSoundAbs(filepath2, "", false, false, loop);
+			isDefaultSkin = false;
+		}
+		else if (env->fileExists(filepath3))
+		{
+			if (osu_skin_async.getBool())
+				engine->getResourceManager()->requestNextLoadAsync();
+
+			*addressOfPointer = engine->getResourceManager()->loadSoundAbs(filepath3, "", false, false, loop);
 			isDefaultSkin = false;
 		}
 	}
