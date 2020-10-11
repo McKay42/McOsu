@@ -858,7 +858,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	}
 
 	addSpacer();
-	const UString keyboardSectionTags = "keyboard keys binds keybinds";
+	const UString keyboardSectionTags = "keyboard keys key bindings binds keybinds keybindings";
 	CBaseUIElement *subSectionKeyboard = addSubSection("Keyboard", keyboardSectionTags);
 	addSubSection("Keys - osu! Standard Mode", keyboardSectionTags);
 	addKeyBindButton("Left Click", &OsuKeyBindings::LEFT_CLICK);
@@ -983,6 +983,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Draw Stats: pp", "Realtime pp counter.\nDynamically calculates currently earned pp by incrementally updating the star rating.", convar->getConVarByName("osu_draw_statistics_pp"));
 	addCheckbox("Draw Stats: Misses", convar->getConVarByName("osu_draw_statistics_misses"));
 	addCheckbox("Draw Stats: SliderBreaks", convar->getConVarByName("osu_draw_statistics_sliderbreaks"));
+	addCheckbox("Draw Stats: Max Possible Combo", convar->getConVarByName("osu_draw_statistics_maxpossiblecombo"));
 	addCheckbox("Draw Stats: BPM", convar->getConVarByName("osu_draw_statistics_bpm"));
 	addCheckbox("Draw Stats: AR", convar->getConVarByName("osu_draw_statistics_ar"));
 	addCheckbox("Draw Stats: CS", convar->getConVarByName("osu_draw_statistics_cs"));
@@ -1056,7 +1057,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addLabel("");
 	addLabel("NOTE: Use CTRL + O during gameplay to get here!")->setTextColor(0xff777777);
 	addLabel("");
-	CBaseUISlider *fposuDistanceSlider = addSlider("Distance:", 0.01f, 2.0f, convar->getConVarByName("fposu_distance"), -1.0f, true);
+	CBaseUISlider *fposuDistanceSlider = addSlider("Distance:", 0.01f, 5.0f, convar->getConVarByName("fposu_distance"), -1.0f, true);
 	fposuDistanceSlider->setKeyDelta(0.01f);
 	addCheckbox("Vertical FOV", "If enabled: Vertical FOV.\nIf disabled: Horizontal FOV (default).", convar->getConVarByName("fposu_vertical_fov"));
 	CBaseUISlider *fovSlider = addSlider("FOV:", 20.0f, 160.0f, convar->getConVarByName("fposu_fov"));
@@ -1328,10 +1329,11 @@ void OsuOptionsMenu::update()
 	// force context menu focus
 	if (m_contextMenu->isVisible())
 	{
-		std::vector<CBaseUIElement*> *options = m_options->getContainer()->getAllBaseUIElementsPointer();
-		for (int i=0; i<options->size(); i++)
+		const std::vector<CBaseUIElement*> &elements = m_options->getContainer()->getElements();
+		for (int i=0; i<elements.size(); i++)
 		{
-			CBaseUIElement *e = ((*options)[i]);
+			CBaseUIElement *e = (elements[i]);
+
 			if (e == m_contextMenu)
 				continue;
 
@@ -2041,14 +2043,14 @@ void OsuOptionsMenu::updateLayout()
 				CBaseUIElement *e3 = m_elements[i].elements[2];
 
 				const float dividerBegin = 5.0f / 8.0f;
-				const float dividerMiddle = 1.0f / 8.0f;
+				//const float dividerMiddle = 1.0f / 8.0f;
 				const float dividerEnd = 2.0f / 8.0f;
 
 				e1->setRelPos(sideMargin, yCounter);
 				e1->setSizeX(elementWidth*dividerBegin - spacing);
 
 				e2->setRelPos(sideMargin + e1->getSize().x + 0.5f*spacing, yCounter);
-				e2->setSizeX(elementWidth*dividerMiddle - spacing);
+				e2->setSizeX(e2->getSize().y); // elementWidth*dividerMiddle - spacing
 
 				e3->setRelPos(sideMargin + e1->getSize().x + e2->getSize().x + 1.5f*spacing, yCounter);
 				e3->setSizeX(elementWidth*dividerEnd - spacing);
@@ -2234,7 +2236,17 @@ void OsuOptionsMenu::updateFposuDPI()
 	if (m_dpiTextbox == NULL) return;
 
 	m_dpiTextbox->stealFocus();
-	convar->getConVarByName("fposu_mouse_dpi")->setValue(m_dpiTextbox->getText());
+
+	const UString &text = m_dpiTextbox->getText();
+	UString value;
+	for (int i=0; i<text.length(); i++)
+	{
+		if (text[i] == L',')
+			value.append(L'.');
+		else
+			value.append(text[i]);
+	}
+	convar->getConVarByName("fposu_mouse_dpi")->setValue(value);
 }
 
 void OsuOptionsMenu::updateFposuCMper360()
@@ -2242,7 +2254,17 @@ void OsuOptionsMenu::updateFposuCMper360()
 	if (m_cm360Textbox == NULL) return;
 
 	m_cm360Textbox->stealFocus();
-	convar->getConVarByName("fposu_mouse_cm_360")->setValue(m_cm360Textbox->getText());
+
+	const UString &text = m_cm360Textbox->getText();
+	UString value;
+	for (int i=0; i<text.length(); i++)
+	{
+		if (text[i] == L',')
+			value.append(L'.');
+		else
+			value.append(text[i]);
+	}
+	convar->getConVarByName("fposu_mouse_cm_360")->setValue(value);
 }
 
 void OsuOptionsMenu::updateVRRenderTargetResolutionLabel()

@@ -28,7 +28,7 @@ public:
 	typedef fastdelegate::FastDelegate2<UString, int> ButtonClickCallback;
 	void setClickCallback(ButtonClickCallback clickCallback) {m_clickCallback = clickCallback;}
 
-	void begin(int minWidth = 0);
+	void begin(int minWidth = 0, bool bigStyle = false);
 	CBaseUIButton *addButton(UString text, int id = -1);
 	void end(bool invertAnimation = false);
 
@@ -57,6 +57,8 @@ private:
 	bool m_bVisible2;
 	float m_fAnimation;
 	bool m_bInvertAnimation;
+
+	bool m_bBigStyle;
 };
 
 #endif

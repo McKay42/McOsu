@@ -24,8 +24,9 @@
 #include "Osu.h"
 #include "OsuSkin.h"
 #include "OsuSkinImage.h"
+#include "OsuBackgroundImageHandler.h"
 #include "OsuBeatmap.h"
-#include "OsuBeatmapDifficulty.h"
+#include "OsuDatabaseBeatmap.h"
 #include "OsuMainMenu.h"
 #include "OsuOptionsMenu.h"
 #include "OsuHUD.h"
@@ -366,7 +367,7 @@ void OsuMainMenu::draw(Graphics *g)
 	bool haveTimingpoints = false;
 	const float div = 1.25f;
 	float pulse = 0.0f;
-	if (m_osu->getSelectedBeatmap() != NULL && m_osu->getSelectedBeatmap()->getSelectedDifficulty() != NULL && m_osu->getSelectedBeatmap()->getMusic() != NULL && m_osu->getSelectedBeatmap()->getMusic()->isPlaying())
+	if (m_osu->getSelectedBeatmap() != NULL && m_osu->getSelectedBeatmap()->getSelectedDifficulty2() != NULL && m_osu->getSelectedBeatmap()->getMusic() != NULL && m_osu->getSelectedBeatmap()->getMusic()->isPlaying())
 	{
 		haveTimingpoints = true;
 
@@ -374,11 +375,11 @@ void OsuMainMenu::draw(Graphics *g)
 			+ (long)m_osu_universal_offset_ref->getInt()
 			+ (long)m_osu_universal_offset_hardcoded_ref->getInt()
 			+ (m_win_snd_fallback_dsound_ref->getBool() ? (long)m_osu_universal_offset_hardcoded_fallback_dsound_ref->getInt() : 0)
-			- m_osu->getSelectedBeatmap()->getSelectedDifficulty()->localoffset
-			- m_osu->getSelectedBeatmap()->getSelectedDifficulty()->onlineOffset
-			- (m_osu->getSelectedBeatmap()->getSelectedDifficulty()->version < 5 ? m_osu_old_beatmap_offset_ref->getInt() : 0);
+			- m_osu->getSelectedBeatmap()->getSelectedDifficulty2()->getLocalOffset()
+			- m_osu->getSelectedBeatmap()->getSelectedDifficulty2()->getOnlineOffset()
+			- (m_osu->getSelectedBeatmap()->getSelectedDifficulty2()->getVersion() < 5 ? m_osu_old_beatmap_offset_ref->getInt() : 0);
 
-		OsuBeatmapDifficulty::TIMING_INFO t = m_osu->getSelectedBeatmap()->getSelectedDifficulty()->getTimingInfoForTime(curMusicPos);
+		OsuDatabaseBeatmap::TIMING_INFO t = m_osu->getSelectedBeatmap()->getSelectedDifficulty2()->getTimingInfoForTime(curMusicPos);
 
 		if (t.beatLengthBase == 0.0f) // bah
 			t.beatLengthBase = 1.0f;
@@ -959,6 +960,9 @@ void OsuMainMenu::update()
 	if (m_osu->getOptionsMenu()->isMouseInside())
 		m_container->stealFocus();
 
+	// keep loaded background images while main menu is active
+	m_osu->getBackgroundImageHandler()->scheduleFreezeCache();
+
 	// update and focus handling
 	// the main button always gets top focus
 	m_mainButton->update();
@@ -1230,7 +1234,7 @@ void OsuMainMenu::animMainButton()
 
 	m_iMainMenuRandomAnimType = (rand() % 4) == 1 ? 1 : 0;
 	if (!m_bMainMenuAnimFadeToFriendForNextAnim)
-		m_bMainMenuAnimFadeToFriendForNextAnim = (rand() % 3) == 1;
+		m_bMainMenuAnimFadeToFriendForNextAnim = (rand() % 6) == 1;
 
 	m_fMainMenuAnim = 0.0f;
 	m_fMainMenuAnim1 = 0.0f;

@@ -12,8 +12,6 @@
 
 #include "OsuDifficultyCalculator.h"
 
-class BackgroundImagePathLoader;
-
 class Osu;
 class OsuBeatmap;
 class OsuBeatmapStandard;
@@ -121,10 +119,6 @@ public:
 	void unloadBackgroundImage();
 	void loadBackgroundImagePath();
 
-	inline unsigned long long getSortHack() const {return m_iSortHack;}
-	inline bool shouldBackgroundImageBeLoaded() const {return m_bShouldBackgroundImageBeLoaded;}
-	bool isBackgroundLoaderActive();
-
 	bool loaded;
 
 	// metadata
@@ -183,8 +177,6 @@ public:
 
 	// timing (points) + breaks
 	TIMING_INFO getTimingInfoForTime(unsigned long positionMS);
-	unsigned long getBreakDurationTotal();
-	BREAK getBreakForTimeRange(long startMS, long positionMS, long endMS);
 
 	// for score v2
 	inline int getMaxCombo() {return m_iMaxCombo;}
@@ -205,12 +197,6 @@ public:
 	*/
 
 private:
-	static unsigned long long sortHackCounter;
-
-	friend class BackgroundImagePathLoader;
-
-	void deleteBackgroundImagePathLoader();
-
 	// every supported type of beatmap/gamemode gets its own build function here. it should build the hitobject classes from the data loaded from disk.
 	void buildStandardHitObjects(OsuBeatmapStandard *beatmap, std::vector<OsuHitObject*> *hitobjects);
 	void buildManiaHitObjects(OsuBeatmapMania *beatmap, std::vector<OsuHitObject*> *hitobjects);
@@ -228,11 +214,6 @@ private:
 
 	UString m_sFilePath;	// path to .osu file
 	UString m_sFolder;		// path to folder containing .osu file
-
-	// custom
-	bool m_bShouldBackgroundImageBeLoaded;
-	BackgroundImagePathLoader *m_backgroundImagePathLoader;
-	unsigned long long m_iSortHack;
 
 	// for pp & star & score calculation
 	int m_iMaxCombo;

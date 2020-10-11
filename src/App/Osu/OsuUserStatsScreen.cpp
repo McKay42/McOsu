@@ -19,11 +19,12 @@
 #include "Osu.h"
 #include "OsuSkin.h"
 #include "OsuReplay.h"
+#include "OsuBackgroundImageHandler.h"
 #include "OsuOptionsMenu.h"
 #include "OsuSongBrowser2.h"
 #include "OsuMultiplayer.h"
-#include "OsuBeatmapDifficulty.h"
 #include "OsuDatabase.h"
+#include "OsuDatabaseBeatmap.h"
 
 #include "OsuUIContextMenu.h"
 #include "OsuUISongBrowserScoreButton.h"
@@ -104,6 +105,9 @@ void OsuUserStatsScreen::update()
 	OsuScreenBackable::update();
 	if (!m_bVisible) return;
 
+	// keep loaded background images while user stats screen is active
+	m_osu->getBackgroundImageHandler()->scheduleFreezeCache();
+
 	m_container->update();
 
 	if (m_contextMenu->isMouseInside())
@@ -154,23 +158,22 @@ void OsuUserStatsScreen::rebuildScoreButtons(UString playerName)
 	m_scores->getContainer()->clear();
 	m_scoreButtons.clear();
 
-	// TODO: optimize db accesses by caching a hashmap from md5hash -> OsuBeatmap*, currently it just does a loop over all diffs of all beatmaps (for every score here)
 	OsuDatabase *db = m_osu->getSongBrowser()->getDatabase();
 	std::vector<OsuDatabase::Score*> scores = db->getPlayerPPScores(playerName).ppScores;
 	for (int i=scores.size()-1; i>=std::max(0, (int)scores.size() - osu_ui_top_ranks_max.getInt()); i--)
 	{
 		const float weight = OsuDatabase::getWeightForIndex(scores.size()-1-i);
 
-		OsuBeatmapDifficulty *diff = db->getBeatmapDifficulty(scores[i]->md5hash);
+		const OsuDatabaseBeatmap *diff = db->getBeatmapDifficulty(scores[i]->md5hash);
 
 		UString title = "...";
 		if (diff != NULL)
 		{
-			title = diff->artist;
+			title = diff->getArtist();
 			title.append(" - ");
-			title.append(diff->title);
+			title.append(diff->getTitle());
 			title.append(" [");
-			title.append(diff->name);
+			title.append(diff->getDifficultyName());
 			title.append("]");
 		}
 
@@ -183,7 +186,7 @@ void OsuUserStatsScreen::rebuildScoreButtons(UString playerName)
 	}
 
 	m_userButton->setText(playerName);
-	m_osu->getOptionsMenu()->setUsername(playerName); // force update textbox to avoid shutdown inconsistency
+	m_osu->getOptionsMenu()->setUsername(playerName); // NOTE: force update options textbox to avoid shutdown inconsistency
 	m_userButton->updateUserStats();
 
 	updateLayout();

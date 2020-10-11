@@ -24,8 +24,6 @@
 #include "OsuSongBrowser2.h"
 #include "OsuUserStatsScreen.h"
 #include "OsuDatabase.h"
-#include "OsuBeatmap.h"
-#include "OsuBeatmapDifficulty.h"
 
 #include "OsuUIContextMenu.h"
 
@@ -56,14 +54,16 @@ OsuUISongBrowserScoreButton::OsuUISongBrowserScoreButton(Osu *osu, OsuUIContextM
 	m_iScoreUnixTimestamp = 0;
 
 	m_scoreGrade = OsuScore::GRADE::GRADE_D;
-	//m_sScoreUsername = "McKay";
-	//m_sScoreScore = "Score: 123,456,789 (123x)";
-	//m_sScoreAccuracy = "98.97%";
-	//m_sScoreMods = "HD,HR";
+	/*
+	m_sScoreUsername = "McKay";
+	m_sScoreScore = "Score: 123,456,789 (123x)";
+	m_sScoreAccuracy = "98.97%";
+	m_sScoreMods = "HD,HR";
 
-	//m_sScoreScorePPWeightedPP = "233pp";
-	//m_sScoreScorePPWeightedWeight = "   weighted 95% (221pp)";
-	//m_sScoreWeight = "weighted 95%";
+	m_sScoreScorePPWeightedPP = "233pp";
+	m_sScoreScorePPWeightedWeight = "   weighted 95% (221pp)";
+	m_sScoreWeight = "weighted 95%";
+	*/
 }
 
 OsuUISongBrowserScoreButton::~OsuUISongBrowserScoreButton()
@@ -518,11 +518,11 @@ void OsuUISongBrowserScoreButton::onRightMouseUpInside()
 	{
 		m_contextMenu->setPos(pos);
 		m_contextMenu->setRelPos(pos);
-		m_contextMenu->begin();
+		m_contextMenu->begin(0, true);
 		{
+			m_contextMenu->addButton("Use Mods");
+			m_contextMenu->addButton("---");
 			m_contextMenu->addButton("Delete Score");
-			m_contextMenu->addButton("---");
-			m_contextMenu->addButton("---");
 		}
 		m_contextMenu->end();
 		m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUISongBrowserScoreButton::onContextMenu) );

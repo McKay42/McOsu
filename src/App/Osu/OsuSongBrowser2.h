@@ -14,7 +14,7 @@
 class Osu;
 class OsuBeatmap;
 class OsuDatabase;
-class OsuBeatmapDifficulty;
+class OsuDatabaseBeatmap;
 
 class OsuUIContextMenu;
 class OsuUISearchOverlay;
@@ -24,9 +24,8 @@ class OsuUISongBrowserUserButton;
 class OsuUISongBrowserScoreButton;
 class OsuUISongBrowserButton;
 class OsuUISongBrowserSongButton;
+class OsuUISongBrowserSongDifficultyButton;
 class OsuUISongBrowserCollectionButton;
-
-class OsuUISongBrowserDifficultyCollectionButton;
 
 class CBaseUIContainer;
 class CBaseUIImageButton;
@@ -61,11 +60,14 @@ public:
 
 	virtual void onResolutionChange(Vector2 newResolution);
 
-	void onPlayEnd(bool quit = true);	// called when a beatmap is finished playing (or the player quit)
+	virtual void setVisible(bool visible);
 
-	void onDifficultySelected(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff, bool play = false, bool mp = false);
-	void onDifficultySelectedMP(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff, bool play = false);
-	void selectBeatmapMP(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff);
+	void onPlayEnd(bool quit = true); // called when a beatmap is finished playing (or the player quit)
+
+	void onSelectionChange(OsuUISongBrowserButton *button, bool rebuild);
+	void onDifficultySelected(OsuDatabaseBeatmap *diff2, bool play = false, bool mp = false);
+	void onDifficultySelectedMP(OsuDatabaseBeatmap *diff2, bool play = false);
+	void selectBeatmapMP(OsuDatabaseBeatmap *diff2);
 
 	void onScoreContextMenu(OsuUISongBrowserScoreButton *scoreButton, UString text);
 
@@ -73,32 +75,38 @@ public:
 	void playNextRandomBeatmap() {selectRandomBeatmap();playSelectedDifficulty();}
 
 	void refreshBeatmaps();
+	void addBeatmap(OsuDatabaseBeatmap *beatmap);
+
 	void scrollToSongButton(OsuUISongBrowserButton *songButton, bool alignOnTop = false);
 	void scrollToSelectedSongButton();
-	void rebuildSongButtons(bool unloadAllThumbnails = true);
+	void rebuildSongButtons();
 	void rebuildScoreButtons();
 	void updateSongButtonLayout();
+	void updateSongButtonSorting();
 
-	OsuUISongBrowserButton* findCurrentlySelectedSongButton() const;
+	OsuUISongBrowserButton *findCurrentlySelectedSongButton() const;
 
-	virtual void setVisible(bool visible);
-
-	inline bool hasSelectedAndIsPlaying() {return m_bHasSelectedAndIsPlaying;}
-	inline OsuDatabase *getDatabase() {return m_db;}
+	inline bool hasSelectedAndIsPlaying() const {return m_bHasSelectedAndIsPlaying;}
+	inline OsuDatabase *getDatabase() const {return m_db;}
 	inline OsuBeatmap *getSelectedBeatmap() const {return m_selectedBeatmap;}
 
 	inline OsuUISongBrowserInfoLabel *getInfoLabel() {return m_songInfo;}
 
 private:
-	static bool searchMatcher(OsuBeatmap *beatmap, UString searchString);
-	static bool findSubstringInDifficulty(OsuBeatmapDifficulty *diff, const UString &searchString);
+	static bool searchMatcher(OsuDatabaseBeatmap *databaseBeatmap, UString searchString);
+	static bool findSubstringInDifficulty(OsuDatabaseBeatmap *diff, const UString &searchString);
 
 	enum class GROUP
 	{
 		GROUP_NO_GROUPING,
-		GROUP_COLLECTIONS,
-		GROUP_DIFFICULTY
-		// incomplete
+		GROUP_ARTIST,
+		GROUP_BPM,
+		GROUP_CREATOR,
+		GROUP_DATEADDED,
+		GROUP_DIFFICULTY,
+		GROUP_LENGTH,
+		GROUP_TITLE,
+		GROUP_COLLECTIONS
 	};
 
 	enum class SORT
@@ -120,6 +128,12 @@ private:
 		SORTING_COMPARATOR *comparator;
 	};
 
+	struct GROUPING
+	{
+		GROUP type;
+		UString name;
+	};
+
 	virtual void updateLayout();
 	virtual void onBack();
 
@@ -129,6 +143,7 @@ private:
 
 	OsuUISelectionButton *addBottombarNavButton(std::function<Image*()> getImageFunc, std::function<Image*()> getImageOverFunc);
 	CBaseUIButton *addTopBarRightTabButton(UString text);
+	CBaseUIButton *addTopBarRightGroupButton(UString text);
 	CBaseUIButton *addTopBarRightSortButton(UString text);
 	CBaseUIButton *addTopBarLeftTabButton(UString text);
 	CBaseUIButton *addTopBarLeftButton(UString text);
@@ -141,14 +156,23 @@ private:
 	void onSortScoresChange(UString text, int id = -1);
 	void onWebClicked(CBaseUIButton *button);
 
+	void onGroupClicked(CBaseUIButton *button);
+	void onGroupChange(UString text, int id = -1);
+
 	void onSortClicked(CBaseUIButton *button);
 	void onSortChange(UString text, int id = -1);
 
 	void onGroupNoGrouping(CBaseUIButton *b);
 	void onGroupCollections(CBaseUIButton *b);
+	void onGroupArtist(CBaseUIButton *b);
 	void onGroupDifficulty(CBaseUIButton *b);
+	void onGroupBPM(CBaseUIButton *b);
+	void onGroupCreator(CBaseUIButton *b);
+	void onGroupDateadded(CBaseUIButton *b);
+	void onGroupLength(CBaseUIButton *b);
+	void onGroupTitle(CBaseUIButton *b);
 
-	void onAfterSortingOrGroupChange(CBaseUIButton *b);
+	void onAfterSortingOrGroupChange(CBaseUIButton *groupingButton);
 
 	void onSelectionMode();
 	void onSelectionMods();
@@ -185,6 +209,7 @@ private:
 	Osu *m_osu;
 	std::mt19937 m_rngalg;
 	GROUP m_group;
+	std::vector<GROUPING> m_groupings;
 	SORT m_sortingMethod;
 	std::vector<SORTING_METHOD> m_sortingMethods;
 
@@ -202,10 +227,14 @@ private:
 	// top bar right
 	CBaseUIContainer *m_topbarRight;
 	std::vector<CBaseUIButton*> m_topbarRightTabButtons;
+	std::vector<CBaseUIButton*> m_topbarRightGroupButtons;
 	std::vector<CBaseUIButton*> m_topbarRightSortButtons;
 	CBaseUILabel *m_groupLabel;
+	CBaseUIButton *m_groupButton;
 	CBaseUIButton *m_noGroupingButton;
 	CBaseUIButton *m_collectionsButton;
+	CBaseUIButton *m_artistButton;
+	CBaseUIButton *m_difficultiesButton;
 	CBaseUILabel *m_sortLabel;
 	CBaseUIButton *m_sortButton;
 	OsuUIContextMenu *m_contextMenu;
@@ -225,13 +254,24 @@ private:
 	bool m_bSongBrowserRightClickScrollCheck;
 	bool m_bSongBrowserRightClickScrolling;
 
+	// song browser selection state logic
+	OsuUISongBrowserSongButton *m_selectionPreviousSongButton;
+	OsuUISongBrowserSongDifficultyButton *m_selectionPreviousSongDiffButton;
+	OsuUISongBrowserCollectionButton *m_selectionPreviousCollectionButton;
+
 	// beatmap database
 	OsuDatabase *m_db;
-	std::vector<OsuBeatmap*> m_beatmaps;
-	std::vector<OsuUISongBrowserButton*> m_visibleSongButtons;
+	std::vector<OsuDatabaseBeatmap*> m_beatmaps;
 	std::vector<OsuUISongBrowserSongButton*> m_songButtons;
+	std::vector<OsuUISongBrowserButton*> m_visibleSongButtons;
 	std::vector<OsuUISongBrowserCollectionButton*> m_collectionButtons;
-	std::vector<OsuUISongBrowserDifficultyCollectionButton*> m_difficultyCollectionButtons;
+	std::vector<OsuUISongBrowserCollectionButton*> m_artistCollectionButtons;
+	std::vector<OsuUISongBrowserCollectionButton*> m_difficultyCollectionButtons;
+	std::vector<OsuUISongBrowserCollectionButton*> m_bpmCollectionButtons;
+	std::vector<OsuUISongBrowserCollectionButton*> m_creatorCollectionButtons;
+	std::vector<OsuUISongBrowserCollectionButton*> m_dateaddedCollectionButtons;
+	std::vector<OsuUISongBrowserCollectionButton*> m_lengthCollectionButtons;
+	std::vector<OsuUISongBrowserCollectionButton*> m_titleCollectionButtons;
 	bool m_bBeatmapRefreshScheduled;
 	UString m_sLastOsuFolder;
 
@@ -249,7 +289,7 @@ private:
 	bool m_bHasSelectedAndIsPlaying;
 	float m_fPulseAnimation;
 	float m_fBackgroundFadeInTime;
-	std::vector<OsuBeatmap*> m_previousRandomBeatmaps;
+	std::vector<OsuDatabaseBeatmap*> m_previousRandomBeatmaps;
 
 	// search
 	OsuUISearchOverlay *m_search;

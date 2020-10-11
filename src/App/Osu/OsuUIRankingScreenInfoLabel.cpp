@@ -12,7 +12,7 @@
 
 #include "Osu.h"
 #include "OsuBeatmap.h"
-#include "OsuBeatmapDifficulty.h"
+#include "OsuDatabaseBeatmap.h"
 
 #include <chrono>
 
@@ -95,12 +95,12 @@ void OsuUIRankingScreenInfoLabel::draw(Graphics *g)
 	g->popTransform();
 }
 
-void OsuUIRankingScreenInfoLabel::setFromBeatmap(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff)
+void OsuUIRankingScreenInfoLabel::setFromBeatmap(OsuBeatmap *beatmap, OsuDatabaseBeatmap *diff2)
 {
-	setArtist(diff->artist);
-	setTitle(diff->title);
-	setDiff(diff->name);
-	setMapper(diff->creator);
+	setArtist(diff2->getArtist());
+	setTitle(diff2->getTitle());
+	setDiff(diff2->getDifficultyName());
+	setMapper(diff2->getCreator());
 
 	std::time_t now_c = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
 	m_sDate = std::ctime(&now_c);

@@ -33,6 +33,7 @@
 #include "OsuMainMenu.h"
 #include "OsuOptionsMenu.h"
 #include "OsuSongBrowser2.h"
+#include "OsuBackgroundImageHandler.h"
 #include "OsuModSelector.h"
 #include "OsuRankingScreen.h"
 #include "OsuUserStatsScreen.h"
@@ -54,7 +55,7 @@
 #include "OsuModFPoSu.h"
 
 #include "OsuBeatmap.h"
-#include "OsuBeatmapDifficulty.h"
+#include "OsuDatabaseBeatmap.h"
 #include "OsuBeatmapStandard.h"
 #include "OsuBeatmapMania.h"
 
@@ -64,7 +65,7 @@
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 31.12f);
+ConVar osu_version("osu_version", 32.00f);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr");
 #else
@@ -308,6 +309,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
   	// vars
 	m_skin = NULL;
 	m_songBrowser2 = NULL;
+	m_backgroundImageHandler = NULL;
 	m_modSelector = NULL;
 	m_updateHandler = NULL;
 	m_multiplayer = NULL;
@@ -461,6 +463,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_mainMenu = new OsuMainMenu(this);
 	m_optionsMenu = new OsuOptionsMenu(this);
 	m_songBrowser2 = new OsuSongBrowser2(this);
+	m_backgroundImageHandler = new OsuBackgroundImageHandler();
 	m_modSelector = new OsuModSelector(this);
 	m_rankingScreen = new OsuRankingScreen(this);
 	m_userStatsScreen = new OsuUserStatsScreen(this);
@@ -513,20 +516,20 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	OsuBeatmap *debugBeatmap = new OsuBeatmapStandard(this);
 	UString beatmapPath = debugFolder;
 	beatmapPath.append(debugDiffFileName);
-	OsuBeatmapDifficulty *debugDiff = new OsuBeatmapDifficulty(this, beatmapPath, debugFolder);
+	OsuDatabaseBeatmap *debugDiff = new OsuDatabaseBeatmap(this, beatmapPath, debugFolder);
 	if (!debugDiff->loadMetadataRaw())
-		engine->showMessageError("OsuBeatmapDifficulty", "Couldn't debugDiff->loadMetadataRaw()!");
+		engine->showMessageError("OsuDatabaseBeatmap", "Couldn't debugDiff->loadMetadataRaw()!");
 	else
 	{
-		std::vector<OsuBeatmapDifficulty*> diffs;
+		std::vector<OsuDatabaseBeatmap*> diffs;
 		diffs.push_back(debugDiff);
 		debugBeatmap->setDifficulties(diffs);
 
-		debugBeatmap->selectDifficulty(debugDiff);
+		debugBeatmap->selectDifficulty2(debugDiff);
 		m_songBrowser2->onDifficultySelected(debugBeatmap, debugDiff, true);
 		//convar->getConVarByName("osu_volume_master")->setValue(1.0f);
 
-		// this will leak memory (one OsuBeatmap object and one OsuBeatmapDifficulty object), but who cares (since debug only)
+		// this will leak memory (one OsuBeatmap object and one OsuDatabaseBeatmap object), but who cares (since debug only)
 	}
 	*/
 
@@ -537,20 +540,20 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	OsuBeatmap *debugBeatmap = new OsuBeatmapMania(this);
 	UString beatmapPath = debugFolder;
 	beatmapPath.append(debugDiffFileName);
-	OsuBeatmapDifficulty *debugDiff = new OsuBeatmapDifficulty(this, beatmapPath, debugFolder);
+	OsuDatabaseBeatmap *debugDiff = new OsuDatabaseBeatmap(this, beatmapPath, debugFolder);
 	if (!debugDiff->loadMetadataRaw())
-		engine->showMessageError("OsuBeatmapDifficulty", "Couldn't debugDiff->loadMetadataRaw()!");
+		engine->showMessageError("OsuDatabaseBeatmap", "Couldn't debugDiff->loadMetadataRaw()!");
 	else
 	{
-		std::vector<OsuBeatmapDifficulty*> diffs;
+		std::vector<OsuDatabaseBeatmap*> diffs;
 		diffs.push_back(debugDiff);
 		debugBeatmap->setDifficulties(diffs);
 
-		debugBeatmap->selectDifficulty(debugDiff);
+		debugBeatmap->selectDifficulty2(debugDiff);
 		m_songBrowser2->onDifficultySelected(debugBeatmap, debugDiff, true);
 		//convar->getConVarByName("osu_volume_master")->setValue(1.0f);
 
-		// this will leak memory (one OsuBeatmap object and one OsuBeatmapDifficulty object), but who cares (since debug only)
+		// this will leak memory (one OsuBeatmap object and one OsuDatabaseBeatmap object), but who cares (since debug only)
 	}
 	*/
 
@@ -583,6 +586,7 @@ Osu::~Osu()
 	SAFE_DELETE(m_vr);
 	SAFE_DELETE(m_multiplayer);
 	SAFE_DELETE(m_skin);
+	SAFE_DELETE(m_backgroundImageHandler);
 }
 
 void Osu::draw(Graphics *g)
@@ -873,6 +877,9 @@ void Osu::update()
 	{
 		getSelectedBeatmap()->update();
 
+		// keep loaded background images while playing
+		m_backgroundImageHandler->scheduleFreezeCache();
+
 		// scrubbing/seeking
 		if (m_bSeekKey)
 		{
@@ -1152,6 +1159,9 @@ void Osu::update()
 		m_bFireResolutionChangedScheduled = false;
 		fireResolutionChanged();
 	}
+
+	// background image cache tick
+	m_backgroundImageHandler->update();
 }
 
 void Osu::updateMods()
@@ -1436,14 +1446,14 @@ void Osu::onKeyDown(KeyboardEvent &key)
 			if (key == (KEYCODE)OsuKeyBindings::INCREASE_LOCAL_OFFSET.getInt())
 			{
 				long offsetAdd = engine->getKeyboard()->isAltDown() ? 1 : 5;
-				getSelectedBeatmap()->getSelectedDifficulty()->localoffset += offsetAdd;
-				m_notificationOverlay->addNotification(UString::format("Local beatmap offset set to %ld ms", getSelectedBeatmap()->getSelectedDifficulty()->localoffset));
+				getSelectedBeatmap()->getSelectedDifficulty2()->setLocalOffset(getSelectedBeatmap()->getSelectedDifficulty2()->getLocalOffset() + offsetAdd);
+				m_notificationOverlay->addNotification(UString::format("Local beatmap offset set to %ld ms", getSelectedBeatmap()->getSelectedDifficulty2()->getLocalOffset()));
 			}
 			if (key == (KEYCODE)OsuKeyBindings::DECREASE_LOCAL_OFFSET.getInt())
 			{
 				long offsetAdd = -(engine->getKeyboard()->isAltDown() ? 1 : 5);
-				getSelectedBeatmap()->getSelectedDifficulty()->localoffset += offsetAdd;
-				m_notificationOverlay->addNotification(UString::format("Local beatmap offset set to %ld ms", getSelectedBeatmap()->getSelectedDifficulty()->localoffset));
+				getSelectedBeatmap()->getSelectedDifficulty2()->setLocalOffset(getSelectedBeatmap()->getSelectedDifficulty2()->getLocalOffset() + offsetAdd);
+				m_notificationOverlay->addNotification(UString::format("Local beatmap offset set to %ld ms", getSelectedBeatmap()->getSelectedDifficulty2()->getLocalOffset()));
 			}
 
 			// mania scroll speed
@@ -1590,6 +1600,9 @@ void Osu::toggleModSelection(bool waitForF1KeyUp)
 void Osu::toggleSongBrowser()
 {
 	m_bToggleSongBrowserScheduled = true;
+
+	// HACKHACK: usability workaround to keep loaded background images through frame delay
+	m_backgroundImageHandler->scheduleFreezeCache();
 }
 
 void Osu::toggleOptionsMenu()
@@ -1601,6 +1614,9 @@ void Osu::toggleOptionsMenu()
 void Osu::toggleRankingScreen()
 {
 	m_bToggleRankingScreenScheduled = true;
+
+	// HACKHACK: usability workaround to keep loaded background images through frame delay
+	m_backgroundImageHandler->scheduleFreezeCache();
 }
 
 void Osu::toggleUserStatsScreen()
@@ -1702,8 +1718,8 @@ void Osu::onPlayStart()
 		m_bShouldCursorBeVisible = true;
 	}
 
-	if (getSelectedBeatmap()->getSelectedDifficulty()->localoffset != 0)
-		m_notificationOverlay->addNotification(UString::format("Using local beatmap offset (%ld ms)", getSelectedBeatmap()->getSelectedDifficulty()->localoffset), 0xffffffff, false, 0.75f);
+	if (getSelectedBeatmap()->getSelectedDifficulty2()->getLocalOffset() != 0)
+		m_notificationOverlay->addNotification(UString::format("Using local beatmap offset (%ld ms)", getSelectedBeatmap()->getSelectedDifficulty2()->getLocalOffset()), 0xffffffff, false, 0.75f);
 
 	m_fQuickSaveTime = 0.0f; // reset
 
@@ -1733,7 +1749,7 @@ void Osu::onPlayEnd(bool quit)
 			}
 
 			m_rankingScreen->setScore(m_score);
-			m_rankingScreen->setBeatmapInfo(getSelectedBeatmap(), getSelectedBeatmap()->getSelectedDifficulty());
+			m_rankingScreen->setBeatmapInfo(getSelectedBeatmap(), getSelectedBeatmap()->getSelectedDifficulty2());
 
 			engine->getSound()->play(m_skin->getApplause());
 		}
@@ -1807,6 +1823,8 @@ float Osu::getCSDifficultyMultiplier()
 float Osu::getScoreMultiplier()
 {
 	float multiplier = 1.0f;
+
+	// TODO: scorev2 has different multipliers ffs
 
 	if (m_bModEZ || m_bModNF)
 		multiplier *= 0.5f;

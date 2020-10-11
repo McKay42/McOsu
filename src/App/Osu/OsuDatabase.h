@@ -15,8 +15,7 @@ class ConVar;
 
 class Osu;
 class OsuFile;
-class OsuBeatmap;
-class OsuBeatmapDifficulty;
+class OsuDatabaseBeatmap;
 
 class OsuDatabaseLoader;
 
@@ -26,7 +25,7 @@ public:
 	struct Collection
 	{
 		UString name;
-		std::vector<std::pair<OsuBeatmap*, std::vector<OsuBeatmapDifficulty*>>> beatmaps;
+		std::vector<std::pair<OsuDatabaseBeatmap*, std::vector<OsuDatabaseBeatmap*>>> beatmaps;
 	};
 
 	struct Score
@@ -112,6 +111,8 @@ public:
 	void cancel();
 	void save();
 
+	OsuDatabaseBeatmap *addBeatmap(UString beatmapFolderPath);
+
 	int addScore(std::string beatmapMD5Hash, OsuDatabase::Score score);
 	void deleteScore(std::string beatmapMD5Hash, uint64_t scoreUnixTimestamp);
 	void sortScores(std::string beatmapMD5Hash);
@@ -128,10 +129,9 @@ public:
 	inline bool isFinished() const {return (getProgress() >= 1.0f);}
 	inline bool foundChanges() const {return m_bFoundChanges;}
 
-	inline int getNumBeatmaps() const {return m_beatmaps.size();} // valid beatmaps
-	inline const std::vector<OsuBeatmap*> getBeatmaps() const {return m_beatmaps;}
-	OsuBeatmap *getBeatmap(std::string md5hash);
-	OsuBeatmapDifficulty *getBeatmapDifficulty(std::string md5hash);
+	inline const std::vector<OsuDatabaseBeatmap*> getDatabaseBeatmaps() const {return m_databaseBeatmaps;}
+	OsuDatabaseBeatmap *getBeatmap(std::string md5hash);
+	OsuDatabaseBeatmap *getBeatmapDifficulty(std::string md5hash);
 	inline int getNumCollections() const {return m_collections.size();}
 	inline const std::vector<Collection> getCollections() const {return m_collections;}
 
@@ -153,9 +153,7 @@ private:
 	void loadScores();
 	void saveScores();
 
-	OsuBeatmap *loadRawBeatmap(UString beatmapPath);	// only used for raw loading without db
-
-	OsuBeatmap *createBeatmapForActiveGamemode();		// TEMP: workaround
+	OsuDatabaseBeatmap *loadRawBeatmap(UString beatmapPath); // only used for raw loading without db
 
 	Osu *m_osu;
 	Timer *m_importTimer;
@@ -166,7 +164,7 @@ private:
 	int m_iNumBeatmapsToLoad;
 	std::atomic<float> m_fLoadingProgress;
 	std::atomic<bool> m_bInterruptLoad;
-	std::vector<OsuBeatmap*> m_beatmaps;
+	std::vector<OsuDatabaseBeatmap*> m_databaseBeatmaps;
 
 	// osu!.db
 	int m_iVersion;

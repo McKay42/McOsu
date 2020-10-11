@@ -21,9 +21,10 @@
 #include "OsuHUD.h"
 #include "OsuSkin.h"
 #include "OsuSkinImage.h"
+#include "OsuBackgroundImageHandler.h"
 #include "OsuIcons.h"
 #include "OsuBeatmap.h"
-#include "OsuBeatmapDifficulty.h"
+#include "OsuDatabaseBeatmap.h"
 #include "OsuTooltipOverlay.h"
 #include "OsuOptionsMenu.h"
 #include "OsuKeyBindings.h"
@@ -40,6 +41,8 @@
 #include "OsuUISlider.h"
 #include "OsuUICheckbox.h"
 #include "OsuUIModSelectorModButton.h"
+
+
 
 class OsuModSelectorOverrideSliderDescButton : public CBaseUIButton
 {
@@ -67,6 +70,8 @@ private:
 		}
 	}
 };
+
+
 
 class OsuModSelectorOverrideSliderLockButton : public CBaseUICheckbox
 {
@@ -119,6 +124,8 @@ private:
 	float m_fAnim;
 };
 
+
+
 OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen(osu)
 {
 	m_fAnimation = 0.0f;
@@ -137,10 +144,9 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen(osu)
 
 	m_bWaitForCSChangeFinished = false;
 	m_bWaitForSpeedChangeFinished = false;
+	m_bWaitForHPChangeFinished = false;
 
-	m_BPMSlider = NULL;
 	m_speedSlider = NULL;
-	m_previousDifficulty = NULL;
 	m_bShowOverrideSliderALTHint = true;
 
 	// convar refs
@@ -182,22 +188,18 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen(osu)
 	m_CSSlider = overrideCS.slider;
 	m_ARSlider = overrideAR.slider;
 	m_ODSlider = overrideOD.slider;
+	m_HPSlider = overrideHP.slider;
 	m_ARLock = overrideAR.lock;
 	m_ODLock = overrideOD.lock;
 
 	if (env->getOS() != Environment::OS::OS_HORIZON)
 	{
-		///OVERRIDE_SLIDER overrideBPM = addOverrideSlider("BPM Override", "BPM:", convar->getConVarByName("osu_speed_override"), 0.0f, 2.5f);
 		OVERRIDE_SLIDER overrideSpeed = addOverrideSlider("Speed/BPM Multiplier", "x", convar->getConVarByName("osu_speed_override"), 0.0f, 2.5f);
 
-		///overrideBPM.slider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
-		///overrideBPM.slider->setValue(-1.0f, false);
-		///overrideBPM.slider->setAnimated(false); // same quick fix as above
 		overrideSpeed.slider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
 		//overrideSpeed.slider->setValue(-1.0f, false);
 		overrideSpeed.slider->setAnimated(false); // same quick fix as above
 
-		///m_BPMSlider = overrideBPM.slider;
 		m_speedSlider = overrideSpeed.slider;
 	}
 
@@ -452,6 +454,9 @@ void OsuModSelector::update()
 	m_container->update();
 	m_overrideSliderContainer->update();
 
+	// keep loaded background images while mod selection screen is active
+	m_osu->getBackgroundImageHandler()->scheduleFreezeCache();
+
 	// override slider tooltips (ALT)
 	// seems too annoying, commented for now
 	/*
@@ -500,28 +505,49 @@ void OsuModSelector::update()
 		anim->moveQuadIn(&m_fExperimentalAnimation, 0.0f, m_fExperimentalAnimation*0.11f, 0.0f, true);
 	}
 
-	// handle dynamic CS and slider vertex buffer updates
-	if (m_CSSlider->isActive() || m_CSSlider->hasChanged())
+	// delayed onModUpdate() triggers when changing some values
 	{
-		m_bWaitForCSChangeFinished = true;
-	}
-	else if (m_bWaitForCSChangeFinished)
-	{
-		m_bWaitForCSChangeFinished = false;
-		if (m_osu->isInPlayMode() && m_osu->getSelectedBeatmap() != NULL)
-			m_osu->getSelectedBeatmap()->onModUpdate();
-	}
+		// handle dynamic CS and slider vertex buffer updates
+		if (m_CSSlider != NULL && (m_CSSlider->isActive() || m_CSSlider->hasChanged()))
+		{
+			m_bWaitForCSChangeFinished = true;
+		}
+		else if (m_bWaitForCSChangeFinished)
+		{
+			m_bWaitForCSChangeFinished = false;
+			m_bWaitForSpeedChangeFinished = false;
+			m_bWaitForHPChangeFinished = false;
+			if (m_osu->isInPlayMode() && m_osu->getSelectedBeatmap() != NULL)
+				m_osu->getSelectedBeatmap()->onModUpdate();
+		}
 
-	// handle dynamic live pp calculation updates (when CS or Speed/BPM changes)
-	if ((m_speedSlider != NULL && m_speedSlider->isActive())/* || (m_BPMSlider != NULL && m_BPMSlider->isActive())*/)
-	{
-		m_bWaitForSpeedChangeFinished = true;
-	}
-	else if (m_bWaitForSpeedChangeFinished)
-	{
-		m_bWaitForSpeedChangeFinished = false;
-		if (m_osu->isInPlayMode() && m_osu->getSelectedBeatmap() != NULL)
-			m_osu->getSelectedBeatmap()->onModUpdate();
+		// handle dynamic live pp calculation updates (when CS or Speed/BPM changes)
+		if (m_speedSlider != NULL && (m_speedSlider->isActive() || m_speedSlider->hasChanged()))
+		{
+			m_bWaitForSpeedChangeFinished = true;
+		}
+		else if (m_bWaitForSpeedChangeFinished)
+		{
+			m_bWaitForCSChangeFinished = false;
+			m_bWaitForSpeedChangeFinished = false;
+			m_bWaitForHPChangeFinished = false;
+			if (m_osu->isInPlayMode() && m_osu->getSelectedBeatmap() != NULL)
+				m_osu->getSelectedBeatmap()->onModUpdate();
+		}
+
+		// handle dynamic HP drain updates
+		if (m_HPSlider != NULL && (m_HPSlider->isActive() || m_HPSlider->hasChanged()))
+		{
+			m_bWaitForHPChangeFinished = true;
+		}
+		else if (m_bWaitForHPChangeFinished)
+		{
+			m_bWaitForCSChangeFinished = false;
+			m_bWaitForSpeedChangeFinished = false;
+			m_bWaitForHPChangeFinished = false;
+			if (m_osu->isInPlayMode() && m_osu->getSelectedBeatmap() != NULL)
+				m_osu->getSelectedBeatmap()->onModUpdate();
+		}
 	}
 }
 
@@ -587,7 +613,6 @@ void OsuModSelector::setVisible(bool visible)
 		updateExperimentalButtons(true); // force state update without firing callbacks
 		updateLayout();
 		updateOverrideSliderLabels();
-		checkUpdateBPMSliderSlaves();
 
 		m_fAnimation = 0.0f;
 		anim->moveQuadOut(&m_fAnimation, 1.0f, 0.1f, 0.0f, true);
@@ -645,6 +670,34 @@ bool OsuModSelector::isCSOverrideSliderActive()
 bool OsuModSelector::isMouseInScrollView()
 {
 	return m_experimentalContainer->isMouseInside() && isVisible();
+}
+
+bool OsuModSelector::isMouseInside()
+{
+	bool isMouseInsideAnyModSelectorModButton = false;
+	for (size_t i=0; i<m_modButtons.size(); i++)
+	{
+		if (m_modButtons[i]->isMouseInside())
+		{
+			isMouseInsideAnyModSelectorModButton = true;
+			break;
+		}
+	}
+
+	bool isMouseInsideAnyOverrideSliders = false;
+	for (size_t i=0; i<m_overrideSliders.size(); i++)
+	{
+		if ((m_overrideSliders[i].lock != NULL && m_overrideSliders[i].lock->isMouseInside())
+			|| m_overrideSliders[i].desc->isMouseInside()
+			|| m_overrideSliders[i].slider->isMouseInside()
+			|| m_overrideSliders[i].label->isMouseInside())
+		{
+			isMouseInsideAnyOverrideSliders = true;
+			break;
+		}
+	}
+
+	return isVisible() && (m_experimentalContainer->isMouseInside() || isMouseInsideAnyModSelectorModButton || isMouseInsideAnyOverrideSliders);
 }
 
 void OsuModSelector::updateLayout()
@@ -1036,7 +1089,7 @@ void OsuModSelector::onOverrideSliderChange(CBaseUISlider *slider)
 				m_overrideSliders[i].label->setWidthToContent(0);
 
 				// HACKHACK: dirty
-				if (m_osu->getSelectedBeatmap() != NULL && m_osu->getSelectedBeatmap()->getSelectedDifficulty() != NULL)
+				if (m_osu->getSelectedBeatmap() != NULL && m_osu->getSelectedBeatmap()->getSelectedDifficulty2() != NULL)
 				{
 					if (m_overrideSliders[i].label->getName().find("BPM") != -1)
 					{
@@ -1065,7 +1118,7 @@ void OsuModSelector::onOverrideSliderChange(CBaseUISlider *slider)
 				}
 
 				// HACKHACK: dirty
-				if (m_osu->getSelectedBeatmap() != NULL && m_osu->getSelectedBeatmap()->getSelectedDifficulty() != NULL)
+				if (m_osu->getSelectedBeatmap() != NULL && m_osu->getSelectedBeatmap()->getSelectedDifficulty2() != NULL)
 				{
 					if (m_overrideSliders[i].label->getName().find("BPM") != -1)
 					{
@@ -1085,11 +1138,6 @@ void OsuModSelector::onOverrideSliderChange(CBaseUISlider *slider)
 
 						m_ARSlider->setValue(newAR + 1.0f, false); // '+1' to compensate for turn-off area of the override sliders
 						m_ODSlider->setValue(newOD + 1.0f, false);
-					}
-					else if (m_overrideSliders[i].desc->getText().find("Speed") != -1)
-					{
-						// bpm slider may not be used in conjunction
-						///m_BPMSlider->setValue(0.0f, false);
 					}
 				}
 
@@ -1116,10 +1164,6 @@ void OsuModSelector::onOverrideSliderLockChange(CBaseUICheckbox *checkbox)
 		{
 			const bool locked = m_overrideSliders[i].lock->isChecked();
 			const bool wasLocked = m_overrideSliders[i].lockCvar->getBool();
-
-			// bpm slider may not be used in conjunction
-			///if (locked && m_BPMSlider->getFloat() > 0.99f)
-			///	m_BPMSlider->setValue(0.0f, false);
 
 			// update convar with final value (e.g. osu_ar_override_lock, osu_od_override_lock)
 			m_overrideSliders[i].lockCvar->setValue(locked ? 1.0f : 0.0f);
@@ -1201,21 +1245,21 @@ UString OsuModSelector::getOverrideSliderLabelText(OsuModSelector::OVERRIDE_SLID
 	float convarValue = s.cvar->getFloat();
 
 	UString newLabelText = s.label->getName();
-	if (m_osu->getSelectedBeatmap() != NULL && m_osu->getSelectedBeatmap()->getSelectedDifficulty() != NULL)
+	if (m_osu->getSelectedBeatmap() != NULL && m_osu->getSelectedBeatmap()->getSelectedDifficulty2() != NULL)
 	{
 		// used for compensating speed changing experimental mods (which cause m_osu->getSpeedMultiplier() != beatmap->getSpeedMultiplier())
 		// to keep the AR/OD display correct
 		const float speedMultiplierLive = m_osu->isInPlayMode() ? m_osu->getSelectedBeatmap()->getSpeedMultiplier() : m_osu->getSpeedMultiplier();
 
-		// for relevant values (AR/OD), any non-1.0x speed multiplier should show the fractional parts caused by such a speed multiplier
-		const bool forceDisplayTwoDecimalDigits = speedMultiplierLive != 1.0f;
+		// for relevant values (AR/OD), any non-1.0x speed multiplier should show the fractional parts caused by such a speed multiplier (same for non-1.0x difficulty multiplier)
+		const bool forceDisplayTwoDecimalDigits = (speedMultiplierLive != 1.0f || m_osu->getDifficultyMultiplier() != 1.0f || m_osu->getCSDifficultyMultiplier() != 1.0f);
 
 		// HACKHACK: dirty
-		bool wasBPMslider = false;
+		bool wasSpeedSlider = false;
 		float beatmapValue = 1.0f;
 		if (s.label->getName().find("CS") != -1)
 		{
-			beatmapValue = clamp<float>(m_osu->getSelectedBeatmap()->getSelectedDifficulty()->CS*m_osu->getCSDifficultyMultiplier(), 0.0f, 10.0f);
+			beatmapValue = clamp<float>(m_osu->getSelectedBeatmap()->getSelectedDifficulty2()->getCS()*m_osu->getCSDifficultyMultiplier(), 0.0f, 10.0f);
 			convarValue = m_osu->getSelectedBeatmap()->getCS();
 		}
 		else if (s.label->getName().find("AR") != -1)
@@ -1242,44 +1286,14 @@ UString OsuModSelector::getOverrideSliderLabelText(OsuModSelector::OVERRIDE_SLID
 		}
 		else if (s.label->getName().find("HP") != -1)
 		{
-			beatmapValue = clamp<float>(m_osu->getSelectedBeatmap()->getSelectedDifficulty()->HP*m_osu->getDifficultyMultiplier(), 0.0f, 10.0f);
+			beatmapValue = clamp<float>(m_osu->getSelectedBeatmap()->getSelectedDifficulty2()->getHP()*m_osu->getDifficultyMultiplier(), 0.0f, 10.0f);
 			convarValue = m_osu->getSelectedBeatmap()->getHP();
-		}
-		else if (s.label->getName().find("BPM") != -1)
-		{
-			/*
-			wasBPMslider = true;
-
-			int minBPM = m_osu->getSelectedBeatmap()->getSelectedDifficulty()->minBPM;
-			int maxBPM = m_osu->getSelectedBeatmap()->getSelectedDifficulty()->maxBPM;
-			int newMinBPM = minBPM * m_osu->getSpeedMultiplier();
-			int newMaxBPM = maxBPM * m_osu->getSpeedMultiplier();
-			if (!active)
-			{
-				if (minBPM == maxBPM)
-					newLabelText.append(UString::format(" %i", newMaxBPM));
-				else
-					newLabelText.append(UString::format(" %i-%i", newMinBPM, newMaxBPM));
-			}
-			else
-			{
-				if (m_osu->getSpeedMultiplier() == 1.0f)
-					newLabelText.append(UString::format(" %i", newMaxBPM));
-				else
-				{
-					if (minBPM == maxBPM)
-						newLabelText.append(UString::format(" %i  ->  %i", maxBPM, newMaxBPM));
-					else
-						newLabelText.append(UString::format(" %i-%i  ->  %i-%i", minBPM, maxBPM,  newMinBPM, newMaxBPM));
-				}
-			}
-			*/
 		}
 		else if (s.desc->getText().find("Speed") != -1)
 		{
 			beatmapValue = active ? m_osu->getRawSpeedMultiplier() : m_osu->getSpeedMultiplier();
 
-			wasBPMslider = true;
+			wasSpeedSlider = true;
 			{
 				{
 					if (!active)
@@ -1290,8 +1304,8 @@ UString OsuModSelector::getOverrideSliderLabelText(OsuModSelector::OVERRIDE_SLID
 
 				newLabelText.append("  (BPM: ");
 
-				int minBPM = m_osu->getSelectedBeatmap()->getSelectedDifficulty()->minBPM;
-				int maxBPM = m_osu->getSelectedBeatmap()->getSelectedDifficulty()->maxBPM;
+				int minBPM = m_osu->getSelectedBeatmap()->getSelectedDifficulty2()->getMinBPM();
+				int maxBPM = m_osu->getSelectedBeatmap()->getSelectedDifficulty2()->getMaxBPM();
 				int newMinBPM = minBPM * m_osu->getSpeedMultiplier();
 				int newMaxBPM = maxBPM * m_osu->getSpeedMultiplier();
 				if (!active)
@@ -1318,7 +1332,7 @@ UString OsuModSelector::getOverrideSliderLabelText(OsuModSelector::OVERRIDE_SLID
 			}
 		}
 
-		// always round beatmapValue to 1 decimal digit, except for the speed slider, and except for non-1.0x speed multipliers
+		// always round beatmapValue to 1 decimal digit, except for the speed slider, and except for non-1.0x speed multipliers, and except for non-1.0x difficulty multipliers
 		// HACKHACK: dirty
 		if (s.desc->getText().find("Speed") == -1)
 		{
@@ -1329,7 +1343,7 @@ UString OsuModSelector::getOverrideSliderLabelText(OsuModSelector::OVERRIDE_SLID
 		}
 
 		// update label
-		if (!wasBPMslider)
+		if (!wasSpeedSlider)
 		{
 			if (!active)
 				newLabelText.append(UString::format(" %.4g", beatmapValue));
@@ -1339,35 +1353,6 @@ UString OsuModSelector::getOverrideSliderLabelText(OsuModSelector::OVERRIDE_SLID
 	}
 
 	return newLabelText;
-}
-
-void OsuModSelector::checkUpdateBPMSliderSlaves()
-{
-	// only force OD/AR slider constant update if diff changed
-	/*
-	if (m_osu->getSelectedBeatmap() != NULL && m_osu->getSelectedBeatmap()->getSelectedDifficulty() != NULL)
-	{
-		OsuBeatmapDifficulty *diff = m_osu->getSelectedBeatmap()->getSelectedDifficulty();
-		if (diff != m_previousDifficulty)
-		{
-			m_previousDifficulty = diff;
-
-			for (int i=0; i<m_overrideSliders.size(); i++)
-			{
-				if (m_overrideSliders[i].slider == m_BPMSlider)
-				{
-					float sliderValue = m_overrideSliders[i].slider->getFloat()-1.0f;
-					sliderValue = std::floor(sliderValue * 100) / 100.0f;
-
-					if (sliderValue >= 0.0f) // force constant AR/OD recalculation if bpm slider is active and we have changed diffs/maps
-						onOverrideSliderChange(m_overrideSliders[i].slider);
-
-					break;
-				}
-			}
-		}
-	}
-	*/
 }
 
 void OsuModSelector::enableAuto()

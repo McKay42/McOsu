@@ -40,6 +40,8 @@ OsuSliderCurve *OsuSliderCurve::createCurve(char osuSliderCurveType, std::vector
 		norb.x = -norb.y;
 		norb.y = temp;
 
+		// TODO: to properly support all aspire sliders (e.g. Ping), need to use osu circular arc calc + subdivide line segments if they are too big
+
 		if (std::abs(norb.x * nora.y - norb.y * nora.x) < 0.00001f)
 			return new OsuSliderCurveLinearBezier(controlPoints, pixelLength, false, curvePointsSeparation); // vectors parallel, use linear bezier instead
 		else

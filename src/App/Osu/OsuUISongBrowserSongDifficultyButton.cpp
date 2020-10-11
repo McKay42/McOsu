@@ -9,13 +9,14 @@
 
 #include "Engine.h"
 #include "ResourceManager.h"
+#include "AnimationHandler.h"
 #include "ConVar.h"
 
 #include "Osu.h"
 #include "OsuSkin.h"
-#include "OsuBeatmap.h"
-#include "OsuBeatmapDifficulty.h"
+#include "OsuDatabaseBeatmap.h"
 #include "OsuSongBrowser2.h"
+#include "OsuBackgroundImageHandler.h"
 #include "OsuDatabase.h"
 #include "OsuReplay.h"
 
@@ -27,17 +28,14 @@
 #include "OpenGLES2Interface.h"
 
 ConVar *OsuUISongBrowserSongDifficultyButton::m_osu_scores_enabled = NULL;
-OsuUISongBrowserSongDifficultyButton *OsuUISongBrowserSongDifficultyButton::previousButton = NULL;
 
-OsuUISongBrowserSongDifficultyButton::OsuUISongBrowserSongDifficultyButton(Osu *osu, OsuSongBrowser2 *songBrowser, CBaseUIScrollView *view, float xPos, float yPos, float xSize, float ySize, UString name, OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff) : OsuUISongBrowserSongButton(osu, songBrowser, view, xPos, yPos, xSize, ySize, name, NULL)
+OsuUISongBrowserSongDifficultyButton::OsuUISongBrowserSongDifficultyButton(Osu *osu, OsuSongBrowser2 *songBrowser, CBaseUIScrollView *view, OsuUIContextMenu *contextMenu, float xPos, float yPos, float xSize, float ySize, UString name, OsuDatabaseBeatmap *diff2, OsuUISongBrowserSongButton *parentSongButton) : OsuUISongBrowserSongButton(osu, songBrowser, view, contextMenu, xPos, yPos, xSize, ySize, name, NULL)
 {
-	m_beatmap = beatmap;
-	m_diff = diff;
+	m_databaseBeatmap = diff2; // NOTE: can't use parent constructor for passing this argument, as it would otherwise try to build a full button (and not just a diff button)
+	m_parentSongButton = parentSongButton;
 
 	if (m_osu_scores_enabled == NULL)
 		m_osu_scores_enabled = convar->getConVarByName("osu_scores_enabled");
-
-	previousButton = NULL; // reset
 
 	/*
 	m_sTitle = "Title";
@@ -46,19 +44,26 @@ OsuUISongBrowserSongDifficultyButton::OsuUISongBrowserSongDifficultyButton(Osu *
 	m_sDiff = "Difficulty";
 	*/
 
-	m_sTitle = m_diff->title;
-	m_sArtist = m_diff->artist;
-	m_sMapper = m_diff->creator;
-	m_sDiff = m_diff->name;
+	m_sTitle = m_databaseBeatmap->getTitle();
+	m_sArtist = m_databaseBeatmap->getArtist();
+	m_sMapper = m_databaseBeatmap->getCreator();
+	m_sDiff = m_databaseBeatmap->getDifficultyName();
 
 	m_fDiffScale = 0.18f;
+	m_fOffsetPercentAnim = (m_parentSongButton != NULL ? 1.0f : 0.0f);
+
+	m_bUpdateGradeScheduled = true;
+	m_bPrevOffsetPercentSelectionState = isIndependentDiffButton();
 
 	// settings
 	setHideIfSelected(false);
-	setOffsetPercent(0.075f);
-	setInactiveBackgroundColor(COLOR(255, 0, 150, 236));
 
 	updateLayoutEx();
+}
+
+OsuUISongBrowserSongDifficultyButton::~OsuUISongBrowserSongDifficultyButton()
+{
+	anim->deleteExistingAnimation(&m_fOffsetPercentAnim);
 }
 
 void OsuUISongBrowserSongDifficultyButton::draw(Graphics *g)
@@ -66,19 +71,22 @@ void OsuUISongBrowserSongDifficultyButton::draw(Graphics *g)
 	OsuUISongBrowserButton::draw(g);
 	if (!m_bVisible) return;
 
+	const bool isIndependentDiff = isIndependentDiffButton();
+
 	OsuSkin *skin = m_osu->getSkin();
 
 	// scaling
 	const Vector2 pos = getActualPos();
 	const Vector2 size = getActualSize();
 
-	drawBeatmapBackgroundThumbnail(g, m_diff->backgroundImage);
+	// draw background image
+	drawBeatmapBackgroundThumbnail(g, m_osu->getBackgroundImageHandler()->getLoadBackgroundImage(m_databaseBeatmap));
 
 	if (m_bHasGrade)
 		drawGrade(g);
 
-	drawTitle(g, 0.2f);
-	drawSubTitle(g, 0.2f);
+	drawTitle(g, !isIndependentDiff ? 0.2f : 1.0f);
+	drawSubTitle(g, !isIndependentDiff ? 0.2f : 1.0f);
 
 	// draw diff name
 	const float titleScale = (size.y*m_fTitleScale) / m_font->getHeight();
@@ -94,7 +102,7 @@ void OsuUISongBrowserSongDifficultyButton::draw(Graphics *g)
 	g->popTransform();
 
 	// draw stars
-	const float starsNoMod = m_diff->starsNoMod;
+	const float starsNoMod = m_databaseBeatmap->getStarsNomod();
 	if (starsNoMod > 0)
 	{
 		const float starOffsetY = (size.y*0.85);
@@ -170,28 +178,38 @@ void OsuUISongBrowserSongDifficultyButton::draw(Graphics *g)
 	}
 }
 
-void OsuUISongBrowserSongDifficultyButton::onSelected(bool wasSelected)
+void OsuUISongBrowserSongDifficultyButton::update()
 {
-	if (!wasSelected)
-		m_beatmap->selectDifficulty(m_diff, false);
+	OsuUISongBrowserSongButton::update();
+	if (!m_bVisible) return;
 
-	m_songBrowser->onDifficultySelected(m_beatmap, m_diff, wasSelected);
-	m_songBrowser->scrollToSongButton(this);
-
-	// automatically deselect previous selection
-	if (m_osu->getInstanceID() < 2) // TODO: this leaks memory on slaves
+	// dynamic settings (moved from constructor to here)
+	const bool isIndependentDiff = isIndependentDiffButton();
+	const bool newOffsetPercentSelectionState = (m_bSelected || !isIndependentDiff);
+	if (newOffsetPercentSelectionState != m_bPrevOffsetPercentSelectionState)
 	{
-		if (previousButton != NULL && previousButton != this)
-			previousButton->deselect();
+		m_bPrevOffsetPercentSelectionState = newOffsetPercentSelectionState;
+		anim->moveQuadOut(&m_fOffsetPercentAnim, newOffsetPercentSelectionState ? 1.0f : 0.0f, 0.25f * (1.0f - m_fOffsetPercentAnim), true);
+	}
+	setOffsetPercent(lerp<float>(0.0f, 0.075f, m_fOffsetPercentAnim));
+	setInactiveBackgroundColor(!isIndependentDiff ? COLOR(255, 0, 150, 236) : COLOR(240, 235, 73, 153));
 
-		previousButton = this;
+	if (m_bUpdateGradeScheduled)
+	{
+		m_bUpdateGradeScheduled = false;
+		updateGrade();
 	}
 }
 
-void OsuUISongBrowserSongDifficultyButton::onDeselected()
+void OsuUISongBrowserSongDifficultyButton::onSelected(bool wasSelected)
 {
-	// since unselected elements will NOT get a setVisible(false) event by the scrollview, we have to manually hide them if unselected
-	setVisible(false); // this also unloads the thumbnail
+	OsuUISongBrowserButton::onSelected(wasSelected);
+
+	updateGrade();
+
+	m_songBrowser->onSelectionChange(this, true);
+	m_songBrowser->onDifficultySelected(m_databaseBeatmap, wasSelected);
+	m_songBrowser->scrollToSongButton(this);
 }
 
 void OsuUISongBrowserSongDifficultyButton::updateGrade()
@@ -205,33 +223,10 @@ void OsuUISongBrowserSongDifficultyButton::updateGrade()
 	bool hasGrade = false;
 	OsuScore::GRADE grade;
 
-	// old
-	/*
-	unsigned long long highestScore = 0;
-	for (int i=0; i<(*m_osu->getSongBrowser()->getDatabase()->getScores())[m_diff->md5hash].size(); i++)
+	m_osu->getSongBrowser()->getDatabase()->sortScores(m_databaseBeatmap->getMD5Hash());
+	if ((*m_osu->getSongBrowser()->getDatabase()->getScores())[m_databaseBeatmap->getMD5Hash()].size() > 0)
 	{
-		const unsigned long long score = (*m_osu->getSongBrowser()->getDatabase()->getScores())[m_diff->md5hash][i].score;
-		const int num300s = (*m_osu->getSongBrowser()->getDatabase()->getScores())[m_diff->md5hash][i].num300s;
-		const int num100s = (*m_osu->getSongBrowser()->getDatabase()->getScores())[m_diff->md5hash][i].num100s;
-		const int num50s = (*m_osu->getSongBrowser()->getDatabase()->getScores())[m_diff->md5hash][i].num50s;
-		const int numMisses = (*m_osu->getSongBrowser()->getDatabase()->getScores())[m_diff->md5hash][i].numMisses;
-		const bool modHidden = (*m_osu->getSongBrowser()->getDatabase()->getScores())[m_diff->md5hash][i].modsLegacy & OsuReplay::Mods::Hidden;
-		const bool modFlashlight = (*m_osu->getSongBrowser()->getDatabase()->getScores())[m_diff->md5hash][i].modsLegacy & OsuReplay::Mods::Flashlight;
-
-		if (score > highestScore)
-		{
-			highestScore = score;
-			hasGrade = true;
-			grade = OsuScore::calculateGrade(num300s, num100s, num50s, numMisses, modHidden, modFlashlight);
-		}
-	}
-	*/
-
-	// new
-	m_osu->getSongBrowser()->getDatabase()->sortScores(m_diff->md5hash);
-	if ((*m_osu->getSongBrowser()->getDatabase()->getScores())[m_diff->md5hash].size() > 0)
-	{
-		const OsuDatabase::Score &score = (*m_osu->getSongBrowser()->getDatabase()->getScores())[m_diff->md5hash][0];
+		const OsuDatabase::Score &score = (*m_osu->getSongBrowser()->getDatabase()->getScores())[m_databaseBeatmap->getMD5Hash()][0];
 		hasGrade = true;
 		grade = OsuScore::calculateGrade(score.num300s, score.num100s, score.num50s, score.numMisses, score.modsLegacy & OsuReplay::Mods::Hidden, score.modsLegacy & OsuReplay::Mods::Flashlight);
 	}
@@ -239,4 +234,9 @@ void OsuUISongBrowserSongDifficultyButton::updateGrade()
 	m_bHasGrade = hasGrade;
 	if (m_bHasGrade)
 		m_grade = grade;
+}
+
+bool OsuUISongBrowserSongDifficultyButton::isIndependentDiffButton() const
+{
+	return (m_parentSongButton == NULL || !m_parentSongButton->isSelected());
 }

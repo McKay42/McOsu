@@ -104,6 +104,7 @@ protected:
 	bool m_bOverrideHDApproachCircle;
 	bool m_bMisAim;
 	long m_iAutopilotDelta;
+	bool m_bUseFadeInTimeAsApproachTime;
 
 private:
 	static unsigned long long sortHackCounter;

@@ -243,6 +243,7 @@ OsuHitObject::OsuHitObject(long time, int sampleType, int comboNumber, bool isEn
 	m_bMisAim = false;
 	m_iAutopilotDelta = 0;
 	m_bOverrideHDApproachCircle = false;
+	m_bUseFadeInTimeAsApproachTime = false;
 
 	m_iStack = 0;
 
@@ -291,7 +292,7 @@ void OsuHitObject::update(long curPos)
 {
 	m_fAlphaForApproachCircle = 0.0f;
 
-	m_iApproachTime = (long)OsuGameRules::getApproachTime(m_beatmap);
+	m_iApproachTime = (m_bUseFadeInTimeAsApproachTime ? OsuGameRules::getFadeInTime() : (long)OsuGameRules::getApproachTime(m_beatmap));
 	m_iFadeInTime = OsuGameRules::getFadeInTime();
 
 	m_iDelta = m_iTime - curPos;

@@ -13,7 +13,6 @@
 class Osu;
 class OsuSkinImage;
 class OsuSongBrowser;
-class OsuBeatmapDifficulty;
 
 class CBaseUIElement;
 class CBaseUIContainer;
@@ -44,7 +43,6 @@ public:
 
 	virtual void setVisible(bool visible);
 
-	void checkUpdateBPMSliderSlaves();
 	void enableAuto();
 	void toggleAuto();
 
@@ -53,6 +51,7 @@ public:
 	bool isInCompactMode();
 	bool isCSOverrideSliderActive();
 	bool isMouseInScrollView();
+	bool isMouseInside();
 
 	void updateModConVar();
 
@@ -120,17 +119,17 @@ private:
 
 	bool m_bWaitForCSChangeFinished;
 	bool m_bWaitForSpeedChangeFinished;
+	bool m_bWaitForHPChangeFinished;
 
 	// override sliders
 	std::vector<OVERRIDE_SLIDER> m_overrideSliders;
 	CBaseUISlider *m_CSSlider;
 	CBaseUISlider *m_ARSlider;
 	CBaseUISlider *m_ODSlider;
-	CBaseUISlider *m_BPMSlider;
+	CBaseUISlider *m_HPSlider;
 	CBaseUISlider *m_speedSlider;
 	CBaseUICheckbox *m_ARLock;
 	CBaseUICheckbox *m_ODLock;
-	OsuBeatmapDifficulty *m_previousDifficulty;
 	bool m_bShowOverrideSliderALTHint;
 
 	// mod grid buttons

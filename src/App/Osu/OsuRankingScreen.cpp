@@ -23,10 +23,10 @@
 #include "Osu.h"
 #include "OsuSkin.h"
 #include "OsuSkinImage.h"
+#include "OsuBackgroundImageHandler.h"
 #include "OsuIcons.h"
 #include "OsuScore.h"
 #include "OsuBeatmap.h"
-#include "OsuBeatmapDifficulty.h"
 #include "OsuOptionsMenu.h"
 #include "OsuSongBrowser2.h"
 #include "OsuTooltipOverlay.h"
@@ -422,6 +422,9 @@ void OsuRankingScreen::update()
 	if (m_osu->getOptionsMenu()->isMouseInside())
 		engine->getMouse()->resetWheelDelta();
 
+	// keep loaded background images while ranking screen is active
+	m_osu->getBackgroundImageHandler()->scheduleFreezeCache();
+
 	// update and focus handling
 	m_container->update();
 
@@ -612,9 +615,9 @@ void OsuRankingScreen::setScore(OsuDatabase::Score score, UString dateTime)
 	}
 }
 
-void OsuRankingScreen::setBeatmapInfo(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff)
+void OsuRankingScreen::setBeatmapInfo(OsuBeatmap *beatmap, OsuDatabaseBeatmap *diff2)
 {
-	m_songInfo->setFromBeatmap(beatmap, diff);
+	m_songInfo->setFromBeatmap(beatmap, diff2);
 	m_songInfo->setPlayer(m_bIsUnranked ? "McOsu" : convar->getConVarByName("name")->getString());
 
 	// round all here to 2 decimal places

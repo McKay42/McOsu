@@ -26,7 +26,7 @@ public:
 	OsuFile(UString filepath, bool write = false);
 	virtual ~OsuFile();
 
-	inline bool isReady() {return m_bReady;}
+	inline bool isReady() const {return m_bReady;}
 
 	void write();
 

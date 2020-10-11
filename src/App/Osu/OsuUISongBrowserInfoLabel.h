@@ -14,7 +14,7 @@ class McFont;
 
 class Osu;
 class OsuBeatmap;
-class OsuBeatmapDifficulty;
+class OsuDatabaseBeatmap;
 
 class OsuUISongBrowserInfoLabel : public CBaseUIButton
 {
@@ -24,7 +24,7 @@ public:
 	void draw(Graphics *g);
 	void update();
 
-	void setFromBeatmap(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff);
+	void setFromBeatmap(OsuBeatmap *beatmap, OsuDatabaseBeatmap *diff2);
 	void setFromMissingBeatmap(long beatmapId);
 
 	void setArtist(UString artist) {m_sArtist = artist;}

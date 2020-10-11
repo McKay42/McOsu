@@ -38,7 +38,6 @@ ConVar osu_mod_random_spinner_offset_x_percent("osu_mod_random_spinner_offset_x_
 ConVar osu_mod_random_spinner_offset_y_percent("osu_mod_random_spinner_offset_y_percent", 1.0f, "how much the randomness affects things");
 ConVar osu_mod_reverse_sliders("osu_mod_reverse_sliders", false);
 ConVar osu_show_approach_circle_on_first_hidden_object("osu_show_approach_circle_on_first_hidden_object", true);
-ConVar osu_load_beatmap_background_images("osu_load_beatmap_background_images", true);
 
 ConVar osu_stars_stacking("osu_stars_stacking", true, "respect hitobject stacking before calculating stars/pp");
 
@@ -59,73 +58,6 @@ public:
 		return clamp<int>((int)std::floor(position / localXDivisor), 0, availableColumns - 1);
 	}
 };
-
-
-
-class BackgroundImagePathLoader : public Resource
-{
-public:
-	BackgroundImagePathLoader(OsuBeatmapDifficulty *diff) : Resource()
-	{
-		m_diff = diff;
-
-		m_bAsyncReady = false;
-		m_bReady = false;
-
-		m_bDead = false;
-	};
-
-	void kill() {m_bDead = true;}
-
-protected:
-	virtual void init()
-	{
-		m_bReady = true; // this is up here on purpose
-		if (m_bDead) return;
-
-		if (m_diff->shouldBackgroundImageBeLoaded()) // check if we still really need to load the image (could have changed while loading the path)
-			m_diff->loadBackgroundImage(); // this immediately deletes us, which is allowed since the init() function is the last event and nothing happens after the call in here
-		else
-			m_diff->deleteBackgroundImagePathLoader(); // same here
-	}
-
-	virtual void initAsync()
-	{
-		if (m_bDead)
-		{
-			m_bAsyncReady = true;
-			return;
-		}
-
-		// HACKHACK: thread sync, see OsuSongBrowser2.cpp, see OsuBeatmap.cpp, wait until potential calculation going on is finished
-		while (m_diff->semaphore)
-		{
-			m_timer.sleep(10*1000);
-		}
-
-		if (OsuBeatmapDifficulty::m_osu_database_dynamic_star_calculation->getBool())
-		{
-			m_diff->semaphore = true;
-			{
-				m_diff->loadMetadataRaw(true); // for accurate stars
-			}
-			m_diff->semaphore = false;
-		}
-
-		m_diff->loadBackgroundImagePath();
-		m_bAsyncReady = true;
-	}
-
-	virtual void destroy() {;}
-
-private:
-	static Timer m_timer;
-
-	OsuBeatmapDifficulty *m_diff;
-	std::atomic<bool> m_bDead;
-};
-
-Timer BackgroundImagePathLoader::m_timer;
 
 
 
@@ -153,7 +85,6 @@ ConVar *OsuBeatmapDifficulty::m_osu_database_dynamic_star_calculation = NULL;
 ConVar *OsuBeatmapDifficulty::m_osu_slider_end_inside_check_offset = NULL;
 ConVar *OsuBeatmapDifficulty::m_osu_stars_xexxar_angles_sliders = NULL;
 ConVar *OsuBeatmapDifficulty::m_osu_slider_curve_max_length = NULL;
-unsigned long long OsuBeatmapDifficulty::sortHackCounter = 0;
 
 OsuBeatmapDifficulty::OsuBeatmapDifficulty(Osu *osu, UString filepath, UString folder)
 {
@@ -162,7 +93,6 @@ OsuBeatmapDifficulty::OsuBeatmapDifficulty(Osu *osu, UString filepath, UString f
 	loaded = false;
 	m_sFilePath = filepath;
 	m_sFolder = folder;
-	m_bShouldBackgroundImageBeLoaded = false;
 
 	// convar refs
 	if (m_osu_slider_scorev2 == NULL)
@@ -213,26 +143,12 @@ OsuBeatmapDifficulty::OsuBeatmapDifficulty(Osu *osu, UString filepath, UString f
 	starsWereCalculatedAccurately = false;
 	semaphore = false;
 
-	m_backgroundImagePathLoader = NULL;
-
 	m_iMaxCombo = 0;
 	m_fScoreV2ComboPortionMaximum = 1;
-
-	m_iSortHack = sortHackCounter++;
 }
 
 OsuBeatmapDifficulty::~OsuBeatmapDifficulty()
 {
-	if (m_backgroundImagePathLoader != NULL)
-	{
-		m_backgroundImagePathLoader->kill();
-
-		if (engine->getResourceManager()->isLoadingResource(m_backgroundImagePathLoader))
-			while (!m_backgroundImagePathLoader->isAsyncReady()) {;}
-
-		engine->getResourceManager()->destroyResource(m_backgroundImagePathLoader);
-	}
-
 	unloadBackgroundImage();
 }
 
@@ -1138,23 +1054,9 @@ bool OsuBeatmapDifficulty::loadRaw(OsuBeatmap *beatmap, std::vector<OsuHitObject
 
 void OsuBeatmapDifficulty::loadBackgroundImage()
 {
-	m_bShouldBackgroundImageBeLoaded = osu_load_beatmap_background_images.getBool();
+	//osu_load_beatmap_background_images.getBool();
 
-	if (m_backgroundImagePathLoader != NULL) // handle loader cleanup
-	{
-		if (m_backgroundImagePathLoader->isReady())
-			deleteBackgroundImagePathLoader();
-	}
-	else if (backgroundImageName.length() < 1 || (starsNoMod == 0.0f || !starsWereCalculatedAccurately)) // dynamically load background image path and star rating from osu file if it wasn't set by the database
-	{
-		m_backgroundImagePathLoader = new BackgroundImagePathLoader(this);
-		engine->getResourceManager()->requestNextLoadAsync();
-		engine->getResourceManager()->loadResource(m_backgroundImagePathLoader);
-
-		return; // we're done here
-	}
-
-	if (backgroundImage != NULL || backgroundImageName.length() < 1 || !osu_load_beatmap_background_images.getBool()) return;
+	if (backgroundImage != NULL || backgroundImageName.length() < 1 /*|| !osu_load_beatmap_background_images.getBool()*/) return;
 
 	UString fullBackgroundImageFilePath = m_sFolder;
 	fullBackgroundImageFilePath.append(backgroundImageName);
@@ -1170,8 +1072,6 @@ void OsuBeatmapDifficulty::loadBackgroundImage()
 
 void OsuBeatmapDifficulty::unloadBackgroundImage()
 {
-	m_bShouldBackgroundImageBeLoaded = false;
-
 	if (Osu::debug->getBool() && backgroundImage != NULL)
 		debugLog("Unloading %s\n", backgroundImage->getFilePath().toUtf8());
 
@@ -1230,16 +1130,6 @@ void OsuBeatmapDifficulty::loadBackgroundImagePath()
 				break;
 		}
 	}
-}
-
-bool OsuBeatmapDifficulty::isBackgroundLoaderActive()
-{
-	 return (m_backgroundImagePathLoader != NULL && !m_backgroundImagePathLoader->isReady());
-}
-
-void OsuBeatmapDifficulty::deleteBackgroundImagePathLoader()
-{
-	SAFE_DELETE(m_backgroundImagePathLoader);
 }
 
 void OsuBeatmapDifficulty::buildStandardHitObjects(OsuBeatmapStandard *beatmap, std::vector<OsuHitObject*> *hitobjects)
@@ -1590,36 +1480,6 @@ OsuBeatmapDifficulty::TIMING_INFO OsuBeatmapDifficulty::getTimingInfoForTime(uns
 
 
 	return ti;
-}
-
-unsigned long OsuBeatmapDifficulty::getBreakDurationTotal()
-{
-	unsigned long breakDurationTotal = 0;
-	for (int i=0; i<breaks.size(); i++)
-	{
-		breakDurationTotal += (unsigned long)(breaks[i].endTime - breaks[i].startTime);
-	}
-
-	return breakDurationTotal;
-}
-
-OsuBeatmapDifficulty::BREAK OsuBeatmapDifficulty::getBreakForTimeRange(long startMS, long positionMS, long endMS)
-{
-	BREAK curBreak;
-
-	curBreak.startTime = -1;
-	curBreak.endTime = -1;
-
-	for (int i=0; i<breaks.size(); i++)
-	{
-		if (breaks[i].startTime >= (int)startMS && breaks[i].endTime <= (int)endMS)
-		{
-			if ((int)positionMS >= curBreak.startTime)
-				curBreak = breaks[i];
-		}
-	}
-
-	return curBreak;
 }
 
 std::vector<std::shared_ptr<OsuDifficultyHitObject>> OsuBeatmapDifficulty::generateDifficultyHitObjectsForBeatmap(OsuBeatmap *beatmap, bool calculateStarsInaccurately)

@@ -19,11 +19,18 @@ class Osu;
 class OsuVR;
 class OsuSkin;
 class OsuHitObject;
-class OsuBeatmapDifficulty;
+
+class OsuDatabaseBeatmap;
 
 class OsuBeatmap
 {
 public:
+	struct BREAK
+	{
+		int startTime;
+		int endTime;
+	};
+
 	struct CLICK
 	{
 		long musicPos;
@@ -43,13 +50,10 @@ public:
 	virtual void onKeyDown(KeyboardEvent &e);
 	virtual void onKeyUp(KeyboardEvent &e);
 
-	virtual void onModUpdate() {;} // this should make all the necessary internal updates to hitobjects when legacy osu mods or static mods change live (but also on start)
-	virtual bool isLoading(); // allows subclasses to delay the playing start, e.g. to load something
+	virtual void onModUpdate() {;}	// this should make all the necessary internal updates to hitobjects when legacy osu mods or static mods change live (but also on start)
+	virtual bool isLoading();		// allows subclasses to delay the playing start, e.g. to load something
 
-	virtual long getPVS(); // Potentially Visible Set gate time size, for optimizing draw() and update() when iterating over all hitobjects
-
-	// database logic
-	void setDifficulties(std::vector<OsuBeatmapDifficulty*> diffs);
+	virtual long getPVS();			// Potentially Visible Set gate time size, for optimizing draw() and update() when iterating over all hitobjects
 
 	// callbacks called by the Osu class (osu!standard)
 	void skipEmptySection();
@@ -58,11 +62,10 @@ public:
 	void keyReleased1(bool mouse);
 	void keyReleased2(bool mouse);
 
-	// songbrowser logic
+	// songbrowser & player logic
 	void select(); // loads the music of the currently selected diff and starts playing from the previewTime (e.g. clicking on a beatmap)
-	void selectDifficulty(int index, bool deleteImage = true); // DEPRECATED deleteImage parameter
-	void selectDifficulty(OsuBeatmapDifficulty *difficulty, bool deleteImage = true); // DEPRECATED deleteImage parameter
-	void deselect(bool deleteImages = true); // stops + unloads the currently loaded music and deletes all hitobjects // DEPRECATED deleteImages parameter
+	void selectDifficulty2(OsuDatabaseBeatmap *difficulty2);
+	void deselect(); // stops + unloads the currently loaded music and deletes all hitobjects
 	bool play();
 	void restart(bool quick = false);
 	void pause(bool quitIfWaiting = true);
@@ -71,6 +74,10 @@ public:
 	void stop(bool quit = true);
 	void fail();
 	void cancelFailing();
+
+	// loader
+	void setMaxPossibleCombo(int maxPossibleCombo) {m_iMaxPossibleCombo = maxPossibleCombo;}
+	void setScoreV2ComboPortionMaximum(unsigned long long scoreV2ComboPortionMaximum) {m_iScoreV2ComboPortionMaximum = scoreV2ComboPortionMaximum;}
 
 	// music/sound
 	void setVolume(float volume);
@@ -81,61 +88,70 @@ public:
 	void seekMS(unsigned long ms);
 
 	inline Sound *getMusic() const {return m_music;}
-	unsigned long getTime();
-	unsigned long getStartTimePlayable();
-	unsigned long getLength();
-	unsigned long getLengthPlayable();
-	float getPercentFinished();
-	float getPercentFinishedPlayable();
+	unsigned long getTime() const;
+	unsigned long getStartTimePlayable() const;
+	unsigned long getLength() const;
+	unsigned long getLengthPlayable() const;
+	float getPercentFinished() const;
+	float getPercentFinishedPlayable() const;
 
 	// live statistics
-	int getBPM();
+	int getBPM() const;
 	float getSpeedMultiplier() const;
-	inline int getNPS() {return m_iNPS;}
-	inline int getND() {return m_iND;}
-	inline int getHitObjectIndexForCurrentTime() {return m_iCurrentHitObjectIndex;}
-	inline int getNumCirclesForCurrentTime() {return m_iCurrentNumCircles;}
+	inline int getNPS() const {return m_iNPS;}
+	inline int getND() const {return m_iND;}
+	inline int getHitObjectIndexForCurrentTime() const {return m_iCurrentHitObjectIndex;}
+	inline int getNumCirclesForCurrentTime() const {return m_iCurrentNumCircles;}
+	inline int getMaxPossibleCombo() const {return m_iMaxPossibleCombo;}
+	inline unsigned long long getScoreV2ComboPortionMaximum() const {return m_iScoreV2ComboPortionMaximum;}
+	inline double getAimStarsForUpToHitObjectIndex(int upToHitObjectIndex) const {return (m_aimStarsForNumHitObjects.size() > 0 ? m_aimStarsForNumHitObjects[clamp<int>(upToHitObjectIndex, 0, m_aimStarsForNumHitObjects.size()-1)] : 0);}
+	inline double getSpeedStarsForUpToHitObjectIndex(int upToHitObjectIndex) const {return (m_speedStarsForNumHitObjects.size() > 0 ? m_speedStarsForNumHitObjects[clamp<int>(upToHitObjectIndex, 0, m_speedStarsForNumHitObjects.size()-1)] : 0);}
 
 	// used by OsuHitObject children and OsuModSelector
 	inline Osu *getOsu() const {return m_osu;}
-	OsuSkin *getSkin(); // maybe use this for beatmap skins, maybe
+	OsuSkin *getSkin() const; // maybe use this for beatmap skins, maybe
+
 	inline long getCurMusicPos() const {return m_iCurMusicPos;}
 	inline long getCurMusicPosWithOffsets() const {return m_iCurMusicPosWithOffsets;}
 
-	float getRawAR();
-	float getAR();
-	float getCS();
-	float getHP();
-	float getRawOD();
-	float getOD();
+	float getRawAR() const;
+	float getAR() const;
+	float getCS() const;
+	float getHP() const;
+	float getRawOD() const;
+	float getOD() const;
 
 	// health
-	inline double getHealth() {return m_fHealth;}
-	inline bool hasFailed() {return m_bFailed;}
-	inline double getHPMultiplierNormal() {return m_fHpMultiplierNormal;}
-	inline double getHPMultiplierComboEnd() {return m_fHpMultiplierComboEnd;}
+	inline double getHealth() const {return m_fHealth;}
+	inline bool hasFailed() const {return m_bFailed;}
+	inline double getHPMultiplierNormal() const {return m_fHpMultiplierNormal;}
+	inline double getHPMultiplierComboEnd() const {return m_fHpMultiplierComboEnd;}
 
-	// generic
-	inline OsuBeatmapDifficulty *getSelectedDifficulty() {return m_selectedDifficulty;}
-	inline const std::vector<OsuBeatmapDifficulty*> &getDifficulties() {return m_difficulties;}
+	// database (legacy)
+	inline OsuDatabaseBeatmap *getSelectedDifficulty2() const {return m_selectedDifficulty2;}
 
-	inline bool isPlaying() {return m_bIsPlaying;}
-	inline bool isPaused() {return m_bIsPaused;}
-	inline bool isRestartScheduled() {return m_bIsRestartScheduled;}
-	inline bool isContinueScheduled() {return m_bContinueScheduled;}
-	inline bool isWaiting() {return m_bIsWaiting;}
-	inline bool isInSkippableSection() {return m_bIsInSkippableSection;}
-	inline bool isInBreak() {return m_bInBreak;}
-	inline bool shouldFlashWarningArrows() {return m_bShouldFlashWarningArrows;}
-	inline float shouldFlashSectionPass() {return m_fShouldFlashSectionPass;}
-	inline float shouldFlashSectionFail() {return m_fShouldFlashSectionFail;}
-	bool isClickHeld(); // is any key currently being held down
-	inline bool isKey1Down() {return m_bClick1Held;}
-	inline bool isKey2Down() {return m_bClick2Held;}
-	inline bool isLastKeyDownKey1() {return m_bPrevKeyWasKey1;}
+	// generic state
+	inline bool isPlaying() const {return m_bIsPlaying;}
+	inline bool isPaused() const {return m_bIsPaused;}
+	inline bool isRestartScheduled() const {return m_bIsRestartScheduled;}
+	inline bool isContinueScheduled() const {return m_bContinueScheduled;}
+	inline bool isWaiting() const {return m_bIsWaiting;}
+	inline bool isInSkippableSection() const {return m_bIsInSkippableSection;}
+	inline bool isInBreak() const {return m_bInBreak;}
+	inline bool shouldFlashWarningArrows() const {return m_bShouldFlashWarningArrows;}
+	inline float shouldFlashSectionPass() const {return m_fShouldFlashSectionPass;}
+	inline float shouldFlashSectionFail() const {return m_fShouldFlashSectionFail;}
+	bool isClickHeld() const; // is any key currently being held down
+	inline bool isKey1Down() const {return m_bClick1Held;}
+	inline bool isKey2Down() const {return m_bClick2Held;}
+	inline bool isLastKeyDownKey1() const {return m_bPrevKeyWasKey1;}
 
-	UString getTitle();
-	UString getArtist();
+	UString getTitle() const;
+	UString getArtist() const;
+
+	inline const std::vector<BREAK> &getBreaks() const {return m_breaks;}
+	unsigned long getBreakDurationTotal() const;
+	BREAK getBreakForTimeRange(long startMS, long positionMS, long endMS) const;
 
 	// OsuHitObject and other helper functions
 	OsuScore::HIT addHitResult(OsuHitObject *hitObject, OsuScore::HIT hit, long delta, bool isEndOfCombo = false, bool ignoreOnHitErrorBar = false, bool hitErrorBarOnly = false, bool ignoreCombo = false, bool ignoreScore = false, bool ignoreHealth = false);
@@ -145,7 +161,7 @@ public:
 	void updateTimingPoints(long curPos);
 
 	// ILLEGAL:
-	inline const std::vector<OsuHitObject*> &getHitObjectsPointer() {return m_hitobjects;}
+	inline const std::vector<OsuHitObject*> &getHitObjectsPointer() const {return m_hitobjects;}
 	inline float getBreakBackgroundFadeAnim() const {return m_fBreakBackgroundFade;}
 
 protected:
@@ -167,11 +183,11 @@ protected:
 	static ConVar *m_osu_volume_music_ref;
 
 	// overridable child events
-	virtual void onBeforeLoad() {;} // called before hitobjects are loaded
-	virtual void onLoad() {;} // called after hitobjects have been loaded
-	virtual void onPlayStart() {;} // called when the player starts playing (everything has been loaded, including the music)
+	virtual void onBeforeLoad() {;}			 // called before hitobjects are loaded
+	virtual void onLoad() {;}				 // called after hitobjects have been loaded
+	virtual void onPlayStart() {;}			 // called when the player starts playing (everything has been loaded, including the music)
 	virtual void onBeforeStop(bool quit) {;} // called before hitobjects are unloaded (quit = don't display ranking screen)
-	virtual void onStop(bool quit) {;} // called after hitobjects have been unloaded, but before Osu::onPlayEnd() (quit = don't display ranking screen)
+	virtual void onStop(bool quit) {;}		 // called after hitobjects have been unloaded, but before Osu::onPlayEnd() (quit = don't display ranking screen)
 	virtual void onPaused(bool first) {;}
 	virtual void onUnpaused() {;}
 	virtual void onRestart(bool quick) {;}
@@ -185,7 +201,6 @@ protected:
 	void handlePreviewPlay();
 	void loadMusic(bool stream = true, bool prescan = false);
 	void unloadMusic();
-	void unloadDiffs();
 	void unloadHitObjects();
 
 	void resetHitObjects(long curPos = 0);
@@ -197,7 +212,7 @@ protected:
 
 	Osu *m_osu;
 
-	// beatmap
+	// beatmap state
 	bool m_bIsPlaying;
 	bool m_bIsPaused;
 	bool m_bIsWaiting;
@@ -208,13 +223,12 @@ protected:
 	bool m_bShouldFlashWarningArrows;
 	float m_fShouldFlashSectionPass;
 	float m_fShouldFlashSectionFail;
-	int m_iSelectedDifficulty;
-	float m_fWaitTime;
 	bool m_bContinueScheduled;
 	unsigned long m_iContinueMusicPos;
+	float m_fWaitTime;
 
-	std::vector<OsuBeatmapDifficulty*> m_difficulties;
-	OsuBeatmapDifficulty *m_selectedDifficulty;
+	// database
+	OsuDatabaseBeatmap *m_selectedDifficulty2;
 
 	// sound
 	Sound *m_music;
@@ -240,6 +254,7 @@ protected:
 	double m_fHpMultiplierComboEnd;
 
 	// breaks
+	std::vector<BREAK> m_breaks;
 	float m_fBreakBackgroundFade;
 	bool m_bInBreak;
 	OsuHitObject *m_currentHitObject;
@@ -247,7 +262,7 @@ protected:
 	long m_iPreviousHitObjectTime;
 	long m_iPreviousSectionPassFailTime;
 
-	// player
+	// player input
 	bool m_bClick1Held;
 	bool m_bClick2Held;
 	bool m_bClickedContinue;
@@ -266,6 +281,10 @@ protected:
 	int m_iND;
 	int m_iCurrentHitObjectIndex;
 	int m_iCurrentNumCircles;
+	int m_iMaxPossibleCombo;
+	unsigned long long m_iScoreV2ComboPortionMaximum;
+	std::vector<double> m_aimStarsForNumHitObjects;
+	std::vector<double> m_speedStarsForNumHitObjects;
 
 	// custom
 	int m_iPreviousFollowPointObjectIndex; // TODO: this shouldn't be in this class

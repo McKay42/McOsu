@@ -13,8 +13,8 @@
 #include "Osu.h"
 #include "OsuMultiplayer.h"
 #include "OsuBeatmap.h"
+#include "OsuDatabaseBeatmap.h"
 #include "OsuBeatmapStandard.h"
-#include "OsuBeatmapDifficulty.h"
 #include "OsuDifficultyCalculator.h"
 #include "OsuHUD.h"
 #include "OsuGameRules.h"
@@ -174,9 +174,9 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignor
 	}
 
 	// add hitValue to score, recalculate score v1
-	const unsigned long breakTimeMS = beatmap->getSelectedDifficulty()->getBreakDurationTotal();
+	const unsigned long breakTimeMS = beatmap->getBreakDurationTotal();
 	const unsigned long drainLength = std::max(beatmap->getLengthPlayable() - std::min(breakTimeMS, beatmap->getLengthPlayable()), (unsigned long)1000) / 1000;
-	const int difficultyMultiplier = (int)std::round((beatmap->getSelectedDifficulty()->CS + beatmap->getSelectedDifficulty()->HP + beatmap->getSelectedDifficulty()->OD + clamp<float>((float)beatmap->getSelectedDifficulty()->numObjects / (float)drainLength * 8.0f, 0.0f, 16.0f)) / 38.0f * 5.0f);
+	const int difficultyMultiplier = (int)std::round((beatmap->getSelectedDifficulty2()->getCS() + beatmap->getSelectedDifficulty2()->getHP() + beatmap->getSelectedDifficulty2()->getOD() + clamp<float>((float)beatmap->getSelectedDifficulty2()->getNumObjects() / (float)drainLength * 8.0f, 0.0f, 16.0f)) / 38.0f * 5.0f);
 	if (!ignoreScore)
 		m_iScoreV1 += hitValue + ((hitValue * (unsigned long long)((double)scoreComboMultiplier * (double)difficultyMultiplier * (double)m_osu->getScoreMultiplier())) / (unsigned long long)25);
 
@@ -196,14 +196,11 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignor
 	m_iScoreV2ComboPortion += (unsigned long long)((double)hitValue * (1.0 + (double)scoreComboMultiplier / 10.0));
 	if (m_osu->getModScorev2())
 	{
-		const int numHitObjects = beatmap->getSelectedDifficulty()->hitcircles.size() + beatmap->getSelectedDifficulty()->sliders.size() + beatmap->getSelectedDifficulty()->spinners.size();
+		const int numHitObjects = beatmap->getSelectedDifficulty2()->getNumObjects();
 		const double maximumAccurateHits = numHitObjects;
 
-		// TODO: this should also scale and respect all of these with combo: sliderticks 10, sliderend 30, sliderrepeats 30
-		// currently they are completely ignored (don't count towards score v2 score at all)
-
 		if (totalNumHits > 0)
-			m_iScoreV2 = (unsigned long long)(((double)m_iScoreV2ComboPortion / (double)beatmap->getSelectedDifficulty()->getScoreV2ComboPortionMaximum() * 700000.0 + std::pow((double)m_fAccuracy, 10.0) * ((double)totalNumHits / maximumAccurateHits) * 300000.0 + (double)m_iBonusPoints) * (double)m_osu->getScoreMultiplier());
+			m_iScoreV2 = (unsigned long long)(((double)m_iScoreV2ComboPortion / (double)beatmap->getScoreV2ComboPortionMaximum() * 700000.0 + std::pow((double)m_fAccuracy, 10.0) * ((double)totalNumHits / maximumAccurateHits) * 300000.0 + (double)m_iBonusPoints) * (double)m_osu->getScoreMultiplier());
 
 		///debugLog("%i / %i, combo = %ix\n", (int)m_iScoreV2ComboPortion, (int)beatmap->getSelectedDifficulty()->getScoreV2ComboPortionMaximum(), m_iCombo);
 	}
@@ -303,24 +300,24 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignor
 	if (m_osu_draw_statistics_pp_ref->getBool()) // sanity + performance
 	{
 		OsuBeatmapStandard *standardPointer = dynamic_cast<OsuBeatmapStandard*>(beatmap);
-		if (standardPointer != NULL && beatmap->getSelectedDifficulty() != NULL)
+		if (standardPointer != NULL && beatmap->getSelectedDifficulty2() != NULL)
 		{
 			double aimStars = standardPointer->getAimStars();
 			double speedStars = standardPointer->getSpeedStars();
 
 			//int numHitObjects = standardPointer->getNumHitObjects();
-			int maxPossibleCombo = beatmap->getSelectedDifficulty()->getMaxCombo();
-			int numCircles = beatmap->getSelectedDifficulty()->hitcircles.size();
+			int maxPossibleCombo = beatmap->getMaxPossibleCombo();
+			int numCircles = beatmap->getSelectedDifficulty2()->getNumCircles();
 
 			// real (simulate beatmap being cut off after current hit, thus changing aimStars and speedStars on every hit)
 			{
 				int curHitobjectIndex = beatmap->getHitObjectIndexForCurrentTime(); // current index of last hitobject to just finish at this time (e.g. if the first OsuCircle just finished and called addHitResult(), this would be 0)
 				maxPossibleCombo = m_iComboFull; // current maximum possible combo at this time
-				numCircles = clamp<int>(beatmap->getNumCirclesForCurrentTime() + 1, 0, beatmap->getSelectedDifficulty()->hitcircles.size()); // current maximum number of circles at this time (+1 because of 1 frame delay in update())
+				numCircles = clamp<int>(beatmap->getNumCirclesForCurrentTime() + 1, 0, beatmap->getSelectedDifficulty2()->getNumCircles()); // current maximum number of circles at this time (+1 because of 1 frame delay in update())
 
 				///beatmap->getSelectedDifficulty()->calculateStarDiff(beatmap, &aimStars, &speedStars, curHitobjectIndex); // recalculating this live costs too much time
-				aimStars = beatmap->getSelectedDifficulty()->getAimStarsForUpToHitObjectIndex(curHitobjectIndex);
-				speedStars = beatmap->getSelectedDifficulty()->getSpeedStarsForUpToHitObjectIndex(curHitobjectIndex);
+				aimStars = beatmap->getAimStarsForUpToHitObjectIndex(curHitobjectIndex);
+				speedStars = beatmap->getSpeedStarsForUpToHitObjectIndex(curHitobjectIndex);
 
 				m_fPPv2 = OsuDifficultyCalculator::calculatePPv2(m_osu, beatmap, aimStars, speedStars, -1, numCircles, maxPossibleCombo, m_iComboMax, m_iNumMisses, m_iNum300s, m_iNum100s, m_iNum50s);
 

@@ -26,7 +26,7 @@
 #include "OsuSkinImage.h"
 
 #include "OsuBeatmap.h"
-#include "OsuBeatmapDifficulty.h"
+#include "OsuDatabaseBeatmap.h"
 #include "OsuBeatmapStandard.h"
 #include "OsuBeatmapMania.h"
 
@@ -160,6 +160,7 @@ ConVar osu_draw_inputoverlay("osu_draw_inputoverlay", true);
 
 ConVar osu_draw_statistics_misses("osu_draw_statistics_misses", false);
 ConVar osu_draw_statistics_sliderbreaks("osu_draw_statistics_sliderbreaks", false);
+ConVar osu_draw_statistics_maxpossiblecombo("osu_draw_statistics_maxpossiblecombo", false);
 ConVar osu_draw_statistics_bpm("osu_draw_statistics_bpm", false);
 ConVar osu_draw_statistics_ar("osu_draw_statistics_ar", false);
 ConVar osu_draw_statistics_cs("osu_draw_statistics_cs", false);
@@ -303,8 +304,8 @@ void OsuHUD::draw(Graphics *g)
 		{
 			if (m_osu->isInMultiplayer())
 				drawScoreBoardMP(g);
-			else if (beatmap->getSelectedDifficulty() != NULL)
-				drawScoreBoard(g, beatmap->getSelectedDifficulty()->md5hash, m_osu->getScore());
+			else if (beatmap->getSelectedDifficulty2() != NULL)
+				drawScoreBoard(g, (std::string&)beatmap->getSelectedDifficulty2()->getMD5Hash(), m_osu->getScore());
 		}
 
 		if (beatmap->isInSkippableSection() && ((m_osu_skip_intro_enabled_ref->getBool() && beatmap->getHitObjectIndexForCurrentTime() < 1) || (m_osu_skip_breaks_enabled_ref->getBool() && beatmap->getHitObjectIndexForCurrentTime() > 0)))
@@ -318,6 +319,7 @@ void OsuHUD::draw(Graphics *g)
 			drawStatistics(g,
 					m_osu->getScore()->getNumMisses(),
 					m_osu->getScore()->getNumSliderBreaks(),
+					beatmap->getMaxPossibleCombo(),
 					beatmap->getBPM(),
 					OsuGameRules::getApproachRateForSpeedMultiplier(beatmap, beatmap->getSpeedMultiplier()),
 					beatmap->getCS(),
@@ -406,27 +408,26 @@ void OsuHUD::draw(Graphics *g)
 			const unsigned long startTimePlayableMS = beatmap->getStartTimePlayable();
 			const unsigned long endTimePlayableMS = startTimePlayableMS + lengthPlayableMS;
 
-			if (beatmap->getSelectedDifficulty() != NULL)
+			const std::vector<OsuBeatmap::BREAK> &beatmapBreaks = beatmap->getBreaks();
+
+			breaks.reserve(beatmapBreaks.size());
+
+			for (int i=0; i<beatmapBreaks.size(); i++)
 			{
-				breaks.reserve(beatmap->getSelectedDifficulty()->breaks.size());
+				const OsuBeatmap::BREAK &bk = beatmapBreaks[i];
 
-				for (int i=0; i<beatmap->getSelectedDifficulty()->breaks.size(); i++)
-				{
-					const OsuBeatmapDifficulty::BREAK &bk = beatmap->getSelectedDifficulty()->breaks[i];
+				// ignore breaks after last hitobject
+				if (/*bk.endTime <= (int)startTimePlayableMS ||*/ bk.startTime >= (int)(startTimePlayableMS + lengthPlayableMS))
+					continue;
 
-					// ignore breaks after last hitobject
-					if (/*bk.endTime <= (int)startTimePlayableMS ||*/ bk.startTime >= (int)(startTimePlayableMS + lengthPlayableMS))
-						continue;
+				BREAK bk2;
 
-					BREAK bk2;
+				bk2.startPercent = (float)(bk.startTime) / (float)(endTimePlayableMS);
+				bk2.endPercent = (float)(bk.endTime) / (float)(endTimePlayableMS);
 
-					bk2.startPercent = (float)(bk.startTime) / (float)(endTimePlayableMS);
-					bk2.endPercent = (float)(bk.endTime) / (float)(endTimePlayableMS);
+				//debugLog("%i: s = %f, e = %f\n", i, bk2.startPercent, bk2.endPercent);
 
-					//debugLog("%i: s = %f, e = %f\n", i, bk2.startPercent, bk2.endPercent);
-
-					breaks.push_back(bk2);
-				}
+				breaks.push_back(bk2);
 			}
 		}
 
@@ -536,16 +537,17 @@ void OsuHUD::update()
 	{
 		animateVolumeChange();
 
-		for (int i=0; i<m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer()->size(); i++)
+		const std::vector<CBaseUIElement*> &elements = m_volumeSliderOverlayContainer->getElements();
+		for (int i=0; i<elements.size(); i++)
 		{
-			if (((OsuUIVolumeSlider*)(*m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer())[i])->checkWentMouseInside())
+			if (((OsuUIVolumeSlider*)elements[i])->checkWentMouseInside())
 			{
-				for (int c=0; c<m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer()->size(); c++)
+				for (int c=0; c<elements.size(); c++)
 				{
 					if (c != i)
-						((OsuUIVolumeSlider*)(*m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer())[c])->setSelected(false);
+						((OsuUIVolumeSlider*)elements[c])->setSelected(false);
 				}
-				((OsuUIVolumeSlider*)(*m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer())[i])->setSelected(true);
+				((OsuUIVolumeSlider*)elements[i])->setSelected(true);
 			}
 		}
 	}
@@ -594,6 +596,7 @@ void OsuHUD::drawDummy(Graphics *g)
 	scoreEntry.score = 12345678;
 	scoreEntry.accuracy = 1.0f;
 	scoreEntry.missingBeatmap = false;
+	scoreEntry.downloadingBeatmap = false;
 	scoreEntry.dead = false;
 	scoreEntry.highlight = true;
 	if (osu_draw_scoreboard.getBool())
@@ -605,7 +608,7 @@ void OsuHUD::drawDummy(Graphics *g)
 
 	drawSkip(g);
 
-	drawStatistics(g, 0, 0, 180, 9.0f, 4.0f, 8.0f, 6.0f, 4, 6, 90.0f, 123, 25, -5, 15);
+	drawStatistics(g, 0, 0, 727, 180, 9.0f, 4.0f, 8.0f, 6.0f, 4, 6, 90.0f, 123, 25, -5, 15);
 
 	drawWarningArrows(g);
 
@@ -645,8 +648,8 @@ void OsuHUD::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 			{
 				if (m_osu->isInMultiplayer())
 					drawScoreBoardMP(g);
-				else if (beatmap->getSelectedDifficulty() != NULL)
-					drawScoreBoard(g, beatmap->getSelectedDifficulty()->md5hash, m_osu->getScore());
+				else if (beatmap->getSelectedDifficulty2() != NULL)
+					drawScoreBoard(g, (std::string&)beatmap->getSelectedDifficulty2()->getMD5Hash(), m_osu->getScore());
 			}
 
 			if (beatmap->isInSkippableSection() && ((m_osu_skip_intro_enabled_ref->getBool() && beatmap->getHitObjectIndexForCurrentTime() < 1) || (m_osu_skip_breaks_enabled_ref->getBool() && beatmap->getHitObjectIndexForCurrentTime() > 0)))
@@ -655,6 +658,7 @@ void OsuHUD::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 			drawStatistics(g,
 					m_osu->getScore()->getNumMisses(),
 					m_osu->getScore()->getNumSliderBreaks(),
+					beatmap->getMaxPossibleCombo(),
 					beatmap->getBPM(),
 					OsuGameRules::getApproachRateForSpeedMultiplier(beatmap, beatmap->getSpeedMultiplier()),
 					beatmap->getCS(),
@@ -712,6 +716,7 @@ void OsuHUD::drawVRDummy(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 		scoreEntry.score = 12345678;
 		scoreEntry.accuracy = 1.0f;
 		scoreEntry.missingBeatmap = false;
+		scoreEntry.downloadingBeatmap = false;
 		scoreEntry.dead = false;
 		scoreEntry.highlight = true;
 		if (osu_draw_scoreboard.getBool())
@@ -723,7 +728,7 @@ void OsuHUD::drawVRDummy(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 
 		drawSkip(g);
 
-		drawStatistics(g, 0, 0, 180, 9.0f, 4.0f, 8.0f, 6.0f, 4, 6, 90.0f, 123, 25, -5, 15);
+		drawStatistics(g, 0, 0, 727, 180, 9.0f, 4.0f, 8.0f, 6.0f, 4, 6, 90.0f, 123, 25, -5, 15);
 
 		if (osu_draw_score.getBool())
 			drawScore(g, scoreEntry.score);
@@ -1708,6 +1713,7 @@ void OsuHUD::drawScoreBoard(Graphics *g, std::string &beatmapMD5Hash, OsuScore *
 		scoreEntry.accuracy = OsuScore::calculateAccuracy((*scores)[i].num300s, (*scores)[i].num100s, (*scores)[i].num50s, (*scores)[i].numMisses);
 
 		scoreEntry.missingBeatmap = false;
+		scoreEntry.downloadingBeatmap = false;
 		scoreEntry.dead = false;
 		scoreEntry.highlight = false;
 
@@ -1739,6 +1745,7 @@ void OsuHUD::drawScoreBoard(Graphics *g, std::string &beatmapMD5Hash, OsuScore *
 			}
 
 			currentScoreEntry.missingBeatmap = false;
+			currentScoreEntry.downloadingBeatmap = false;
 			currentScoreEntry.dead = currentScore->isDead();
 			currentScoreEntry.highlight = true;
 
@@ -1783,6 +1790,7 @@ void OsuHUD::drawScoreBoardMP(Graphics *g)
 		scoreEntry.accuracy = (*m_osu->getMultiplayer()->getPlayers())[i].accuracy;
 
 		scoreEntry.missingBeatmap = (*m_osu->getMultiplayer()->getPlayers())[i].missingBeatmap;
+		scoreEntry.downloadingBeatmap = (*m_osu->getMultiplayer()->getPlayers())[i].downloadingBeatmap;
 		scoreEntry.dead = (*m_osu->getMultiplayer()->getPlayers())[i].dead;
 		scoreEntry.highlight = ((*m_osu->getMultiplayer()->getPlayers())[i].id == engine->getNetworkHandler()->getLocalClientID());
 
@@ -1818,6 +1826,7 @@ void OsuHUD::drawScoreBoardInt(Graphics *g, const std::vector<OsuHUD::SCORE_ENTR
 	const Color nameScoreColor = 0xffaaaaaa;
 	const Color nameScoreColorHighlight = 0xffffffff;
 	const Color nameScoreColorTop = 0xffeeeeee;
+	const Color nameScoreColorDownloading = 0xffeeee00;
 	const Color nameScoreColorDead = 0xffee0000;
 
 	const Color comboAccuracyColor = 0xff5d9ca1;
@@ -1883,36 +1892,42 @@ void OsuHUD::drawScoreBoardInt(Graphics *g, const std::vector<OsuHUD::SCORE_ENTR
 		g->popTransform();
 
 		// draw name
+		const bool isDownloadingOrHasNoMap = (scoreEntries[i].downloadingBeatmap || scoreEntries[i].missingBeatmap);
 		const float nameScale = 0.315f;
-		g->pushTransform();
+		if (!isDownloadingOrHasNoMap)
 		{
-			const bool isInPlayModeAndAlsoNotInVR = m_osu->isInPlayMode() && !m_osu->isInVRMode();
-
-			if (isInPlayModeAndAlsoNotInVR)
-				g->pushClipRect(McRect(x, y, width - 2*padding, height));
-
-			UString nameString = scoreEntries[i].name;
-			if (scoreEntries[i].missingBeatmap)
-				nameString.append(" [no map]");
-
-			const float scale = (height / nameFont->getHeight())*nameScale;
-
-			g->scale(scale, scale);
-			g->translate(x + padding, y + padding + nameFont->getHeight()*scale);
-			if (drawTextShadow)
+			g->pushTransform();
 			{
-				g->translate(1, 1);
-				g->setColor(textShadowColor);
-				g->drawString(nameFont, nameString);
-				g->translate(-1, -1);
-			}
-			g->setColor((scoreEntries[i].dead || scoreEntries[i].missingBeatmap ? nameScoreColorDead : (scoreEntries[i].highlight ? nameScoreColorHighlight : (i == 0 ? nameScoreColorTop : nameScoreColor))));
-			g->drawString(nameFont, nameString);
+				const bool isInPlayModeAndAlsoNotInVR = m_osu->isInPlayMode() && !m_osu->isInVRMode();
 
-			if (isInPlayModeAndAlsoNotInVR)
-				g->popClipRect();
+				if (isInPlayModeAndAlsoNotInVR)
+					g->pushClipRect(McRect(x, y, width - 2*padding, height));
+
+				UString nameString = scoreEntries[i].name;
+				if (scoreEntries[i].downloadingBeatmap)
+					nameString.append(" [downloading]");
+				else if (scoreEntries[i].missingBeatmap)
+					nameString.append(" [no map]");
+
+				const float scale = (height / nameFont->getHeight())*nameScale;
+
+				g->scale(scale, scale);
+				g->translate(x + padding, y + padding + nameFont->getHeight()*scale);
+				if (drawTextShadow)
+				{
+					g->translate(1, 1);
+					g->setColor(textShadowColor);
+					g->drawString(nameFont, nameString);
+					g->translate(-1, -1);
+				}
+				g->setColor((scoreEntries[i].dead || scoreEntries[i].missingBeatmap ? (scoreEntries[i].downloadingBeatmap ? nameScoreColorDownloading : nameScoreColorDead) : (scoreEntries[i].highlight ? nameScoreColorHighlight : (i == 0 ? nameScoreColorTop : nameScoreColor))));
+				g->drawString(nameFont, nameString);
+
+				if (isInPlayModeAndAlsoNotInVR)
+					g->popClipRect();
+			}
+			g->popTransform();
 		}
-		g->popTransform();
 
 		// draw score
 		const float scoreScale = 0.26f;
@@ -1984,6 +1999,46 @@ void OsuHUD::drawScoreBoardInt(Graphics *g, const std::vector<OsuHUD::SCORE_ENTR
 			}
 			g->popTransform();
 		}
+
+
+
+		// HACKHACK: code duplication
+		if (isDownloadingOrHasNoMap)
+		{
+			g->pushTransform();
+			{
+				const bool isInPlayModeAndAlsoNotInVR = m_osu->isInPlayMode() && !m_osu->isInVRMode();
+
+				if (isInPlayModeAndAlsoNotInVR)
+					g->pushClipRect(McRect(x, y, width - 2*padding, height));
+
+				UString nameString = scoreEntries[i].name;
+				if (scoreEntries[i].downloadingBeatmap)
+					nameString.append(" [downloading]");
+				else if (scoreEntries[i].missingBeatmap)
+					nameString.append(" [no map]");
+
+				const float scale = (height / nameFont->getHeight())*nameScale;
+
+				g->scale(scale, scale);
+				g->translate(x + padding, y + padding + nameFont->getHeight()*scale);
+				if (drawTextShadow)
+				{
+					g->translate(1, 1);
+					g->setColor(textShadowColor);
+					g->drawString(nameFont, nameString);
+					g->translate(-1, -1);
+				}
+				g->setColor((scoreEntries[i].dead || scoreEntries[i].missingBeatmap ? (scoreEntries[i].downloadingBeatmap ? nameScoreColorDownloading : nameScoreColorDead) : (scoreEntries[i].highlight ? nameScoreColorHighlight : (i == 0 ? nameScoreColorTop : nameScoreColor))));
+				g->drawString(nameFont, nameString);
+
+				if (isInPlayModeAndAlsoNotInVR)
+					g->popClipRect();
+			}
+			g->popTransform();
+		}
+
+
 
 		if (m_osu->isInVRDraw())
 		{
@@ -2352,7 +2407,7 @@ void OsuHUD::drawProgressBarVR(Graphics *g, Matrix4 &mvp, OsuVR *vr, float perce
 	}
 }
 
-void OsuHUD::drawStatistics(Graphics *g, int misses, int sliderbreaks, int bpm, float ar, float cs, float od, float hp, int nps, int nd, int ur, float pp, float hitWindow300, int hitdeltaMin, int hitdeltaMax)
+void OsuHUD::drawStatistics(Graphics *g, int misses, int sliderbreaks, int maxPossibleCombo, int bpm, float ar, float cs, float od, float hp, int nps, int nd, int ur, float pp, float hitWindow300, int hitdeltaMin, int hitdeltaMax)
 {
 	g->pushTransform();
 	{
@@ -2374,7 +2429,12 @@ void OsuHUD::drawStatistics(Graphics *g, int misses, int sliderbreaks, int bpm, 
 		}
 		if (osu_draw_statistics_sliderbreaks.getBool())
 		{
-			drawStatisticText(g, UString::format("SBreak: %i", sliderbreaks));
+			drawStatisticText(g, UString::format("SBrk: %i", sliderbreaks));
+			g->translate(0, yDelta);
+		}
+		if (osu_draw_statistics_maxpossiblecombo.getBool())
+		{
+			drawStatisticText(g, UString::format("FC: %ix", maxPossibleCombo));
 			g->translate(0, yDelta);
 		}
 		if (osu_draw_statistics_bpm.getBool())
@@ -3096,13 +3156,14 @@ void OsuHUD::addCursorTrailPosition(std::vector<CURSORTRAIL> &trail, Vector2 pos
 
 void OsuHUD::selectVolumePrev()
 {
-	for (int i=0; i<m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer()->size(); i++)
+	const std::vector<CBaseUIElement*> &elements = m_volumeSliderOverlayContainer->getElements();
+	for (int i=0; i<elements.size(); i++)
 	{
-		if (((OsuUIVolumeSlider*)(*m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer())[i])->isSelected())
+		if (((OsuUIVolumeSlider*)elements[i])->isSelected())
 		{
-			const int prevIndex = (i == 0 ? m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer()->size()-1 : i-1);
-			((OsuUIVolumeSlider*)(*m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer())[i])->setSelected(false);
-			((OsuUIVolumeSlider*)(*m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer())[prevIndex])->setSelected(true);
+			const int prevIndex = (i == 0 ? elements.size()-1 : i-1);
+			((OsuUIVolumeSlider*)elements[i])->setSelected(false);
+			((OsuUIVolumeSlider*)elements[prevIndex])->setSelected(true);
 			break;
 		}
 	}
@@ -3111,13 +3172,14 @@ void OsuHUD::selectVolumePrev()
 
 void OsuHUD::selectVolumeNext()
 {
-	for (int i=0; i<m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer()->size(); i++)
+	const std::vector<CBaseUIElement*> &elements = m_volumeSliderOverlayContainer->getElements();
+	for (int i=0; i<elements.size(); i++)
 	{
-		if (((OsuUIVolumeSlider*)(*m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer())[i])->isSelected())
+		if (((OsuUIVolumeSlider*)elements[i])->isSelected())
 		{
-			const int nextIndex = (i == m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer()->size()-1 ? 0 : i+1);
-			((OsuUIVolumeSlider*)(*m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer())[i])->setSelected(false);
-			((OsuUIVolumeSlider*)(*m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer())[nextIndex])->setSelected(true);
+			const int nextIndex = (i == elements.size()-1 ? 0 : i+1);
+			((OsuUIVolumeSlider*)elements[i])->setSelected(false);
+			((OsuUIVolumeSlider*)elements[nextIndex])->setSelected(true);
 			break;
 		}
 	}

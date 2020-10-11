@@ -19,7 +19,7 @@
 #include "OsuDatabase.h"
 
 #include "OsuBeatmap.h"
-#include "OsuBeatmapDifficulty.h"
+#include "OsuDatabaseBeatmap.h"
 
 ConVar osu_rich_presence("osu_rich_presence", true, OsuRichPresence::onRichPresenceChange);
 ConVar osu_rich_presence_dynamic_windowtitle("osu_rich_presence_dynamic_windowtitle", true, "should the window title show the currently playing beatmap Artist - Title and [Difficulty] name");
@@ -49,11 +49,11 @@ void OsuRichPresence::onSongBrowser(Osu *osu)
 void OsuRichPresence::onPlayStart(Osu *osu)
 {
 	UString playingInfo /*= "Playing "*/;
-	playingInfo.append(osu->getSelectedBeatmap()->getSelectedDifficulty()->artist);
+	playingInfo.append(osu->getSelectedBeatmap()->getSelectedDifficulty2()->getArtist());
 	playingInfo.append(" - ");
-	playingInfo.append(osu->getSelectedBeatmap()->getSelectedDifficulty()->title);
+	playingInfo.append(osu->getSelectedBeatmap()->getSelectedDifficulty2()->getTitle());
 	playingInfo.append(" [");
-	playingInfo.append(osu->getSelectedBeatmap()->getSelectedDifficulty()->name);
+	playingInfo.append(osu->getSelectedBeatmap()->getSelectedDifficulty2()->getDifficultyName());
 	playingInfo.append("]");
 
 	setStatus(osu, playingInfo);

@@ -14,7 +14,7 @@ class McFont;
 
 class Osu;
 class OsuBeatmap;
-class OsuBeatmapDifficulty;
+class OsuDatabaseBeatmap;
 
 class OsuUIRankingScreenInfoLabel : public CBaseUIElement
 {
@@ -23,7 +23,7 @@ public:
 
 	void draw(Graphics *g);
 
-	void setFromBeatmap(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff);
+	void setFromBeatmap(OsuBeatmap *beatmap, OsuDatabaseBeatmap *diff2);
 
 	void setArtist(UString artist) {m_sArtist = artist;}
 	void setTitle(UString title) {m_sTitle = title;}

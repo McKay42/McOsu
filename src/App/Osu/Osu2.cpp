@@ -56,7 +56,6 @@ Osu2::Osu2()
 	}
 
 	// vars
-	m_prevBeatmap = NULL;
 	m_prevBeatmapDifficulty = NULL;
 
 	m_bPrevPlayingState = false;
@@ -184,17 +183,16 @@ void Osu2::update()
 	}
 
 	// beatmap select sync
-	if (m_osu->getSelectedBeatmap() != m_prevBeatmap || (m_osu->getSelectedBeatmap() != NULL && m_osu->getSelectedBeatmap()->getSelectedDifficulty() != m_prevBeatmapDifficulty))
+	if ((m_osu->getSelectedBeatmap() != NULL && m_osu->getSelectedBeatmap()->getSelectedDifficulty2() != m_prevBeatmapDifficulty))
 	{
-		m_prevBeatmap = m_osu->getSelectedBeatmap();
-		m_prevBeatmapDifficulty = m_osu->getSelectedBeatmap() != NULL ? m_osu->getSelectedBeatmap()->getSelectedDifficulty() : NULL;
+		m_prevBeatmapDifficulty = m_osu->getSelectedBeatmap() != NULL ? m_osu->getSelectedBeatmap()->getSelectedDifficulty2() : NULL;
 
 		for (int i=0; i<m_slaves.size(); i++)
 		{
-			m_slaves[i]->getMultiplayer()->setBeatmap(m_prevBeatmap);
+			m_slaves[i]->getMultiplayer()->setBeatmap(m_prevBeatmapDifficulty);
 		}
 
-		m_osu->getMultiplayer()->setBeatmap(m_prevBeatmap);
+		m_osu->getMultiplayer()->setBeatmap(m_prevBeatmapDifficulty);
 	}
 
 	// db load sync
@@ -227,7 +225,7 @@ void Osu2::update()
 			for (int i=0; i<m_slaves.size(); i++)
 			{
 				if (m_bPrevPlayingState)
-					m_slaves[i]->getSongBrowser()->onDifficultySelected(m_slaves[i]->getSongBrowser()->getSelectedBeatmap(), m_slaves[i]->getSongBrowser()->getSelectedBeatmap()->getSelectedDifficulty(), true, false);
+					m_slaves[i]->getSongBrowser()->onDifficultySelected(m_slaves[i]->getSongBrowser()->getSelectedBeatmap()->getSelectedDifficulty2(), true, false);
 				else
 					m_slaves[i]->getSongBrowser()->getSelectedBeatmap()->stop(true);
 			}
