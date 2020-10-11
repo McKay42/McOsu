@@ -1,6 +1,6 @@
 //================ Copyright (c) 2017, PG, All rights reserved. =================//
 //
-// Purpose:		changelog screen
+// Purpose:		changelog screen 
 //
 // $NoKeywords: $osulog
 //===============================================================================//
