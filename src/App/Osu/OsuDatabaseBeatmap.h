@@ -112,6 +112,7 @@ public:
 	inline const std::string &getMD5Hash() const {return m_sMD5Hash;}
 
 	TIMING_INFO getTimingInfoForTime(unsigned long positionMS);
+	static TIMING_INFO getTimingInfoForTimeAndTimingPoints(unsigned long positionMS, std::vector<TIMINGPOINT> &timingpoints);
 
 
 
@@ -302,7 +303,11 @@ private:
 		std::vector<SPINNER> spinners;
 		std::vector<BREAK> breaks;
 
+		std::vector<TIMINGPOINT> timingpoints;
 		std::vector<Color> combocolors;
+
+		float sliderMultiplier;
+		float sliderTickRate;
 	};
 
 
@@ -317,6 +322,7 @@ private:
 	static ConVar *m_osu_show_approach_circle_on_first_hidden_object_ref;
 	static ConVar *m_osu_stars_xexxar_angles_sliders_ref;
 	static ConVar *m_osu_stars_stacking_ref;
+	static ConVar *m_osu_debug_pp_ref;
 	static ConVar *m_osu_slider_end_inside_check_offset_ref;
 	static ConVar *m_osu_mod_random_ref;
 	static ConVar *m_osu_mod_random_circle_offset_x_percent_ref;
@@ -334,6 +340,7 @@ private:
 	virtual void destroy();
 
 	static PRIMITIVE_CONTAINER loadPrimitiveObjects(const UString &osuFilePath, Osu::GAMEMODE gameMode);
+	static void calculateSliderTimesClicksTicks(std::vector<SLIDER> &sliders, std::vector<TIMINGPOINT> &timingpoints, float sliderMultiplier, float sliderTickRate);
 
 	bool loadBeatmapMetadataInt();
 	bool loadBeatmapInt(OsuBeatmap *beatmap);
