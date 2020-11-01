@@ -34,6 +34,7 @@
 #include "OsuOptionsMenu.h"
 #include "OsuSongBrowser2.h"
 #include "OsuBackgroundImageHandler.h"
+#include "OsuBackgroundStarCalcHandler.h"
 #include "OsuModSelector.h"
 #include "OsuRankingScreen.h"
 #include "OsuUserStatsScreen.h"
@@ -310,6 +311,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_skin = NULL;
 	m_songBrowser2 = NULL;
 	m_backgroundImageHandler = NULL;
+	m_backgroundStarCalcHandler = NULL;
 	m_modSelector = NULL;
 	m_updateHandler = NULL;
 	m_multiplayer = NULL;
@@ -464,6 +466,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_optionsMenu = new OsuOptionsMenu(this);
 	m_songBrowser2 = new OsuSongBrowser2(this);
 	m_backgroundImageHandler = new OsuBackgroundImageHandler();
+	m_backgroundStarCalcHandler = new OsuBackgroundStarCalcHandler();
 	m_modSelector = new OsuModSelector(this);
 	m_rankingScreen = new OsuRankingScreen(this);
 	m_userStatsScreen = new OsuUserStatsScreen(this);
@@ -587,6 +590,7 @@ Osu::~Osu()
 	SAFE_DELETE(m_multiplayer);
 	SAFE_DELETE(m_skin);
 	SAFE_DELETE(m_backgroundImageHandler);
+	SAFE_DELETE(m_backgroundStarCalcHandler);
 }
 
 void Osu::draw(Graphics *g)
@@ -877,7 +881,7 @@ void Osu::update()
 	{
 		getSelectedBeatmap()->update();
 
-		// keep loaded background images while playing
+		// NOTE: force keep loaded background images while playing
 		m_backgroundImageHandler->scheduleFreezeCache();
 
 		// scrubbing/seeking

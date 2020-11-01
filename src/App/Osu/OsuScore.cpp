@@ -315,7 +315,7 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignor
 				maxPossibleCombo = m_iComboFull; // current maximum possible combo at this time
 				numCircles = clamp<int>(beatmap->getNumCirclesForCurrentTime() + 1, 0, beatmap->getSelectedDifficulty2()->getNumCircles()); // current maximum number of circles at this time (+1 because of 1 frame delay in update())
 
-				///beatmap->getSelectedDifficulty()->calculateStarDiff(beatmap, &aimStars, &speedStars, curHitobjectIndex); // recalculating this live costs too much time
+				//beatmap->getSelectedDifficulty()->calculateStarDiff(beatmap, &aimStars, &speedStars, curHitobjectIndex); // recalculating this live costs too much time
 				aimStars = beatmap->getAimStarsForUpToHitObjectIndex(curHitobjectIndex);
 				speedStars = beatmap->getSpeedStarsForUpToHitObjectIndex(curHitobjectIndex);
 

@@ -129,12 +129,47 @@ protected:
 			return;
 		}
 
-		// TODO: recalculate star cache
-		/*
-		OsuBeatmapDifficulty *diff = m_beatmap->getSelectedDifficulty();
-		if (diff != NULL)
-			diff->rebuildStarCacheForUpToHitObjectIndex(m_beatmap, m_bDead, m_iProgress);
-		*/
+		// recalculate star cache
+		OsuDatabaseBeatmap *diff2 = m_beatmap->getSelectedDifficulty2();
+		if (diff2 != NULL)
+		{
+			// precalculate cut star values for live pp
+
+			// reset
+			m_beatmap->m_aimStarsForNumHitObjects.clear();
+			m_beatmap->m_speedStarsForNumHitObjects.clear();
+
+			const UString &osuFilePath = diff2->getFilePath();
+			const Osu::GAMEMODE gameMode = m_beatmap->getOsu()->getGamemode();
+			const float AR = m_beatmap->getAR();
+			const float CS = m_beatmap->getCS();
+			const int version = diff2->getVersion();
+			const float stackLeniency = diff2->getStackLeniency();
+			const float speedMultiplier = m_beatmap->getOsu()->getSpeedMultiplier(); // NOTE: not beatmap->getSpeedMultiplier()!
+
+			std::vector<std::shared_ptr<OsuDifficultyHitObject>> hitObjects = OsuDatabaseBeatmap::generateDifficultyHitObjects(osuFilePath, gameMode, AR, CS, version, stackLeniency, speedMultiplier);
+
+			for (size_t i=0; i<hitObjects.size(); i++)
+			{
+				double aimStars = 0.0;
+				double speedStars = 0.0;
+
+				OsuDifficultyCalculator::calculateStarDiffForHitObjects(hitObjects, CS, &aimStars, &speedStars, i);
+
+				m_beatmap->m_aimStarsForNumHitObjects.push_back(aimStars);
+				m_beatmap->m_speedStarsForNumHitObjects.push_back(speedStars);
+
+				m_iProgress = i;
+
+				if (m_bDead.load())
+				{
+					m_beatmap->m_aimStarsForNumHitObjects.clear();
+					m_beatmap->m_speedStarsForNumHitObjects.clear();
+
+					break;
+				}
+			}
+		}
 
 		m_bAsyncReady = true;
 	}
@@ -2203,7 +2238,10 @@ void OsuBeatmapStandard::stopStarCacheLoader()
 		while (!m_starCacheLoader->isAsyncReady()) // stall main thread until it's killed (this should be very quick, around max 1 ms, as the kill flag is checked in every iteration)
 		{
 			if (engine->getTimeReal() - startTime > 1)
+			{
+				debugLog("WARNING: Ignoring stuck StarCacheLoader thread!\n");
 				break;
+			}
 		}
 	}
 }

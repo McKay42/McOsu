@@ -10,6 +10,9 @@
 
 #include "Resource.h"
 
+#include "Osu.h"
+#include "OsuDifficultyCalculator.h"
+
 // purpose:
 // 1) contain all infos which are ALWAYS kept in memory for beatmaps
 // 2) be the data source for OsuBeatmap when starting a difficulty
@@ -24,8 +27,9 @@
 // TODO: calc and store m_aimStarsForNumHitObjects in OsuBeatmap.
 // TODO: calc and store m_speedStarsForNumHitObjects in OsuBeatmap.
 // TODO: while playing, storage of numCircles/sliders/spinners etc.
+// TODO: the DatabaseBeatmap class being a Resource feels like a clusterfuck when actually trying to use it, think about improving this structure
 
-// TODO: getter for checking the loadMetadata() result => just use Resource::isReady()
+// TODO: getter for checking the loadMetadata() result => just use Resource::isReady()?
 
 class Osu;
 class OsuBeatmap;
@@ -81,6 +85,12 @@ public:
 	OsuDatabaseBeatmap(Osu *osu, UString filePath, UString folder);
 	OsuDatabaseBeatmap(Osu *osu, std::vector<OsuDatabaseBeatmap*> &difficulties);
 	virtual ~OsuDatabaseBeatmap();
+
+
+
+	static std::vector<std::shared_ptr<OsuDifficultyHitObject>> generateDifficultyHitObjects(const UString &osuFilePath, Osu::GAMEMODE gameMode, float AR, float CS, int version, float stackLeniency, float speedMultiplier, bool calculateStarsInaccurately = false);
+
+
 
 	void setLoadBeatmapMetadata();
 	void setLoadBeatmap(OsuBeatmap *beatmap);
@@ -234,6 +244,70 @@ private:
 
 
 private:
+	// primitive objects
+
+	struct HITCIRCLE
+	{
+		int x,y;
+		unsigned long time;
+		int sampleType;
+		int number;
+		int colorCounter;
+		int colorOffset;
+		bool clicked;
+		long maniaEndTime;
+	};
+
+	struct SLIDER
+	{
+		int x,y;
+		char type;
+		int repeat;
+		float pixelLength;
+		long time;
+		int sampleType;
+		int number;
+		int colorCounter;
+		int colorOffset;
+		std::vector<Vector2> points;
+		std::vector<int> hitSounds;
+
+		float sliderTime;
+		float sliderTimeWithoutRepeats;
+		std::vector<float> ticks;
+
+		std::vector<long> scoringTimesForStarCalc;
+	};
+
+	struct SPINNER
+	{
+		int x,y;
+		unsigned long time;
+		int sampleType;
+		unsigned long endTime;
+	};
+
+	struct BREAK
+	{
+		int startTime;
+		int endTime;
+	};
+
+	struct PRIMITIVE_CONTAINER
+	{
+		int errorCode;
+
+		std::vector<HITCIRCLE> hitcircles;
+		std::vector<SLIDER> sliders;
+		std::vector<SPINNER> spinners;
+		std::vector<BREAK> breaks;
+
+		std::vector<Color> combocolors;
+	};
+
+
+
+private:
 	friend class OsuDatabase;
 	friend class OsuBackgroundImageHandler;
 
@@ -242,6 +316,7 @@ private:
 	static ConVar *m_osu_slider_curve_max_length_ref;
 	static ConVar *m_osu_show_approach_circle_on_first_hidden_object_ref;
 	static ConVar *m_osu_stars_xexxar_angles_sliders_ref;
+	static ConVar *m_osu_stars_stacking_ref;
 	static ConVar *m_osu_slider_end_inside_check_offset_ref;
 	static ConVar *m_osu_mod_random_ref;
 	static ConVar *m_osu_mod_random_circle_offset_x_percent_ref;
@@ -258,7 +333,8 @@ private:
 	virtual void initAsync();
 	virtual void destroy();
 
-	void loadBackgroundImagePathInt();
+	static PRIMITIVE_CONTAINER loadPrimitiveObjects(const UString &osuFilePath, Osu::GAMEMODE gameMode);
+
 	bool loadBeatmapMetadataInt();
 	bool loadBeatmapInt(OsuBeatmap *beatmap);
 
@@ -320,6 +396,19 @@ private:
 	UString m_sFilePath;
 
 	UString m_sLoadedBackgroundImageFileName;
+};
+
+
+
+class OsuDatabaseBeatmapStarCalculator : public Resource
+{
+public:
+	OsuDatabaseBeatmapStarCalculator();
+
+private:
+	virtual void init();
+	virtual void initAsync();
+	virtual void destroy() {;}
 };
 
 #endif

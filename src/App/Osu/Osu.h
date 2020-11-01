@@ -22,6 +22,7 @@ class OsuOptionsMenu;
 class OsuModSelector;
 class OsuSongBrowser2;
 class OsuBackgroundImageHandler;
+class OsuBackgroundStarCalcHandler;
 class OsuRankingScreen;
 class OsuUserStatsScreen;
 class OsuUpdateHandler;
@@ -132,6 +133,7 @@ public:
 	inline OsuOptionsMenu *getOptionsMenu() const {return m_optionsMenu;}
 	inline OsuSongBrowser2 *getSongBrowser() const {return m_songBrowser2;}
 	inline OsuBackgroundImageHandler *getBackgroundImageHandler() const {return m_backgroundImageHandler;}
+	inline OsuBackgroundStarCalcHandler *getBackgroundStarCalcHandler() const {return m_backgroundStarCalcHandler;}
 	inline OsuSkin *getSkin() const {return m_skin;}
 	inline OsuHUD *getHUD() const {return m_hud;}
 	inline OsuNotificationOverlay *getNotificationOverlay() const {return m_notificationOverlay;}
@@ -271,6 +273,7 @@ private:
 	OsuOptionsMenu *m_optionsMenu;
 	OsuSongBrowser2 *m_songBrowser2;
 	OsuBackgroundImageHandler *m_backgroundImageHandler;
+	OsuBackgroundStarCalcHandler *m_backgroundStarCalcHandler;
 	OsuModSelector *m_modSelector;
 	OsuRankingScreen *m_rankingScreen;
 	OsuUserStatsScreen *m_userStatsScreen;
