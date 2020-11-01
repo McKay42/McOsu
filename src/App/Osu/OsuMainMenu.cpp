@@ -24,7 +24,6 @@
 #include "Osu.h"
 #include "OsuSkin.h"
 #include "OsuSkinImage.h"
-#include "OsuBackgroundImageHandler.h"
 #include "OsuBeatmap.h"
 #include "OsuDatabaseBeatmap.h"
 #include "OsuMainMenu.h"
@@ -959,9 +958,6 @@ void OsuMainMenu::update()
 
 	if (m_osu->getOptionsMenu()->isMouseInside())
 		m_container->stealFocus();
-
-	// keep loaded background images while main menu is active
-	m_osu->getBackgroundImageHandler()->scheduleFreezeCache();
 
 	// update and focus handling
 	// the main button always gets top focus

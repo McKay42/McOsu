@@ -19,7 +19,6 @@
 #include "Osu.h"
 #include "OsuSkin.h"
 #include "OsuOptionsMenu.h"
-#include "OsuBackgroundImageHandler.h"
 #include "OsuHUD.h"
 
 OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
@@ -38,6 +37,7 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	CHANGELOG alpha316;
 	alpha316.title = UString::format("32 (Build Date: %s, %s)", __DATE__, __TIME__);
 	alpha316.changes.push_back("- TODO: write changelog");
+	alpha316.changes.push_back("- TODO: added support for collection editing (maybe)");
 	alpha316.changes.push_back("- TODO: Rewrote songbrowser and entire internal database class architecture (lazy design decisions were made in the past)");
 	alpha316.changes.push_back("- Songbrowser can now handle individual diff buttons and/or split from their parent beatmap button");
 	alpha316.changes.push_back("- Added new grouping options to songbrowser: \"By Artist\", \"By BPM\", \"By Creator\", \"By Difficulty\", \"By Length\", \"By Title\"");
@@ -702,9 +702,6 @@ void OsuChangelog::update()
 		engine->getMouse()->resetWheelDelta();
 
 	m_container->update();
-
-	// keep loaded background images while changelog screen is active
-	m_osu->getBackgroundImageHandler()->scheduleFreezeCache();
 
 	if (m_osu->getHUD()->isVolumeOverlayBusy() || m_osu->getOptionsMenu()->isMouseInside())
 	{

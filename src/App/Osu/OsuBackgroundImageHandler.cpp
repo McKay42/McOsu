@@ -15,6 +15,7 @@
 
 ConVar osu_load_beatmap_background_images("osu_load_beatmap_background_images", true);
 
+ConVar osu_background_image_cache_size("osu_background_image_cache_size", 32, "how many images can stay loaded in parallel");
 ConVar osu_background_image_loading_delay("osu_background_image_loading_delay", 0.1f, "how many seconds to wait until loading background images for visible beatmaps starts");
 ConVar osu_background_image_eviction_delay("osu_background_image_eviction_delay", 0.05f, "how many seconds to keep stale background images in the cache before deleting them");
 
@@ -33,7 +34,7 @@ OsuBackgroundImageHandler::~OsuBackgroundImageHandler()
 	m_cache.clear();
 }
 
-void OsuBackgroundImageHandler::update()
+void OsuBackgroundImageHandler::update(bool allowEviction)
 {
 	for (size_t i=0; i<m_cache.size(); i++)
 	{
@@ -46,15 +47,20 @@ void OsuBackgroundImageHandler::update()
 		// check and handle evictions
 		if (!wasUsedLastFrame && engine->getTime() >= entry.evictionTime)
 		{
-			if (!m_bFrozen && !engine->isMinimized())
+			if (allowEviction)
 			{
-				engine->getResourceManager()->destroyResource(entry.backgroundImagePathLoader);
-				engine->getResourceManager()->destroyResource(entry.image);
+				if (!m_bFrozen && !engine->isMinimized())
+				{
+					engine->getResourceManager()->destroyResource(entry.backgroundImagePathLoader);
+					engine->getResourceManager()->destroyResource(entry.image);
 
-				m_cache.erase(m_cache.begin() + i);
-				i--;
-				continue;
+					m_cache.erase(m_cache.begin() + i);
+					i--;
+					continue;
+				}
 			}
+			else
+				entry.evictionTime = engine->getTime() + osu_background_image_eviction_delay.getFloat();
 		}
 		else if (wasUsedLastFrame)
 		{
@@ -164,7 +170,7 @@ Image *OsuBackgroundImageHandler::getLoadBackgroundImage(const OsuDatabaseBeatma
 	// 2) not found in cache, so create a new entry which will get handled in the next update
 	{
 		// try evicting stale not-yet-loaded-nor-started-loading entries on overflow
-		const int maxCacheEntries = 32;
+		const int maxCacheEntries = osu_background_image_cache_size.getInt();
 		{
 			if (m_cache.size() >= maxCacheEntries)
 			{

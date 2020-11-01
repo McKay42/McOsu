@@ -23,7 +23,6 @@
 #include "Osu.h"
 #include "OsuSkin.h"
 #include "OsuSkinImage.h"
-#include "OsuBackgroundImageHandler.h"
 #include "OsuIcons.h"
 #include "OsuScore.h"
 #include "OsuBeatmap.h"
@@ -421,9 +420,6 @@ void OsuRankingScreen::update()
 	// HACKHACK:
 	if (m_osu->getOptionsMenu()->isMouseInside())
 		engine->getMouse()->resetWheelDelta();
-
-	// keep loaded background images while ranking screen is active
-	m_osu->getBackgroundImageHandler()->scheduleFreezeCache();
 
 	// update and focus handling
 	m_container->update();

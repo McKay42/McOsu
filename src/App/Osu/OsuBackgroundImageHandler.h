@@ -21,7 +21,7 @@ public:
 	OsuBackgroundImageHandler();
 	~OsuBackgroundImageHandler();
 
-	void update();
+	void update(bool allowEviction);
 
 	void scheduleFreezeCache() {m_bFrozen = true;}
 	void keepAlive(const OsuDatabaseBeatmap *beatmap);

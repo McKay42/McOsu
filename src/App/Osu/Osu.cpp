@@ -970,6 +970,9 @@ void Osu::update()
 		}
 	}
 
+	// background image cache tick
+	m_backgroundImageHandler->update(m_songBrowser2->isVisible()); // NOTE: must be before the asynchronous ui toggles due to potential 1-frame unloads after invisible songbrowser
+
 	// asynchronous ui toggles
 	// TODO: this is cancer, why did I even write this section
 	if (m_bToggleModSelectionScheduled)
@@ -1159,9 +1162,6 @@ void Osu::update()
 		m_bFireResolutionChangedScheduled = false;
 		fireResolutionChanged();
 	}
-
-	// background image cache tick
-	m_backgroundImageHandler->update();
 }
 
 void Osu::updateMods()
@@ -1600,9 +1600,6 @@ void Osu::toggleModSelection(bool waitForF1KeyUp)
 void Osu::toggleSongBrowser()
 {
 	m_bToggleSongBrowserScheduled = true;
-
-	// HACKHACK: usability workaround to keep loaded background images through frame delay
-	m_backgroundImageHandler->scheduleFreezeCache();
 }
 
 void Osu::toggleOptionsMenu()
@@ -1614,9 +1611,6 @@ void Osu::toggleOptionsMenu()
 void Osu::toggleRankingScreen()
 {
 	m_bToggleRankingScreenScheduled = true;
-
-	// HACKHACK: usability workaround to keep loaded background images through frame delay
-	m_backgroundImageHandler->scheduleFreezeCache();
 }
 
 void Osu::toggleUserStatsScreen()

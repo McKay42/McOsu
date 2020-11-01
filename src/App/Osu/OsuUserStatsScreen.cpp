@@ -19,7 +19,6 @@
 #include "Osu.h"
 #include "OsuSkin.h"
 #include "OsuReplay.h"
-#include "OsuBackgroundImageHandler.h"
 #include "OsuOptionsMenu.h"
 #include "OsuSongBrowser2.h"
 #include "OsuMultiplayer.h"
@@ -104,9 +103,6 @@ void OsuUserStatsScreen::update()
 {
 	OsuScreenBackable::update();
 	if (!m_bVisible) return;
-
-	// keep loaded background images while user stats screen is active
-	m_osu->getBackgroundImageHandler()->scheduleFreezeCache();
 
 	m_container->update();
 

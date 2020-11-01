@@ -21,7 +21,6 @@
 #include "OsuHUD.h"
 #include "OsuSkin.h"
 #include "OsuSkinImage.h"
-#include "OsuBackgroundImageHandler.h"
 #include "OsuIcons.h"
 #include "OsuBeatmap.h"
 #include "OsuDatabaseBeatmap.h"
@@ -453,9 +452,6 @@ void OsuModSelector::update()
 	// update
 	m_container->update();
 	m_overrideSliderContainer->update();
-
-	// keep loaded background images while mod selection screen is active
-	m_osu->getBackgroundImageHandler()->scheduleFreezeCache();
 
 	// override slider tooltips (ALT)
 	// seems too annoying, commented for now
