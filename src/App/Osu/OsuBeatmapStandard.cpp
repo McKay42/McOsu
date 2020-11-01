@@ -15,11 +15,6 @@
 #include "Mouse.h"
 #include "ConVar.h"
 
-#include <string.h>
-#include <sstream>
-#include <cctype>
-#include <algorithm>
-
 #include "Osu.h"
 #include "OsuVR.h"
 #include "OsuMultiplayer.h"
@@ -32,6 +27,7 @@
 #include "OsuNotificationOverlay.h"
 #include "OsuDatabaseBeatmap.h"
 #include "OsuDifficultyCalculator.h"
+#include "OsuBackgroundStarCacheLoader.h"
 #include "OsuReplay.h"
 
 #include "OsuHitObject.h"
@@ -44,6 +40,10 @@
 #include "OpenGL3Interface.h"
 #include "OpenGLES2Interface.h"
 
+#include <string.h>
+#include <sstream>
+#include <cctype>
+#include <algorithm>
 #include <chrono>
 
 ConVar osu_draw_followpoints("osu_draw_followpoints", true);
@@ -91,100 +91,6 @@ ConVar osu_debug_hiterrorbar_misaims("osu_debug_hiterrorbar_misaims", false);
 
 ConVar osu_pp_live_timeout("osu_pp_live_timeout", 1.0f, "show message that we're still calculating stars after this many seconds, on the first start of the beatmap");
 
-ConVar osu_stars_discrepancy_warning_delta("osu_stars_discrepancy_warning_delta", 0.1f, "if the star rating differs more than this, notify the user upon score submission");
-
-
-
-class StarCacheLoader : public Resource
-{
-public:
-	StarCacheLoader(OsuBeatmap *beatmap) : Resource()
-	{
-		m_beatmap = beatmap;
-
-		m_bDead = true; // NOTE: start dead! need to revive() before use
-		m_iProgress = 0;
-
-		m_bAsyncReady = false;
-		m_bReady = false;
-	};
-
-	bool isDead() {return m_bDead.load();}
-	void kill() {m_bDead = true; m_iProgress = 0;}
-	void revive() {m_bDead = false; m_iProgress = 0;}
-
-	inline int getProgress() const {return m_iProgress.load();}
-
-protected:
-	virtual void init()
-	{
-		m_bReady = true;
-	}
-
-	virtual void initAsync()
-	{
-		if (m_bDead.load())
-		{
-			m_bAsyncReady = true;
-			return;
-		}
-
-		// recalculate star cache
-		OsuDatabaseBeatmap *diff2 = m_beatmap->getSelectedDifficulty2();
-		if (diff2 != NULL)
-		{
-			// precalculate cut star values for live pp
-
-			// reset
-			m_beatmap->m_aimStarsForNumHitObjects.clear();
-			m_beatmap->m_speedStarsForNumHitObjects.clear();
-
-			const UString &osuFilePath = diff2->getFilePath();
-			const Osu::GAMEMODE gameMode = m_beatmap->getOsu()->getGamemode();
-			const float AR = m_beatmap->getAR();
-			const float CS = m_beatmap->getCS();
-			const int version = diff2->getVersion();
-			const float stackLeniency = diff2->getStackLeniency();
-			const float speedMultiplier = m_beatmap->getOsu()->getSpeedMultiplier(); // NOTE: not beatmap->getSpeedMultiplier()!
-
-			std::vector<std::shared_ptr<OsuDifficultyHitObject>> hitObjects = OsuDatabaseBeatmap::generateDifficultyHitObjects(osuFilePath, gameMode, AR, CS, version, stackLeniency, speedMultiplier);
-
-			for (size_t i=0; i<hitObjects.size(); i++)
-			{
-				double aimStars = 0.0;
-				double speedStars = 0.0;
-
-				OsuDifficultyCalculator::calculateStarDiffForHitObjects(hitObjects, CS, &aimStars, &speedStars, i);
-
-				m_beatmap->m_aimStarsForNumHitObjects.push_back(aimStars);
-				m_beatmap->m_speedStarsForNumHitObjects.push_back(speedStars);
-
-				m_iProgress = i;
-
-				if (m_bDead.load())
-				{
-					m_beatmap->m_aimStarsForNumHitObjects.clear();
-					m_beatmap->m_speedStarsForNumHitObjects.clear();
-
-					break;
-				}
-			}
-		}
-
-		m_bAsyncReady = true;
-	}
-
-	virtual void destroy() {;}
-
-private:
-	OsuBeatmap *m_beatmap;
-
-	std::atomic<bool> m_bDead;
-	std::atomic<int> m_iProgress;
-};
-
-
-
 ConVar *OsuBeatmapStandard::m_osu_draw_statistics_pp_ref = NULL;
 ConVar *OsuBeatmapStandard::m_osu_mod_fullalternate_ref = NULL;
 ConVar *OsuBeatmapStandard::m_osu_mod_fposu_ref = NULL;
@@ -208,7 +114,7 @@ OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 
 	m_fAimStars = 0.0f;
 	m_fSpeedStars = 0.0f;
-	m_starCacheLoader = new StarCacheLoader(this);
+	m_starCacheLoader = new OsuBackgroundStarCacheLoader(this);
 	m_fStarCacheTime = 0.0f;
 
 	m_bWasHREnabled = false;
@@ -1341,12 +1247,17 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 		double aim = 0.0;
 		double speed = 0.0;
 
+		// calculate stars
+		const UString &osuFilePath = m_selectedDifficulty2->getFilePath();
+		const Osu::GAMEMODE gameMode = Osu::GAMEMODE::STD;
+		const float AR = getAR();
+		const float CS = getCS();
+		const int version = m_selectedDifficulty2->getVersion();
+		const float stackLeniency = m_selectedDifficulty2->getStackLeniency();
+		const float speedMultiplier = m_osu->getSpeedMultiplier(); // NOTE: not this->getSpeedMultiplier()!
 
-
-		// TODO: calculate stars
-		const double totalStars = /*m_selectedDifficulty->calculateStarDiff(this, &aim, &speed)*/ 0.0;
-
-
+		std::vector<std::shared_ptr<OsuDifficultyHitObject>> hitObjects = OsuDatabaseBeatmap::generateDifficultyHitObjects(osuFilePath, gameMode, AR, CS, version, stackLeniency, speedMultiplier);
+		const double totalStars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(hitObjects, CS, &aim, &speed);
 
 		m_fAimStars = (float)aim;
 		m_fSpeedStars = (float)speed;
@@ -1407,8 +1318,8 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 				score.starsTomAim = aim;
 				score.starsTomSpeed = speed;
 				score.speedMultiplier = m_osu->getSpeedMultiplier();
-				score.CS = getCS();
-				score.AR = getAR();
+				score.CS = CS;
+				score.AR = AR;
 				score.OD = getOD();
 				score.HP = getHP();
 
@@ -2222,7 +2133,7 @@ void OsuBeatmapStandard::updateStarCache()
 		engine->getResourceManager()->destroyResource(m_starCacheLoader);
 
 		// create new loader
-		m_starCacheLoader = new StarCacheLoader(this);
+		m_starCacheLoader = new OsuBackgroundStarCacheLoader(this);
 		m_starCacheLoader->revive(); // activate it
 		engine->getResourceManager()->requestNextLoadAsync();
 		engine->getResourceManager()->loadResource(m_starCacheLoader);

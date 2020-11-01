@@ -22,7 +22,7 @@ class OsuHitObject;
 
 class OsuDatabaseBeatmap;
 
-class StarCacheLoader;
+class OsuBackgroundStarCacheLoader;
 
 class OsuBeatmap
 {
@@ -292,7 +292,7 @@ protected:
 	int m_iPreviousFollowPointObjectIndex; // TODO: this shouldn't be in this class
 
 private:
-	friend class StarCacheLoader;
+	friend class OsuBackgroundStarCacheLoader;
 };
 
 #endif

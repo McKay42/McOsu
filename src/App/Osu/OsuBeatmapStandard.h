@@ -10,7 +10,7 @@
 
 #include "OsuBeatmap.h"
 
-class StarCacheLoader;
+class OsuBackgroundStarCacheLoader;
 
 class OsuBeatmapStandard : public OsuBeatmap
 {
@@ -116,7 +116,7 @@ private:
 	// pp calculation buffer (only needs to be recalculated in onModUpdate(), instead of on every hit)
 	float m_fAimStars;
 	float m_fSpeedStars;
-	StarCacheLoader *m_starCacheLoader;
+	OsuBackgroundStarCacheLoader *m_starCacheLoader;
 	float m_fStarCacheTime;
 
 	// dynamic slider vertex buffer and other recalculation checks (for live mod switching)
