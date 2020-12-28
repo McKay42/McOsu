@@ -308,18 +308,20 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignor
 			//int numHitObjects = standardPointer->getNumHitObjects();
 			int maxPossibleCombo = beatmap->getMaxPossibleCombo();
 			int numCircles = beatmap->getSelectedDifficulty2()->getNumCircles();
+			int numSpinners = beatmap->getSelectedDifficulty2()->getNumSpinners();
 
 			// real (simulate beatmap being cut off after current hit, thus changing aimStars and speedStars on every hit)
 			{
 				int curHitobjectIndex = beatmap->getHitObjectIndexForCurrentTime(); // current index of last hitobject to just finish at this time (e.g. if the first OsuCircle just finished and called addHitResult(), this would be 0)
 				maxPossibleCombo = m_iComboFull; // current maximum possible combo at this time
 				numCircles = clamp<int>(beatmap->getNumCirclesForCurrentTime() + 1, 0, beatmap->getSelectedDifficulty2()->getNumCircles()); // current maximum number of circles at this time (+1 because of 1 frame delay in update())
+				numSpinners = clamp<int>(beatmap->getNumSpinnersForCurrentTime(), 0, beatmap->getSelectedDifficulty2()->getNumSpinners()); // current maximum number of spinners at this time (ignoring frame delay here)
 
 				//beatmap->getSelectedDifficulty()->calculateStarDiff(beatmap, &aimStars, &speedStars, curHitobjectIndex); // recalculating this live costs too much time
 				aimStars = beatmap->getAimStarsForUpToHitObjectIndex(curHitobjectIndex);
 				speedStars = beatmap->getSpeedStarsForUpToHitObjectIndex(curHitobjectIndex);
 
-				m_fPPv2 = OsuDifficultyCalculator::calculatePPv2(m_osu, beatmap, aimStars, speedStars, -1, numCircles, maxPossibleCombo, m_iComboMax, m_iNumMisses, m_iNum300s, m_iNum100s, m_iNum50s);
+				m_fPPv2 = OsuDifficultyCalculator::calculatePPv2(m_osu, beatmap, aimStars, speedStars, -1, numCircles, numSpinners, maxPossibleCombo, m_iComboMax, m_iNumMisses, m_iNum300s, m_iNum100s, m_iNum50s);
 
 				if (osu_debug_pp.getBool())
 					debugLog("pp = %f, aimstars = %f, speedstars = %f, curindex = %i, maxpossiblecombo = %i, numcircles = %i\n", m_fPPv2, aimStars, speedStars, curHitobjectIndex, maxPossibleCombo, numCircles);

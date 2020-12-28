@@ -104,6 +104,7 @@ public:
 	inline int getND() const {return m_iND;}
 	inline int getHitObjectIndexForCurrentTime() const {return m_iCurrentHitObjectIndex;}
 	inline int getNumCirclesForCurrentTime() const {return m_iCurrentNumCircles;}
+	inline int getNumSpinnersForCurrentTime() const {return m_iCurrentNumSpinners;}
 	inline int getMaxPossibleCombo() const {return m_iMaxPossibleCombo;}
 	inline unsigned long long getScoreV2ComboPortionMaximum() const {return m_iScoreV2ComboPortionMaximum;}
 	inline double getAimStarsForUpToHitObjectIndex(int upToHitObjectIndex) const {return (m_aimStarsForNumHitObjects.size() > 0 ? m_aimStarsForNumHitObjects[clamp<int>(upToHitObjectIndex, 0, m_aimStarsForNumHitObjects.size()-1)] : 0);}
@@ -283,6 +284,7 @@ protected:
 	int m_iND;
 	int m_iCurrentHitObjectIndex;
 	int m_iCurrentNumCircles;
+	int m_iCurrentNumSpinners;
 	int m_iMaxPossibleCombo;
 	unsigned long long m_iScoreV2ComboPortionMaximum;
 	std::vector<double> m_aimStarsForNumHitObjects;

@@ -206,6 +206,7 @@ OsuBeatmap::OsuBeatmap(Osu *osu)
 	m_iND = 0;
 	m_iCurrentHitObjectIndex = 0;
 	m_iCurrentNumCircles = 0;
+	m_iCurrentNumSpinners = 0;
 	m_iMaxPossibleCombo = 0;
 	m_iScoreV2ComboPortionMaximum = 0;
 
@@ -518,6 +519,7 @@ void OsuBeatmap::update()
 	m_iNPS = 0;
 	m_iND = 0;
 	m_iCurrentNumCircles = 0;
+	m_iCurrentNumSpinners = 0;
 	{
 		bool blockNextNotes = false;
 
@@ -542,6 +544,7 @@ void OsuBeatmap::update()
 
 			// ************ live pp block start ************ //
 			const bool isCircle = m_hitobjects[i]->isCircle();
+			const bool isSpinner = m_hitobjects[i]->isSpinner();
 			// ************ live pp block end ************** //
 
 			// determine previous & next object time, used for auto + followpoints + warning arrows + empty section skipping
@@ -568,6 +571,8 @@ void OsuBeatmap::update()
 					// ************ live pp block start ************ //
 					if (isCircle)
 						m_iCurrentNumCircles++;
+					if (isSpinner)
+						m_iCurrentNumSpinners++;
 
 					m_iCurrentHitObjectIndex = i;
 					// ************ live pp block end ************** //
@@ -732,6 +737,8 @@ void OsuBeatmap::update()
 			// ************ live pp block start ************ //
 			if (isCircle && m_hitobjects[i]->isFinished())
 				m_iCurrentNumCircles++;
+			if (isSpinner && m_hitobjects[i]->isFinished())
+				m_iCurrentNumSpinners++;
 
 			if (m_hitobjects[i]->isFinished())
 				m_iCurrentHitObjectIndex = i;

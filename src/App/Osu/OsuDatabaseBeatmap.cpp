@@ -123,6 +123,7 @@ OsuDatabaseBeatmap::OsuDatabaseBeatmap(Osu *osu, UString filePath, UString folde
 	m_iNumObjects = 0;
 	m_iNumCircles = 0;
 	m_iNumSliders = 0;
+	m_iNumSpinners = 0;
 
 
 
@@ -1234,12 +1235,10 @@ bool OsuDatabaseBeatmap::loadBeatmapInt(OsuBeatmap *beatmap)
 	}
 
 	// update numObjects
-	if (m_iNumObjects == 0)
-		m_iNumObjects = c.hitcircles.size() + c.sliders.size() + c.spinners.size();
-	if (m_iNumCircles == 0)
-		m_iNumCircles = c.hitcircles.size();
-	if (m_iNumSliders == 0)
-		m_iNumSliders = c.sliders.size();
+	m_iNumObjects = c.hitcircles.size() + c.sliders.size() + c.spinners.size();
+	m_iNumCircles = c.hitcircles.size();
+	m_iNumSliders = c.sliders.size();
+	m_iNumSpinners = c.spinners.size();
 
 	// sort timingpoints by time
 	std::sort(m_timingpoints.begin(), m_timingpoints.end(), TimingPointSortComparator());
@@ -1366,9 +1365,9 @@ bool OsuDatabaseBeatmap::loadBeatmapInt(OsuBeatmap *beatmap)
 				double aim = 0.0;
 				double speed = 0.0;
 				double stars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(hitObjects, CS, &aim, &speed);
-				double pp = OsuDifficultyCalculator::calculatePPv2(beatmap->getOsu(), beatmap, aim, speed, m_iNumObjects, m_iNumCircles, maxCombo);
+				double pp = OsuDifficultyCalculator::calculatePPv2(beatmap->getOsu(), beatmap, aim, speed, m_iNumObjects, m_iNumCircles, m_iNumSpinners, maxCombo);
 
-				engine->showMessageInfo("PP", UString::format("pp = %f, stars = %f, aimstars = %f, speedstars = %f, %i circles, %i sliders, %i spinners, %i hitobjects, maxcombo = %i", pp, stars, aim, speed, m_iNumCircles, m_iNumSliders, c.spinners.size(), m_iNumObjects, maxCombo));
+				engine->showMessageInfo("PP", UString::format("pp = %f, stars = %f, aimstars = %f, speedstars = %f, %i circles, %i sliders, %i spinners, %i hitobjects, maxcombo = %i", pp, stars, aim, speed, m_iNumCircles, m_iNumSliders, m_iNumSpinners, m_iNumObjects, maxCombo));
 			}
 		}
 		else if (beatmapMania != NULL)

@@ -170,6 +170,7 @@ public:
 	inline int getNumObjects() const {return m_iNumObjects;}
 	inline int getNumCircles() const {return m_iNumCircles;}
 	inline int getNumSliders() const {return m_iNumSliders;}
+	inline int getNumSpinners() const {return m_iNumSpinners;}
 
 
 
@@ -232,6 +233,7 @@ private:
 	int m_iNumObjects;
 	int m_iNumCircles;
 	int m_iNumSliders;
+	int m_iNumSpinners;
 
 
 

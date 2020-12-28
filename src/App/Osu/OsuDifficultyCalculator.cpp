@@ -582,7 +582,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<std::
 	return calculateTotalStarsFromSkills(*aim, *speed);
 }
 
-double OsuDifficultyCalculator::calculatePPv2(Osu *osu, OsuBeatmap *beatmap, double aim, double speed, int numHitObjects, int numCircles, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50)
+double OsuDifficultyCalculator::calculatePPv2(Osu *osu, OsuBeatmap *beatmap, double aim, double speed, int numHitObjects, int numCircles, int numSpinners, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50)
 {
 	// NOTE: depends on active mods + OD + AR
 
@@ -598,10 +598,10 @@ double OsuDifficultyCalculator::calculatePPv2(Osu *osu, OsuBeatmap *beatmap, dou
 
 	// TODO: for recalculating existing scores, take accuracy directly from stored score! this way osu_slider_scorev2-scores don't get downgraded
 
-	return calculatePPv2(modsLegacy, osu->getSpeedMultiplier(), beatmap->getAR(), beatmap->getOD(), aim, speed, numHitObjects, numCircles, maxPossibleCombo, combo, misses, c300, c100, c50);
+	return calculatePPv2(modsLegacy, osu->getSpeedMultiplier(), beatmap->getAR(), beatmap->getOD(), aim, speed, numHitObjects, numCircles, numSpinners, maxPossibleCombo, combo, misses, c300, c100, c50);
 }
 
-double OsuDifficultyCalculator::calculatePPv2(int modsLegacy, double timescale, double ar, double od, double aim, double speed, int numHitObjects, int numCircles, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50)
+double OsuDifficultyCalculator::calculatePPv2(int modsLegacy, double timescale, double ar, double od, double aim, double speed, int numHitObjects, int numCircles, int numSpinners, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50)
 {
 	// NOTE: depends on active mods + OD + AR
 
@@ -653,16 +653,6 @@ double OsuDifficultyCalculator::calculatePPv2(int modsLegacy, double timescale, 
 
 	if (combo < 1) return 0.0;
 
-	// custom multipliers for nofail and spunout
-	double multiplier = 1.12; // keep final pp normalized across changes
-	{
-		if (modsLegacy & OsuReplay::Mods::NoFail)
-			multiplier *= 0.90;
-
-		if (modsLegacy & OsuReplay::Mods::SpunOut)
-			multiplier *= 0.95;
-	}
-
 	ScoreData score;
 	{
 		score.modsLegacy = modsLegacy;
@@ -686,6 +676,16 @@ double OsuDifficultyCalculator::calculatePPv2(int modsLegacy, double timescale, 
 		attributes.SpeedStrain = speed;
 		attributes.ApproachRate = ar;
 		attributes.OverallDifficulty = od;
+	}
+
+	// custom multipliers for nofail and spunout
+	double multiplier = 1.12; // keep final pp normalized across changes
+	{
+		if (modsLegacy & OsuReplay::Mods::NoFail)
+			multiplier *= 0.90;
+
+		if ((modsLegacy & OsuReplay::Mods::SpunOut) && score.totalHits > 0)
+			multiplier *= 1.0f - std::pow((float)numSpinners / (float)score.totalHits, 0.85f); // see https://github.com/ppy/osu-performance/pull/110/
 	}
 
 	const double aimValue = computeAimValue(score, attributes);

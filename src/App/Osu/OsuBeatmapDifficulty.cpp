@@ -1236,7 +1236,7 @@ void OsuBeatmapDifficulty::buildStandardHitObjects(OsuBeatmapStandard *beatmap, 
 		double aim = 0.0;
 		double speed = 0.0;
 		double stars = calculateStarDiff(beatmap, &aim, &speed);
-		double pp = OsuDifficultyCalculator::calculatePPv2(beatmap->getOsu(), beatmap, aim, speed, hitobjects->size(), hitcircles.size(), m_iMaxCombo);
+		double pp = OsuDifficultyCalculator::calculatePPv2(beatmap->getOsu(), beatmap, aim, speed, hitobjects->size(), hitcircles.size(), spinners.size(), m_iMaxCombo);
 
 		engine->showMessageInfo("PP", UString::format("pp = %f, stars = %f, aimstars = %f, speedstars = %f, %i circles, %i sliders, %i spinners, %i hitobjects, maxcombo = %i", pp, stars, aim, speed, hitcircles.size(), sliders.size(), spinners.size(), (hitcircles.size() + sliders.size() + spinners.size()), m_iMaxCombo));
 	}
