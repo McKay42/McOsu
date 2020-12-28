@@ -35,7 +35,7 @@ ConVar fposu_absolute_mode("fposu_absolute_mode", false);
 ConVar fposu_distance("fposu_distance", 0.5f);
 ConVar fposu_fov("fposu_fov", 103.0f);
 ConVar fposu_zoom_fov("fposu_zoom_fov", 45.0f);
-ConVar fposu_zoom_sensitivity_ratio("fposu_zoom_sensitivity_ratio", 0.818933f, "replicates zoom_sensitivity_ratio behavior on css/csgo/tf2/etc.");
+ConVar fposu_zoom_sensitivity_ratio("fposu_zoom_sensitivity_ratio", 1.0f, "replicates zoom_sensitivity_ratio behavior on css/csgo/tf2/etc.");
 ConVar fposu_zoom_anim_duration("fposu_zoom_anim_duration", 0.065f, "time in seconds for the zoom/unzoom animation");
 ConVar fposu_vertical_fov("fposu_vertical_fov", false);
 ConVar fposu_curved("fposu_curved", true);
@@ -200,7 +200,7 @@ void OsuModFPoSu::update()
 		rawDelta *= multiplier;
 
 		// apply zoom_sensitivity_ratio if zoomed
-		if (m_bZoomed)
+		if (m_bZoomed && fposu_zoom_sensitivity_ratio.getFloat() > 0.0f)
 			rawDelta *= (fposu_zoom_fov.getFloat() / fposu_fov.getFloat()) * fposu_zoom_sensitivity_ratio.getFloat(); // see https://www.reddit.com/r/GlobalOffensive/comments/3vxkav/how_zoomed_sensitivity_works/
 
 		// update camera
