@@ -17,6 +17,7 @@
 #include "CBaseUIScrollView.h"
 
 #include "Osu.h"
+#include "OsuIcons.h"
 #include "OsuSkin.h"
 #include "OsuReplay.h"
 #include "OsuOptionsMenu.h"
@@ -30,6 +31,39 @@
 #include "OsuUISongBrowserUserButton.h"
 
 ConVar osu_ui_top_ranks_max("osu_ui_top_ranks_max", 100, "maximum number of displayed scores, to keep the ui/scrollbar manageable");
+
+
+
+class OsuUserStatsScreenMenuButton : public CBaseUIButton
+{
+public:
+	OsuUserStatsScreenMenuButton(float xPos = 0, float yPos = 0, float xSize = 0, float ySize = 0, UString name = "", UString text = "") : CBaseUIButton(xPos, yPos, xSize, ySize, name, text)
+	{
+	}
+
+	virtual void drawText(Graphics *g)
+	{
+		// HACKHACK: force update string height to non-average line height for icon
+		m_fStringHeight = m_font->getStringHeight(m_sText);
+
+		if (m_font != NULL && m_sText.length() > 0)
+		{
+			g->pushClipRect(McRect(m_vPos.x+1, m_vPos.y+1, m_vSize.x-1, m_vSize.y-1));
+			{
+				g->setColor(m_textColor);
+				g->pushTransform();
+				{
+					g->translate((int)(m_vPos.x + m_vSize.x/2.0f - (m_fStringWidth/2.0f)), (int)(m_vPos.y + m_vSize.y/2.0f + (m_fStringHeight/2.0f)));
+					g->drawString(m_font, m_sText);
+				}
+				g->popTransform();
+			}
+			g->popClipRect();
+		}
+	}
+};
+
+
 
 OsuUserStatsScreen::OsuUserStatsScreen(Osu *osu) : OsuScreenBackable(osu)
 {
@@ -53,12 +87,21 @@ OsuUserStatsScreen::OsuUserStatsScreen(Osu *osu) : OsuScreenBackable(osu)
 	m_scores->setVerticalScrolling(true);
 	m_container->addBaseUIElement(m_scores);
 
+	m_menuButton = new OsuUserStatsScreenMenuButton();
+	m_menuButton->setFont(m_osu->getFontIcons());
+	{
+		UString iconString; iconString.insert(0, OsuIcons::GEAR);
+		m_menuButton->setText(iconString);
+	}
+	m_menuButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUserStatsScreen::onMenuClicked) );
+	m_container->addBaseUIElement(m_menuButton);
+
 	// the context menu gets added last (drawn on top of everything)
 	m_container->addBaseUIElement(m_contextMenu);
 
-	m_vInfoText.push_back("Old scores are not recalculated yet!");
-	m_vInfoText.push_back("Will be included in a future update.");
-	m_vInfoText.push_back("(Scores before 15.02.2019 = old pp)");
+	///m_vInfoText.push_back("Old scores are not recalculated yet!");
+	///m_vInfoText.push_back("Will be included in a future update.");
+	///m_vInfoText.push_back("(Scores before 15.02.2019 = old pp)");
 }
 
 OsuUserStatsScreen::~OsuUserStatsScreen()
@@ -70,6 +113,7 @@ void OsuUserStatsScreen::draw(Graphics *g)
 {
 	if (!m_bVisible) return;
 
+	/*
 	if (m_vInfoText.size() > 0)
 	{
 		const float dpiScale = Osu::getUIScale();
@@ -93,6 +137,7 @@ void OsuUserStatsScreen::draw(Graphics *g)
 			g->popTransform();
 		}
 	}
+	*/
 
 	m_container->draw(g);
 
@@ -230,6 +275,26 @@ void OsuUserStatsScreen::onScoreClicked(CBaseUIButton *button)
 	m_osu->getSongBrowser()->highlightScore(((OsuUISongBrowserScoreButton*)button)->getScore().unixTimestamp);
 }
 
+void OsuUserStatsScreen::onMenuClicked(CBaseUIButton *button)
+{
+	m_contextMenu->setPos(m_menuButton->getPos() + Vector2(0, m_menuButton->getSize().y - 1));
+	m_contextMenu->setRelPos(m_menuButton->getPos() + Vector2(0, m_menuButton->getSize().y - 1));
+	m_contextMenu->begin(0, true);
+	{
+		m_contextMenu->addButton("Recalculate pp");
+		m_contextMenu->addButton("---");
+		m_contextMenu->addButton("Delete All Scores (!)");
+	}
+	m_contextMenu->end();
+	m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUserStatsScreen::onMenuSelected) );
+}
+
+void OsuUserStatsScreen::onMenuSelected(UString text, int id)
+{
+	// TODO: implement "recalculate pp", "delete all scores", etc.
+	debugLog("TODO ...\n");
+}
+
 void OsuUserStatsScreen::updateLayout()
 {
 	OsuScreenBackable::updateLayout();
@@ -260,4 +325,7 @@ void OsuUserStatsScreen::updateLayout()
 	const int userButtonHeight = m_scores->getPos().y*0.6f;
 	m_userButton->setSize(userButtonHeight*3.5f, userButtonHeight);
 	m_userButton->setPos(m_osu->getScreenWidth()/2 - m_userButton->getSize().x/2, m_scores->getPos().y/2 - m_userButton->getSize().y/2);
+
+	m_menuButton->setSize(userButtonHeight*0.7f, userButtonHeight*0.7f);
+	m_menuButton->setPos(std::max(m_userButton->getPos().x + m_userButton->getSize().x, m_userButton->getPos().x + m_userButton->getSize().x + (m_userButton->getPos().x - m_scores->getPos().x)/2 - m_menuButton->getSize().x/2), m_userButton->getPos().y + m_userButton->getSize().y/2 - m_menuButton->getSize().y/2);
 }

@@ -42,6 +42,8 @@ private:
 	void onUserClicked(CBaseUIButton *button);
 	void onUserButtonChange(UString text, int id);
 	void onScoreClicked(CBaseUIButton *button);
+	void onMenuClicked(CBaseUIButton *button);
+	void onMenuSelected(UString text, int id);
 
 	ConVar *m_name_ref;
 
@@ -54,7 +56,9 @@ private:
 	CBaseUIScrollView *m_scores;
 	std::vector<OsuUISongBrowserScoreButton*> m_scoreButtons;
 
-	std::vector<UString> m_vInfoText;
+	///std::vector<UString> m_vInfoText;
+
+	CBaseUIButton *m_menuButton;
 };
 
 #endif
