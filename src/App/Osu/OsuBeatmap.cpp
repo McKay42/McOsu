@@ -528,6 +528,7 @@ void OsuBeatmap::update()
 		const bool usePVS = m_osu_pvs->getBool();
 
 		const int notelockType = osu_notelock_type.getInt();
+		const long tolerance2B = (long)osu_notelock_stable_tolerance2b.getInt();
 
 		m_iCurrentHitObjectIndex = 0; // reset below here, since it's needed for mafham pvs
 
@@ -633,7 +634,7 @@ void OsuBeatmap::update()
 							{
 								if ((i + 1) < m_hitobjects.size())
 								{
-									if ((isSpinner || sliderPointer->isStartCircleFinished()) && (m_hitobjects[i + 1]->getTime() <= (m_hitobjects[i]->getTime() + m_hitobjects[i]->getDuration() + osu_notelock_stable_tolerance2b.getInt())))
+									if ((isSpinner || sliderPointer->isStartCircleFinished()) && (m_hitobjects[i + 1]->getTime() <= (m_hitobjects[i]->getTime() + m_hitobjects[i]->getDuration() + tolerance2B)))
 										blockNextNotes = false;
 								}
 							}
