@@ -682,10 +682,10 @@ double OsuDifficultyCalculator::calculatePPv2(int modsLegacy, double timescale, 
 	double multiplier = 1.12; // keep final pp normalized across changes
 	{
 		if (modsLegacy & OsuReplay::Mods::NoFail)
-			multiplier *= std::max(0.9f, 1.0f - 0.02f * score.countMiss); // see https://github.com/ppy/osu-performance/pull/127/files
+			multiplier *= std::max(0.9, 1.0 - 0.02 * score.countMiss); // see https://github.com/ppy/osu-performance/pull/127/files
 
 		if ((modsLegacy & OsuReplay::Mods::SpunOut) && score.totalHits > 0)
-			multiplier *= 1.0f - std::pow((float)numSpinners / (float)score.totalHits, 0.85f); // see https://github.com/ppy/osu-performance/pull/110/
+			multiplier *= 1.0 - std::pow((double)numSpinners / (double)score.totalHits, 0.85); // see https://github.com/ppy/osu-performance/pull/110/
 	}
 
 	const double aimValue = computeAimValue(score, attributes);
@@ -787,10 +787,11 @@ double OsuDifficultyCalculator::computeSpeedValue(const ScoreData &score, const 
 	if (score.modsLegacy & OsuReplay::Mods::Hidden)
 		speedValue *= 1.0 + 0.04 * (std::max(12.0 - attributes.ApproachRate, 0.0)); // NOTE: clamped to 0 because McOsu allows AR > 12
 
-	// scale aim with acc slightly
-	speedValue *= 0.02 + score.accuracy;
-	// also consider acc difficulty when doing that
-	speedValue *= 0.96 + std::pow(attributes.OverallDifficulty, 2.0) / 1600.0;
+	// see https://github.com/ppy/osu-performance/pull/128/
+	// Scale the speed value with accuracy and OD
+	speedValue *= (0.95 + std::pow(attributes.OverallDifficulty, 2.0) / 750.0) * std::pow(score.accuracy, (14.5 - std::max(attributes.OverallDifficulty, 8.0)) / 2.0);
+	// Scale the speed value with # of 50s to punish doubletapping.
+	speedValue *= std::pow(0.98, score.countMeh < (score.totalHits / 500.0) ? 0.0 : score.countMeh - (score.totalHits / 500.0));
 
 	return speedValue;
 }
