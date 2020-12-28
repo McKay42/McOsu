@@ -682,7 +682,7 @@ double OsuDifficultyCalculator::calculatePPv2(int modsLegacy, double timescale, 
 	double multiplier = 1.12; // keep final pp normalized across changes
 	{
 		if (modsLegacy & OsuReplay::Mods::NoFail)
-			multiplier *= 0.90;
+			multiplier *= std::max(0.9f, 1.0f - 0.02f * score.countMiss); // see https://github.com/ppy/osu-performance/pull/127/files
 
 		if ((modsLegacy & OsuReplay::Mods::SpunOut) && score.totalHits > 0)
 			multiplier *= 1.0f - std::pow((float)numSpinners / (float)score.totalHits, 0.85f); // see https://github.com/ppy/osu-performance/pull/110/
