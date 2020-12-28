@@ -16,6 +16,8 @@ public:
 	static ConVar LEFT_CLICK;
 	static ConVar RIGHT_CLICK;
 
+	static ConVar FPOSU_ZOOM;
+
 	static ConVar INCREASE_SPEED;
 	static ConVar DECREASE_SPEED;
 

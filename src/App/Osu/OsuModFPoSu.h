@@ -37,6 +37,9 @@ public:
 	void draw(Graphics *g);
 	void update();
 
+	void onKeyDown(KeyboardEvent &key);
+	void onKeyUp(KeyboardEvent &key);
+
 private:
 	static int SUBDIVISIONS;
 
@@ -72,6 +75,8 @@ private:
 	std::list<VertexPair> m_meshList;
 	float m_fCircumLength;
 	Camera *m_camera;
+	bool m_bZoomed;
+	float m_fZoomFOVAnimPercent;
 
 	Matrix4 m_modelMatrix;
 

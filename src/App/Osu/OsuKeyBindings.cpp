@@ -12,6 +12,8 @@
 ConVar OsuKeyBindings::LEFT_CLICK("osu_key_left_click", (int)KEY_Z);
 ConVar OsuKeyBindings::RIGHT_CLICK("osu_key_right_click", (int)KEY_X);
 
+ConVar OsuKeyBindings::FPOSU_ZOOM("osu_key_fposu_zoom", 0);
+
 ConVar OsuKeyBindings::INCREASE_SPEED("osu_key_mania_increase_speed", (int)KEY_RIGHT);
 ConVar OsuKeyBindings::DECREASE_SPEED("osu_key_mania_decrease_speed", (int)KEY_LEFT);
 

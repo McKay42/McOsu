@@ -1395,6 +1395,9 @@ void Osu::onKeyDown(KeyboardEvent &key)
 		// handle seeking
 		if (key == (KEYCODE)OsuKeyBindings::SEEK_TIME.getInt())
 			m_bSeekKey = true;
+
+		// handle fposu key handling
+		m_fposu->onKeyDown(key);
 	}
 
 	// forward to all subsystem, if not already consumed
@@ -1550,6 +1553,9 @@ void Osu::onKeyUp(KeyboardEvent &key)
 		m_bQuickRetryDown = false;
 	if (key == (KEYCODE)OsuKeyBindings::SEEK_TIME.getInt())
 		m_bSeekKey = false;
+
+	// handle fposu key handling
+	m_fposu->onKeyUp(key);
 }
 
 void Osu::onChar(KeyboardEvent &e)
