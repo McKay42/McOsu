@@ -526,6 +526,14 @@ void OsuUISongBrowserScoreButton::onRightMouseUpInside()
 		}
 		m_contextMenu->end();
 		m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUISongBrowserScoreButton::onContextMenu) );
+
+		// clamp to bottom screen edge
+		if (m_contextMenu->getRelPos().y + m_contextMenu->getSize().y > m_osu->getScreenHeight())
+		{
+			int newRelPosY = m_osu->getScreenHeight() - m_contextMenu->getSize().y - 1;
+			m_contextMenu->setRelPosY(newRelPosY);
+			m_contextMenu->setPosY(newRelPosY);
+		}
 	}
 }
 
