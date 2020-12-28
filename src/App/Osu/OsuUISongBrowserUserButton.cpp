@@ -38,7 +38,8 @@ OsuUISongBrowserUserButton::OsuUISongBrowserUserButton(Osu *osu) : CBaseUIButton
 	m_iLevel = 0;
 	m_fPercentToNextLevel = 0.0f;
 
-	m_iPPIncrease = 0;
+	m_fPPDelta = 0.0f;
+	m_fPPDeltaAnim = 0.0f;
 
 	m_fHoverAnim = 0.0f;
 }
@@ -181,6 +182,50 @@ void OsuUISongBrowserUserButton::draw(Graphics *g)
 			g->drawRect(m_vPos.x + m_vSize.x - barWidth - barBorder - 1, m_vPos.y + m_vSize.y - barHeight - barBorder, barWidth, barHeight);
 			g->fillRect(m_vPos.x + m_vSize.x - barWidth - barBorder - 1, m_vPos.y + m_vSize.y - barHeight - barBorder, barWidth*clamp<float>(m_fPercentToNextLevel, 0.0f, 1.0f), barHeight);
 		}
+
+		// draw pp increase/decrease delta
+		McFont *deltaFont = performanceFont;
+		const float deltaScale = 0.4f;
+		if (m_fPPDeltaAnim > 0.0f)
+		{
+			UString performanceDeltaString = UString::format("%.1fpp", m_fPPDelta);
+			if (m_fPPDelta > 0.0f)
+				performanceDeltaString.insert(0, L'+');
+
+			const float border = (int)(iconBorder);
+
+			const float height = m_vSize.y*0.5f;
+			const float scale = (height / deltaFont->getHeight())*deltaScale;
+
+			const float performanceDeltaStringWidth = deltaFont->getStringWidth(performanceDeltaString) * scale;
+
+			const Vector2 backgroundSize = Vector2(performanceDeltaStringWidth + border, deltaFont->getHeight()*scale + border*3);
+			const Vector2 pos = Vector2(m_vPos.x + m_vSize.x - performanceDeltaStringWidth - border, m_vPos.y + border);
+			const Vector2 textPos = Vector2(pos.x, pos.y + deltaFont->getHeight()*scale);
+
+			// background (to ensure readability even with stupid long usernames)
+			g->setColor(COLORf(1.0f, backgroundBrightness, backgroundBrightness, backgroundBrightness)); // NOTE: this must match the general background rect color in order to merge seamlessly
+			g->setAlpha(1.0f - (1.0f - m_fPPDeltaAnim)*(1.0f - m_fPPDeltaAnim));
+			g->fillRect(pos.x, pos.y, backgroundSize.x, backgroundSize.y);
+
+			// delta text
+			g->pushTransform();
+			{
+				g->scale(scale, scale);
+				g->translate((int)textPos.x, (int)textPos.y);
+
+				g->translate(1, 1);
+				g->setColor(0xff000000);
+				g->setAlpha(m_fPPDeltaAnim);
+				g->drawString(deltaFont, performanceDeltaString);
+
+				g->translate(-1, -1);
+				g->setColor(m_fPPDelta > 0.0f ? 0xff00ff00 : 0xffff0000);
+				g->setAlpha(m_fPPDeltaAnim);
+				g->drawString(deltaFont, performanceDeltaString);
+			}
+			g->popTransform();
+		}
 	}
 }
 
@@ -206,6 +251,11 @@ void OsuUISongBrowserUserButton::updateUserStats()
 
 	const bool changed = (m_fPP != stats.pp || m_fAcc != stats.accuracy || m_iLevel != stats.level || m_fPercentToNextLevel != stats.percentToNextLevel);
 
+	const bool isFirstLoad = (m_fPP == 0.0f);
+	const float newPPDelta = (stats.pp - m_fPP);
+	if (newPPDelta != 0.0f)
+		m_fPPDelta = newPPDelta;
+
 	m_fPP = stats.pp;
 	m_fAcc = stats.accuracy;
 	m_iLevel = stats.level;
@@ -215,6 +265,12 @@ void OsuUISongBrowserUserButton::updateUserStats()
 	{
 		anim->moveQuadOut(&m_fHoverAnim, 1.5f, 0.2f, true);
 		anim->moveLinear(&m_fHoverAnim, 0.0f, 1.5f, 0.2f);
+
+		if (m_fPPDelta != 0.0f && !isFirstLoad)
+		{
+			m_fPPDeltaAnim = 1.0f;
+			anim->moveLinear(&m_fPPDeltaAnim, 0.0f, 25.0f, true);
+		}
 	}
 }
 
