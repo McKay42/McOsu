@@ -122,6 +122,7 @@ public:
 	PlayerPPScores getPlayerPPScores(UString playerName);
 	PlayerStats calculatePlayerStats(UString playerName);
 	static float getWeightForIndex(int i);
+	static float getBonusPPForNumScores(int numScores);
 	unsigned long long getRequiredScoreForLevel(int level);
 	int getLevelForScore(unsigned long long score, int maxLevel = 120);
 

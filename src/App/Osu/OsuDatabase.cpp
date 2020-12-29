@@ -57,6 +57,7 @@ ConVar osu_scores_legacy_enabled("osu_scores_legacy_enabled", true, "load osu!'s
 ConVar osu_scores_custom_enabled("osu_scores_custom_enabled", true, "load custom scores.db");
 ConVar osu_scores_save_immediately("osu_scores_save_immediately", true, "write scores.db as soon as a new score is added");
 ConVar osu_scores_sort_by_pp("osu_scores_sort_by_pp", true, "display pp in score browser instead of score");
+ConVar osu_scores_bonus_pp("osu_scores_bonus_pp", true, "whether to add bonus pp to total (real) pp or not");
 ConVar osu_user_include_relax_and_autopilot_for_stats("osu_user_include_relax_and_autopilot_for_stats", false);
 
 
@@ -703,16 +704,22 @@ OsuDatabase::PlayerStats OsuDatabase::calculatePlayerStats(UString playerName)
 
 	float pp = 0.0f;
 	float acc = 0.0f;
-	for (int i=0; i<ps.ppScores.size(); i++)
+	for (size_t i=0; i<ps.ppScores.size(); i++)
 	{
-		const float weight = getWeightForIndex(ps.ppScores.size()-1-i);
+		const float weight = getWeightForIndex(ps.ppScores.size() - 1 - i);
 
 		pp += ps.ppScores[i]->pp * weight;
 		acc += OsuScore::calculateAccuracy(ps.ppScores[i]->num300s, ps.ppScores[i]->num100s, ps.ppScores[i]->num50s, ps.ppScores[i]->numMisses) * weight;
 	}
 
+	// bonus pp
+	// https://osu.ppy.sh/wiki/en/Performance_points
+	if (osu_scores_bonus_pp.getBool())
+		pp += getBonusPPForNumScores(ps.ppScores.size());
+
+	// normalize accuracy
 	if (ps.ppScores.size() > 0)
-		acc /= (20.0f * (1.0f - getWeightForIndex(ps.ppScores.size()))); // normalize accuracy
+		acc /= (20.0f * (1.0f - getWeightForIndex(ps.ppScores.size())));
 
 	// fill stats
 	m_prevPlayerStats.name = playerName;
@@ -738,7 +745,12 @@ OsuDatabase::PlayerStats OsuDatabase::calculatePlayerStats(UString playerName)
 
 float OsuDatabase::getWeightForIndex(int i)
 {
-	return std::pow(0.95f, (float)i);
+	return std::pow(0.95, (double)i);
+}
+
+float OsuDatabase::getBonusPPForNumScores(int numScores)
+{
+	return (416.6667 * (1.0 - std::pow(0.9994, (double)numScores)));
 }
 
 unsigned long long OsuDatabase::getRequiredScoreForLevel(int level)
