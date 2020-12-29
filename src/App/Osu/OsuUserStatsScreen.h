@@ -19,6 +19,8 @@ class OsuUIContextMenu;
 class OsuUISongBrowserUserButton;
 class OsuUISongBrowserScoreButton;
 
+class OsuUserStatsScreenBackgroundPPRecalculator;
+
 class OsuUserStatsScreen : public OsuScreenBackable
 {
 public:
@@ -44,6 +46,7 @@ private:
 	void onScoreClicked(CBaseUIButton *button);
 	void onMenuClicked(CBaseUIButton *button);
 	void onMenuSelected(UString text, int id);
+	void onRecalculatePP();
 
 	ConVar *m_name_ref;
 
@@ -56,9 +59,10 @@ private:
 	CBaseUIScrollView *m_scores;
 	std::vector<OsuUISongBrowserScoreButton*> m_scoreButtons;
 
-	///std::vector<UString> m_vInfoText;
-
 	CBaseUIButton *m_menuButton;
+
+	bool m_bRecalculatingPP;
+	OsuUserStatsScreenBackgroundPPRecalculator *m_backgroundPPRecalculator;
 };
 
 #endif

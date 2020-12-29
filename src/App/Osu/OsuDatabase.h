@@ -116,11 +116,11 @@ public:
 	int addScore(std::string beatmapMD5Hash, OsuDatabase::Score score);
 	void deleteScore(std::string beatmapMD5Hash, uint64_t scoreUnixTimestamp);
 	void sortScores(std::string beatmapMD5Hash);
+	void forceScoreUpdateOnNextCalculatePlayerStats() {m_bDidScoresChangeForStats = true;}
 
 	std::vector<UString> getPlayerNamesWithPPScores();
 	PlayerPPScores getPlayerPPScores(UString playerName);
 	PlayerStats calculatePlayerStats(UString playerName);
-	void recalculatePPForAllScores();
 	static float getWeightForIndex(int i);
 	unsigned long long getRequiredScoreForLevel(int level);
 	int getLevelForScore(unsigned long long score, int maxLevel = 120);

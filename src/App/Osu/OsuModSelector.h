@@ -45,6 +45,7 @@ public:
 
 	void enableAuto();
 	void toggleAuto();
+	void resetMods();
 
 	void setWaitForF1KeyUp(bool waitForF1KeyUp) {m_bWaitForF1KeyUp = waitForF1KeyUp;}
 
@@ -104,7 +105,6 @@ private:
 
 	OsuUIButton *addActionButton(UString text);
 
-	void resetMods();
 	void close();
 
 	float m_fAnimation;

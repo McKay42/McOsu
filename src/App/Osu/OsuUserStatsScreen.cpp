@@ -20,8 +20,10 @@
 #include "OsuIcons.h"
 #include "OsuSkin.h"
 #include "OsuReplay.h"
+#include "OsuHUD.h"
 #include "OsuOptionsMenu.h"
 #include "OsuSongBrowser2.h"
+#include "OsuModSelector.h"
 #include "OsuMultiplayer.h"
 #include "OsuDatabase.h"
 #include "OsuDatabaseBeatmap.h"
@@ -63,13 +65,159 @@ public:
 	}
 };
 
+class OsuUserStatsScreenBackgroundPPRecalculator : public Resource
+{
+public:
+	OsuUserStatsScreenBackgroundPPRecalculator(Osu *osu, UString userName) : Resource()
+	{
+		m_osu = osu;
+		m_sUserName = userName;
+
+		m_iNumScoresToRecalculate = 0;
+		m_iNumScoresRecalculated = 0;
+	}
+
+	inline int getNumScoresToRecalculate() const {return m_iNumScoresToRecalculate.load();}
+	inline int getNumScoresRecalculated() const {return m_iNumScoresRecalculated.load();}
+
+private:
+	virtual void init()
+	{
+		m_bReady = true;
+	}
+
+	virtual void initAsync()
+	{
+		std::unordered_map<std::string, std::vector<OsuDatabase::Score>> *scores = m_osu->getSongBrowser()->getDatabase()->getScores();
+
+		// count number of scores to recalculate for UI
+		size_t numScoresToRecalculate = 0;
+		for (const auto kv : *scores)
+		{
+			for (size_t i=0; i<kv.second.size(); i++)
+			{
+				const OsuDatabase::Score &score = kv.second[i];
+				if (!score.isLegacyScore && score.playerName == m_sUserName)
+					numScoresToRecalculate++;
+			}
+		}
+		m_iNumScoresToRecalculate = numScoresToRecalculate;
+
+		// actually recalculate them
+		for (auto &kv : *scores)
+		{
+			for (size_t i=0; i<kv.second.size(); i++)
+			{
+				OsuDatabase::Score *score = &kv.second[i];
+				if (!score->isLegacyScore && score->playerName == m_sUserName)
+				{
+					if (m_bInterrupted.load())
+						break;
+					if (score->md5hash.length() < 1)
+						continue;
+
+					// TODO: what about scores with experimental mods enabled? can these be safely recalculated?
+
+					// 1) get matching beatmap from db
+					OsuDatabaseBeatmap *diff2 = m_osu->getSongBrowser()->getDatabase()->getBeatmapDifficulty(score->md5hash);
+					if (diff2 == NULL)
+					{
+						if (Osu::debug->getBool())
+							printf("PPRecalc couldn't find %s\n", score->md5hash.c_str());
+
+						continue;
+					}
+
+					// 2) force reload metadata (because osu.db does not contain e.g. the version field)
+					diff2->setLoadBeatmapMetadata(); // HACKHACK: this is fucking disgusting. refactor loadBeatmapMetadata(OsuDatabaseBeatmap *targetToLoadInto) stuff to be static
+					diff2->reload(); // HACKHACK: this is fucking disgusting. refactor loadBeatmapMetadata(OsuDatabaseBeatmap *targetToLoadInto) stuff to be static
+
+					const UString &osuFilePath = diff2->getFilePath();
+					const Osu::GAMEMODE gameMode = Osu::GAMEMODE::STD;
+					const float AR = score->AR;
+					const float CS = score->CS;
+					const float OD = score->OD;
+					const int version = diff2->getVersion();
+					const float stackLeniency = diff2->getStackLeniency();
+					const float speedMultiplier = score->speedMultiplier;
+
+					// 3) load hitobjects for diffcalc
+					std::vector<std::shared_ptr<OsuDifficultyHitObject>> hitObjects = OsuDatabaseBeatmap::generateDifficultyHitObjects(osuFilePath, gameMode, AR, CS, version, stackLeniency, speedMultiplier);
+					if (hitObjects.size() < 1)
+					{
+						if (Osu::debug->getBool())
+							printf("PPRecalc couldn't load %s\n", osuFilePath.toUtf8());
+
+						continue;
+					}
+
+					// 4) calculate stars
+					double aimStars = 0.0;
+					double speedStars = 0.0;
+					OsuDifficultyCalculator::calculateStarDiffForHitObjects(hitObjects, CS, &aimStars, &speedStars);
+
+					// 5) calculate pp
+					double pp = 0.0;
+					{
+						const int numHitObjects = hitObjects.size();
+						int numSpinners = 0;
+						{
+							for (size_t h=0; h<hitObjects.size(); h++)
+							{
+								if (hitObjects[h]->type == OsuDifficultyHitObject::TYPE::SPINNER)
+									numSpinners++;
+							}
+						}
+						int numCircles = 0;
+						{
+							for (size_t h=0; h<hitObjects.size(); h++)
+							{
+								if (hitObjects[h]->type == OsuDifficultyHitObject::TYPE::CIRCLE)
+									numCircles++;
+							}
+						}
+
+						// TODO: manually recalculate maxPossibleCombo, as the score field is only available for scores > 2018something
+						const int maxPossibleCombo = score->maxPossibleCombo;
+						if (maxPossibleCombo < 1)
+							continue;
+
+						pp = OsuDifficultyCalculator::calculatePPv2(score->modsLegacy, speedMultiplier, AR, OD, aimStars, speedStars, numHitObjects, numCircles, numSpinners, maxPossibleCombo, score->comboMax, score->numMisses, score->num300s, score->num100s, score->num50s);
+					}
+
+					// 6) overwrite score with new pp data
+					if (pp > 0.0f)
+						score->pp = pp;
+
+					m_iNumScoresRecalculated++;
+
+					// HACKHACK: DEBUG:
+					printf("[%s] original = %f, new = %f, delta = %f\n", score->md5hash.c_str(), score->pp, pp, (pp - score->pp));
+					printf("at %i/%i\n", m_iNumScoresRecalculated.load(), m_iNumScoresToRecalculate.load());
+				}
+			}
+
+			if (m_bInterrupted.load())
+				break;
+		}
+
+		m_bAsyncReady = true;
+	}
+
+	virtual void destroy() {;}
+
+	Osu *m_osu;
+	UString m_sUserName;
+
+	std::atomic<int> m_iNumScoresToRecalculate;
+	std::atomic<int> m_iNumScoresRecalculated;
+};
+
 
 
 OsuUserStatsScreen::OsuUserStatsScreen(Osu *osu) : OsuScreenBackable(osu)
 {
 	m_name_ref = convar->getConVarByName("name");
-
-	// TODO: (statistics panel with values (how many plays, average UR/offset+-/score/pp/etc.))
 
 	m_container = new CBaseUIContainer();
 
@@ -99,13 +247,21 @@ OsuUserStatsScreen::OsuUserStatsScreen(Osu *osu) : OsuScreenBackable(osu)
 	// the context menu gets added last (drawn on top of everything)
 	m_container->addBaseUIElement(m_contextMenu);
 
-	///m_vInfoText.push_back("Old scores are not recalculated yet!");
-	///m_vInfoText.push_back("Will be included in a future update.");
-	///m_vInfoText.push_back("(Scores before 15.02.2019 = old pp)");
+	m_bRecalculatingPP = false;
+	m_backgroundPPRecalculator = NULL;
+
+	// TODO: (statistics panel with values (how many plays, average UR/offset+-/score/pp/etc.))
 }
 
 OsuUserStatsScreen::~OsuUserStatsScreen()
 {
+	if (m_backgroundPPRecalculator != NULL)
+	{
+		m_backgroundPPRecalculator->interruptLoad();
+		engine->getResourceManager()->destroyResource(m_backgroundPPRecalculator);
+		m_backgroundPPRecalculator = NULL;
+	}
+
 	SAFE_DELETE(m_container);
 }
 
@@ -113,31 +269,27 @@ void OsuUserStatsScreen::draw(Graphics *g)
 {
 	if (!m_bVisible) return;
 
-	/*
-	if (m_vInfoText.size() > 0)
+	if (m_bRecalculatingPP)
 	{
-		const float dpiScale = Osu::getUIScale();
-
-		const float infoScale = 0.1f;
-		const float paddingScale = 0.4f;
-		McFont *infoFont = m_osu->getSubTitleFont();
-		g->setColor(0x77888888);
-		for (int i=0; i<m_vInfoText.size(); i++)
+		if (m_backgroundPPRecalculator != NULL)
 		{
+			const float percentFinished = (float)m_backgroundPPRecalculator->getNumScoresRecalculated() / (float)m_backgroundPPRecalculator->getNumScoresToRecalculate();
+			UString loadingMessage = UString::format("Recalculating scores ... (%i %%, %i/%i)", (int)(percentFinished*100.0f), m_backgroundPPRecalculator->getNumScoresRecalculated(), m_backgroundPPRecalculator->getNumScoresToRecalculate());
+
+			g->setColor(0xffffffff);
 			g->pushTransform();
 			{
-				const float scale = (m_scores->getPos().y / infoFont->getHeight())*infoScale;
-				const float height = infoFont->getHeight()*scale;
-				const float padding = height*paddingScale;
-
-				g->scale(scale, scale);
-				g->translate(m_userButton->getPos().x + m_userButton->getSize().x + 10 * dpiScale, m_scores->getPos().y/2 + height/2 - ((m_vInfoText.size()-1)*height + (m_vInfoText.size()-1)*padding)/2 + i*(height+padding));
-				g->drawString(infoFont, m_vInfoText[i]);
+				g->translate((int)(m_osu->getScreenWidth()/2 - m_osu->getSubTitleFont()->getStringWidth(loadingMessage)/2), m_osu->getScreenHeight() - 15);
+				g->drawString(m_osu->getSubTitleFont(), loadingMessage);
 			}
 			g->popTransform();
 		}
+
+		m_osu->getHUD()->drawBeatmapImportSpinner(g);
+
+		OsuScreenBackable::draw(g);
+		return;
 	}
-	*/
 
 	m_container->draw(g);
 
@@ -148,6 +300,21 @@ void OsuUserStatsScreen::update()
 {
 	OsuScreenBackable::update();
 	if (!m_bVisible) return;
+
+	if (m_bRecalculatingPP)
+	{
+		// wait until recalc is finished
+		if (m_backgroundPPRecalculator != NULL && m_backgroundPPRecalculator->isReady())
+		{
+			// force recalc + refresh UI
+			m_osu->getSongBrowser()->getDatabase()->forceScoreUpdateOnNextCalculatePlayerStats();
+			rebuildScoreButtons(m_name_ref->getString());
+
+			m_bRecalculatingPP = false;
+		}
+		else
+			return; // don't update rest of UI while recalcing
+	}
 
 	m_container->update();
 
@@ -187,8 +354,18 @@ void OsuUserStatsScreen::onScoreContextMenu(OsuUISongBrowserScoreButton *scoreBu
 
 void OsuUserStatsScreen::onBack()
 {
-	engine->getSound()->play(m_osu->getSkin()->getMenuClick());
-	m_osu->toggleSongBrowser();
+	if (m_bRecalculatingPP)
+	{
+		if (m_backgroundPPRecalculator != NULL)
+			m_backgroundPPRecalculator->interruptLoad();
+		else
+			m_bRecalculatingPP = false; // this should never happen
+	}
+	else
+	{
+		engine->getSound()->play(m_osu->getSkin()->getMenuClick());
+		m_osu->toggleSongBrowser();
+	}
 }
 
 void OsuUserStatsScreen::rebuildScoreButtons(UString playerName)
@@ -277,11 +454,11 @@ void OsuUserStatsScreen::onScoreClicked(CBaseUIButton *button)
 
 void OsuUserStatsScreen::onMenuClicked(CBaseUIButton *button)
 {
-	m_contextMenu->setPos(m_menuButton->getPos() + Vector2(0, m_menuButton->getSize().y - 1));
-	m_contextMenu->setRelPos(m_menuButton->getPos() + Vector2(0, m_menuButton->getSize().y - 1));
-	m_contextMenu->begin(0, true);
+	m_contextMenu->setPos(m_menuButton->getPos() + Vector2(0, m_menuButton->getSize().y));
+	m_contextMenu->setRelPos(m_menuButton->getPos() + Vector2(0, m_menuButton->getSize().y));
+	m_contextMenu->begin();
 	{
-		m_contextMenu->addButton("Recalculate pp");
+		m_contextMenu->addButton("Recalculate pp", 1);
 		m_contextMenu->addButton("---");
 		m_contextMenu->addButton("Delete All Scores (!)");
 	}
@@ -292,7 +469,31 @@ void OsuUserStatsScreen::onMenuClicked(CBaseUIButton *button)
 void OsuUserStatsScreen::onMenuSelected(UString text, int id)
 {
 	// TODO: implement "recalculate pp", "delete all scores", etc.
-	debugLog("TODO ...\n");
+
+	if (id == 1)
+		onRecalculatePP();
+	else
+		debugLog("TODO ...\n");
+}
+
+void OsuUserStatsScreen::onRecalculatePP()
+{
+	m_bRecalculatingPP = true;
+
+	if (m_backgroundPPRecalculator != NULL)
+	{
+		m_backgroundPPRecalculator->interruptLoad();
+		engine->getResourceManager()->destroyResource(m_backgroundPPRecalculator);
+		m_backgroundPPRecalculator = NULL;
+	}
+
+	m_backgroundPPRecalculator = new OsuUserStatsScreenBackgroundPPRecalculator(m_osu, m_name_ref->getString());
+
+	// NOTE: force disable all runtime mods (including all experimental mods!), as they directly influence global OsuGameRules which are used during pp calculation
+	m_osu->getModSelector()->resetMods();
+
+	engine->getResourceManager()->requestNextLoadAsync();
+	engine->getResourceManager()->loadResource(m_backgroundPPRecalculator);
 }
 
 void OsuUserStatsScreen::updateLayout()
@@ -326,6 +527,6 @@ void OsuUserStatsScreen::updateLayout()
 	m_userButton->setSize(userButtonHeight*3.5f, userButtonHeight);
 	m_userButton->setPos(m_osu->getScreenWidth()/2 - m_userButton->getSize().x/2, m_scores->getPos().y/2 - m_userButton->getSize().y/2);
 
-	m_menuButton->setSize(userButtonHeight*0.7f, userButtonHeight*0.7f);
+	m_menuButton->setSize(userButtonHeight*0.9f, userButtonHeight*0.9f);
 	m_menuButton->setPos(std::max(m_userButton->getPos().x + m_userButton->getSize().x, m_userButton->getPos().x + m_userButton->getSize().x + (m_userButton->getPos().x - m_scores->getPos().x)/2 - m_menuButton->getSize().x/2), m_userButton->getPos().y + m_userButton->getSize().y/2 - m_menuButton->getSize().y/2);
 }

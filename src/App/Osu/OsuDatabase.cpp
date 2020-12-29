@@ -736,16 +736,6 @@ OsuDatabase::PlayerStats OsuDatabase::calculatePlayerStats(UString playerName)
 	return m_prevPlayerStats;
 }
 
-void OsuDatabase::recalculatePPForAllScores()
-{
-	// TODO: recalculate 20180722 scores for https://github.com/ppy/osu-performance/pull/76/ and https://github.com/ppy/osu-performance/pull/72/
-
-	// TODO: before being able to recalculate scoreVersion 20180722 scores, we have to fetch/calculate these values from the beatmap db:
-	// maxPossibleCombo, numHitObjects, numCircles
-	// therefore: we have to ensure everything is loaded, or dynamically load these values from the osu files (which will be expensive)
-	// (however, if and when star rating changes come in, everything will have to be recalculated completely anyway)
-}
-
 float OsuDatabase::getWeightForIndex(int i)
 {
 	return std::pow(0.95f, (float)i);
