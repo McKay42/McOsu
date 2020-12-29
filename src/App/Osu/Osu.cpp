@@ -319,7 +319,6 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_bF1 = false;
 	m_bUIToggleCheck = false;
 	m_bScoreboardToggleCheck = false;
-	m_bTab = false;
 	m_bEscape = false;
 	m_bKeyboardKey1Down = false;
 	m_bKeyboardKey2Down = false;
@@ -1321,32 +1320,23 @@ void Osu::onKeyDown(KeyboardEvent &key)
 				m_bSkipScheduled = true;
 
 			// toggle ui
+			if (!key.isConsumed() && key == (KEYCODE)OsuKeyBindings::TOGGLE_SCOREBOARD.getInt() && !m_bScoreboardToggleCheck)
 			{
-				if (key == KEY_SHIFT)
+				m_bScoreboardToggleCheck = true;
+
+				if (engine->getKeyboard()->isShiftDown())
 				{
-					if (m_bTab && !m_bUIToggleCheck)
+					if (!m_bUIToggleCheck)
 					{
 						m_bUIToggleCheck = true;
 						m_osu_draw_hud_ref->setValue(!m_osu_draw_hud_ref->getBool());
+						m_notificationOverlay->addNotification(m_osu_draw_hud_ref->getBool() ? "In-game interface has been enabled." : "In-game interface has been disabled.", 0xffffffff, false, 0.1f);
 
 						key.consume();
 					}
 				}
-				if (key == KEY_TAB)
+				else
 				{
-					m_bTab = true;
-					if (engine->getKeyboard()->isShiftDown() && !m_bUIToggleCheck)
-					{
-						m_bUIToggleCheck = true;
-						m_osu_draw_hud_ref->setValue(!m_osu_draw_hud_ref->getBool());
-
-						key.consume();
-					}
-				}
-
-				if (!key.isConsumed() && key == (KEYCODE)OsuKeyBindings::TOGGLE_SCOREBOARD.getInt() && !m_bScoreboardToggleCheck)
-				{
-					m_bScoreboardToggleCheck = true;
 					m_osu_draw_scoreboard->setValue(!m_osu_draw_scoreboard->getBool());
 					m_notificationOverlay->addNotification(m_osu_draw_scoreboard->getBool() ? "Scoreboard is shown." : "Scoreboard is hidden.", 0xffffffff, false, 0.1f);
 
@@ -1543,10 +1533,8 @@ void Osu::onKeyUp(KeyboardEvent &key)
 	if (key == KEY_SHIFT)
 		m_bUIToggleCheck = false;
 	if (key == (KEYCODE)OsuKeyBindings::TOGGLE_SCOREBOARD.getInt())
-		m_bScoreboardToggleCheck = false;
-	if (key == KEY_TAB)
 	{
-		m_bTab = false;
+		m_bScoreboardToggleCheck = false;
 		m_bUIToggleCheck = false;
 	}
 	if (key == (KEYCODE)OsuKeyBindings::QUICK_RETRY.getInt() || key == KEY_R)

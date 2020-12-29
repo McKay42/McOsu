@@ -326,7 +326,6 @@ private:
 	bool m_bF1;
 	bool m_bUIToggleCheck;
 	bool m_bScoreboardToggleCheck;
-	bool m_bTab;
 	bool m_bEscape;
 	bool m_bKeyboardKey1Down;
 	bool m_bKeyboardKey2Down;
