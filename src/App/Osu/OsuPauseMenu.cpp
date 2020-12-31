@@ -237,15 +237,16 @@ void OsuPauseMenu::onKeyDown(KeyboardEvent &e)
 	OsuScreen::onKeyDown(e); // only used for options menu
 	if (!m_bVisible || e.isConsumed()) return;
 
-	if (e == (KEYCODE)OsuKeyBindings::LEFT_CLICK.getInt() || e == (KEYCODE)OsuKeyBindings::RIGHT_CLICK.getInt())
+	if (e == (KEYCODE)OsuKeyBindings::LEFT_CLICK.getInt() || e == (KEYCODE)OsuKeyBindings::RIGHT_CLICK.getInt()
+	 || e == (KEYCODE)OsuKeyBindings::LEFT_CLICK_2.getInt() || e == (KEYCODE)OsuKeyBindings::RIGHT_CLICK_2.getInt())
 	{
 		bool fireButtonClick = false;
-		if (e == (KEYCODE)OsuKeyBindings::LEFT_CLICK.getInt() && !m_bClick1Down)
+		if ((e == (KEYCODE)OsuKeyBindings::LEFT_CLICK.getInt() || e == (KEYCODE)OsuKeyBindings::LEFT_CLICK_2.getInt()) && !m_bClick1Down)
 		{
 			m_bClick1Down = true;
 			fireButtonClick = true;
 		}
-		if (e == (KEYCODE)OsuKeyBindings::RIGHT_CLICK.getInt() && !m_bClick2Down)
+		if ((e == (KEYCODE)OsuKeyBindings::RIGHT_CLICK.getInt() || e == (KEYCODE)OsuKeyBindings::RIGHT_CLICK_2.getInt()) && !m_bClick2Down)
 		{
 			m_bClick2Down = true;
 			fireButtonClick = true;
@@ -343,10 +344,10 @@ void OsuPauseMenu::onKeyDown(KeyboardEvent &e)
 
 void OsuPauseMenu::onKeyUp(KeyboardEvent &e)
 {
-	if (e == (KEYCODE)OsuKeyBindings::LEFT_CLICK.getInt())
+	if (e == (KEYCODE)OsuKeyBindings::LEFT_CLICK.getInt() || e == (KEYCODE)OsuKeyBindings::LEFT_CLICK_2.getInt())
 		m_bClick1Down = false;
 
-	if (e == (KEYCODE)OsuKeyBindings::RIGHT_CLICK.getInt())
+	if (e == (KEYCODE)OsuKeyBindings::RIGHT_CLICK.getInt() || e == (KEYCODE)OsuKeyBindings::RIGHT_CLICK_2.getInt())
 		m_bClick2Down = false;
 }
 

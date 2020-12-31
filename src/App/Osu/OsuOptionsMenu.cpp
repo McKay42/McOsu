@@ -208,9 +208,10 @@ private:
 class OsuOptionsMenuKeyBindLabel : public CBaseUILabel
 {
 public:
-	OsuOptionsMenuKeyBindLabel(float xPos, float yPos, float xSize, float ySize, UString name, UString text, ConVar *cvar) : CBaseUILabel(xPos, yPos, xSize, ySize, name, text)
+	OsuOptionsMenuKeyBindLabel(float xPos, float yPos, float xSize, float ySize, UString name, UString text, ConVar *cvar, CBaseUIButton *bindButton) : CBaseUILabel(xPos, yPos, xSize, ySize, name, text)
 	{
 		m_key = cvar;
+		m_bindButton = bindButton;
 
 		m_textColorBound = 0xffffd700;
 		m_textColorUnbound = 0xffbb0000;
@@ -245,7 +246,14 @@ public:
 	void setTextColorUnbound(Color textColorUnbound) {m_textColorUnbound = textColorUnbound;}
 
 private:
+	virtual void onMouseUpInside()
+	{
+		CBaseUILabel::onMouseUpInside();
+		m_bindButton->click();
+	}
+
 	ConVar *m_key;
+	CBaseUIButton *m_bindButton;
 
 	Color m_textColorBound;
 	Color m_textColorUnbound;
@@ -863,6 +871,9 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSubSection("Keys - osu! Standard Mode", keyboardSectionTags);
 	addKeyBindButton("Left Click", &OsuKeyBindings::LEFT_CLICK);
 	addKeyBindButton("Right Click", &OsuKeyBindings::RIGHT_CLICK);
+	addSpacer();
+	addKeyBindButton("Left Click (2)", &OsuKeyBindings::LEFT_CLICK_2);
+	addKeyBindButton("Right Click (2)", &OsuKeyBindings::RIGHT_CLICK_2);
 	addSubSection("Keys - FPoSu", keyboardSectionTags);
 	addKeyBindButton("Zoom", &OsuKeyBindings::FPOSU_ZOOM);
 	addSubSection("Keys - In-Game", keyboardSectionTags);
@@ -2047,15 +2058,14 @@ void OsuOptionsMenu::updateLayout()
 			{
 				CBaseUIElement *e3 = m_elements[i].elements[2];
 
-				const float dividerBegin = 5.0f / 8.0f;
-				//const float dividerMiddle = 1.0f / 8.0f;
+				const float dividerMiddle = 5.0f / 8.0f;
 				const float dividerEnd = 2.0f / 8.0f;
 
 				e1->setRelPos(sideMargin, yCounter);
-				e1->setSizeX(elementWidth*dividerBegin - spacing);
+				e1->setSizeX(e1->getSize().y);
 
 				e2->setRelPos(sideMargin + e1->getSize().x + 0.5f*spacing, yCounter);
-				e2->setSizeX(e2->getSize().y); // elementWidth*dividerMiddle - spacing
+				e2->setSizeX(elementWidth*dividerMiddle - spacing);
 
 				e3->setRelPos(sideMargin + e1->getSize().x + e2->getSize().x + 1.5f*spacing, yCounter);
 				e3->setSizeX(elementWidth*dividerEnd - spacing);
@@ -3638,35 +3648,35 @@ OsuOptionsMenu::OPTIONS_ELEMENT OsuOptionsMenu::addButtonButtonLabel(UString tex
 
 OsuUIButton *OsuOptionsMenu::addKeyBindButton(UString text, ConVar *cvar)
 {
-	OsuUIButton *button = new OsuUIButton(m_osu, 0, 0, m_options->getSize().x, 50, text, text);
-	button->setColor(0xff0e94b5);
-	button->setUseDefaultSkin();
-	button->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	m_options->getContainer()->addBaseUIElement(button);
+	///UString unbindIconString; unbindIconString.insert(0, OsuIcons::UNDO);
+	OsuUIButton *unbindButton = new OsuUIButton(m_osu, 0, 0, m_options->getSize().x, 50, text, "");
+	unbindButton->setTooltipText("Unbind");
+	unbindButton->setColor(0x77ff0000);
+	unbindButton->setUseDefaultSkin();
+	unbindButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyUnbindButtonPressed) );
+	///unbindButton->setFont(m_osu->getFontIcons());
+	m_options->getContainer()->addBaseUIElement(unbindButton);
 
-	///UString iconString; iconString.insert(0, OsuIcons::UNDO);
-	OsuUIButton *button2 = new OsuUIButton(m_osu, 0, 0, m_options->getSize().x, 50, text, "");
-	button2->setTooltipText("Unbind");
-	button2->setColor(0x77ff0000);
-	button2->setUseDefaultSkin();
-	button2->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyUnbindButtonPressed) );
-	///button2->setFont(m_osu->getFontIcons());
-	m_options->getContainer()->addBaseUIElement(button2);
+	OsuUIButton *bindButton = new OsuUIButton(m_osu, 0, 0, m_options->getSize().x, 50, text, text);
+	bindButton->setColor(0xff0e94b5);
+	bindButton->setUseDefaultSkin();
+	bindButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	m_options->getContainer()->addBaseUIElement(bindButton);
 
-	OsuOptionsMenuKeyBindLabel *label = new OsuOptionsMenuKeyBindLabel(0, 0, m_options->getSize().x, 50, "", "", cvar);
+	OsuOptionsMenuKeyBindLabel *label = new OsuOptionsMenuKeyBindLabel(0, 0, m_options->getSize().x, 50, "", "", cvar, bindButton);
 	label->setDrawFrame(false);
 	label->setDrawBackground(false);
 	m_options->getContainer()->addBaseUIElement(label);
 
 	OPTIONS_ELEMENT e;
-	e.elements.push_back(button);
-	e.elements.push_back(button2);
+	e.elements.push_back(unbindButton);
+	e.elements.push_back(bindButton);
 	e.elements.push_back(label);
 	e.type = 5;
 	e.cvar = cvar;
 	m_elements.push_back(e);
 
-	return button;
+	return bindButton;
 }
 
 CBaseUICheckbox *OsuOptionsMenu::addCheckbox(UString text, ConVar *cvar)

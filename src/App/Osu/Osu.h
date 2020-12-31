@@ -328,7 +328,9 @@ private:
 	bool m_bScoreboardToggleCheck;
 	bool m_bEscape;
 	bool m_bKeyboardKey1Down;
+	bool m_bKeyboardKey12Down;
 	bool m_bKeyboardKey2Down;
+	bool m_bKeyboardKey22Down;
 	bool m_bMouseKey1Down;
 	bool m_bMouseKey2Down;
 	bool m_bSkipDownCheck;

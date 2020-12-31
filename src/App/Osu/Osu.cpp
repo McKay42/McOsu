@@ -176,6 +176,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_jigsaw2"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_fullalternate"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_random"));
+	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_reverse_sliders"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_no50s"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_no100s"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_ming3012"));
@@ -321,7 +322,9 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_bScoreboardToggleCheck = false;
 	m_bEscape = false;
 	m_bKeyboardKey1Down = false;
+	m_bKeyboardKey12Down = false;
 	m_bKeyboardKey2Down = false;
+	m_bKeyboardKey22Down = false;
 	m_bMouseKey1Down = false;
 	m_bMouseKey2Down = false;
 	m_bSkipDownCheck = false;
@@ -916,7 +919,7 @@ void Osu::update()
 		// skip button clicking
 		if (getSelectedBeatmap()->isInSkippableSection() && !getSelectedBeatmap()->isPaused() && !m_bSeeking && !m_hud->isVolumeOverlayBusy())
 		{
-			const bool isAnyOsuKeyDown = (m_bKeyboardKey1Down || m_bKeyboardKey2Down || m_bMouseKey1Down || m_bMouseKey2Down);
+			const bool isAnyOsuKeyDown = (m_bKeyboardKey1Down || m_bKeyboardKey12Down || m_bKeyboardKey2Down || m_bKeyboardKey22Down || m_bMouseKey1Down || m_bMouseKey2Down);
 			const bool isAnyVRKeyDown = isInVRMode() && !m_vr->isUIActive() && (openvr->getLeftController()->isButtonPressed(OpenVRController::BUTTON::BUTTON_STEAMVR_TOUCHPAD) || openvr->getRightController()->isButtonPressed(OpenVRController::BUTTON::BUTTON_STEAMVR_TOUCHPAD)
 												|| openvr->getLeftController()->getTrigger() > 0.95f || openvr->getRightController()->getTrigger() > 0.95f);
 
@@ -1287,7 +1290,7 @@ void Osu::onKeyDown(KeyboardEvent &key)
 		}
 	}
 
-	// local hotkeys
+	// local hotkeys (and gameplay keys)
 
 	// while playing (and not in options)
 	if (isInPlayMode() && !m_optionsMenu->isVisible())
@@ -1297,22 +1300,40 @@ void Osu::onKeyDown(KeyboardEvent &key)
 		{
 			getSelectedBeatmap()->onKeyDown(key);
 
-			if (!m_bKeyboardKey1Down && key == (KEYCODE)OsuKeyBindings::LEFT_CLICK.getInt())
+			// K1
 			{
-				m_bKeyboardKey1Down = true;
-				onKey1Change(true, false);
+				const bool isKeyLeftClick = (key == (KEYCODE)OsuKeyBindings::LEFT_CLICK.getInt());
+				const bool isKeyLeftClick2 = (key == (KEYCODE)OsuKeyBindings::LEFT_CLICK_2.getInt());
+				if ((!m_bKeyboardKey1Down && isKeyLeftClick) || (!m_bKeyboardKey12Down && isKeyLeftClick2))
+				{
+					if (isKeyLeftClick2)
+						m_bKeyboardKey12Down = true;
+					else
+						m_bKeyboardKey1Down = true;
 
-				if (!getSelectedBeatmap()->hasFailed())
-					key.consume();
+					onKey1Change(true, false);
+
+					if (!getSelectedBeatmap()->hasFailed())
+						key.consume();
+				}
 			}
 
-			if (!m_bKeyboardKey2Down && key == (KEYCODE)OsuKeyBindings::RIGHT_CLICK.getInt())
+			// K2
 			{
-				m_bKeyboardKey2Down = true;
-				onKey2Change(true, false);
+				const bool isKeyRightClick = (key == (KEYCODE)OsuKeyBindings::RIGHT_CLICK.getInt());
+				const bool isKeyRightClick2 = (key == (KEYCODE)OsuKeyBindings::RIGHT_CLICK_2.getInt());
+				if ((!m_bKeyboardKey2Down && isKeyRightClick) || (!m_bKeyboardKey22Down && isKeyRightClick2))
+				{
+					if (isKeyRightClick2)
+						m_bKeyboardKey22Down = true;
+					else
+						m_bKeyboardKey2Down = true;
 
-				if (!getSelectedBeatmap()->hasFailed())
-					key.consume();
+					onKey2Change(true, false);
+
+					if (!getSelectedBeatmap()->hasFailed())
+						key.consume();
+				}
 			}
 
 			// handle skipping
@@ -1347,8 +1368,8 @@ void Osu::onKeyDown(KeyboardEvent &key)
 			// allow live mod changing while playing
 			if (!key.isConsumed()
 				&& (key == KEY_F1 || key == (KEYCODE)OsuKeyBindings::TOGGLE_MODSELECT.getInt())
-				&& (KEY_F1 != (KEYCODE)OsuKeyBindings::LEFT_CLICK.getInt() || !m_bKeyboardKey1Down)
-				&& (KEY_F1 != (KEYCODE)OsuKeyBindings::RIGHT_CLICK.getInt() || !m_bKeyboardKey2Down)
+				&& ((KEY_F1 != (KEYCODE)OsuKeyBindings::LEFT_CLICK.getInt() && KEY_F1 != (KEYCODE)OsuKeyBindings::LEFT_CLICK_2.getInt()) || (!m_bKeyboardKey1Down && !m_bKeyboardKey12Down))
+				&& ((KEY_F1 != (KEYCODE)OsuKeyBindings::RIGHT_CLICK.getInt() && KEY_F1 != (KEYCODE)OsuKeyBindings::RIGHT_CLICK_2.getInt() ) || (!m_bKeyboardKey2Down && !m_bKeyboardKey22Down))
 				&& !m_bF1
 				&& !getSelectedBeatmap()->hasFailed()) // only if not failed though
 			{
@@ -1497,23 +1518,42 @@ void Osu::onKeyUp(KeyboardEvent &key)
 	if (isInPlayMode())
 	{
 		if (!getSelectedBeatmap()->isPaused())
-		{
-			getSelectedBeatmap()->onKeyUp(key);
-		}
+			getSelectedBeatmap()->onKeyUp(key); // only used for mania atm
 	}
 
 	// clicks
-	if (key == (KEYCODE)OsuKeyBindings::LEFT_CLICK.getInt() && m_bKeyboardKey1Down)
 	{
-		m_bKeyboardKey1Down = false;
-		if (isInPlayMode())
-			onKey1Change(false, false);
-	}
-	if (key == (KEYCODE)OsuKeyBindings::RIGHT_CLICK.getInt() && m_bKeyboardKey2Down)
-	{
-		m_bKeyboardKey2Down = false;
-		if (isInPlayMode())
-			onKey2Change(false, false);
+		// K1
+		{
+			const bool isKeyLeftClick = (key == (KEYCODE)OsuKeyBindings::LEFT_CLICK.getInt());
+			const bool isKeyLeftClick2 = (key == (KEYCODE)OsuKeyBindings::LEFT_CLICK_2.getInt());
+			if ((isKeyLeftClick && m_bKeyboardKey1Down) || (isKeyLeftClick2 && m_bKeyboardKey12Down))
+			{
+				if (isKeyLeftClick2)
+					m_bKeyboardKey12Down = false;
+				else
+					m_bKeyboardKey1Down = false;
+
+				if (isInPlayMode())
+					onKey1Change(false, false);
+			}
+		}
+
+		// K2
+		{
+			const bool isKeyRightClick = (key == (KEYCODE)OsuKeyBindings::RIGHT_CLICK.getInt());
+			const bool isKeyRightClick2 = (key == (KEYCODE)OsuKeyBindings::RIGHT_CLICK_2.getInt());
+			if ((isKeyRightClick && m_bKeyboardKey2Down) || (isKeyRightClick2 && m_bKeyboardKey22Down))
+			{
+				if (isKeyRightClick2)
+					m_bKeyboardKey22Down = false;
+				else
+					m_bKeyboardKey2Down = false;
+
+				if (isInPlayMode())
+					onKey2Change(false, false);
+			}
+		}
 	}
 
 	// forward to all subsystems, if not consumed
@@ -2316,6 +2356,16 @@ void Osu::onConfineCursorFullscreenChange(UString oldValue, UString newValue)
 
 void Osu::onKey1Change(bool pressed, bool mouse)
 {
+	int numKeys1Down = 0;
+	if (m_bKeyboardKey1Down)
+		numKeys1Down++;
+	if (m_bKeyboardKey12Down)
+		numKeys1Down++;
+	if (m_bMouseKey1Down)
+		numKeys1Down++;
+
+	const bool isKeyPressed1Allowed = (numKeys1Down == 1); // all key1 keys (incl. multiple bindings) act as one single key with state handover
+
 	// WARNING: if paused, keyReleased*() will be called out of sequence every time due to the fix. do not put actions in it
 	if (isInPlayMode()/* && !getSelectedBeatmap()->isPaused()*/) // NOTE: allow keyup even while beatmap is paused, to correctly not-continue immediately due to pressed keys
 	{
@@ -2325,9 +2375,9 @@ void Osu::onKey1Change(bool pressed, bool mouse)
 			if (osu_disable_mousebuttons.getBool())
 				m_bMouseKey1Down = false;
 
-			if (pressed && !(m_bKeyboardKey1Down && m_bMouseKey1Down) && !getSelectedBeatmap()->isPaused()) // see above note
+			if (pressed && isKeyPressed1Allowed && !getSelectedBeatmap()->isPaused()) // see above note
 				getSelectedBeatmap()->keyPressed1(mouse);
-			else if (!m_bKeyboardKey1Down && !m_bMouseKey1Down)
+			else if (!m_bKeyboardKey1Down && !m_bKeyboardKey12Down && !m_bMouseKey1Down)
 				getSelectedBeatmap()->keyReleased1(mouse);
 		}
 	}
@@ -2336,24 +2386,28 @@ void Osu::onKey1Change(bool pressed, bool mouse)
 	const bool doAnimate = !(isInPlayMode() && !getSelectedBeatmap()->isPaused() && mouse && osu_disable_mousebuttons.getBool());
 	if (doAnimate)
 	{
-		if (pressed && !(m_bKeyboardKey1Down && m_bMouseKey1Down))
+		if (pressed && isKeyPressed1Allowed)
 		{
 			m_hud->animateCursorExpand();
 			m_hud->addCursorRipple(engine->getMouse()->getPos());
-
-			/*
-			engine->getResourceManager()->loadSoundAbs("c:/Program Files (x86)/osu!/Skins/HL skin normal sounds/pl_gun3.wav", "OSU_TEMP_GUN_3")->setOverlayable(true);
-			engine->getResourceManager()->loadSoundAbs("c:/Program Files (x86)/osu!/Skins/HL skin normal sounds/pl_gun3.wav", "OSU_TEMP_GUN_3")->setVolume(0.2f);
-			engine->getSound()->play(engine->getResourceManager()->loadSoundAbs("c:/Program Files (x86)/osu!/Skins/HL skin normal sounds/pl_gun3.wav", "OSU_TEMP_GUN_3"));
-			*/
 		}
-		else if (!m_bKeyboardKey1Down && !m_bMouseKey1Down && !m_bKeyboardKey2Down && !m_bMouseKey2Down)
+		else if (!m_bKeyboardKey1Down && !m_bKeyboardKey12Down && !m_bMouseKey1Down && !m_bKeyboardKey2Down && !m_bKeyboardKey22Down && !m_bMouseKey2Down)
 			m_hud->animateCursorShrink();
 	}
 }
 
 void Osu::onKey2Change(bool pressed, bool mouse)
 {
+	int numKeys2Down = 0;
+	if (m_bKeyboardKey2Down)
+		numKeys2Down++;
+	if (m_bKeyboardKey22Down)
+		numKeys2Down++;
+	if (m_bMouseKey2Down)
+		numKeys2Down++;
+
+	const bool isKeyPressed2Allowed = (numKeys2Down == 1); // all key2 keys (incl. multiple bindings) act as one single key with state handover
+
 	// WARNING: if paused, keyReleased*() will be called out of sequence every time due to the fix. do not put actions in it
 	if (isInPlayMode()/* && !getSelectedBeatmap()->isPaused()*/) // NOTE: allow keyup even while beatmap is paused, to correctly not-continue immediately due to pressed keys
 	{
@@ -2363,9 +2417,9 @@ void Osu::onKey2Change(bool pressed, bool mouse)
 			if (osu_disable_mousebuttons.getBool())
 				m_bMouseKey2Down = false;
 
-			if (pressed && !(m_bKeyboardKey2Down && m_bMouseKey2Down) && !getSelectedBeatmap()->isPaused()) // see above note
+			if (pressed && isKeyPressed2Allowed && !getSelectedBeatmap()->isPaused()) // see above note
 				getSelectedBeatmap()->keyPressed2(mouse);
-			else if (!m_bKeyboardKey2Down && !m_bMouseKey2Down)
+			else if (!m_bKeyboardKey2Down && !m_bKeyboardKey22Down && !m_bMouseKey2Down)
 				getSelectedBeatmap()->keyReleased2(mouse);
 		}
 	}
@@ -2374,16 +2428,12 @@ void Osu::onKey2Change(bool pressed, bool mouse)
 	const bool doAnimate = !(isInPlayMode() && !getSelectedBeatmap()->isPaused() && mouse && osu_disable_mousebuttons.getBool());
 	if (doAnimate)
 	{
-		if (pressed && !(m_bKeyboardKey2Down && m_bMouseKey2Down))
+		if (pressed && isKeyPressed2Allowed)
 		{
 			m_hud->animateCursorExpand();
 			m_hud->addCursorRipple(engine->getMouse()->getPos());
-
-			/*
-			engine->getSound()->play(engine->getResourceManager()->loadSoundAbs("c:/Program Files (x86)/osu!/Skins/HL skin normal sounds/pl_gun3.wav", "OSU_TEMP_GUN_3"));
-			*/
 		}
-		else if (!m_bKeyboardKey2Down && !m_bMouseKey2Down && !m_bKeyboardKey1Down && !m_bMouseKey1Down)
+		else if (!m_bKeyboardKey2Down && !m_bKeyboardKey22Down && !m_bMouseKey2Down && !m_bKeyboardKey1Down && !m_bKeyboardKey12Down && !m_bMouseKey1Down)
 			m_hud->animateCursorShrink();
 	}
 }
