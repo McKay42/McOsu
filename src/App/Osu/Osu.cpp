@@ -1856,20 +1856,28 @@ float Osu::getScoreMultiplier()
 {
 	float multiplier = 1.0f;
 
-	// TODO: scorev2 has different multipliers ffs
-
-	if (m_bModEZ || m_bModNF)
-		multiplier *= 0.5f;
+	if (m_bModEZ || m_bModNF) // NOTE: technically osu!stable's "NF + SCOREV2" multiplier is 1.0x (for tournaments), but since we have customizable hp drain it doesn't make sense here
+		multiplier *= 0.50f;
 	if (m_bModHT || m_bModDC)
-		multiplier *= 0.3f;
+		multiplier *= 0.30f;
 	if (m_bModHR)
-		multiplier *= 1.06f;
+	{
+		if (m_bModScorev2)
+			multiplier *= 1.10f;
+		else
+			multiplier *= 1.06f;
+	}
 	if (m_bModDT || m_bModNC)
-		multiplier *= 1.12f;
+	{
+		if (m_bModScorev2)
+			multiplier *= 1.20f;
+		else
+			multiplier *= 1.12f;
+	}
 	if (m_bModHD)
 		multiplier *= 1.06f;
 	if (m_bModSpunout)
-		multiplier *= 0.9f;
+		multiplier *= 0.90f;
 
 	return multiplier;
 }
