@@ -503,6 +503,8 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSpacer();
 	addCheckbox("Use osu!.db database (read-only)", "If you have an existing osu! installation,\nthen this will speed up the initial loading process.", convar->getConVarByName("osu_database_enabled"));
 	if (env->getOS() != Environment::OS::OS_HORIZON)
+		addCheckbox("Load osu! collection.db (read-only)", "If you have an existing osu! installation,\nalso load and display your created collections from there.", convar->getConVarByName("osu_collections_legacy_enabled"));
+	if (env->getOS() != Environment::OS::OS_HORIZON)
 		addCheckbox("Load osu! scores.db (read-only)", "If you have an existing osu! installation,\nalso load and display your achieved scores from there.", convar->getConVarByName("osu_scores_legacy_enabled"));
 
 	addSubSection("Player (Name)");
