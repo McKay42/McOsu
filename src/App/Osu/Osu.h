@@ -192,6 +192,7 @@ public:
 	bool isInMultiplayer();
 	inline bool isSkinLoading() const {return m_bSkinLoadScheduled;}
 
+	inline bool isSkipScheduled() const {return m_bSkipScheduled;}
 	inline bool isSeeking() const {return m_bSeeking;}
 	inline float getQuickSaveTime() const {return m_fQuickSaveTime;}
 

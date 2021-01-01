@@ -946,7 +946,9 @@ void Osu::update()
 		// skipping
 		if (m_bSkipScheduled)
 		{
-			if (getSelectedBeatmap()->isInSkippableSection() && !getSelectedBeatmap()->isPaused())
+			const bool isLoading = getSelectedBeatmap()->isLoading();
+
+			if (getSelectedBeatmap()->isInSkippableSection() && !getSelectedBeatmap()->isPaused() && !isLoading)
 			{
 				if (!isInMultiplayer() || m_multiplayer->isServer())
 				{
@@ -959,7 +961,8 @@ void Osu::update()
 				}
 			}
 
-			m_bSkipScheduled = false;
+			if (!isLoading)
+				m_bSkipScheduled = false;
 		}
 
 		// quick retry timer

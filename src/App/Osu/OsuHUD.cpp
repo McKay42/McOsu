@@ -308,7 +308,7 @@ void OsuHUD::draw(Graphics *g)
 				drawScoreBoard(g, (std::string&)beatmap->getSelectedDifficulty2()->getMD5Hash(), m_osu->getScore());
 		}
 
-		if (beatmap->isInSkippableSection() && ((m_osu_skip_intro_enabled_ref->getBool() && beatmap->getHitObjectIndexForCurrentTime() < 1) || (m_osu_skip_breaks_enabled_ref->getBool() && beatmap->getHitObjectIndexForCurrentTime() > 0)))
+		if (!m_osu->isSkipScheduled() && beatmap->isInSkippableSection() && ((m_osu_skip_intro_enabled_ref->getBool() && beatmap->getHitObjectIndexForCurrentTime() < 1) || (m_osu_skip_breaks_enabled_ref->getBool() && beatmap->getHitObjectIndexForCurrentTime() > 0)))
 			drawSkip(g);
 
 		g->pushTransform();
@@ -408,13 +408,13 @@ void OsuHUD::draw(Graphics *g)
 			const unsigned long startTimePlayableMS = beatmap->getStartTimePlayable();
 			const unsigned long endTimePlayableMS = startTimePlayableMS + lengthPlayableMS;
 
-			const std::vector<OsuBeatmap::BREAK> &beatmapBreaks = beatmap->getBreaks();
+			const std::vector<OsuDatabaseBeatmap::BREAK> &beatmapBreaks = beatmap->getBreaks();
 
 			breaks.reserve(beatmapBreaks.size());
 
 			for (int i=0; i<beatmapBreaks.size(); i++)
 			{
-				const OsuBeatmap::BREAK &bk = beatmapBreaks[i];
+				const OsuDatabaseBeatmap::BREAK &bk = beatmapBreaks[i];
 
 				// ignore breaks after last hitobject
 				if (/*bk.endTime <= (int)startTimePlayableMS ||*/ bk.startTime >= (int)(startTimePlayableMS + lengthPlayableMS))
@@ -652,7 +652,7 @@ void OsuHUD::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 					drawScoreBoard(g, (std::string&)beatmap->getSelectedDifficulty2()->getMD5Hash(), m_osu->getScore());
 			}
 
-			if (beatmap->isInSkippableSection() && ((m_osu_skip_intro_enabled_ref->getBool() && beatmap->getHitObjectIndexForCurrentTime() < 1) || (m_osu_skip_breaks_enabled_ref->getBool() && beatmap->getHitObjectIndexForCurrentTime() > 0)))
+			if (!m_osu->isSkipScheduled() && beatmap->isInSkippableSection() && ((m_osu_skip_intro_enabled_ref->getBool() && beatmap->getHitObjectIndexForCurrentTime() < 1) || (m_osu_skip_breaks_enabled_ref->getBool() && beatmap->getHitObjectIndexForCurrentTime() > 0)))
 				drawSkip(g);
 
 			drawStatistics(g,
