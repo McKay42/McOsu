@@ -1201,7 +1201,7 @@ bool OsuBeatmap::play()
 
 	// actually load the difficulty (and the hitobjects)
 	{
-		OsuDatabaseBeatmap::LOAD_RESULT result = OsuDatabaseBeatmap::load(m_selectedDifficulty2, this);
+		OsuDatabaseBeatmap::LOAD_GAMEPLAY_RESULT result = OsuDatabaseBeatmap::loadGameplay(m_selectedDifficulty2, this);
 		if (result.errorCode != 0)
 		{
 			switch (result.errorCode)

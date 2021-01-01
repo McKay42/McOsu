@@ -1256,8 +1256,8 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 		const float stackLeniency = m_selectedDifficulty2->getStackLeniency();
 		const float speedMultiplier = m_osu->getSpeedMultiplier(); // NOTE: not this->getSpeedMultiplier()!
 
-		std::vector<std::shared_ptr<OsuDifficultyHitObject>> hitObjects = OsuDatabaseBeatmap::loadDifficultyHitObjects(osuFilePath, gameMode, AR, CS, version, stackLeniency, speedMultiplier);
-		const double totalStars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(hitObjects, CS, &aim, &speed);
+		OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT diffres = OsuDatabaseBeatmap::loadDifficultyHitObjects(osuFilePath, gameMode, AR, CS, version, stackLeniency, speedMultiplier);
+		const double totalStars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, CS, &aim, &speed);
 
 		m_fAimStars = (float)aim;
 		m_fSpeedStars = (float)speed;

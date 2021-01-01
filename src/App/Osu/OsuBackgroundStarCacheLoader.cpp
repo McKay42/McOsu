@@ -53,14 +53,14 @@ void OsuBackgroundStarCacheLoader::initAsync()
 		const float stackLeniency = diff2->getStackLeniency();
 		const float speedMultiplier = m_beatmap->getOsu()->getSpeedMultiplier(); // NOTE: not beatmap->getSpeedMultiplier()!
 
-		std::vector<std::shared_ptr<OsuDifficultyHitObject>> hitObjects = OsuDatabaseBeatmap::loadDifficultyHitObjects(osuFilePath, gameMode, AR, CS, version, stackLeniency, speedMultiplier);
+		OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT diffres = OsuDatabaseBeatmap::loadDifficultyHitObjects(osuFilePath, gameMode, AR, CS, version, stackLeniency, speedMultiplier);
 
-		for (size_t i=0; i<hitObjects.size(); i++)
+		for (size_t i=0; i<diffres.diffobjects.size(); i++)
 		{
 			double aimStars = 0.0;
 			double speedStars = 0.0;
 
-			OsuDifficultyCalculator::calculateStarDiffForHitObjects(hitObjects, CS, &aimStars, &speedStars, i);
+			OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, CS, &aimStars, &speedStars, i);
 
 			m_beatmap->m_aimStarsForNumHitObjects.push_back(aimStars);
 			m_beatmap->m_speedStarsForNumHitObjects.push_back(speedStars);

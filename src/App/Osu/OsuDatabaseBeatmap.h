@@ -21,11 +21,7 @@
 
 // TODO: move all unnecessary shit into OsuBeatmap, and clear out the garbage
 // TODO: star loading (separate class which just uses the m_sFilePath of this resource)
-// TODO: break storage + break duration functions, put all of that into OsuBeatmap. now load breaks into beatmap.
-// TODO: calc and store m_aimStarsForNumHitObjects in OsuBeatmap.
-// TODO: calc and store m_speedStarsForNumHitObjects in OsuBeatmap.
 // TODO: while playing, storage of numCircles/sliders/spinners etc.
-// TODO: the DatabaseBeatmap class being a Resource feels like a clusterfuck when actually trying to use it, think about improving this structure
 
 class Osu;
 class OsuBeatmap;
@@ -67,7 +63,23 @@ public:
 public:
 	// custom structs
 
-	struct LOAD_RESULT
+	struct LOAD_DIFFOBJ_RESULT
+	{
+		int errorCode;
+
+		std::vector<std::shared_ptr<OsuDifficultyHitObject>> diffobjects;
+
+		int maxPossibleCombo;
+
+		LOAD_DIFFOBJ_RESULT()
+		{
+			errorCode = 0;
+
+			maxPossibleCombo = 0;
+		}
+	};
+
+	struct LOAD_GAMEPLAY_RESULT
 	{
 		int errorCode;
 
@@ -75,7 +87,7 @@ public:
 		std::vector<BREAK> breaks;
 		std::vector<Color> combocolors;
 
-		LOAD_RESULT()
+		LOAD_GAMEPLAY_RESULT()
 		{
 			errorCode = 0;
 		}
@@ -104,9 +116,9 @@ public:
 
 
 
-	static std::vector<std::shared_ptr<OsuDifficultyHitObject>> loadDifficultyHitObjects(const UString &osuFilePath, Osu::GAMEMODE gameMode, float AR, float CS, int version, float stackLeniency, float speedMultiplier, bool calculateStarsInaccurately = false);
-	static LOAD_RESULT load(OsuDatabaseBeatmap *databaseBeatmap, OsuBeatmap *beatmap);
+	static LOAD_DIFFOBJ_RESULT loadDifficultyHitObjects(const UString &osuFilePath, Osu::GAMEMODE gameMode, float AR, float CS, int version, float stackLeniency, float speedMultiplier, bool calculateStarsInaccurately = false);
 	static bool loadMetadata(OsuDatabaseBeatmap *databaseBeatmap);
+	static LOAD_GAMEPLAY_RESULT loadGameplay(OsuDatabaseBeatmap *databaseBeatmap, OsuBeatmap *beatmap);
 
 
 
@@ -316,8 +328,6 @@ private:
 
 		float sliderMultiplier;
 		float sliderTickRate;
-
-		int maxPossibleCombo;
 	};
 
 

@@ -142,8 +142,8 @@ private:
 					const float speedMultiplier = score->speedMultiplier;
 
 					// 3) load hitobjects for diffcalc
-					std::vector<std::shared_ptr<OsuDifficultyHitObject>> hitObjects = OsuDatabaseBeatmap::loadDifficultyHitObjects(osuFilePath, gameMode, AR, CS, version, stackLeniency, speedMultiplier);
-					if (hitObjects.size() < 1)
+					OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT diffres = OsuDatabaseBeatmap::loadDifficultyHitObjects(osuFilePath, gameMode, AR, CS, version, stackLeniency, speedMultiplier);
+					if (diffres.diffobjects.size() < 1)
 					{
 						if (Osu::debug->getBool())
 							printf("PPRecalc couldn't load %s\n", osuFilePath.toUtf8());
@@ -154,31 +154,31 @@ private:
 					// 4) calculate stars
 					double aimStars = 0.0;
 					double speedStars = 0.0;
-					OsuDifficultyCalculator::calculateStarDiffForHitObjects(hitObjects, CS, &aimStars, &speedStars);
+					OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, CS, &aimStars, &speedStars);
 
 					// 5) calculate pp
 					double pp = 0.0;
 					{
-						const int numHitObjects = hitObjects.size();
+						// calculate a few values fresh from beatmap data necessary for pp calculation
+						const int numHitObjects = diffres.diffobjects.size();
 						int numSpinners = 0;
 						{
-							for (size_t h=0; h<hitObjects.size(); h++)
+							for (size_t h=0; h<diffres.diffobjects.size(); h++)
 							{
-								if (hitObjects[h]->type == OsuDifficultyHitObject::TYPE::SPINNER)
+								if (diffres.diffobjects[h]->type == OsuDifficultyHitObject::TYPE::SPINNER)
 									numSpinners++;
 							}
 						}
 						int numCircles = 0;
 						{
-							for (size_t h=0; h<hitObjects.size(); h++)
+							for (size_t h=0; h<diffres.diffobjects.size(); h++)
 							{
-								if (hitObjects[h]->type == OsuDifficultyHitObject::TYPE::CIRCLE)
+								if (diffres.diffobjects[h]->type == OsuDifficultyHitObject::TYPE::CIRCLE)
 									numCircles++;
 							}
 						}
 
-						// TODO: manually recalculate maxPossibleCombo, as the score field is only available for scores > 2018something
-						const int maxPossibleCombo = score->maxPossibleCombo;
+						const int maxPossibleCombo = diffres.maxPossibleCombo;
 						if (maxPossibleCombo < 1)
 							continue;
 
@@ -186,14 +186,17 @@ private:
 					}
 
 					// 6) overwrite score with new pp data
+					const float oldPP = score->pp;
 					if (pp > 0.0f)
 						score->pp = pp;
 
 					m_iNumScoresRecalculated++;
 
-					// HACKHACK: DEBUG:
-					printf("[%s] original = %f, new = %f, delta = %f\n", score->md5hash.c_str(), score->pp, pp, (pp - score->pp));
-					printf("at %i/%i\n", m_iNumScoresRecalculated.load(), m_iNumScoresToRecalculate.load());
+					if (Osu::debug->getBool())
+					{
+						printf("[%s] original = %f, new = %f, delta = %f\n", score->md5hash.c_str(), oldPP, score->pp, (score->pp - oldPP));
+						printf("at %i/%i\n", m_iNumScoresRecalculated.load(), m_iNumScoresToRecalculate.load());
+					}
 				}
 			}
 
@@ -308,6 +311,7 @@ void OsuUserStatsScreen::update()
 		{
 			// force recalc + refresh UI
 			m_osu->getSongBrowser()->getDatabase()->forceScoreUpdateOnNextCalculatePlayerStats();
+			m_osu->getSongBrowser()->getDatabase()->forceScoresSaveOnNextShutdown();
 			rebuildScoreButtons(m_name_ref->getString());
 
 			m_bRecalculatingPP = false;

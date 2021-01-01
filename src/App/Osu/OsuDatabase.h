@@ -117,6 +117,7 @@ public:
 	void deleteScore(std::string beatmapMD5Hash, uint64_t scoreUnixTimestamp);
 	void sortScores(std::string beatmapMD5Hash);
 	void forceScoreUpdateOnNextCalculatePlayerStats() {m_bDidScoresChangeForStats = true;}
+	void forceScoresSaveOnNextShutdown() {m_bDidScoresChangeForSave = true;}
 
 	std::vector<UString> getPlayerNamesWithPPScores();
 	PlayerPPScores getPlayerPPScores(UString playerName);
