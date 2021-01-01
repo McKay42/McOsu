@@ -1230,7 +1230,7 @@ void OsuMainMenu::animMainButton()
 
 	m_iMainMenuRandomAnimType = (rand() % 4) == 1 ? 1 : 0;
 	if (!m_bMainMenuAnimFadeToFriendForNextAnim)
-		m_bMainMenuAnimFadeToFriendForNextAnim = (rand() % 6) == 1;
+		m_bMainMenuAnimFadeToFriendForNextAnim = (rand() % 12) == 1;
 
 	m_fMainMenuAnim = 0.0f;
 	m_fMainMenuAnim1 = 0.0f;

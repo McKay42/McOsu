@@ -44,7 +44,7 @@ ConVar *OsuDatabaseBeatmap::m_osu_mod_reverse_sliders_ref = NULL;
 ConVar *OsuDatabaseBeatmap::m_osu_mod_random_spinner_offset_x_percent_ref = NULL;
 ConVar *OsuDatabaseBeatmap::m_osu_mod_random_spinner_offset_y_percent_ref = NULL;
 
-OsuDatabaseBeatmap::OsuDatabaseBeatmap(Osu *osu, UString filePath, UString folder) : Resource()
+OsuDatabaseBeatmap::OsuDatabaseBeatmap(Osu *osu, UString filePath, UString folder)
 {
 	m_osu = osu;
 
@@ -53,10 +53,6 @@ OsuDatabaseBeatmap::OsuDatabaseBeatmap(Osu *osu, UString filePath, UString folde
 	m_sFolder = folder;
 
 	m_iSortHack = sortHackCounter++;
-
-	m_iLoadType = 0;
-	m_iLoadErrorCode = 0;
-	m_loadBeatmap = NULL;
 
 
 
@@ -144,82 +140,8 @@ OsuDatabaseBeatmap::~OsuDatabaseBeatmap()
 {
 	for (size_t i=0; i<m_difficulties.size(); i++)
 	{
-		SAFE_DELETE(m_difficulties[i]);
+		delete m_difficulties[i];
 	}
-}
-
-void OsuDatabaseBeatmap::setLoadBeatmapMetadata()
-{
-	m_iLoadType = 0;
-}
-
-void OsuDatabaseBeatmap::setLoadBeatmap(OsuBeatmap *beatmap)
-{
-	m_iLoadType = 1;
-	m_loadBeatmap = beatmap;
-}
-
-void OsuDatabaseBeatmap::init()
-{
-	switch (m_iLoadErrorCode)
-	{
-	case 1:
-		{
-			UString errorMessage = "Error: Couldn't load beatmap metadata :(";
-			debugLog("Osu Error: Couldn't load beatmap metadata %s\n", m_sFilePath.toUtf8());
-
-			if (m_osu != NULL)
-				m_osu->getNotificationOverlay()->addNotification(errorMessage, 0xffff0000);
-		}
-		break;
-
-	case 2:
-		{
-			UString errorMessage = "Error: Couldn't load beatmap file :(";
-			debugLog("Osu Error: Couldn't load beatmap file %s\n", m_sFilePath.toUtf8());
-
-			if (m_osu != NULL)
-				m_osu->getNotificationOverlay()->addNotification(errorMessage, 0xffff0000);
-		}
-		break;
-
-	case 3:
-		{
-			UString errorMessage = "Error: No timingpoints in beatmap!";
-			debugLog("Osu Error: No timingpoints in beatmap %s\n", m_sFilePath.toUtf8());
-
-			if (m_osu != NULL)
-				m_osu->getNotificationOverlay()->addNotification(errorMessage, 0xffff0000);
-		}
-		break;
-	}
-
-	if (m_iLoadErrorCode != 0 || !m_bAsyncReady) return;
-
-	// TODO: set hitobjects vector on beatmap (use m_loadHitObjects!), or not, think about a better loading architecture
-
-	// load beatmap skin
-	m_osu->getSkin()->loadBeatmapOverride(m_sFolder);
-
-	m_bReady = true;
-}
-
-void OsuDatabaseBeatmap::initAsync()
-{
-	switch (m_iLoadType)
-	{
-	case 0:
-		m_bAsyncReady = loadBeatmapMetadataInt();
-		break;
-	case 1:
-		m_bAsyncReady = loadBeatmapInt(m_loadBeatmap);
-		break;
-	}
-}
-
-void OsuDatabaseBeatmap::destroy()
-{
-	// (special case: this is not destroyed via destroy())
 }
 
 OsuDatabaseBeatmap::PRIMITIVE_CONTAINER OsuDatabaseBeatmap::loadPrimitiveObjects(const UString &osuFilePath, Osu::GAMEMODE gameMode)
@@ -230,6 +152,8 @@ OsuDatabaseBeatmap::PRIMITIVE_CONTAINER OsuDatabaseBeatmap::loadPrimitiveObjects
 
 		c.sliderMultiplier = 1.0f;
 		c.sliderTickRate = 1.0f;
+
+		c.maxPossibleCombo = 0;
 	}
 
 	// open osu file for parsing
@@ -566,6 +490,23 @@ OsuDatabaseBeatmap::PRIMITIVE_CONTAINER OsuDatabaseBeatmap::loadPrimitiveObjects
 	if (c.timingpoints.size() > 0)
 		std::sort(c.timingpoints.begin(), c.timingpoints.end(), TimingPointSortComparator());
 
+	// precalculate maxPossibleCombo
+	{
+		int maxCombo = 0;
+		{
+			maxCombo += c.hitcircles.size();
+			for (size_t i=0; i<c.sliders.size(); i++)
+			{
+				const SLIDER &s = c.sliders[i];
+
+				const int repeats = std::max((s.repeat - 1), 0);
+				maxCombo += 2 + repeats + (repeats+1)*s.ticks.size(); // start/end + repeat arrow + ticks
+			}
+			maxCombo += c.spinners.size();
+		}
+		c.maxPossibleCombo = maxCombo;
+	}
+
 	return c;
 }
 
@@ -679,7 +620,7 @@ void OsuDatabaseBeatmap::calculateSliderTimesClicksTicks(std::vector<SLIDER> &sl
 	}
 }
 
-std::vector<std::shared_ptr<OsuDifficultyHitObject>> OsuDatabaseBeatmap::generateDifficultyHitObjects(const UString &osuFilePath, Osu::GAMEMODE gameMode, float AR, float CS, int version, float stackLeniency, float speedMultiplier, bool calculateStarsInaccurately)
+std::vector<std::shared_ptr<OsuDifficultyHitObject>> OsuDatabaseBeatmap::loadDifficultyHitObjects(const UString &osuFilePath, Osu::GAMEMODE gameMode, float AR, float CS, int version, float stackLeniency, float speedMultiplier, bool calculateStarsInaccurately)
 {
 	// build generalized OsuDifficultyHitObjects from the vectors (hitcircles, sliders, spinners)
 	// the OsuDifficultyHitObject class is the one getting used in all pp/star calculations, it encompasses every object type for simplicity
@@ -923,20 +864,21 @@ std::vector<std::shared_ptr<OsuDifficultyHitObject>> OsuDatabaseBeatmap::generat
 	return diffHitObjects;
 }
 
-bool OsuDatabaseBeatmap::loadBeatmapMetadataInt()
+bool OsuDatabaseBeatmap::loadMetadata(OsuDatabaseBeatmap *databaseBeatmap)
 {
-	if (m_difficulties.size() > 0) return false; // we are just a container
+	if (databaseBeatmap == NULL) return false;
+	if (databaseBeatmap->m_difficulties.size() > 0) return false; // we are just a container
 
 	// reset
-	m_timingpoints = std::vector<TIMINGPOINT>();
+	databaseBeatmap->m_timingpoints = std::vector<TIMINGPOINT>();
 
 	if (Osu::debug->getBool())
-		debugLog("OsuDatabaseBeatmap::loadMetadata() : %s\n", m_sFilePath.toUtf8());
+		debugLog("OsuDatabaseBeatmap::loadMetadata() : %s\n", databaseBeatmap->m_sFilePath.toUtf8());
 
 	// generate MD5 hash (loads entire file, very slow)
-	m_sMD5Hash.clear();
+	databaseBeatmap->m_sMD5Hash.clear();
 	{
-		File file(m_sFilePath);
+		File file(databaseBeatmap->m_sFilePath);
 		if (file.canRead())
 		{
 			const char *beatmapFile = file.readFile();
@@ -951,8 +893,8 @@ bool OsuDatabaseBeatmap::loadBeatmapMetadataInt()
 
 				for (int i=0; i<16; i++)
 				{
-					m_sMD5Hash += hexDigits[(rawMD5Hash[i] >> 4) & 0xf];	// md5hash[i] / 16
-					m_sMD5Hash += hexDigits[rawMD5Hash[i] & 0xf];			// md5hash[i] % 16
+					databaseBeatmap->m_sMD5Hash += hexDigits[(rawMD5Hash[i] >> 4) & 0xf];	// md5hash[i] / 16
+					databaseBeatmap->m_sMD5Hash += hexDigits[rawMD5Hash[i] & 0xf];			// md5hash[i] % 16
 				}
 			}
 		}
@@ -961,10 +903,10 @@ bool OsuDatabaseBeatmap::loadBeatmapMetadataInt()
 	// open osu file again, but this time for parsing
 	bool foundAR = false;
 	{
-		File file(m_sFilePath);
+		File file(databaseBeatmap->m_sFilePath);
 		if (!file.canRead())
 		{
-			debugLog("Osu Error: Couldn't read file %s\n", m_sFilePath.toUtf8());
+			debugLog("Osu Error: Couldn't read file %s\n", databaseBeatmap->m_sFilePath.toUtf8());
 			return false;
 		}
 
@@ -998,7 +940,7 @@ bool OsuDatabaseBeatmap::loadBeatmapMetadataInt()
 				{
 				case -1: // header (e.g. "osu file format v12")
 					{
-						sscanf(curLineChar, " osu file format v %i \n", &m_iVersion);
+						sscanf(curLineChar, " osu file format v %i \n", &databaseBeatmap->m_iVersion);
 					}
 					break;
 
@@ -1007,13 +949,13 @@ bool OsuDatabaseBeatmap::loadBeatmapMetadataInt()
 						memset(stringBuffer, '\0', 1024);
 						if (sscanf(curLineChar, " AudioFilename : %1023[^\n]", stringBuffer) == 1)
 						{
-							m_sAudioFileName = UString(stringBuffer);
-							m_sAudioFileName = m_sAudioFileName.trim();
+							databaseBeatmap->m_sAudioFileName = UString(stringBuffer);
+							databaseBeatmap->m_sAudioFileName = databaseBeatmap->m_sAudioFileName.trim();
 						}
 
-						sscanf(curLineChar, " StackLeniency : %f \n", &m_fStackLeniency);
-						sscanf(curLineChar, " PreviewTime : %lu \n", &m_iPreviewTime);
-						sscanf(curLineChar, " Mode : %i \n", &m_iGameMode);
+						sscanf(curLineChar, " StackLeniency : %f \n", &databaseBeatmap->m_fStackLeniency);
+						sscanf(curLineChar, " PreviewTime : %lu \n", &databaseBeatmap->m_iPreviewTime);
+						sscanf(curLineChar, " Mode : %i \n", &databaseBeatmap->m_iGameMode);
 					}
 					break;
 
@@ -1022,60 +964,60 @@ bool OsuDatabaseBeatmap::loadBeatmapMetadataInt()
 						memset(stringBuffer, '\0', 1024);
 						if (sscanf(curLineChar, " Title :%1023[^\n]", stringBuffer) == 1)
 						{
-							m_sTitle = UString(stringBuffer);
-							m_sTitle = m_sTitle.trim();
+							databaseBeatmap->m_sTitle = UString(stringBuffer);
+							databaseBeatmap->m_sTitle = databaseBeatmap->m_sTitle.trim();
 						}
 
 						memset(stringBuffer, '\0', 1024);
 						if (sscanf(curLineChar, " Artist :%1023[^\n]", stringBuffer) == 1)
 						{
-							m_sArtist = UString(stringBuffer);
-							m_sArtist = m_sArtist.trim();
+							databaseBeatmap->m_sArtist = UString(stringBuffer);
+							databaseBeatmap->m_sArtist = databaseBeatmap->m_sArtist.trim();
 						}
 
 						memset(stringBuffer, '\0', 1024);
 						if (sscanf(curLineChar, " Creator :%1023[^\n]", stringBuffer) == 1)
 						{
-							m_sCreator = UString(stringBuffer);
-							m_sCreator = m_sCreator.trim();
+							databaseBeatmap->m_sCreator = UString(stringBuffer);
+							databaseBeatmap->m_sCreator = databaseBeatmap->m_sCreator.trim();
 						}
 
 						memset(stringBuffer, '\0', 1024);
 						if (sscanf(curLineChar, " Version :%1023[^\n]", stringBuffer) == 1)
 						{
-							m_sDifficultyName = UString(stringBuffer);
-							m_sDifficultyName = m_sDifficultyName.trim();
+							databaseBeatmap->m_sDifficultyName = UString(stringBuffer);
+							databaseBeatmap->m_sDifficultyName = databaseBeatmap->m_sDifficultyName.trim();
 						}
 
 						memset(stringBuffer, '\0', 1024);
 						if (sscanf(curLineChar, " Source :%1023[^\n]", stringBuffer) == 1)
 						{
-							m_sSource = UString(stringBuffer);
-							m_sSource = m_sSource.trim();
+							databaseBeatmap->m_sSource = UString(stringBuffer);
+							databaseBeatmap->m_sSource = databaseBeatmap->m_sSource.trim();
 						}
 
 						memset(stringBuffer, '\0', 1024);
 						if (sscanf(curLineChar, " Tags :%1023[^\n]", stringBuffer) == 1)
 						{
-							m_sTags = UString(stringBuffer);
-							m_sTags = m_sTags.trim();
+							databaseBeatmap->m_sTags = UString(stringBuffer);
+							databaseBeatmap->m_sTags = databaseBeatmap->m_sTags.trim();
 						}
 
-						sscanf(curLineChar, " BeatmapID : %ld \n", &m_iID);
-						sscanf(curLineChar, " BeatmapSetID : %i \n", &m_iSetID);
+						sscanf(curLineChar, " BeatmapID : %ld \n", &databaseBeatmap->m_iID);
+						sscanf(curLineChar, " BeatmapSetID : %i \n", &databaseBeatmap->m_iSetID);
 					}
 					break;
 
 				case 2: // Difficulty
 					{
-						sscanf(curLineChar, " CircleSize : %f \n", &m_fCS);
-						if (sscanf(curLineChar, " ApproachRate : %f \n", &m_fAR) == 1)
+						sscanf(curLineChar, " CircleSize : %f \n", &databaseBeatmap->m_fCS);
+						if (sscanf(curLineChar, " ApproachRate : %f \n", &databaseBeatmap->m_fAR) == 1)
 							foundAR = true;
 
-						sscanf(curLineChar, " HPDrainRate : %f \n", &m_fHP);
-						sscanf(curLineChar, " OverallDifficulty : %f \n", &m_fOD);
-						sscanf(curLineChar, " SliderMultiplier : %f \n", &m_fSliderMultiplier);
-						sscanf(curLineChar, " SliderTickRate : %f \n", &m_fSliderTickRate);
+						sscanf(curLineChar, " HPDrainRate : %f \n", &databaseBeatmap->m_fHP);
+						sscanf(curLineChar, " OverallDifficulty : %f \n", &databaseBeatmap->m_fOD);
+						sscanf(curLineChar, " SliderMultiplier : %f \n", &databaseBeatmap->m_fSliderMultiplier);
+						sscanf(curLineChar, " SliderTickRate : %f \n", &databaseBeatmap->m_fSliderTickRate);
 					}
 					break;
 
@@ -1087,9 +1029,9 @@ bool OsuDatabaseBeatmap::loadBeatmapMetadataInt()
 						{
 							if (type == 0)
 							{
-								m_sBackgroundImageFileName = UString(stringBuffer);
-								m_sFullBackgroundImageFilePath = m_sFolder;
-								m_sFullBackgroundImageFilePath.append(m_sBackgroundImageFileName);
+								databaseBeatmap->m_sBackgroundImageFileName = UString(stringBuffer);
+								databaseBeatmap->m_sFullBackgroundImageFilePath = databaseBeatmap->m_sFolder;
+								databaseBeatmap->m_sFullBackgroundImageFilePath.append(databaseBeatmap->m_sBackgroundImageFileName);
 							}
 						}
 					}
@@ -1125,7 +1067,7 @@ bool OsuDatabaseBeatmap::loadBeatmapMetadataInt()
 
 								t.sortHack = timingPointSortHack++;
 							}
-							m_timingpoints.push_back(t);
+							databaseBeatmap->m_timingpoints.push_back(t);
 						}
 						else if (sscanf(curLineChar, " %lf , %f", &tpOffset, &tpMSPerBeat) == 2)
 						{
@@ -1143,7 +1085,7 @@ bool OsuDatabaseBeatmap::loadBeatmapMetadataInt()
 
 								t.sortHack = timingPointSortHack++;
 							}
-							m_timingpoints.push_back(t);
+							databaseBeatmap->m_timingpoints.push_back(t);
 						}
 					}
 					break;
@@ -1153,28 +1095,28 @@ bool OsuDatabaseBeatmap::loadBeatmapMetadataInt()
 	}
 
 	// gamemode filter
-	if ((m_iGameMode != 0 && m_osu->getGamemode() == Osu::GAMEMODE::STD) || (m_iGameMode != 0x03 && m_osu->getGamemode() == Osu::GAMEMODE::MANIA))
+	if ((databaseBeatmap->m_iGameMode != 0 && databaseBeatmap->m_osu->getGamemode() == Osu::GAMEMODE::STD) || (databaseBeatmap->m_iGameMode != 0x03 && databaseBeatmap->m_osu->getGamemode() == Osu::GAMEMODE::MANIA))
 		return false; // nothing more to do here
 
 	// build sound file path
-	m_sFullSoundFilePath = m_sFolder;
-	m_sFullSoundFilePath.append(m_sAudioFileName);
+	databaseBeatmap->m_sFullSoundFilePath = databaseBeatmap->m_sFolder;
+	databaseBeatmap->m_sFullSoundFilePath.append(databaseBeatmap->m_sAudioFileName);
 
 	// sort timingpoints and calculate BPM range
-	if (m_timingpoints.size() > 0)
+	if (databaseBeatmap->m_timingpoints.size() > 0)
 	{
 		if (Osu::debug->getBool())
 			debugLog("OsuDatabaseBeatmap::loadMetadata() : calculating BPM range ...\n");
 
 		// sort timingpoints by time
-		std::sort(m_timingpoints.begin(), m_timingpoints.end(), TimingPointSortComparator());
+		std::sort(databaseBeatmap->m_timingpoints.begin(), databaseBeatmap->m_timingpoints.end(), TimingPointSortComparator());
 
 		// calculate bpm range
 		float tempMinBPM = 0;
 		float tempMaxBPM = std::numeric_limits<float>::max();
-		for (int i=0; i<m_timingpoints.size(); i++)
+		for (int i=0; i<databaseBeatmap->m_timingpoints.size(); i++)
 		{
-			const TIMINGPOINT &t = m_timingpoints[i];
+			const TIMINGPOINT &t = databaseBeatmap->m_timingpoints[i];
 
 			if (t.msPerBeat >= 0) // NOT inherited
 			{
@@ -1192,64 +1134,64 @@ bool OsuDatabaseBeatmap::loadBeatmapMetadataInt()
 		if (tempMaxBPM != 0)
 			tempMaxBPM = msPerMinute / tempMaxBPM;
 
-		m_iMinBPM = (int)std::round(tempMinBPM);
-		m_iMaxBPM = (int)std::round(tempMaxBPM);
+		databaseBeatmap->m_iMinBPM = (int)std::round(tempMinBPM);
+		databaseBeatmap->m_iMaxBPM = (int)std::round(tempMaxBPM);
 	}
 
 	// special case: old beatmaps have AR = OD, there is no ApproachRate stored
 	if (!foundAR)
-		m_fAR = m_fOD;
+		databaseBeatmap->m_fAR = databaseBeatmap->m_fOD;
 
 	return true;
 }
 
-bool OsuDatabaseBeatmap::loadBeatmapInt(OsuBeatmap *beatmap)
+OsuDatabaseBeatmap::LOAD_RESULT OsuDatabaseBeatmap::load(OsuDatabaseBeatmap *databaseBeatmap, OsuBeatmap *beatmap)
 {
-	m_iLoadErrorCode = 0;
+	LOAD_RESULT result = LOAD_RESULT();
 
-	// NOTE: reload metadata
-	if (!loadBeatmapMetadataInt())
+	// NOTE: reload metadata (force ensures that all necessary data is ready for creating hitobjects and playing etc.)
+	if (!loadMetadata(databaseBeatmap))
 	{
-		m_iLoadErrorCode = 1;
-		return false;
+		result.errorCode = 1;
+		return result;
 	}
 
-	// build temporary containers for raw objects
-	PRIMITIVE_CONTAINER c = loadPrimitiveObjects(m_sFilePath, m_osu->getGamemode());
+	// load primitives, put in temporary container
+	PRIMITIVE_CONTAINER c = loadPrimitiveObjects(databaseBeatmap->m_sFilePath, databaseBeatmap->m_osu->getGamemode());
 	if (c.errorCode != 0)
 	{
-		m_iLoadErrorCode = c.errorCode;
-		return false;
+		result.errorCode = c.errorCode;
+		return result;
 	}
+	result.breaks = std::move(c.breaks);
 
-	// override some values with data from primitive load (sanity)
-	m_timingpoints.swap(c.timingpoints);
-	m_fSliderMultiplier = c.sliderMultiplier;
-	m_fSliderTickRate = c.sliderTickRate;
+	// override some values with data from primitive load, even though they should already be loaded from metadata (sanity)
+	databaseBeatmap->m_timingpoints.swap(c.timingpoints);
+	databaseBeatmap->m_fSliderMultiplier = c.sliderMultiplier;
+	databaseBeatmap->m_fSliderTickRate = c.sliderTickRate;
 
 	// check if we have any timingpoints at all
-	if (m_timingpoints.size() == 0)
+	if (databaseBeatmap->m_timingpoints.size() == 0)
 	{
-		m_iLoadErrorCode = 3;
-		return false;
+		result.errorCode = 3;
+		return result;
 	}
 
 	// update numObjects
-	m_iNumObjects = c.hitcircles.size() + c.sliders.size() + c.spinners.size();
-	m_iNumCircles = c.hitcircles.size();
-	m_iNumSliders = c.sliders.size();
-	m_iNumSpinners = c.spinners.size();
+	databaseBeatmap->m_iNumObjects = c.hitcircles.size() + c.sliders.size() + c.spinners.size();
+	databaseBeatmap->m_iNumCircles = c.hitcircles.size();
+	databaseBeatmap->m_iNumSliders = c.sliders.size();
+	databaseBeatmap->m_iNumSpinners = c.spinners.size();
 
 	// sort timingpoints by time
-	std::sort(m_timingpoints.begin(), m_timingpoints.end(), TimingPointSortComparator());
+	std::sort(databaseBeatmap->m_timingpoints.begin(), databaseBeatmap->m_timingpoints.end(), TimingPointSortComparator());
 
 	// calculate sliderTimes, and build slider clicks and ticks
-	calculateSliderTimesClicksTicks(c.sliders, m_timingpoints, m_fSliderMultiplier, m_fSliderTickRate);
+	calculateSliderTimesClicksTicks(c.sliders, databaseBeatmap->m_timingpoints, databaseBeatmap->m_fSliderMultiplier, databaseBeatmap->m_fSliderTickRate);
 
-	// build hitobjects from the data we loaded from the beatmap file
+	// build hitobjects from the primitive data we loaded from the osu file
 	OsuBeatmapStandard *beatmapStandard = dynamic_cast<OsuBeatmapStandard*>(beatmap);
 	OsuBeatmapMania *beatmapMania = dynamic_cast<OsuBeatmapMania*>(beatmap);
-	m_loadHitObjects.clear();
 	{
 		if (beatmapStandard != NULL)
 		{
@@ -1266,7 +1208,7 @@ bool OsuDatabaseBeatmap::loadBeatmapInt(OsuBeatmap *beatmap)
 					h.y = clamp<int>(h.y - (int)(((rand() % OsuGameRules::OSU_COORD_HEIGHT) / 8.0f) * m_osu_mod_random_circle_offset_y_percent_ref->getFloat()), 0, OsuGameRules::OSU_COORD_HEIGHT);
 				}
 
-				m_loadHitObjects.push_back(new OsuCircle(h.x, h.y, h.time, h.sampleType, h.number, false, h.colorCounter, h.colorOffset, beatmapStandard));
+				result.hitobjects.push_back(new OsuCircle(h.x, h.y, h.time, h.sampleType, h.number, false, h.colorCounter, h.colorOffset, beatmapStandard));
 
 				// potential convert-all-circles-to-sliders mod, have to play around more with this
 				/*
@@ -1327,7 +1269,7 @@ bool OsuDatabaseBeatmap::loadBeatmapInt(OsuBeatmap *beatmap)
 				if (m_osu_mod_reverse_sliders_ref->getBool())
 					std::reverse(s.points.begin(), s.points.end());
 
-				m_loadHitObjects.push_back(new OsuSlider(s.type, s.repeat, s.pixelLength, s.points, s.hitSounds, s.ticks, s.sliderTime, s.sliderTimeWithoutRepeats, s.time, s.sampleType, s.number, false, s.colorCounter, s.colorOffset, beatmapStandard));
+				result.hitobjects.push_back(new OsuSlider(s.type, s.repeat, s.pixelLength, s.points, s.hitSounds, s.ticks, s.sliderTime, s.sliderTimeWithoutRepeats, s.time, s.sampleType, s.number, false, s.colorCounter, s.colorOffset, beatmapStandard));
 
 				const int repeats = std::max((s.repeat - 1), 0);
 				maxCombo += 2 + repeats + (repeats+1)*s.ticks.size(); // start/end + repeat arrow + ticks
@@ -1343,7 +1285,7 @@ bool OsuDatabaseBeatmap::loadBeatmapInt(OsuBeatmap *beatmap)
 					s.y = clamp<int>(s.y - (int)(((rand() % OsuGameRules::OSU_COORD_HEIGHT) / 1.25f) * (rand() % 2 == 0 ? 1.0f : -1.0f) * m_osu_mod_random_spinner_offset_y_percent_ref->getFloat()), 0, OsuGameRules::OSU_COORD_HEIGHT);
 				}
 
-				m_loadHitObjects.push_back(new OsuSpinner(s.x, s.y, s.time, s.sampleType, false, s.endTime, beatmapStandard));
+				result.hitobjects.push_back(new OsuSpinner(s.x, s.y, s.time, s.sampleType, false, s.endTime, beatmapStandard));
 			}
 			maxCombo += c.spinners.size();
 
@@ -1352,22 +1294,22 @@ bool OsuDatabaseBeatmap::loadBeatmapInt(OsuBeatmap *beatmap)
 			// debug
 			if (m_osu_debug_pp_ref->getBool())
 			{
-				const UString &osuFilePath = m_sFilePath;
+				const UString &osuFilePath = databaseBeatmap->m_sFilePath;
 				const Osu::GAMEMODE gameMode = Osu::GAMEMODE::STD;
 				const float AR = beatmap->getAR();
 				const float CS = beatmap->getCS();
-				const int version = m_iVersion;
-				const float stackLeniency = m_fStackLeniency;
-				const float speedMultiplier = m_osu->getSpeedMultiplier(); // NOTE: not this->getSpeedMultiplier()!
+				const int version = databaseBeatmap->m_iVersion;
+				const float stackLeniency = databaseBeatmap->m_fStackLeniency;
+				const float speedMultiplier = databaseBeatmap->m_osu->getSpeedMultiplier(); // NOTE: not this->getSpeedMultiplier()!
 
-				std::vector<std::shared_ptr<OsuDifficultyHitObject>> hitObjects = OsuDatabaseBeatmap::generateDifficultyHitObjects(osuFilePath, gameMode, AR, CS, version, stackLeniency, speedMultiplier);
+				std::vector<std::shared_ptr<OsuDifficultyHitObject>> hitObjects = OsuDatabaseBeatmap::loadDifficultyHitObjects(osuFilePath, gameMode, AR, CS, version, stackLeniency, speedMultiplier);
 
 				double aim = 0.0;
 				double speed = 0.0;
 				double stars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(hitObjects, CS, &aim, &speed);
-				double pp = OsuDifficultyCalculator::calculatePPv2(beatmap->getOsu(), beatmap, aim, speed, m_iNumObjects, m_iNumCircles, m_iNumSpinners, maxCombo);
+				double pp = OsuDifficultyCalculator::calculatePPv2(beatmap->getOsu(), beatmap, aim, speed, databaseBeatmap->m_iNumObjects, databaseBeatmap->m_iNumCircles, databaseBeatmap->m_iNumSpinners, maxCombo);
 
-				engine->showMessageInfo("PP", UString::format("pp = %f, stars = %f, aimstars = %f, speedstars = %f, %i circles, %i sliders, %i spinners, %i hitobjects, maxcombo = %i", pp, stars, aim, speed, m_iNumCircles, m_iNumSliders, m_iNumSpinners, m_iNumObjects, maxCombo));
+				engine->showMessageInfo("PP", UString::format("pp = %f, stars = %f, aimstars = %f, speedstars = %f, %i circles, %i sliders, %i spinners, %i hitobjects, maxcombo = %i", pp, stars, aim, speed, databaseBeatmap->m_iNumCircles, databaseBeatmap->m_iNumSliders, databaseBeatmap->m_iNumSpinners, databaseBeatmap->m_iNumObjects, maxCombo));
 			}
 		}
 		else if (beatmapMania != NULL)
@@ -1392,13 +1334,13 @@ bool OsuDatabaseBeatmap::loadBeatmapInt(OsuBeatmap *beatmap)
 			for (int i=0; i<c.hitcircles.size(); i++)
 			{
 				HITCIRCLE &h = c.hitcircles[i];
-				m_loadHitObjects.push_back(new OsuManiaNote(ManiaHelper::getColumn(availableColumns, h.x), h.maniaEndTime > 0 ? (h.maniaEndTime - h.time) : 0, h.time, h.sampleType, h.number, h.colorCounter, beatmapMania));
+				result.hitobjects.push_back(new OsuManiaNote(ManiaHelper::getColumn(availableColumns, h.x), h.maniaEndTime > 0 ? (h.maniaEndTime - h.time) : 0, h.time, h.sampleType, h.number, h.colorCounter, beatmapMania));
 			}
 
 			for (int i=0; i<c.sliders.size(); i++)
 			{
 				SLIDER &s = c.sliders[i];
-				m_loadHitObjects.push_back(new OsuManiaNote(ManiaHelper::getColumn(availableColumns, s.x), s.sliderTime, s.time, s.sampleType, s.number, s.colorCounter, beatmapMania));
+				result.hitobjects.push_back(new OsuManiaNote(ManiaHelper::getColumn(availableColumns, s.x), s.sliderTime, s.time, s.sampleType, s.number, s.colorCounter, beatmapMania));
 			}
 		}
 	}
@@ -1415,25 +1357,25 @@ bool OsuDatabaseBeatmap::loadBeatmapInt(OsuBeatmap *beatmap)
 	    		return a->getTime() < b->getTime();
 	    }
 	};
-	std::sort(m_loadHitObjects.begin(), m_loadHitObjects.end(), HitObjectSortComparator());
+	std::sort(result.hitobjects.begin(), result.hitobjects.end(), HitObjectSortComparator());
 
 	// update beatmap length stat
-	if (m_iLengthMS == 0 && m_loadHitObjects.size() > 0)
-		m_iLengthMS = m_loadHitObjects[m_loadHitObjects.size() - 1]->getTime() + m_loadHitObjects[m_loadHitObjects.size() - 1]->getDuration();
+	if (databaseBeatmap->m_iLengthMS == 0 && result.hitobjects.size() > 0)
+		databaseBeatmap->m_iLengthMS = result.hitobjects[result.hitobjects.size() - 1]->getTime() + result.hitobjects[result.hitobjects.size() - 1]->getDuration();
 
 	// set isEndOfCombo + precalculate Score v2 combo portion maximum
 	if (beatmapStandard != NULL)
 	{
 		unsigned long long scoreV2ComboPortionMaximum = 1;
 
-		if (m_loadHitObjects.size() > 0)
+		if (result.hitobjects.size() > 0)
 			scoreV2ComboPortionMaximum = 0;
 
 		int combo = 0;
-		for (int i=0; i<m_loadHitObjects.size(); i++)
+		for (int i=0; i<result.hitobjects.size(); i++)
 		{
-			OsuHitObject *currentHitObject = m_loadHitObjects[i];
-			const OsuHitObject *nextHitObject = (i + 1 < m_loadHitObjects.size() ? m_loadHitObjects[i + 1] : NULL);
+			OsuHitObject *currentHitObject = result.hitobjects[i];
+			const OsuHitObject *nextHitObject = (i + 1 < result.hitobjects.size() ? result.hitobjects[i + 1] : NULL);
 
 			const OsuCircle *circlePointer = dynamic_cast<OsuCircle*>(currentHitObject);
 			const OsuSlider *sliderPointer = dynamic_cast<OsuSlider*>(currentHitObject);
@@ -1464,17 +1406,13 @@ bool OsuDatabaseBeatmap::loadBeatmapInt(OsuBeatmap *beatmap)
 	// special rule for first hitobject (for 1 approach circle with HD)
 	if (m_osu_show_approach_circle_on_first_hidden_object_ref->getBool())
 	{
-		if (m_loadHitObjects.size() > 0)
-			m_loadHitObjects[0]->setForceDrawApproachCircle(true);
+		if (result.hitobjects.size() > 0)
+			result.hitobjects[0]->setForceDrawApproachCircle(true);
 	}
 
-	debugLog("OsuDatabaseBeatmap::load() loaded %i hitobjects\n", m_loadHitObjects.size());
+	debugLog("OsuDatabaseBeatmap::load() loaded %i hitobjects\n", result.hitobjects.size());
 
-	// update combo colors in skin
-	// TODO: this is not safe async! (but currently unused, so)
-	beatmap->getOsu()->getSkin()->setBeatmapComboColors(c.combocolors);
-
-	return true;
+	return result;
 }
 
 void OsuDatabaseBeatmap::setDifficulties(std::vector<OsuDatabaseBeatmap*> &difficulties)

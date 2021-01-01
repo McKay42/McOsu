@@ -220,7 +220,7 @@ OsuBeatmap::~OsuBeatmap()
 	anim->deleteExistingAnimation(&m_fHealth2);
 	anim->deleteExistingAnimation(&m_fFailAnim);
 
-	unloadHitObjects();
+	unloadObjects();
 }
 
 void OsuBeatmap::draw(Graphics *g)
@@ -850,7 +850,7 @@ void OsuBeatmap::update()
 	}
 
 	// break time detection, and background fade during breaks
-	const BREAK breakEvent = getBreakForTimeRange(m_iPreviousHitObjectTime, m_iCurMusicPos, m_iNextHitObjectTime);
+	const OsuDatabaseBeatmap::BREAK breakEvent = getBreakForTimeRange(m_iPreviousHitObjectTime, m_iCurMusicPos, m_iNextHitObjectTime);
 	const bool isInBreak = ((int)m_iCurMusicPos >= breakEvent.startTime && (int)m_iCurMusicPos <= breakEvent.endTime);
 	if (isInBreak != m_bInBreak)
 	{
@@ -1186,8 +1186,7 @@ void OsuBeatmap::deselect()
 {
 	m_iContinueMusicPos = 0;
 
-	//unloadMusic();
-	unloadHitObjects();
+	unloadObjects();
 }
 
 bool OsuBeatmap::play()
@@ -1195,40 +1194,78 @@ bool OsuBeatmap::play()
 	if (m_selectedDifficulty2 == NULL) return false;
 
 	// reset everything, including deleting any previously loaded hitobjects from another diff which we might just have played
-	unloadHitObjects();
+	unloadObjects();
 	resetScore();
 
 	onBeforeLoad();
 
 	// actually load the difficulty (and the hitobjects)
-	// TODO: this will break async, think some more about this later
-	m_selectedDifficulty2->setLoadBeatmap(this);
-	engine->getResourceManager()->loadResource(m_selectedDifficulty2);
-	m_hitobjects = m_selectedDifficulty2->getLoadedHitObjects();
-	const bool success = m_selectedDifficulty2->isReady();
-
-	if (!success)
-		return false;
-	else
 	{
-		// the drawing order is different from the playing/input order.
-		// for drawing, if multiple hitobjects occupy the same time (duration) then they get drawn on top of the active hitobject
-		m_hitobjectsSortedByEndTime = m_hitobjects;
-
-		// sort hitobjects by endtime
-		struct HitObjectSortComparator
+		OsuDatabaseBeatmap::LOAD_RESULT result = OsuDatabaseBeatmap::load(m_selectedDifficulty2, this);
+		if (result.errorCode != 0)
 		{
-			bool operator() (OsuHitObject const *a, OsuHitObject const *b) const
+			switch (result.errorCode)
 			{
-				// strict weak ordering!
-				if ((a->getTime() + a->getDuration()) == (b->getTime() + b->getDuration()))
-					return a->getSortHack() < b->getSortHack();
-				else
-					return (a->getTime() + a->getDuration()) < (b->getTime() + b->getDuration());
+			case 1:
+				{
+					UString errorMessage = "Error: Couldn't load beatmap metadata :(";
+					debugLog("Osu Error: Couldn't load beatmap metadata %s\n", m_selectedDifficulty2->getFilePath().toUtf8());
+
+					if (m_osu != NULL)
+						m_osu->getNotificationOverlay()->addNotification(errorMessage, 0xffff0000);
+				}
+				break;
+
+			case 2:
+				{
+					UString errorMessage = "Error: Couldn't load beatmap file :(";
+					debugLog("Osu Error: Couldn't load beatmap file %s\n", m_selectedDifficulty2->getFilePath().toUtf8());
+
+					if (m_osu != NULL)
+						m_osu->getNotificationOverlay()->addNotification(errorMessage, 0xffff0000);
+				}
+				break;
+
+			case 3:
+				{
+					UString errorMessage = "Error: No timingpoints in beatmap!";
+					debugLog("Osu Error: No timingpoints in beatmap %s\n", m_selectedDifficulty2->getFilePath().toUtf8());
+
+					if (m_osu != NULL)
+						m_osu->getNotificationOverlay()->addNotification(errorMessage, 0xffff0000);
+				}
+				break;
 			}
-		};
-		std::sort(m_hitobjectsSortedByEndTime.begin(), m_hitobjectsSortedByEndTime.end(), HitObjectSortComparator());
+
+			return false;
+		}
+
+		// move temp result data into beatmap
+		m_hitobjects = std::move(result.hitobjects);
+		m_breaks = std::move(result.breaks);
+		m_osu->getSkin()->setBeatmapComboColors(std::move(result.combocolors)); // update combo colors in skin
+
+		// load beatmap skin
+		m_osu->getSkin()->loadBeatmapOverride(m_selectedDifficulty2->getFolder());
 	}
+
+	// the drawing order is different from the playing/input order.
+	// for drawing, if multiple hitobjects occupy the exact same time (duration) then they get drawn on top of the active hitobject
+	m_hitobjectsSortedByEndTime = m_hitobjects;
+
+	// sort hitobjects by endtime
+	struct HitObjectSortComparator
+	{
+		bool operator() (OsuHitObject const *a, OsuHitObject const *b) const
+		{
+			// strict weak ordering!
+			if ((a->getTime() + a->getDuration()) == (b->getTime() + b->getDuration()))
+				return a->getSortHack() < b->getSortHack();
+			else
+				return (a->getTime() + a->getDuration()) < (b->getTime() + b->getDuration());
+		}
+	};
+	std::sort(m_hitobjectsSortedByEndTime.begin(), m_hitobjectsSortedByEndTime.end(), HitObjectSortComparator());
 
 	onLoad();
 
@@ -1412,7 +1449,7 @@ void OsuBeatmap::stop(bool quit)
 
 	onBeforeStop(quit);
 
-	unloadHitObjects();
+	unloadObjects();
 
 	onStop(quit);
 
@@ -1741,9 +1778,9 @@ unsigned long OsuBeatmap::getBreakDurationTotal() const
 	return breakDurationTotal;
 }
 
-OsuBeatmap::BREAK OsuBeatmap::getBreakForTimeRange(long startMS, long positionMS, long endMS) const
+OsuDatabaseBeatmap::BREAK OsuBeatmap::getBreakForTimeRange(long startMS, long positionMS, long endMS) const
 {
-	BREAK curBreak;
+	OsuDatabaseBeatmap::BREAK curBreak;
 
 	curBreak.startTime = -1;
 	curBreak.endTime = -1;
@@ -2070,7 +2107,7 @@ void OsuBeatmap::unloadMusic()
 	m_music = NULL;
 }
 
-void OsuBeatmap::unloadHitObjects()
+void OsuBeatmap::unloadObjects()
 {
 	for (int i=0; i<m_hitobjects.size(); i++)
 	{
@@ -2079,6 +2116,11 @@ void OsuBeatmap::unloadHitObjects()
 	m_hitobjects = std::vector<OsuHitObject*>();
 	m_hitobjectsSortedByEndTime = std::vector<OsuHitObject*>();
 	m_misaimObjects = std::vector<OsuHitObject*>();
+
+	m_breaks = std::vector<OsuDatabaseBeatmap::BREAK>();
+
+	m_clicks = std::vector<CLICK>();
+	m_keyUps = std::vector<CLICK>();
 }
 
 void OsuBeatmap::resetHitObjects(long curPos)

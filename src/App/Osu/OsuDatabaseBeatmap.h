@@ -19,17 +19,13 @@
 // 3) allow async calculations/loaders to work on the contained data (e.g. background image loader)
 // 4) be a container for difficulties (all top level OsuDatabaseBeatmap objects are containers)
 
-// TODO: can now start testing the db loading async
 // TODO: move all unnecessary shit into OsuBeatmap, and clear out the garbage
 // TODO: star loading (separate class which just uses the m_sFilePath of this resource)
-// TODO: background image loading (separate class OsuBackgroundImageCache which handles all thumbnail logic async and independently)
 // TODO: break storage + break duration functions, put all of that into OsuBeatmap. now load breaks into beatmap.
 // TODO: calc and store m_aimStarsForNumHitObjects in OsuBeatmap.
 // TODO: calc and store m_speedStarsForNumHitObjects in OsuBeatmap.
 // TODO: while playing, storage of numCircles/sliders/spinners etc.
 // TODO: the DatabaseBeatmap class being a Resource feels like a clusterfuck when actually trying to use it, think about improving this structure
-
-// TODO: getter for checking the loadMetadata() result => just use Resource::isReady()?
 
 class Osu;
 class OsuBeatmap;
@@ -39,7 +35,7 @@ class OsuDatabase;
 
 class OsuBackgroundImageHandler;
 
-class OsuDatabaseBeatmap : public Resource
+class OsuDatabaseBeatmap
 {
 public:
 	// raw structs
@@ -60,10 +56,30 @@ public:
 		unsigned long long sortHack;
 	};
 
+	struct BREAK
+	{
+		int startTime;
+		int endTime;
+	};
+
 
 
 public:
 	// custom structs
+
+	struct LOAD_RESULT
+	{
+		int errorCode;
+
+		std::vector<OsuHitObject*> hitobjects;
+		std::vector<BREAK> breaks;
+		std::vector<Color> combocolors;
+
+		LOAD_RESULT()
+		{
+			errorCode = 0;
+		}
+	};
 
 	struct TIMING_INFO
 	{
@@ -84,16 +100,15 @@ public:
 public:
 	OsuDatabaseBeatmap(Osu *osu, UString filePath, UString folder);
 	OsuDatabaseBeatmap(Osu *osu, std::vector<OsuDatabaseBeatmap*> &difficulties);
-	virtual ~OsuDatabaseBeatmap();
+	~OsuDatabaseBeatmap();
 
 
 
-	static std::vector<std::shared_ptr<OsuDifficultyHitObject>> generateDifficultyHitObjects(const UString &osuFilePath, Osu::GAMEMODE gameMode, float AR, float CS, int version, float stackLeniency, float speedMultiplier, bool calculateStarsInaccurately = false);
+	static std::vector<std::shared_ptr<OsuDifficultyHitObject>> loadDifficultyHitObjects(const UString &osuFilePath, Osu::GAMEMODE gameMode, float AR, float CS, int version, float stackLeniency, float speedMultiplier, bool calculateStarsInaccurately = false);
+	static LOAD_RESULT load(OsuDatabaseBeatmap *databaseBeatmap, OsuBeatmap *beatmap);
+	static bool loadMetadata(OsuDatabaseBeatmap *databaseBeatmap);
 
 
-
-	void setLoadBeatmapMetadata();
-	void setLoadBeatmap(OsuBeatmap *beatmap);
 
 	void setDifficulties(std::vector<OsuDatabaseBeatmap*> &difficulties);
 
@@ -104,6 +119,7 @@ public:
 	inline Osu *getOsu() {return m_osu;}
 
 	inline UString getFolder() const {return m_sFolder;}
+	inline UString getFilePath() const {return m_sFilePath;}
 
 	inline unsigned long long getSortHack() const {return m_iSortHack;}
 
@@ -113,10 +129,6 @@ public:
 
 	TIMING_INFO getTimingInfoForTime(unsigned long positionMS);
 	static TIMING_INFO getTimingInfoForTimeAndTimingPoints(unsigned long positionMS, std::vector<TIMINGPOINT> &timingpoints);
-
-
-
-	inline const std::vector<OsuHitObject*> &getLoadedHitObjects() {return m_loadHitObjects;}
 
 
 
@@ -290,12 +302,6 @@ private:
 		unsigned long endTime;
 	};
 
-	struct BREAK
-	{
-		int startTime;
-		int endTime;
-	};
-
 	struct PRIMITIVE_CONTAINER
 	{
 		int errorCode;
@@ -310,11 +316,15 @@ private:
 
 		float sliderMultiplier;
 		float sliderTickRate;
+
+		int maxPossibleCombo;
 	};
 
 
 
 private:
+	// class internal data (custom)
+
 	friend class OsuDatabase;
 	friend class OsuBackgroundImageHandler;
 
@@ -337,36 +347,21 @@ private:
 
 
 
-	virtual void init();
-	virtual void initAsync();
-	virtual void destroy();
-
 	static PRIMITIVE_CONTAINER loadPrimitiveObjects(const UString &osuFilePath, Osu::GAMEMODE gameMode);
 	static void calculateSliderTimesClicksTicks(std::vector<SLIDER> &sliders, std::vector<TIMINGPOINT> &timingpoints, float sliderMultiplier, float sliderTickRate);
-
-	bool loadBeatmapMetadataInt();
-	bool loadBeatmapInt(OsuBeatmap *beatmap);
 
 
 
 	Osu *m_osu;
 
-	UString m_sFolder; // path to folder containing .osu file
+	UString m_sFolder;		// path to folder containing .osu file (e.g. "/path/to/beatmapfolder/")
+	UString m_sFilePath;	// path to .osu file (e.g. "/path/to/beatmapfolder/beatmap.osu")
 
 	unsigned long long m_iSortHack;
 
 	std::vector<OsuDatabaseBeatmap*> m_difficulties;
 
 	std::string m_sMD5Hash;
-
-
-
-	// loader temporaries (for async support)
-
-	int m_iLoadType;
-	int m_iLoadErrorCode;
-	OsuBeatmap *m_loadBeatmap;
-	std::vector<OsuHitObject*> m_loadHitObjects;
 
 
 

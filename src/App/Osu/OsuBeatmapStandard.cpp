@@ -1256,7 +1256,7 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 		const float stackLeniency = m_selectedDifficulty2->getStackLeniency();
 		const float speedMultiplier = m_osu->getSpeedMultiplier(); // NOTE: not this->getSpeedMultiplier()!
 
-		std::vector<std::shared_ptr<OsuDifficultyHitObject>> hitObjects = OsuDatabaseBeatmap::generateDifficultyHitObjects(osuFilePath, gameMode, AR, CS, version, stackLeniency, speedMultiplier);
+		std::vector<std::shared_ptr<OsuDifficultyHitObject>> hitObjects = OsuDatabaseBeatmap::loadDifficultyHitObjects(osuFilePath, gameMode, AR, CS, version, stackLeniency, speedMultiplier);
 		const double totalStars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(hitObjects, CS, &aim, &speed);
 
 		m_fAimStars = (float)aim;
@@ -1914,7 +1914,7 @@ void OsuBeatmapStandard::computeDrainRate()
 				int breakTime = 0;
 				if (breakCount > 0 && breakNumber < breakCount)
 				{
-					const BREAK &e = m_breaks[breakNumber];
+					const OsuDatabaseBeatmap::BREAK &e = m_breaks[breakNumber];
 					if (e.startTime >= localLastTime && e.endTime <= h->getTime())
 					{
 						// consider break start equal to object end time for version 8+ since drain stops during this time

@@ -557,8 +557,8 @@ bool OsuMultiplayer::onClientReceiveInt(uint32_t id, void *data, uint32_t size, 
 				OsuDatabaseBeatmap *diff = m_osu->getSongBrowser()->getSelectedBeatmap()->getSelectedDifficulty2();
 
 				// HACKHACK: TODO: TEMP, force load background image (so local downloaded /tmp/ beatmaps are at least complete, even if background image loader is not finished yet)
-				diff->setLoadBeatmapMetadata();
-				engine->getResourceManager()->loadResource(diff);
+				// TODO: handle loadMetadata() failure here (what if it returns false)!
+				OsuDatabaseBeatmap::loadMetadata(diff);
 
 				BeatmapUploadState uploadState;
 				{

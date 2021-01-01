@@ -129,8 +129,8 @@ private:
 					}
 
 					// 2) force reload metadata (because osu.db does not contain e.g. the version field)
-					diff2->setLoadBeatmapMetadata(); // HACKHACK: this is fucking disgusting. refactor loadBeatmapMetadata(OsuDatabaseBeatmap *targetToLoadInto) stuff to be static
-					diff2->reload(); // HACKHACK: this is fucking disgusting. refactor loadBeatmapMetadata(OsuDatabaseBeatmap *targetToLoadInto) stuff to be static
+					if (!OsuDatabaseBeatmap::loadMetadata(diff2))
+						continue;
 
 					const UString &osuFilePath = diff2->getFilePath();
 					const Osu::GAMEMODE gameMode = Osu::GAMEMODE::STD;
@@ -142,7 +142,7 @@ private:
 					const float speedMultiplier = score->speedMultiplier;
 
 					// 3) load hitobjects for diffcalc
-					std::vector<std::shared_ptr<OsuDifficultyHitObject>> hitObjects = OsuDatabaseBeatmap::generateDifficultyHitObjects(osuFilePath, gameMode, AR, CS, version, stackLeniency, speedMultiplier);
+					std::vector<std::shared_ptr<OsuDifficultyHitObject>> hitObjects = OsuDatabaseBeatmap::loadDifficultyHitObjects(osuFilePath, gameMode, AR, CS, version, stackLeniency, speedMultiplier);
 					if (hitObjects.size() < 1)
 					{
 						if (Osu::debug->getBool())

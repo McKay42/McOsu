@@ -11,6 +11,7 @@
 #include "cbase.h"
 
 #include "OsuScore.h"
+#include "OsuDatabaseBeatmap.h"
 
 class Sound;
 class ConVar;
@@ -27,12 +28,6 @@ class OsuBackgroundStarCacheLoader;
 class OsuBeatmap
 {
 public:
-	struct BREAK
-	{
-		int startTime;
-		int endTime;
-	};
-
 	struct CLICK
 	{
 		long musicPos;
@@ -152,9 +147,9 @@ public:
 	UString getTitle() const;
 	UString getArtist() const;
 
-	inline const std::vector<BREAK> &getBreaks() const {return m_breaks;}
+	inline const std::vector<OsuDatabaseBeatmap::BREAK> &getBreaks() const {return m_breaks;}
 	unsigned long getBreakDurationTotal() const;
-	BREAK getBreakForTimeRange(long startMS, long positionMS, long endMS) const;
+	OsuDatabaseBeatmap::BREAK getBreakForTimeRange(long startMS, long positionMS, long endMS) const;
 
 	// OsuHitObject and other helper functions
 	OsuScore::HIT addHitResult(OsuHitObject *hitObject, OsuScore::HIT hit, long delta, bool isEndOfCombo = false, bool ignoreOnHitErrorBar = false, bool hitErrorBarOnly = false, bool ignoreCombo = false, bool ignoreScore = false, bool ignoreHealth = false);
@@ -204,7 +199,7 @@ protected:
 	void handlePreviewPlay();
 	void loadMusic(bool stream = true, bool prescan = false);
 	void unloadMusic();
-	void unloadHitObjects();
+	void unloadObjects();
 
 	void resetHitObjects(long curPos = 0);
 	void resetScore();
@@ -257,7 +252,7 @@ protected:
 	double m_fHpMultiplierComboEnd;
 
 	// breaks
-	std::vector<BREAK> m_breaks;
+	std::vector<OsuDatabaseBeatmap::BREAK> m_breaks;
 	float m_fBreakBackgroundFade;
 	bool m_bInBreak;
 	OsuHitObject *m_currentHitObject;
