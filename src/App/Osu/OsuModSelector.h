@@ -84,6 +84,7 @@ private:
 	};
 
 	void updateButtons(bool initial = false);
+	void updateScoreMultiplierLabelText();
 	void updateExperimentalButtons(bool initial);
 	void updateLayout();
 	void updateExperimentalLayout();
@@ -153,6 +154,9 @@ private:
 
 	// experimental mods
 	std::vector<EXPERIMENTAL_MOD> m_experimentalMods;
+
+	// score multiplier info label
+	CBaseUILabel *m_scoreMultiplierLabel;
 
 	// action buttons
 	std::vector<OsuUIButton*> m_actionButtons;

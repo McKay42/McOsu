@@ -227,6 +227,13 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen(osu)
 	addExperimentalCheckbox("Flip Horizontally", "Playfield is flipped horizontally.", convar->getConVarByName("osu_playfield_mirror_horizontal"));
 	addExperimentalCheckbox("Flip Vertically", "Playfield is flipped vertically.", convar->getConVarByName("osu_playfield_mirror_vertical"));
 
+	// build score multiplier label
+	m_scoreMultiplierLabel = new CBaseUILabel();
+	m_scoreMultiplierLabel->setDrawFrame(false);
+	m_scoreMultiplierLabel->setDrawBackground(false);
+	m_scoreMultiplierLabel->setCenterText(true);
+	m_container->addBaseUIElement(m_scoreMultiplierLabel);
+
 	// build action buttons
 	m_resetModsButton = addActionButton("1. Reset All Mods");
 	m_resetModsButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::resetMods) );
@@ -271,6 +278,21 @@ void OsuModSelector::updateButtons(bool initial)
 		getModButtonOnGrid(2, 1)->setAvailable(false);
 		getModButtonOnGrid(2, 0)->setAvailable(false);
 	}
+}
+
+void OsuModSelector::updateScoreMultiplierLabelText()
+{
+	const float scoreMultiplier = m_osu->getScoreMultiplier();
+
+	const int alpha = 200;
+	if (scoreMultiplier > 1.0f)
+		m_scoreMultiplierLabel->setTextColor(COLOR(alpha, 173, 255, 47));
+	else if (scoreMultiplier == 1.0f)
+		m_scoreMultiplierLabel->setTextColor(COLOR(alpha, 255, 255, 255));
+	else
+		m_scoreMultiplierLabel->setTextColor(COLOR(alpha, 255, 69, 00));
+
+	m_scoreMultiplierLabel->setText(UString::format("Score Multiplier: %.2fX", scoreMultiplier));
 }
 
 void OsuModSelector::updateExperimentalButtons(bool initial)
@@ -608,6 +630,7 @@ void OsuModSelector::setVisible(bool visible)
 		updateButtons(true); // force state update without firing callbacks
 		updateExperimentalButtons(true); // force state update without firing callbacks
 		updateLayout();
+		updateScoreMultiplierLabelText();
 		updateOverrideSliderLabels();
 
 		m_fAnimation = 0.0f;
@@ -755,7 +778,7 @@ void OsuModSelector::updateLayout()
 		}
 
 		// action buttons
-		float actionMinY = start.y + size.y*m_iGridHeight + offset.y*(m_iGridHeight-1); // exact bottom of the mod buttons
+		float actionMinY = start.y + size.y*m_iGridHeight + offset.y*(m_iGridHeight - 1); // exact bottom of the mod buttons
 		Vector2 actionSize = Vector2(m_osu->getUIScale(m_osu, 448.0f) * uiScale, size.y*0.75f);
 		float actionOffsetY = actionSize.y*0.5f;
 		Vector2 actionStart = Vector2(m_osu->getScreenWidth()/2.0f - actionSize.x/2.0f, actionMinY + (m_osu->getScreenHeight() - actionMinY)/2.0f  - (actionSize.y*m_actionButtons.size() + actionOffsetY*(m_actionButtons.size()-1))/2.0f);
@@ -766,6 +789,13 @@ void OsuModSelector::updateLayout()
 			m_actionButtons[i]->onResized(); // HACKHACK: framework, setSize*() does not update string metrics
 			m_actionButtons[i]->setSize(actionSize);
 		}
+
+		// score multiplier info label
+		const float modGridMaxY = start.y + size.y*m_iGridHeight + offset.y*(m_iGridHeight - 1); // exact bottom of the mod buttons
+		m_scoreMultiplierLabel->setVisible(true);
+		m_scoreMultiplierLabel->setSizeToContent();
+		m_scoreMultiplierLabel->setSize(Vector2(m_osu->getScreenWidth(), 20 * uiScale));
+		m_scoreMultiplierLabel->setPos(0, modGridMaxY + std::abs(actionStart.y - modGridMaxY)/2 - m_scoreMultiplierLabel->getSize().y/2);
 	}
 	else // compact in-beatmap mode
 	{
@@ -824,6 +854,9 @@ void OsuModSelector::updateLayout()
 		{
 			m_actionButtons[i]->setVisible(false);
 		}
+
+		// score multiplier info label
+		m_scoreMultiplierLabel->setVisible(false);
 	}
 
 	updateExperimentalLayout();
@@ -909,6 +942,7 @@ void OsuModSelector::updateModConVar()
 
 	osu_mods_ref->setValue(modString);
 
+	updateScoreMultiplierLabelText();
 	updateOverrideSliderLabels();
 }
 
