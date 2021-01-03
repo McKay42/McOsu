@@ -93,7 +93,7 @@ private:
 
 		// count number of scores to recalculate for UI
 		size_t numScoresToRecalculate = 0;
-		for (const auto kv : *scores)
+		for (const auto &kv : *scores)
 		{
 			for (size_t i=0; i<kv.second.size(); i++)
 			{
@@ -581,7 +581,7 @@ void OsuUserStatsScreen::onMenuClicked(CBaseUIButton *button)
 		m_contextMenu->addButton("---");
 		m_contextMenu->addButton("Import osu! Scores", 2);
 		m_contextMenu->addButton("---");
-		m_contextMenu->addButton("Delete All Scores");
+		m_contextMenu->addButton("Delete All Scores", 3);
 	}
 	m_contextMenu->end();
 	m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUserStatsScreen::onMenuSelected) );
@@ -589,14 +589,12 @@ void OsuUserStatsScreen::onMenuClicked(CBaseUIButton *button)
 
 void OsuUserStatsScreen::onMenuSelected(UString text, int id)
 {
-	// TODO: implement "recalculate pp", "delete all scores", etc.
-
 	if (id == 1)
 		onRecalculatePP(false);
 	else if (id == 2)
 		onRecalculatePP(true);
-	else
-		debugLog("TODO ...\n");
+	else if (id == 3)
+		onDeleteAllScores();
 }
 
 void OsuUserStatsScreen::onRecalculatePP(bool importLegacyScores)
@@ -617,6 +615,31 @@ void OsuUserStatsScreen::onRecalculatePP(bool importLegacyScores)
 
 	engine->getResourceManager()->requestNextLoadAsync();
 	engine->getResourceManager()->loadResource(m_backgroundPPRecalculator);
+}
+
+void OsuUserStatsScreen::onDeleteAllScores()
+{
+	std::unordered_map<std::string, std::vector<OsuDatabase::Score>> *scores = m_osu->getSongBrowser()->getDatabase()->getScores();
+
+	// delete every score matching the current playerName
+	const UString &playerName = m_name_ref->getString();
+	for (auto &kv : *scores)
+	{
+		for (size_t i=0; i<kv.second.size(); i++)
+		{
+			if (kv.second[i].playerName == playerName)
+			{
+				kv.second.erase(kv.second.begin() + i);
+				i--;
+			}
+		}
+	}
+
+	// force recalc + refresh UI
+	m_osu->getSongBrowser()->getDatabase()->forceScoreUpdateOnNextCalculatePlayerStats();
+	m_osu->getSongBrowser()->getDatabase()->forceScoresSaveOnNextShutdown();
+
+	rebuildScoreButtons(playerName);
 }
 
 void OsuUserStatsScreen::updateLayout()
