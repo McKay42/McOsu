@@ -100,10 +100,36 @@ private:
 				const OsuDatabase::Score &score = kv.second[i];
 
 				if ((!score.isLegacyScore || m_bImportLegacyScores) && score.playerName == m_sUserName)
+				{
+					if (score.md5hash.length() < 1)
+						continue;
+
+					// NOTE: avoid importing the same score twice
+					if (m_bImportLegacyScores && score.isLegacyScore)
+					{
+						const std::vector<OsuDatabase::Score> &otherScores = (*scores)[score.md5hash];
+
+						bool isScoreAlreadyImported = false;
+						for (size_t s=0; s<otherScores.size(); s++)
+						{
+							if (score.isLegacyScoreEqualToImportedLegacyScore(otherScores[s]))
+							{
+								isScoreAlreadyImported = true;
+								break;
+							}
+						}
+
+						if (isScoreAlreadyImported)
+							continue;
+					}
+
 					numScoresToRecalculate++;
+				}
 			}
 		}
 		m_iNumScoresToRecalculate = numScoresToRecalculate;
+
+		printf("PPRecalc will recalculate %i scores ...\n", (int)numScoresToRecalculate);
 
 		// actually recalculate them
 		for (auto &kv : *scores)
@@ -119,9 +145,24 @@ private:
 					if (score.md5hash.length() < 1)
 						continue;
 
-					// TODO: what about scores with experimental mods enabled? can these be safely recalculated?
-					// TODO: if scores were imported once, and the database is reloaded, importing them again will duplicate all isImportedLegacyScore entries logically
-					// TODO: do some kind of equality/hash check and only import if different (compare to-be-imported legacy score with isImportedLegacyScore score)
+					// NOTE: avoid importing the same score twice
+					if (m_bImportLegacyScores && score.isLegacyScore)
+					{
+						const std::vector<OsuDatabase::Score> &otherScores = (*scores)[score.md5hash];
+
+						bool isScoreAlreadyImported = false;
+						for (size_t s=0; s<otherScores.size(); s++)
+						{
+							if (score.isLegacyScoreEqualToImportedLegacyScore(otherScores[s]))
+							{
+								isScoreAlreadyImported = true;
+								break;
+							}
+						}
+
+						if (isScoreAlreadyImported)
+							continue;
+					}
 
 					// 1) get matching beatmap from db
 					OsuDatabaseBeatmap *diff2 = m_osu->getSongBrowser()->getDatabase()->getBeatmapDifficulty(score.md5hash);
@@ -208,7 +249,7 @@ private:
 					int numCircles = 0;
 					int maxPossibleCombo = 0;
 					{
-						// calculate a few values fresh from beatmap data necessary for pp calculation
+						// calculate a few values fresh from the beatmap data necessary for pp calculation
 						numHitObjects = diffres.diffobjects.size();
 
 						for (size_t h=0; h<diffres.diffobjects.size(); h++)
@@ -230,17 +271,17 @@ private:
 						pp = OsuDifficultyCalculator::calculatePPv2(score.modsLegacy, speedMultiplier, AR, OD, aimStars, speedStars, numHitObjects, numCircles, numSpinners, maxPossibleCombo, score.comboMax, score.numMisses, score.num300s, score.num100s, score.num50s);
 					}
 
-					// 6) overwrite score with new pp data
+					// 6) overwrite score with new pp data (and handle imports)
 					const float oldPP = score.pp;
 					if (pp > 0.0f)
 					{
 						score.pp = pp;
+						score.version = 20210103;
 
 						if (m_bImportLegacyScores && score.isLegacyScore)
 						{
 							score.isLegacyScore = false;		// convert to McOsu (pp) score
 							score.isImportedLegacyScore = true;	// but remember that this score does not have all play data
-							score.version = 20210103;			// and upgrade its version
 							{
 								score.numSliderBreaks = 0;
 								score.unstableRate = 0.0f;

@@ -66,9 +66,37 @@ public:
 		int numCircles;
 		UString experimentalModsConVars;
 
-		// temp
+		// runtime
 		unsigned long long sortHack;
 		std::string md5hash;
+
+		bool isLegacyScoreEqualToImportedLegacyScore(const OsuDatabase::Score &importedLegacyScore) const
+		{
+			if (!isLegacyScore) return false;
+			if (!importedLegacyScore.isImportedLegacyScore) return false;
+
+			const bool isScoreValueEqual = (score == importedLegacyScore.score);
+			const bool isTimestampEqual = (unixTimestamp == importedLegacyScore.unixTimestamp);
+			const bool isComboMaxEqual = (comboMax == importedLegacyScore.comboMax);
+			const bool isModsLegacyEqual = (modsLegacy == importedLegacyScore.modsLegacy);
+			const bool isNum300sEqual = (num300s == importedLegacyScore.num300s);
+			const bool isNum100sEqual = (num100s == importedLegacyScore.num100s);
+			const bool isNum50sEqual = (num50s == importedLegacyScore.num50s);
+			const bool isNumGekisEqual = (numGekis == importedLegacyScore.numGekis);
+			const bool isNumKatusEqual = (numKatus == importedLegacyScore.numKatus);
+			const bool isNumMissesEqual = (numMisses == importedLegacyScore.numMisses);
+
+			return (isScoreValueEqual
+				 && isTimestampEqual
+				 && isComboMaxEqual
+				 && isModsLegacyEqual
+				 && isNum300sEqual
+				 && isNum100sEqual
+				 && isNum50sEqual
+				 && isNumGekisEqual
+				 && isNumKatusEqual
+				 && isNumMissesEqual);
+		}
 	};
 
 	struct PlayerStats

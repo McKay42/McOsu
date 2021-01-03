@@ -591,7 +591,7 @@ void OsuUISongBrowserScoreButton::setScore(OsuDatabase::Score score, int index, 
 	m_tooltipLines.clear();
 	m_tooltipLines.push_back(achievedOn);
 
-	if (m_score.isLegacyScore)
+	if (m_score.isLegacyScore || m_score.isImportedLegacyScore)
 		m_tooltipLines.push_back(UString::format("300:%i 100:%i 50:%i Miss:%i", score.num300s, score.num100s, score.num50s, score.numMisses));
 	else
 		m_tooltipLines.push_back(UString::format("300:%i 100:%i 50:%i Miss:%i SBreak:%i", score.num300s, score.num100s, score.num50s, score.numMisses, score.numSliderBreaks));
@@ -634,8 +634,14 @@ void OsuUISongBrowserScoreButton::setScore(OsuDatabase::Score score, int index, 
 		m_tooltipLines.push_back(UString::format("Speed: %.3gx", score.speedMultiplier));
 		m_tooltipLines.push_back(UString::format("CS:%.4g AR:%.4g OD:%.4g HP:%.4g", score.CS, score.AR, score.OD, score.HP));
 		//m_tooltipLines.push_back("Accuracy:");
-		m_tooltipLines.push_back(UString::format("Error: %.2fms - %.2fms avg", score.hitErrorAvgMin, score.hitErrorAvgMax));
-		m_tooltipLines.push_back(UString::format("Unstable Rate: %.2f", score.unstableRate));
+		if (!score.isImportedLegacyScore)
+		{
+			m_tooltipLines.push_back(UString::format("Error: %.2fms - %.2fms avg", score.hitErrorAvgMin, score.hitErrorAvgMax));
+			m_tooltipLines.push_back(UString::format("Unstable Rate: %.2f", score.unstableRate));
+		}
+		else
+			m_tooltipLines.push_back("This score was imported from osu!");
+
 		m_tooltipLines.push_back(UString::format("Version: %i", score.version));
 	}
 
