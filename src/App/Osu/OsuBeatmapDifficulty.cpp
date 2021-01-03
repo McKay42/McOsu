@@ -1724,8 +1724,11 @@ std::vector<std::shared_ptr<OsuDifficultyHitObject>> OsuBeatmapDifficulty::gener
 
 double OsuBeatmapDifficulty::calculateStarDiff(OsuBeatmap *beatmap, double *aim, double *speed, int upToObjectIndex, bool calculateStarsInaccurately, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains)
 {
+	/*
 	std::vector<std::shared_ptr<OsuDifficultyHitObject>> hitObjects = generateDifficultyHitObjectsForBeatmap(beatmap, calculateStarsInaccurately);
 	return OsuDifficultyCalculator::calculateStarDiffForHitObjects(hitObjects, (beatmap != NULL ? beatmap->getCS() : CS), aim, speed, upToObjectIndex, outAimStrains, outSpeedStrains);
+	*/
+	return 0.0;
 }
 
 void OsuBeatmapDifficulty::rebuildStarCacheForUpToHitObjectIndex(OsuBeatmap *beatmap, std::atomic<bool> &interruptLoad, std::atomic<int> &progress)
@@ -1749,7 +1752,7 @@ void OsuBeatmapDifficulty::rebuildStarCacheForUpToHitObjectIndex(OsuBeatmap *bea
 		double speedStars = 0.0;
 
 		//OsuDifficultyCalculator::calculateStarDiffForHitObjects(hitObjects, CS, &aimStars, &speedStars, i, (i == (hitObjects.size() - 1) ? &m_aimStrains : NULL), (i == (hitObjects.size() - 1) ? &m_speedStrains : NULL));
-		OsuDifficultyCalculator::calculateStarDiffForHitObjects(hitObjects, CS, &aimStars, &speedStars, i);
+		///OsuDifficultyCalculator::calculateStarDiffForHitObjects(hitObjects, CS, &aimStars, &speedStars, i);
 
 		m_aimStarsForNumHitObjects.push_back(aimStars);
 		m_speedStarsForNumHitObjects.push_back(speedStars);
