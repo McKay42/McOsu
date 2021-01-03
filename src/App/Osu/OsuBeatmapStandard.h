@@ -64,6 +64,7 @@ private:
 	static ConVar *m_osu_draw_statistics_pp_ref;
 	static ConVar *m_osu_mod_fullalternate_ref;
 	static ConVar *m_osu_mod_fposu_ref;
+	static ConVar *m_osu_slider_scorev2_ref;
 
 	virtual void onBeforeLoad();
 	virtual void onLoad();

@@ -265,6 +265,7 @@ OsuRankingScreen::OsuRankingScreen(Osu *osu) : OsuScreenBackable(osu)
 	m_bModTD = false;
 
 	m_bIsLegacyScore = false;
+	m_bIsImportedLegacyScore = false;
 	m_bIsUnranked = false;
 }
 
@@ -434,18 +435,25 @@ void OsuRankingScreen::update()
 	if (!m_osu->getOptionsMenu()->isMouseInside() && !m_bIsLegacyScore && engine->getMouse()->getPos().x < m_osu->getScreenWidth() * 0.5f)
 	{
 		m_osu->getTooltipOverlay()->begin();
-		m_osu->getTooltipOverlay()->addLine(UString::format("%.2fpp", m_fPPv2));
-		m_osu->getTooltipOverlay()->addLine("Difficulty:");
-		m_osu->getTooltipOverlay()->addLine(UString::format("Stars: %.2f (%.2f aim, %.2f speed)", m_fStarsTomTotal, m_fStarsTomAim, m_fStarsTomSpeed));
-		m_osu->getTooltipOverlay()->addLine(UString::format("Speed: %.3gx", m_fSpeedMultiplier));
-		m_osu->getTooltipOverlay()->addLine(UString::format("CS:%.4g AR:%.4g OD:%.4g HP:%.4g", m_fCS, m_fAR, m_fOD, m_fHP));
+		{
+			m_osu->getTooltipOverlay()->addLine(UString::format("%.2fpp", m_fPPv2));
+			m_osu->getTooltipOverlay()->addLine("Difficulty:");
+			m_osu->getTooltipOverlay()->addLine(UString::format("Stars: %.2f (%.2f aim, %.2f speed)", m_fStarsTomTotal, m_fStarsTomAim, m_fStarsTomSpeed));
+			m_osu->getTooltipOverlay()->addLine(UString::format("Speed: %.3gx", m_fSpeedMultiplier));
+			m_osu->getTooltipOverlay()->addLine(UString::format("CS:%.4g AR:%.4g OD:%.4g HP:%.4g", m_fCS, m_fAR, m_fOD, m_fHP));
 
-		if (m_sMods.length() > 0)
-			m_osu->getTooltipOverlay()->addLine(m_sMods);
+			if (m_sMods.length() > 0)
+				m_osu->getTooltipOverlay()->addLine(m_sMods);
 
-		m_osu->getTooltipOverlay()->addLine("Accuracy:");
-		m_osu->getTooltipOverlay()->addLine(UString::format("Error: %.2fms - %.2fms avg", m_fHitErrorAvgMin, m_fHitErrorAvgMax));
-		m_osu->getTooltipOverlay()->addLine(UString::format("Unstable Rate: %.2f", m_fUnstableRate));
+			if (!m_bIsImportedLegacyScore)
+			{
+				m_osu->getTooltipOverlay()->addLine("Accuracy:");
+				m_osu->getTooltipOverlay()->addLine(UString::format("Error: %.2fms - %.2fms avg", m_fHitErrorAvgMin, m_fHitErrorAvgMax));
+				m_osu->getTooltipOverlay()->addLine(UString::format("Unstable Rate: %.2f", m_fUnstableRate));
+			}
+			else
+				m_osu->getTooltipOverlay()->addLine("This score was imported from osu!");
+		}
 		m_osu->getTooltipOverlay()->end();
 	}
 
@@ -539,12 +547,14 @@ void OsuRankingScreen::setScore(OsuScore *score)
 	}
 
 	m_bIsLegacyScore = false;
+	m_bIsImportedLegacyScore = false;
 	m_bIsUnranked = score->isUnranked();
 }
 
 void OsuRankingScreen::setScore(OsuDatabase::Score score, UString dateTime)
 {
 	m_bIsLegacyScore = score.isLegacyScore;
+	m_bIsImportedLegacyScore = score.isImportedLegacyScore;
 	m_bIsUnranked = false;
 
 	m_songInfo->setDate(dateTime);

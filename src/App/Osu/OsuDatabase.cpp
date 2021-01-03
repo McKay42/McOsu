@@ -788,16 +788,19 @@ int OsuDatabase::getLevelForScore(unsigned long long score, int maxLevel)
 
 OsuDatabaseBeatmap *OsuDatabase::getBeatmap(std::string md5hash)
 {
-	for (int i=0; i<m_databaseBeatmaps.size(); i++)
+	const size_t md5hashLength = md5hash.length();
+
+	for (size_t i=0; i<m_databaseBeatmaps.size(); i++)
 	{
 		OsuDatabaseBeatmap *beatmap = m_databaseBeatmaps[i];
 		const std::vector<OsuDatabaseBeatmap*> &diffs = beatmap->getDifficulties();
-		for (int d=0; d<diffs.size(); d++)
+		for (size_t d=0; d<diffs.size(); d++)
 		{
 			const OsuDatabaseBeatmap *diff = diffs[d];
 
-			bool uuidMatches = (diff->getMD5Hash().length() > 0 && diff->getMD5Hash().length() == md5hash.length());
-			for (int u=0; u<32 && u<diff->getMD5Hash().length() && u<md5hash.length(); u++)
+			const size_t diffmd5hashLength = diff->getMD5Hash().length();
+			bool uuidMatches = (diffmd5hashLength > 0 && diffmd5hashLength == md5hashLength);
+			for (size_t u=0; u<32 && u<diffmd5hashLength && u<md5hashLength; u++)
 			{
 				if (diff->getMD5Hash()[u] != md5hash[u])
 				{
@@ -816,17 +819,20 @@ OsuDatabaseBeatmap *OsuDatabase::getBeatmap(std::string md5hash)
 
 OsuDatabaseBeatmap *OsuDatabase::getBeatmapDifficulty(std::string md5hash)
 {
+	const size_t md5hashLength = md5hash.length();
+
 	// TODO: optimize db accesses by caching a hashmap from md5hash -> OsuBeatmap*, currently it just does a loop over all diffs of all beatmaps (for every call)
-	for (int i=0; i<m_databaseBeatmaps.size(); i++)
+	for (size_t i=0; i<m_databaseBeatmaps.size(); i++)
 	{
 		OsuDatabaseBeatmap *beatmap = m_databaseBeatmaps[i];
 		const std::vector<OsuDatabaseBeatmap*> &diffs = beatmap->getDifficulties();
-		for (int d=0; d<diffs.size(); d++)
+		for (size_t d=0; d<diffs.size(); d++)
 		{
 			OsuDatabaseBeatmap *diff = diffs[d];
 
-			bool uuidMatches = (diff->getMD5Hash().length() > 0);
-			for (int u=0; u<32 && u<diff->getMD5Hash().length(); u++)
+			const size_t diffmd5hashLength = diff->getMD5Hash().length();
+			bool uuidMatches = (diffmd5hashLength > 0);
+			for (size_t u=0; u<32 && u<diffmd5hashLength && u<md5hashLength; u++)
 			{
 				if (diff->getMD5Hash()[u] != md5hash[u])
 				{
@@ -1700,6 +1706,7 @@ void OsuDatabase::loadScores()
 
 						// temp
 						sc.sortHack = m_iSortHackCounter++;
+						sc.md5hash = md5hash;
 
 						addScoreRaw(md5hash, sc);
 						scoreCounter++;
@@ -1748,6 +1755,11 @@ void OsuDatabase::loadScores()
 				{
 					const unsigned char gamemode = db.readByte();
 					const int scoreVersion = db.readInt();
+					bool isImportedLegacyScore = false;
+					if (scoreVersion > 20190103)
+					{
+						isImportedLegacyScore = db.readBool();
+					}
 					const uint64_t unixTimestamp = db.readLongLong();
 
 					// default
@@ -1796,6 +1808,7 @@ void OsuDatabase::loadScores()
 						Score sc;
 
 						sc.isLegacyScore = false;
+						sc.isImportedLegacyScore = isImportedLegacyScore;
 						sc.version = scoreVersion;
 						sc.unixTimestamp = unixTimestamp;
 
@@ -1852,7 +1865,7 @@ void OsuDatabase::saveScores()
 	if (!m_bDidScoresChangeForSave) return;
 	m_bDidScoresChangeForSave = false;
 
-	const int dbVersion = 20190103;
+	const int dbVersion = 20210103;
 
 	if (m_scores.size() > 0)
 	{
@@ -1902,6 +1915,10 @@ void OsuDatabase::saveScores()
 						{
 							db.writeByte(0); // gamemode (hardcoded atm)
 							db.writeInt(it->second[i].version);
+							if (it->second[i].version > 20190103)
+							{
+								db.writeBool(it->second[i].isImportedLegacyScore);
+							}
 							db.writeLongLong(it->second[i].unixTimestamp);
 
 							// default

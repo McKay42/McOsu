@@ -31,6 +31,7 @@ public:
 	struct Score
 	{
 		bool isLegacyScore;
+		bool isImportedLegacyScore; // used for identifying imported osu! scores (which were previously legacy scores, so they don't have any numSliderBreaks/unstableRate/hitErrorAvgMin/hitErrorAvgMax)
 		int version;
 		uint64_t unixTimestamp;
 

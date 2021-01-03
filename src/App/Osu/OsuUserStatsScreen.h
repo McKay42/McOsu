@@ -46,7 +46,7 @@ private:
 	void onScoreClicked(CBaseUIButton *button);
 	void onMenuClicked(CBaseUIButton *button);
 	void onMenuSelected(UString text, int id);
-	void onRecalculatePP();
+	void onRecalculatePP(bool importLegacyScores);
 
 	ConVar *m_name_ref;
 

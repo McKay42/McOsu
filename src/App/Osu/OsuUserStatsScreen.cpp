@@ -68,10 +68,11 @@ public:
 class OsuUserStatsScreenBackgroundPPRecalculator : public Resource
 {
 public:
-	OsuUserStatsScreenBackgroundPPRecalculator(Osu *osu, UString userName) : Resource()
+	OsuUserStatsScreenBackgroundPPRecalculator(Osu *osu, UString userName, bool importLegacyScores) : Resource()
 	{
 		m_osu = osu;
 		m_sUserName = userName;
+		m_bImportLegacyScores = importLegacyScores;
 
 		m_iNumScoresToRecalculate = 0;
 		m_iNumScoresRecalculated = 0;
@@ -97,7 +98,8 @@ private:
 			for (size_t i=0; i<kv.second.size(); i++)
 			{
 				const OsuDatabase::Score &score = kv.second[i];
-				if (!score.isLegacyScore && score.playerName == m_sUserName)
+
+				if ((!score.isLegacyScore || m_bImportLegacyScores) && score.playerName == m_sUserName)
 					numScoresToRecalculate++;
 			}
 		}
@@ -108,22 +110,25 @@ private:
 		{
 			for (size_t i=0; i<kv.second.size(); i++)
 			{
-				OsuDatabase::Score *score = &kv.second[i];
-				if (!score->isLegacyScore && score->playerName == m_sUserName)
+				OsuDatabase::Score &score = kv.second[i];
+
+				if ((!score.isLegacyScore || m_bImportLegacyScores) && score.playerName == m_sUserName)
 				{
 					if (m_bInterrupted.load())
 						break;
-					if (score->md5hash.length() < 1)
+					if (score.md5hash.length() < 1)
 						continue;
 
 					// TODO: what about scores with experimental mods enabled? can these be safely recalculated?
+					// TODO: if scores were imported once, and the database is reloaded, importing them again will duplicate all isImportedLegacyScore entries logically
+					// TODO: do some kind of equality/hash check and only import if different (compare to-be-imported legacy score with isImportedLegacyScore score)
 
 					// 1) get matching beatmap from db
-					OsuDatabaseBeatmap *diff2 = m_osu->getSongBrowser()->getDatabase()->getBeatmapDifficulty(score->md5hash);
+					OsuDatabaseBeatmap *diff2 = m_osu->getSongBrowser()->getDatabase()->getBeatmapDifficulty(score.md5hash);
 					if (diff2 == NULL)
 					{
 						if (Osu::debug->getBool())
-							printf("PPRecalc couldn't find %s\n", score->md5hash.c_str());
+							printf("PPRecalc couldn't find %s\n", score.md5hash.c_str());
 
 						continue;
 					}
@@ -132,14 +137,54 @@ private:
 					if (!OsuDatabaseBeatmap::loadMetadata(diff2))
 						continue;
 
+					float legacySpeedMultiplier = 1.0f;
+					float legacyAR = diff2->getAR();
+					float legacyCS = diff2->getCS();
+					float legacyOD = diff2->getOD();
+					float legacyHP = diff2->getHP();
+					{
+						// HACKHACK: code duplication, see Osu::getRawSpeedMultiplier()
+						{
+							if (score.modsLegacy & OsuReplay::Mods::HalfTime)
+								legacySpeedMultiplier = 0.75f;
+							if ((score.modsLegacy & OsuReplay::Mods::DoubleTime) || (score.modsLegacy & OsuReplay::Mods::Nightcore))
+								legacySpeedMultiplier = 1.5f;
+						}
+
+						// HACKHACK: code duplication, see Osu::getDifficultyMultiplier()
+						float difficultyMultiplier = 1.0f;
+						{
+							if (score.modsLegacy & OsuReplay::Mods::HardRock)
+								difficultyMultiplier = 1.4f;
+							if (score.modsLegacy & OsuReplay::Mods::Easy)
+								difficultyMultiplier = 0.5f;
+						}
+
+						// HACKHACK: code duplication, see Osu::getCSDifficultyMultiplier()
+						float csDifficultyMultiplier = 1.0f;
+						{
+							if (score.modsLegacy & OsuReplay::Mods::HardRock)
+								csDifficultyMultiplier = 1.3f; // different!
+							if (score.modsLegacy & OsuReplay::Mods::Easy)
+								csDifficultyMultiplier = 0.5f;
+						}
+
+						// apply legacy mods to legacy beatmap values
+						legacyAR = clamp<float>(legacyAR * difficultyMultiplier, 0.0f, 10.0f);
+						legacyCS = clamp<float>(legacyCS * csDifficultyMultiplier, 0.0f, 10.0f);
+						legacyOD = clamp<float>(legacyOD * difficultyMultiplier, 0.0f, 10.0f);
+						legacyHP = clamp<float>(legacyHP * difficultyMultiplier, 0.0f, 10.0f);
+					}
+
 					const UString &osuFilePath = diff2->getFilePath();
 					const Osu::GAMEMODE gameMode = Osu::GAMEMODE::STD;
-					const float AR = score->AR;
-					const float CS = score->CS;
-					const float OD = score->OD;
+					const float AR = (score.isLegacyScore ? legacyAR : score.AR);
+					const float CS = (score.isLegacyScore ? legacyCS : score.CS);
+					const float OD = (score.isLegacyScore ? legacyOD : score.OD);
+					const float HP = (score.isLegacyScore ? legacyHP : score.HP);
 					const int version = diff2->getVersion();
 					const float stackLeniency = diff2->getStackLeniency();
-					const float speedMultiplier = score->speedMultiplier;
+					const float speedMultiplier = (score.isLegacyScore ? legacySpeedMultiplier : score.speedMultiplier);
 
 					// 3) load hitobjects for diffcalc
 					OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT diffres = OsuDatabaseBeatmap::loadDifficultyHitObjects(osuFilePath, gameMode, AR, CS, version, stackLeniency, speedMultiplier);
@@ -154,47 +199,73 @@ private:
 					// 4) calculate stars
 					double aimStars = 0.0;
 					double speedStars = 0.0;
-					OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, CS, &aimStars, &speedStars);
+					const double totalStars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, CS, &aimStars, &speedStars);
 
 					// 5) calculate pp
 					double pp = 0.0;
+					int numHitObjects = 0;
+					int numSpinners = 0;
+					int numCircles = 0;
+					int maxPossibleCombo = 0;
 					{
 						// calculate a few values fresh from beatmap data necessary for pp calculation
-						const int numHitObjects = diffres.diffobjects.size();
-						int numSpinners = 0;
+						numHitObjects = diffres.diffobjects.size();
+
+						for (size_t h=0; h<diffres.diffobjects.size(); h++)
 						{
-							for (size_t h=0; h<diffres.diffobjects.size(); h++)
-							{
-								if (diffres.diffobjects[h]->type == OsuDifficultyHitObject::TYPE::SPINNER)
-									numSpinners++;
-							}
-						}
-						int numCircles = 0;
-						{
-							for (size_t h=0; h<diffres.diffobjects.size(); h++)
-							{
-								if (diffres.diffobjects[h]->type == OsuDifficultyHitObject::TYPE::CIRCLE)
-									numCircles++;
-							}
+							if (diffres.diffobjects[h].type == OsuDifficultyHitObject::TYPE::SPINNER)
+								numSpinners++;
 						}
 
-						const int maxPossibleCombo = diffres.maxPossibleCombo;
+						for (size_t h=0; h<diffres.diffobjects.size(); h++)
+						{
+							if (diffres.diffobjects[h].type == OsuDifficultyHitObject::TYPE::CIRCLE)
+								numCircles++;
+						}
+
+						maxPossibleCombo = diffres.maxPossibleCombo;
 						if (maxPossibleCombo < 1)
 							continue;
 
-						pp = OsuDifficultyCalculator::calculatePPv2(score->modsLegacy, speedMultiplier, AR, OD, aimStars, speedStars, numHitObjects, numCircles, numSpinners, maxPossibleCombo, score->comboMax, score->numMisses, score->num300s, score->num100s, score->num50s);
+						pp = OsuDifficultyCalculator::calculatePPv2(score.modsLegacy, speedMultiplier, AR, OD, aimStars, speedStars, numHitObjects, numCircles, numSpinners, maxPossibleCombo, score.comboMax, score.numMisses, score.num300s, score.num100s, score.num50s);
 					}
 
 					// 6) overwrite score with new pp data
-					const float oldPP = score->pp;
+					const float oldPP = score.pp;
 					if (pp > 0.0f)
-						score->pp = pp;
+					{
+						score.pp = pp;
+
+						if (m_bImportLegacyScores && score.isLegacyScore)
+						{
+							score.isLegacyScore = false;		// convert to McOsu (pp) score
+							score.isImportedLegacyScore = true;	// but remember that this score does not have all play data
+							score.version = 20210103;			// and upgrade its version
+							{
+								score.numSliderBreaks = 0;
+								score.unstableRate = 0.0f;
+								score.hitErrorAvgMin = 0.0f;
+								score.hitErrorAvgMax = 0.0f;
+							}
+							score.starsTomTotal = totalStars;
+							score.starsTomAim = aimStars;
+							score.starsTomSpeed = speedStars;
+							score.speedMultiplier = speedMultiplier;
+							score.CS = CS;
+							score.AR = AR;
+							score.OD = OD;
+							score.HP = HP;
+							score.maxPossibleCombo = maxPossibleCombo;
+							score.numHitObjects = numHitObjects;
+							score.numCircles = numCircles;
+						}
+					}
 
 					m_iNumScoresRecalculated++;
 
 					if (Osu::debug->getBool())
 					{
-						printf("[%s] original = %f, new = %f, delta = %f\n", score->md5hash.c_str(), oldPP, score->pp, (score->pp - oldPP));
+						printf("[%s] original = %f, new = %f, delta = %f\n", score.md5hash.c_str(), oldPP, score.pp, (score.pp - oldPP));
 						printf("at %i/%i\n", m_iNumScoresRecalculated.load(), m_iNumScoresToRecalculate.load());
 					}
 				}
@@ -211,6 +282,7 @@ private:
 
 	Osu *m_osu;
 	UString m_sUserName;
+	bool m_bImportLegacyScores;
 
 	std::atomic<int> m_iNumScoresToRecalculate;
 	std::atomic<int> m_iNumScoresRecalculated;
@@ -276,7 +348,8 @@ void OsuUserStatsScreen::draw(Graphics *g)
 	{
 		if (m_backgroundPPRecalculator != NULL)
 		{
-			const float percentFinished = (float)m_backgroundPPRecalculator->getNumScoresRecalculated() / (float)m_backgroundPPRecalculator->getNumScoresToRecalculate();
+			const float numScoresToRecalculate = (float)m_backgroundPPRecalculator->getNumScoresToRecalculate();
+			const float percentFinished = (numScoresToRecalculate > 0 ? (float)m_backgroundPPRecalculator->getNumScoresRecalculated() / numScoresToRecalculate : 0.0f);
 			UString loadingMessage = UString::format("Recalculating scores ... (%i %%, %i/%i)", (int)(percentFinished*100.0f), m_backgroundPPRecalculator->getNumScoresRecalculated(), m_backgroundPPRecalculator->getNumScoresToRecalculate());
 
 			g->setColor(0xffffffff);
@@ -312,6 +385,7 @@ void OsuUserStatsScreen::update()
 			// force recalc + refresh UI
 			m_osu->getSongBrowser()->getDatabase()->forceScoreUpdateOnNextCalculatePlayerStats();
 			m_osu->getSongBrowser()->getDatabase()->forceScoresSaveOnNextShutdown();
+
 			rebuildScoreButtons(m_name_ref->getString());
 
 			m_bRecalculatingPP = false;
@@ -464,7 +538,9 @@ void OsuUserStatsScreen::onMenuClicked(CBaseUIButton *button)
 	{
 		m_contextMenu->addButton("Recalculate pp", 1);
 		m_contextMenu->addButton("---");
-		m_contextMenu->addButton("Delete All Scores (!)");
+		m_contextMenu->addButton("Import osu! Scores", 2);
+		m_contextMenu->addButton("---");
+		m_contextMenu->addButton("Delete All Scores");
 	}
 	m_contextMenu->end();
 	m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUserStatsScreen::onMenuSelected) );
@@ -475,12 +551,14 @@ void OsuUserStatsScreen::onMenuSelected(UString text, int id)
 	// TODO: implement "recalculate pp", "delete all scores", etc.
 
 	if (id == 1)
-		onRecalculatePP();
+		onRecalculatePP(false);
+	else if (id == 2)
+		onRecalculatePP(true);
 	else
 		debugLog("TODO ...\n");
 }
 
-void OsuUserStatsScreen::onRecalculatePP()
+void OsuUserStatsScreen::onRecalculatePP(bool importLegacyScores)
 {
 	m_bRecalculatingPP = true;
 
@@ -491,7 +569,7 @@ void OsuUserStatsScreen::onRecalculatePP()
 		m_backgroundPPRecalculator = NULL;
 	}
 
-	m_backgroundPPRecalculator = new OsuUserStatsScreenBackgroundPPRecalculator(m_osu, m_name_ref->getString());
+	m_backgroundPPRecalculator = new OsuUserStatsScreenBackgroundPPRecalculator(m_osu, m_name_ref->getString(), importLegacyScores);
 
 	// NOTE: force disable all runtime mods (including all experimental mods!), as they directly influence global OsuGameRules which are used during pp calculation
 	m_osu->getModSelector()->resetMods();

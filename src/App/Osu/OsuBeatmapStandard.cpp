@@ -94,6 +94,7 @@ ConVar osu_pp_live_timeout("osu_pp_live_timeout", 1.0f, "show message that we're
 ConVar *OsuBeatmapStandard::m_osu_draw_statistics_pp_ref = NULL;
 ConVar *OsuBeatmapStandard::m_osu_mod_fullalternate_ref = NULL;
 ConVar *OsuBeatmapStandard::m_osu_mod_fposu_ref = NULL;
+ConVar *OsuBeatmapStandard::m_osu_slider_scorev2_ref = NULL;
 
 OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 {
@@ -150,6 +151,8 @@ OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 		m_osu_mod_fullalternate_ref = convar->getConVarByName("osu_mod_fullalternate");
 	if (m_osu_mod_fposu_ref == NULL)
 		m_osu_mod_fposu_ref = convar->getConVarByName("osu_mod_fposu");
+	if (m_osu_slider_scorev2_ref == NULL)
+		m_osu_slider_scorev2_ref = convar->getConVarByName("osu_slider_scorev2");
 }
 
 OsuBeatmapStandard::~OsuBeatmapStandard()
@@ -1285,13 +1288,19 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 		int scoreIndex = -1;
 		if (isComplete && !isZero && !isUnranked && !m_osu->getScore()->hasDied())
 		{
-			const int scoreVersion = 20190103;
+			const int scoreVersion = 20210103;
 
 			debugLog("OsuBeatmapStandard::onBeforeStop() saving score ...\n");
 			{
 				OsuDatabase::Score score;
 
 				score.isLegacyScore = false;
+
+				if (scoreVersion > 20190103)
+				{
+					score.isImportedLegacyScore = false;
+				}
+
 				score.version = scoreVersion;
 				score.unixTimestamp = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
@@ -1308,6 +1317,11 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 				score.comboMax = m_osu->getScore()->getComboMax();
 				score.perfect = (maxPossibleCombo > 0 && score.comboMax > 0 && score.comboMax >= maxPossibleCombo);
 				score.modsLegacy = m_osu->getScore()->getModsLegacy();
+				{
+					// special case: manual slider accuracy has been enabled (affects pp but not score), so force scorev2 for potential future score recalculations
+					// NOTE: I forgot to add this before 20210103, so all old scores which were played without scorev2 but with osu_slider_scorev2 will get downgraded slighly :(
+					score.modsLegacy |= (m_osu_slider_scorev2_ref->getBool() ? OsuReplay::Mods::ScoreV2 : 0);
+				}
 
 				// custom
 				score.numSliderBreaks = m_osu->getScore()->getNumSliderBreaks();
