@@ -1296,7 +1296,7 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 
 				score.isLegacyScore = false;
 
-				if (scoreVersion > 20190103)
+				//if (scoreVersion > 20190103)
 				{
 					score.isImportedLegacyScore = false;
 				}
@@ -1338,7 +1338,7 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 				score.OD = getOD();
 				score.HP = getHP();
 
-				if (scoreVersion > 20180722)
+				//if (scoreVersion > 20180722)
 				{
 					score.maxPossibleCombo = maxPossibleCombo;
 					score.numHitObjects = numHitObjects;

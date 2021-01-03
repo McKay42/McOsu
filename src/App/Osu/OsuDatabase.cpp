@@ -1671,6 +1671,7 @@ void OsuDatabase::loadScores()
 						Score sc;
 
 						sc.isLegacyScore = true;
+						sc.isImportedLegacyScore = false;
 						sc.version = scoreVersion;
 						sc.unixTimestamp = (ticksWindows - 621355968000000000) / 10000000;
 
