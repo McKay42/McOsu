@@ -79,6 +79,29 @@ OsuDifficultyHitObject::OsuDifficultyHitObject(OsuDifficultyHitObject &&dobj)
 	dobj.curve = NULL;
 }
 
+OsuDifficultyHitObject& OsuDifficultyHitObject::operator = (OsuDifficultyHitObject &&dobj)
+{
+	// move
+	this->type = dobj.type;
+	this->pos = dobj.pos;
+	this->time = dobj.time;
+	this->endTime = dobj.endTime;
+	this->spanDuration = dobj.spanDuration;
+	this->osuSliderCurveType = dobj.osuSliderCurveType;
+	this->pixelLength = dobj.pixelLength;
+	this->scoringTimes = std::move(dobj.scoringTimes);
+
+	this->curve = dobj.curve;
+	this->stack = dobj.stack;
+	this->originalPos = dobj.originalPos;
+	this->sortHack = dobj.sortHack;
+
+	// reset source
+	dobj.curve = NULL;
+
+	return *this;
+}
+
 void OsuDifficultyHitObject::updateStackPosition(float stackOffset)
 {
 	pos = originalPos - Vector2(stack * stackOffset, stack * stackOffset);
@@ -107,7 +130,7 @@ Vector2 OsuDifficultyHitObject::getOriginalRawPosAt(long pos)
 
 ConVar *OsuDifficultyCalculator::m_osu_slider_scorev2_ref = NULL;
 
-double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<std::shared_ptr<OsuDifficultyHitObject>> &sortedHitObjects, float CS, double *aim, double *speed, int upToObjectIndex, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains)
+double OsuDifficultyCalculator::calculateStarDiffForHitObjects(const std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, double *aim, double *speed, int upToObjectIndex, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains)
 {
 	// NOTE: depends on speed multiplier + CS
 
@@ -117,7 +140,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<std::
 	if (sortedHitObjects.size() < 2)
 	{
 		if (sortedHitObjects.size() < 1) return 0.0;
-		if (sortedHitObjects[0]->type != OsuDifficultyHitObject::TYPE::SLIDER) return 0.0;
+		if (sortedHitObjects[0].type != OsuDifficultyHitObject::TYPE::SLIDER) return 0.0;
 	}
 
 	// global independent variables/constants
@@ -182,7 +205,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<std::
 	class DiffObject
 	{
 	public:
-		std::shared_ptr<OsuDifficultyHitObject> ho;
+		OsuDifficultyHitObject *ho;
 
 		double strains[NUM_SKILLS];
 
@@ -199,7 +222,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<std::
 		Vector2 lazyEndPos;		// precalc temp
 		double lazyTravelDist;	// precalc temp
 
-		DiffObject(std::shared_ptr<OsuDifficultyHitObject> base_object, float radius_scaling_factor)
+		DiffObject(OsuDifficultyHitObject *base_object, float radius_scaling_factor)
 		{
 			ho = base_object;
 
@@ -515,7 +538,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<std::
 	diffObjects.reserve((upToObjectIndex < 0) ? sortedHitObjects.size() : upToObjectIndex+1);
 	for (size_t i=0; i<sortedHitObjects.size() && (upToObjectIndex < 0 || i < upToObjectIndex+1); i++) // respect upToObjectIndex!
 	{
-		diffObjects.push_back(DiffObject(sortedHitObjects[i], radius_scaling_factor)); // this already initializes the angle to NaN
+		diffObjects.push_back(DiffObject(const_cast<OsuDifficultyHitObject*>(&sortedHitObjects[i]), radius_scaling_factor)); // this already initializes the angle to NaN
 	}
 
 	const int numDiffObjects = diffObjects.size();
@@ -596,12 +619,10 @@ double OsuDifficultyCalculator::calculatePPv2(Osu *osu, OsuBeatmap *beatmap, dou
 		modsLegacy |= (m_osu_slider_scorev2_ref->getBool() ? OsuReplay::Mods::ScoreV2 : 0);
 	}
 
-	// TODO: for recalculating existing scores, take accuracy directly from stored score! this way osu_slider_scorev2-scores don't get downgraded
-
 	return calculatePPv2(modsLegacy, osu->getSpeedMultiplier(), beatmap->getAR(), beatmap->getOD(), aim, speed, numHitObjects, numCircles, numSpinners, maxPossibleCombo, combo, misses, c300, c100, c50);
 }
 
-double OsuDifficultyCalculator::calculatePPv2(int modsLegacy, double timescale, double ar, double od, double aim, double speed, int numHitObjects, int numCircles, int numSpinners, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50)
+double OsuDifficultyCalculator::calculatePPv2(int modsLegacy, double timescale, double ar, double od, double aim, double speed, int numHitObjects, int numCircles, int numSpinners, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50, float precalculatedAccuracy)
 {
 	// NOTE: depends on active mods + OD + AR
 
@@ -665,7 +686,11 @@ double OsuDifficultyCalculator::calculatePPv2(int modsLegacy, double timescale, 
 		score.beatmapMaxCombo = maxPossibleCombo;
 		score.scoreMaxCombo = combo;
 		{
-			score.accuracy = (score.totalHits > 0 ? (double)(c300 * 300 + c100 * 100 + c50 * 50) / (double)(score.totalHits * 300) : 0.0);
+			if (precalculatedAccuracy >= 0.0f)
+				score.accuracy = clamp<float>(precalculatedAccuracy, 0.0f, 1.0f);
+			else
+				score.accuracy = (score.totalHits > 0 ? (double)(c300 * 300 + c100 * 100 + c50 * 50) / (double)(score.totalHits * 300) : 0.0);
+
 			score.amountHitObjectsWithAccuracy = (modsLegacy & OsuReplay::ScoreV2 ? score.totalHits : numCircles);
 		}
 	}

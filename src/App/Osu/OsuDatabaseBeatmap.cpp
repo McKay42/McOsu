@@ -637,7 +637,7 @@ OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT OsuDatabaseBeatmap::loadDifficultyHitObj
 
 	for (int i=0; i<c.hitcircles.size(); i++)
 	{
-		result.diffobjects.push_back(std::make_shared<OsuDifficultyHitObject>(
+		result.diffobjects.push_back(OsuDifficultyHitObject(
 				OsuDifficultyHitObject::TYPE::CIRCLE,
 				Vector2(c.hitcircles[i].x, c.hitcircles[i].y),
 				(long)c.hitcircles[i].time));
@@ -647,7 +647,7 @@ OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT OsuDatabaseBeatmap::loadDifficultyHitObj
 	{
 		if (!calculateStarsInaccurately)
 		{
-			result.diffobjects.push_back(std::make_shared<OsuDifficultyHitObject>(
+			result.diffobjects.push_back(OsuDifficultyHitObject(
 					OsuDifficultyHitObject::TYPE::SLIDER,
 					Vector2(c.sliders[i].x, c.sliders[i].y),
 					c.sliders[i].time,
@@ -660,7 +660,7 @@ OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT OsuDatabaseBeatmap::loadDifficultyHitObj
 		}
 		else
 		{
-			result.diffobjects.push_back(std::make_shared<OsuDifficultyHitObject>(
+			result.diffobjects.push_back(OsuDifficultyHitObject(
 					OsuDifficultyHitObject::TYPE::SLIDER,
 					Vector2(c.sliders[i].x, c.sliders[i].y),
 					c.sliders[i].time,
@@ -675,7 +675,7 @@ OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT OsuDatabaseBeatmap::loadDifficultyHitObj
 
 	for (int i=0; i<c.spinners.size(); i++)
 	{
-		result.diffobjects.push_back(std::make_shared<OsuDifficultyHitObject>(
+		result.diffobjects.push_back(OsuDifficultyHitObject(
 				OsuDifficultyHitObject::TYPE::SPINNER,
 				Vector2(c.spinners[i].x, c.spinners[i].y),
 				(long)c.spinners[i].time,
@@ -685,13 +685,13 @@ OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT OsuDatabaseBeatmap::loadDifficultyHitObj
 	// sort hitobjects by time
 	struct DiffHitObjectSortComparator
 	{
-	    bool operator() (const std::shared_ptr<OsuDifficultyHitObject> &a, const std::shared_ptr<OsuDifficultyHitObject> &b) const
+	    bool operator() (const OsuDifficultyHitObject &a, const OsuDifficultyHitObject &b) const
 	    {
 	    	// strict weak ordering!
-	    	if (a->time == b->time)
-	    		return a->sortHack < b->sortHack;
+	    	if (a.time == b.time)
+	    		return a.sortHack < b.sortHack;
 	    	else
-	    		return a->time < b->time;
+	    		return a.time < b.time;
 	    }
 	};
 	std::sort(result.diffobjects.begin(), result.diffobjects.end(), DiffHitObjectSortComparator());
@@ -720,7 +720,7 @@ OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT OsuDatabaseBeatmap::loadDifficultyHitObj
 			{
 				int n = i;
 
-				std::shared_ptr<OsuDifficultyHitObject> objectI = result.diffobjects[i];
+				OsuDifficultyHitObject *objectI = &result.diffobjects[i];
 
 				const bool isSpinner = (objectI->type == OsuDifficultyHitObject::TYPE::SPINNER);
 
@@ -734,7 +734,7 @@ OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT OsuDatabaseBeatmap::loadDifficultyHitObj
 				{
 					while (--n >= 0)
 					{
-						std::shared_ptr<OsuDifficultyHitObject> objectN = result.diffobjects[n];
+						OsuDifficultyHitObject *objectN = &result.diffobjects[n];
 
 						const bool isSpinnerN = (objectN->type == OsuDifficultyHitObject::TYPE::SPINNER);
 
@@ -750,8 +750,8 @@ OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT OsuDatabaseBeatmap::loadDifficultyHitObj
 							int offset = objectI->stack - objectN->stack + 1;
 							for (int j=n+1; j<=i; j++)
 							{
-								if ((objectNEndPosition - result.diffobjects[j]->getOriginalRawPosAt(result.diffobjects[j]->time)).length() < STACK_LENIENCE)
-									result.diffobjects[j]->stack = (result.diffobjects[j]->stack - offset);
+								if ((objectNEndPosition - result.diffobjects[j].getOriginalRawPosAt(result.diffobjects[j].time)).length() < STACK_LENIENCE)
+									result.diffobjects[j].stack = (result.diffobjects[j].stack - offset);
 							}
 
 							break;
@@ -768,7 +768,7 @@ OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT OsuDatabaseBeatmap::loadDifficultyHitObj
 				{
 					while (--n >= 0)
 					{
-						std::shared_ptr<OsuDifficultyHitObject> objectN = result.diffobjects[n];
+						OsuDifficultyHitObject *objectN = &result.diffobjects[n];
 
 						const bool isSpinner = (objectN->type == OsuDifficultyHitObject::TYPE::SPINNER);
 
@@ -794,7 +794,7 @@ OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT OsuDatabaseBeatmap::loadDifficultyHitObj
 
 			for (int i=0; i<result.diffobjects.size(); i++)
 			{
-				std::shared_ptr<OsuDifficultyHitObject> currHitObject = result.diffobjects[i];
+				OsuDifficultyHitObject *currHitObject = &result.diffobjects[i];
 
 				const bool isSlider = (currHitObject->type == OsuDifficultyHitObject::TYPE::SLIDER);
 
@@ -806,7 +806,7 @@ OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT OsuDatabaseBeatmap::loadDifficultyHitObj
 
 				for (int j=i+1; j<result.diffobjects.size(); j++)
 				{
-					std::shared_ptr<OsuDifficultyHitObject> objectJ = result.diffobjects[j];
+					OsuDifficultyHitObject *objectJ = &result.diffobjects[j];
 
 					if (objectJ->time - (approachTime * stackLeniency) > startTime)
 						break;
@@ -836,8 +836,8 @@ OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT OsuDatabaseBeatmap::loadDifficultyHitObj
 		float stackOffset = rawHitCircleDiameter * STACK_OFFSET;
 		for (int i=0; i<result.diffobjects.size(); i++)
 		{
-			if (result.diffobjects[i]->stack != 0)
-				result.diffobjects[i]->updateStackPosition(stackOffset);
+			if (result.diffobjects[i].stack != 0)
+				result.diffobjects[i].updateStackPosition(stackOffset);
 		}
 	}
 
@@ -847,15 +847,15 @@ OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT OsuDatabaseBeatmap::loadDifficultyHitObj
 		const double invSpeedMultiplier = 1.0 / (double)speedMultiplier;
 		for (int i=0; i<result.diffobjects.size(); i++)
 		{
-			result.diffobjects[i]->time = (long)((double)result.diffobjects[i]->time * invSpeedMultiplier);
-			result.diffobjects[i]->endTime = (long)((double)result.diffobjects[i]->endTime * invSpeedMultiplier);
+			result.diffobjects[i].time = (long)((double)result.diffobjects[i].time * invSpeedMultiplier);
+			result.diffobjects[i].endTime = (long)((double)result.diffobjects[i].endTime * invSpeedMultiplier);
 
 			if (!calculateStarsInaccurately) // NOTE: ignore slider curves when calculating inaccurately
 			{
-				result.diffobjects[i]->spanDuration = (double)result.diffobjects[i]->spanDuration * invSpeedMultiplier;
-				for (int s=0; s<result.diffobjects[i]->scoringTimes.size(); s++)
+				result.diffobjects[i].spanDuration = (double)result.diffobjects[i].spanDuration * invSpeedMultiplier;
+				for (int s=0; s<result.diffobjects[i].scoringTimes.size(); s++)
 				{
-					result.diffobjects[i]->scoringTimes[s] = (long)((double)result.diffobjects[i]->scoringTimes[s] * invSpeedMultiplier);
+					result.diffobjects[i].scoringTimes[s] = (long)((double)result.diffobjects[i].scoringTimes[s] * invSpeedMultiplier);
 				}
 			}
 		}
@@ -884,17 +884,25 @@ bool OsuDatabaseBeatmap::loadMetadata(OsuDatabaseBeatmap *databaseBeatmap)
 			const char *beatmapFile = file.readFile();
 			if (beatmapFile != NULL)
 			{
-				const char hexDigits[17] = "0123456789abcdef";
+				const char *hexDigits = "0123456789abcdef";
 				const unsigned char *input = (unsigned char*)beatmapFile;
+
 				MD5 hasher;
 				hasher.update(input, file.getFileSize());
 				hasher.finalize();
-				unsigned char *rawMD5Hash = hasher.getDigest();
+
+				const unsigned char *rawMD5Hash = hasher.getDigest();
 
 				for (int i=0; i<16; i++)
 				{
-					databaseBeatmap->m_sMD5Hash += hexDigits[(rawMD5Hash[i] >> 4) & 0xf];	// md5hash[i] / 16
-					databaseBeatmap->m_sMD5Hash += hexDigits[rawMD5Hash[i] & 0xf];			// md5hash[i] % 16
+					const size_t index1 = (rawMD5Hash[i] >> 4) & 0xf;	// md5hash[i] / 16
+					const size_t index2 = (rawMD5Hash[i] & 0xf);		// md5hash[i] % 16
+
+					if (index1 > 15 || index2 > 15)
+						continue;
+
+					databaseBeatmap->m_sMD5Hash += hexDigits[index1];
+					databaseBeatmap->m_sMD5Hash += hexDigits[index2];
 				}
 			}
 		}

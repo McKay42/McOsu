@@ -67,7 +67,7 @@ public:
 	{
 		int errorCode;
 
-		std::vector<std::shared_ptr<OsuDifficultyHitObject>> diffobjects;
+		std::vector<OsuDifficultyHitObject> diffobjects;
 
 		int maxPossibleCombo;
 
