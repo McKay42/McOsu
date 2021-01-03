@@ -221,6 +221,13 @@ void OsuSliderCurveEqualDistanceMulti::init(const std::vector<OsuSliderCurveType
 		if (curCurve->getCurvePoints().size() < 1)
 		{
 			debugLog("OsuSliderCurveEqualDistanceMulti::init() Error: curCurve->getCurvePoints().size() == 0!!!\n");
+
+			// cleanup
+			for (size_t i=0; i<curvesList.size(); i++)
+			{
+				delete curvesList[i];
+			}
+
 			return;
 		}
 	}
@@ -307,6 +314,13 @@ void OsuSliderCurveEqualDistanceMulti::init(const std::vector<OsuSliderCurveType
 	if (m_curvePoints.size() == 0)
 	{
 		debugLog("OsuSliderCurveEqualDistanceMulti::init() Error: m_curvePoints.size() == 0!!!\n");
+
+		// cleanup
+		for (size_t i=0; i<curvesList.size(); i++)
+		{
+			delete curvesList[i];
+		}
+
 		return;
 	}
 
@@ -380,6 +394,12 @@ void OsuSliderCurveEqualDistanceMulti::init(const std::vector<OsuSliderCurveType
 	// backup (for dynamic updateStackPosition() recalculation)
 	m_originalCurvePoints = std::vector<Vector2>(m_curvePoints); // copy
 	m_originalCurvePointSegments = std::vector<std::vector<Vector2>>(m_curvePointSegments); // copy
+
+	// cleanup
+	for (size_t i=0; i<curvesList.size(); i++)
+	{
+		delete curvesList[i];
+	}
 }
 
 Vector2 OsuSliderCurveEqualDistanceMulti::pointAt(float t)
