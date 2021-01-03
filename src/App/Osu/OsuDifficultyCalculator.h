@@ -79,7 +79,7 @@ public:
 	static double calculatePPv2(Osu *osu, OsuBeatmap *beatmap, double aim, double speed, int numHitObjects, int numCircles, int numSpinners, int maxPossibleCombo, int combo = -1, int misses = 0, int c300 = -1, int c100 = 0, int c50 = 0);
 
 	// pp, fully static
-	static double calculatePPv2(int modsLegacy, double timescale, double ar, double od, double aim, double speed, int numHitObjects, int numCircles, int numSpinners, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50, float precalculatedAccuracy = -1.0f);
+	static double calculatePPv2(int modsLegacy, double timescale, double ar, double od, double aim, double speed, int numHitObjects, int numCircles, int numSpinners, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50);
 
 	// helper functions
 	static double calculateTotalStarsFromSkills(double aim, double speed);
