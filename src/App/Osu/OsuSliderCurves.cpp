@@ -217,7 +217,14 @@ void OsuSliderCurveEqualDistanceMulti::init(const std::vector<OsuSliderCurveType
 	float lastDistanceAt = 0.0f;
 
 	OsuSliderCurveType *curCurve = curvesList[curCurveIndex];
-	Vector2 lastCurve = curCurve->getCurvePoints()[0];
+	{
+		if (curCurve->getCurvePoints().size() < 1)
+		{
+			debugLog("OsuSliderCurveEqualDistanceMulti::init() Error: curCurve->getCurvePoints().size() == 0!!!\n");
+			return;
+		}
+	}
+	Vector2 lastCurve = curCurve->getCurvePoints()[curPoint];
 
 	// length of the curve should be equal to the pixel length
 	// for each distance, try to get in between the two points that are between it
@@ -230,7 +237,8 @@ void OsuSliderCurveEqualDistanceMulti::init(const std::vector<OsuSliderCurveType
 		while (distanceAt < prefDistance)
 		{
 			lastDistanceAt = distanceAt;
-			lastCurve = curCurve->getCurvePoints()[curPoint];
+			if (curCurve->getCurvePoints().size() > 0 && curPoint > -1 && curPoint < curCurve->getCurvePoints().size())
+				lastCurve = curCurve->getCurvePoints()[curPoint];
 
 			// jump to next point
 			curPoint++;
@@ -268,10 +276,11 @@ void OsuSliderCurveEqualDistanceMulti::init(const std::vector<OsuSliderCurveType
 				}
 			}
 
-			distanceAt += curCurve->getCurveDistances()[curPoint];
+			if (curCurve->getCurveDistances().size() > 0 && curPoint > -1 && curPoint < curCurve->getCurveDistances().size())
+				distanceAt += curCurve->getCurveDistances()[curPoint];
 		}
 
-		const Vector2 thisCurve = curCurve->getCurvePoints()[curPoint];
+		const Vector2 thisCurve = (curCurve->getCurvePoints().size() > 0 && curPoint > -1 && curPoint < curCurve->getCurvePoints().size() ? curCurve->getCurvePoints()[curPoint] : Vector2(0, 0));
 
 		// interpolate the point between the two closest distances
 		m_curvePoints.push_back(Vector2(0, 0));
@@ -286,7 +295,7 @@ void OsuSliderCurveEqualDistanceMulti::init(const std::vector<OsuSliderCurveType
 
 		// add the point to the current segment (this is not using the lerp'd point! would cause mm mesh artifacts if it did)
 		lastCurvePointForNextSegmentStart = thisCurve;
-		curCurvePoints[curCurvePoints.size()-1] = thisCurve;
+		curCurvePoints[curCurvePoints.size() - 1] = thisCurve;
 	}
 
 	// if we only had one segment, no jump to any next curve has occurred (and therefore no insertion of the segment into the vector)
@@ -341,23 +350,32 @@ void OsuSliderCurveEqualDistanceMulti::init(const std::vector<OsuSliderCurveType
 	}
 
 	// calculate start and end angles for possible repeats (good enough and cheaper than calculating it live every frame)
-	Vector2 c1 = m_curvePoints[0];
-	int cnt = 1;
-	Vector2 c2 = m_curvePoints[cnt++];
-	while (cnt <= m_iNCurve && (c2-c1).length() < 1)
+	if (m_curvePoints.size() > 1)
 	{
-		c2 = m_curvePoints[cnt++];
+		Vector2 c1 = m_curvePoints[0];
+		int cnt = 1;
+		Vector2 c2 = m_curvePoints[cnt++];
+		while (cnt <= m_iNCurve && cnt < m_curvePoints.size() && (c2-c1).length() < 1)
+		{
+			c2 = m_curvePoints[cnt++];
+		}
+		m_fStartAngle = (float)(std::atan2(c2.y - c1.y, c2.x - c1.x) * 180 / PI);
 	}
-	m_fStartAngle = (float)(std::atan2(c2.y - c1.y, c2.x - c1.x) * 180 / PI);
 
-	c1 = m_curvePoints[m_iNCurve];
-	cnt = m_iNCurve - 1;
-	c2 = m_curvePoints[cnt--];
-	while (cnt >= 0 && (c2-c1).length() < 1)
+	if (m_curvePoints.size() > 1)
 	{
-		c2 = m_curvePoints[cnt--];
+		if (m_iNCurve < m_curvePoints.size())
+		{
+			Vector2 c1 = m_curvePoints[m_iNCurve];
+			int cnt = m_iNCurve - 1;
+			Vector2 c2 = m_curvePoints[cnt--];
+			while (cnt >= 0 && (c2-c1).length() < 1)
+			{
+				c2 = m_curvePoints[cnt--];
+			}
+			m_fEndAngle = (float)(std::atan2(c2.y - c1.y, c2.x - c1.x) * 180 / PI);
+		}
 	}
-	m_fEndAngle = (float)(std::atan2(c2.y - c1.y, c2.x - c1.x) * 180 / PI);
 
 	// backup (for dynamic updateStackPosition() recalculation)
 	m_originalCurvePoints = std::vector<Vector2>(m_curvePoints); // copy
@@ -369,14 +387,30 @@ Vector2 OsuSliderCurveEqualDistanceMulti::pointAt(float t)
 	if (m_curvePoints.size() < 1) return Vector2(0, 0);
 
 	const float indexF = t * m_iNCurve;
-	const int index = (int) indexF;
+	const int index = (int)indexF;
 	if (index >= m_iNCurve)
-		return m_curvePoints[m_iNCurve];
+	{
+		if (m_iNCurve > -1 && m_iNCurve < m_curvePoints.size())
+			return m_curvePoints[m_iNCurve];
+		else
+		{
+			debugLog("OsuSliderCurveEqualDistanceMulti::pointAt() Error: Illegal index %i!!!\n", m_iNCurve);
+			return Vector2(0, 0);
+		}
+	}
 	else
 	{
+		if (index < 0 || index + 1 >= m_curvePoints.size())
+		{
+			debugLog("OsuSliderCurveEqualDistanceMulti::pointAt() Error: Illegal index %i!!!\n", index);
+			return Vector2(0, 0);
+		}
+
 		const Vector2 poi = m_curvePoints[index];
 		const Vector2 poi2 = m_curvePoints[index + 1];
+
 		const float t2 = indexF - index;
+
 		return Vector2(lerp(poi.x, poi2.x, t2), lerp(poi.y, poi2.y, t2));
 	}
 }
@@ -386,14 +420,30 @@ Vector2 OsuSliderCurveEqualDistanceMulti::originalPointAt(float t)
 	if (m_originalCurvePoints.size() < 1) return Vector2(0, 0);
 
 	const float indexF = t * m_iNCurve;
-	const int index = (int) indexF;
+	const int index = (int)indexF;
 	if (index >= m_iNCurve)
-		return m_originalCurvePoints[m_iNCurve];
+	{
+		if (m_iNCurve > -1 && m_iNCurve < m_originalCurvePoints.size())
+			return m_originalCurvePoints[m_iNCurve];
+		else
+		{
+			debugLog("OsuSliderCurveEqualDistanceMulti::originalPointAt() Error: Illegal index %i!!!\n", m_iNCurve);
+			return Vector2(0, 0);
+		}
+	}
 	else
 	{
+		if (index < 0 || index + 1 >= m_originalCurvePoints.size())
+		{
+			debugLog("OsuSliderCurveEqualDistanceMulti::originalPointAt() Error: Illegal index %i!!!\n", index);
+			return Vector2(0, 0);
+		}
+
 		const Vector2 poi = m_originalCurvePoints[index];
 		const Vector2 poi2 = m_originalCurvePoints[index + 1];
+
 		const float t2 = indexF - index;
+
 		return Vector2(lerp(poi.x, poi2.x, t2), lerp(poi.y, poi2.y, t2));
 	}
 }
@@ -701,6 +751,8 @@ std::vector<Vector2> OsuSliderBezierApproximator::createBezier(const std::vector
 
 bool OsuSliderBezierApproximator::isFlatEnough(const std::vector<Vector2> &controlPoints)
 {
+	if (controlPoints.size() < 1) return true;
+
     for (int i=1; i<(int)(controlPoints.size() - 1); i++)
     {
         if (std::pow((double)(controlPoints[i - 1] - 2 * controlPoints[i] + controlPoints[i + 1]).length(), 2.0) > TOLERANCE_SQ * 4)
