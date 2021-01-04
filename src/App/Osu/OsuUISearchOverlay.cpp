@@ -108,10 +108,10 @@ void OsuUISearchOverlay::draw(Graphics *g)
 			g->translate(0, (int)((searchTextFont->getHeight()*searchTextScale)*1.5f));
 			g->translate(1, 1);
 			g->setColor(0xff000000);
-			g->drawString(searchTextFont, m_iNumFoundResults > -1 ? (m_iNumFoundResults > 0 ? UString::format("%i matches found!", m_iNumFoundResults) : noMatchesFoundText1) : noMatchesFoundText2);
+			g->drawString(searchTextFont, m_iNumFoundResults > -1 ? (m_iNumFoundResults > 0 ? UString::format(m_iNumFoundResults == 1 ? "%i match found!" : "%i matches found!", m_iNumFoundResults) : noMatchesFoundText1) : noMatchesFoundText2);
 			g->translate(-1, -1);
 			g->setColor(0xffffffff);
-			g->drawString(searchTextFont, m_iNumFoundResults > -1 ? (m_iNumFoundResults > 0 ? UString::format("%i matches found!", m_iNumFoundResults) : noMatchesFoundText1) : noMatchesFoundText2);
+			g->drawString(searchTextFont, m_iNumFoundResults > -1 ? (m_iNumFoundResults > 0 ? UString::format(m_iNumFoundResults == 1 ? "%i match found!" : "%i matches found!", m_iNumFoundResults) : noMatchesFoundText1) : noMatchesFoundText2);
 		}
 	}
 	g->popTransform();

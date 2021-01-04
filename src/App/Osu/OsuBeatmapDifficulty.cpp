@@ -1744,7 +1744,7 @@ void OsuBeatmapDifficulty::rebuildStarCacheForUpToHitObjectIndex(OsuBeatmap *bea
 	*/
 
 	std::vector<std::shared_ptr<OsuDifficultyHitObject>> hitObjects = generateDifficultyHitObjectsForBeatmap(beatmap);
-	const float CS = beatmap->getCS();
+	///const float CS = beatmap->getCS();
 
 	for (int i=0; i<hitObjects.size(); i++)
 	{
