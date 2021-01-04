@@ -54,6 +54,8 @@
 #include "OsuUISongBrowserCollectionButton.h"
 #include "OsuUISongBrowserScoreButton.h"
 
+
+
 ConVar osu_gamemode("osu_gamemode", "std");
 
 ConVar osu_songbrowser_sortingtype("osu_songbrowser_sortingtype", "By Date Added");
@@ -1544,7 +1546,7 @@ void OsuSongBrowser2::onDifficultySelected(OsuDatabaseBeatmap *diff2, bool play,
 	if (m_selectedBeatmap != NULL)
 		m_selectedBeatmap->deselect();
 
-	// create/recreate runtime beatmap object depending on gamemode
+	// create/recreate/cache runtime beatmap object depending on gamemode
 	if (m_osu->getGamemode() == Osu::GAMEMODE::STD && dynamic_cast<OsuBeatmapStandard*>(m_selectedBeatmap) == NULL)
 	{
 		SAFE_DELETE(m_selectedBeatmap);
@@ -1916,6 +1918,27 @@ void OsuSongBrowser2::rebuildSongButtons()
 			for (size_t c=0; c<children.size(); c++)
 			{
 				OsuUISongBrowserButton *button2 = children[c];
+
+				bool isButton2SearchMatch = false;
+				if (button2->getChildren().size() > 0)
+				{
+					const std::vector<OsuUISongBrowserButton*> &children2 = button2->getChildren();
+					for (size_t c2=0; c2<children2.size(); c2++)
+					{
+						const OsuUISongBrowserButton *button3 = children2[c2];
+						if (button3->isSearchMatch())
+						{
+							isButton2SearchMatch = true;
+							break;
+						}
+					}
+				}
+				else
+					isButton2SearchMatch = button2->isSearchMatch();
+
+				if (m_bInSearch && !isButton2SearchMatch)
+					continue;
+
 				button2->resetAnimations();
 
 				if (!(button2->isSelected() && button2->isHiddenIfSelected()))
@@ -1928,6 +1951,10 @@ void OsuSongBrowser2::rebuildSongButtons()
 					for (size_t c2=0; c2<children2.size(); c2++)
 					{
 						OsuUISongBrowserButton *button3 = children2[c2];
+
+						if (m_bInSearch && !button3->isSearchMatch())
+							continue;
+
 						button3->resetAnimations();
 
 						if (!(button3->isSelected() && button3->isHiddenIfSelected()))
@@ -2007,6 +2034,8 @@ bool OsuSongBrowser2::searchMatcher(OsuDatabaseBeatmap *databaseBeatmap, UString
 	const bool isContainer = (diffs.size() > 0);
 	const int numDiffs = (isContainer ? diffs.size() : 1);
 
+	// TODO: optimize this dumpster fire. can at least cache the parsed tokens and literal strings array instead of parsing every single damn time
+
 	// intelligent search parser
 	// all strings which are not expressions get appended with spaces between, then checked with one call to findSubstringInDifficulty()
 	// the rest is interpreted
@@ -2020,7 +2049,7 @@ bool OsuSongBrowser2::searchMatcher(OsuDatabaseBeatmap *databaseBeatmap, UString
 		GE,
 		NE
 	};
-	const std::vector<std::pair<UString, operatorId>> operators =
+	static const std::vector<std::pair<UString, operatorId>> operators =
 	{
 		std::pair<UString, operatorId>("<=",LE),
 		std::pair<UString, operatorId>(">=",GE),
@@ -2047,7 +2076,7 @@ bool OsuSongBrowser2::searchMatcher(OsuDatabaseBeatmap *databaseBeatmap, UString
 		LENGTH,
 		STARS,
 	};
-	const std::vector<std::pair<UString, keywordId>> keywords =
+	static const std::vector<std::pair<UString, keywordId>> keywords =
 	{
 		std::pair<UString, keywordId>("ar", AR),
 		std::pair<UString, keywordId>("cs", CS),
@@ -2836,6 +2865,8 @@ void OsuSongBrowser2::onSearchUpdate()
 {
 	m_bInSearch = (m_sSearchString.length() > 0);
 
+	// TODO: sorting support for search results. currently is sorted by parent button group values
+
 	// empty the container
 	m_songBrowser->getContainer()->empty();
 
@@ -2845,33 +2876,89 @@ void OsuSongBrowser2::onSearchUpdate()
 	{
 		m_searchPrevGroup = m_group;
 
+		// flag all search matches across entire database
+		for (size_t i=0; i<m_songButtons.size(); i++)
+		{
+			const std::vector<OsuUISongBrowserButton*> &children = m_songButtons[i]->getChildren();
+			if (children.size() > 0)
+			{
+				for (size_t c=0; c<children.size(); c++)
+				{
+					children[c]->setIsSearchMatch(searchMatcher(children[c]->getDatabaseBeatmap(), m_sSearchString));
+				}
+			}
+			else
+				m_songButtons[i]->setIsSearchMatch(searchMatcher(m_songButtons[i]->getDatabaseBeatmap(), m_sSearchString));
+		}
+
 		// TODO: add missing new groups, and fix search in general (especially for collections)
 
-		// search for possible matches, add the children below the possibly visible currently selected song button (which owns them)
+		// use flagged search matches to rebuild visible song buttons
 		switch (m_group)
 		{
 		case GROUP::GROUP_NO_GROUPING:
 			for (size_t i=0; i<m_songButtons.size(); i++)
 			{
-				if (searchMatcher(m_songButtons[i]->getDatabaseBeatmap(), m_sSearchString))
+				const std::vector<OsuUISongBrowserButton*> &children = m_songButtons[i]->getChildren();
+				if (children.size() > 0)
+				{
+					// if all children match, then we still want to display the parent wrapper button (without expanding all diffs)
+					bool allChildrenMatch = true;
+					for (size_t c=0; c<children.size(); c++)
+					{
+						if (!children[c]->isSearchMatch())
+							allChildrenMatch = false;
+					}
+
+					if (allChildrenMatch)
+						m_visibleSongButtons.push_back(m_songButtons[i]);
+					else
+					{
+						// rip matching children from parent
+						for (size_t c=0; c<children.size(); c++)
+						{
+							if (children[c]->isSearchMatch())
+								m_visibleSongButtons.push_back(children[c]);
+						}
+					}
+				}
+				else if (m_songButtons[i]->isSearchMatch())
 					m_visibleSongButtons.push_back(m_songButtons[i]);
 			}
 			break;
 
+		// TODO: can reuse this logic for all collections of all types!
 		case GROUP::GROUP_COLLECTIONS:
 			for (size_t i=0; i<m_collectionButtons.size(); i++)
 			{
-				bool match = false;
+				bool isAnyMatchInCollection = false;
 
 				const std::vector<OsuUISongBrowserButton*> &children = m_collectionButtons[i]->getChildren();
 				for (size_t c=0; c<children.size(); c++)
 				{
-					const bool searchMatch = searchMatcher(children[c]->getDatabaseBeatmap(), m_sSearchString);
-					match |= searchMatch;
-					///children[c]->setCollectionSearchHack(searchMatch); // TODO: flag every match
+					const std::vector<OsuUISongBrowserButton*> &childrenChildren = children[c]->getChildren();
+					if (childrenChildren.size() > 0)
+					{
+						for (size_t cc=0; cc<childrenChildren.size(); cc++)
+						{
+							if (childrenChildren[cc]->isSearchMatch())
+							{
+								isAnyMatchInCollection = true;
+								break;
+							}
+						}
+
+						if (isAnyMatchInCollection)
+							break;
+					}
+					else if (children[c]->isSearchMatch())
+					{
+						isAnyMatchInCollection = true;
+						break;
+					}
 				}
 
-				if (match)
+				if (isAnyMatchInCollection)
 					m_visibleSongButtons.push_back(m_collectionButtons[i]);
 			}
 			break;
@@ -2879,7 +2966,7 @@ void OsuSongBrowser2::onSearchUpdate()
 
 		rebuildSongButtons();
 
-		// scroll to top result, or select the only result
+		// scroll to top result, or auto select the only result
 		if (m_visibleSongButtons.size() > 1)
 			scrollToSongButton(m_visibleSongButtons[0]);
 		else if (m_visibleSongButtons.size() > 0)
@@ -2890,17 +2977,23 @@ void OsuSongBrowser2::onSearchUpdate()
 	}
 	else // exit search
 	{
-		// reset match flag
-		for (size_t i=0; i<m_collectionButtons.size(); i++)
+		// reset all flags
+		for (size_t i=0; i<m_songButtons.size(); i++)
 		{
-			const std::vector<OsuUISongBrowserButton*> &children = m_collectionButtons[i]->getChildren();
-			for (size_t c=0; c<children.size(); c++)
+			const std::vector<OsuUISongBrowserButton*> &children = m_songButtons[i]->getChildren();
+			if (children.size() > 0)
 			{
-				///children[c]->setCollectionSearchHack(true); // TODO:
+				for (size_t c=0; c<children.size(); c++)
+				{
+					children[c]->setIsSearchMatch(true);
+				}
 			}
+			else
+				m_songButtons[i]->setIsSearchMatch(true);
 		}
 
 		// remember which tab was selected, instead of defaulting back to no grouping
+		// TODO: add support for all new tabs
 		switch (m_searchPrevGroup)
 		{
 		case GROUP::GROUP_NO_GROUPING:
@@ -3055,6 +3148,7 @@ void OsuSongBrowser2::onSortClicked(CBaseUIButton *button)
 	}
 	m_contextMenu->end();
 	m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onSortChange) );
+
 	// NOTE: don't remember group setting on shutdown
 
 	// manual hack for small resolutions
@@ -3071,7 +3165,6 @@ void OsuSongBrowser2::onSortChange(UString text, int id)
 	SORTING_METHOD *sortingMethod = (m_sortingMethods.size() > 3 ? &m_sortingMethods[3] : NULL);
 	for (size_t i=0; i<m_sortingMethods.size(); i++)
 	{
-		// laziness wins again :(
 		if (m_sortingMethods[i].name == text)
 		{
 			sortingMethod = &m_sortingMethods[i];
@@ -3082,7 +3175,8 @@ void OsuSongBrowser2::onSortChange(UString text, int id)
 
 	m_sortingMethod = sortingMethod->type;
 	m_sortButton->setText(sortingMethod->name);
-	osu_songbrowser_sortingtype.setValue(sortingMethod->name); // remember
+
+	osu_songbrowser_sortingtype.setValue(sortingMethod->name); // NOTE: remember persistently
 
 	struct COMPARATOR_WRAPPER
 	{
@@ -3362,6 +3456,7 @@ void OsuSongBrowser2::onUserButtonClicked()
 		m_contextMenu->setRelPos(m_contextMenu->getRelPos() - Vector2(0, m_contextMenu->getSize().y));
 		m_contextMenu->end(true);
 		m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onUserButtonChange) );
+		OsuUIContextMenu::clampToRightScreenEdge(m_contextMenu);
 	}
 }
 
@@ -3394,9 +3489,11 @@ void OsuSongBrowser2::onScoreClicked(CBaseUIButton *button)
 	m_osu->getRankingScreen()->setVisible(true);
 }
 
-void OsuSongBrowser2::onScoreContextMenu(OsuUISongBrowserScoreButton *scoreButton, UString text)
+void OsuSongBrowser2::onScoreContextMenu(OsuUISongBrowserScoreButton *scoreButton, int id)
 {
-	if (text == "Delete Score")
+	// NOTE: see OsuUISongBrowserScoreButton::onContextMenu()
+
+	if (id == 2)
 	{
 		m_db->deleteScore(std::string(scoreButton->getName().toUtf8()), scoreButton->getScoreUnixTimestamp());
 

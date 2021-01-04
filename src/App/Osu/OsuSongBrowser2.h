@@ -69,7 +69,7 @@ public:
 	void onDifficultySelectedMP(OsuDatabaseBeatmap *diff2, bool play = false);
 	void selectBeatmapMP(OsuDatabaseBeatmap *diff2);
 
-	void onScoreContextMenu(OsuUISongBrowserScoreButton *scoreButton, UString text);
+	void onScoreContextMenu(OsuUISongBrowserScoreButton *scoreButton, int id);
 
 	void highlightScore(uint64_t unixTimestamp);
 	void playNextRandomBeatmap() {selectRandomBeatmap();playSelectedDifficulty();}
@@ -87,6 +87,8 @@ public:
 	OsuUISongBrowserButton *findCurrentlySelectedSongButton() const;
 
 	inline bool hasSelectedAndIsPlaying() const {return m_bHasSelectedAndIsPlaying;}
+	inline bool isInSearch() const {return m_bInSearch;}
+
 	inline OsuDatabase *getDatabase() const {return m_db;}
 	inline OsuBeatmap *getSelectedBeatmap() const {return m_selectedBeatmap;}
 

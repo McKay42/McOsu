@@ -12,6 +12,7 @@
 #include "SoundEngine.h"
 #include "ResourceManager.h"
 #include "Mouse.h"
+#include "Keyboard.h"
 
 #include "CBaseUIContainer.h"
 #include "CBaseUIScrollView.h"
@@ -100,31 +101,7 @@ private:
 				const OsuDatabase::Score &score = kv.second[i];
 
 				if ((!score.isLegacyScore || m_bImportLegacyScores) && score.playerName == m_sUserName)
-				{
-					if (score.md5hash.length() < 1)
-						continue;
-
-					// NOTE: avoid importing the same score twice
-					if (m_bImportLegacyScores && score.isLegacyScore)
-					{
-						const std::vector<OsuDatabase::Score> &otherScores = (*scores)[score.md5hash];
-
-						bool isScoreAlreadyImported = false;
-						for (size_t s=0; s<otherScores.size(); s++)
-						{
-							if (score.isLegacyScoreEqualToImportedLegacyScore(otherScores[s]))
-							{
-								isScoreAlreadyImported = true;
-								break;
-							}
-						}
-
-						if (isScoreAlreadyImported)
-							continue;
-					}
-
 					numScoresToRecalculate++;
-				}
 			}
 		}
 		m_iNumScoresToRecalculate = numScoresToRecalculate;
@@ -460,15 +437,12 @@ void OsuUserStatsScreen::setVisible(bool visible)
 		m_contextMenu->setVisible2(false);
 }
 
-void OsuUserStatsScreen::onScoreContextMenu(OsuUISongBrowserScoreButton *scoreButton, UString text)
+void OsuUserStatsScreen::onScoreContextMenu(OsuUISongBrowserScoreButton *scoreButton, int id)
 {
-	if (text == "Delete Score")
-	{
-		m_osu->getSongBrowser()->getDatabase()->deleteScore(std::string(scoreButton->getName().toUtf8()), scoreButton->getScoreUnixTimestamp());
+	// NOTE: see OsuUISongBrowserScoreButton::onContextMenu()
 
+	if (id == 2)
 		rebuildScoreButtons(m_name_ref->getString());
-		m_osu->getSongBrowser()->rebuildScoreButtons();
-	}
 }
 
 void OsuUserStatsScreen::onBack()
@@ -550,6 +524,7 @@ void OsuUserStatsScreen::onUserClicked(CBaseUIButton *button)
 		}
 		m_contextMenu->end();
 		m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUserStatsScreen::onUserButtonChange) );
+		OsuUIContextMenu::clampToRightScreenEdge(m_contextMenu);
 	}
 }
 
@@ -578,13 +553,25 @@ void OsuUserStatsScreen::onMenuClicked(CBaseUIButton *button)
 	m_contextMenu->begin();
 	{
 		m_contextMenu->addButton("Recalculate pp", 1);
-		m_contextMenu->addButton("---");
-		m_contextMenu->addButton("Import osu! Scores", 2);
-		m_contextMenu->addButton("---");
+		CBaseUIButton *spacer = m_contextMenu->addButton("---");
+		spacer->setEnabled(false);
+		spacer->setTextColor(0xff888888);
+		spacer->setTextDarkColor(0xff000000);
+		{
+			UString importText = "Import osu! Scores of \"";
+			importText.append(m_name_ref->getString());
+			importText.append("\"");
+			m_contextMenu->addButton(importText, 2);
+		}
+		spacer = m_contextMenu->addButton("---");
+		spacer->setEnabled(false);
+		spacer->setTextColor(0xff888888);
+		spacer->setTextDarkColor(0xff000000);
 		m_contextMenu->addButton("Delete All Scores", 3);
 	}
 	m_contextMenu->end();
 	m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUserStatsScreen::onMenuSelected) );
+	OsuUIContextMenu::clampToRightScreenEdge(m_contextMenu);
 }
 
 void OsuUserStatsScreen::onMenuSelected(UString text, int id)
@@ -594,7 +581,7 @@ void OsuUserStatsScreen::onMenuSelected(UString text, int id)
 	else if (id == 2)
 		onRecalculatePP(true);
 	else if (id == 3)
-		onDeleteAllScores();
+		onDeleteAllScoresClicked();
 }
 
 void OsuUserStatsScreen::onRecalculatePP(bool importLegacyScores)
@@ -617,12 +604,42 @@ void OsuUserStatsScreen::onRecalculatePP(bool importLegacyScores)
 	engine->getResourceManager()->loadResource(m_backgroundPPRecalculator);
 }
 
-void OsuUserStatsScreen::onDeleteAllScores()
+void OsuUserStatsScreen::onDeleteAllScoresClicked()
 {
+	m_contextMenu->setPos(m_menuButton->getPos() + Vector2(0, m_menuButton->getSize().y));
+	m_contextMenu->setRelPos(m_menuButton->getPos() + Vector2(0, m_menuButton->getSize().y));
+	m_contextMenu->begin();
+	{
+		{
+			UString reallyText = "Really delete all scores for \"";
+			reallyText.append(m_name_ref->getString());
+			reallyText.append("\"?");
+			m_contextMenu->addButton(reallyText)->setEnabled(false);
+		}
+		CBaseUIButton *spacer = m_contextMenu->addButton("---");
+		spacer->setTextLeft(false);
+		spacer->setEnabled(false);
+		spacer->setTextColor(0xff888888);
+		spacer->setTextDarkColor(0xff000000);
+		m_contextMenu->addButton("Yes", 1)->setTextLeft(false);
+		m_contextMenu->addButton("No")->setTextLeft(false);
+	}
+	m_contextMenu->end();
+	m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUserStatsScreen::onDeleteAllScoresConfirmed) );
+	OsuUIContextMenu::clampToRightScreenEdge(m_contextMenu);
+}
+
+void OsuUserStatsScreen::onDeleteAllScoresConfirmed(UString text, int id)
+{
+	if (id != 1) return;
+
+	const UString &playerName = m_name_ref->getString();
+
+	debugLog("Deleting all scores for \"%s\"\n", playerName.toUtf8());
+
 	std::unordered_map<std::string, std::vector<OsuDatabase::Score>> *scores = m_osu->getSongBrowser()->getDatabase()->getScores();
 
 	// delete every score matching the current playerName
-	const UString &playerName = m_name_ref->getString();
 	for (auto &kv : *scores)
 	{
 		for (size_t i=0; i<kv.second.size(); i++)

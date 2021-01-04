@@ -66,6 +66,9 @@ private:
 
 	void onRightMouseUpInside();
 	void onContextMenu(UString text, int id = -1);
+	void onUseModsClicked();
+	void onDeleteScoreClicked();
+	void onDeleteScoreConfirmed(UString text, int id);
 
 	bool isContextMenuVisible();
 

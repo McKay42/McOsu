@@ -63,17 +63,26 @@ UString OsuUISongBrowserCollectionButton::buildTitleString()
 {
 	UString titleString = m_sCollectionName;
 
-	// TODO: count children (also with support for search results in collections)
-	const int numChildren = m_children.size();
+	// count children (also with support for search results in collections)
+	int numChildren = 0;
+	{
+		for (size_t c=0; c<m_children.size(); c++)
+		{
+			const std::vector<OsuUISongBrowserButton*> &childrenChildren = m_children[c]->getChildren();
+			if (childrenChildren.size() > 0)
+			{
+				for (size_t cc=0; cc<childrenChildren.size(); cc++)
+				{
+					if (childrenChildren[cc]->isSearchMatch())
+						numChildren++;
+				}
+			}
+			else if (m_children[c]->isSearchMatch())
+				numChildren++;
+		}
+	}
 
 	titleString.append(UString::format((numChildren == 1 ? " (%i map)" : " (%i maps)"), numChildren));
-
-	// debugging
-	/*
-	titleString.append(" ");
-	if (m_children.size() > 0)
-		titleString.append(UString::format("%i, %i", m_children[0]->getBeatmap()->getDifficulties()[0]->setID, m_children[0]->getBeatmap()->getDifficulties()[0]->ID));
-	*/
 
 	return titleString;
 }

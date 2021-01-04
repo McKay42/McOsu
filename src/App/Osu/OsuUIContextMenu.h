@@ -19,6 +19,10 @@ class Osu;
 class OsuUIContextMenu : public CBaseUIElement
 {
 public:
+	static void clampToBottomScreenEdge(OsuUIContextMenu *menu);
+	static void clampToRightScreenEdge(OsuUIContextMenu *menu);
+
+public:
 	OsuUIContextMenu(Osu *osu, float xPos = 0, float yPos = 0, float xSize = 0, float ySize = 0, UString name = "", CBaseUIScrollView *parent = NULL);
 	virtual ~OsuUIContextMenu();
 

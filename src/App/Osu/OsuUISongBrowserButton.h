@@ -42,6 +42,7 @@ public:
 	void setInactiveBackgroundColor(Color inactiveBackgroundColor) {m_inactiveBackgroundColor = inactiveBackgroundColor;}
 	void setOffsetPercent(float offsetPercent) {m_fOffsetPercent = offsetPercent;}
 	void setHideIfSelected(bool hideIfSelected) {m_bHideIfSelected = hideIfSelected;}
+	void setIsSearchMatch(bool isSearchMatch) {m_bIsSearchMatch = isSearchMatch;}
 
 	Vector2 getActualOffset() const;
 	inline Vector2 getActualSize() const {return m_vSize - 2*getActualOffset();}
@@ -53,6 +54,7 @@ public:
 
 	inline bool isSelected() const {return m_bSelected;}
 	inline bool isHiddenIfSelected() const {return m_bHideIfSelected;}
+	inline bool isSearchMatch() const {return m_bIsSearchMatch;}
 
 protected:
 	void drawMenuButtonBackground(Graphics *g);
@@ -103,6 +105,7 @@ private:
 	float m_fCenterOffsetVelocityAnimation;
 
 	int m_iSortHack;
+	bool m_bIsSearchMatch;
 
 	bool m_bHideIfSelected;
 

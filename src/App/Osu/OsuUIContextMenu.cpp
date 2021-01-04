@@ -15,6 +15,8 @@
 
 #include "Osu.h"
 
+
+
 class OsuUIContextMenuButton : public CBaseUIButton
 {
 public:
@@ -28,6 +30,8 @@ public:
 private:
 	int m_iID;
 };
+
+
 
 OsuUIContextMenu::OsuUIContextMenu(Osu *osu, float xPos, float yPos, float xSize, float ySize, UString name, CBaseUIScrollView *parent) : CBaseUIElement(xPos, yPos, xSize, ySize, name)
 {
@@ -136,7 +140,7 @@ void OsuUIContextMenu::end(bool invertAnimation)
 	const int margin = 9 * Osu::getUIScale();
 
 	const std::vector<CBaseUIElement*> &elements = m_container->getElements();
-	for (int i=0; i<elements.size(); i++)
+	for (size_t i=0; i<elements.size(); i++)
 	{
 		(elements[i])->setSizeX(m_iWidthCounter - 2*margin);
 	}
@@ -186,3 +190,22 @@ void OsuUIContextMenu::onClick(CBaseUIButton *button)
 		m_clickCallback(button->getName(), ((OsuUIContextMenuButton*)button)->getID());
 }
 
+void OsuUIContextMenu::clampToBottomScreenEdge(OsuUIContextMenu *menu)
+{
+	if (menu->getRelPos().y + menu->getSize().y > menu->m_osu->getScreenHeight())
+	{
+		int newRelPosY = menu->m_osu->getScreenHeight() - menu->getSize().y - 1;
+		menu->setRelPosY(newRelPosY);
+		menu->setPosY(newRelPosY);
+	}
+}
+
+void OsuUIContextMenu::clampToRightScreenEdge(OsuUIContextMenu *menu)
+{
+	if (menu->getRelPos().x + menu->getSize().x > menu->m_osu->getScreenWidth())
+	{
+		const int newRelPosX = menu->m_osu->getScreenWidth() - menu->getSize().x - 1;
+		menu->setRelPosX(newRelPosX);
+		menu->setPosX(newRelPosX);
+	}
+}

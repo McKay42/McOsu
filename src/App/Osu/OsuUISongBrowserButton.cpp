@@ -53,6 +53,7 @@ OsuUISongBrowserButton::OsuUISongBrowserButton(Osu *osu, OsuSongBrowser2 *songBr
 	m_fCenterOffsetVelocityAnimation = 0.0f;
 
 	m_iSortHack = sortHackCounter++;
+	m_bIsSearchMatch = true;
 
 	m_inactiveBackgroundColor = COLOR(240, 235, 73, 153); // pink
 	m_activeBackgroundColor = COLOR(220 + 10, 255, 255, 255); // white

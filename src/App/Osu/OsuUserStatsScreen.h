@@ -32,7 +32,7 @@ public:
 
 	virtual void setVisible(bool visible);
 
-	void onScoreContextMenu(OsuUISongBrowserScoreButton *scoreButton, UString text);
+	void onScoreContextMenu(OsuUISongBrowserScoreButton *scoreButton, int id);
 
 private:
 	virtual void updateLayout();
@@ -47,7 +47,8 @@ private:
 	void onMenuClicked(CBaseUIButton *button);
 	void onMenuSelected(UString text, int id);
 	void onRecalculatePP(bool importLegacyScores);
-	void onDeleteAllScores();
+	void onDeleteAllScoresClicked();
+	void onDeleteAllScoresConfirmed(UString text, int id);
 
 	ConVar *m_name_ref;
 

@@ -168,7 +168,7 @@ void OsuUISongBrowserScoreButton::draw(Graphics *g)
 
 	// score | pp | weighted 95% (pp)
 	const float scoreScale = 0.5f;
-	McFont *scoreFont = (m_vSize.y < 50 ? engine->getResourceManager()->getFont("FONT_DEFAULT") : usernameFont); // HACKHACK
+	McFont *scoreFont = (m_vSize.y < 50 ? engine->getResourceManager()->getFont("FONT_DEFAULT") : usernameFont); // HACKHACK: switch font for very low resolutions
 	g->pushTransform();
 	{
 		const float height = m_vSize.y*0.5f;
@@ -520,30 +520,72 @@ void OsuUISongBrowserScoreButton::onRightMouseUpInside()
 		m_contextMenu->setRelPos(pos);
 		m_contextMenu->begin(0, true);
 		{
-			m_contextMenu->addButton("Use Mods");
-			m_contextMenu->addButton("---");
-			m_contextMenu->addButton("Delete Score");
+			m_contextMenu->addButton("Use Mods", 1);
+			CBaseUIButton *spacer = m_contextMenu->addButton("---");
+			spacer->setEnabled(false);
+			spacer->setTextColor(0xff888888);
+			spacer->setTextDarkColor(0xff000000);
+			m_contextMenu->addButton("Delete Score", 2);
 		}
 		m_contextMenu->end();
 		m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUISongBrowserScoreButton::onContextMenu) );
-
-		// clamp to bottom screen edge
-		if (m_contextMenu->getRelPos().y + m_contextMenu->getSize().y > m_osu->getScreenHeight())
-		{
-			int newRelPosY = m_osu->getScreenHeight() - m_contextMenu->getSize().y - 1;
-			m_contextMenu->setRelPosY(newRelPosY);
-			m_contextMenu->setPosY(newRelPosY);
-		}
+		OsuUIContextMenu::clampToRightScreenEdge(m_contextMenu);
+		OsuUIContextMenu::clampToBottomScreenEdge(m_contextMenu);
 	}
 }
 
 void OsuUISongBrowserScoreButton::onContextMenu(UString text, int id)
 {
+	if (id == 1)
+		onUseModsClicked();
+	if (id == 2)
+		onDeleteScoreClicked();
+}
+
+void OsuUISongBrowserScoreButton::onUseModsClicked()
+{
+	// TODO: implement
+	debugLog("TODO ...\n");
+}
+
+void OsuUISongBrowserScoreButton::onDeleteScoreClicked()
+{
+	if (m_contextMenu != NULL)
+	{
+		m_contextMenu->begin(0, true);
+		{
+			m_contextMenu->addButton("Really delete score?")->setEnabled(false);
+			CBaseUIButton *spacer = m_contextMenu->addButton("---");
+			spacer->setTextLeft(false);
+			spacer->setEnabled(false);
+			spacer->setTextColor(0xff888888);
+			spacer->setTextDarkColor(0xff000000);
+			m_contextMenu->addButton("Yes", 1)->setTextLeft(false);
+			m_contextMenu->addButton("No")->setTextLeft(false);
+		}
+		m_contextMenu->end();
+		m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUISongBrowserScoreButton::onDeleteScoreConfirmed) );
+		OsuUIContextMenu::clampToRightScreenEdge(m_contextMenu);
+		OsuUIContextMenu::clampToBottomScreenEdge(m_contextMenu);
+	}
+}
+
+void OsuUISongBrowserScoreButton::onDeleteScoreConfirmed(UString text, int id)
+{
+	if (id != 1) return;
+
+	debugLog("Deleting score\n");
+
 	// absolutely disgusting
 	if (m_style == STYLE::SCORE_BROWSER)
-		m_osu->getSongBrowser()->onScoreContextMenu(this, text);
+		m_osu->getSongBrowser()->onScoreContextMenu(this, 2);
 	else if (m_style == STYLE::TOP_RANKS)
-		m_osu->getUserStatsScreen()->onScoreContextMenu(this, text);
+	{
+		// in this case, deletion of the actual scores is handled in OsuSongBrowser2::onScoreContextMenu()
+		// this is nice because it updates the songbrowser scorebrowser too (so if the user closes the top ranks screen everything is in sync, even for the currently selected beatmap)
+		m_osu->getSongBrowser()->onScoreContextMenu(this, 2);
+		m_osu->getUserStatsScreen()->onScoreContextMenu(this, 2);
+	}
 }
 
 void OsuUISongBrowserScoreButton::setScore(OsuDatabase::Score score, int index, UString titleString, float weight)

@@ -331,22 +331,8 @@ void OsuUISongBrowserSongButton::onRightMouseUpInside()
 		}
 		m_contextMenu->end();
 		m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUISongBrowserSongButton::onContextMenu) );
-
-		// clamp to right screen edge
-		if (m_contextMenu->getRelPos().x + m_contextMenu->getSize().x > m_osu->getScreenWidth())
-		{
-			const int newRelPosX = m_osu->getScreenWidth() - m_contextMenu->getSize().x - 1;
-			m_contextMenu->setRelPosX(newRelPosX);
-			m_contextMenu->setPosX(newRelPosX);
-		}
-
-		// clamp to bottom screen edge
-		if (m_contextMenu->getRelPos().y + m_contextMenu->getSize().y > m_osu->getScreenHeight())
-		{
-			const int newRelPosY = m_osu->getScreenHeight() - m_contextMenu->getSize().y - 1;
-			m_contextMenu->setRelPosY(newRelPosY);
-			m_contextMenu->setPosY(newRelPosY);
-		}
+		OsuUIContextMenu::clampToRightScreenEdge(m_contextMenu);
+		OsuUIContextMenu::clampToBottomScreenEdge(m_contextMenu);
 	}
 }
 
