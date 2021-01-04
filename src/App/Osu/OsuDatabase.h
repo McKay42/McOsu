@@ -184,7 +184,12 @@ private:
 	void loadScores();
 	void saveScores();
 
+	void loadCollections(const std::unordered_map<std::string, OsuDatabaseBeatmap*> &hashToDiff2, const std::unordered_map<std::string, OsuDatabaseBeatmap*> &hashToBeatmap);
+	void saveCollections();
+
 	OsuDatabaseBeatmap *loadRawBeatmap(UString beatmapPath); // only used for raw loading without db
+
+	void onScoresRename(UString args);
 
 	Osu *m_osu;
 	Timer *m_importTimer;
