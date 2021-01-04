@@ -528,15 +528,22 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	m_bInSearch = false;
 	m_searchPrevGroup = GROUP::GROUP_NO_GROUPING;
 
-	// background star calculation
+	// background star calculation (entire database)
 	m_fBackgroundStarCalculationWorkNotificationTime = 0.0f;
 	m_iBackgroundStarCalculationIndex = 0;
+
+	// background star calculation (currently selected beatmap)
+	m_bBackgroundStarCalcScheduled = false;
+	m_bBackgroundStarCalcScheduledForce = false;
+	m_backgroundStarCalculator = new OsuDatabaseBeatmapStarCalculator();
 
 	updateLayout();
 }
 
 OsuSongBrowser2::~OsuSongBrowser2()
 {
+	engine->getResourceManager()->destroyResource(m_backgroundStarCalculator);
+
 	m_songBrowser->getContainer()->empty();
 
 	for (size_t i=0; i<m_songButtons.size(); i++)
@@ -670,12 +677,11 @@ void OsuSongBrowser2::draw(Graphics *g)
 		}
 	}
 
-	/*
-	// TODO: draw strain graph of currently selected beatmap
-	if (getSelectedBeatmap() != NULL && getSelectedBeatmap()->getSelectedDifficulty() != NULL)
+	// draw strain graph of currently selected beatmap
+	if (getSelectedBeatmap() != NULL && getSelectedBeatmap()->getSelectedDifficulty2() != NULL)
 	{
-		const std::vector<double> &aimStrains = getSelectedBeatmap()->getSelectedDifficulty()->getAimStrains();
-		const std::vector<double> &speedStrains = getSelectedBeatmap()->getSelectedDifficulty()->getSpeedStrains();
+		const std::vector<double> &aimStrains = getSelectedBeatmap()->getAimStrains();
+		const std::vector<double> &speedStrains = getSelectedBeatmap()->getSpeedStrains();
 
 		//const unsigned long lengthFullMS = beatmapLength;
 		//const unsigned long lengthMS = getSelectedBeatmap()->getLengthPlayable();
@@ -789,7 +795,6 @@ void OsuSongBrowser2::draw(Graphics *g)
 			}
 		}
 	}
-	*/
 
 	// draw score browser
 	m_scoreBrowser->draw(g);
@@ -1095,6 +1100,14 @@ void OsuSongBrowser2::update()
 	}
 
 	// handle background star calculation
+	if (m_bBackgroundStarCalcScheduled)
+	{
+		m_bBackgroundStarCalcScheduled = false;
+		const bool force = m_bBackgroundStarCalcScheduledForce;
+		m_bBackgroundStarCalcScheduledForce = false;
+
+		recalculateStarsForSelectedBeatmap(force);
+	}
 	/*
 	if (m_beatmaps.size() > 0 && m_osu_database_dynamic_star_calculation_ref->getBool())
 	{
@@ -1610,6 +1623,9 @@ void OsuSongBrowser2::onDifficultySelected(OsuDatabaseBeatmap *diff2, bool play,
 
 	// update web button
 	m_webButton->setVisible(m_songInfo->getBeatmapID() > 0);
+
+	// trigger dynamic star calc (including current mods etc.)
+	recalculateStarsForSelectedBeatmap();
 }
 
 void OsuSongBrowser2::onDifficultySelectedMP(OsuDatabaseBeatmap *diff2, bool play)
@@ -1619,6 +1635,17 @@ void OsuSongBrowser2::onDifficultySelectedMP(OsuDatabaseBeatmap *diff2, bool pla
 
 void OsuSongBrowser2::selectBeatmapMP(OsuDatabaseBeatmap *diff2)
 {
+	// force exit search
+	if (m_sSearchString.length() > 0)
+	{
+		m_sSearchString = "";
+		onSearchUpdate();
+	}
+
+	// force no grouping
+	if (m_group != GROUP::GROUP_NO_GROUPING)
+		onGroupNoGrouping(m_noGroupingButton);
+
 	OsuUISongBrowserButton *matchingButton = NULL;
 	for (size_t i=0; i<m_songButtons.size(); i++)
 	{
@@ -1654,6 +1681,8 @@ void OsuSongBrowser2::refreshBeatmaps()
 	if (!m_bVisible || m_bHasSelectedAndIsPlaying) return;
 
 	// reset
+	checkHandleKillBackgroundStarCalculator(false);
+
 	m_selectedBeatmap = NULL;
 
 	m_selectionPreviousSongButton = NULL;
@@ -2600,6 +2629,39 @@ void OsuSongBrowser2::scheduleSearchUpdate(bool immediately)
 	m_fSearchWaitTime = engine->getTime() + (immediately ? 0.0f : osu_songbrowser_search_delay.getFloat());
 }
 
+bool OsuSongBrowser2::checkHandleKillBackgroundStarCalculator(bool timeout)
+{
+	if (!m_backgroundStarCalculator->isDead())
+	{
+		if (timeout)
+		{
+			// this is a bit stupid, but it does allow everything to keep running in the meantime
+			const bool isAsyncReady = m_backgroundStarCalculator->isAsyncReady();
+
+			if (isAsyncReady)
+				m_backgroundStarCalculator->kill();
+
+			return isAsyncReady;
+		}
+		else
+		{
+			m_backgroundStarCalculator->kill();
+			const double startTime = engine->getTimeReal();
+			while (!m_backgroundStarCalculator->isAsyncReady())
+			{
+				if (timeout && engine->getTimeReal() - startTime > 2)
+				{
+					debugLog("WARNING: Ignoring stuck StarCalculator thread!\n");
+					break;
+				}
+			}
+			return m_backgroundStarCalculator->isAsyncReady();
+		}
+	}
+	else
+		return true;
+}
+
 OsuUISelectionButton *OsuSongBrowser2::addBottombarNavButton(std::function<Image*()> getImageFunc, std::function<Image*()> getImageOverFunc)
 {
 	OsuUISelectionButton *btn = new OsuUISelectionButton(getImageFunc, getImageOverFunc, 0, 0, 0, 0, "");
@@ -3512,6 +3574,43 @@ void OsuSongBrowser2::highlightScore(uint64_t unixTimestamp)
 			m_scoreButtonCache[i]->highlight();
 			break;
 		}
+	}
+}
+
+void OsuSongBrowser2::recalculateStarsForSelectedBeatmap(bool force)
+{
+	debugLog("recalculateStarsForSelectedBeatmap(%i)\n", (int)force);
+
+	if (m_selectedBeatmap == NULL || m_selectedBeatmap->getSelectedDifficulty2() == NULL) return;
+	if (!force && m_selectedBeatmap->getSelectedDifficulty2() == m_backgroundStarCalculator->getBeatmapDifficulty()) return;
+
+	if (m_osu->isInPlayMode())
+	{
+		m_bBackgroundStarCalcScheduled = true;
+		m_bBackgroundStarCalcScheduledForce = (m_bBackgroundStarCalcScheduledForce || force);
+		return;
+	}
+
+	if (checkHandleKillBackgroundStarCalculator(true))
+	{
+		// NOTE: this only works safely because OsuDatabaseBeatmapStarCalculator does no work in load(), because it might still be in the ResourceManager's sync load() queue, so future loadAsync() could crash with the old pending load()
+
+		m_backgroundStarCalculator->release();
+		m_backgroundStarCalculator->revive();
+
+		const float AR = m_selectedBeatmap->getAR();
+		const float CS = m_selectedBeatmap->getCS();
+		const float speedMultiplier = m_osu->getSpeedMultiplier(); // NOTE: not m_selectedBeatmap->getSpeedMultiplier()!
+
+		m_backgroundStarCalculator->setBeatmapDifficulty(m_selectedBeatmap->getSelectedDifficulty2(), AR, CS, speedMultiplier);
+
+		engine->getResourceManager()->requestNextLoadAsync();
+		engine->getResourceManager()->loadResource(m_backgroundStarCalculator);
+	}
+	else
+	{
+		m_bBackgroundStarCalcScheduled = true;
+		m_bBackgroundStarCalcScheduledForce = (m_bBackgroundStarCalcScheduledForce || force);
 	}
 }
 

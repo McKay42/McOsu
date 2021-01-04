@@ -144,7 +144,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(const std::vector
 	}
 
 	// global independent variables/constants
-	const float circleRadiusInOsuPixels = OsuGameRules::getRawHitCircleDiameter(CS) / 2.0f;
+	const float circleRadiusInOsuPixels = OsuGameRules::getRawHitCircleDiameter(clamp<float>(CS, 0.0f, 12.142f)) / 2.0f; // NOTE: clamped CS because McOsu allows CS > ~12.1429 (at which point the diameter becomes negative)
 
 	// ****************************************************************************************************************************************** //
 

@@ -419,10 +419,42 @@ class OsuDatabaseBeatmapStarCalculator : public Resource
 public:
 	OsuDatabaseBeatmapStarCalculator();
 
+	bool isDead() const {return m_bDead.load();}
+	void kill() {m_bDead = true;}
+	void revive() {m_bDead = false;}
+
+	void setBeatmapDifficulty(OsuDatabaseBeatmap *diff2, float AR, float CS, float speedMultiplier);
+
+	inline OsuDatabaseBeatmap *getBeatmapDifficulty() const {return m_diff2;}
+
+	inline double getTotalStars() const {return m_totalStars.load();}
+	inline double getAimStars() const {return m_aimStars.load();}
+	inline double getSpeedStars() const {return m_speedStars.load();}
+
+	inline std::vector<double> &getAimStrains() {return m_aimStrains;}
+	inline std::vector<double> &getSpeedStrains() {return m_speedStrains;}
+
 private:
 	virtual void init();
 	virtual void initAsync();
 	virtual void destroy() {;}
+
+	std::atomic<bool> m_bDead;
+
+	OsuDatabaseBeatmap *m_diff2;
+
+	float m_fAR;
+	float m_fCS;
+	int m_iVersion;
+	float m_fStackLeniency;
+	float m_fSpeedMultiplier;
+
+	std::atomic<double> m_totalStars;
+	std::atomic<double> m_aimStars;
+	std::atomic<double> m_speedStars;
+
+	std::vector<double> m_aimStrains;
+	std::vector<double> m_speedStrains;
 };
 
 #endif

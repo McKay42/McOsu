@@ -41,7 +41,6 @@ public:
 	void setOD(float OD) {m_fOD = OD;}
 	void setHP(float HP) {m_fHP = HP;}
 	void setStars(float stars) {m_fStars = stars;}
-	void setStarsRecalculating(bool recalculating) {m_bStarsRecalculating = recalculating;}
 
 	void setLocalOffset(long localOffset) {m_iLocalOffset = localOffset;}
 	void setOnlineOffset(long onlineOffset) {m_iOnlineOffset = onlineOffset;}
@@ -87,7 +86,6 @@ private:
 	float m_fOD;
 	float m_fHP;
 	float m_fStars;
-	bool m_bStarsRecalculating;
 
 	long m_iLocalOffset;
 	long m_iOnlineOffset;

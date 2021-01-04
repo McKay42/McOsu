@@ -17,9 +17,6 @@ OsuBackgroundStarCacheLoader::OsuBackgroundStarCacheLoader(OsuBeatmap *beatmap) 
 
 	m_bDead = true; // NOTE: start dead! need to revive() before use
 	m_iProgress = 0;
-
-	m_bAsyncReady = false;
-	m_bReady = false;
 }
 
 void OsuBackgroundStarCacheLoader::init()

@@ -1175,6 +1175,8 @@ void Osu::update()
 
 void Osu::updateMods()
 {
+	debugLog("Osu::updateMods()\n");
+
 	m_bModAuto = osu_mods.getString().find("auto") != -1;
 	m_bModAutopilot = osu_mods.getString().find("autopilot") != -1;
 	m_bModRelax = osu_mods.getString().find("relax") != -1;
@@ -1218,8 +1220,13 @@ void Osu::updateMods()
 	updateWindowsKeyDisable();
 
 	// notify the possibly running beatmap of mod changes, for e.g. recalculating stacks dynamically if HR is toggled
-	if (getSelectedBeatmap() != NULL)
-		getSelectedBeatmap()->onModUpdate();
+	{
+		if (getSelectedBeatmap() != NULL)
+			getSelectedBeatmap()->onModUpdate();
+
+		if (m_songBrowser2 != NULL)
+			m_songBrowser2->recalculateStarsForSelectedBeatmap(true);
+	}
 }
 
 void Osu::onKeyDown(KeyboardEvent &key)

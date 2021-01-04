@@ -18,6 +18,7 @@
 #include "OsuDatabaseBeatmap.h"
 #include "OsuNotificationOverlay.h"
 #include "OsuTooltipOverlay.h"
+#include "OsuSongBrowser2.h"
 #include "OsuGameRules.h"
 #include "OsuMultiplayer.h"
 
@@ -55,7 +56,6 @@ OsuUISongBrowserInfoLabel::OsuUISongBrowserInfoLabel(Osu *osu, float xPos, float
 	m_fOD = 5.0f;
 	m_fHP = 5.0f;
 	m_fStars = 5.0f;
-	m_bStarsRecalculating = false;
 
 	m_iLocalOffset = 0;
 	m_iOnlineOffset = 0;
@@ -322,7 +322,9 @@ UString OsuUISongBrowserInfoLabel::buildDiffInfoString()
 	float HP = m_fHP;
 	float stars = m_fStars;
 
-	bool areStarsInaccurate = false;
+	const float modStars = m_osu->getSongBrowser()->getBackgroundStarCalculator()->getTotalStars();
+	const bool areStarsInaccurate = (m_osu->getSongBrowser()->getBackgroundStarCalculator()->isDead() || !m_osu->getSongBrowser()->getBackgroundStarCalculator()->isAsyncReady());
+
 	OsuBeatmap *beatmap = m_osu->getSelectedBeatmap();
 	if (beatmap != NULL)
 	{
@@ -330,13 +332,18 @@ UString OsuUISongBrowserInfoLabel::buildDiffInfoString()
 		AR = OsuGameRules::getApproachRateForSpeedMultiplier(beatmap);
 		OD = OsuGameRules::getOverallDifficultyForSpeedMultiplier(beatmap);
 		HP = beatmap->getHP();
-
-		areStarsInaccurate = beatmap->getSpeedMultiplier() != 1.0f || CS != m_fCS || AR != m_fAR || OD != m_fOD;
 	}
 
-	UString finalString = UString::format(areStarsInaccurate ? "CS:%.3g AR:%.3g OD:%.3g HP:%.3g Stars:? (%.3g)" : "CS:%.3g AR:%.3g OD:%.3g HP:%.3g Stars:%.3g", CS, AR, OD, HP, stars);
-	if (m_bStarsRecalculating)
-		finalString.append(" (recalculating ...)");
+	const float starComparisonEpsilon = 0.01f;
+	const bool starsAndModStarsAreEqual = (std::abs(stars - modStars) < starComparisonEpsilon);
+
+	UString finalString;
+	if (areStarsInaccurate)
+		finalString = UString::format("CS:%.3g AR:%.3g OD:%.3g HP:%.3g Stars:%.3g (recalculating ...)", CS, AR, OD, HP, stars);
+	else if (!starsAndModStarsAreEqual)
+		finalString = UString::format("CS:%.3g AR:%.3g OD:%.3g HP:%.3g Stars:%.3g -> %.3g", CS, AR, OD, HP, stars, modStars);
+	else
+		finalString = UString::format("CS:%.3g AR:%.3g OD:%.3g HP:%.3g Stars:%.3g", CS, AR, OD, HP, stars);
 
 	return finalString;
 }

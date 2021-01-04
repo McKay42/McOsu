@@ -26,6 +26,7 @@
 #include "OsuDatabaseBeatmap.h"
 #include "OsuTooltipOverlay.h"
 #include "OsuOptionsMenu.h"
+#include "OsuSongBrowser2.h"
 #include "OsuKeyBindings.h"
 #include "OsuGameRules.h"
 
@@ -535,8 +536,13 @@ void OsuModSelector::update()
 			m_bWaitForCSChangeFinished = false;
 			m_bWaitForSpeedChangeFinished = false;
 			m_bWaitForHPChangeFinished = false;
-			if (m_osu->isInPlayMode() && m_osu->getSelectedBeatmap() != NULL)
-				m_osu->getSelectedBeatmap()->onModUpdate();
+
+			{
+				if (m_osu->isInPlayMode() && m_osu->getSelectedBeatmap() != NULL)
+					m_osu->getSelectedBeatmap()->onModUpdate();
+
+				m_osu->getSongBrowser()->recalculateStarsForSelectedBeatmap(true);
+			}
 		}
 
 		// handle dynamic live pp calculation updates (when CS or Speed/BPM changes)
@@ -549,8 +555,13 @@ void OsuModSelector::update()
 			m_bWaitForCSChangeFinished = false;
 			m_bWaitForSpeedChangeFinished = false;
 			m_bWaitForHPChangeFinished = false;
-			if (m_osu->isInPlayMode() && m_osu->getSelectedBeatmap() != NULL)
-				m_osu->getSelectedBeatmap()->onModUpdate();
+
+			{
+				if (m_osu->isInPlayMode() && m_osu->getSelectedBeatmap() != NULL)
+					m_osu->getSelectedBeatmap()->onModUpdate();
+
+				m_osu->getSongBrowser()->recalculateStarsForSelectedBeatmap(true);
+			}
 		}
 
 		// handle dynamic HP drain updates
@@ -1406,8 +1417,12 @@ void OsuModSelector::onCheckboxChange(CBaseUICheckbox *checkbox)
 				m_experimentalMods[i].cvar->setValue(checkbox->isChecked());
 
 			// force mod update
-			if (m_osu->isInPlayMode() && m_osu->getSelectedBeatmap() != NULL)
-				m_osu->getSelectedBeatmap()->onModUpdate();
+			{
+				if (m_osu->isInPlayMode() && m_osu->getSelectedBeatmap() != NULL)
+					m_osu->getSelectedBeatmap()->onModUpdate();
+
+				m_osu->getSongBrowser()->recalculateStarsForSelectedBeatmap(true);
+			}
 
 			break;
 		}

@@ -2163,12 +2163,14 @@ void OsuBeatmapStandard::stopStarCacheLoader()
 		double startTime = engine->getTimeReal();
 		while (!m_starCacheLoader->isAsyncReady()) // stall main thread until it's killed (this should be very quick, around max 1 ms, as the kill flag is checked in every iteration)
 		{
-			if (engine->getTimeReal() - startTime > 1)
+			if (engine->getTimeReal() - startTime > 2)
 			{
 				debugLog("WARNING: Ignoring stuck StarCacheLoader thread!\n");
 				break;
 			}
 		}
+
+		// NOTE: this only works safely because OsuBackgroundStarCacheLoader does no work in load(), because it might still be in the ResourceManager's sync load() queue, so future loadAsync() could crash with the old pending load()
 	}
 }
 

@@ -24,6 +24,7 @@ class OsuHitObject;
 class OsuDatabaseBeatmap;
 
 class OsuBackgroundStarCacheLoader;
+class OsuBackgroundStarCalcHandler;
 
 class OsuBeatmap
 {
@@ -104,6 +105,8 @@ public:
 	inline unsigned long long getScoreV2ComboPortionMaximum() const {return m_iScoreV2ComboPortionMaximum;}
 	inline double getAimStarsForUpToHitObjectIndex(int upToHitObjectIndex) const {return (m_aimStarsForNumHitObjects.size() > 0 ? m_aimStarsForNumHitObjects[clamp<int>(upToHitObjectIndex, 0, m_aimStarsForNumHitObjects.size()-1)] : 0);}
 	inline double getSpeedStarsForUpToHitObjectIndex(int upToHitObjectIndex) const {return (m_speedStarsForNumHitObjects.size() > 0 ? m_speedStarsForNumHitObjects[clamp<int>(upToHitObjectIndex, 0, m_speedStarsForNumHitObjects.size()-1)] : 0);}
+	inline const std::vector<double> &getAimStrains() const {return m_aimStrains;}
+	inline const std::vector<double> &getSpeedStrains() const {return m_speedStrains;}
 
 	// used by OsuHitObject children and OsuModSelector
 	inline Osu *getOsu() const {return m_osu;}
@@ -284,12 +287,15 @@ protected:
 	unsigned long long m_iScoreV2ComboPortionMaximum;
 	std::vector<double> m_aimStarsForNumHitObjects;
 	std::vector<double> m_speedStarsForNumHitObjects;
+	std::vector<double> m_aimStrains;
+	std::vector<double> m_speedStrains;
 
 	// custom
 	int m_iPreviousFollowPointObjectIndex; // TODO: this shouldn't be in this class
 
 private:
 	friend class OsuBackgroundStarCacheLoader;
+	friend class OsuBackgroundStarCalcHandler;
 };
 
 #endif

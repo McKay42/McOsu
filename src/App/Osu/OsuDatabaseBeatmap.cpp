@@ -1641,15 +1641,59 @@ void OsuDatabaseBeatmapBackgroundImagePathLoader::initAsync()
 
 OsuDatabaseBeatmapStarCalculator::OsuDatabaseBeatmapStarCalculator() : Resource()
 {
-	// TODO: finish this
+	m_bDead = true; // NOTE: start dead! need to revive() before use
+
+	m_diff2 = NULL;
+
+	m_fAR = 5.0f;
+	m_fCS = 5.0f;
+	m_iVersion = 14;
+	m_fStackLeniency = 0.7f;
+	m_fSpeedMultiplier = 1.0f;
+
+	m_totalStars = 0.0;
+	m_aimStars = 0.0;
+	m_speedStars = 0.0;
 }
 
 void OsuDatabaseBeatmapStarCalculator::init()
 {
-
+	m_bReady = true;
 }
 
 void OsuDatabaseBeatmapStarCalculator::initAsync()
 {
+	// sanity reset
+	m_totalStars = 0.0;
+	m_aimStars = 0.0;
+	m_speedStars = 0.0;
 
+	const Osu::GAMEMODE gameMode = Osu::GAMEMODE::STD;
+	OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT diffres = OsuDatabaseBeatmap::loadDifficultyHitObjects(m_sFilePath, gameMode, m_fAR, m_fCS, m_iVersion, m_fStackLeniency, m_fSpeedMultiplier);
+
+	if (diffres.errorCode == 0)
+	{
+		double aimStars = 0.0;
+		double speedStars = 0.0;
+		m_totalStars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, m_fCS, &aimStars, &speedStars, -1, &m_aimStrains, &m_speedStrains);
+		m_aimStars = aimStars;
+		m_speedStars = speedStars;
+	}
+
+	m_bAsyncReady = true;
+}
+
+void OsuDatabaseBeatmapStarCalculator::setBeatmapDifficulty(OsuDatabaseBeatmap *diff2, float AR, float CS, float speedMultiplier)
+{
+	// TODO: what if version is not loaded yet because of osu!.db
+
+	m_diff2 = diff2;
+
+	m_sFilePath = diff2->getFilePath();
+	m_iVersion = diff2->getVersion();
+	m_fStackLeniency = diff2->getStackLeniency();
+
+	m_fAR = AR;
+	m_fCS = CS;
+	m_fSpeedMultiplier = speedMultiplier;
 }

@@ -103,13 +103,15 @@ void OsuUISongBrowserSongDifficultyButton::draw(Graphics *g)
 
 	// draw stars
 	const float starsNoMod = m_databaseBeatmap->getStarsNomod();
-	if (starsNoMod > 0)
+	const bool areStarsInaccurate = (m_osu->getSongBrowser()->getBackgroundStarCalculator()->isDead() || !m_osu->getSongBrowser()->getBackgroundStarCalculator()->isAsyncReady());
+	const float stars = (areStarsInaccurate || !m_bSelected ? starsNoMod : m_osu->getSongBrowser()->getBackgroundStarCalculator()->getTotalStars());
+	if (stars > 0)
 	{
 		const float starOffsetY = (size.y*0.85);
 		const float starWidth = (size.y*0.2);
 		const float starScale = starWidth / skin->getStar()->getHeight();
-		const int numFullStars = std::min((int)starsNoMod, 25);
-		const float partialStarScale = std::max(0.5f, clamp<float>(starsNoMod - numFullStars, 0.0f, 1.0f)); // at least 0.5x
+		const int numFullStars = std::min((int)stars, 25);
+		const float partialStarScale = std::max(0.5f, clamp<float>(stars - numFullStars, 0.0f, 1.0f)); // at least 0.5x
 
 		g->setColor(m_bSelected ? skin->getSongSelectActiveText() : skin->getSongSelectInactiveText());
 
