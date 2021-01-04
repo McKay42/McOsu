@@ -37,6 +37,7 @@ ConVar fposu_fov("fposu_fov", 103.0f);
 ConVar fposu_zoom_fov("fposu_zoom_fov", 45.0f);
 ConVar fposu_zoom_sensitivity_ratio("fposu_zoom_sensitivity_ratio", 1.0f, "replicates zoom_sensitivity_ratio behavior on css/csgo/tf2/etc.");
 ConVar fposu_zoom_anim_duration("fposu_zoom_anim_duration", 0.065f, "time in seconds for the zoom/unzoom animation");
+ConVar fposu_zoom_toggle("fposu_zoom_toggle", false, "whether the zoom key acts as a toggle");
 ConVar fposu_vertical_fov("fposu_vertical_fov", false);
 ConVar fposu_curved("fposu_curved", true);
 ConVar fposu_cube("fposu_cube", true);
@@ -58,6 +59,7 @@ OsuModFPoSu::OsuModFPoSu(Osu *osu)
 	// vars
 	m_fCircumLength = 0.0f;
 	m_camera = new Camera(Vector3(0, 0, 0),Vector3(0, 0, -1));
+	m_bZoomKeyDown = false;
 	m_bZoomed = false;
 	m_fZoomFOVAnimPercent = 0.0f;
 
@@ -240,12 +242,18 @@ void OsuModFPoSu::update()
 
 void OsuModFPoSu::onKeyDown(KeyboardEvent &key)
 {
-	if (key == (KEYCODE)OsuKeyBindings::FPOSU_ZOOM.getInt())
+	if (key == (KEYCODE)OsuKeyBindings::FPOSU_ZOOM.getInt() && !m_bZoomKeyDown)
 	{
-		if (!m_bZoomed)
+		m_bZoomKeyDown = true;
+
+		if (!m_bZoomed || fposu_zoom_toggle.getBool())
 		{
-			m_bZoomed = true;
-			anim->moveQuadOut(&m_fZoomFOVAnimPercent, 1.0f, (1.0f - m_fZoomFOVAnimPercent)*fposu_zoom_anim_duration.getFloat(), true);
+			if (!fposu_zoom_toggle.getBool())
+				m_bZoomed = true;
+			else
+				m_bZoomed = !m_bZoomed;
+
+			handleZoomedChange();
 		}
 	}
 }
@@ -254,12 +262,22 @@ void OsuModFPoSu::onKeyUp(KeyboardEvent &key)
 {
 	if (key == (KEYCODE)OsuKeyBindings::FPOSU_ZOOM.getInt())
 	{
-		if (m_bZoomed)
+		m_bZoomKeyDown = false;
+
+		if (m_bZoomed && !fposu_zoom_toggle.getBool())
 		{
 			m_bZoomed = false;
-			anim->moveQuadOut(&m_fZoomFOVAnimPercent, 0.0f, m_fZoomFOVAnimPercent*fposu_zoom_anim_duration.getFloat(), true);
+			handleZoomedChange();
 		}
 	}
+}
+
+void OsuModFPoSu::handleZoomedChange()
+{
+	if (m_bZoomed)
+		anim->moveQuadOut(&m_fZoomFOVAnimPercent, 1.0f, (1.0f - m_fZoomFOVAnimPercent)*fposu_zoom_anim_duration.getFloat(), true);
+	else
+		anim->moveQuadOut(&m_fZoomFOVAnimPercent, 0.0f, m_fZoomFOVAnimPercent*fposu_zoom_anim_duration.getFloat(), true);
 }
 
 void OsuModFPoSu::setMousePosCompensated(Vector2 newMousePos)

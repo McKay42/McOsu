@@ -53,6 +53,8 @@ private:
 		VertexPair(Vector3 a, Vector3 b, float tc) : a(a), b(b), textureCoordinate(tc) {;}
 	};
 
+	void handleZoomedChange();
+
 	void setMousePosCompensated(Vector2 newMousePos);
 	Vector2 intersectRayMesh(Vector3 pos, Vector3 dir);
 	Vector3 calculateUnProjectedVector(Vector2 pos);
@@ -75,6 +77,7 @@ private:
 	std::list<VertexPair> m_meshList;
 	float m_fCircumLength;
 	Camera *m_camera;
+	bool m_bZoomKeyDown;
 	bool m_bZoomed;
 	float m_fZoomFOVAnimPercent;
 
