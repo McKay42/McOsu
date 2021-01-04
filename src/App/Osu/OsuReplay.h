@@ -53,10 +53,25 @@ public:
 		ScoreIncreaseMods = Hidden | HardRock | DoubleTime | Flashlight | FadeIn
 	};
 
+	struct BEATMAP_VALUES
+	{
+		float AR;
+		float CS;
+		float OD;
+		float HP;
+
+		float speedMultiplier;
+
+		float difficultyMultiplier;
+		float csDifficultyMultiplier;
+	};
+
+public:
+
 	OsuReplay();
 	virtual ~OsuReplay();
 
-private:
+	static BEATMAP_VALUES getBeatmapValuesForModsLegacy(int modsLegacy, float legacyAR, float legacyCS, float legacyOD, float legacyHP);
 };
 
 class OsuReplayFile

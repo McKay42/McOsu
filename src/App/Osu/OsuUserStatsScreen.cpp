@@ -155,54 +155,16 @@ private:
 					if (!OsuDatabaseBeatmap::loadMetadata(diff2))
 						continue;
 
-					float legacySpeedMultiplier = 1.0f;
-					float legacyAR = diff2->getAR();
-					float legacyCS = diff2->getCS();
-					float legacyOD = diff2->getOD();
-					float legacyHP = diff2->getHP();
-					{
-						// HACKHACK: code duplication, see Osu::getRawSpeedMultiplier()
-						{
-							if (score.modsLegacy & OsuReplay::Mods::HalfTime)
-								legacySpeedMultiplier = 0.75f;
-							if ((score.modsLegacy & OsuReplay::Mods::DoubleTime) || (score.modsLegacy & OsuReplay::Mods::Nightcore))
-								legacySpeedMultiplier = 1.5f;
-						}
-
-						// HACKHACK: code duplication, see Osu::getDifficultyMultiplier()
-						float difficultyMultiplier = 1.0f;
-						{
-							if (score.modsLegacy & OsuReplay::Mods::HardRock)
-								difficultyMultiplier = 1.4f;
-							if (score.modsLegacy & OsuReplay::Mods::Easy)
-								difficultyMultiplier = 0.5f;
-						}
-
-						// HACKHACK: code duplication, see Osu::getCSDifficultyMultiplier()
-						float csDifficultyMultiplier = 1.0f;
-						{
-							if (score.modsLegacy & OsuReplay::Mods::HardRock)
-								csDifficultyMultiplier = 1.3f; // different!
-							if (score.modsLegacy & OsuReplay::Mods::Easy)
-								csDifficultyMultiplier = 0.5f;
-						}
-
-						// apply legacy mods to legacy beatmap values
-						legacyAR = clamp<float>(legacyAR * difficultyMultiplier, 0.0f, 10.0f);
-						legacyCS = clamp<float>(legacyCS * csDifficultyMultiplier, 0.0f, 10.0f);
-						legacyOD = clamp<float>(legacyOD * difficultyMultiplier, 0.0f, 10.0f);
-						legacyHP = clamp<float>(legacyHP * difficultyMultiplier, 0.0f, 10.0f);
-					}
-
+					const OsuReplay::BEATMAP_VALUES legacyValues = OsuReplay::getBeatmapValuesForModsLegacy(score.modsLegacy, diff2->getAR(), diff2->getCS(), diff2->getOD(), diff2->getHP());
 					const UString &osuFilePath = diff2->getFilePath();
 					const Osu::GAMEMODE gameMode = Osu::GAMEMODE::STD;
-					const float AR = (score.isLegacyScore ? legacyAR : score.AR);
-					const float CS = (score.isLegacyScore ? legacyCS : score.CS);
-					const float OD = (score.isLegacyScore ? legacyOD : score.OD);
-					const float HP = (score.isLegacyScore ? legacyHP : score.HP);
+					const float AR = (score.isLegacyScore ? legacyValues.AR : score.AR);
+					const float CS = (score.isLegacyScore ? legacyValues.CS : score.CS);
+					const float OD = (score.isLegacyScore ? legacyValues.OD : score.OD);
+					const float HP = (score.isLegacyScore ? legacyValues.HP : score.HP);
 					const int version = diff2->getVersion();
 					const float stackLeniency = diff2->getStackLeniency();
-					const float speedMultiplier = (score.isLegacyScore ? legacySpeedMultiplier : score.speedMultiplier);
+					const float speedMultiplier = (score.isLegacyScore ? legacyValues.speedMultiplier : score.speedMultiplier);
 
 					// 3) load hitobjects for diffcalc
 					OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT diffres = OsuDatabaseBeatmap::loadDifficultyHitObjects(osuFilePath, gameMode, AR, CS, version, stackLeniency, speedMultiplier);

@@ -118,7 +118,7 @@ public:
 
 	int getKeyCount(int key);
 	int getModsLegacy();
-	UString getModsString();
+	UString getModsStringForRichPresence();
 
 private:
 	static ConVar *m_osu_draw_statistics_pp_ref;

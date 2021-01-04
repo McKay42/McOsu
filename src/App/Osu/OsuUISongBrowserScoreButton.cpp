@@ -8,6 +8,7 @@
 #include "OsuUISongBrowserScoreButton.h"
 
 #include "Engine.h"
+#include "Console.h"
 #include "ResourceManager.h"
 #include "AnimationHandler.h"
 #include "SoundEngine.h"
@@ -21,16 +22,25 @@
 #include "OsuSkinImage.h"
 #include "OsuReplay.h"
 #include "OsuTooltipOverlay.h"
+#include "OsuNotificationOverlay.h"
 
 #include "OsuSongBrowser2.h"
 #include "OsuUserStatsScreen.h"
+#include "OsuModSelector.h"
 #include "OsuDatabase.h"
+#include "OsuDatabaseBeatmap.h"
 
 #include "OsuUIContextMenu.h"
 
 #include <chrono>
 
-ConVar *OsuUISongBrowserScoreButton::m_osu_scores_sort_by_pp = NULL;
+ConVar *OsuUISongBrowserScoreButton::m_osu_scores_sort_by_pp_ref = NULL;
+ConVar *OsuUISongBrowserScoreButton::m_osu_mods_ref = NULL;
+ConVar *OsuUISongBrowserScoreButton::m_osu_speed_override_ref = NULL;
+ConVar *OsuUISongBrowserScoreButton::m_osu_ar_override_ref = NULL;
+ConVar *OsuUISongBrowserScoreButton::m_osu_cs_override_ref = NULL;
+ConVar *OsuUISongBrowserScoreButton::m_osu_od_override_ref = NULL;
+ConVar *OsuUISongBrowserScoreButton::m_osu_hp_override_ref = NULL;
 UString OsuUISongBrowserScoreButton::recentScoreIconString;
 
 OsuUISongBrowserScoreButton::OsuUISongBrowserScoreButton(Osu *osu, OsuUIContextMenu *contextMenu, float xPos, float yPos, float xSize, float ySize, UString name, STYLE style) : CBaseUIButton(xPos, yPos, xSize, ySize, name, "")
@@ -39,8 +49,20 @@ OsuUISongBrowserScoreButton::OsuUISongBrowserScoreButton(Osu *osu, OsuUIContextM
 	m_contextMenu = contextMenu;
 	m_style = style;
 
-	if (m_osu_scores_sort_by_pp == NULL)
-		m_osu_scores_sort_by_pp = convar->getConVarByName("osu_scores_sort_by_pp");
+	if (m_osu_scores_sort_by_pp_ref == NULL)
+		m_osu_scores_sort_by_pp_ref = convar->getConVarByName("osu_scores_sort_by_pp");
+	if (m_osu_mods_ref == NULL)
+		m_osu_mods_ref = convar->getConVarByName("osu_mods");
+	if (m_osu_speed_override_ref == NULL)
+		m_osu_speed_override_ref = convar->getConVarByName("osu_speed_override");
+	if (m_osu_ar_override_ref == NULL)
+		m_osu_ar_override_ref = convar->getConVarByName("osu_ar_override");
+	if (m_osu_cs_override_ref == NULL)
+		m_osu_cs_override_ref = convar->getConVarByName("osu_cs_override");
+	if (m_osu_od_override_ref == NULL)
+		m_osu_od_override_ref = convar->getConVarByName("osu_od_override");
+	if (m_osu_hp_override_ref == NULL)
+		m_osu_hp_override_ref = convar->getConVarByName("osu_hp_override");
 
 	if (recentScoreIconString.length() < 1)
 		recentScoreIconString.insert(0, OsuIcons::ARROW_CIRCLE_UP);
@@ -184,10 +206,10 @@ void OsuUISongBrowserScoreButton::draw(Graphics *g)
 		g->translate(0.75f, 0.75f);
 		g->setColor(0xff000000);
 		g->setAlpha(0.75f);
-		g->drawString(scoreFont, (m_osu_scores_sort_by_pp->getBool() && !m_score.isLegacyScore ? string : (m_style == STYLE::TOP_RANKS ? string : m_sScoreScore)));
+		g->drawString(scoreFont, (m_osu_scores_sort_by_pp_ref->getBool() && !m_score.isLegacyScore ? string : (m_style == STYLE::TOP_RANKS ? string : m_sScoreScore)));
 		g->translate(-0.75f, -0.75f);
 		g->setColor((m_style == STYLE::TOP_RANKS ? 0xffdeff87 : 0xffffffff));
-		g->drawString(scoreFont, (m_osu_scores_sort_by_pp->getBool() && !m_score.isLegacyScore ? string : (m_style == STYLE::TOP_RANKS ? string : m_sScoreScore)));
+		g->drawString(scoreFont, (m_osu_scores_sort_by_pp_ref->getBool() && !m_score.isLegacyScore ? string : (m_style == STYLE::TOP_RANKS ? string : m_sScoreScore)));
 
 		if (m_style == STYLE::TOP_RANKS)
 		{
@@ -515,18 +537,24 @@ void OsuUISongBrowserScoreButton::onRightMouseUpInside()
 {
 	const Vector2 pos = engine->getMouse()->getPos();
 
-	if (m_contextMenu != NULL && !m_score.isLegacyScore)
+	if (m_contextMenu != NULL)
 	{
 		m_contextMenu->setPos(pos);
 		m_contextMenu->setRelPos(pos);
 		m_contextMenu->begin(0, true);
 		{
-			m_contextMenu->addButton("Use Mods", 1);
+			m_contextMenu->addButton("Use Mods", 1); // for scores without mods this will just nomod
 			CBaseUIButton *spacer = m_contextMenu->addButton("---");
 			spacer->setEnabled(false);
 			spacer->setTextColor(0xff888888);
 			spacer->setTextDarkColor(0xff000000);
-			m_contextMenu->addButton("Delete Score", 2);
+			CBaseUIButton *deleteButton = m_contextMenu->addButton("Delete Score", 2);
+			if (m_score.isLegacyScore)
+			{
+				deleteButton->setEnabled(false);
+				deleteButton->setTextColor(0xff888888);
+				deleteButton->setTextDarkColor(0xff000000);
+			}
 		}
 		m_contextMenu->end();
 		m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUISongBrowserScoreButton::onContextMenu) );
@@ -550,8 +578,97 @@ void OsuUISongBrowserScoreButton::onContextMenu(UString text, int id)
 
 void OsuUISongBrowserScoreButton::onUseModsClicked()
 {
-	// TODO: implement
-	debugLog("TODO ...\n");
+	bool nomod = (m_score.modsLegacy == 0);
+
+	// legacy mods (common to all scores)
+	{
+		m_osu->getModSelector()->resetMods();
+		m_osu_mods_ref->setValue(getModsStringForConVar(m_score.modsLegacy));
+	}
+
+	if (m_score.isLegacyScore || m_score.isImportedLegacyScore)
+	{
+		// legacy score (or imported legacy score), no custom beatmap values necessary, can get everything directly from modsLegacy
+
+		// (nothing to do here, everything is already handled above in the "legacy mods" block)
+	}
+	else
+	{
+		// mcosu score, custom values for everything possible, have to calculate and check whether to apply any overrides (or leave default)
+		// reason being that just because the speedMultiplier stored in the score = 1.5x doesn't mean that we should move the override slider to 1.5x
+		// especially for CS/AR/OD/HP, because those get stored in the score as directly coming from OsuBeatmap::getAR() (so with pre-applied difficultyMultiplier etc.)
+
+		// overrides
+
+		// NOTE: if the beatmap is loaded (in db), then use the raw base values from there, otherwise trust potentially incorrect stored values from score (see explanation above)
+		float tempAR = m_score.AR;
+		float tempCS = m_score.CS;
+		float tempOD = m_score.OD;
+		float tempHP = m_score.HP;
+		const OsuDatabaseBeatmap *diff2 = m_osu->getSongBrowser()->getDatabase()->getBeatmapDifficulty(m_score.md5hash);
+		if (diff2 != NULL)
+		{
+			tempAR = diff2->getAR();
+			tempCS = diff2->getCS();
+			tempOD = diff2->getOD();
+			tempHP = diff2->getHP();
+		}
+
+		const OsuReplay::BEATMAP_VALUES legacyValues = OsuReplay::getBeatmapValuesForModsLegacy(m_score.modsLegacy, tempAR, tempCS, tempOD, tempHP);
+
+		// beatmap values
+		{
+			const float beatmapValueComparisonEpsilon = 0.0001f;
+			if (std::abs(legacyValues.AR - m_score.AR) >= beatmapValueComparisonEpsilon)
+			{
+				m_osu_ar_override_ref->setValue(m_score.AR);
+				nomod = false;
+			}
+			if (std::abs(legacyValues.CS - m_score.CS) >= beatmapValueComparisonEpsilon)
+			{
+				m_osu_cs_override_ref->setValue(m_score.CS);
+				nomod = false;
+			}
+			if (std::abs(legacyValues.OD - m_score.OD) >= beatmapValueComparisonEpsilon)
+			{
+				m_osu_od_override_ref->setValue(m_score.OD);
+				nomod = false;
+			}
+			if (std::abs(legacyValues.HP - m_score.HP) >= beatmapValueComparisonEpsilon)
+			{
+				m_osu_hp_override_ref->setValue(m_score.HP);
+				nomod = false;
+			}
+		}
+
+		// speed multiplier
+		{
+			const float speedMultiplierComparisonEpsilon = 0.0001f;
+			if (std::abs(legacyValues.speedMultiplier - m_score.speedMultiplier) >= speedMultiplierComparisonEpsilon)
+			{
+				m_osu_speed_override_ref->setValue(m_score.speedMultiplier);
+				nomod = false;
+			}
+		}
+
+		// experimental mods
+		{
+			const std::vector<UString> experimentalMods = m_score.experimentalModsConVars.split(";");
+			for (size_t i=0; i<experimentalMods.size(); i++)
+			{
+				ConVar *cvar = convar->getConVarByName(experimentalMods[i], false);
+				if (cvar != NULL)
+				{
+					cvar->setValue(1.0f); // enable experimental mod (true, 1.0f)
+					nomod = false;
+				}
+				else
+					debugLog("couldn't find \"%s\"\n", experimentalMods[i].toUtf8());
+			}
+		}
+	}
+
+	engine->getSound()->play(nomod ? m_osu->getSkin()->getCheckOff() : m_osu->getSkin()->getCheckOn());
 }
 
 void OsuUISongBrowserScoreButton::onDeleteScoreClicked()
@@ -610,7 +727,7 @@ void OsuUISongBrowserScoreButton::setScore(OsuDatabase::Score score, int index, 
 	m_sScoreScorePP = UString::format((score.perfect ? "PP: %ipp (%ix FC)" : "PP: %ipp (%ix)"), (int)std::round(score.pp), score.comboMax);
 	m_sScoreAccuracy = UString::format("%.2f%%", accuracy);
 	m_sScoreAccuracyFC = UString::format((score.perfect ? "FC %.2f%%" : "%.2f%%"), accuracy);
-	m_sScoreMods = getModsString(score.modsLegacy);
+	m_sScoreMods = getModsStringForDisplay(score.modsLegacy);
 	if (score.experimentalModsConVars.length() > 0)
 	{
 		if (m_sScoreMods.length() > 0)
@@ -702,7 +819,30 @@ bool OsuUISongBrowserScoreButton::isContextMenuVisible()
 	return (m_contextMenu != NULL && m_contextMenu->isVisible());
 }
 
-UString OsuUISongBrowserScoreButton::getModsString(int mods)
+OsuSkinImage *OsuUISongBrowserScoreButton::getGradeImage(Osu *osu, OsuScore::GRADE grade)
+{
+	switch (grade)
+	{
+	case OsuScore::GRADE::GRADE_XH:
+		return osu->getSkin()->getRankingXHsmall();
+	case OsuScore::GRADE::GRADE_SH:
+		return osu->getSkin()->getRankingSHsmall();
+	case OsuScore::GRADE::GRADE_X:
+		return osu->getSkin()->getRankingXsmall();
+	case OsuScore::GRADE::GRADE_S:
+		return osu->getSkin()->getRankingSsmall();
+	case OsuScore::GRADE::GRADE_A:
+		return osu->getSkin()->getRankingAsmall();
+	case OsuScore::GRADE::GRADE_B:
+		return osu->getSkin()->getRankingBsmall();
+	case OsuScore::GRADE::GRADE_C:
+		return osu->getSkin()->getRankingCsmall();
+	default:
+		return osu->getSkin()->getRankingDsmall();
+	}
+}
+
+UString OsuUISongBrowserScoreButton::getModsStringForDisplay(int mods)
 {
 	UString modsString;
 
@@ -749,25 +889,46 @@ UString OsuUISongBrowserScoreButton::getModsString(int mods)
 	return modsString;
 }
 
-OsuSkinImage *OsuUISongBrowserScoreButton::getGradeImage(Osu *osu, OsuScore::GRADE grade)
+UString OsuUISongBrowserScoreButton::getModsStringForConVar(int mods)
 {
-	switch (grade)
-	{
-	case OsuScore::GRADE::GRADE_XH:
-		return osu->getSkin()->getRankingXHsmall();
-	case OsuScore::GRADE::GRADE_SH:
-		return osu->getSkin()->getRankingSHsmall();
-	case OsuScore::GRADE::GRADE_X:
-		return osu->getSkin()->getRankingXsmall();
-	case OsuScore::GRADE::GRADE_S:
-		return osu->getSkin()->getRankingSsmall();
-	case OsuScore::GRADE::GRADE_A:
-		return osu->getSkin()->getRankingAsmall();
-	case OsuScore::GRADE::GRADE_B:
-		return osu->getSkin()->getRankingBsmall();
-	case OsuScore::GRADE::GRADE_C:
-		return osu->getSkin()->getRankingCsmall();
-	default:
-		return osu->getSkin()->getRankingDsmall();
-	}
+	UString modsString = "  "; // double space to reset if emtpy
+
+	// NOTE: the order here is different on purpose, to avoid name collisions during parsing (see Osu::updateMods())
+	// order is the same as in OsuModSelector::updateModConVar()
+	if (mods & OsuReplay::Mods::Easy)
+		modsString.append("ez");
+	if (mods & OsuReplay::Mods::HardRock)
+		modsString.append("hr");
+	if (mods & OsuReplay::Mods::Relax)
+		modsString.append("relax");
+	if (mods & OsuReplay::Mods::NoFail)
+		modsString.append("nf");
+	if (mods & OsuReplay::Mods::SuddenDeath)
+		modsString.append("sd");
+	if (mods & OsuReplay::Mods::Perfect)
+		modsString.append("ss,");
+	if (mods & OsuReplay::Mods::Relax2)
+		modsString.append("autopilot");
+	if (mods & OsuReplay::Mods::HalfTime)
+		modsString.append("ht");
+	if (mods & OsuReplay::Mods::DoubleTime)
+		modsString.append("dt");
+	if (mods & OsuReplay::Mods::Nightcore)
+		modsString.append("nc");
+	if (mods & OsuReplay::Mods::SpunOut)
+		modsString.append("spunout");
+	if (mods & OsuReplay::Mods::Hidden)
+		modsString.append("hd");
+	if (mods & OsuReplay::Mods::Autoplay)
+		modsString.append("auto");
+	if (mods & OsuReplay::Mods::Nightmare)
+		modsString.append("nm");
+	if (mods & OsuReplay::Mods::Target)
+		modsString.append("practicetarget");
+	if (mods & OsuReplay::Mods::TouchDevice)
+		modsString.append("nerftd");
+	if (mods & OsuReplay::Mods::ScoreV2)
+		modsString.append("v2");
+
+	return modsString;
 }

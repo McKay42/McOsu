@@ -565,7 +565,7 @@ int OsuScore::getModsLegacy()
 	return modsLegacy;
 }
 
-UString OsuScore::getModsString()
+UString OsuScore::getModsStringForRichPresence()
 {
 	UString modsString;
 

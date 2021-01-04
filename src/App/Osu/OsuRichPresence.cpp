@@ -87,7 +87,7 @@ void OsuRichPresence::onPlayEnd(Osu *osu, bool quit)
 			scoreInfo.append(UString::format(" %.2f%%", osu->getScore()->getAccuracy()*100.0f));
 
 			// mods
-			UString mods = osu->getScore()->getModsString();
+			UString mods = osu->getScore()->getModsStringForRichPresence();
 			if (mods.length() > 0)
 			{
 				scoreInfo.append(" ");

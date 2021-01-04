@@ -511,7 +511,7 @@ void OsuRankingScreen::setScore(OsuScore *score)
 	m_fStarsTomSpeed = score->getStarsTomSpeed();
 	m_fPPv2 = score->getPPv2();
 
-	const UString modsString = OsuUISongBrowserScoreButton::getModsString(score->getModsLegacy());
+	const UString modsString = OsuUISongBrowserScoreButton::getModsStringForDisplay(score->getModsLegacy());
 	if (modsString.length() > 0)
 	{
 		m_sMods = "Mods: ";
@@ -578,7 +578,7 @@ void OsuRankingScreen::setScore(OsuDatabase::Score score, UString dateTime)
 	m_fOD = std::round(OsuGameRules::getRawOverallDifficultyForSpeedMultiplier(OsuGameRules::getRawHitWindow300(score.OD), score.speedMultiplier) * 100.0f) / 100.0f;
 	m_fHP = std::round(score.HP * 100.0f) / 100.0f;
 
-	const UString modsString = OsuUISongBrowserScoreButton::getModsString(score.modsLegacy);
+	const UString modsString = OsuUISongBrowserScoreButton::getModsStringForDisplay(score.modsLegacy);
 	if (modsString.length() > 0)
 	{
 		m_sMods = "Mods: ";
