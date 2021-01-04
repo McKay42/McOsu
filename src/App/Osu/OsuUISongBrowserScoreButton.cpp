@@ -13,6 +13,7 @@
 #include "SoundEngine.h"
 #include "ConVar.h"
 #include "Mouse.h"
+#include "Keyboard.h"
 
 #include "Osu.h"
 #include "OsuIcons.h"
@@ -539,7 +540,12 @@ void OsuUISongBrowserScoreButton::onContextMenu(UString text, int id)
 	if (id == 1)
 		onUseModsClicked();
 	if (id == 2)
-		onDeleteScoreClicked();
+	{
+		if (engine->getKeyboard()->isShiftDown())
+			onDeleteScoreConfirmed("", 1);
+		else
+			onDeleteScoreClicked();
+	}
 }
 
 void OsuUISongBrowserScoreButton::onUseModsClicked()

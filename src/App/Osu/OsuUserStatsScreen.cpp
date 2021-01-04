@@ -581,7 +581,12 @@ void OsuUserStatsScreen::onMenuSelected(UString text, int id)
 	else if (id == 2)
 		onRecalculatePP(true);
 	else if (id == 3)
-		onDeleteAllScoresClicked();
+	{
+		if (engine->getKeyboard()->isShiftDown())
+			onDeleteAllScoresConfirmed("", 1);
+		else
+			onDeleteAllScoresClicked();
+	}
 }
 
 void OsuUserStatsScreen::onRecalculatePP(bool importLegacyScores)
