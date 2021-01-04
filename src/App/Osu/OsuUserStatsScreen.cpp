@@ -567,7 +567,12 @@ void OsuUserStatsScreen::onMenuClicked(CBaseUIButton *button)
 		spacer->setEnabled(false);
 		spacer->setTextColor(0xff888888);
 		spacer->setTextDarkColor(0xff000000);
-		m_contextMenu->addButton("Delete All Scores", 3);
+		{
+			UString deleteText = "Delete All Scores of \"";
+			deleteText.append(m_name_ref->getString());
+			deleteText.append("\"");
+			m_contextMenu->addButton(deleteText, 3);
+		}
 	}
 	m_contextMenu->end();
 	m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUserStatsScreen::onMenuSelected) );
@@ -616,7 +621,7 @@ void OsuUserStatsScreen::onDeleteAllScoresClicked()
 	m_contextMenu->begin();
 	{
 		{
-			UString reallyText = "Really delete all scores for \"";
+			UString reallyText = "Really delete all scores of \"";
 			reallyText.append(m_name_ref->getString());
 			reallyText.append("\"?");
 			m_contextMenu->addButton(reallyText)->setEnabled(false);
