@@ -27,22 +27,25 @@
 #include "OsuSpinner.h"
 #include "OsuManiaNote.h"
 
+ConVar osu_mod_random("osu_mod_random", false);
+ConVar osu_mod_random_circle_offset_x_percent("osu_mod_random_circle_offset_x_percent", 1.0f, "how much the randomness affects things");
+ConVar osu_mod_random_circle_offset_y_percent("osu_mod_random_circle_offset_y_percent", 1.0f, "how much the randomness affects things");
+ConVar osu_mod_random_slider_offset_x_percent("osu_mod_random_slider_offset_x_percent", 1.0f, "how much the randomness affects things");
+ConVar osu_mod_random_slider_offset_y_percent("osu_mod_random_slider_offset_y_percent", 1.0f, "how much the randomness affects things");
+ConVar osu_mod_random_spinner_offset_x_percent("osu_mod_random_spinner_offset_x_percent", 1.0f, "how much the randomness affects things");
+ConVar osu_mod_random_spinner_offset_y_percent("osu_mod_random_spinner_offset_y_percent", 1.0f, "how much the randomness affects things");
+ConVar osu_mod_reverse_sliders("osu_mod_reverse_sliders", false);
+ConVar osu_show_approach_circle_on_first_hidden_object("osu_show_approach_circle_on_first_hidden_object", true);
+
+ConVar osu_stars_stacking("osu_stars_stacking", true, "respect hitobject stacking before calculating stars/pp");
+
 unsigned long long OsuDatabaseBeatmap::sortHackCounter = 0;
 
 ConVar *OsuDatabaseBeatmap::m_osu_slider_curve_max_length_ref = NULL;
-ConVar *OsuDatabaseBeatmap::m_osu_show_approach_circle_on_first_hidden_object_ref = NULL;
 ConVar *OsuDatabaseBeatmap::m_osu_stars_xexxar_angles_sliders_ref = NULL;
 ConVar *OsuDatabaseBeatmap::m_osu_stars_stacking_ref = NULL;
 ConVar *OsuDatabaseBeatmap::m_osu_debug_pp_ref = NULL;
 ConVar *OsuDatabaseBeatmap::m_osu_slider_end_inside_check_offset_ref = NULL;
-ConVar *OsuDatabaseBeatmap::m_osu_mod_random_ref = NULL;
-ConVar *OsuDatabaseBeatmap::m_osu_mod_random_circle_offset_x_percent_ref = NULL;
-ConVar *OsuDatabaseBeatmap::m_osu_mod_random_circle_offset_y_percent_ref = NULL;
-ConVar *OsuDatabaseBeatmap::m_osu_mod_random_slider_offset_x_percent_ref = NULL;
-ConVar *OsuDatabaseBeatmap::m_osu_mod_random_slider_offset_y_percent_ref = NULL;
-ConVar *OsuDatabaseBeatmap::m_osu_mod_reverse_sliders_ref = NULL;
-ConVar *OsuDatabaseBeatmap::m_osu_mod_random_spinner_offset_x_percent_ref = NULL;
-ConVar *OsuDatabaseBeatmap::m_osu_mod_random_spinner_offset_y_percent_ref = NULL;
 
 OsuDatabaseBeatmap::OsuDatabaseBeatmap(Osu *osu, UString filePath, UString folder)
 {
@@ -59,8 +62,6 @@ OsuDatabaseBeatmap::OsuDatabaseBeatmap(Osu *osu, UString filePath, UString folde
 	// convar refs
 	if (m_osu_slider_curve_max_length_ref == NULL)
 		m_osu_slider_curve_max_length_ref = convar->getConVarByName("osu_slider_curve_max_length");
-	if (m_osu_show_approach_circle_on_first_hidden_object_ref == NULL)
-		m_osu_show_approach_circle_on_first_hidden_object_ref = convar->getConVarByName("osu_show_approach_circle_on_first_hidden_object");
 	if (m_osu_stars_xexxar_angles_sliders_ref == NULL)
 		m_osu_stars_xexxar_angles_sliders_ref = convar->getConVarByName("osu_stars_xexxar_angles_sliders");
 	if (m_osu_stars_stacking_ref == NULL)
@@ -69,22 +70,6 @@ OsuDatabaseBeatmap::OsuDatabaseBeatmap(Osu *osu, UString filePath, UString folde
 		m_osu_debug_pp_ref = convar->getConVarByName("osu_debug_pp");
 	if (m_osu_slider_end_inside_check_offset_ref == NULL)
 		m_osu_slider_end_inside_check_offset_ref = convar->getConVarByName("osu_slider_end_inside_check_offset");
-	if (m_osu_mod_random_ref == NULL)
-		m_osu_mod_random_ref = convar->getConVarByName("osu_mod_random");
-	if (m_osu_mod_random_circle_offset_x_percent_ref == NULL)
-		m_osu_mod_random_circle_offset_x_percent_ref = convar->getConVarByName("osu_mod_random_circle_offset_x_percent");
-	if (m_osu_mod_random_circle_offset_y_percent_ref == NULL)
-		m_osu_mod_random_circle_offset_y_percent_ref = convar->getConVarByName("osu_mod_random_circle_offset_y_percent");
-	if (m_osu_mod_random_slider_offset_x_percent_ref == NULL)
-		m_osu_mod_random_slider_offset_x_percent_ref = convar->getConVarByName("osu_mod_random_slider_offset_x_percent");
-	if (m_osu_mod_random_slider_offset_y_percent_ref == NULL)
-		m_osu_mod_random_slider_offset_y_percent_ref = convar->getConVarByName("osu_mod_random_slider_offset_y_percent");
-	if (m_osu_mod_reverse_sliders_ref == NULL)
-		m_osu_mod_reverse_sliders_ref = convar->getConVarByName("osu_mod_reverse_sliders");
-	if (m_osu_mod_random_spinner_offset_x_percent_ref == NULL)
-		m_osu_mod_random_spinner_offset_x_percent_ref = convar->getConVarByName("osu_mod_random_spinner_offset_x_percent");
-	if (m_osu_mod_random_spinner_offset_y_percent_ref == NULL)
-		m_osu_mod_random_spinner_offset_y_percent_ref = convar->getConVarByName("osu_mod_random_spinner_offset_y_percent");
 
 
 
@@ -1227,10 +1212,10 @@ OsuDatabaseBeatmap::LOAD_GAMEPLAY_RESULT OsuDatabaseBeatmap::loadGameplay(OsuDat
 			{
 				HITCIRCLE &h = c.hitcircles[i];
 
-				if (m_osu_mod_random_ref->getBool())
+				if (osu_mod_random.getBool())
 				{
-					h.x = clamp<int>(h.x - (int)(((rand() % OsuGameRules::OSU_COORD_WIDTH) / 8.0f) * m_osu_mod_random_circle_offset_x_percent_ref->getFloat()), 0, OsuGameRules::OSU_COORD_WIDTH);
-					h.y = clamp<int>(h.y - (int)(((rand() % OsuGameRules::OSU_COORD_HEIGHT) / 8.0f) * m_osu_mod_random_circle_offset_y_percent_ref->getFloat()), 0, OsuGameRules::OSU_COORD_HEIGHT);
+					h.x = clamp<int>(h.x - (int)(((rand() % OsuGameRules::OSU_COORD_WIDTH) / 8.0f) * osu_mod_random_circle_offset_x_percent.getFloat()), 0, OsuGameRules::OSU_COORD_WIDTH);
+					h.y = clamp<int>(h.y - (int)(((rand() % OsuGameRules::OSU_COORD_HEIGHT) / 8.0f) * osu_mod_random_circle_offset_y_percent.getFloat()), 0, OsuGameRules::OSU_COORD_HEIGHT);
 				}
 
 				result.hitobjects.push_back(new OsuCircle(h.x, h.y, h.time, h.sampleType, h.number, false, h.colorCounter, h.colorOffset, beatmapStandard));
@@ -1282,16 +1267,16 @@ OsuDatabaseBeatmap::LOAD_GAMEPLAY_RESULT OsuDatabaseBeatmap::loadGameplay(OsuDat
 			{
 				SLIDER &s = c.sliders[i];
 
-				if (m_osu_mod_random_ref->getBool())
+				if (osu_mod_random.getBool())
 				{
 					for (int p=0; p<s.points.size(); p++)
 					{
-						s.points[p].x = clamp<int>(s.points[p].x - (int)(((rand() % OsuGameRules::OSU_COORD_WIDTH) / 3.0f) * m_osu_mod_random_slider_offset_x_percent_ref->getFloat()), 0, OsuGameRules::OSU_COORD_WIDTH);
-						s.points[p].y = clamp<int>(s.points[p].y - (int)(((rand() % OsuGameRules::OSU_COORD_HEIGHT) / 3.0f) * m_osu_mod_random_slider_offset_y_percent_ref->getFloat()), 0, OsuGameRules::OSU_COORD_HEIGHT);
+						s.points[p].x = clamp<int>(s.points[p].x - (int)(((rand() % OsuGameRules::OSU_COORD_WIDTH) / 3.0f) * osu_mod_random_slider_offset_x_percent.getFloat()), 0, OsuGameRules::OSU_COORD_WIDTH);
+						s.points[p].y = clamp<int>(s.points[p].y - (int)(((rand() % OsuGameRules::OSU_COORD_HEIGHT) / 3.0f) * osu_mod_random_slider_offset_y_percent.getFloat()), 0, OsuGameRules::OSU_COORD_HEIGHT);
 					}
 				}
 
-				if (m_osu_mod_reverse_sliders_ref->getBool())
+				if (osu_mod_reverse_sliders.getBool())
 					std::reverse(s.points.begin(), s.points.end());
 
 				result.hitobjects.push_back(new OsuSlider(s.type, s.repeat, s.pixelLength, s.points, s.hitSounds, s.ticks, s.sliderTime, s.sliderTimeWithoutRepeats, s.time, s.sampleType, s.number, false, s.colorCounter, s.colorOffset, beatmapStandard));
@@ -1304,10 +1289,10 @@ OsuDatabaseBeatmap::LOAD_GAMEPLAY_RESULT OsuDatabaseBeatmap::loadGameplay(OsuDat
 			{
 				SPINNER &s = c.spinners[i];
 
-				if (m_osu_mod_random_ref->getBool())
+				if (osu_mod_random.getBool())
 				{
-					s.x = clamp<int>(s.x - (int)(((rand() % OsuGameRules::OSU_COORD_WIDTH) / 1.25f) * (rand() % 2 == 0 ? 1.0f : -1.0f) * m_osu_mod_random_spinner_offset_x_percent_ref->getFloat()), 0, OsuGameRules::OSU_COORD_WIDTH);
-					s.y = clamp<int>(s.y - (int)(((rand() % OsuGameRules::OSU_COORD_HEIGHT) / 1.25f) * (rand() % 2 == 0 ? 1.0f : -1.0f) * m_osu_mod_random_spinner_offset_y_percent_ref->getFloat()), 0, OsuGameRules::OSU_COORD_HEIGHT);
+					s.x = clamp<int>(s.x - (int)(((rand() % OsuGameRules::OSU_COORD_WIDTH) / 1.25f) * (rand() % 2 == 0 ? 1.0f : -1.0f) * osu_mod_random_spinner_offset_x_percent.getFloat()), 0, OsuGameRules::OSU_COORD_WIDTH);
+					s.y = clamp<int>(s.y - (int)(((rand() % OsuGameRules::OSU_COORD_HEIGHT) / 1.25f) * (rand() % 2 == 0 ? 1.0f : -1.0f) * osu_mod_random_spinner_offset_y_percent.getFloat()), 0, OsuGameRules::OSU_COORD_HEIGHT);
 				}
 
 				result.hitobjects.push_back(new OsuSpinner(s.x, s.y, s.time, s.sampleType, false, s.endTime, beatmapStandard));
@@ -1427,7 +1412,7 @@ OsuDatabaseBeatmap::LOAD_GAMEPLAY_RESULT OsuDatabaseBeatmap::loadGameplay(OsuDat
 	}
 
 	// special rule for first hitobject (for 1 approach circle with HD)
-	if (m_osu_show_approach_circle_on_first_hidden_object_ref->getBool())
+	if (osu_show_approach_circle_on_first_hidden_object.getBool())
 	{
 		if (result.hitobjects.size() > 0)
 			result.hitobjects[0]->setForceDrawApproachCircle(true);

@@ -345,19 +345,10 @@ private:
 	static unsigned long long sortHackCounter;
 
 	static ConVar *m_osu_slider_curve_max_length_ref;
-	static ConVar *m_osu_show_approach_circle_on_first_hidden_object_ref;
 	static ConVar *m_osu_stars_xexxar_angles_sliders_ref;
 	static ConVar *m_osu_stars_stacking_ref;
 	static ConVar *m_osu_debug_pp_ref;
 	static ConVar *m_osu_slider_end_inside_check_offset_ref;
-	static ConVar *m_osu_mod_random_ref;
-	static ConVar *m_osu_mod_random_circle_offset_x_percent_ref;
-	static ConVar *m_osu_mod_random_circle_offset_y_percent_ref;
-	static ConVar *m_osu_mod_random_slider_offset_x_percent_ref;
-	static ConVar *m_osu_mod_random_slider_offset_y_percent_ref;
-	static ConVar *m_osu_mod_reverse_sliders_ref;
-	static ConVar *m_osu_mod_random_spinner_offset_x_percent_ref;
-	static ConVar *m_osu_mod_random_spinner_offset_y_percent_ref;
 
 
 
