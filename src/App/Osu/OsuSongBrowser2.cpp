@@ -486,7 +486,7 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 
 	CBaseUIButton *modeButton = addBottombarNavButton([this]() -> Image *{return m_osu->getSkin()->getSelectionMode();}, [this]() -> Image *{return m_osu->getSkin()->getSelectionModeOver();});
 	modeButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onSelectionMode) );
-	modeButton->setVisible(false); // NOTE: hidden for now. can support weird skin songbrowser overlays later
+	modeButton->setVisible(false); // NOTE: hidden for now. can support weird skin songbrowser overlays later // NOTE: if visible, skins with very long selection-mode.png will overlap other buttons and break click handling
 	addBottombarNavButton([this]() -> Image *{return m_osu->getSkin()->getSelectionMods();}, [this]() -> Image *{return m_osu->getSkin()->getSelectionModsOver();})->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onSelectionMods) );
 	addBottombarNavButton([this]() -> Image *{return m_osu->getSkin()->getSelectionRandom();}, [this]() -> Image *{return m_osu->getSkin()->getSelectionRandomOver();})->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onSelectionRandom) );
 	//addBottombarNavButton([this]() -> Image *{return m_osu->getSkin()->getSelectionOptions();}, [this]() -> Image *{return m_osu->getSkin()->getSelectionOptionsOver();})->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser::onSelectionOptions) );
@@ -2510,7 +2510,7 @@ void OsuSongBrowser2::updateLayout()
 
 	// nav bar
 	const bool isWidescreen = ((int)(std::max(0, (int)((m_osu->getScreenWidth() - (m_osu->getScreenHeight() * 4.0f / 3.0f)) / 2.0f))) > 0);
-	const float navBarStart = Osu::getUIScale(m_osu, (isWidescreen ? 140.0f : 120.0f));
+	const float navBarXCounter = Osu::getUIScale(m_osu, (isWidescreen ? 140.0f : 120.0f));
 
 	// bottombar cont
 	for (int i=0; i<m_bottombarNavButtons.size(); i++)
@@ -2520,7 +2520,12 @@ void OsuSongBrowser2::updateLayout()
 	for (int i=0; i<m_bottombarNavButtons.size(); i++)
 	{
 		const int gap = (i == 1 ? Osu::getUIScale(m_osu, 3.0f) : 0) + (i == 2 ? Osu::getUIScale(m_osu, 2.0f) : 0);
-		m_bottombarNavButtons[i]->setRelPosX((i == 0 ? navBarStart : 0) + gap + (i > 0 ? m_bottombarNavButtons[i-1]->getRelPos().x + m_bottombarNavButtons[i-1]->getSize().x : 0));
+
+		// new, hardcoded offsets instead of dynamically using the button skin image widths (except starting at 3rd button)
+		m_bottombarNavButtons[i]->setRelPosX(navBarXCounter + gap + (i > 0 ? Osu::getUIScale(m_osu, 57.6f) : 0) + (i > 1 ? std::max((i-1)*Osu::getUIScale(m_osu, 48.0f), m_bottombarNavButtons[i-1]->getSize().x) : 0));
+
+		// old, overflows with some skins (e.g. kyu)
+		//m_bottombarNavButtons[i]->setRelPosX((i == 0 ? navBarXCounter : 0) + gap + (i > 0 ? m_bottombarNavButtons[i-1]->getRelPos().x + m_bottombarNavButtons[i-1]->getSize().x : 0));
 	}
 
 	const int userButtonHeight = m_bottombar->getSize().y*0.9f;
