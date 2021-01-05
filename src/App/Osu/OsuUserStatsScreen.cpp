@@ -151,7 +151,7 @@ private:
 						continue;
 					}
 
-					// 2) force reload metadata (because osu.db does not contain e.g. the version field)
+					// 1.5) reload metadata for sanity (maybe osu!.db has outdated AR/CS/OD/HP or some other shit)
 					if (!OsuDatabaseBeatmap::loadMetadata(diff2))
 						continue;
 
@@ -162,12 +162,10 @@ private:
 					const float CS = (score.isLegacyScore ? legacyValues.CS : score.CS);
 					const float OD = (score.isLegacyScore ? legacyValues.OD : score.OD);
 					const float HP = (score.isLegacyScore ? legacyValues.HP : score.HP);
-					const int version = diff2->getVersion();
-					const float stackLeniency = diff2->getStackLeniency();
 					const float speedMultiplier = (score.isLegacyScore ? legacyValues.speedMultiplier : score.speedMultiplier);
 
-					// 3) load hitobjects for diffcalc
-					OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT diffres = OsuDatabaseBeatmap::loadDifficultyHitObjects(osuFilePath, gameMode, AR, CS, version, stackLeniency, speedMultiplier);
+					// 2) load hitobjects for diffcalc
+					OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT diffres = OsuDatabaseBeatmap::loadDifficultyHitObjects(osuFilePath, gameMode, AR, CS, speedMultiplier);
 					if (diffres.diffobjects.size() < 1)
 					{
 						if (Osu::debug->getBool())
@@ -176,12 +174,12 @@ private:
 						continue;
 					}
 
-					// 4) calculate stars
+					// 3) calculate stars
 					double aimStars = 0.0;
 					double speedStars = 0.0;
 					const double totalStars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, CS, &aimStars, &speedStars);
 
-					// 5) calculate pp
+					// 4) calculate pp
 					double pp = 0.0;
 					int numHitObjects = 0;
 					int numSpinners = 0;
@@ -210,7 +208,7 @@ private:
 						pp = OsuDifficultyCalculator::calculatePPv2(score.modsLegacy, speedMultiplier, AR, OD, aimStars, speedStars, numHitObjects, numCircles, numSpinners, maxPossibleCombo, score.comboMax, score.numMisses, score.num300s, score.num100s, score.num50s);
 					}
 
-					// 6) overwrite score with new pp data (and handle imports)
+					// 5) overwrite score with new pp data (and handle imports)
 					const float oldPP = score.pp;
 					if (pp > 0.0f)
 					{

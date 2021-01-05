@@ -205,6 +205,7 @@ private:
 	ConVar *m_osu_scores_enabled;
 	ConVar *m_name_ref;
 
+	ConVar *m_osu_draw_scrubbing_timeline_strain_graph_ref;
 	ConVar *m_osu_hud_scrubbing_timeline_strains_height_ref;
 	ConVar *m_osu_hud_scrubbing_timeline_strains_alpha_ref;
 	ConVar *m_osu_hud_scrubbing_timeline_strains_aim_color_r_ref;

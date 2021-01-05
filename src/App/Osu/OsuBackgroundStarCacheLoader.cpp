@@ -46,11 +46,9 @@ void OsuBackgroundStarCacheLoader::initAsync()
 		const Osu::GAMEMODE gameMode = m_beatmap->getOsu()->getGamemode();
 		const float AR = m_beatmap->getAR();
 		const float CS = m_beatmap->getCS();
-		const int version = diff2->getVersion();
-		const float stackLeniency = diff2->getStackLeniency();
 		const float speedMultiplier = m_beatmap->getOsu()->getSpeedMultiplier(); // NOTE: not beatmap->getSpeedMultiplier()!
 
-		OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT diffres = OsuDatabaseBeatmap::loadDifficultyHitObjects(osuFilePath, gameMode, AR, CS, version, stackLeniency, speedMultiplier);
+		OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT diffres = OsuDatabaseBeatmap::loadDifficultyHitObjects(osuFilePath, gameMode, AR, CS, speedMultiplier);
 
 		for (size_t i=0; i<diffres.diffobjects.size(); i++)
 		{

@@ -28,6 +28,7 @@
 #include "OpenGLES2Interface.h"
 
 ConVar *OsuUISongBrowserSongDifficultyButton::m_osu_scores_enabled = NULL;
+ConVar *OsuUISongBrowserSongDifficultyButton::m_osu_songbrowser_dynamic_star_recalc_ref = NULL;
 
 OsuUISongBrowserSongDifficultyButton::OsuUISongBrowserSongDifficultyButton(Osu *osu, OsuSongBrowser2 *songBrowser, CBaseUIScrollView *view, OsuUIContextMenu *contextMenu, float xPos, float yPos, float xSize, float ySize, UString name, OsuDatabaseBeatmap *diff2, OsuUISongBrowserSongButton *parentSongButton) : OsuUISongBrowserSongButton(osu, songBrowser, view, contextMenu, xPos, yPos, xSize, ySize, name, NULL)
 {
@@ -36,6 +37,8 @@ OsuUISongBrowserSongDifficultyButton::OsuUISongBrowserSongDifficultyButton(Osu *
 
 	if (m_osu_scores_enabled == NULL)
 		m_osu_scores_enabled = convar->getConVarByName("osu_scores_enabled");
+	if (m_osu_songbrowser_dynamic_star_recalc_ref == NULL)
+		m_osu_songbrowser_dynamic_star_recalc_ref = convar->getConVarByName("osu_songbrowser_dynamic_star_recalc");
 
 	/*
 	m_sTitle = "Title";
@@ -104,7 +107,7 @@ void OsuUISongBrowserSongDifficultyButton::draw(Graphics *g)
 	// draw stars
 	const float starsNoMod = m_databaseBeatmap->getStarsNomod();
 	const bool areStarsInaccurate = (m_osu->getSongBrowser()->getBackgroundStarCalculator()->isDead() || !m_osu->getSongBrowser()->getBackgroundStarCalculator()->isAsyncReady());
-	const float stars = (areStarsInaccurate || !m_bSelected ? starsNoMod : m_osu->getSongBrowser()->getBackgroundStarCalculator()->getTotalStars());
+	const float stars = (areStarsInaccurate || !m_osu_songbrowser_dynamic_star_recalc_ref->getBool() || !m_bSelected ? starsNoMod : m_osu->getSongBrowser()->getBackgroundStarCalculator()->getTotalStars());
 	if (stars > 0)
 	{
 		const float starOffsetY = (size.y*0.85);

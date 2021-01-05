@@ -30,6 +30,7 @@ OsuUISongBrowserInfoLabel::OsuUISongBrowserInfoLabel(Osu *osu, float xPos, float
 	m_font = m_osu->getSubTitleFont();
 
 	m_osu_debug_ref = convar->getConVarByName("osu_debug");
+	m_osu_songbrowser_dynamic_star_recalc_ref = convar->getConVarByName("osu_songbrowser_dynamic_star_recalc");
 
 	m_iMargin = 10;
 
@@ -338,9 +339,9 @@ UString OsuUISongBrowserInfoLabel::buildDiffInfoString()
 	const bool starsAndModStarsAreEqual = (std::abs(stars - modStars) < starComparisonEpsilon);
 
 	UString finalString;
-	if (areStarsInaccurate)
-		finalString = UString::format("CS:%.3g AR:%.3g OD:%.3g HP:%.3g Stars:%.3g (recalculating ...)", CS, AR, OD, HP, stars);
-	else if (!starsAndModStarsAreEqual)
+	if (areStarsInaccurate && m_osu_songbrowser_dynamic_star_recalc_ref->getBool())
+		finalString = UString::format("CS:%.3g AR:%.3g OD:%.3g HP:%.3g Stars:%.3g *", CS, AR, OD, HP, stars);
+	else if (!starsAndModStarsAreEqual && m_osu_songbrowser_dynamic_star_recalc_ref->getBool())
 		finalString = UString::format("CS:%.3g AR:%.3g OD:%.3g HP:%.3g Stars:%.3g -> %.3g", CS, AR, OD, HP, stars, modStars);
 	else
 		finalString = UString::format("CS:%.3g AR:%.3g OD:%.3g HP:%.3g Stars:%.3g", CS, AR, OD, HP, stars);

@@ -150,8 +150,12 @@ OsuDatabaseBeatmap::PRIMITIVE_CONTAINER OsuDatabaseBeatmap::loadPrimitiveObjects
 	{
 		c.errorCode = 0;
 
+		c.stackLeniency = 0.7f;
+
 		c.sliderMultiplier = 1.0f;
 		c.sliderTickRate = 1.0f;
+
+		c.version = 14;
 	}
 
 	// open osu file for parsing
@@ -179,27 +183,41 @@ OsuDatabaseBeatmap::PRIMITIVE_CONTAINER OsuDatabaseBeatmap::loadPrimitiveObjects
 			const int commentIndex = curLine.find("//");
 			if (commentIndex == std::string::npos || commentIndex != 0) // ignore comments, but only if at the beginning of a line (e.g. allow Artist:DJ'TEKINA//SOMETHING)
 			{
-				if (curLine.find("[Difficulty]") != std::string::npos)
+				if (curLine.find("[General]") != std::string::npos)
 					curBlock = 1;
-				else if (curLine.find("[Events]") != std::string::npos)
+				else if (curLine.find("[Difficulty]") != std::string::npos)
 					curBlock = 2;
-				else if (curLine.find("[TimingPoints]") != std::string::npos)
+				else if (curLine.find("[Events]") != std::string::npos)
 					curBlock = 3;
-				else if (curLine.find("[Colours]") != std::string::npos)
+				else if (curLine.find("[TimingPoints]") != std::string::npos)
 					curBlock = 4;
-				else if (curLine.find("[HitObjects]") != std::string::npos)
+				else if (curLine.find("[Colours]") != std::string::npos)
 					curBlock = 5;
+				else if (curLine.find("[HitObjects]") != std::string::npos)
+					curBlock = 6;
 
 				switch (curBlock)
 				{
-				case 1: // Difficulty
+				case -1: // header (e.g. "osu file format v12")
+					{
+						sscanf(curLineChar, " osu file format v %i \n", &c.version);
+					}
+					break;
+
+				case 1: // General
+					{
+						sscanf(curLineChar, " StackLeniency : %f \n", &c.stackLeniency);
+					}
+					break;
+
+				case 2: // Difficulty
 					{
 						sscanf(curLineChar, " SliderMultiplier : %f \n", &c.sliderMultiplier);
 						sscanf(curLineChar, " SliderTickRate : %f \n", &c.sliderTickRate);
 					}
 					break;
 
-				case 2: // Events
+				case 3: // Events
 					{
 						int type, startTime, endTime;
 						if (sscanf(curLineChar, " %i , %i , %i \n", &type, &startTime, &endTime) == 3)
@@ -217,7 +235,7 @@ OsuDatabaseBeatmap::PRIMITIVE_CONTAINER OsuDatabaseBeatmap::loadPrimitiveObjects
 					}
 					break;
 
-				case 3: // TimingPoints
+				case 4: // TimingPoints
 					{
 						// old beatmaps: Offset, Milliseconds per Beat
 						// old new beatmaps: Offset, Milliseconds per Beat, Meter, Sample Type, Sample Set, Volume, !Inherited
@@ -270,7 +288,7 @@ OsuDatabaseBeatmap::PRIMITIVE_CONTAINER OsuDatabaseBeatmap::loadPrimitiveObjects
 					}
 					break;
 
-				case 4: // Colours
+				case 5: // Colours
 					{
 						int comboNum;
 						int r,g,b;
@@ -279,7 +297,7 @@ OsuDatabaseBeatmap::PRIMITIVE_CONTAINER OsuDatabaseBeatmap::loadPrimitiveObjects
 					}
 					break;
 
-				case 5: // HitObjects
+				case 6: // HitObjects
 
 					// circles:
 					// x,y,time,type,hitSound,addition
@@ -601,7 +619,7 @@ void OsuDatabaseBeatmap::calculateSliderTimesClicksTicks(std::vector<SLIDER> &sl
 	}
 }
 
-OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT OsuDatabaseBeatmap::loadDifficultyHitObjects(const UString &osuFilePath, Osu::GAMEMODE gameMode, float AR, float CS, int version, float stackLeniency, float speedMultiplier, bool calculateStarsInaccurately)
+OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT OsuDatabaseBeatmap::loadDifficultyHitObjects(const UString &osuFilePath, Osu::GAMEMODE gameMode, float AR, float CS, float speedMultiplier, bool calculateStarsInaccurately)
 {
 	LOAD_DIFFOBJ_RESULT result = LOAD_DIFFOBJ_RESULT();
 
@@ -711,7 +729,7 @@ OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT OsuDatabaseBeatmap::loadDifficultyHitObj
 
 		const float approachTime = OsuGameRules::getApproachTimeForStacking(finalAR);
 
-		if (version > 5)
+		if (c.version > 5)
 		{
 			// peppy's algorithm
 			// https://gist.github.com/peppy/1167470
@@ -741,7 +759,7 @@ OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT OsuDatabaseBeatmap::loadDifficultyHitObj
 						if (isSpinnerN)
 							continue;
 
-						if (objectI->time - (approachTime * stackLeniency) > (objectN->endTime))
+						if (objectI->time - (approachTime * c.stackLeniency) > (objectN->endTime))
 							break;
 
 						Vector2 objectNEndPosition = objectN->getOriginalRawPosAt(objectN->time + objectN->getDuration());
@@ -775,7 +793,7 @@ OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT OsuDatabaseBeatmap::loadDifficultyHitObj
 						if (isSpinner)
 							continue;
 
-						if (objectI->time - (approachTime * stackLeniency) > objectN->time)
+						if (objectI->time - (approachTime * c.stackLeniency) > objectN->time)
 							break;
 
 						if (((objectN->getDuration() != 0 ? objectN->getOriginalRawPosAt(objectN->time + objectN->getDuration()) : objectN->getOriginalRawPosAt(objectN->time)) - objectI->getOriginalRawPosAt(objectI->time)).length() < STACK_LENIENCE)
@@ -808,7 +826,7 @@ OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT OsuDatabaseBeatmap::loadDifficultyHitObj
 				{
 					OsuDifficultyHitObject *objectJ = &result.diffobjects[j];
 
-					if (objectJ->time - (approachTime * stackLeniency) > startTime)
+					if (objectJ->time - (approachTime * c.stackLeniency) > startTime)
 						break;
 
 					// "The start position of the hitobject, or the position at the end of the path if the hitobject is a slider"
@@ -841,7 +859,7 @@ OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT OsuDatabaseBeatmap::loadDifficultyHitObj
 		}
 	}
 
-	// apply speed multiplier from beatmap (if present)
+	// apply speed multiplier (if present)
 	if (speedMultiplier != 1.0f && speedMultiplier > 0.0f)
 	{
 		const double invSpeedMultiplier = 1.0 / (double)speedMultiplier;
@@ -1157,7 +1175,7 @@ OsuDatabaseBeatmap::LOAD_GAMEPLAY_RESULT OsuDatabaseBeatmap::loadGameplay(OsuDat
 {
 	LOAD_GAMEPLAY_RESULT result = LOAD_GAMEPLAY_RESULT();
 
-	// NOTE: reload metadata (force ensures that all necessary data is ready for creating hitobjects and playing etc.)
+	// NOTE: reload metadata (force ensures that all necessary data is ready for creating hitobjects and playing etc., also if beatmap file is changed manually in the meantime)
 	if (!loadMetadata(databaseBeatmap))
 	{
 		result.errorCode = 1;
@@ -1177,6 +1195,8 @@ OsuDatabaseBeatmap::LOAD_GAMEPLAY_RESULT OsuDatabaseBeatmap::loadGameplay(OsuDat
 	databaseBeatmap->m_timingpoints.swap(c.timingpoints);
 	databaseBeatmap->m_fSliderMultiplier = c.sliderMultiplier;
 	databaseBeatmap->m_fSliderTickRate = c.sliderTickRate;
+	databaseBeatmap->m_fStackLeniency = c.stackLeniency;
+	databaseBeatmap->m_iVersion = c.version;
 
 	// check if we have any timingpoints at all
 	if (databaseBeatmap->m_timingpoints.size() == 0)
@@ -1303,11 +1323,9 @@ OsuDatabaseBeatmap::LOAD_GAMEPLAY_RESULT OsuDatabaseBeatmap::loadGameplay(OsuDat
 				const Osu::GAMEMODE gameMode = Osu::GAMEMODE::STD;
 				const float AR = beatmap->getAR();
 				const float CS = beatmap->getCS();
-				const int version = databaseBeatmap->m_iVersion;
-				const float stackLeniency = databaseBeatmap->m_fStackLeniency;
 				const float speedMultiplier = databaseBeatmap->m_osu->getSpeedMultiplier(); // NOTE: not this->getSpeedMultiplier()!
 
-				LOAD_DIFFOBJ_RESULT diffres = OsuDatabaseBeatmap::loadDifficultyHitObjects(osuFilePath, gameMode, AR, CS, version, stackLeniency, speedMultiplier);
+				LOAD_DIFFOBJ_RESULT diffres = OsuDatabaseBeatmap::loadDifficultyHitObjects(osuFilePath, gameMode, AR, CS, speedMultiplier);
 
 				double aim = 0.0;
 				double speed = 0.0;
@@ -1647,8 +1665,6 @@ OsuDatabaseBeatmapStarCalculator::OsuDatabaseBeatmapStarCalculator() : Resource(
 
 	m_fAR = 5.0f;
 	m_fCS = 5.0f;
-	m_iVersion = 14;
-	m_fStackLeniency = 0.7f;
 	m_fSpeedMultiplier = 1.0f;
 
 	m_totalStars = 0.0;
@@ -1669,7 +1685,7 @@ void OsuDatabaseBeatmapStarCalculator::initAsync()
 	m_speedStars = 0.0;
 
 	const Osu::GAMEMODE gameMode = Osu::GAMEMODE::STD;
-	OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT diffres = OsuDatabaseBeatmap::loadDifficultyHitObjects(m_sFilePath, gameMode, m_fAR, m_fCS, m_iVersion, m_fStackLeniency, m_fSpeedMultiplier);
+	OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT diffres = OsuDatabaseBeatmap::loadDifficultyHitObjects(m_sFilePath, gameMode, m_fAR, m_fCS, m_fSpeedMultiplier);
 
 	if (diffres.errorCode == 0)
 	{
@@ -1685,13 +1701,9 @@ void OsuDatabaseBeatmapStarCalculator::initAsync()
 
 void OsuDatabaseBeatmapStarCalculator::setBeatmapDifficulty(OsuDatabaseBeatmap *diff2, float AR, float CS, float speedMultiplier)
 {
-	// TODO: what if version is not loaded yet because of osu!.db
-
 	m_diff2 = diff2;
 
 	m_sFilePath = diff2->getFilePath();
-	m_iVersion = diff2->getVersion();
-	m_fStackLeniency = diff2->getStackLeniency();
 
 	m_fAR = AR;
 	m_fCS = CS;

@@ -116,7 +116,7 @@ public:
 
 
 
-	static LOAD_DIFFOBJ_RESULT loadDifficultyHitObjects(const UString &osuFilePath, Osu::GAMEMODE gameMode, float AR, float CS, int version, float stackLeniency, float speedMultiplier, bool calculateStarsInaccurately = false);
+	static LOAD_DIFFOBJ_RESULT loadDifficultyHitObjects(const UString &osuFilePath, Osu::GAMEMODE gameMode, float AR, float CS, float speedMultiplier, bool calculateStarsInaccurately = false);
 	static bool loadMetadata(OsuDatabaseBeatmap *databaseBeatmap);
 	static LOAD_GAMEPLAY_RESULT loadGameplay(OsuDatabaseBeatmap *databaseBeatmap, OsuBeatmap *beatmap);
 
@@ -326,8 +326,12 @@ private:
 		std::vector<TIMINGPOINT> timingpoints;
 		std::vector<Color> combocolors;
 
+		float stackLeniency;
+
 		float sliderMultiplier;
 		float sliderTickRate;
+
+		int version;
 	};
 
 
@@ -431,8 +435,8 @@ public:
 	inline double getAimStars() const {return m_aimStars.load();}
 	inline double getSpeedStars() const {return m_speedStars.load();}
 
-	inline std::vector<double> &getAimStrains() {return m_aimStrains;}
-	inline std::vector<double> &getSpeedStrains() {return m_speedStrains;}
+	inline const std::vector<double> &getAimStrains() const {return m_aimStrains;}
+	inline const std::vector<double> &getSpeedStrains() const {return m_speedStrains;}
 
 private:
 	virtual void init();
@@ -445,8 +449,6 @@ private:
 
 	float m_fAR;
 	float m_fCS;
-	int m_iVersion;
-	float m_fStackLeniency;
 	float m_fSpeedMultiplier;
 
 	std::atomic<double> m_totalStars;

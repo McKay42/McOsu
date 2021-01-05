@@ -70,9 +70,11 @@ ConVar osu_songbrowser_bottombar_percent("osu_songbrowser_bottombar_percent", 0.
 
 ConVar osu_draw_songbrowser_background_image("osu_draw_songbrowser_background_image", true);
 ConVar osu_draw_songbrowser_menu_background_image("osu_draw_songbrowser_menu_background_image", true);
+ConVar osu_draw_songbrowser_strain_graph("osu_draw_songbrowser_strain_graph", false);
 ConVar osu_songbrowser_background_fade_in_duration("osu_songbrowser_background_fade_in_duration", 0.1f);
 
 ConVar osu_songbrowser_search_delay("osu_songbrowser_search_delay", 0.5f, "delay until search update when entering text");
+ConVar osu_songbrowser_dynamic_star_recalc("osu_songbrowser_dynamic_star_recalc", true, "dynamically recalculate displayed star value of currently selected beatmap in songbrowser");
 
 
 
@@ -388,6 +390,7 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	m_osu_scores_enabled = convar->getConVarByName("osu_scores_enabled");
 	m_name_ref = convar->getConVarByName("name");
 
+	m_osu_draw_scrubbing_timeline_strain_graph_ref = convar->getConVarByName("osu_draw_scrubbing_timeline_strain_graph");
 	m_osu_hud_scrubbing_timeline_strains_height_ref = convar->getConVarByName("osu_hud_scrubbing_timeline_strains_height");
 	m_osu_hud_scrubbing_timeline_strains_alpha_ref = convar->getConVarByName("osu_hud_scrubbing_timeline_strains_alpha");
 	m_osu_hud_scrubbing_timeline_strains_aim_color_r_ref = convar->getConVarByName("osu_hud_scrubbing_timeline_strains_aim_color_r");
@@ -677,11 +680,19 @@ void OsuSongBrowser2::draw(Graphics *g)
 		}
 	}
 
+	// draw score browser
+	m_scoreBrowser->draw(g);
+
 	// draw strain graph of currently selected beatmap
-	if (getSelectedBeatmap() != NULL && getSelectedBeatmap()->getSelectedDifficulty2() != NULL)
+	if (osu_draw_songbrowser_strain_graph.getBool() && getSelectedBeatmap() != NULL && getSelectedBeatmap()->getSelectedDifficulty2() != NULL && m_backgroundStarCalculator->isAsyncReady())
 	{
-		const std::vector<double> &aimStrains = getSelectedBeatmap()->getAimStrains();
-		const std::vector<double> &speedStrains = getSelectedBeatmap()->getSpeedStrains();
+		// this is still WIP
+
+		///const std::vector<double> &aimStrains = getSelectedBeatmap()->getAimStrains();
+		///const std::vector<double> &speedStrains = getSelectedBeatmap()->getSpeedStrains();
+		const std::vector<double> &aimStrains = m_backgroundStarCalculator->getAimStrains();
+		const std::vector<double> &speedStrains = m_backgroundStarCalculator->getSpeedStrains();
+		const float speedMultiplier = m_osu->getSpeedMultiplier();
 
 		//const unsigned long lengthFullMS = beatmapLength;
 		//const unsigned long lengthMS = getSelectedBeatmap()->getLengthPlayable();
@@ -691,12 +702,9 @@ void OsuSongBrowser2::draw(Graphics *g)
 
 		if (aimStrains.size() > 0 && aimStrains.size() == speedStrains.size())
 		{
-			const float strainStepMS = 400.0f;
+			const float strainStepMS = 400.0f * speedMultiplier;
 
 			const unsigned long lengthMS = strainStepMS * aimStrains.size();
-
-			// TODO: multiply height by dpi scale
-			// TODO: add separate aim/speed strain drawing and convars/hotkeys
 
 			// get highest strain values for normalization
 			double highestAimStrain = 0.0;
@@ -727,13 +735,17 @@ void OsuSongBrowser2::draw(Graphics *g)
 			// draw strain bar graph
 			if (highestAimStrain > 0.0 && highestSpeedStrain > 0.0 && highestStrain > 0.0)
 			{
+				const float dpiScale = Osu::getUIScale();
+
 				const float graphWidth = m_scoreBrowser->getSize().x;
 
 				const float msPerPixel = (float)lengthMS / graphWidth;
 				const float strainWidth = strainStepMS / msPerPixel;
-				const float strainHeightMultiplier = m_osu_hud_scrubbing_timeline_strains_height_ref->getFloat();
+				const float strainHeightMultiplier = m_osu_hud_scrubbing_timeline_strains_height_ref->getFloat() * dpiScale;
 
-				const float alpha = m_osu_hud_scrubbing_timeline_strains_alpha_ref->getFloat();
+				McRect graphRect(0, m_bottombar->getPos().y - strainHeightMultiplier, graphWidth, strainHeightMultiplier);
+
+				const float alpha = (graphRect.contains(engine->getMouse()->getPos()) ? 1.0f : m_osu_hud_scrubbing_timeline_strains_alpha_ref->getFloat());
 
 				const Color aimStrainColor = COLORf(alpha, m_osu_hud_scrubbing_timeline_strains_aim_color_r_ref->getInt() / 255.0f, m_osu_hud_scrubbing_timeline_strains_aim_color_g_ref->getInt() / 255.0f, m_osu_hud_scrubbing_timeline_strains_aim_color_b_ref->getInt() / 255.0f);
 				const Color speedStrainColor = COLORf(alpha, m_osu_hud_scrubbing_timeline_strains_speed_color_r_ref->getInt() / 255.0f, m_osu_hud_scrubbing_timeline_strains_speed_color_g_ref->getInt() / 255.0f, m_osu_hud_scrubbing_timeline_strains_speed_color_b_ref->getInt() / 255.0f);
@@ -749,11 +761,17 @@ void OsuSongBrowser2::draw(Graphics *g)
 					const double speedStrainHeight = speedStrain * strainHeightMultiplier;
 					//const double strainHeight = strain * strainHeightMultiplier;
 
-					g->setColor(aimStrainColor);
-					g->fillRect(i*strainWidth, m_bottombar->getPos().y - aimStrainHeight, std::max(1.0f, std::round(strainWidth + 0.5f)), aimStrainHeight);
+					if (!engine->getKeyboard()->isShiftDown())
+					{
+						g->setColor(aimStrainColor);
+						g->fillRect(i*strainWidth, m_bottombar->getPos().y - aimStrainHeight, std::max(1.0f, std::round(strainWidth + 0.5f)), aimStrainHeight);
+					}
 
-					g->setColor(speedStrainColor);
-					g->fillRect(i*strainWidth, m_bottombar->getPos().y - aimStrainHeight - speedStrainHeight, std::max(1.0f, std::round(strainWidth + 0.5f)), speedStrainHeight + 1);
+					if (!engine->getKeyboard()->isControlDown())
+					{
+						g->setColor(speedStrainColor);
+						g->fillRect(i*strainWidth, m_bottombar->getPos().y - (engine->getKeyboard()->isShiftDown() ? 0 : aimStrainHeight) - speedStrainHeight, std::max(1.0f, std::round(strainWidth + 0.5f)), speedStrainHeight + 1);
+					}
 				}
 				g->setDepthBuffer(false);
 
@@ -770,7 +788,7 @@ void OsuSongBrowser2::draw(Graphics *g)
 
 					Vector2 topLeftCenter = Vector2(highestStrainIndex*strainWidth + strainWidth/2.0f, m_bottombar->getPos().y - aimStrainHeight - speedStrainHeight);
 
-					const float margin = 5.0f;
+					const float margin = 5.0f * dpiScale;
 
 					g->setColor(0xffffffff);
 					g->setAlpha(alpha);
@@ -781,6 +799,8 @@ void OsuSongBrowser2::draw(Graphics *g)
 					g->drawRect(topLeftCenter.x - margin*strainWidth - 4, topLeftCenter.y - margin*strainWidth - 4, strainWidth*2*margin + 8, aimStrainHeight + speedStrainHeight + 2*margin*strainWidth + 8);
 				}
 
+				// DEBUG:
+				/*
 				g->pushTransform();
 				{
 					g->translate(10, m_bottombar->getPos().y - 200);
@@ -792,12 +812,10 @@ void OsuSongBrowser2::draw(Graphics *g)
 					g->drawString(m_osu->getSubTitleFont(), UString::format("delta = %i%% (%f)", (int)(((highestStrain - averageStrain) / highestStrain) * 100.0f), (highestStrain - averageStrain)));
 				}
 				g->popTransform();
+				*/
 			}
 		}
 	}
-
-	// draw score browser
-	m_scoreBrowser->draw(g);
 
 	// draw song browser
 	m_songBrowser->draw(g);
@@ -977,6 +995,17 @@ void OsuSongBrowser2::drawSelectedBeatmapBackgroundImage(Graphics *g, Osu *osu, 
 
 void OsuSongBrowser2::update()
 {
+	// HACKHACK: temporarily putting this on top as to support recalc while inPlayMode() (and songbrowser is invisible) for drawing strain graph in scrubbing timeline
+	// handle background star calculation (1)
+	if (m_bBackgroundStarCalcScheduled)
+	{
+		m_bBackgroundStarCalcScheduled = false;
+		const bool force = m_bBackgroundStarCalcScheduledForce;
+		m_bBackgroundStarCalcScheduledForce = false;
+
+		recalculateStarsForSelectedBeatmap(force);
+	}
+
 	OsuScreenBackable::update();
 	if (!m_bVisible) return;
 
@@ -1099,15 +1128,7 @@ void OsuSongBrowser2::update()
 		onSearchUpdate();
 	}
 
-	// handle background star calculation
-	if (m_bBackgroundStarCalcScheduled)
-	{
-		m_bBackgroundStarCalcScheduled = false;
-		const bool force = m_bBackgroundStarCalcScheduledForce;
-		m_bBackgroundStarCalcScheduledForce = false;
-
-		recalculateStarsForSelectedBeatmap(force);
-	}
+	// handle background star calculation (2)
 	/*
 	if (m_beatmaps.size() > 0 && m_osu_database_dynamic_star_calculation_ref->getBool())
 	{
@@ -3579,16 +3600,21 @@ void OsuSongBrowser2::highlightScore(uint64_t unixTimestamp)
 
 void OsuSongBrowser2::recalculateStarsForSelectedBeatmap(bool force)
 {
-	debugLog("recalculateStarsForSelectedBeatmap(%i)\n", (int)force);
+	if (!osu_songbrowser_dynamic_star_recalc.getBool()) return;
 
 	if (m_selectedBeatmap == NULL || m_selectedBeatmap->getSelectedDifficulty2() == NULL) return;
 	if (!force && m_selectedBeatmap->getSelectedDifficulty2() == m_backgroundStarCalculator->getBeatmapDifficulty()) return;
 
-	if (m_osu->isInPlayMode())
+	// HACKHACK: temporarily deactivated, see OsuSongBrowser2::update(), but only if drawing scrubbing timeline strain graph is enabled
+	if (!m_osu_draw_scrubbing_timeline_strain_graph_ref->getBool())
 	{
-		m_bBackgroundStarCalcScheduled = true;
-		m_bBackgroundStarCalcScheduledForce = (m_bBackgroundStarCalcScheduledForce || force);
-		return;
+		if (m_osu->isInPlayMode())
+		{
+			m_bBackgroundStarCalcScheduled = true;
+			m_bBackgroundStarCalcScheduledForce = (m_bBackgroundStarCalcScheduledForce || force);
+
+			return;
+		}
 	}
 
 	if (checkHandleKillBackgroundStarCalculator(true))

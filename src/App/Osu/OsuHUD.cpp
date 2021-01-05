@@ -154,6 +154,7 @@ ConVar osu_draw_accuracy("osu_draw_accuracy", true);
 ConVar osu_draw_target_heatmap("osu_draw_target_heatmap", true);
 ConVar osu_draw_scrubbing_timeline("osu_draw_scrubbing_timeline", true);
 ConVar osu_draw_scrubbing_timeline_breaks("osu_draw_scrubbing_timeline_breaks", true);
+ConVar osu_draw_scrubbing_timeline_strain_graph("osu_draw_scrubbing_timeline_strain_graph", false);
 ConVar osu_draw_continue("osu_draw_continue", true);
 ConVar osu_draw_scoreboard("osu_draw_scoreboard", true);
 ConVar osu_draw_inputoverlay("osu_draw_inputoverlay", true);
@@ -431,8 +432,6 @@ void OsuHUD::draw(Graphics *g)
 			}
 		}
 
-		//if (beatmap->getSelectedDifficulty() != NULL) // TODO: dirty
-		//	drawScrubbingTimeline(g, beatmap->getTime(), beatmap->getLength(), beatmap->getLengthPlayable(), beatmap->getStartTimePlayable(), beatmap->getPercentFinishedPlayable(), breaks, beatmap->getSelectedDifficulty()->getAimStrains(), beatmap->getSelectedDifficulty()->getSpeedStrains(), beatmap->getSpeedMultiplier());
 		drawScrubbingTimeline(g, beatmap->getTime(), beatmap->getLength(), beatmap->getLengthPlayable(), beatmap->getStartTimePlayable(), beatmap->getPercentFinishedPlayable(), breaks);
 	}
 }
@@ -2579,7 +2578,7 @@ void OsuHUD::drawTargetHeatmap(Graphics *g, float hitcircleDiameter)
 	}
 }
 
-void OsuHUD::drawScrubbingTimeline(Graphics *g, unsigned long beatmapTime, unsigned long beatmapLength, unsigned long beatmapLengthPlayable, unsigned long beatmapStartTimePlayable, float beatmapPercentFinishedPlayable, const std::vector<BREAK> &breaks/*, const std::vector<double> &aimStrains, const std::vector<double> &speedStrains, float speedMultiplier*/)
+void OsuHUD::drawScrubbingTimeline(Graphics *g, unsigned long beatmapTime, unsigned long beatmapLength, unsigned long beatmapLengthPlayable, unsigned long beatmapStartTimePlayable, float beatmapPercentFinishedPlayable, const std::vector<BREAK> &breaks)
 {
 	const float dpiScale = Osu::getUIScale();
 
@@ -2604,92 +2603,97 @@ void OsuHUD::drawScrubbingTimeline(Graphics *g, unsigned long beatmapTime, unsig
 	const unsigned long endTimeMS = startTimeMS + lengthMS;
 	const unsigned long currentTimeMS = beatmapTime;
 
-	/*
-	// TODO: strains
-	if (aimStrains.size() > 0 && aimStrains.size() == speedStrains.size())
+	// draw strain graph
+	if (osu_draw_scrubbing_timeline_strain_graph.getBool() && m_osu->getSongBrowser()->getBackgroundStarCalculator()->isAsyncReady())
 	{
-		const float strainStepMS = 400.0f * speedMultiplier;
+		// this is still WIP
 
-		// TODO: multiply height by dpi scale
-		// TODO: add separate aim/speed strain drawing and convars/hotkeys
+		// TODO: should use strains from beatmap, not songbrowser (because songbrowser doesn't update onModUpdate() while playing)
+		const std::vector<double> &aimStrains = m_osu->getSongBrowser()->getBackgroundStarCalculator()->getAimStrains();
+		const std::vector<double> &speedStrains = m_osu->getSongBrowser()->getBackgroundStarCalculator()->getSpeedStrains();
+		const float speedMultiplier = m_osu->getSpeedMultiplier();
 
-		// get highest strain values for normalization
-		double highestAimStrain = 0.0;
-		double highestSpeedStrain = 0.0;
-		double highestStrain = 0.0;
-		int highestStrainIndex = -1;
-		for (int i=0; i<aimStrains.size(); i++)
+		if (aimStrains.size() > 0 && aimStrains.size() == speedStrains.size())
 		{
-			const double aimStrain = aimStrains[i];
-			const double speedStrain = speedStrains[i];
-			const double strain = aimStrain + speedStrain;
+			const float strainStepMS = 400.0f * speedMultiplier;
 
-			if (strain > highestStrain)
-			{
-				highestStrain = strain;
-				highestStrainIndex = i;
-			}
-			if (aimStrain > highestAimStrain)
-				highestAimStrain = aimStrain;
-			if (speedStrain > highestSpeedStrain)
-				highestSpeedStrain = speedStrain;
-		}
-
-		// draw strain bar graph
-		if (highestAimStrain > 0.0 && highestSpeedStrain > 0.0 && highestStrain > 0.0)
-		{
-			const float msPerPixel = (float)lengthMS / (float)(m_osu->getScreenWidth() - (((float)startTimeMS / (float)endTimeMS))*m_osu->getScreenWidth());
-			const float strainWidth = strainStepMS / msPerPixel;
-			const float strainHeightMultiplier = osu_hud_scrubbing_timeline_strains_height.getFloat();
-
-			const float offsetX = ((float)startTimeMS / (float)strainStepMS) * strainWidth; // compensate for startTimeMS
-
-			const float alpha = osu_hud_scrubbing_timeline_strains_alpha.getFloat();
-
-			const Color aimStrainColor = COLORf(alpha, osu_hud_scrubbing_timeline_strains_aim_color_r.getInt() / 255.0f, osu_hud_scrubbing_timeline_strains_aim_color_g.getInt() / 255.0f, osu_hud_scrubbing_timeline_strains_aim_color_b.getInt() / 255.0f);
-			const Color speedStrainColor = COLORf(alpha, osu_hud_scrubbing_timeline_strains_speed_color_r.getInt() / 255.0f, osu_hud_scrubbing_timeline_strains_speed_color_g.getInt() / 255.0f, osu_hud_scrubbing_timeline_strains_speed_color_b.getInt() / 255.0f);
-
-			g->setDepthBuffer(true);
+			// get highest strain values for normalization
+			double highestAimStrain = 0.0;
+			double highestSpeedStrain = 0.0;
+			double highestStrain = 0.0;
+			int highestStrainIndex = -1;
 			for (int i=0; i<aimStrains.size(); i++)
 			{
-				const double aimStrain = (aimStrains[i]) / highestStrain;
-				const double speedStrain = (speedStrains[i]) / highestStrain;
-				//const double strain = (aimStrains[i] + speedStrains[i]) / highestStrain;
+				const double aimStrain = aimStrains[i];
+				const double speedStrain = speedStrains[i];
+				const double strain = aimStrain + speedStrain;
 
-				const double aimStrainHeight = aimStrain * strainHeightMultiplier;
-				const double speedStrainHeight = speedStrain * strainHeightMultiplier;
-				//const double strainHeight = strain * strainHeightMultiplier;
-
-				g->setColor(aimStrainColor);
-				g->fillRect(i*strainWidth + offsetX, cursorPos.y - aimStrainHeight, std::max(1.0f, std::round(strainWidth + 0.5f)), aimStrainHeight);
-
-				g->setColor(speedStrainColor);
-				g->fillRect(i*strainWidth + offsetX, cursorPos.y - aimStrainHeight - speedStrainHeight, std::max(1.0f, std::round(strainWidth + 0.5f)), speedStrainHeight + 1);
+				if (strain > highestStrain)
+				{
+					highestStrain = strain;
+					highestStrainIndex = i;
+				}
+				if (aimStrain > highestAimStrain)
+					highestAimStrain = aimStrain;
+				if (speedStrain > highestSpeedStrain)
+					highestSpeedStrain = speedStrain;
 			}
-			g->setDepthBuffer(false);
 
-			// highlight highest total strain value (+- section block)
-			if (highestStrainIndex > -1)
+			// draw strain bar graph
+			if (highestAimStrain > 0.0 && highestSpeedStrain > 0.0 && highestStrain > 0.0)
 			{
-				const double aimStrain = (aimStrains[highestStrainIndex]) / highestStrain;
-				const double speedStrain = (speedStrains[highestStrainIndex]) / highestStrain;
-				//const double strain = (aimStrains[i] + speedStrains[i]) / highestStrain;
+				const float msPerPixel = (float)lengthMS / (float)(m_osu->getScreenWidth() - (((float)startTimeMS / (float)endTimeMS))*m_osu->getScreenWidth());
+				const float strainWidth = strainStepMS / msPerPixel;
+				const float strainHeightMultiplier = osu_hud_scrubbing_timeline_strains_height.getFloat() * dpiScale;
 
-				const double aimStrainHeight = aimStrain * strainHeightMultiplier;
-				const double speedStrainHeight = speedStrain * strainHeightMultiplier;
-				//const double strainHeight = strain * strainHeightMultiplier;
+				const float offsetX = ((float)startTimeMS / (float)strainStepMS) * strainWidth; // compensate for startTimeMS
 
-				Vector2 topLeftCenter = Vector2(highestStrainIndex*strainWidth + offsetX + strainWidth/2.0f, cursorPos.y - aimStrainHeight - speedStrainHeight);
+				const float alpha = osu_hud_scrubbing_timeline_strains_alpha.getFloat();
 
-				const float margin = 5.0f;
+				const Color aimStrainColor = COLORf(alpha, osu_hud_scrubbing_timeline_strains_aim_color_r.getInt() / 255.0f, osu_hud_scrubbing_timeline_strains_aim_color_g.getInt() / 255.0f, osu_hud_scrubbing_timeline_strains_aim_color_b.getInt() / 255.0f);
+				const Color speedStrainColor = COLORf(alpha, osu_hud_scrubbing_timeline_strains_speed_color_r.getInt() / 255.0f, osu_hud_scrubbing_timeline_strains_speed_color_g.getInt() / 255.0f, osu_hud_scrubbing_timeline_strains_speed_color_b.getInt() / 255.0f);
 
-				g->setColor(0xffffffff);
-				g->setAlpha(alpha);
-				g->drawRect(topLeftCenter.x - margin*strainWidth, topLeftCenter.y - margin*strainWidth, strainWidth*2*margin, aimStrainHeight + speedStrainHeight + 2*margin*strainWidth);
+				g->setDepthBuffer(true);
+				for (int i=0; i<aimStrains.size(); i++)
+				{
+					const double aimStrain = (aimStrains[i]) / highestStrain;
+					const double speedStrain = (speedStrains[i]) / highestStrain;
+					//const double strain = (aimStrains[i] + speedStrains[i]) / highestStrain;
+
+					const double aimStrainHeight = aimStrain * strainHeightMultiplier;
+					const double speedStrainHeight = speedStrain * strainHeightMultiplier;
+					//const double strainHeight = strain * strainHeightMultiplier;
+
+					g->setColor(aimStrainColor);
+					g->fillRect(i*strainWidth + offsetX, cursorPos.y - aimStrainHeight, std::max(1.0f, std::round(strainWidth + 0.5f)), aimStrainHeight);
+
+					g->setColor(speedStrainColor);
+					g->fillRect(i*strainWidth + offsetX, cursorPos.y - aimStrainHeight - speedStrainHeight, std::max(1.0f, std::round(strainWidth + 0.5f)), speedStrainHeight + 1);
+				}
+				g->setDepthBuffer(false);
+
+				// highlight highest total strain value (+- section block)
+				if (highestStrainIndex > -1)
+				{
+					const double aimStrain = (aimStrains[highestStrainIndex]) / highestStrain;
+					const double speedStrain = (speedStrains[highestStrainIndex]) / highestStrain;
+					//const double strain = (aimStrains[i] + speedStrains[i]) / highestStrain;
+
+					const double aimStrainHeight = aimStrain * strainHeightMultiplier;
+					const double speedStrainHeight = speedStrain * strainHeightMultiplier;
+					//const double strainHeight = strain * strainHeightMultiplier;
+
+					Vector2 topLeftCenter = Vector2(highestStrainIndex*strainWidth + offsetX + strainWidth/2.0f, cursorPos.y - aimStrainHeight - speedStrainHeight);
+
+					const float margin = 5.0f * dpiScale;
+
+					g->setColor(0xffffffff);
+					g->setAlpha(alpha);
+					g->drawRect(topLeftCenter.x - margin*strainWidth, topLeftCenter.y - margin*strainWidth, strainWidth*2*margin, aimStrainHeight + speedStrainHeight + 2*margin*strainWidth);
+				}
 			}
 		}
 	}
-	*/
 
 	// breaks
 	g->setColor(greyTransparent);
