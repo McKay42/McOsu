@@ -36,23 +36,50 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 
 	CHANGELOG alpha316;
 	alpha316.title = UString::format("32 (Build Date: %s, %s)", __DATE__, __TIME__);
-	alpha316.changes.push_back("- TODO: write changelog");
-	alpha316.changes.push_back("- TODO: added support for collection editing (maybe)");
+
 	alpha316.changes.push_back("- TODO: Rewrote songbrowser and entire internal database class architecture (lazy design decisions were made in the past)");
-	alpha316.changes.push_back("- Songbrowser can now handle individual diff buttons and/or split from their parent beatmap button");
-	alpha316.changes.push_back("- Added new grouping options to songbrowser: \"By Artist\", \"By BPM\", \"By Creator\", \"By Difficulty\", \"By Length\", \"By Title\"");
+	alpha316.changes.push_back("- Songbrowser can now handle individual diff buttons and/or split from their parent beatmap button (after 9 years in development)");
+	alpha316.changes.push_back("- Collections now correctly only show the contained diffs, instead of always the entire set");
+	alpha316.changes.push_back("- TODO: Similarly, searching will now match individual diffs, instead of always the entire set");
+	///alpha316.changes.push_back("- TODO: Added support for creating/editing collections");
+	alpha316.changes.push_back("- TODO: Added new grouping options to songbrowser: \"By Artist\", \"By BPM\", \"By Creator\", \"By Difficulty\", \"By Length\", \"By Title\"");
+	alpha316.changes.push_back("- FPoSu: Added zooming/scoping (Options > Input > Keyboard > FPoSu > Zoom) (Options > FPoSu > \"FOV (Zoom)\")");
+	alpha316.changes.push_back("- Added dynamic star recalculation for all mods in songbrowser (stars will now recalculate to reflect active mods, including overrides and experimentals)");
+	alpha316.changes.push_back("- Added ability to recalculate all McOsu pp scores (Songbrowser > Top Ranks > Menu > Recalculate)");
+	alpha316.changes.push_back("- Added ability to convert/import osu! scores into McOsu pp scores (Songbrowser > Top Ranks > Menu > Import)");
+	alpha316.changes.push_back("- Added ability to delete all scores of active user (Songbrowser > Top Ranks > Menu > Delete)");
+	alpha316.changes.push_back("- Added menu button to \"Top Ranks\" screen (Recalculate pp, Delete All Scores, etc.)");
+	alpha316.changes.push_back("- Added \"Use Mods\" to score button right-click context menu (sets all mods, including overrides and experimentals, to whatever the score has)");
+	alpha316.changes.push_back("- Added extra set of keybinds for key1/key2 (Options > Input > Keyboard)");
+	alpha316.changes.push_back("- Added bonus pp calculation (previously total pp were without bonus. Bonus is purely based on number of scores.)");
 	alpha316.changes.push_back("- Added option \"Draw Stats: Max Possible Combo\" (Options > Gameplay > HUD)");
 	alpha316.changes.push_back("- Added support for OGG files in skin sound samples");
-	alpha316.changes.push_back("- Added ConVars: osu_spinner_use_ar_fadein");
+	alpha316.changes.push_back("- Added Tolerance2B handling to osu!stable notelock algorithm (unlock if within 3 ms overlap)");
+	alpha316.changes.push_back("- Added score multiplier info label to mod selection screen");
+	alpha316.changes.push_back("- Added ConVars (1): osu_spinner_use_ar_fadein, osu_notelock_stable_tolerance2b");
+	alpha316.changes.push_back("- Added ConVars (2): fposu_zoom_fov, fposu_zoom_sensitivity_ratio, fposu_zoom_anim_duration");
+	alpha316.changes.push_back("- Added ConVars (3): osu_scores_rename, osu_scores_bonus_pp, osu_collections_legacy_enabled");
+	alpha316.changes.push_back("- Added ConVars (4): osu_songbrowser_dynamic_star_recalc, osu_draw_songbrowser_strain_graph, osu_draw_scrubbing_timeline_strain_graph");
+	alpha316.changes.push_back("- Updated all right-click context menus to be bigger and easier to hit (score buttons, song buttons)");
+	alpha316.changes.push_back("- Updated SearchUIOverlay to simply move left on text overflow");
 	alpha316.changes.push_back("- Updated \"DPI\" and \"cm per 360\" textboxes to support decimal values with comma (e.g. 4,2 vs 4.2)");
 	alpha316.changes.push_back("- Updated mouse_raw_input_absolute_to_window to be ignored if raw input is disabled");
+	alpha316.changes.push_back("- Updated pp algorithm (11) (Xexxar's miss curve changes), see https://github.com/ppy/osu-performance/pull/129");
+	alpha316.changes.push_back("- Updated pp algorithm (10) (Xexxar's low acc speed nerf), see https://github.com/ppy/osu-performance/pull/128/");
+	alpha316.changes.push_back("- Updated pp algorithm (9) (StanR's NF multiplier based on amount of misses), see https://github.com/ppy/osu-performance/pull/127");
+	alpha316.changes.push_back("- Updated pp algorithm (8) (StanR's SO multiplier based on amount of spinners in map), see https://github.com/ppy/osu-performance/pull/110/");
+	alpha316.changes.push_back("- Updated pp algorithm (7) (Xexxar's AR11 nerf and AR8 buff), see https://github.com/ppy/osu-performance/pull/125");
+	alpha316.changes.push_back("- Fixed ScoreV2 score multipliers for HR and DT (1.06x -> 1.10x, 1.12x -> 1.20x)");
+	alpha316.changes.push_back("- Fixed UI toggle being hardcoded to SHIFT+TAB and not respecting \"Toggle Scoreboard\" keybind");
 	alpha316.changes.push_back("- Fixed star cache not updating instantly when changing Speed Override with keyboard keys while playing (previously only recalculated upon closing mod selection screen)");
 	alpha316.changes.push_back("- Fixed drain not being recalculated instantly when changing HP Override while playing (previously only recalculated upon closing mod selection screen)");
 	alpha316.changes.push_back("- Fixed clicking mod selection screen buttons also triggering \"click on the orange cursor to continue play\" (unwanted click-through)");
 	alpha316.changes.push_back("- Fixed animated followpoint.png scaling not respecting inconsistent @2x frames");
+	alpha316.changes.push_back("- Fixed drawHitCircleNumber for variable number width skins");
 	alpha316.changes.push_back("- Fixed spinners not using hardcoded 400 ms fadein (previously used same AR-dependent fadein as circles, because that makes sense compared to this insanity)");
 	alpha316.changes.push_back("- Fixed mod selection screen visually rounding non-1.0x difficulty multipliers to one decimal digit (e.g. HR CS showed 4.55 in songbrowser but 4.5 in overrides)");
 	alpha316.changes.push_back("- Fixed songbrowser visually always showing raw beatmap HP value (without applying mods or overrides)");
+	alpha316.changes.push_back("- Fixed skipping while loading potentially breaking hitobject state");
 	changelogs.push_back(alpha316);
 
 	CHANGELOG alpha315;
@@ -741,7 +768,7 @@ void OsuChangelog::updateLayout()
 		{
 			change->onResized(); // HACKHACK: framework, setSizeToContent() does not update string metrics
 			change->setSizeToContent();
-			yCounter += change->getSize().y + 7 * dpiScale;
+			yCounter += change->getSize().y + 13 * dpiScale;
 			change->setRelPos(35 * dpiScale, yCounter);
 		}
 
