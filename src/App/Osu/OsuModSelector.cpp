@@ -1090,6 +1090,8 @@ void OsuModSelector::resetMods()
 
 	for (int i=0; i<m_overrideSliders.size(); i++)
 	{
+		// HACKHACK: force small delta to force an update (otherwise values could get stuck, e.g. for "Use Mods" context menu)
+		m_overrideSliders[i].slider->setValue(m_overrideSliders[i].slider->getMin() + 0.0001f);
 		m_overrideSliders[i].slider->setValue(m_overrideSliders[i].slider->getMin());
 	}
 
