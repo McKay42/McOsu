@@ -1286,7 +1286,7 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 		int scoreIndex = -1;
 		if (isComplete && !isZero && !isUnranked && !m_osu->getScore()->hasDied())
 		{
-			const int scoreVersion = 20210103;
+			const int scoreVersion = OsuScore::VERSION;
 
 			debugLog("OsuBeatmapStandard::onBeforeStop() saving score ...\n");
 			{

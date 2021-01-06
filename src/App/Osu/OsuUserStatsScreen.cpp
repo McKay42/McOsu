@@ -213,7 +213,7 @@ private:
 					if (pp > 0.0f)
 					{
 						score.pp = pp;
-						score.version = 20210103;
+						score.version = OsuScore::VERSION;
 
 						if (m_bImportLegacyScores && score.isLegacyScore)
 						{
