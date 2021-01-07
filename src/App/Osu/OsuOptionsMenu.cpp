@@ -995,10 +995,13 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Draw Scrubbing Timeline", convar->getConVarByName("osu_draw_scrubbing_timeline"));
 	addCheckbox("Draw Miss Window on HitErrorBar", convar->getConVarByName("osu_hud_hiterrorbar_showmisswindow"));
 	addSpacer();
-	addCheckbox("Draw Stats: pp", "Realtime pp counter.\nDynamically calculates currently earned pp by incrementally updating the star rating.", convar->getConVarByName("osu_draw_statistics_pp"));
-	addCheckbox("Draw Stats: Misses", convar->getConVarByName("osu_draw_statistics_misses"));
-	addCheckbox("Draw Stats: SliderBreaks", convar->getConVarByName("osu_draw_statistics_sliderbreaks"));
+	addCheckbox("Draw Stats: pp", "Realtime pp counter.\nDynamically calculates earned pp by incrementally updating the star rating.", convar->getConVarByName("osu_draw_statistics_pp"));
+	addCheckbox("Draw Stats: pp (SS)", "Max possible total pp for active mods (full combo + perfect acc).", convar->getConVarByName("osu_draw_statistics_perfectpp"));
+	addCheckbox("Draw Stats: Misses", "Number of misses.", convar->getConVarByName("osu_draw_statistics_misses"));
+	addCheckbox("Draw Stats: SliderBreaks", "Number of slider breaks.", convar->getConVarByName("osu_draw_statistics_sliderbreaks"));
 	addCheckbox("Draw Stats: Max Possible Combo", convar->getConVarByName("osu_draw_statistics_maxpossiblecombo"));
+	addCheckbox("Draw Stats: Stars*** (Until Now)", "Incrementally updates the star rating (aka \"realtime stars\").", convar->getConVarByName("osu_draw_statistics_livestars"));
+	addCheckbox("Draw Stats: Stars* (Total)", "Total stars for active mods.", convar->getConVarByName("osu_draw_statistics_totalstars"));
 	addCheckbox("Draw Stats: BPM", convar->getConVarByName("osu_draw_statistics_bpm"));
 	addCheckbox("Draw Stats: AR", convar->getConVarByName("osu_draw_statistics_ar"));
 	addCheckbox("Draw Stats: CS", convar->getConVarByName("osu_draw_statistics_cs"));

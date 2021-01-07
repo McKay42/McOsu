@@ -400,6 +400,9 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	m_osu_hud_scrubbing_timeline_strains_speed_color_g_ref = convar->getConVarByName("osu_hud_scrubbing_timeline_strains_speed_color_g");
 	m_osu_hud_scrubbing_timeline_strains_speed_color_b_ref = convar->getConVarByName("osu_hud_scrubbing_timeline_strains_speed_color_b");
 
+	m_osu_draw_statistics_perfectpp_ref = convar->getConVarByName("osu_draw_statistics_perfectpp");
+	m_osu_draw_statistics_totalstars_ref = convar->getConVarByName("osu_draw_statistics_totalstars");
+
 	// convar callbacks
 	osu_gamemode.setCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onModeChange) );
 
@@ -995,7 +998,7 @@ void OsuSongBrowser2::drawSelectedBeatmapBackgroundImage(Graphics *g, Osu *osu, 
 
 void OsuSongBrowser2::update()
 {
-	// HACKHACK: temporarily putting this on top as to support recalc while inPlayMode() (and songbrowser is invisible) for drawing strain graph in scrubbing timeline
+	// HACKHACK: temporarily putting this on top as to support recalc while inPlayMode() (and songbrowser is invisible) for drawing strain graph in scrubbing timeline (and total stars statistics, and max total pp statistics)
 	// handle background star calculation (1)
 	if (m_bBackgroundStarCalcScheduled)
 	{
@@ -3610,8 +3613,8 @@ void OsuSongBrowser2::recalculateStarsForSelectedBeatmap(bool force)
 	if (m_selectedBeatmap == NULL || m_selectedBeatmap->getSelectedDifficulty2() == NULL) return;
 	if (!force && m_selectedBeatmap->getSelectedDifficulty2() == m_backgroundStarCalculator->getBeatmapDifficulty()) return;
 
-	// HACKHACK: temporarily deactivated, see OsuSongBrowser2::update(), but only if drawing scrubbing timeline strain graph is enabled
-	if (!m_osu_draw_scrubbing_timeline_strain_graph_ref->getBool())
+	// HACKHACK: temporarily deactivated, see OsuSongBrowser2::update(), but only if drawing scrubbing timeline strain graph is enabled (or "Draw Stats: Stars* (Total)", or "Draw Stats: pp (SS)")
+	if (!m_osu_draw_scrubbing_timeline_strain_graph_ref->getBool() && !m_osu_draw_statistics_perfectpp_ref->getBool() && !m_osu_draw_statistics_totalstars_ref->getBool())
 	{
 		if (m_osu->isInPlayMode())
 		{

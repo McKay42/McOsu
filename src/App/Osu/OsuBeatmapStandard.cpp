@@ -92,6 +92,7 @@ ConVar osu_debug_hiterrorbar_misaims("osu_debug_hiterrorbar_misaims", false);
 ConVar osu_pp_live_timeout("osu_pp_live_timeout", 1.0f, "show message that we're still calculating stars after this many seconds, on the first start of the beatmap");
 
 ConVar *OsuBeatmapStandard::m_osu_draw_statistics_pp_ref = NULL;
+ConVar *OsuBeatmapStandard::m_osu_draw_statistics_livestars_ref = NULL;
 ConVar *OsuBeatmapStandard::m_osu_mod_fullalternate_ref = NULL;
 ConVar *OsuBeatmapStandard::m_osu_mod_fposu_ref = NULL;
 ConVar *OsuBeatmapStandard::m_osu_slider_scorev2_ref = NULL;
@@ -147,6 +148,8 @@ OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 	// convar refs
 	if (m_osu_draw_statistics_pp_ref == NULL)
 		m_osu_draw_statistics_pp_ref = convar->getConVarByName("osu_draw_statistics_pp");
+	if (m_osu_draw_statistics_livestars_ref == NULL)
+		m_osu_draw_statistics_livestars_ref = convar->getConVarByName("osu_draw_statistics_livestars");
 	if (m_osu_mod_fullalternate_ref == NULL)
 		m_osu_mod_fullalternate_ref = convar->getConVarByName("osu_mod_fullalternate");
 	if (m_osu_mod_fposu_ref == NULL)
@@ -177,8 +180,8 @@ void OsuBeatmapStandard::draw(Graphics *g)
 			progressPercent = (float)m_starCacheLoader->getProgress() / (float)m_hitobjects.size();
 
 		g->setColor(0x44ffffff);
-		UString loadingMessage = UString::format("Calculating stars for live pp (%i%%) ...", (int)(progressPercent*100.0f));
-		UString loadingMessage2 = "(To get rid of this delay, disable [Draw Statistics: pp])";
+		UString loadingMessage = UString::format("Calculating stars for realtime pp/stars (%i%%) ...", (int)(progressPercent*100.0f));
+		UString loadingMessage2 = "(To get rid of this delay, disable [Draw Statistics: pp/Stars***])";
 		g->pushTransform();
 		{
 			g->translate((int)(m_osu->getScreenWidth()/2 - m_osu->getSubTitleFont()->getStringWidth(loadingMessage)/2), m_osu->getScreenHeight() - m_osu->getSubTitleFont()->getHeight() - 25);
@@ -892,7 +895,7 @@ void OsuBeatmapStandard::onModUpdate(bool rebuildSliderVertexBuffers, bool recom
 	}
 
 	// recalculate star cache for live pp
-	if (m_osu_draw_statistics_pp_ref->getBool()) // sanity + performance/usability
+	if (m_osu_draw_statistics_pp_ref->getBool() || m_osu_draw_statistics_livestars_ref->getBool()) // sanity + performance/usability
 	{
 		bool didCSChange = false;
 		if (getHitcircleDiameter() != m_fPrevHitCircleDiameterForStarCache && m_hitobjects.size() > 0)
@@ -2135,7 +2138,7 @@ void OsuBeatmapStandard::computeDrainRate()
 
 void OsuBeatmapStandard::updateStarCache()
 {
-	if (m_osu_draw_statistics_pp_ref->getBool())
+	if (m_osu_draw_statistics_pp_ref->getBool() || m_osu_draw_statistics_livestars_ref->getBool())
 	{
 		// so we don't get a useless double load inside onModUpdate()
 		m_fPrevHitCircleDiameterForStarCache = getHitcircleDiameter();
@@ -2174,7 +2177,7 @@ void OsuBeatmapStandard::stopStarCacheLoader()
 
 bool OsuBeatmapStandard::isLoadingStarCache()
 {
-	return (m_osu_draw_statistics_pp_ref->getBool() && !m_starCacheLoader->isReady());
+	return ((m_osu_draw_statistics_pp_ref->getBool() || m_osu_draw_statistics_livestars_ref->getBool()) && !m_starCacheLoader->isReady());
 }
 
 bool OsuBeatmapStandard::isLoadingInt()

@@ -115,6 +115,7 @@ ConVar osu_hud_accuracy_scale("osu_hud_accuracy_scale", 1.0f);
 ConVar osu_hud_progressbar_scale("osu_hud_progressbar_scale", 1.0f);
 ConVar osu_hud_playfield_border_size("osu_hud_playfield_border_size", 5.0f);
 ConVar osu_hud_statistics_scale("osu_hud_statistics_scale", 1.0f);
+ConVar osu_hud_statistics_spacing_scale("osu_hud_statistics_spacing_scale", 1.1f);
 ConVar osu_hud_statistics_offset_x("osu_hud_statistics_offset_x", 5.0f);
 ConVar osu_hud_statistics_offset_y("osu_hud_statistics_offset_y", 50.0f);
 ConVar osu_hud_statistics_pp_decimal_places("osu_hud_statistics_pp_decimal_places", 0, "number of decimal places for the live pp counter (min = 0, max = 2)");
@@ -161,7 +162,10 @@ ConVar osu_draw_inputoverlay("osu_draw_inputoverlay", true);
 
 ConVar osu_draw_statistics_misses("osu_draw_statistics_misses", false);
 ConVar osu_draw_statistics_sliderbreaks("osu_draw_statistics_sliderbreaks", false);
+ConVar osu_draw_statistics_perfectpp("osu_draw_statistics_perfectpp", false);
 ConVar osu_draw_statistics_maxpossiblecombo("osu_draw_statistics_maxpossiblecombo", false);
+ConVar osu_draw_statistics_livestars("osu_draw_statistics_livestars", false);
+ConVar osu_draw_statistics_totalstars("osu_draw_statistics_totalstars", false);
 ConVar osu_draw_statistics_bpm("osu_draw_statistics_bpm", false);
 ConVar osu_draw_statistics_ar("osu_draw_statistics_ar", false);
 ConVar osu_draw_statistics_cs("osu_draw_statistics_cs", false);
@@ -317,10 +321,14 @@ void OsuHUD::draw(Graphics *g)
 			if (m_osu->getModTarget() && osu_draw_target_heatmap.getBool() && beatmapStd != NULL)
 				g->translate(0, beatmapStd->getHitcircleDiameter()*(1.0f / (osu_hud_scale.getFloat()*osu_hud_statistics_scale.getFloat())));
 
+			const int hitObjectIndexForCurrentTime = (beatmap->getHitObjectIndexForCurrentTime() < 1 ? -1 : beatmap->getHitObjectIndexForCurrentTime());
+
 			drawStatistics(g,
 					m_osu->getScore()->getNumMisses(),
 					m_osu->getScore()->getNumSliderBreaks(),
 					beatmap->getMaxPossibleCombo(),
+					OsuDifficultyCalculator::calculateTotalStarsFromSkills(beatmap->getAimStarsForUpToHitObjectIndex(hitObjectIndexForCurrentTime), beatmap->getSpeedStarsForUpToHitObjectIndex(hitObjectIndexForCurrentTime)),
+					m_osu->getSongBrowser()->getBackgroundStarCalculator()->getTotalStars(),
 					beatmap->getBPM(),
 					OsuGameRules::getApproachRateForSpeedMultiplier(beatmap, beatmap->getSpeedMultiplier()),
 					beatmap->getCS(),
@@ -330,6 +338,7 @@ void OsuHUD::draw(Graphics *g)
 					beatmap->getND(),
 					m_osu->getScore()->getUnstableRate(),
 					m_osu->getScore()->getPPv2(),
+					m_osu->getSongBrowser()->getBackgroundStarCalculator()->getPPv2(),
 					((int)OsuGameRules::getHitWindow300(beatmap) - 0.5f) * (1.0f / m_osu->getSpeedMultiplier()), // see OsuUISongBrowserInfoLabel::update()
 					m_osu->getScore()->getHitErrorAvgCustomMin(),
 					m_osu->getScore()->getHitErrorAvgCustomMax());
@@ -607,7 +616,7 @@ void OsuHUD::drawDummy(Graphics *g)
 
 	drawSkip(g);
 
-	drawStatistics(g, 0, 0, 727, 180, 9.0f, 4.0f, 8.0f, 6.0f, 4, 6, 90.0f, 123, 25, -5, 15);
+	drawStatistics(g, 0, 0, 727, 2.3f, 5.5f, 180, 9.0f, 4.0f, 8.0f, 6.0f, 4, 6, 90.0f, 123, 1234, 25, -5, 15);
 
 	drawWarningArrows(g);
 
@@ -654,10 +663,14 @@ void OsuHUD::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 			if (!m_osu->isSkipScheduled() && beatmap->isInSkippableSection() && ((m_osu_skip_intro_enabled_ref->getBool() && beatmap->getHitObjectIndexForCurrentTime() < 1) || (m_osu_skip_breaks_enabled_ref->getBool() && beatmap->getHitObjectIndexForCurrentTime() > 0)))
 				drawSkip(g);
 
+			const int hitObjectIndexForCurrentTime = (beatmap->getHitObjectIndexForCurrentTime() < 1 ? -1 : beatmap->getHitObjectIndexForCurrentTime());
+
 			drawStatistics(g,
 					m_osu->getScore()->getNumMisses(),
 					m_osu->getScore()->getNumSliderBreaks(),
 					beatmap->getMaxPossibleCombo(),
+					OsuDifficultyCalculator::calculateTotalStarsFromSkills(beatmap->getAimStarsForUpToHitObjectIndex(hitObjectIndexForCurrentTime), beatmap->getSpeedStarsForUpToHitObjectIndex(hitObjectIndexForCurrentTime)),
+					m_osu->getSongBrowser()->getBackgroundStarCalculator()->getTotalStars(),
 					beatmap->getBPM(),
 					OsuGameRules::getApproachRateForSpeedMultiplier(beatmap, beatmap->getSpeedMultiplier()),
 					beatmap->getCS(),
@@ -667,6 +680,7 @@ void OsuHUD::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 					beatmap->getND(),
 					m_osu->getScore()->getUnstableRate(),
 					m_osu->getScore()->getPPv2(),
+					m_osu->getSongBrowser()->getBackgroundStarCalculator()->getPPv2(),
 					((int)OsuGameRules::getHitWindow300(beatmap) - 0.5f) * (1.0f / m_osu->getSpeedMultiplier()), // see OsuUISongBrowserInfoLabel::update()
 					m_osu->getScore()->getHitErrorAvgCustomMin(),
 					m_osu->getScore()->getHitErrorAvgCustomMax());
@@ -727,7 +741,7 @@ void OsuHUD::drawVRDummy(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 
 		drawSkip(g);
 
-		drawStatistics(g, 0, 0, 727, 180, 9.0f, 4.0f, 8.0f, 6.0f, 4, 6, 90.0f, 123, 25, -5, 15);
+		drawStatistics(g, 0, 0, 727, 2.3f, 5.5f, 180, 9.0f, 4.0f, 8.0f, 6.0f, 4, 6, 90.0f, 123, 1234, 25, -5, 15);
 
 		if (osu_draw_score.getBool())
 			drawScore(g, scoreEntry.score);
@@ -2406,7 +2420,7 @@ void OsuHUD::drawProgressBarVR(Graphics *g, Matrix4 &mvp, OsuVR *vr, float perce
 	}
 }
 
-void OsuHUD::drawStatistics(Graphics *g, int misses, int sliderbreaks, int maxPossibleCombo, int bpm, float ar, float cs, float od, float hp, int nps, int nd, int ur, float pp, float hitWindow300, int hitdeltaMin, int hitdeltaMax)
+void OsuHUD::drawStatistics(Graphics *g, int misses, int sliderbreaks, int maxPossibleCombo, float liveStars,  float totalStars, int bpm, float ar, float cs, float od, float hp, int nps, int nd, int ur, float pp, float ppfc, float hitWindow300, int hitdeltaMin, int hitdeltaMax)
 {
 	g->pushTransform();
 	{
@@ -2415,10 +2429,15 @@ void OsuHUD::drawStatistics(Graphics *g, int misses, int sliderbreaks, int maxPo
 		g->scale(osu_hud_statistics_scale.getFloat()*osu_hud_scale.getFloat(), osu_hud_statistics_scale.getFloat()*osu_hud_scale.getFloat());
 		g->translate(osu_hud_statistics_offset_x.getInt()/* * offsetScale*/, (int)((m_osu->getTitleFont()->getHeight())*osu_hud_scale.getFloat()*osu_hud_statistics_scale.getFloat()) + (osu_hud_statistics_offset_y.getInt() * offsetScale));
 
-		const int yDelta = (int)((m_osu->getTitleFont()->getHeight() + 10)*osu_hud_scale.getFloat()*osu_hud_statistics_scale.getFloat());
+		const int yDelta = (int)((m_osu->getTitleFont()->getHeight() + 10)*osu_hud_scale.getFloat()*osu_hud_statistics_scale.getFloat()*osu_hud_statistics_spacing_scale.getFloat());
 		if (osu_draw_statistics_pp.getBool())
 		{
-			drawStatisticText(g, (osu_hud_statistics_pp_decimal_places.getInt() < 1 ? UString::format("%ipp", (int)pp) : (osu_hud_statistics_pp_decimal_places.getInt() > 1 ? UString::format("%.2fpp", pp) : UString::format("%.1fpp", pp))));
+			drawStatisticText(g, (osu_hud_statistics_pp_decimal_places.getInt() < 1 ? UString::format("%ipp", (int)std::round(pp)) : (osu_hud_statistics_pp_decimal_places.getInt() > 1 ? UString::format("%.2fpp", pp) : UString::format("%.1fpp", pp))));
+			g->translate(0, yDelta);
+		}
+		if (osu_draw_statistics_perfectpp.getBool())
+		{
+			drawStatisticText(g, (osu_hud_statistics_pp_decimal_places.getInt() < 1 ? UString::format("SS: %ipp", (int)std::round(ppfc)) : (osu_hud_statistics_pp_decimal_places.getInt() > 1 ? UString::format("SS: %.2fpp", ppfc) : UString::format("SS: %.1fpp", ppfc))));
 			g->translate(0, yDelta);
 		}
 		if (osu_draw_statistics_misses.getBool())
@@ -2434,6 +2453,16 @@ void OsuHUD::drawStatistics(Graphics *g, int misses, int sliderbreaks, int maxPo
 		if (osu_draw_statistics_maxpossiblecombo.getBool())
 		{
 			drawStatisticText(g, UString::format("FC: %ix", maxPossibleCombo));
+			g->translate(0, yDelta);
+		}
+		if (osu_draw_statistics_livestars.getBool())
+		{
+			drawStatisticText(g, UString::format("%.3g***", liveStars));
+			g->translate(0, yDelta);
+		}
+		if (osu_draw_statistics_totalstars.getBool())
+		{
+			drawStatisticText(g, UString::format("%.3g*", totalStars));
 			g->translate(0, yDelta);
 		}
 		if (osu_draw_statistics_bpm.getBool())

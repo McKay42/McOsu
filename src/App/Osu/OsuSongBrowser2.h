@@ -215,6 +215,9 @@ private:
 	ConVar *m_osu_hud_scrubbing_timeline_strains_speed_color_g_ref;
 	ConVar *m_osu_hud_scrubbing_timeline_strains_speed_color_b_ref;
 
+	ConVar *m_osu_draw_statistics_perfectpp_ref;
+	ConVar *m_osu_draw_statistics_totalstars_ref;
+
 	Osu *m_osu;
 	std::mt19937 m_rngalg;
 	GROUP m_group;
