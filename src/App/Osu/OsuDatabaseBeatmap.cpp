@@ -1655,10 +1655,22 @@ OsuDatabaseBeatmapStarCalculator::OsuDatabaseBeatmapStarCalculator() : Resource(
 	m_totalStars = 0.0;
 	m_aimStars = 0.0;
 	m_speedStars = 0.0;
+	m_pp = 0.0;
+
+	m_iErrorCode = 0;
+	m_iNumObjects = 0;
+	m_iNumCircles = 0;
+	m_iNumSpinners = 0;
+	m_iMaxPossibleCombo = 0;
 }
 
 void OsuDatabaseBeatmapStarCalculator::init()
 {
+	// NOTE: this accesses runtime mods, so must be run sync (not async)
+	// technically the getSelectedBeatmap() call here is a bit unsafe, since the beatmap could have changed already between async and sync, but in that case we recalculate immediately after anyways
+	if (m_iErrorCode == 0 && m_diff2->m_osu->getSelectedBeatmap() != NULL)
+		m_pp = OsuDifficultyCalculator::calculatePPv2(m_diff2->m_osu, m_diff2->m_osu->getSelectedBeatmap(), m_aimStars.load(), m_speedStars.load(), m_iNumObjects, m_iNumCircles, m_iNumSpinners, m_iMaxPossibleCombo);
+
 	m_bReady = true;
 }
 
@@ -1668,12 +1680,28 @@ void OsuDatabaseBeatmapStarCalculator::initAsync()
 	m_totalStars = 0.0;
 	m_aimStars = 0.0;
 	m_speedStars = 0.0;
+	m_pp = 0.0;
 
 	const Osu::GAMEMODE gameMode = Osu::GAMEMODE::STD;
 	OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT diffres = OsuDatabaseBeatmap::loadDifficultyHitObjects(m_sFilePath, gameMode, m_fAR, m_fCS, m_fSpeedMultiplier);
+	m_iErrorCode = diffres.errorCode;
 
-	if (diffres.errorCode == 0)
+	if (m_iErrorCode == 0)
 	{
+		m_iNumObjects = diffres.diffobjects.size();
+		{
+			m_iNumCircles = 0;
+			m_iNumSpinners = 0;
+			for (size_t i=0; i<diffres.diffobjects.size(); i++)
+			{
+				if (diffres.diffobjects[i].type == OsuDifficultyHitObject::TYPE::CIRCLE)
+					m_iNumCircles++;
+				if (diffres.diffobjects[i].type == OsuDifficultyHitObject::TYPE::SPINNER)
+					m_iNumSpinners++;
+			}
+		}
+		m_iMaxPossibleCombo = diffres.maxPossibleCombo;
+
 		double aimStars = 0.0;
 		double speedStars = 0.0;
 		m_totalStars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, m_fCS, &aimStars, &speedStars, -1, &m_aimStrains, &m_speedStrains);

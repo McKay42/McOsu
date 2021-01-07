@@ -13,16 +13,6 @@
 #include "Osu.h"
 #include "OsuDifficultyCalculator.h"
 
-// purpose:
-// 1) contain all infos which are ALWAYS kept in memory for beatmaps
-// 2) be the data source for OsuBeatmap when starting a difficulty
-// 3) allow async calculations/loaders to work on the contained data (e.g. background image loader)
-// 4) be a container for difficulties (all top level OsuDatabaseBeatmap objects are containers)
-
-// TODO: move all unnecessary shit into OsuBeatmap, and clear out the garbage
-// TODO: star loading (separate class which just uses the m_sFilePath of this resource)
-// TODO: while playing, storage of numCircles/sliders/spinners etc.
-
 class Osu;
 class OsuBeatmap;
 class OsuHitObject;
@@ -30,6 +20,12 @@ class OsuHitObject;
 class OsuDatabase;
 
 class OsuBackgroundImageHandler;
+
+// purpose:
+// 1) contain all infos which are ALWAYS kept in memory for beatmaps
+// 2) be the data source for OsuBeatmap when starting a difficulty
+// 3) allow async calculations/loaders to work on the contained data (e.g. background image loader)
+// 4) be a container for difficulties (all top level OsuDatabaseBeatmap objects are containers)
 
 class OsuDatabaseBeatmap
 {
@@ -341,6 +337,7 @@ private:
 
 	friend class OsuDatabase;
 	friend class OsuBackgroundImageHandler;
+	friend class OsuDatabaseBeatmapStarCalculator;
 
 	static unsigned long long sortHackCounter;
 
@@ -425,6 +422,7 @@ public:
 	inline double getTotalStars() const {return m_totalStars.load();}
 	inline double getAimStars() const {return m_aimStars.load();}
 	inline double getSpeedStars() const {return m_speedStars.load();}
+	inline double getPPv2() const {return m_pp.load();} // NOTE: pp with currently active mods (runtime mods)
 
 	inline const std::vector<double> &getAimStrains() const {return m_aimStrains;}
 	inline const std::vector<double> &getSpeedStrains() const {return m_speedStrains;}
@@ -445,9 +443,17 @@ private:
 	std::atomic<double> m_totalStars;
 	std::atomic<double> m_aimStars;
 	std::atomic<double> m_speedStars;
+	std::atomic<double> m_pp;
 
 	std::vector<double> m_aimStrains;
 	std::vector<double> m_speedStrains;
+
+	// custom
+	int m_iErrorCode;
+	int m_iNumObjects;
+	int m_iNumCircles;
+	int m_iNumSpinners;
+	int m_iMaxPossibleCombo;
 };
 
 #endif

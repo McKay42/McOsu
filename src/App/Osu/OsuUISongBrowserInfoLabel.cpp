@@ -323,7 +323,8 @@ UString OsuUISongBrowserInfoLabel::buildDiffInfoString()
 	float HP = m_fHP;
 	float stars = m_fStars;
 
-	const float modStars = m_osu->getSongBrowser()->getBackgroundStarCalculator()->getTotalStars();
+	const float modStars = (float)m_osu->getSongBrowser()->getBackgroundStarCalculator()->getTotalStars();
+	const float modPp = (float)m_osu->getSongBrowser()->getBackgroundStarCalculator()->getPPv2();
 	const bool areStarsInaccurate = (m_osu->getSongBrowser()->getBackgroundStarCalculator()->isDead() || !m_osu->getSongBrowser()->getBackgroundStarCalculator()->isAsyncReady());
 
 	OsuBeatmap *beatmap = m_osu->getSelectedBeatmap();
@@ -342,7 +343,9 @@ UString OsuUISongBrowserInfoLabel::buildDiffInfoString()
 	if (areStarsInaccurate && m_osu_songbrowser_dynamic_star_recalc_ref->getBool())
 		finalString = UString::format("CS:%.3g AR:%.3g OD:%.3g HP:%.3g Stars:%.3g *", CS, AR, OD, HP, stars);
 	else if (!starsAndModStarsAreEqual && m_osu_songbrowser_dynamic_star_recalc_ref->getBool())
-		finalString = UString::format("CS:%.3g AR:%.3g OD:%.3g HP:%.3g Stars:%.3g -> %.3g", CS, AR, OD, HP, stars, modStars);
+		finalString = UString::format("CS:%.3g AR:%.3g OD:%.3g HP:%.3g Stars:%.3g -> %.3g (%ipp)", CS, AR, OD, HP, stars, modStars, (int)(std::round(modPp)));
+	else if (m_osu_songbrowser_dynamic_star_recalc_ref->getBool())
+		finalString = UString::format("CS:%.3g AR:%.3g OD:%.3g HP:%.3g Stars:%.3g (%ipp)", CS, AR, OD, HP, stars, (int)(std::round(modPp)));
 	else
 		finalString = UString::format("CS:%.3g AR:%.3g OD:%.3g HP:%.3g Stars:%.3g", CS, AR, OD, HP, stars);
 
