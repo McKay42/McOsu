@@ -99,8 +99,8 @@ public:
 	inline OsuUISongBrowserInfoLabel *getInfoLabel() {return m_songInfo;}
 
 private:
-	static bool searchMatcher(OsuDatabaseBeatmap *databaseBeatmap, UString searchString);
-	static bool findSubstringInDifficulty(OsuDatabaseBeatmap *diff, const UString &searchString);
+	static bool searchMatcher(const OsuDatabaseBeatmap *databaseBeatmap, const UString &searchString);
+	static bool findSubstringInDifficulty(const OsuDatabaseBeatmap *diff, const std::string &stdSearchString);
 
 	enum class GROUP
 	{
@@ -138,6 +138,7 @@ private:
 	{
 		GROUP type;
 		UString name;
+		int id;
 	};
 
 	virtual void updateLayout();
@@ -170,17 +171,18 @@ private:
 	void onSortClicked(CBaseUIButton *button);
 	void onSortChange(UString text, int id = -1);
 
-	void onGroupNoGrouping(CBaseUIButton *b);
-	void onGroupCollections(CBaseUIButton *b);
-	void onGroupArtist(CBaseUIButton *b);
-	void onGroupDifficulty(CBaseUIButton *b);
-	void onGroupBPM(CBaseUIButton *b);
-	void onGroupCreator(CBaseUIButton *b);
-	void onGroupDateadded(CBaseUIButton *b);
-	void onGroupLength(CBaseUIButton *b);
-	void onGroupTitle(CBaseUIButton *b);
+	void onGroupTabButtonClicked(CBaseUIButton *groupTabButton);
+	void onGroupNoGrouping();
+	void onGroupCollections();
+	void onGroupArtist();
+	void onGroupDifficulty();
+	void onGroupBPM();
+	void onGroupCreator();
+	void onGroupDateadded();
+	void onGroupLength();
+	void onGroupTitle();
 
-	void onAfterSortingOrGroupChange(CBaseUIButton *groupingButton);
+	void onAfterSortingOrGroupChange();
 
 	void onSelectionMode();
 	void onSelectionMods();
