@@ -1228,8 +1228,18 @@ bool OsuBeatmap::play()
 
 			case 3:
 				{
-					UString errorMessage = "Error: No timingpoints in beatmap!";
+					UString errorMessage = "Error: No timingpoints in beatmap :(";
 					debugLog("Osu Error: No timingpoints in beatmap %s\n", m_selectedDifficulty2->getFilePath().toUtf8());
+
+					if (m_osu != NULL)
+						m_osu->getNotificationOverlay()->addNotification(errorMessage, 0xffff0000);
+				}
+				break;
+
+			case 4:
+				{
+					UString errorMessage = "Error: No hitobjects in beatmap :(";
+					debugLog("Osu Error: No hitobjects in beatmap %s\n", m_selectedDifficulty2->getFilePath().toUtf8());
 
 					if (m_osu != NULL)
 						m_osu->getNotificationOverlay()->addNotification(errorMessage, 0xffff0000);

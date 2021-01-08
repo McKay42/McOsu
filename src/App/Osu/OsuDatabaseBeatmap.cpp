@@ -1196,6 +1196,13 @@ OsuDatabaseBeatmap::LOAD_GAMEPLAY_RESULT OsuDatabaseBeatmap::loadGameplay(OsuDat
 	databaseBeatmap->m_iNumSliders = c.sliders.size();
 	databaseBeatmap->m_iNumSpinners = c.spinners.size();
 
+	// check if we have any hitobjects at all
+	if (databaseBeatmap->m_iNumObjects < 1)
+	{
+		result.errorCode = 4;
+		return result;
+	}
+
 	// calculate sliderTimes, and build slider clicks and ticks
 	calculateSliderTimesClicksTicks(c.sliders, databaseBeatmap->m_timingpoints, databaseBeatmap->m_fSliderMultiplier, databaseBeatmap->m_fSliderTickRate);
 
