@@ -532,7 +532,7 @@ void OsuCircle::update(long curPos)
 
 			if (m_beatmap->getOsu()->getModRelax() || m_beatmap->getOsu()->isInVRMode())
 			{
-				if (curPos >= m_iTime + (long)m_osu_relax_offset_ref->getInt())
+				if (curPos >= m_iTime + (long)m_osu_relax_offset_ref->getInt() && !m_beatmap->isPaused() && !m_beatmap->isContinueScheduled())
 				{
 					const Vector2 pos = m_beatmap->osuCoords2Pixels(m_vRawPos);
 					const float cursorDelta = (m_beatmap->getCursorPos() - pos).length();
