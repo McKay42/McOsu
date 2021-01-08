@@ -249,7 +249,8 @@ void OsuUISongBrowserUserButton::updateUserStats()
 {
 	OsuDatabase::PlayerStats stats = m_osu->getSongBrowser()->getDatabase()->calculatePlayerStats(m_sText);
 
-	const bool changed = (m_fPP != stats.pp || m_fAcc != stats.accuracy || m_iLevel != stats.level || m_fPercentToNextLevel != stats.percentToNextLevel);
+	const bool changedPP = (m_fPP != stats.pp);
+	const bool changed = (changedPP || m_fAcc != stats.accuracy || m_iLevel != stats.level || m_fPercentToNextLevel != stats.percentToNextLevel);
 
 	const bool isFirstLoad = (m_fPP == 0.0f);
 	const float newPPDelta = (stats.pp - m_fPP);
@@ -266,7 +267,7 @@ void OsuUISongBrowserUserButton::updateUserStats()
 		anim->moveQuadOut(&m_fHoverAnim, 1.5f, 0.2f, true);
 		anim->moveLinear(&m_fHoverAnim, 0.0f, 1.5f, 0.2f);
 
-		if (m_fPPDelta != 0.0f && !isFirstLoad)
+		if (changedPP && !isFirstLoad && m_fPPDelta != 0.0f && m_fPP != 0.0f)
 		{
 			m_fPPDeltaAnim = 1.0f;
 			anim->moveLinear(&m_fPPDeltaAnim, 0.0f, 25.0f, true);
