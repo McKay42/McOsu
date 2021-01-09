@@ -544,14 +544,41 @@ void OsuUserStatsScreen::onMenuSelected(UString text, int id)
 	if (id == 1)
 		onRecalculatePP(false);
 	else if (id == 2)
-		onRecalculatePP(true);
+		onRecalculatePPImportLegacyScoresClicked();
 	else if (id == 3)
+		onDeleteAllScoresClicked();
+}
+
+void OsuUserStatsScreen::onRecalculatePPImportLegacyScoresClicked()
+{
+	m_contextMenu->setPos(m_menuButton->getPos() + Vector2(0, m_menuButton->getSize().y));
+	m_contextMenu->setRelPos(m_menuButton->getPos() + Vector2(0, m_menuButton->getSize().y));
+	m_contextMenu->begin();
 	{
-		if (engine->getKeyboard()->isShiftDown())
-			onDeleteAllScoresConfirmed("", 1);
-		else
-			onDeleteAllScoresClicked();
+		{
+			UString reallyText = "Really import all osu! scores of \"";
+			reallyText.append(m_name_ref->getString());
+			reallyText.append("\"?");
+			m_contextMenu->addButton(reallyText)->setEnabled(false);
+		}
+		CBaseUIButton *spacer = m_contextMenu->addButton("---");
+		spacer->setTextLeft(false);
+		spacer->setEnabled(false);
+		spacer->setTextColor(0xff888888);
+		spacer->setTextDarkColor(0xff000000);
+		m_contextMenu->addButton("Yes", 1)->setTextLeft(false);
+		m_contextMenu->addButton("No")->setTextLeft(false);
 	}
+	m_contextMenu->end();
+	m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUserStatsScreen::onRecalculatePPImportLegacyScoresConfirmed) );
+	OsuUIContextMenu::clampToRightScreenEdge(m_contextMenu);
+}
+
+void OsuUserStatsScreen::onRecalculatePPImportLegacyScoresConfirmed(UString text, int id)
+{
+	if (id != 1) return;
+
+	onRecalculatePP(true);
 }
 
 void OsuUserStatsScreen::onRecalculatePP(bool importLegacyScores)

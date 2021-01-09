@@ -46,6 +46,8 @@ private:
 	void onScoreClicked(CBaseUIButton *button);
 	void onMenuClicked(CBaseUIButton *button);
 	void onMenuSelected(UString text, int id);
+	void onRecalculatePPImportLegacyScoresClicked();
+	void onRecalculatePPImportLegacyScoresConfirmed(UString text, int id);
 	void onRecalculatePP(bool importLegacyScores);
 	void onDeleteAllScoresClicked();
 	void onDeleteAllScoresConfirmed(UString text, int id);
