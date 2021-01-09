@@ -28,6 +28,8 @@ public:
 	OsuFile(UString filepath, bool write = false);
 	virtual ~OsuFile();
 
+	inline size_t getFileSize() const {return m_iFileSize;}
+
 	inline bool isReady() const {return m_bReady;}
 
 	void write();
