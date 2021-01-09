@@ -345,6 +345,24 @@ void OsuUserStatsScreen::draw(Graphics *g)
 		return;
 	}
 
+	// draw pp version info
+	{
+		const Vector2 center = m_userButton->getPos() + Vector2(0, m_userButton->getSize().y/2) - Vector2((m_userButton->getPos().x - m_scores->getPos().x)/2, 0);
+
+		McFont *font = engine->getResourceManager()->getFont("FONT_DEFAULT");
+		UString text = UString::format("pp Version: %i", OsuDifficultyCalculator::PP_ALGORITHM_VERSION);
+		const float stringWidth = font->getStringWidth(text);
+		const float overflow = (center.x + stringWidth/2) - m_userButton->getPos().x;
+
+		g->pushTransform();
+		{
+			g->translate((int)(center.x - stringWidth/2 - std::max(overflow, 0.0f)), (int)(center.y + font->getHeight()/2));
+			g->setColor(0x77888888);
+			g->drawString(font, text);
+		}
+		g->popTransform();
+	}
+
 	m_container->draw(g);
 
 	OsuScreenBackable::draw(g);

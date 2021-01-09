@@ -72,6 +72,9 @@ private:
 class OsuDifficultyCalculator
 {
 public:
+	static constexpr const int PP_ALGORITHM_VERSION = 20210103;
+
+public:
 	// stars, fully static
 	static double calculateStarDiffForHitObjects(const std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, double *aim, double *speed, int upToObjectIndex = -1, std::vector<double> *outAimStrains = NULL, std::vector<double> *outSpeedStrains = NULL);
 

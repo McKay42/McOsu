@@ -339,7 +339,7 @@ public:
 	// "Builds of osu! up to 2013-05-04 had the gamefield being rounded down, which caused incorrect radius calculations
 	// in widescreen cases. This ratio adjusts to allow for old replays to work post-fix, which in turn increases the lenience
 	// for all plays, but by an amount so small it should only be effective in replays."
-	static constexpr float broken_gamefield_rounding_allowance = 1.00041f;
+	static constexpr const float broken_gamefield_rounding_allowance = 1.00041f;
 
 	static float getRawHitCircleDiameter(float CS)
 	{
