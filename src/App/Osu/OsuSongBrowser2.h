@@ -46,7 +46,49 @@ public:
 	struct SORTING_COMPARATOR
 	{
 		virtual ~SORTING_COMPARATOR() {;}
-		virtual bool operator() (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const = 0;
+		virtual bool operator () (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const = 0;
+	};
+
+	struct SortByArtist : public SORTING_COMPARATOR
+	{
+		virtual ~SortByArtist() {;}
+		virtual bool operator () (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const;
+	};
+
+	struct SortByBPM : public SORTING_COMPARATOR
+	{
+		virtual ~SortByBPM() {;}
+		virtual bool operator () (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const;
+	};
+
+	struct SortByCreator : public SORTING_COMPARATOR
+	{
+		virtual ~SortByCreator() {;}
+		virtual bool operator () (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const;
+	};
+
+	struct SortByDateAdded : public SORTING_COMPARATOR
+	{
+		virtual ~SortByDateAdded() {;}
+		virtual bool operator () (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const;
+	};
+
+	struct SortByDifficulty : public SORTING_COMPARATOR
+	{
+		virtual ~SortByDifficulty() {;}
+		virtual bool operator () (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const;
+	};
+
+	struct SortByLength : public SORTING_COMPARATOR
+	{
+		virtual ~SortByLength() {;}
+		bool operator () (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const;
+	};
+
+	struct SortByTitle : public SORTING_COMPARATOR
+	{
+		virtual ~SortByTitle() {;}
+		bool operator () (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const;
 	};
 
 public:
@@ -100,7 +142,7 @@ public:
 
 private:
 	static bool searchMatcher(const OsuDatabaseBeatmap *databaseBeatmap, const UString &searchString);
-	static bool findSubstringInDifficulty(const OsuDatabaseBeatmap *diff, const std::string &stdSearchString);
+	static bool findSubstringInDifficulty(const OsuDatabaseBeatmap *diff, const UString &searchString);
 
 	enum class GROUP
 	{

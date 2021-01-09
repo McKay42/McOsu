@@ -131,223 +131,176 @@ private:
 
 
 
-struct SortByArtist : public OsuSongBrowser2::SORTING_COMPARATOR
+bool OsuSongBrowser2::SortByArtist::operator () (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const
 {
-	virtual ~SortByArtist() {;}
-	bool operator() (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const
+	if (a->getDatabaseBeatmap() == NULL || b->getDatabaseBeatmap() == NULL)
+		return a->getSortHack() < b->getSortHack();
+
+	// strict weak ordering!
+	if (a->getDatabaseBeatmap()->getArtist().equalsIgnoreCase(b->getDatabaseBeatmap()->getArtist()))
+		return a->getSortHack() < b->getSortHack();
+
+	return a->getDatabaseBeatmap()->getArtist().lessThanIgnoreCase(b->getDatabaseBeatmap()->getArtist());
+}
+
+bool OsuSongBrowser2::SortByBPM::operator () (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const
+{
+	if (a->getDatabaseBeatmap() == NULL || b->getDatabaseBeatmap() == NULL)
+		return a->getSortHack() < b->getSortHack();
+
+	int bpm1 = a->getDatabaseBeatmap()->getMaxBPM();
+	const std::vector<OsuDatabaseBeatmap*> &aDiffs = a->getDatabaseBeatmap()->getDifficulties();
+	for (size_t i=0; i<aDiffs.size(); i++)
 	{
-		if (a->getDatabaseBeatmap() == NULL || b->getDatabaseBeatmap() == NULL)
-			return a->getSortHack() < b->getSortHack();
+		if (aDiffs[i]->getMaxBPM() > bpm1)
+			bpm1 = aDiffs[i]->getMaxBPM();
+	}
 
-		std::wstring artistLowercase1 = std::wstring((a->getDatabaseBeatmap()->getArtist().wc_str() == NULL || a->getDatabaseBeatmap()->getArtist().length() < 1) ? L"" : a->getDatabaseBeatmap()->getArtist().wc_str());
-		std::wstring artistLowercase2 = std::wstring((b->getDatabaseBeatmap()->getArtist().wc_str() == NULL || b->getDatabaseBeatmap()->getArtist().length() < 1) ? L"" : b->getDatabaseBeatmap()->getArtist().wc_str());
+	int bpm2 = b->getDatabaseBeatmap()->getMaxBPM();
+	const std::vector<OsuDatabaseBeatmap*> &bDiffs = b->getDatabaseBeatmap()->getDifficulties();
+	for (size_t i=0; i<bDiffs.size(); i++)
+	{
+		if (bDiffs[i]->getMaxBPM() > bpm2)
+			bpm2 = bDiffs[i]->getMaxBPM();
+	}
 
-		std::transform(artistLowercase1.begin(), artistLowercase1.end(), artistLowercase1.begin(), std::towlower);
-		std::transform(artistLowercase2.begin(), artistLowercase2.end(), artistLowercase2.begin(), std::towlower);
+	// strict weak ordering!
+	if (bpm1 == bpm2)
+		return a->getSortHack() < b->getSortHack();
 
+	return bpm1 < bpm2;
+}
+
+bool OsuSongBrowser2::SortByCreator::operator () (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const
+{
+	if (a->getDatabaseBeatmap() == NULL || b->getDatabaseBeatmap() == NULL)
+		return a->getSortHack() < b->getSortHack();
+
+	// strict weak ordering!
+	if (a->getDatabaseBeatmap()->getCreator().equalsIgnoreCase(b->getDatabaseBeatmap()->getCreator()))
+		return a->getSortHack() < b->getSortHack();
+
+	return a->getDatabaseBeatmap()->getCreator().lessThanIgnoreCase(b->getDatabaseBeatmap()->getCreator());
+}
+
+bool OsuSongBrowser2::SortByDateAdded::operator () (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const
+{
+	if (a->getDatabaseBeatmap() == NULL || b->getDatabaseBeatmap() == NULL)
+		return a->getSortHack() < b->getSortHack();
+
+	long long time1 = a->getDatabaseBeatmap()->getLastModificationTime();
+	const std::vector<OsuDatabaseBeatmap*> &aDiffs = a->getDatabaseBeatmap()->getDifficulties();
+	for (size_t i=0; i<aDiffs.size(); i++)
+	{
+		if (aDiffs[i]->getLastModificationTime() > time1)
+			time1 = aDiffs[i]->getLastModificationTime();
+	}
+
+	long long time2 = b->getDatabaseBeatmap()->getLastModificationTime();
+	const std::vector<OsuDatabaseBeatmap*> &bDiffs = b->getDatabaseBeatmap()->getDifficulties();
+	for (size_t i=0; i<bDiffs.size(); i++)
+	{
+		if (bDiffs[i]->getLastModificationTime() > time2)
+			time2 = bDiffs[i]->getLastModificationTime();
+	}
+
+	// strict weak ordering!
+	if (time1 == time2)
+		return a->getSortHack() > b->getSortHack();
+
+	return time1 > time2;
+}
+
+bool OsuSongBrowser2::SortByDifficulty::operator () (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const
+{
+	if (a->getDatabaseBeatmap() == NULL || b->getDatabaseBeatmap() == NULL)
+		return a->getSortHack() < b->getSortHack();
+
+	float diff1 = (a->getDatabaseBeatmap()->getAR()+1)*(a->getDatabaseBeatmap()->getCS()+1)*(a->getDatabaseBeatmap()->getHP()+1)*(a->getDatabaseBeatmap()->getOD()+1)*(std::max(a->getDatabaseBeatmap()->getMaxBPM(), 1));
+	float stars1 = a->getDatabaseBeatmap()->getStarsNomod();
+	const std::vector<OsuDatabaseBeatmap*> &aDiffs = a->getDatabaseBeatmap()->getDifficulties();
+	for (size_t i=0; i<aDiffs.size(); i++)
+	{
+		const OsuDatabaseBeatmap *d = aDiffs[i];
+		if (d->getStarsNomod() > stars1)
+			stars1 = d->getStarsNomod();
+
+		const float tempDiff1 = (d->getAR()+1)*(d->getCS()+1)*(d->getHP()+1)*(d->getOD()+1)*(std::max(d->getMaxBPM(), 1));
+		if (tempDiff1 > diff1)
+			diff1 = tempDiff1;
+	}
+
+	float diff2 = (b->getDatabaseBeatmap()->getAR()+1)*(b->getDatabaseBeatmap()->getCS()+1)*(b->getDatabaseBeatmap()->getHP()+1)*(b->getDatabaseBeatmap()->getOD()+1)*(std::max(b->getDatabaseBeatmap()->getMaxBPM(), 1));
+	float stars2 = b->getDatabaseBeatmap()->getStarsNomod();
+	const std::vector<OsuDatabaseBeatmap*> &bDiffs = b->getDatabaseBeatmap()->getDifficulties();
+	for (size_t i=0; i<bDiffs.size(); i++)
+	{
+		const OsuDatabaseBeatmap *d = bDiffs[i];
+		if (d->getStarsNomod() > stars2)
+			stars2 = d->getStarsNomod();
+
+		const float tempDiff2 = (d->getAR()+1)*(d->getCS()+1)*(d->getHP()+1)*(d->getOD()+1)*(std::max(d->getMaxBPM(), 1));
+		if (tempDiff2 > diff1)
+			diff2 = tempDiff2;
+	}
+
+	if (stars1 > 0 && stars2 > 0)
+	{
 		// strict weak ordering!
-		if (artistLowercase1 == artistLowercase2)
+		if (stars1 == stars2)
 			return a->getSortHack() < b->getSortHack();
 
-		return artistLowercase1 < artistLowercase2;
+		return stars1 < stars2;
 	}
-};
-
-struct SortByBPM : public OsuSongBrowser2::SORTING_COMPARATOR
-{
-	virtual ~SortByBPM() {;}
-	bool operator() (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const
+	else
 	{
-		if (a->getDatabaseBeatmap() == NULL || b->getDatabaseBeatmap() == NULL)
-			return a->getSortHack() < b->getSortHack();
-
-		int bpm1 = a->getDatabaseBeatmap()->getMaxBPM();
-		const std::vector<OsuDatabaseBeatmap*> &aDiffs = a->getDatabaseBeatmap()->getDifficulties();
-		for (size_t i=0; i<aDiffs.size(); i++)
-		{
-			if (aDiffs[i]->getMaxBPM() > bpm1)
-				bpm1 = aDiffs[i]->getMaxBPM();
-		}
-
-		int bpm2 = b->getDatabaseBeatmap()->getMaxBPM();
-		const std::vector<OsuDatabaseBeatmap*> &bDiffs = b->getDatabaseBeatmap()->getDifficulties();
-		for (size_t i=0; i<bDiffs.size(); i++)
-		{
-			if (bDiffs[i]->getMaxBPM() > bpm2)
-				bpm2 = bDiffs[i]->getMaxBPM();
-		}
-
 		// strict weak ordering!
-		if (bpm1 == bpm2)
+		if (diff1 == diff2)
 			return a->getSortHack() < b->getSortHack();
 
-		return bpm1 < bpm2;
+		return diff1 < diff2;
 	}
-};
+}
 
-struct SortByCreator : public OsuSongBrowser2::SORTING_COMPARATOR
+bool OsuSongBrowser2::SortByLength::operator () (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const
 {
-	virtual ~SortByCreator() {;}
-	bool operator() (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const
+	if (a->getDatabaseBeatmap() == NULL || b->getDatabaseBeatmap() == NULL)
+		return a->getSortHack() < b->getSortHack();
+
+	unsigned long length1 = a->getDatabaseBeatmap()->getLengthMS();
+	const std::vector<OsuDatabaseBeatmap*> &aDiffs = a->getDatabaseBeatmap()->getDifficulties();
+	for (size_t i=0; i<aDiffs.size(); i++)
 	{
-		if (a->getDatabaseBeatmap() == NULL || b->getDatabaseBeatmap() == NULL)
-			return a->getSortHack() < b->getSortHack();
-
-		std::wstring creatorLowercase1 = std::wstring((a->getDatabaseBeatmap()->getCreator().wc_str() == NULL || a->getDatabaseBeatmap()->getCreator().length() < 1) ? L"" : a->getDatabaseBeatmap()->getCreator().wc_str());
-
-		std::wstring creatorLowercase2 = std::wstring((b->getDatabaseBeatmap()->getCreator().wc_str() == NULL || b->getDatabaseBeatmap()->getCreator().length() < 1) ? L"" : b->getDatabaseBeatmap()->getCreator().wc_str());
-
-		std::transform(creatorLowercase1.begin(), creatorLowercase1.end(), creatorLowercase1.begin(), std::towlower);
-		std::transform(creatorLowercase2.begin(), creatorLowercase2.end(), creatorLowercase2.begin(), std::towlower);
-
-		// strict weak ordering!
-		if (creatorLowercase1 == creatorLowercase2)
-			return a->getSortHack() < b->getSortHack();
-
-		return creatorLowercase1 < creatorLowercase2;
+		if (aDiffs[i]->getLengthMS() > length1)
+			length1 = aDiffs[i]->getLengthMS();
 	}
-};
 
-struct SortByDateAdded : public OsuSongBrowser2::SORTING_COMPARATOR
+	unsigned long length2 = b->getDatabaseBeatmap()->getLengthMS();
+	const std::vector<OsuDatabaseBeatmap*> &bDiffs = b->getDatabaseBeatmap()->getDifficulties();
+	for (size_t i=0; i<bDiffs.size(); i++)
+	{
+		if (bDiffs[i]->getLengthMS() > length2)
+			length2 = bDiffs[i]->getLengthMS();
+	}
+
+	// strict weak ordering!
+	if (length1 == length2)
+		return a->getSortHack() < b->getSortHack();
+
+	return length1 < length2;
+}
+
+bool OsuSongBrowser2::SortByTitle::operator () (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const
 {
-	virtual ~SortByDateAdded() {;}
-	bool operator() (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const
-	{
-		if (a->getDatabaseBeatmap() == NULL || b->getDatabaseBeatmap() == NULL)
-			return a->getSortHack() < b->getSortHack();
+	if (a->getDatabaseBeatmap() == NULL || b->getDatabaseBeatmap() == NULL)
+		return a->getSortHack() < b->getSortHack();
 
-		long long time1 = a->getDatabaseBeatmap()->getLastModificationTime();
-		const std::vector<OsuDatabaseBeatmap*> &aDiffs = a->getDatabaseBeatmap()->getDifficulties();
-		for (size_t i=0; i<aDiffs.size(); i++)
-		{
-			if (aDiffs[i]->getLastModificationTime() > time1)
-				time1 = aDiffs[i]->getLastModificationTime();
-		}
+	// strict weak ordering!
+	if (a->getDatabaseBeatmap()->getTitle().equalsIgnoreCase(b->getDatabaseBeatmap()->getTitle()))
+		return a->getSortHack() < b->getSortHack();
 
-		long long time2 = b->getDatabaseBeatmap()->getLastModificationTime();
-		const std::vector<OsuDatabaseBeatmap*> &bDiffs = b->getDatabaseBeatmap()->getDifficulties();
-		for (size_t i=0; i<bDiffs.size(); i++)
-		{
-			if (bDiffs[i]->getLastModificationTime() > time2)
-				time2 = bDiffs[i]->getLastModificationTime();
-		}
-
-		// strict weak ordering!
-		if (time1 == time2)
-			return a->getSortHack() > b->getSortHack();
-
-		return time1 > time2;
-	}
-};
-
-struct SortByDifficulty : public OsuSongBrowser2::SORTING_COMPARATOR
-{
-	virtual ~SortByDifficulty() {;}
-	bool operator() (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const
-	{
-		if (a->getDatabaseBeatmap() == NULL || b->getDatabaseBeatmap() == NULL)
-			return a->getSortHack() < b->getSortHack();
-
-		float diff1 = (a->getDatabaseBeatmap()->getAR()+1)*(a->getDatabaseBeatmap()->getCS()+1)*(a->getDatabaseBeatmap()->getHP()+1)*(a->getDatabaseBeatmap()->getOD()+1)*(std::max(a->getDatabaseBeatmap()->getMaxBPM(), 1));
-		float stars1 = a->getDatabaseBeatmap()->getStarsNomod();
-		const std::vector<OsuDatabaseBeatmap*> &aDiffs = a->getDatabaseBeatmap()->getDifficulties();
-		for (size_t i=0; i<aDiffs.size(); i++)
-		{
-			const OsuDatabaseBeatmap *d = aDiffs[i];
-			if (d->getStarsNomod() > stars1)
-				stars1 = d->getStarsNomod();
-
-			const float tempDiff1 = (d->getAR()+1)*(d->getCS()+1)*(d->getHP()+1)*(d->getOD()+1)*(std::max(d->getMaxBPM(), 1));
-			if (tempDiff1 > diff1)
-				diff1 = tempDiff1;
-		}
-
-		float diff2 = (b->getDatabaseBeatmap()->getAR()+1)*(b->getDatabaseBeatmap()->getCS()+1)*(b->getDatabaseBeatmap()->getHP()+1)*(b->getDatabaseBeatmap()->getOD()+1)*(std::max(b->getDatabaseBeatmap()->getMaxBPM(), 1));
-		float stars2 = b->getDatabaseBeatmap()->getStarsNomod();
-		const std::vector<OsuDatabaseBeatmap*> &bDiffs = b->getDatabaseBeatmap()->getDifficulties();
-		for (size_t i=0; i<bDiffs.size(); i++)
-		{
-			const OsuDatabaseBeatmap *d = bDiffs[i];
-			if (d->getStarsNomod() > stars2)
-				stars2 = d->getStarsNomod();
-
-			const float tempDiff2 = (d->getAR()+1)*(d->getCS()+1)*(d->getHP()+1)*(d->getOD()+1)*(std::max(d->getMaxBPM(), 1));
-			if (tempDiff2 > diff1)
-				diff2 = tempDiff2;
-		}
-
-		if (stars1 > 0 && stars2 > 0)
-		{
-			// strict weak ordering!
-			if (stars1 == stars2)
-				return a->getSortHack() < b->getSortHack();
-
-			return stars1 < stars2;
-		}
-		else
-		{
-			// strict weak ordering!
-			if (diff1 == diff2)
-				return a->getSortHack() < b->getSortHack();
-
-			return diff1 < diff2;
-		}
-	}
-};
-
-struct SortByLength : public OsuSongBrowser2::SORTING_COMPARATOR
-{
-	virtual ~SortByLength() {;}
-	bool operator() (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const
-	{
-		if (a->getDatabaseBeatmap() == NULL || b->getDatabaseBeatmap() == NULL)
-			return a->getSortHack() < b->getSortHack();
-
-		unsigned long length1 = a->getDatabaseBeatmap()->getLengthMS();
-		const std::vector<OsuDatabaseBeatmap*> &aDiffs = a->getDatabaseBeatmap()->getDifficulties();
-		for (size_t i=0; i<aDiffs.size(); i++)
-		{
-			if (aDiffs[i]->getLengthMS() > length1)
-				length1 = aDiffs[i]->getLengthMS();
-		}
-
-		unsigned long length2 = b->getDatabaseBeatmap()->getLengthMS();
-		const std::vector<OsuDatabaseBeatmap*> &bDiffs = b->getDatabaseBeatmap()->getDifficulties();
-		for (size_t i=0; i<bDiffs.size(); i++)
-		{
-			if (bDiffs[i]->getLengthMS() > length2)
-				length2 = bDiffs[i]->getLengthMS();
-		}
-
-		// strict weak ordering!
-		if (length1 == length2)
-			return a->getSortHack() < b->getSortHack();
-
-		return length1 < length2;
-	}
-};
-
-struct SortByTitle : public OsuSongBrowser2::SORTING_COMPARATOR
-{
-	virtual ~SortByTitle() {;}
-	bool operator() (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const
-	{
-		if (a->getDatabaseBeatmap() == NULL || b->getDatabaseBeatmap() == NULL)
-			return a->getSortHack() < b->getSortHack();
-
-		std::wstring titleLowercase1 = std::wstring((a->getDatabaseBeatmap()->getTitle().wc_str() == NULL || a->getDatabaseBeatmap()->getTitle().length() < 1) ? L"" : a->getDatabaseBeatmap()->getTitle().wc_str());
-		std::wstring titleLowercase2 = std::wstring((b->getDatabaseBeatmap()->getTitle().wc_str() == NULL || b->getDatabaseBeatmap()->getTitle().length() < 1) ? L"" : b->getDatabaseBeatmap()->getTitle().wc_str());
-
-		std::transform(titleLowercase1.begin(), titleLowercase1.end(), titleLowercase1.begin(), std::towlower);
-		std::transform(titleLowercase2.begin(), titleLowercase2.end(), titleLowercase2.begin(), std::towlower);
-
-		// strict weak ordering!
-		if (titleLowercase1 == titleLowercase2)
-			return a->getSortHack() < b->getSortHack();
-
-		return titleLowercase1 < titleLowercase2;
-	}
-};
+	return a->getDatabaseBeatmap()->getTitle().lessThanIgnoreCase(b->getDatabaseBeatmap()->getTitle());
+}
 
 
 
@@ -2325,22 +2278,15 @@ bool OsuSongBrowser2::searchMatcher(const OsuDatabaseBeatmap *databaseBeatmap, c
 	// early return here for literal match/contains
 	if (hasAnyValidLiteralSearchString)
 	{
-		// prebuild std::string list (shared for matching all diffs here)
-		std::vector<std::string> stdLiteralSearchStrings;
-		for (size_t i=0; i<literalSearchStrings.size(); i++)
-		{
-			stdLiteralSearchStrings.push_back(std::string(literalSearchStrings[i].toUtf8()));
-		}
-
 		for (size_t i=0; i<numDiffs; i++)
 		{
 			const OsuDatabaseBeatmap *diff = (isContainer ? diffs[i] : databaseBeatmap);
 
 			bool atLeastOneFullMatch = true;
 
-			for (size_t s=0; s<stdLiteralSearchStrings.size(); s++)
+			for (size_t s=0; s<literalSearchStrings.size(); s++)
 			{
-				if (!findSubstringInDifficulty(diff, stdLiteralSearchStrings[s]))
+				if (!findSubstringInDifficulty(diff, literalSearchStrings[s]))
 					atLeastOneFullMatch = false;
 			}
 
@@ -2356,61 +2302,53 @@ bool OsuSongBrowser2::searchMatcher(const OsuDatabaseBeatmap *databaseBeatmap, c
 	return expressionMatches;
 }
 
-bool OsuSongBrowser2::findSubstringInDifficulty(const OsuDatabaseBeatmap *diff, const std::string &stdSearchString)
+bool OsuSongBrowser2::findSubstringInDifficulty(const OsuDatabaseBeatmap *diff, const UString &searchString)
 {
 	if (diff->getTitle().length() > 0)
 	{
-		const std::string difficultySongTitle = std::string(diff->getTitle().toUtf8());
-		if (Osu::findIgnoreCase(difficultySongTitle, stdSearchString))
+		if (diff->getTitle().findIgnoreCase(searchString) != -1)
 			return true;
 	}
 
 	if (diff->getArtist().length() > 0)
 	{
-		const std::string difficultySongArtist = std::string(diff->getArtist().toUtf8());
-		if (Osu::findIgnoreCase(difficultySongArtist, stdSearchString))
+		if (diff->getArtist().findIgnoreCase(searchString) != -1)
 			return true;
 	}
 
 	if (diff->getCreator().length() > 0)
 	{
-		const std::string difficultySongCreator = std::string(diff->getCreator().toUtf8());
-		if (Osu::findIgnoreCase(difficultySongCreator, stdSearchString))
+		if (diff->getCreator().findIgnoreCase(searchString) != -1)
 			return true;
 	}
 
 	if (diff->getDifficultyName().length() > 0)
 	{
-		const std::string difficultyName = std::string(diff->getDifficultyName().toUtf8());
-		if (Osu::findIgnoreCase(difficultyName, stdSearchString))
+		if (diff->getDifficultyName().findIgnoreCase(searchString) != -1)
 			return true;
 	}
 
 	if (diff->getSource().length() > 0)
 	{
-		const std::string difficultySongSource = std::string(diff->getSource().toUtf8());
-		if (Osu::findIgnoreCase(difficultySongSource, stdSearchString))
+		if (diff->getSource().findIgnoreCase(searchString) != -1)
 			return true;
 	}
 
 	if (diff->getTags().length() > 0)
 	{
-		const std::string difficultySongTags = std::string(diff->getTags().toUtf8());
-		if (Osu::findIgnoreCase(difficultySongTags, stdSearchString))
+		if (diff->getTags().findIgnoreCase(searchString) != -1)
 			return true;
 	}
 
 	if (diff->getID() > 0)
 	{
-		const std::string beatmapIdAsString = std::to_string(diff->getID());
-		if (Osu::findIgnoreCase(beatmapIdAsString, stdSearchString))
+		if (UString::format("%i", diff->getID()).findIgnoreCase(searchString) != -1)
 			return true;
 	}
 
 	if (diff->getSetID() > 0)
 	{
-		const std::string beatmapSetIdAsString = std::to_string(diff->getSetID());
-		if (Osu::findIgnoreCase(beatmapSetIdAsString, stdSearchString))
+		if (UString::format("%i", diff->getSetID()).findIgnoreCase(searchString) != -1)
 			return true;
 	}
 

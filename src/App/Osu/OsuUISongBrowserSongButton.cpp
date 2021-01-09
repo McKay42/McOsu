@@ -233,38 +233,7 @@ void OsuUISongBrowserSongButton::drawSubTitle(Graphics *g, float deselectedAlpha
 
 void OsuUISongBrowserSongButton::sortChildren()
 {
-	struct SortComparator
-	{
-		bool operator() (OsuUISongBrowserButton const *aDiff, OsuUISongBrowserButton const *bDiff) const
-		{
-			const OsuDatabaseBeatmap *a = ((OsuUISongBrowserSongDifficultyButton*)aDiff)->getDatabaseBeatmap();
-			const OsuDatabaseBeatmap *b = ((OsuUISongBrowserSongDifficultyButton*)bDiff)->getDatabaseBeatmap();
-
-			const unsigned long diff1 = (a->getAR()+1)*(a->getCS()+1)*(a->getHP()+1)*(a->getOD()+1)*(a->getMaxBPM() > 0 ? a->getMaxBPM() : 1);
-			const unsigned long diff2 = (b->getAR()+1)*(b->getCS()+1)*(b->getHP()+1)*(b->getOD()+1)*(b->getMaxBPM() > 0 ? b->getMaxBPM() : 1);
-
-			const float stars1 = a->getStarsNomod();
-			const float stars2 = b->getStarsNomod();
-
-			if (stars1 > 0 && stars2 > 0)
-			{
-				// strict weak ordering!
-				if (stars1 == stars2)
-					return a->getSortHack() < b->getSortHack();
-				else
-					return stars1 < stars2;
-			}
-			else
-			{
-				// strict weak ordering!
-				if (diff1 == diff2)
-					return a->getSortHack() < b->getSortHack();
-				else
-					return diff1 < diff2;
-			}
-		}
-	};
-	std::sort(m_children.begin(), m_children.end(), SortComparator());
+	std::sort(m_children.begin(), m_children.end(), OsuSongBrowser2::SortByDifficulty());
 }
 
 void OsuUISongBrowserSongButton::updateLayoutEx()
@@ -316,10 +285,12 @@ void OsuUISongBrowserSongButton::onSelected(bool wasSelected)
 
 void OsuUISongBrowserSongButton::onRightMouseUpInside()
 {
-	const Vector2 pos = engine->getMouse()->getPos();
+	///const Vector2 pos = engine->getMouse()->getPos();
 
 	if (m_contextMenu != NULL)
 	{
+		// TODO: implement collection editing
+		/*
 		m_contextMenu->setPos(pos);
 		m_contextMenu->setRelPos(pos);
 		m_contextMenu->begin(0, true);
@@ -333,6 +304,7 @@ void OsuUISongBrowserSongButton::onRightMouseUpInside()
 		m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUISongBrowserSongButton::onContextMenu) );
 		OsuUIContextMenu::clampToRightScreenEdge(m_contextMenu);
 		OsuUIContextMenu::clampToBottomScreenEdge(m_contextMenu);
+		*/
 	}
 }
 
