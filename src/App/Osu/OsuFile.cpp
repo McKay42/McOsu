@@ -9,6 +9,8 @@
 #include "Engine.h"
 #include "File.h"
 
+constexpr const uint64_t OsuFile::MAX_STRING_LENGTH;
+
 OsuFile::OsuFile(UString filepath, bool write)
 {
 	m_bWrite = write;
@@ -241,10 +243,12 @@ UString OsuFile::readString()
 		if (strLength > 0)
 		{
 			std::vector<unsigned char> strData;
-			strData.reserve((size_t)strLength + 1);
+			strData.reserve(std::min(strLength + 1, MAX_STRING_LENGTH));
 			for (uint64_t i=0; i<strLength; i++)
 			{
-				strData.push_back(readByte());
+				const unsigned char character = readByte();
+				if (i < std::min(strLength, MAX_STRING_LENGTH - 1))
+					strData.push_back(character);
 			}
 			strData.push_back('\0');
 
@@ -270,11 +274,13 @@ std::string OsuFile::readStdString()
 
 		if (strLength > 0)
 		{
-			value.reserve(strLength);
+			value.reserve(std::min(strLength, MAX_STRING_LENGTH));
 
 			for (uint64_t i=0; i<strLength; i++)
 			{
-				value += readByte();
+				const unsigned char character = readByte();
+				if (i < std::min(strLength, MAX_STRING_LENGTH))
+					value += character;
 			}
 		}
 	}
@@ -306,7 +312,7 @@ void OsuFile::readByteArray()
 	}
 }
 
-uint64_t OsuFile::decodeULEB128(const uint8_t *p, unsigned *n)
+uint64_t OsuFile::decodeULEB128(const uint8_t *p, unsigned int *n)
 {
 	const uint8_t *backup = p;
 	uint64_t value = 0;
@@ -322,8 +328,8 @@ uint64_t OsuFile::decodeULEB128(const uint8_t *p, unsigned *n)
 	}
 	while (*p++ >= 128);
 
-	if (n)
-		*n = (unsigned)(p - backup);
+	if (n != NULL)
+		*n = (unsigned int)(p - backup);
 
 	return value;
 }
