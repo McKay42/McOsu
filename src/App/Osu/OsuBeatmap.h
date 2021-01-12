@@ -242,6 +242,7 @@ protected:
 	double m_fLastRealTimeForInterpolationDelta;
 	int m_iResourceLoadUpdateDelayHack;
 	bool m_bForceStreamPlayback;
+	float m_fAfterMusicIsFinishedVirtualAudioTimeStart;
 
 	// health
 	bool m_bFailed;

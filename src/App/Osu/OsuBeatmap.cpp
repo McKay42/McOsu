@@ -89,7 +89,7 @@ ConVar osu_mod_arwobble_interval("osu_mod_arwobble_interval", 7.0f);
 ConVar osu_mod_fullalternate("osu_mod_fullalternate", false);
 
 ConVar osu_early_note_time("osu_early_note_time", 1000.0f, "Timeframe in ms at the beginning of a beatmap which triggers a starting delay for easier reading");
-ConVar osu_end_delay_time("osu_end_delay_time", 1100.0f, "Duration in ms which is added at the end of a beatmap after the last hitobject is finished but before the ranking screen is automatically shown");
+ConVar osu_end_delay_time("osu_end_delay_time", 750.0f, "Duration in ms which is added at the end of a beatmap after the last hitobject is finished but before the ranking screen is automatically shown");
 ConVar osu_end_skip_time("osu_end_skip_time", 400.0f, "Duration in ms which is added to the endTime of the last hitobject, after which pausing the game will immediately jump to the ranking screen");
 ConVar osu_skip_time("osu_skip_time", 5000.0f, "Timeframe in ms within a beatmap which allows skipping if it doesn't contain any hitobjects");
 ConVar osu_fail_time("osu_fail_time", 2.25f, "Timeframe in s for the slowdown effect after failing, before the pause menu is shown");
@@ -180,6 +180,7 @@ OsuBeatmap::OsuBeatmap(Osu *osu)
 	m_fLastRealTimeForInterpolationDelta = 0.0;
 	m_iResourceLoadUpdateDelayHack = 0;
 	m_bForceStreamPlayback = true; // if this is set to true here, then the music will always be loaded as a stream (meaning slow disk access could cause audio stalling/stuttering)
+	m_fAfterMusicIsFinishedVirtualAudioTimeStart = -1.0f;
 
 	m_bFailed = false;
 	m_fFailAnim = 1.0f;
@@ -486,12 +487,31 @@ void OsuBeatmap::update()
 	}
 
 	// detect and handle music end
-	if (!m_bIsWaiting && m_music->isReady() && (m_music->isFinished() || (m_hitobjects.size() > 0 && m_iCurMusicPos > (m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size()-1]->getTime() + m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size()-1]->getDuration() + (long)osu_end_delay_time.getInt()))))
+	if (!m_bIsWaiting && m_music->isReady())
 	{
-		if (!m_bFailed)
+		const bool isMusicFinished = m_music->isFinished();
+
+		// trigger virtual audio time after music finishes
+		if (!isMusicFinished)
+			m_fAfterMusicIsFinishedVirtualAudioTimeStart = -1.0f;
+		else if (m_fAfterMusicIsFinishedVirtualAudioTimeStart < 0.0f)
+			m_fAfterMusicIsFinishedVirtualAudioTimeStart = engine->getTimeReal();
+
+		if (isMusicFinished)
 		{
-			stop(false);
-			return;
+			// continue with virtual audio time until the last hitobject is done (plus sanity offset given via osu_end_delay_time)
+			// because some beatmaps have hitobjects going until >= the exact end of the music ffs
+			// NOTE: this overwrites m_iCurMusicPos for the rest of the update loop
+			m_iCurMusicPos = (long)m_music->getLengthMS() + (long)((engine->getTimeReal() - m_fAfterMusicIsFinishedVirtualAudioTimeStart)*1000.0f);
+		}
+
+		if (m_hitobjects.size() < 1 || m_iCurMusicPos > (m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size()-1]->getTime() + m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size()-1]->getDuration() + (long)osu_end_delay_time.getInt()))
+		{
+			if (!m_bFailed)
+			{
+				stop(false);
+				return;
+			}
 		}
 	}
 
