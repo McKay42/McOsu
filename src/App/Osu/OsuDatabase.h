@@ -161,8 +161,8 @@ public:
 	inline bool foundChanges() const {return m_bFoundChanges;}
 
 	inline const std::vector<OsuDatabaseBeatmap*> getDatabaseBeatmaps() const {return m_databaseBeatmaps;}
-	OsuDatabaseBeatmap *getBeatmap(std::string md5hash);
-	OsuDatabaseBeatmap *getBeatmapDifficulty(std::string md5hash);
+	OsuDatabaseBeatmap *getBeatmap(const std::string &md5hash);
+	OsuDatabaseBeatmap *getBeatmapDifficulty(const std::string &md5hash);
 	inline int getNumCollections() const {return m_collections.size();}
 	inline const std::vector<Collection> getCollections() const {return m_collections;}
 

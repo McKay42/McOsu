@@ -784,9 +784,11 @@ int OsuDatabase::getLevelForScore(unsigned long long score, int maxLevel)
 	}
 }
 
-OsuDatabaseBeatmap *OsuDatabase::getBeatmap(std::string md5hash)
+OsuDatabaseBeatmap *OsuDatabase::getBeatmap(const std::string &md5hash)
 {
 	const size_t md5hashLength = md5hash.length();
+
+	if (md5hashLength != 32) return NULL;
 
 	for (size_t i=0; i<m_databaseBeatmaps.size(); i++)
 	{
@@ -815,9 +817,11 @@ OsuDatabaseBeatmap *OsuDatabase::getBeatmap(std::string md5hash)
 	return NULL;
 }
 
-OsuDatabaseBeatmap *OsuDatabase::getBeatmapDifficulty(std::string md5hash)
+OsuDatabaseBeatmap *OsuDatabase::getBeatmapDifficulty(const std::string &md5hash)
 {
 	const size_t md5hashLength = md5hash.length();
+
+	if (md5hashLength != 32) return NULL;
 
 	// TODO: optimize db accesses by caching a hashmap from md5hash -> OsuBeatmap*, currently it just does a loop over all diffs of all beatmaps (for every call)
 	for (size_t i=0; i<m_databaseBeatmaps.size(); i++)

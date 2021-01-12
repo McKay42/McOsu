@@ -711,7 +711,7 @@ void OsuUISongBrowserScoreButton::onDeleteScoreConfirmed(UString text, int id)
 	}
 }
 
-void OsuUISongBrowserScoreButton::setScore(OsuDatabase::Score score, int index, UString titleString, float weight)
+void OsuUISongBrowserScoreButton::setScore(const OsuDatabase::Score &score, int index, UString titleString, float weight)
 {
 	m_score = score;
 	m_iScoreIndexNumber = index;
