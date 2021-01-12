@@ -1286,6 +1286,9 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 		const bool isComplete = (num300s + num100s + num50s + numMisses >= numHitObjects);
 		const bool isZero = (m_osu->getScore()->getScore() < 1);
 		const bool isUnranked = (m_osu->getModAuto() || (m_osu->getModAutopilot() && m_osu->getModRelax())) || m_osu->getScore()->isUnranked();
+
+		//debugLog("isComplete = %i, isZero = %i, isUnranked = %i\n", (int)isComplete, (int)isZero, (int)isUnranked);
+
 		int scoreIndex = -1;
 		if (isComplete && !isZero && !isUnranked && !m_osu->getScore()->hasDied())
 		{
@@ -1355,6 +1358,8 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 						score.experimentalModsConVars.append(";");
 					}
 				}
+
+				score.md5hash = m_selectedDifficulty2->getMD5Hash(); // NOTE: necessary for "Use Mods"
 
 				// save it
 				scoreIndex = m_osu->getSongBrowser()->getDatabase()->addScore(m_selectedDifficulty2->getMD5Hash(), score);
