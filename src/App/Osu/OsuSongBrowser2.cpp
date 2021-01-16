@@ -2920,7 +2920,12 @@ void OsuSongBrowser2::onDatabaseLoadingFinished()
 
 void OsuSongBrowser2::onSearchUpdate()
 {
+	const bool hasSearchStringChanged = (m_sPrevSearchString != m_sSearchString);
+
+	const bool prevInSearch = m_bInSearch;
 	m_bInSearch = (m_sSearchString.length() > 0);
+
+	const bool hasInSearchChanged = (prevInSearch != m_bInSearch);
 
 	// empty the container
 	m_songBrowser->getContainer()->empty();
@@ -2933,18 +2938,21 @@ void OsuSongBrowser2::onSearchUpdate()
 
 		// flag all search matches across entire database
 		// TODO: this is slow as fuck now, optimize at some point
-		for (size_t i=0; i<m_songButtons.size(); i++)
+		if (hasSearchStringChanged || hasInSearchChanged)
 		{
-			const std::vector<OsuUISongBrowserButton*> &children = m_songButtons[i]->getChildren();
-			if (children.size() > 0)
+			for (size_t i=0; i<m_songButtons.size(); i++)
 			{
-				for (size_t c=0; c<children.size(); c++)
+				const std::vector<OsuUISongBrowserButton*> &children = m_songButtons[i]->getChildren();
+				if (children.size() > 0)
 				{
-					children[c]->setIsSearchMatch(searchMatcher(children[c]->getDatabaseBeatmap(), m_sSearchString));
+					for (size_t c=0; c<children.size(); c++)
+					{
+						children[c]->setIsSearchMatch(searchMatcher(children[c]->getDatabaseBeatmap(), m_sSearchString));
+					}
 				}
+				else
+					m_songButtons[i]->setIsSearchMatch(searchMatcher(m_songButtons[i]->getDatabaseBeatmap(), m_sSearchString));
 			}
-			else
-				m_songButtons[i]->setIsSearchMatch(searchMatcher(m_songButtons[i]->getDatabaseBeatmap(), m_sSearchString));
 		}
 
 		// use flagged search matches to rebuild visible song buttons
@@ -3081,6 +3089,8 @@ void OsuSongBrowser2::onSearchUpdate()
 				onGroupChange("", m_groupings[i].id);
 		}
 	}
+
+	m_sPrevSearchString = m_sSearchString;
 }
 
 void OsuSongBrowser2::onSortScoresClicked(CBaseUIButton *button)

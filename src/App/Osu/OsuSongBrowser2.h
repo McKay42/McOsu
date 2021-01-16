@@ -350,6 +350,7 @@ private:
 	// search
 	OsuUISearchOverlay *m_search;
 	UString m_sSearchString;
+	UString m_sPrevSearchString;
 	float m_fSearchWaitTime;
 	bool m_bInSearch;
 	GROUP m_searchPrevGroup;
