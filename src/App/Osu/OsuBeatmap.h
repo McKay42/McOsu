@@ -178,6 +178,7 @@ protected:
 	static ConVar *m_osu_fail_time_ref;
 	static ConVar *m_osu_drain_type_ref;
 
+	static ConVar *m_osu_draw_hud_ref;
 	static ConVar *m_osu_draw_scorebarbg_ref;
 	static ConVar *m_osu_hud_scorebar_hide_during_breaks_ref;
 	static ConVar *m_osu_drain_stable_hpbar_maximum_ref;
