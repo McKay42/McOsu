@@ -1460,8 +1460,9 @@ void OsuDatabase::loadScores()
 		const int maxSupportedCustomDbVersion = 20210106;
 		const unsigned char hackIsImportedLegacyScoreFlag = 0xA9; // TODO: remove this once all builds on steam (even previous-version) have loading version cap logic
 
-		bool makeBackup = false;
+		int makeBackupType = 0;
 		const int backupLessThanVersion = 20210103;
+		const int backupMoreThanVersion = 20210105;
 
 		const UString scoresFilePath = (m_osu->isInVRMode() ? "scoresvr.db" : "scores.db");
 		{
@@ -1473,8 +1474,10 @@ void OsuDatabase::loadScores()
 				const int dbVersion = db.readInt();
 				const int numBeatmaps = db.readInt();
 
-				if (dbVersion < backupLessThanVersion)
-					makeBackup = true;
+				if (dbVersion > backupMoreThanVersion)
+					makeBackupType = 2;
+				else if (dbVersion < backupLessThanVersion)
+					makeBackupType = 1;
 
 				debugLog("Custom scores: version = %i, numBeatmaps = %i\n", dbVersion, numBeatmaps);
 
@@ -1618,13 +1621,13 @@ void OsuDatabase::loadScores()
 		}
 
 		// one-time-backup for special occasions (sanity)
-		if (makeBackup)
+		if (makeBackupType > 0)
 		{
 			File originalScoresFile(scoresFilePath);
 			if (originalScoresFile.canRead())
 			{
 				UString backupScoresFilePath = scoresFilePath;
-				backupScoresFilePath.append(UString::format(".%i.backup", backupLessThanVersion));
+				backupScoresFilePath.append(UString::format(".%i.backup", (makeBackupType < 2 ? backupLessThanVersion : backupMoreThanVersion)));
 
 				File backupScoresFile(backupScoresFilePath, File::TYPE::WRITE);
 				if (backupScoresFile.canWrite())
