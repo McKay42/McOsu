@@ -760,7 +760,7 @@ double OsuDifficultyCalculator::computeAimValue(const ScoreData &score, const Os
 	if (attributes.ApproachRate > 10.33)
 		approachRateFactor += 0.4 * (attributes.ApproachRate - 10.33); // from 0.3 to 0.4 see https://github.com/ppy/osu-performance/pull/125/
 	else if (attributes.ApproachRate < 8.0)
-		approachRateFactor += 0.1 * (8.0 - attributes.ApproachRate); // from 0.01 to 0.1 see https://github.com/ppy/osu-performance/pull/125/
+		approachRateFactor += 0.01 * (8.0 - attributes.ApproachRate); // from 0.01 to 0.1 see https://github.com/ppy/osu-performance/pull/125/ // and back again from 0.1 to 0.01 see https://github.com/ppy/osu-performance/pull/133/
 
 	aimValue *= 1.0 + std::min(approachRateFactor, approachRateFactor * ((double)score.totalHits / 1000.0)); // see https://github.com/ppy/osu-performance/pull/125/
 
