@@ -2922,8 +2922,6 @@ void OsuSongBrowser2::onSearchUpdate()
 {
 	m_bInSearch = (m_sSearchString.length() > 0);
 
-	// TODO: sorting support for search results. currently is sorted by parent button summary values (very inaccurate, e.g. for difficulty sorting)
-
 	// empty the container
 	m_songBrowser->getContainer()->empty();
 
@@ -2934,6 +2932,7 @@ void OsuSongBrowser2::onSearchUpdate()
 		m_searchPrevGroup = m_group;
 
 		// flag all search matches across entire database
+		// TODO: this is slow as fuck now, optimize at some point
 		for (size_t i=0; i<m_songButtons.size(); i++)
 		{
 			const std::vector<OsuUISongBrowserButton*> &children = m_songButtons[i]->getChildren();
@@ -2948,12 +2947,10 @@ void OsuSongBrowser2::onSearchUpdate()
 				m_songButtons[i]->setIsSearchMatch(searchMatcher(m_songButtons[i]->getDatabaseBeatmap(), m_sSearchString));
 		}
 
-		// TODO: add missing new groups, and fix search in general (especially for collections)
-
 		// use flagged search matches to rebuild visible song buttons
-		switch (m_group)
+
+		if (m_group == GROUP::GROUP_NO_GROUPING)
 		{
-		case GROUP::GROUP_NO_GROUPING:
 			for (size_t i=0; i<m_songButtons.size(); i++)
 			{
 				const std::vector<OsuUISongBrowserButton*> &children = m_songButtons[i]->getChildren();
@@ -2982,43 +2979,71 @@ void OsuSongBrowser2::onSearchUpdate()
 				else if (m_songButtons[i]->isSearchMatch())
 					m_visibleSongButtons.push_back(m_songButtons[i]);
 			}
-			break;
-
-		// TODO: can reuse this logic for all collections of all types!
-		case GROUP::GROUP_COLLECTIONS:
-			for (size_t i=0; i<m_collectionButtons.size(); i++)
+		}
+		else
+		{
+			std::vector<OsuUISongBrowserCollectionButton*> *groupButtons = NULL;
 			{
-				bool isAnyMatchInCollection = false;
-
-				const std::vector<OsuUISongBrowserButton*> &children = m_collectionButtons[i]->getChildren();
-				for (size_t c=0; c<children.size(); c++)
+				switch (m_group)
 				{
-					const std::vector<OsuUISongBrowserButton*> &childrenChildren = children[c]->getChildren();
-					if (childrenChildren.size() > 0)
-					{
-						for (size_t cc=0; cc<childrenChildren.size(); cc++)
-						{
-							if (childrenChildren[cc]->isSearchMatch())
-							{
-								isAnyMatchInCollection = true;
-								break;
-							}
-						}
-
-						if (isAnyMatchInCollection)
-							break;
-					}
-					else if (children[c]->isSearchMatch())
-					{
-						isAnyMatchInCollection = true;
-						break;
-					}
+				case GROUP::GROUP_NO_GROUPING:
+					break;
+				case GROUP::GROUP_ARTIST:
+					groupButtons = &m_artistCollectionButtons;
+					break;
+				case GROUP::GROUP_CREATOR:
+					groupButtons = &m_creatorCollectionButtons;
+					break;
+				case GROUP::GROUP_DIFFICULTY:
+					groupButtons = &m_difficultyCollectionButtons;
+					break;
+				case GROUP::GROUP_LENGTH:
+					groupButtons = &m_lengthCollectionButtons;
+					break;
+				case GROUP::GROUP_TITLE:
+					groupButtons = &m_titleCollectionButtons;
+					break;
+				case GROUP::GROUP_COLLECTIONS:
+					groupButtons = &m_collectionButtons;
+					break;
 				}
-
-				if (isAnyMatchInCollection)
-					m_visibleSongButtons.push_back(m_collectionButtons[i]);
 			}
-			break;
+
+			if (groupButtons != NULL)
+			{
+				for (size_t i=0; i<groupButtons->size(); i++)
+				{
+					bool isAnyMatchInGroup = false;
+
+					const std::vector<OsuUISongBrowserButton*> &children = (*groupButtons)[i]->getChildren();
+					for (size_t c=0; c<children.size(); c++)
+					{
+						const std::vector<OsuUISongBrowserButton*> &childrenChildren = children[c]->getChildren();
+						if (childrenChildren.size() > 0)
+						{
+							for (size_t cc=0; cc<childrenChildren.size(); cc++)
+							{
+								if (childrenChildren[cc]->isSearchMatch())
+								{
+									isAnyMatchInGroup = true;
+									break;
+								}
+							}
+
+							if (isAnyMatchInGroup)
+								break;
+						}
+						else if (children[c]->isSearchMatch())
+						{
+							isAnyMatchInGroup = true;
+							break;
+						}
+					}
+
+					if (isAnyMatchInGroup)
+						m_visibleSongButtons.push_back((*groupButtons)[i]);
+				}
+			}
 		}
 
 		rebuildSongButtons();
