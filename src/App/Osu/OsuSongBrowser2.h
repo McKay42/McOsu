@@ -121,6 +121,7 @@ public:
 
 	void refreshBeatmaps();
 	void addBeatmap(OsuDatabaseBeatmap *beatmap);
+	void readdBeatmap(OsuDatabaseBeatmap *diff2);
 
 	void scrollToSongButton(OsuUISongBrowserButton *songButton, bool alignOnTop = false);
 	void scrollToSelectedSongButton();
@@ -136,7 +137,7 @@ public:
 
 	inline OsuDatabase *getDatabase() const {return m_db;}
 	inline OsuBeatmap *getSelectedBeatmap() const {return m_selectedBeatmap;}
-	inline const OsuDatabaseBeatmapStarCalculator *getBackgroundStarCalculator() const {return m_backgroundStarCalculator;}
+	inline const OsuDatabaseBeatmapStarCalculator *getDynamicStarCalculator() const {return m_dynamicStarCalculator;}
 
 	inline OsuUISongBrowserInfoLabel *getInfoLabel() {return m_songInfo;}
 
@@ -190,7 +191,7 @@ private:
 
 	void scheduleSearchUpdate(bool immediately = false);
 
-	bool checkHandleKillBackgroundStarCalculator(bool timeout);
+	bool checkHandleKillDynamicStarCalculator(bool timeout);
 
 	OsuUISelectionButton *addBottombarNavButton(std::function<Image*()> getImageFunc, std::function<Image*()> getImageOverFunc);
 	CBaseUIButton *addTopBarRightTabButton(UString text);
@@ -245,7 +246,6 @@ private:
 	void playSelectedDifficulty();
 
 	ConVar *m_fps_max_ref;
-	ConVar *m_osu_database_dynamic_star_calculation_ref;
 	ConVar *m_osu_scores_enabled;
 	ConVar *m_name_ref;
 
@@ -358,11 +358,12 @@ private:
 	// background star calculation (entire database)
 	float m_fBackgroundStarCalculationWorkNotificationTime;
 	int m_iBackgroundStarCalculationIndex;
+	OsuDatabaseBeatmapStarCalculator *m_backgroundStarCalculator;
 
 	// background star calculation (currently selected beatmap)
 	bool m_bBackgroundStarCalcScheduled;
 	bool m_bBackgroundStarCalcScheduledForce;
-	OsuDatabaseBeatmapStarCalculator *m_backgroundStarCalculator;
+	OsuDatabaseBeatmapStarCalculator *m_dynamicStarCalculator;
 };
 
 #endif

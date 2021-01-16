@@ -120,6 +120,10 @@ public:
 
 	void setDifficulties(std::vector<OsuDatabaseBeatmap*> &difficulties);
 
+	void setLengthMS(unsigned long lengthMS) {m_iLengthMS = lengthMS;}
+
+	void setStarsNoMod(float starsNoMod) {m_fStarsNomod = starsNoMod;}
+
 	void setLocalOffset(long localOffset) {m_iLocalOffset = localOffset;}
 
 
@@ -424,6 +428,8 @@ public:
 	inline double getSpeedStars() const {return m_speedStars.load();}
 	inline double getPPv2() const {return m_pp.load();} // NOTE: pp with currently active mods (runtime mods)
 
+	inline long getLengthMS() const {return m_iLengthMS.load();}
+
 	inline const std::vector<double> &getAimStrains() const {return m_aimStrains;}
 	inline const std::vector<double> &getSpeedStrains() const {return m_speedStrains;}
 
@@ -444,6 +450,8 @@ private:
 	std::atomic<double> m_aimStars;
 	std::atomic<double> m_speedStars;
 	std::atomic<double> m_pp;
+
+	std::atomic<long> m_iLengthMS;
 
 	std::vector<double> m_aimStrains;
 	std::vector<double> m_speedStrains;

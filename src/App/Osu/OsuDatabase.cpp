@@ -47,7 +47,6 @@ ConVar osu_folder_sub_songs("osu_folder_sub_songs", "Songs/");
 ConVar osu_folder_sub_skins("osu_folder_sub_skins", "Skins/");
 
 ConVar osu_database_enabled("osu_database_enabled", true);
-ConVar osu_database_dynamic_star_calculation("osu_database_dynamic_star_calculation", true, "dynamically calculate star ratings in the background");
 ConVar osu_database_version("osu_database_version", 20191114, "maximum supported version, above this will use fallback loader");
 ConVar osu_database_ignore_version_warnings("osu_database_ignore_version_warnings", false);
 ConVar osu_database_ignore_version("osu_database_ignore_version", false, "ignore upper version limit and force load the db file (may crash)");

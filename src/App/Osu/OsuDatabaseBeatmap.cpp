@@ -1443,7 +1443,7 @@ void OsuDatabaseBeatmap::setDifficulties(std::vector<OsuDatabaseBeatmap*> &diffi
 		m_sBackgroundImageFileName = m_difficulties[0]->m_sBackgroundImageFileName;
 
 		// also precalculate some largest representative values
-		m_iLengthMS = 0;
+		m_iLengthMS = 0; // TODO: this needs dynamic recalculation on parent as well
 		m_fCS = 0.0f;
 		m_fAR = 0.0f;
 		m_fOD = 0.0f;
@@ -1664,6 +1664,8 @@ OsuDatabaseBeatmapStarCalculator::OsuDatabaseBeatmapStarCalculator() : Resource(
 	m_speedStars = 0.0;
 	m_pp = 0.0;
 
+	m_iLengthMS = 0;
+
 	m_iErrorCode = 0;
 	m_iNumObjects = 0;
 	m_iNumCircles = 0;
@@ -1675,7 +1677,7 @@ void OsuDatabaseBeatmapStarCalculator::init()
 {
 	// NOTE: this accesses runtime mods, so must be run sync (not async)
 	// technically the getSelectedBeatmap() call here is a bit unsafe, since the beatmap could have changed already between async and sync, but in that case we recalculate immediately after anyways
-	if (m_iErrorCode == 0 && m_diff2->m_osu->getSelectedBeatmap() != NULL)
+	if (!m_bDead.load() && m_iErrorCode == 0 && m_diff2->m_osu->getSelectedBeatmap() != NULL)
 		m_pp = OsuDifficultyCalculator::calculatePPv2(m_diff2->m_osu, m_diff2->m_osu->getSelectedBeatmap(), m_aimStars.load(), m_speedStars.load(), m_iNumObjects, m_iNumCircles, m_iNumSpinners, m_iMaxPossibleCombo);
 
 	m_bReady = true;
@@ -1688,6 +1690,8 @@ void OsuDatabaseBeatmapStarCalculator::initAsync()
 	m_aimStars = 0.0;
 	m_speedStars = 0.0;
 	m_pp = 0.0;
+
+	m_iLengthMS = 0;
 
 	const Osu::GAMEMODE gameMode = Osu::GAMEMODE::STD;
 	OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT diffres = OsuDatabaseBeatmap::loadDifficultyHitObjects(m_sFilePath, gameMode, m_fAR, m_fCS, m_fSpeedMultiplier);
@@ -1714,6 +1718,9 @@ void OsuDatabaseBeatmapStarCalculator::initAsync()
 		m_totalStars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, m_fCS, &aimStars, &speedStars, -1, &m_aimStrains, &m_speedStrains);
 		m_aimStars = aimStars;
 		m_speedStars = speedStars;
+
+		if (diffres.diffobjects.size() > 0)
+			m_iLengthMS = (diffres.diffobjects[diffres.diffobjects.size() - 1].endTime - diffres.diffobjects[0].time);
 	}
 
 	m_bAsyncReady = true;

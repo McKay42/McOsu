@@ -328,7 +328,7 @@ void OsuHUD::draw(Graphics *g)
 					m_osu->getScore()->getNumSliderBreaks(),
 					beatmap->getMaxPossibleCombo(),
 					OsuDifficultyCalculator::calculateTotalStarsFromSkills(beatmap->getAimStarsForUpToHitObjectIndex(hitObjectIndexForCurrentTime), beatmap->getSpeedStarsForUpToHitObjectIndex(hitObjectIndexForCurrentTime)),
-					m_osu->getSongBrowser()->getBackgroundStarCalculator()->getTotalStars(),
+					m_osu->getSongBrowser()->getDynamicStarCalculator()->getTotalStars(),
 					beatmap->getBPM(),
 					OsuGameRules::getApproachRateForSpeedMultiplier(beatmap, beatmap->getSpeedMultiplier()),
 					beatmap->getCS(),
@@ -338,7 +338,7 @@ void OsuHUD::draw(Graphics *g)
 					beatmap->getND(),
 					m_osu->getScore()->getUnstableRate(),
 					m_osu->getScore()->getPPv2(),
-					m_osu->getSongBrowser()->getBackgroundStarCalculator()->getPPv2(),
+					m_osu->getSongBrowser()->getDynamicStarCalculator()->getPPv2(),
 					((int)OsuGameRules::getHitWindow300(beatmap) - 0.5f) * (1.0f / m_osu->getSpeedMultiplier()), // see OsuUISongBrowserInfoLabel::update()
 					m_osu->getScore()->getHitErrorAvgCustomMin(),
 					m_osu->getScore()->getHitErrorAvgCustomMax());
@@ -670,7 +670,7 @@ void OsuHUD::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 					m_osu->getScore()->getNumSliderBreaks(),
 					beatmap->getMaxPossibleCombo(),
 					OsuDifficultyCalculator::calculateTotalStarsFromSkills(beatmap->getAimStarsForUpToHitObjectIndex(hitObjectIndexForCurrentTime), beatmap->getSpeedStarsForUpToHitObjectIndex(hitObjectIndexForCurrentTime)),
-					m_osu->getSongBrowser()->getBackgroundStarCalculator()->getTotalStars(),
+					m_osu->getSongBrowser()->getDynamicStarCalculator()->getTotalStars(),
 					beatmap->getBPM(),
 					OsuGameRules::getApproachRateForSpeedMultiplier(beatmap, beatmap->getSpeedMultiplier()),
 					beatmap->getCS(),
@@ -680,7 +680,7 @@ void OsuHUD::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 					beatmap->getND(),
 					m_osu->getScore()->getUnstableRate(),
 					m_osu->getScore()->getPPv2(),
-					m_osu->getSongBrowser()->getBackgroundStarCalculator()->getPPv2(),
+					m_osu->getSongBrowser()->getDynamicStarCalculator()->getPPv2(),
 					((int)OsuGameRules::getHitWindow300(beatmap) - 0.5f) * (1.0f / m_osu->getSpeedMultiplier()), // see OsuUISongBrowserInfoLabel::update()
 					m_osu->getScore()->getHitErrorAvgCustomMin(),
 					m_osu->getScore()->getHitErrorAvgCustomMax());
@@ -2633,13 +2633,13 @@ void OsuHUD::drawScrubbingTimeline(Graphics *g, unsigned long beatmapTime, unsig
 	const unsigned long currentTimeMS = beatmapTime;
 
 	// draw strain graph
-	if (osu_draw_scrubbing_timeline_strain_graph.getBool() && m_osu->getSongBrowser()->getBackgroundStarCalculator()->isAsyncReady())
+	if (osu_draw_scrubbing_timeline_strain_graph.getBool() && m_osu->getSongBrowser()->getDynamicStarCalculator()->isAsyncReady())
 	{
 		// this is still WIP
 
 		// TODO: should use strains from beatmap, not songbrowser (because songbrowser doesn't update onModUpdate() while playing)
-		const std::vector<double> &aimStrains = m_osu->getSongBrowser()->getBackgroundStarCalculator()->getAimStrains();
-		const std::vector<double> &speedStrains = m_osu->getSongBrowser()->getBackgroundStarCalculator()->getSpeedStrains();
+		const std::vector<double> &aimStrains = m_osu->getSongBrowser()->getDynamicStarCalculator()->getAimStrains();
+		const std::vector<double> &speedStrains = m_osu->getSongBrowser()->getDynamicStarCalculator()->getSpeedStrains();
 		const float speedMultiplier = m_osu->getSpeedMultiplier();
 
 		if (aimStrains.size() > 0 && aimStrains.size() == speedStrains.size())

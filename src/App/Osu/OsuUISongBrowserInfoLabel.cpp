@@ -323,9 +323,9 @@ UString OsuUISongBrowserInfoLabel::buildDiffInfoString()
 	float HP = m_fHP;
 	float stars = m_fStars;
 
-	const float modStars = (float)m_osu->getSongBrowser()->getBackgroundStarCalculator()->getTotalStars();
-	const float modPp = (float)m_osu->getSongBrowser()->getBackgroundStarCalculator()->getPPv2();
-	const bool areStarsInaccurate = (m_osu->getSongBrowser()->getBackgroundStarCalculator()->isDead() || !m_osu->getSongBrowser()->getBackgroundStarCalculator()->isAsyncReady());
+	const float modStars = (float)m_osu->getSongBrowser()->getDynamicStarCalculator()->getTotalStars();
+	const float modPp = (float)m_osu->getSongBrowser()->getDynamicStarCalculator()->getPPv2();
+	const bool areStarsInaccurate = (m_osu->getSongBrowser()->getDynamicStarCalculator()->isDead() || !m_osu->getSongBrowser()->getDynamicStarCalculator()->isAsyncReady());
 
 	OsuBeatmap *beatmap = m_osu->getSelectedBeatmap();
 	if (beatmap != NULL)

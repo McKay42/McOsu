@@ -106,8 +106,8 @@ void OsuUISongBrowserSongDifficultyButton::draw(Graphics *g)
 
 	// draw stars
 	const float starsNoMod = m_databaseBeatmap->getStarsNomod();
-	const bool areStarsInaccurate = (m_osu->getSongBrowser()->getBackgroundStarCalculator()->isDead() || !m_osu->getSongBrowser()->getBackgroundStarCalculator()->isAsyncReady());
-	const float stars = (areStarsInaccurate || !m_osu_songbrowser_dynamic_star_recalc_ref->getBool() || !m_bSelected ? starsNoMod : m_osu->getSongBrowser()->getBackgroundStarCalculator()->getTotalStars());
+	const bool areStarsInaccurate = (m_osu->getSongBrowser()->getDynamicStarCalculator()->isDead() || !m_osu->getSongBrowser()->getDynamicStarCalculator()->isAsyncReady());
+	const float stars = (areStarsInaccurate || !m_osu_songbrowser_dynamic_star_recalc_ref->getBool() || !m_bSelected ? starsNoMod : m_osu->getSongBrowser()->getDynamicStarCalculator()->getTotalStars());
 	if (stars > 0)
 	{
 		const float starOffsetY = (size.y*0.85);

@@ -74,6 +74,7 @@ ConVar osu_draw_songbrowser_strain_graph("osu_draw_songbrowser_strain_graph", fa
 ConVar osu_songbrowser_background_fade_in_duration("osu_songbrowser_background_fade_in_duration", 0.1f);
 
 ConVar osu_songbrowser_search_delay("osu_songbrowser_search_delay", 0.5f, "delay until search update when entering text");
+ConVar osu_songbrowser_background_star_calculation("osu_songbrowser_background_star_calculation", true, "precalculate stars for all loaded beatmaps while in songbrowser");
 ConVar osu_songbrowser_dynamic_star_recalc("osu_songbrowser_dynamic_star_recalc", true, "dynamically recalculate displayed star value of currently selected beatmap in songbrowser");
 
 
@@ -339,7 +340,6 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 
 	// convar refs
 	m_fps_max_ref = convar->getConVarByName("fps_max");
-	m_osu_database_dynamic_star_calculation_ref = convar->getConVarByName("osu_database_dynamic_star_calculation");
 	m_osu_scores_enabled = convar->getConVarByName("osu_scores_enabled");
 	m_name_ref = convar->getConVarByName("name");
 
@@ -490,11 +490,12 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	// background star calculation (entire database)
 	m_fBackgroundStarCalculationWorkNotificationTime = 0.0f;
 	m_iBackgroundStarCalculationIndex = 0;
+	m_backgroundStarCalculator = new OsuDatabaseBeatmapStarCalculator();
 
 	// background star calculation (currently selected beatmap)
 	m_bBackgroundStarCalcScheduled = false;
 	m_bBackgroundStarCalcScheduledForce = false;
-	m_backgroundStarCalculator = new OsuDatabaseBeatmapStarCalculator();
+	m_dynamicStarCalculator = new OsuDatabaseBeatmapStarCalculator();
 
 	updateLayout();
 }
@@ -502,6 +503,7 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 OsuSongBrowser2::~OsuSongBrowser2()
 {
 	engine->getResourceManager()->destroyResource(m_backgroundStarCalculator);
+	engine->getResourceManager()->destroyResource(m_dynamicStarCalculator);
 
 	m_songBrowser->getContainer()->empty();
 
@@ -640,14 +642,14 @@ void OsuSongBrowser2::draw(Graphics *g)
 	m_scoreBrowser->draw(g);
 
 	// draw strain graph of currently selected beatmap
-	if (osu_draw_songbrowser_strain_graph.getBool() && getSelectedBeatmap() != NULL && getSelectedBeatmap()->getSelectedDifficulty2() != NULL && m_backgroundStarCalculator->isAsyncReady())
+	if (osu_draw_songbrowser_strain_graph.getBool() && getSelectedBeatmap() != NULL && getSelectedBeatmap()->getSelectedDifficulty2() != NULL && m_dynamicStarCalculator->isAsyncReady())
 	{
 		// this is still WIP
 
 		///const std::vector<double> &aimStrains = getSelectedBeatmap()->getAimStrains();
 		///const std::vector<double> &speedStrains = getSelectedBeatmap()->getSpeedStrains();
-		const std::vector<double> &aimStrains = m_backgroundStarCalculator->getAimStrains();
-		const std::vector<double> &speedStrains = m_backgroundStarCalculator->getSpeedStrains();
+		const std::vector<double> &aimStrains = m_dynamicStarCalculator->getAimStrains();
+		const std::vector<double> &speedStrains = m_dynamicStarCalculator->getSpeedStrains();
 		const float speedMultiplier = m_osu->getSpeedMultiplier();
 
 		//const unsigned long lengthFullMS = beatmapLength;
@@ -1085,31 +1087,73 @@ void OsuSongBrowser2::update()
 	}
 
 	// handle background star calculation (2)
-	/*
-	if (m_beatmaps.size() > 0 && m_osu_database_dynamic_star_calculation_ref->getBool())
+	// this goes through all loaded beatmaps and checks if stars + length have to be calculated and set (e.g. if without osu!.db database)
+	if (m_beatmaps.size() > 0 && osu_songbrowser_background_star_calculation.getBool())
 	{
 		for (int s=0; s<1; s++) // one beatmap per update
 		{
 			bool canMoveToNextBeatmap = true;
-			if (m_iBackgroundStarCalculationIndex < m_beatmaps.size())
+			if (m_iBackgroundStarCalculationIndex >= 0 && m_iBackgroundStarCalculationIndex < m_beatmaps.size())
 			{
-				const std::vector<OsuBeatmapDifficulty*> &diffs = m_beatmaps[m_iBackgroundStarCalculationIndex]->getDifficulties();
-				for (int i=0; i<diffs.size(); i++)
+				OsuDatabaseBeatmap *beatmap = m_beatmaps[m_iBackgroundStarCalculationIndex];
+				const std::vector<OsuDatabaseBeatmap*> &diffs = beatmap->getDifficulties();
+
+				OsuDatabaseBeatmap *diffToCalc = NULL;
+				if (diffs.size() > 0)
 				{
-					OsuBeatmapDifficulty *diff = diffs[i];
-					if (!diff->isBackgroundLoaderActive() && diff->starsNoMod == 0.0f)
+					for (size_t d=0; d<diffs.size(); d++)
 					{
-						diff->semaphore = true; // NOTE: this is used by the BackgroundImagePathLoader to wait until the main thread is done, and then recalculate accurately
+						if (diffs[d]->getStarsNomod() == 0.0f)
 						{
-							diff->loadMetadataRaw(true, true); // NOTE: calculateStarsInaccurately = true
+							diffToCalc = diffs[d];
+							break;
 						}
-						diff->semaphore = false;
+					}
+				}
+				else if (diffToCalc->getStarsNomod() == 0.0f)
+					diffToCalc = beatmap;
 
-						m_fBackgroundStarCalculationWorkNotificationTime = engine->getTime() + 0.1f;
+				if (diffToCalc != NULL)
+				{
+					// bump notification
+					m_fBackgroundStarCalculationWorkNotificationTime = engine->getTime() + 0.1f;
 
-						// only one diff per beatmap per update
-						canMoveToNextBeatmap = false;
-						break;
+					// only one diff per beatmap per update
+					canMoveToNextBeatmap = false;
+
+					if (m_backgroundStarCalculator->isDead() || m_backgroundStarCalculator->isAsyncReady())
+					{
+						if (m_backgroundStarCalculator->isDead())
+						{
+							// initial iteration, just revive (will stay alive forever, only killed on db refresh)
+
+							m_backgroundStarCalculator->revive();
+						}
+						else if (m_backgroundStarCalculator->isAsyncReady())
+						{
+							// we have a result, store it in db
+							// NOTE: stars are upclamped to 0.0001f to signify that they have been calculated once for this diff (even if something fails), we only try once
+
+							OsuDatabaseBeatmap *calculatedDiff = m_backgroundStarCalculator->getBeatmapDifficulty();
+							calculatedDiff->setStarsNoMod(std::max(0.0001f, (float)m_backgroundStarCalculator->getTotalStars()));
+							calculatedDiff->setLengthMS(m_backgroundStarCalculator->getLengthMS());
+
+							// re-add (potentially changed stars, potentially changed length)
+							readdBeatmap(calculatedDiff);
+						}
+
+						// start new calc (nomod stars)
+						{
+							m_backgroundStarCalculator->release();
+
+							const float AR = diffToCalc->getAR();
+							const float CS = diffToCalc->getCS();
+							const float speedMultiplier = 1.0f;
+							m_backgroundStarCalculator->setBeatmapDifficulty(diffToCalc, AR, CS, speedMultiplier);
+
+							engine->getResourceManager()->requestNextLoadAsync();
+							engine->getResourceManager()->loadResource(m_backgroundStarCalculator);
+						}
 					}
 				}
 			}
@@ -1124,7 +1168,6 @@ void OsuSongBrowser2::update()
 			}
 		}
 	}
-	*/
 }
 
 void OsuSongBrowser2::onKeyDown(KeyboardEvent &key)
@@ -1658,7 +1701,8 @@ void OsuSongBrowser2::refreshBeatmaps()
 	if (!m_bVisible || m_bHasSelectedAndIsPlaying) return;
 
 	// reset
-	checkHandleKillBackgroundStarCalculator(false);
+	checkHandleKillDynamicStarCalculator(false);
+	m_backgroundStarCalculator->kill();
 
 	m_selectedBeatmap = NULL;
 
@@ -1875,6 +1919,18 @@ void OsuSongBrowser2::addBeatmap(OsuDatabaseBeatmap *beatmap)
 					m_titleCollectionButtons[27]->getChildren().push_back(songButton);
 			}
 		}
+	}
+}
+
+void OsuSongBrowser2::readdBeatmap(OsuDatabaseBeatmap *diff2)
+{
+	// TODO: remove corresponding button(s) from "By Difficulty" and "By Length" groups, then readd into correct ones
+	// TODO: also recalc parent wrapper values, if diff has a parent wrapper
+
+	for (size_t i=0; i<m_difficultyCollectionButtons.size(); i++)
+	{
+		//OsuUISongBrowserCollectionButton *groupButton = m_difficultyCollectionButtons[i];
+		//groupButton->getChildren();
 	}
 }
 
@@ -2607,25 +2663,25 @@ void OsuSongBrowser2::scheduleSearchUpdate(bool immediately)
 	m_fSearchWaitTime = engine->getTime() + (immediately ? 0.0f : osu_songbrowser_search_delay.getFloat());
 }
 
-bool OsuSongBrowser2::checkHandleKillBackgroundStarCalculator(bool timeout)
+bool OsuSongBrowser2::checkHandleKillDynamicStarCalculator(bool timeout)
 {
-	if (!m_backgroundStarCalculator->isDead())
+	if (!m_dynamicStarCalculator->isDead())
 	{
 		if (timeout)
 		{
 			// this is a bit stupid, but it does allow everything to keep running in the meantime
-			const bool isAsyncReady = m_backgroundStarCalculator->isAsyncReady();
+			const bool isAsyncReady = m_dynamicStarCalculator->isAsyncReady();
 
 			if (isAsyncReady)
-				m_backgroundStarCalculator->kill();
+				m_dynamicStarCalculator->kill();
 
 			return isAsyncReady;
 		}
 		else
 		{
-			m_backgroundStarCalculator->kill();
+			m_dynamicStarCalculator->kill();
 			const double startTime = engine->getTimeReal();
-			while (!m_backgroundStarCalculator->isAsyncReady())
+			while (!m_dynamicStarCalculator->isAsyncReady())
 			{
 				if (timeout && engine->getTimeReal() - startTime > 2)
 				{
@@ -2633,7 +2689,7 @@ bool OsuSongBrowser2::checkHandleKillBackgroundStarCalculator(bool timeout)
 					break;
 				}
 			}
-			return m_backgroundStarCalculator->isAsyncReady();
+			return m_dynamicStarCalculator->isAsyncReady();
 		}
 	}
 	else
@@ -3662,7 +3718,7 @@ void OsuSongBrowser2::recalculateStarsForSelectedBeatmap(bool force)
 	if (!osu_songbrowser_dynamic_star_recalc.getBool()) return;
 
 	if (m_selectedBeatmap == NULL || m_selectedBeatmap->getSelectedDifficulty2() == NULL) return;
-	if (!force && m_selectedBeatmap->getSelectedDifficulty2() == m_backgroundStarCalculator->getBeatmapDifficulty()) return;
+	if (!force && m_selectedBeatmap->getSelectedDifficulty2() == m_dynamicStarCalculator->getBeatmapDifficulty()) return;
 
 	// HACKHACK: temporarily deactivated, see OsuSongBrowser2::update(), but only if drawing scrubbing timeline strain graph is enabled (or "Draw Stats: Stars* (Total)", or "Draw Stats: pp (SS)")
 	if (!m_osu_draw_scrubbing_timeline_strain_graph_ref->getBool() && !m_osu_draw_statistics_perfectpp_ref->getBool() && !m_osu_draw_statistics_totalstars_ref->getBool())
@@ -3676,21 +3732,21 @@ void OsuSongBrowser2::recalculateStarsForSelectedBeatmap(bool force)
 		}
 	}
 
-	if (checkHandleKillBackgroundStarCalculator(true))
+	if (checkHandleKillDynamicStarCalculator(true))
 	{
 		// NOTE: this only works safely because OsuDatabaseBeatmapStarCalculator does no work in load(), because it might still be in the ResourceManager's sync load() queue, so future loadAsync() could crash with the old pending load()
 
-		m_backgroundStarCalculator->release();
-		m_backgroundStarCalculator->revive();
+		m_dynamicStarCalculator->release();
+		m_dynamicStarCalculator->revive();
 
 		const float AR = m_selectedBeatmap->getAR();
 		const float CS = m_selectedBeatmap->getCS();
 		const float speedMultiplier = m_osu->getSpeedMultiplier(); // NOTE: not m_selectedBeatmap->getSpeedMultiplier()!
 
-		m_backgroundStarCalculator->setBeatmapDifficulty(m_selectedBeatmap->getSelectedDifficulty2(), AR, CS, speedMultiplier);
+		m_dynamicStarCalculator->setBeatmapDifficulty(m_selectedBeatmap->getSelectedDifficulty2(), AR, CS, speedMultiplier);
 
 		engine->getResourceManager()->requestNextLoadAsync();
-		engine->getResourceManager()->loadResource(m_backgroundStarCalculator);
+		engine->getResourceManager()->loadResource(m_dynamicStarCalculator);
 	}
 	else
 	{
