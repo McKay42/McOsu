@@ -1924,13 +1924,90 @@ void OsuSongBrowser2::addBeatmap(OsuDatabaseBeatmap *beatmap)
 
 void OsuSongBrowser2::readdBeatmap(OsuDatabaseBeatmap *diff2)
 {
-	// TODO: remove corresponding button(s) from "By Difficulty" and "By Length" groups, then readd into correct ones
-	// TODO: also recalc parent wrapper values, if diff has a parent wrapper
+	// this function readds updated diffs to the correct groups
+	// i.e. when stars and length are calculated in background
 
-	for (size_t i=0; i<m_difficultyCollectionButtons.size(); i++)
+	// NOTE: the difficulty and length groups only contain diffs (and no parent wrapper objects), makes searching for the button way easier
+
+	// difficulty group
 	{
-		//OsuUISongBrowserCollectionButton *groupButton = m_difficultyCollectionButtons[i];
-		//groupButton->getChildren();
+		// remove from difficulty group
+		OsuUISongBrowserButton *difficultyGroupButton = NULL;
+		for (size_t i=0; i<m_difficultyCollectionButtons.size(); i++)
+		{
+			OsuUISongBrowserCollectionButton *groupButton = m_difficultyCollectionButtons[i];
+			std::vector<OsuUISongBrowserButton*> &children = groupButton->getChildren();
+			for (size_t c=0; c<children.size(); c++)
+			{
+				if (children[c]->getDatabaseBeatmap() == diff2)
+				{
+					difficultyGroupButton = children[c];
+
+					// remove
+					children.erase(children.begin() + c);
+
+					break;
+				}
+			}
+		}
+
+		// add to new difficulty group
+		if (difficultyGroupButton != NULL)
+		{
+			// HACKHACK: partial code duplication, see addBeatmap()
+			if (m_difficultyCollectionButtons.size() == 12)
+			{
+				const int index = clamp<int>((int)diff2->getStarsNomod(), 0, 11);
+				m_difficultyCollectionButtons[index]->getChildren().push_back(difficultyGroupButton);
+			}
+		}
+	}
+
+	// length group
+	{
+		// remove from length group
+		OsuUISongBrowserButton *lengthGroupButton = NULL;
+		for (size_t i=0; i<m_lengthCollectionButtons.size(); i++)
+		{
+			OsuUISongBrowserCollectionButton *groupButton = m_lengthCollectionButtons[i];
+			std::vector<OsuUISongBrowserButton*> &children = groupButton->getChildren();
+			for (size_t c=0; c<children.size(); c++)
+			{
+				if (children[c]->getDatabaseBeatmap() == diff2)
+				{
+					lengthGroupButton = children[c];
+
+					// remove
+					children.erase(children.begin() + c);
+
+					break;
+				}
+			}
+		}
+
+		// add to new length group
+		if (lengthGroupButton != NULL)
+		{
+			// HACKHACK: partial code duplication, see addBeatmap()
+			if (m_lengthCollectionButtons.size() == 7)
+			{
+				const unsigned long lengthMS = diff2->getLengthMS();
+				if (lengthMS <= 1000*60)
+					m_lengthCollectionButtons[0]->getChildren().push_back(lengthGroupButton);
+				else if (lengthMS <= 1000*60*2)
+					m_lengthCollectionButtons[1]->getChildren().push_back(lengthGroupButton);
+				else if (lengthMS <= 1000*60*3)
+					m_lengthCollectionButtons[2]->getChildren().push_back(lengthGroupButton);
+				else if (lengthMS <= 1000*60*4)
+					m_lengthCollectionButtons[3]->getChildren().push_back(lengthGroupButton);
+				else if (lengthMS <= 1000*60*5)
+					m_lengthCollectionButtons[4]->getChildren().push_back(lengthGroupButton);
+				else if (lengthMS <= 1000*60*10)
+					m_lengthCollectionButtons[5]->getChildren().push_back(lengthGroupButton);
+				else
+					m_lengthCollectionButtons[6]->getChildren().push_back(lengthGroupButton);
+			}
+		}
 	}
 }
 
