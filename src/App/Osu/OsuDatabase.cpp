@@ -17,7 +17,6 @@
 #include "OsuFile.h"
 #include "OsuReplay.h"
 #include "OsuScore.h"
-#include "OsuBackgroundStarCalcHandler.h"
 #include "OsuNotificationOverlay.h"
 
 #include "OsuDatabaseBeatmap.h"
@@ -436,9 +435,6 @@ void OsuDatabase::load()
 {
 	m_bInterruptLoad = false;
 	m_fLoadingProgress = 0.0f;
-
-	// NOTE: clear all active dependencies before deleting the current database
-	m_osu->getBackgroundStarCalcHandler()->interruptAndEvict();
 
 	OsuDatabaseLoader *loader = new OsuDatabaseLoader(this); // (deletes itself after finishing)
 

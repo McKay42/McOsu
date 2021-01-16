@@ -410,7 +410,32 @@ void OsuUserStatsScreen::setVisible(bool visible)
 	OsuScreenBackable::setVisible(visible);
 
 	if (m_bVisible)
+	{
 		rebuildScoreButtons(m_name_ref->getString());
+
+		// detect if any old pp scores exist, and notify the user if so
+		// TODO: the detection would have to know if we were able to recalculate, so very annoying for anyone with any deleted beatmap but score
+		/*
+		{
+			OsuDatabase *db = m_osu->getSongBrowser()->getDatabase();
+			const std::vector<OsuDatabase::Score*> scores = db->getPlayerPPScores(m_name_ref->getString()).ppScores;
+
+			bool foundOldScores;
+			for (size_t i=0; i<scores.size(); i++)
+			{
+				//debugLog("version = %i\n", scores[i]->version);
+				if (scores[i]->version < OsuScore::VERSION)
+				{
+					foundOldScores = true;
+					break;
+				}
+			}
+
+			if (foundOldScores)
+				m_osu->getNotificationOverlay()->addNotification("Old pp scores detected. Please recalculate as soon as convenient!");
+		}
+		*/
+	}
 	else
 		m_contextMenu->setVisible2(false);
 }

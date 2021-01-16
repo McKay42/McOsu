@@ -37,7 +37,7 @@
 #include "CBaseUIButton.h"
 
 #define MCOSU_VERSION_TEXT "Version"
-#define MCOSU_BANNER_TEXT "-- WARNING: Will run out of memory and crash! Use HBL NSP! --"
+#define MCOSU_BANNER_TEXT "-- dev --"
 UString OsuMainMenu::MCOSU_MAIN_BUTTON_TEXT = UString("McOsu");
 UString OsuMainMenu::MCOSU_MAIN_BUTTON_SUBTEXT = UString("Practice Client");
 #define MCOSU_MAIN_BUTTON_BACK_TEXT "by McKay"
@@ -1229,7 +1229,7 @@ void OsuMainMenu::animMainButton()
 	m_bInMainMenuRandomAnim = true;
 
 	m_iMainMenuRandomAnimType = (rand() % 4) == 1 ? 1 : 0;
-	if (!m_bMainMenuAnimFadeToFriendForNextAnim)
+	if (!m_bMainMenuAnimFadeToFriendForNextAnim && env->getOS() == Environment::OS::OS_WINDOWS) // NOTE: z buffer bullshit on other platforms >:(
 		m_bMainMenuAnimFadeToFriendForNextAnim = (rand() % 12) == 1;
 
 	m_fMainMenuAnim = 0.0f;
