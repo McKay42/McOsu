@@ -74,6 +74,8 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha316.changes.push_back("- Updated pp algorithm (9) (StanR's NF multiplier based on amount of misses), see https://github.com/ppy/osu-performance/pull/127/");
 	alpha316.changes.push_back("- Updated pp algorithm (8) (StanR's SO multiplier based on amount of spinners in map), see https://github.com/ppy/osu-performance/pull/110/");
 	alpha316.changes.push_back("- Updated pp algorithm (7) (Xexxar's AR11 nerf and AR8 buff), see https://github.com/ppy/osu-performance/pull/125/");
+	alpha316.changes.push_back("- Linux: Updated BASS + BASSFX libraries");
+	alpha316.changes.push_back("- macOS: Updated BASS + BASSFX libraries");
 	alpha316.changes.push_back("- Fixed ScoreV2 score multipliers for HR and DT and NF (1.06x -> 1.10x, 1.12x -> 1.20x, 0.5x -> 1.0x)");
 	alpha316.changes.push_back("- Fixed UI toggle being hardcoded to SHIFT+TAB and not respecting \"Toggle Scoreboard\" keybind (in combination with SHIFT)");
 	alpha316.changes.push_back("- Fixed star cache not updating instantly when changing Speed Override with keyboard keys while playing (previously only recalculated upon closing mod selection screen)");
