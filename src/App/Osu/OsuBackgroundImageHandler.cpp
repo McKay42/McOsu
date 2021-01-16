@@ -51,6 +51,11 @@ void OsuBackgroundImageHandler::update(bool allowEviction)
 			{
 				if (!m_bFrozen && !engine->isMinimized())
 				{
+					if (entry.backgroundImagePathLoader != NULL)
+						entry.backgroundImagePathLoader->interruptLoad();
+					if (entry.image != NULL)
+						entry.image->interruptLoad();
+
 					engine->getResourceManager()->destroyResource(entry.backgroundImagePathLoader);
 					engine->getResourceManager()->destroyResource(entry.image);
 
@@ -128,11 +133,6 @@ void OsuBackgroundImageHandler::handleLoadImageForEntry(ENTRY &entry)
 	engine->getResourceManager()->requestNextLoadAsync();
 	engine->getResourceManager()->requestNextLoadUnmanaged();
 	entry.image = engine->getResourceManager()->loadImageAbsUnnamed(fullBackgroundImageFilePath);
-}
-
-void OsuBackgroundImageHandler::keepAlive(const OsuDatabaseBeatmap *beatmap)
-{
-	getLoadBackgroundImage(beatmap);
 }
 
 Image *OsuBackgroundImageHandler::getLoadBackgroundImage(const OsuDatabaseBeatmap *beatmap)
