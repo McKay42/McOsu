@@ -1074,7 +1074,23 @@ void OsuBeatmap::skipEmptySection()
 {
 	if (!m_bIsInSkippableSection) return;
 
-	m_music->setPositionMS(m_iNextHitObjectTime - 2500);
+	const float offset = 2500.0f;
+	float offsetMultiplier = m_osu->getSpeedMultiplier();
+	{
+		// only compensate if not within "normal" osu mod range (would make the game feel too different regarding time from skip until first hitobject)
+		if (offsetMultiplier >= 0.74f && offsetMultiplier <= 1.51f)
+			offsetMultiplier = 1.0f;
+
+		// don't compensate speed increases at all actually
+		if (offsetMultiplier > 1.0f)
+			offsetMultiplier = 1.0f;
+
+		// and cap slowdowns at sane value (~ spinner fadein start)
+		if (offsetMultiplier <= 0.2f)
+			offsetMultiplier = 0.2f;
+	}
+
+	m_music->setPositionMS(std::max(m_iNextHitObjectTime - (long)(offset * offsetMultiplier), (long)0));
 	m_bIsInSkippableSection = false;
 
 	engine->getSound()->play(m_osu->getSkin()->getMenuHit());
