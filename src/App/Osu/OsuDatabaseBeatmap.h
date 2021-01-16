@@ -128,6 +128,10 @@ public:
 
 
 
+	void updateSetHeuristics();
+
+
+
 	inline Osu *getOsu() const {return m_osu;}
 
 	inline UString getFolder() const {return m_sFolder;}

@@ -359,6 +359,7 @@ private:
 	float m_fBackgroundStarCalculationWorkNotificationTime;
 	int m_iBackgroundStarCalculationIndex;
 	OsuDatabaseBeatmapStarCalculator *m_backgroundStarCalculator;
+	OsuDatabaseBeatmap *m_backgroundStarCalcTempParent;
 
 	// background star calculation (currently selected beatmap)
 	bool m_bBackgroundStarCalcScheduled;

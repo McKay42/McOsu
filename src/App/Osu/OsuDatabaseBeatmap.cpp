@@ -1443,12 +1443,12 @@ void OsuDatabaseBeatmap::setDifficulties(std::vector<OsuDatabaseBeatmap*> &diffi
 		m_sBackgroundImageFileName = m_difficulties[0]->m_sBackgroundImageFileName;
 
 		// also precalculate some largest representative values
-		m_iLengthMS = 0; // TODO: this needs dynamic recalculation on parent as well
+		m_iLengthMS = 0;
 		m_fCS = 0.0f;
 		m_fAR = 0.0f;
 		m_fOD = 0.0f;
 		m_fHP = 0.0f;
-		m_fStarsNomod = 0.0f; // TODO: this needs dynamic recalculation on parent as well
+		m_fStarsNomod = 0.0f;
 		m_iMaxBPM = 0;
 		m_iLastModificationTime = 0;
 		for (size_t i=0; i<m_difficulties.size(); i++)
@@ -1471,6 +1471,11 @@ void OsuDatabaseBeatmap::setDifficulties(std::vector<OsuDatabaseBeatmap*> &diffi
 				m_iLastModificationTime = m_difficulties[i]->getLastModificationTime();
 		}
 	}
+}
+
+void OsuDatabaseBeatmap::updateSetHeuristics()
+{
+	setDifficulties(m_difficulties);
 }
 
 OsuDatabaseBeatmap::TIMING_INFO OsuDatabaseBeatmap::getTimingInfoForTime(unsigned long positionMS)
@@ -1720,7 +1725,7 @@ void OsuDatabaseBeatmapStarCalculator::initAsync()
 		m_speedStars = speedStars;
 
 		if (diffres.diffobjects.size() > 0)
-			m_iLengthMS = (diffres.diffobjects[diffres.diffobjects.size() - 1].endTime - diffres.diffobjects[0].time);
+			m_iLengthMS = std::max((diffres.diffobjects[diffres.diffobjects.size() - 1].endTime - diffres.diffobjects[0].time), (long)0);
 	}
 
 	m_bAsyncReady = true;
