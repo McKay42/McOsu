@@ -1091,13 +1091,33 @@ void OsuSongBrowser2::update()
 	// this goes through all loaded beatmaps and checks if stars + length have to be calculated and set (e.g. if without osu!.db database)
 	if (m_beatmaps.size() > 0 && osu_songbrowser_background_star_calculation.getBool())
 	{
-		for (int s=0; s<1; s++) // one beatmap per update
+		for (int s=0; s<1; s++) // one beatmap per update (leave one update loop gap between beatmaps to avoid stalling background image loading)
 		{
 			bool canMoveToNextBeatmap = true;
 			if (m_iBackgroundStarCalculationIndex >= 0 && m_iBackgroundStarCalculationIndex < m_beatmaps.size())
 			{
 				OsuDatabaseBeatmap *beatmap = m_beatmaps[m_iBackgroundStarCalculationIndex];
 				const std::vector<OsuDatabaseBeatmap*> &diffs = beatmap->getDifficulties();
+
+				if (!m_backgroundStarCalculator->isDead() && m_backgroundStarCalculator->isAsyncReady())
+				{
+					// we have a result, store it in db
+					// this is up here to avoid one extra update loop until the next calc is triggered, but still have a gap between consecutive beatmap objects
+					// NOTE: stars are upclamped to 0.0001f to signify that they have been calculated once for this diff (even if something fails), we only try once
+
+					OsuDatabaseBeatmap *calculatedDiff = m_backgroundStarCalculator->getBeatmapDifficulty();
+					calculatedDiff->setStarsNoMod(std::max(0.0001f, (float)m_backgroundStarCalculator->getTotalStars()));
+					calculatedDiff->setLengthMS(m_backgroundStarCalculator->getLengthMS());
+
+					// re-add (potentially changed stars, potentially changed length)
+					readdBeatmap(calculatedDiff);
+
+					// and update wrapper representative values (parent)
+					if (m_backgroundStarCalcTempParent != NULL)
+						m_backgroundStarCalcTempParent->updateSetHeuristics();
+
+					m_backgroundStarCalculator->kill();
+				}
 
 				OsuDatabaseBeatmap *diffToCalc = NULL;
 				if (diffs.size() > 0)
@@ -1122,32 +1142,9 @@ void OsuSongBrowser2::update()
 					// only one diff per beatmap per update
 					canMoveToNextBeatmap = false;
 
-					if (m_backgroundStarCalculator->isDead() || m_backgroundStarCalculator->isAsyncReady())
+					if (m_backgroundStarCalculator->isDead())
 					{
-						if (m_backgroundStarCalculator->isDead())
-						{
-							// initial iteration, just revive (will stay alive forever, only killed on db refresh)
-
-							m_backgroundStarCalculator->revive();
-
-							m_backgroundStarCalcTempParent = NULL;
-						}
-						else if (m_backgroundStarCalculator->isAsyncReady())
-						{
-							// we have a result, store it in db
-							// NOTE: stars are upclamped to 0.0001f to signify that they have been calculated once for this diff (even if something fails), we only try once
-
-							OsuDatabaseBeatmap *calculatedDiff = m_backgroundStarCalculator->getBeatmapDifficulty();
-							calculatedDiff->setStarsNoMod(std::max(0.0001f, (float)m_backgroundStarCalculator->getTotalStars()));
-							calculatedDiff->setLengthMS(m_backgroundStarCalculator->getLengthMS());
-
-							// re-add (potentially changed stars, potentially changed length)
-							readdBeatmap(calculatedDiff);
-
-							// and update wrapper representative values (parent)
-							if (m_backgroundStarCalcTempParent != NULL)
-								m_backgroundStarCalcTempParent->updateSetHeuristics();
-						}
+						m_backgroundStarCalculator->revive();
 
 						// start new calc (nomod stars)
 						{
