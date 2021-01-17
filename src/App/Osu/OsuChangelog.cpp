@@ -36,6 +36,9 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 
 	CHANGELOG alpha316;
 	alpha316.title = UString::format("32 (Build Date: %s, %s)", __DATE__, __TIME__);
+	alpha316.changes.push_back("- Fixed partial corrupt PNG skin images not loading due to newer/stricter lodepng library version (disabled CRC check)");
+	alpha316.changes.push_back("- Improved background star calc speed");
+	alpha316.changes.push_back("");
 	alpha316.changes.push_back("- Initial rewrite of songbrowser and entire internal database class architecture (not fully finished yet)");
 	alpha316.changes.push_back("- Songbrowser can now handle individual diff buttons and/or split from their parent beatmap/set button");
 	alpha316.changes.push_back("- Collections now correctly only show contained diffs (previously always showed entire set)");
