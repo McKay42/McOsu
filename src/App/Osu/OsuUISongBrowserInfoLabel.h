@@ -14,7 +14,7 @@ class McFont;
 
 class Osu;
 class OsuBeatmap;
-class OsuBeatmapDifficulty;
+class OsuDatabaseBeatmap;
 
 class OsuUISongBrowserInfoLabel : public CBaseUIButton
 {
@@ -24,7 +24,7 @@ public:
 	void draw(Graphics *g);
 	void update();
 
-	void setFromBeatmap(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff);
+	void setFromBeatmap(OsuBeatmap *beatmap, OsuDatabaseBeatmap *diff2);
 	void setFromMissingBeatmap(long beatmapId);
 
 	void setArtist(UString artist) {m_sArtist = artist;}
@@ -41,7 +41,6 @@ public:
 	void setOD(float OD) {m_fOD = OD;}
 	void setHP(float HP) {m_fHP = HP;}
 	void setStars(float stars) {m_fStars = stars;}
-	void setStarsRecalculating(bool recalculating) {m_bStarsRecalculating = recalculating;}
 
 	void setLocalOffset(long localOffset) {m_iLocalOffset = localOffset;}
 	void setOnlineOffset(long onlineOffset) {m_iOnlineOffset = onlineOffset;}
@@ -61,6 +60,7 @@ private:
 	UString buildOffsetInfoString();
 
 	ConVar *m_osu_debug_ref;
+	ConVar *m_osu_songbrowser_dynamic_star_recalc_ref;
 
 	Osu *m_osu;
 	McFont *m_font;
@@ -87,7 +87,6 @@ private:
 	float m_fOD;
 	float m_fHP;
 	float m_fStars;
-	bool m_bStarsRecalculating;
 
 	long m_iLocalOffset;
 	long m_iOnlineOffset;

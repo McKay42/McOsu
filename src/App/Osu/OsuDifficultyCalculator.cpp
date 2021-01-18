@@ -79,6 +79,29 @@ OsuDifficultyHitObject::OsuDifficultyHitObject(OsuDifficultyHitObject &&dobj)
 	dobj.curve = NULL;
 }
 
+OsuDifficultyHitObject& OsuDifficultyHitObject::operator = (OsuDifficultyHitObject &&dobj)
+{
+	// move
+	this->type = dobj.type;
+	this->pos = dobj.pos;
+	this->time = dobj.time;
+	this->endTime = dobj.endTime;
+	this->spanDuration = dobj.spanDuration;
+	this->osuSliderCurveType = dobj.osuSliderCurveType;
+	this->pixelLength = dobj.pixelLength;
+	this->scoringTimes = std::move(dobj.scoringTimes);
+
+	this->curve = dobj.curve;
+	this->stack = dobj.stack;
+	this->originalPos = dobj.originalPos;
+	this->sortHack = dobj.sortHack;
+
+	// reset source
+	dobj.curve = NULL;
+
+	return *this;
+}
+
 void OsuDifficultyHitObject::updateStackPosition(float stackOffset)
 {
 	pos = originalPos - Vector2(stack * stackOffset, stack * stackOffset);
@@ -107,7 +130,7 @@ Vector2 OsuDifficultyHitObject::getOriginalRawPosAt(long pos)
 
 ConVar *OsuDifficultyCalculator::m_osu_slider_scorev2_ref = NULL;
 
-double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<std::shared_ptr<OsuDifficultyHitObject>> &sortedHitObjects, float CS, double *aim, double *speed, int upToObjectIndex, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains)
+double OsuDifficultyCalculator::calculateStarDiffForHitObjects(const std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, double *aim, double *speed, int upToObjectIndex, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains)
 {
 	// NOTE: depends on speed multiplier + CS
 
@@ -117,11 +140,11 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<std::
 	if (sortedHitObjects.size() < 2)
 	{
 		if (sortedHitObjects.size() < 1) return 0.0;
-		if (sortedHitObjects[0]->type != OsuDifficultyHitObject::TYPE::SLIDER) return 0.0;
+		if (sortedHitObjects[0].type != OsuDifficultyHitObject::TYPE::SLIDER) return 0.0;
 	}
 
 	// global independent variables/constants
-	const float circleRadiusInOsuPixels = OsuGameRules::getRawHitCircleDiameter(CS) / 2.0f;
+	const float circleRadiusInOsuPixels = OsuGameRules::getRawHitCircleDiameter(clamp<float>(CS, 0.0f, 12.142f)) / 2.0f; // NOTE: clamped CS because McOsu allows CS > ~12.1429 (at which point the diameter becomes negative)
 
 	// ****************************************************************************************************************************************** //
 
@@ -182,7 +205,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<std::
 	class DiffObject
 	{
 	public:
-		std::shared_ptr<OsuDifficultyHitObject> ho;
+		OsuDifficultyHitObject *ho;
 
 		double strains[NUM_SKILLS];
 
@@ -199,7 +222,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<std::
 		Vector2 lazyEndPos;		// precalc temp
 		double lazyTravelDist;	// precalc temp
 
-		DiffObject(std::shared_ptr<OsuDifficultyHitObject> base_object, float radius_scaling_factor)
+		DiffObject(OsuDifficultyHitObject *base_object, float radius_scaling_factor)
 		{
 			ho = base_object;
 
@@ -515,7 +538,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<std::
 	diffObjects.reserve((upToObjectIndex < 0) ? sortedHitObjects.size() : upToObjectIndex+1);
 	for (size_t i=0; i<sortedHitObjects.size() && (upToObjectIndex < 0 || i < upToObjectIndex+1); i++) // respect upToObjectIndex!
 	{
-		diffObjects.push_back(DiffObject(sortedHitObjects[i], radius_scaling_factor)); // this already initializes the angle to NaN
+		diffObjects.push_back(DiffObject(const_cast<OsuDifficultyHitObject*>(&sortedHitObjects[i]), radius_scaling_factor)); // this already initializes the angle to NaN
 	}
 
 	const int numDiffObjects = diffObjects.size();
@@ -582,7 +605,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<std::
 	return calculateTotalStarsFromSkills(*aim, *speed);
 }
 
-double OsuDifficultyCalculator::calculatePPv2(Osu *osu, OsuBeatmap *beatmap, double aim, double speed, int numHitObjects, int numCircles, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50)
+double OsuDifficultyCalculator::calculatePPv2(Osu *osu, OsuBeatmap *beatmap, double aim, double speed, int numHitObjects, int numCircles, int numSpinners, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50)
 {
 	// NOTE: depends on active mods + OD + AR
 
@@ -596,12 +619,10 @@ double OsuDifficultyCalculator::calculatePPv2(Osu *osu, OsuBeatmap *beatmap, dou
 		modsLegacy |= (m_osu_slider_scorev2_ref->getBool() ? OsuReplay::Mods::ScoreV2 : 0);
 	}
 
-	// TODO: for recalculating existing scores, take accuracy directly from stored score! this way osu_slider_scorev2-scores don't get downgraded
-
-	return calculatePPv2(modsLegacy, osu->getSpeedMultiplier(), beatmap->getAR(), beatmap->getOD(), aim, speed, numHitObjects, numCircles, maxPossibleCombo, combo, misses, c300, c100, c50);
+	return calculatePPv2(modsLegacy, osu->getSpeedMultiplier(), beatmap->getAR(), beatmap->getOD(), aim, speed, numHitObjects, numCircles, numSpinners, maxPossibleCombo, combo, misses, c300, c100, c50);
 }
 
-double OsuDifficultyCalculator::calculatePPv2(int modsLegacy, double timescale, double ar, double od, double aim, double speed, int numHitObjects, int numCircles, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50)
+double OsuDifficultyCalculator::calculatePPv2(int modsLegacy, double timescale, double ar, double od, double aim, double speed, int numHitObjects, int numCircles, int numSpinners, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50)
 {
 	// NOTE: depends on active mods + OD + AR
 
@@ -653,16 +674,6 @@ double OsuDifficultyCalculator::calculatePPv2(int modsLegacy, double timescale, 
 
 	if (combo < 1) return 0.0;
 
-	// custom multipliers for nofail and spunout
-	double multiplier = 1.12; // keep final pp normalized across changes
-	{
-		if (modsLegacy & OsuReplay::Mods::NoFail)
-			multiplier *= 0.90;
-
-		if (modsLegacy & OsuReplay::Mods::SpunOut)
-			multiplier *= 0.95;
-	}
-
 	ScoreData score;
 	{
 		score.modsLegacy = modsLegacy;
@@ -686,6 +697,16 @@ double OsuDifficultyCalculator::calculatePPv2(int modsLegacy, double timescale, 
 		attributes.SpeedStrain = speed;
 		attributes.ApproachRate = ar;
 		attributes.OverallDifficulty = od;
+	}
+
+	// custom multipliers for nofail and spunout
+	double multiplier = 1.12; // keep final pp normalized across changes
+	{
+		if (modsLegacy & OsuReplay::Mods::NoFail)
+			multiplier *= std::max(0.9, 1.0 - 0.02 * score.countMiss); // see https://github.com/ppy/osu-performance/pull/127/files
+
+		if ((modsLegacy & OsuReplay::Mods::SpunOut) && score.totalHits > 0)
+			multiplier *= 1.0 - std::pow((double)numSpinners / (double)score.totalHits, 0.85); // see https://github.com/ppy/osu-performance/pull/110/
 	}
 
 	const double aimValue = computeAimValue(score, attributes);
@@ -725,21 +746,23 @@ double OsuDifficultyCalculator::computeAimValue(const ScoreData &score, const Os
 	aimValue *= 0.95 + 0.4 * std::min(1.0, ((double)score.totalHits / 2000.0))
 		+ (score.totalHits > 2000 ? std::log10(((double)score.totalHits / 2000.0)) * 0.5 : 0.0);
 
-	// miss penalty
-	aimValue *= std::pow(0.97, (double)score.countMiss);
+	// see https://github.com/ppy/osu-performance/pull/129/
+	// Penalize misses by assessing # of misses relative to the total # of objects. Default a 3% reduction for any # of misses.
+	if (score.countMiss > 0 && score.totalHits > 0)
+		aimValue *= 0.97 * std::pow(1.0 - std::pow((double)score.countMiss / (double)score.totalHits, 0.775), (double)score.countMiss);
 
 	// combo scaling
 	if (score.beatmapMaxCombo > 0)
 		aimValue *= std::min(std::pow((double)score.scoreMaxCombo, 0.8) / std::pow((double)score.beatmapMaxCombo, 0.8), 1.0);
 
 	// ar bonus
-	double approachRateFactor = 1.0;
+	double approachRateFactor = 0.0; // see https://github.com/ppy/osu-performance/pull/125/
 	if (attributes.ApproachRate > 10.33)
-		approachRateFactor += 0.3 * (attributes.ApproachRate - 10.33);
+		approachRateFactor += 0.4 * (attributes.ApproachRate - 10.33); // from 0.3 to 0.4 see https://github.com/ppy/osu-performance/pull/125/
 	else if (attributes.ApproachRate < 8.0)
-		approachRateFactor += 0.01 * (8.0 - attributes.ApproachRate);
+		approachRateFactor += 0.01 * (8.0 - attributes.ApproachRate); // from 0.01 to 0.1 see https://github.com/ppy/osu-performance/pull/125/ // and back again from 0.1 to 0.01 see https://github.com/ppy/osu-performance/pull/133/
 
-	aimValue *= approachRateFactor;
+	aimValue *= 1.0 + std::min(approachRateFactor, approachRateFactor * ((double)score.totalHits / 1000.0)); // see https://github.com/ppy/osu-performance/pull/125/
 
 	// hidden
 	if (score.modsLegacy & OsuReplay::Mods::Hidden)
@@ -769,28 +792,31 @@ double OsuDifficultyCalculator::computeSpeedValue(const ScoreData &score, const 
 	speedValue *= 0.95 + 0.4 * std::min(1.0, ((double)score.totalHits / 2000.0))
 		+ (score.totalHits > 2000 ? std::log10(((double)score.totalHits / 2000.0)) * 0.5 : 0.0);
 
-	// miss penalty
-	speedValue *= std::pow(0.97, (double)score.countMiss);
+	// see https://github.com/ppy/osu-performance/pull/129/
+	// Penalize misses by assessing # of misses relative to the total # of objects. Default a 3% reduction for any # of misses.
+	if (score.countMiss > 0 && score.totalHits > 0)
+		speedValue *= 0.97 * std::pow(1.0 - std::pow((double)score.countMiss / (double)score.totalHits, 0.775), std::pow((double)score.countMiss, 0.875));
 
 	// combo scaling
 	if (score.beatmapMaxCombo > 0)
 		speedValue *= std::min(std::pow((double)score.scoreMaxCombo, 0.8) / std::pow((double)score.beatmapMaxCombo, 0.8), 1.0);
 
 	// ar bonus
-	double approachRateFactor = 1.0;
+	double approachRateFactor = 0.0; // see https://github.com/ppy/osu-performance/pull/125/
 	if (attributes.ApproachRate > 10.33)
-		approachRateFactor += 0.3 * (attributes.ApproachRate - 10.33);
+		approachRateFactor += 0.4 * (attributes.ApproachRate - 10.33); // from 0.3 to 0.4 see https://github.com/ppy/osu-performance/pull/125/
 
-	speedValue *= approachRateFactor;
+	speedValue *= 1.0 + std::min(approachRateFactor, approachRateFactor * ((double)score.totalHits / 1000.0)); // see https://github.com/ppy/osu-performance/pull/125/
 
 	// hidden
 	if (score.modsLegacy & OsuReplay::Mods::Hidden)
 		speedValue *= 1.0 + 0.04 * (std::max(12.0 - attributes.ApproachRate, 0.0)); // NOTE: clamped to 0 because McOsu allows AR > 12
 
-	// scale aim with acc slightly
-	speedValue *= 0.02 + score.accuracy;
-	// also consider acc difficulty when doing that
-	speedValue *= 0.96 + std::pow(attributes.OverallDifficulty, 2.0) / 1600.0;
+	// see https://github.com/ppy/osu-performance/pull/128/
+	// Scale the speed value with accuracy and OD
+	speedValue *= (0.95 + std::pow(attributes.OverallDifficulty, 2.0) / 750.0) * std::pow(score.accuracy, (14.5 - std::max(attributes.OverallDifficulty, 8.0)) / 2.0);
+	// Scale the speed value with # of 50s to punish doubletapping.
+	speedValue *= std::pow(0.98, score.countMeh < (score.totalHits / 500.0) ? 0.0 : score.countMeh - (score.totalHits / 500.0));
 
 	return speedValue;
 }

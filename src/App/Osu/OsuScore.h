@@ -19,6 +19,8 @@ class OsuHitObject;
 class OsuScore
 {
 public:
+	static constexpr const int VERSION = 20210116;
+
 	enum class HIT
 	{
 		// score
@@ -118,7 +120,7 @@ public:
 
 	int getKeyCount(int key);
 	int getModsLegacy();
-	UString getModsString();
+	UString getModsStringForRichPresence();
 
 private:
 	static ConVar *m_osu_draw_statistics_pp_ref;

@@ -12,7 +12,7 @@
 #include "Osu.h"
 
 class OsuBeatmap;
-class OsuBeatmapDifficulty;
+class OsuDatabaseBeatmap;
 
 class Osu2 : public App
 {
@@ -46,8 +46,7 @@ private:
 	std::vector<Osu*> m_slaves;
 	std::vector<Osu*> m_instances;
 
-	OsuBeatmap *m_prevBeatmap;
-	OsuBeatmapDifficulty *m_prevBeatmapDifficulty;
+	OsuDatabaseBeatmap *m_prevBeatmapDifficulty;
 	bool m_bSlavesLoaded;
 
 	// hack

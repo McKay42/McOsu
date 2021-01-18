@@ -13,9 +13,11 @@
 #include "Mouse.h"
 #include "Environment.h"
 #include "ResourceManager.h"
+#include "AnimationHandler.h"
 
 #include "Osu.h"
 #include "OsuSkin.h"
+#include "OsuKeyBindings.h"
 #include "OsuBeatmapStandard.h"
 
 #ifdef FPOSU_FEATURE_MAP3D
@@ -32,6 +34,10 @@ ConVar fposu_absolute_mode("fposu_absolute_mode", false);
 
 ConVar fposu_distance("fposu_distance", 0.5f);
 ConVar fposu_fov("fposu_fov", 103.0f);
+ConVar fposu_zoom_fov("fposu_zoom_fov", 45.0f);
+ConVar fposu_zoom_sensitivity_ratio("fposu_zoom_sensitivity_ratio", 1.0f, "replicates zoom_sensitivity_ratio behavior on css/csgo/tf2/etc.");
+ConVar fposu_zoom_anim_duration("fposu_zoom_anim_duration", 0.065f, "time in seconds for the zoom/unzoom animation");
+ConVar fposu_zoom_toggle("fposu_zoom_toggle", false, "whether the zoom key acts as a toggle");
 ConVar fposu_vertical_fov("fposu_vertical_fov", false);
 ConVar fposu_curved("fposu_curved", true);
 ConVar fposu_cube("fposu_cube", true);
@@ -53,6 +59,9 @@ OsuModFPoSu::OsuModFPoSu(Osu *osu)
 	// vars
 	m_fCircumLength = 0.0f;
 	m_camera = new Camera(Vector3(0, 0, 0),Vector3(0, 0, -1));
+	m_bZoomKeyDown = false;
+	m_bZoomed = false;
+	m_fZoomFOVAnimPercent = 0.0f;
 
 #ifdef FPOSU_FEATURE_MAP3D
 
@@ -78,6 +87,8 @@ OsuModFPoSu::OsuModFPoSu(Osu *osu)
 
 OsuModFPoSu::~OsuModFPoSu()
 {
+	anim->deleteExistingAnimation(&m_fZoomFOVAnimPercent);
+
 #ifdef FPOSU_FEATURE_MAP3D
 
 	SAFE_DELETE(m_map);
@@ -89,8 +100,9 @@ void OsuModFPoSu::draw(Graphics *g)
 {
 	if (!osu_mod_fposu.getBool()) return;
 
-	Matrix4 projectionMatrix = fposu_vertical_fov.getBool() ? Camera::buildMatrixPerspectiveFovVertical(deg2rad(fposu_fov.getFloat()), ((float)m_osu->getScreenWidth()/(float)m_osu->getScreenHeight()), 0.05f, 1000.0f)
-															: Camera::buildMatrixPerspectiveFovHorizontal(deg2rad(fposu_fov.getFloat()), ((float)m_osu->getScreenHeight() / (float)m_osu->getScreenWidth()), 0.05f, 1000.0f);
+	const float fov = lerp<float>(fposu_fov.getFloat(), fposu_zoom_fov.getFloat(), m_fZoomFOVAnimPercent);
+	Matrix4 projectionMatrix = fposu_vertical_fov.getBool() ? Camera::buildMatrixPerspectiveFovVertical(deg2rad(fov), ((float)m_osu->getScreenWidth()/(float)m_osu->getScreenHeight()), 0.05f, 1000.0f)
+															: Camera::buildMatrixPerspectiveFovHorizontal(deg2rad(fov), ((float)m_osu->getScreenHeight() / (float)m_osu->getScreenWidth()), 0.05f, 1000.0f);
 	Matrix4 viewMatrix = Camera::buildMatrixLookAt(m_camera->getPos(), m_camera->getViewDirection(), m_camera->getViewUp());
 
 	// HACKHACK: there is currently no way to directly modify the viewport origin, so the only option for rendering non-2d stuff with correct offsets (i.e. top left) is by rendering into a rendertarget
@@ -189,6 +201,10 @@ void OsuModFPoSu::update()
 		const double multiplier = 360.0 / countsPer360;
 		rawDelta *= multiplier;
 
+		// apply zoom_sensitivity_ratio if zoomed
+		if (m_bZoomed && fposu_zoom_sensitivity_ratio.getFloat() > 0.0f)
+			rawDelta *= (fposu_zoom_fov.getFloat() / fposu_fov.getFloat()) * fposu_zoom_sensitivity_ratio.getFloat(); // see https://www.reddit.com/r/GlobalOffensive/comments/3vxkav/how_zoomed_sensitivity_works/
+
 		// update camera
 		if (rawDelta.x != 0.0f)
 			m_camera->rotateY(rawDelta.x * (fposu_invert_horizontal.getBool() ? 1.0f : -1.0f));
@@ -222,6 +238,46 @@ void OsuModFPoSu::update()
 
 		m_camera->lookAt(calculateUnProjectedVector(mousePos));
 	}
+}
+
+void OsuModFPoSu::onKeyDown(KeyboardEvent &key)
+{
+	if (key == (KEYCODE)OsuKeyBindings::FPOSU_ZOOM.getInt() && !m_bZoomKeyDown)
+	{
+		m_bZoomKeyDown = true;
+
+		if (!m_bZoomed || fposu_zoom_toggle.getBool())
+		{
+			if (!fposu_zoom_toggle.getBool())
+				m_bZoomed = true;
+			else
+				m_bZoomed = !m_bZoomed;
+
+			handleZoomedChange();
+		}
+	}
+}
+
+void OsuModFPoSu::onKeyUp(KeyboardEvent &key)
+{
+	if (key == (KEYCODE)OsuKeyBindings::FPOSU_ZOOM.getInt())
+	{
+		m_bZoomKeyDown = false;
+
+		if (m_bZoomed && !fposu_zoom_toggle.getBool())
+		{
+			m_bZoomed = false;
+			handleZoomedChange();
+		}
+	}
+}
+
+void OsuModFPoSu::handleZoomedChange()
+{
+	if (m_bZoomed)
+		anim->moveQuadOut(&m_fZoomFOVAnimPercent, 1.0f, (1.0f - m_fZoomFOVAnimPercent)*fposu_zoom_anim_duration.getFloat(), true);
+	else
+		anim->moveQuadOut(&m_fZoomFOVAnimPercent, 0.0f, m_fZoomFOVAnimPercent*fposu_zoom_anim_duration.getFloat(), true);
 }
 
 void OsuModFPoSu::setMousePosCompensated(Vector2 newMousePos)

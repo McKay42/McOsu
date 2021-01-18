@@ -15,6 +15,8 @@ class File;
 class OsuFile
 {
 public:
+	static constexpr const uint64_t MAX_STRING_LENGTH = 4096ULL;
+
 	struct TIMINGPOINT
 	{
 		double msPerBeat;
@@ -26,7 +28,9 @@ public:
 	OsuFile(UString filepath, bool write = false);
 	virtual ~OsuFile();
 
-	inline bool isReady() {return m_bReady;}
+	inline size_t getFileSize() const {return m_iFileSize;}
+
+	inline bool isReady() const {return m_bReady;}
 
 	void write();
 
@@ -58,7 +62,7 @@ public:
 	void readByteArray();
 
 private:
-	uint64_t decodeULEB128(const uint8_t *p, unsigned *n = NULL);
+	uint64_t decodeULEB128(const uint8_t *p, unsigned int *n = NULL);
 
 	File *m_file;
 	size_t m_iFileSize;

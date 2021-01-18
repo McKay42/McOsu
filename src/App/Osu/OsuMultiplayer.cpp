@@ -14,11 +14,13 @@
 #include "NetworkHandler.h"
 #include "ResourceManager.h"
 #include "Environment.h"
+#include "File.h"
 
 #include "Osu.h"
 #include "OsuDatabase.h"
+#include "OsuDatabaseBeatmap.h"
+
 #include "OsuBeatmap.h"
-#include "OsuBeatmapDifficulty.h"
 
 #include "OsuMainMenu.h"
 #include "OsuSongBrowser2.h"
@@ -32,7 +34,9 @@ ConVar osu_mp_win_condition_accuracy("osu_mp_win_condition_accuracy", false);
 ConVar osu_mp_allow_client_beatmap_select("osu_mp_sv_allow_client_beatmap_select", true);
 ConVar osu_mp_broadcastcommand("osu_mp_broadcastcommand");
 ConVar osu_mp_clientcastcommand("osu_mp_clientcastcommand");
+ConVar osu_mp_broadcastforceclientbeatmapdownload("osu_mp_broadcastforceclientbeatmapdownload");
 ConVar osu_mp_select_beatmap("osu_mp_select_beatmap");
+ConVar osu_mp_request_beatmap_download("osu_mp_request_beatmap_download");
 
 unsigned long long OsuMultiplayer::sortHackCounter = 0;
 ConVar *OsuMultiplayer::m_cl_cmdrate = NULL;
@@ -59,11 +63,15 @@ OsuMultiplayer::OsuMultiplayer(Osu *osu)
 	osu_mp_broadcastcommand.setCallback( fastdelegate::MakeDelegate(this, &OsuMultiplayer::onBroadcastCommand) );
 	osu_mp_clientcastcommand.setCallback( fastdelegate::MakeDelegate(this, &OsuMultiplayer::onClientcastCommand) );
 
+	osu_mp_broadcastforceclientbeatmapdownload.setCallback( fastdelegate::MakeDelegate(this, &OsuMultiplayer::onMPForceClientBeatmapDownload) );
 	osu_mp_select_beatmap.setCallback( fastdelegate::MakeDelegate(this, &OsuMultiplayer::onMPSelectBeatmap) );
+	osu_mp_request_beatmap_download.setCallback( fastdelegate::MakeDelegate(this, &OsuMultiplayer::onMPRequestBeatmapDownload) );
 
 	m_fNextPlayerCmd = 0.0f;
 
 	m_bMPSelectBeatmapScheduled = false;
+
+	m_iLastClientBeatmapSelectID = 0;
 
 	/*
 	PLAYER ply;
@@ -103,6 +111,121 @@ void OsuMultiplayer::update()
 	}
 
 	if (!isInMultiplayer()) return;
+
+	// handle running uploads
+	const size_t uploadChunkSize = 1024 * 16; // 16 KB
+	for (size_t i=0; i<m_uploads.size(); i++)
+	{
+		// send one chunk per filetype per upload tick
+		for (uint8_t fileType=1; fileType<4; fileType++)
+		{
+			// collect relevant vars
+			char *buffer = NULL;
+			size_t fileSize = 0;
+			size_t alreadyUploadedDataBytes = 0;
+			bool finished = false;
+			switch (fileType)
+			{
+			case 1:
+				buffer = (char*)m_uploads[i].osuFile->readFile();
+				fileSize = m_uploads[i].osuFile->getFileSize();
+				alreadyUploadedDataBytes = m_uploads[i].numUploadedOsuFileBytes;
+				if (m_uploads[i].numUploadedOsuFileBytes >= fileSize)
+					finished = true;
+				break;
+			case 2:
+				buffer = (char*)m_uploads[i].musicFile->readFile();
+				fileSize = m_uploads[i].musicFile->getFileSize();
+				alreadyUploadedDataBytes = m_uploads[i].numUploadedMusicFileBytes;
+				if (m_uploads[i].numUploadedMusicFileBytes >= fileSize)
+					finished = true;
+				break;
+			case 3:
+				buffer = (char*)m_uploads[i].backgroundFile->readFile();
+				fileSize = m_uploads[i].backgroundFile->getFileSize();
+				alreadyUploadedDataBytes = m_uploads[i].numUploadedBackgroundFileBytes;
+				if (m_uploads[i].numUploadedBackgroundFileBytes >= fileSize)
+					finished = true;
+				break;
+			}
+
+			BEATMAP_DOWNLOAD_CHUNK_PACKET pp;
+			pp.serial = m_uploads[i].serial;
+			pp.fileType = fileType;
+			pp.numDataBytes = (uint32_t)std::min(uploadChunkSize, fileSize - alreadyUploadedDataBytes);
+			size_t size = sizeof(BEATMAP_DOWNLOAD_CHUNK_PACKET);
+
+			if (!finished)
+			{
+				//debugLog("sending chunk fileType = %i, fileSize = %i, alreadyUploaded = %i, numDataBytes = %i\n", (int)fileType, (int)fileSize, (int)alreadyUploadedDataBytes, (int)pp.numDataBytes);
+
+				if (buffer == NULL)
+				{
+					//debugLog("buffer == NULL!\n");
+					continue;
+				}
+
+				PACKET_TYPE wrap = BEATMAP_DOWNLOAD_CHUNK_TYPE;
+				const int wrapperSize = sizeof(PACKET_TYPE);
+				char wrappedPacket[(wrapperSize + size + pp.numDataBytes)];
+				memcpy(&wrappedPacket, &wrap, wrapperSize);
+				memcpy((void*)(((char*)&wrappedPacket) + wrapperSize), &pp, size);
+				memcpy((void*)(((char*)&wrappedPacket) + wrapperSize + size), buffer + alreadyUploadedDataBytes, pp.numDataBytes);
+
+				if (m_uploads[i].id == 0)
+					engine->getNetworkHandler()->servercast(wrappedPacket, pp.numDataBytes + size + wrapperSize, true);
+				else
+					engine->getNetworkHandler()->clientcast(wrappedPacket, pp.numDataBytes + size + wrapperSize, m_uploads[i].id, true);
+
+				// update counter (2)
+				switch (fileType)
+				{
+				case 1:
+					m_uploads[i].numUploadedOsuFileBytes += pp.numDataBytes;
+					break;
+				case 2:
+					m_uploads[i].numUploadedMusicFileBytes += pp.numDataBytes;
+					break;
+				case 3:
+					m_uploads[i].numUploadedBackgroundFileBytes += pp.numDataBytes;
+					break;
+				}
+			}
+		}
+
+		// check if an upload is done, and if so remove it from the list
+		const size_t totalUploadedSize = m_uploads[i].numUploadedOsuFileBytes + m_uploads[i].numUploadedMusicFileBytes + m_uploads[i].numUploadedBackgroundFileBytes;
+		const size_t totalFilesSize = m_uploads[i].osuFile->getFileSize() + m_uploads[i].musicFile->getFileSize() + m_uploads[i].backgroundFile->getFileSize();
+		if (totalUploadedSize >= totalFilesSize)
+		{
+			delete m_uploads[i].osuFile;
+			delete m_uploads[i].musicFile;
+			delete m_uploads[i].backgroundFile;
+
+			m_uploads.erase(m_uploads.begin() + i);
+			i--;
+
+			debugLog("remaining uploads: %i\n", (int)m_uploads.size());
+
+			continue;
+		}
+	}
+
+	// handle running downloads
+	for (size_t i=0; i<m_downloads.size(); i++)
+	{
+		const size_t numTotalDownloadedBytes = m_downloads[i].numDownloadedOsuFileBytes + m_downloads[i].numDownloadedMusicFileBytes + m_downloads[i].numDownloadedBackgroundFileBytes;
+		if (numTotalDownloadedBytes >= m_downloads[i].totalDownloadBytes)
+		{
+			onBeatmapDownloadFinished(m_downloads[i]);
+			m_downloads.erase(m_downloads.begin() + i);
+			i--;
+
+			debugLog("remaining downloads: %i\n", (int)m_downloads.size());
+
+			continue;
+		}
+	}
 
 	/*
 	if (!isServer())
@@ -197,6 +320,7 @@ bool OsuMultiplayer::onClientReceiveInt(uint32_t id, void *data, uint32_t size, 
 				ply.name = UString(pp->name).substr(0, pp->size);
 
 				ply.missingBeatmap = false;
+				ply.downloadingBeatmap = false;
 				ply.waiting = true;
 
 				ply.combo = 0;
@@ -229,6 +353,7 @@ bool OsuMultiplayer::onClientReceiveInt(uint32_t id, void *data, uint32_t size, 
 				{
 					// player state update
 					m_clientPlayers[i].missingBeatmap = pp->missingBeatmap;
+					m_clientPlayers[i].downloadingBeatmap = pp->downloadingBeatmap;
 					m_clientPlayers[i].waiting = pp->waiting;
 					break;
 				}
@@ -239,7 +364,7 @@ bool OsuMultiplayer::onClientReceiveInt(uint32_t id, void *data, uint32_t size, 
 	case CONVAR_TYPE:
 		if (unwrappedSize >= sizeof(CONVAR_PACKET))
 		{
-			if (!engine->getNetworkHandler()->isServer() || forceAcceptOnServer)
+			if (!isServer() || forceAcceptOnServer)
 			{
 				// execute
 				CONVAR_PACKET *pp = (struct CONVAR_PACKET*)unwrappedPacket;
@@ -251,49 +376,52 @@ bool OsuMultiplayer::onClientReceiveInt(uint32_t id, void *data, uint32_t size, 
 	case STATE_TYPE:
 		if (unwrappedSize >= sizeof(GAME_STATE_PACKET))
 		{
-			if (!engine->getNetworkHandler()->isServer() || forceAcceptOnServer)
+			if (!isServer() || forceAcceptOnServer)
 			{
 				// execute
 				GAME_STATE_PACKET *pp = (struct GAME_STATE_PACKET*)unwrappedPacket;
 				if (pp->state == SELECT)
 				{
 					bool found = false;
-					std::vector<OsuBeatmap*> beatmaps = m_osu->getSongBrowser()->getDatabase()->getBeatmaps();
+					const std::vector<OsuDatabaseBeatmap*> &beatmaps = m_osu->getSongBrowser()->getDatabase()->getDatabaseBeatmaps();
 					for (int i=0; i<beatmaps.size(); i++)
 					{
-						OsuBeatmap *beatmap = beatmaps[i];
-						const std::vector<OsuBeatmapDifficulty*> &diffs = beatmap->getDifficulties();
+						OsuDatabaseBeatmap *beatmap = beatmaps[i];
+						const std::vector<OsuDatabaseBeatmap*> &diffs = beatmap->getDifficulties();
 						for (int d=0; d<diffs.size(); d++)
 						{
-							OsuBeatmapDifficulty *diff = diffs[d];
-							bool uuidMatches = (diff->md5hash.length() > 0);
-							for (int u=0; u<32 && u<diff->md5hash.length(); u++)
+							OsuDatabaseBeatmap *diff = diffs[d];
+							bool uuidMatches = (diff->getMD5Hash().length() > 0);
+							for (int u=0; u<32 && u<diff->getMD5Hash().length(); u++)
 							{
-								if (diff->md5hash[u] != pp->beatmapMD5Hash[u])
+								if (diff->getMD5Hash()[u] != pp->beatmapMD5Hash[u])
 								{
 									uuidMatches = false;
 									break;
 								}
 							}
+
 							if (uuidMatches)
 							{
 								found = true;
-								m_osu->getSongBrowser()->selectBeatmapMP(beatmap, diff);
+								m_osu->getSongBrowser()->selectBeatmapMP(diff);
 								break;
 							}
 						}
+
 						if (found)
 							break;
 					}
 
 					if (!found)
 					{
+						m_sMPSelectBeatmapScheduledMD5Hash = std::string(pp->beatmapMD5Hash, sizeof(pp->beatmapMD5Hash));
+
 						if (beatmaps.size() < 1)
 						{
 							if (m_osu->getMainMenu()->isVisible() && !m_bMPSelectBeatmapScheduled)
 							{
 								m_bMPSelectBeatmapScheduled = true;
-								m_sMPSelectBeatmapScheduledMD5Hash = std::string(pp->beatmapMD5Hash, sizeof(pp->beatmapMD5Hash));
 
 								m_osu->toggleSongBrowser();
 							}
@@ -317,13 +445,13 @@ bool OsuMultiplayer::onClientReceiveInt(uint32_t id, void *data, uint32_t size, 
 							m_osu->getSelectedBeatmap()->stop(true);
 
 						// only start if we actually have the correct beatmap
-						OsuBeatmapDifficulty *diff = m_osu->getSelectedBeatmap()->getSelectedDifficulty();
-						if (diff != NULL)
+						OsuDatabaseBeatmap *diff2 = m_osu->getSelectedBeatmap()->getSelectedDifficulty2();
+						if (diff2 != NULL)
 						{
-							bool uuidMatches = (diff->md5hash.length() > 0);
-							for (int u=0; u<32 && u<diff->md5hash.length(); u++)
+							bool uuidMatches = (diff2->getMD5Hash().length() > 0);
+							for (int u=0; u<32 && u<diff2->getMD5Hash().length(); u++)
 							{
-								if (diff->md5hash[u] != pp->beatmapMD5Hash[u])
+								if (diff2->getMD5Hash()[u] != pp->beatmapMD5Hash[u])
 								{
 									uuidMatches = false;
 									break;
@@ -331,7 +459,7 @@ bool OsuMultiplayer::onClientReceiveInt(uint32_t id, void *data, uint32_t size, 
 							}
 
 							if (uuidMatches)
-								m_osu->getSongBrowser()->onDifficultySelectedMP(m_osu->getSelectedBeatmap(), m_osu->getSelectedBeatmap()->getSelectedDifficulty(), true);
+								m_osu->getSongBrowser()->onDifficultySelectedMP(m_osu->getSelectedBeatmap()->getSelectedDifficulty2(), true);
 						}
 					}
 					else if (m_osu->isInPlayMode())
@@ -417,6 +545,181 @@ bool OsuMultiplayer::onClientReceiveInt(uint32_t id, void *data, uint32_t size, 
 		}
 		return true;
 
+	case BEATMAP_DOWNLOAD_REQUEST_TYPE:
+		if (unwrappedSize >= sizeof(BEATMAP_DOWNLOAD_REQUEST_PACKET))
+		{
+			// execute
+			///BEATMAP_DOWNLOAD_REQUEST_PACKET *pp = (struct BEATMAP_DOWNLOAD_REQUEST_PACKET*)unwrappedPacket;
+
+			if (m_osu->getSongBrowser()->getSelectedBeatmap() != NULL && m_osu->getSongBrowser()->getSelectedBeatmap()->getSelectedDifficulty2() != NULL)
+			{
+				// TODO: add support for requesting a specific beatmap download, and not just whatever the peer currently has selected
+				OsuDatabaseBeatmap *diff = m_osu->getSongBrowser()->getSelectedBeatmap()->getSelectedDifficulty2();
+
+				// HACKHACK: TODO: TEMP, force load background image (so local downloaded /tmp/ beatmaps are at least complete, even if background image loader is not finished yet)
+				// TODO: handle loadMetadata() failure here (what if it returns false)!
+				OsuDatabaseBeatmap::loadMetadata(diff);
+
+				BeatmapUploadState uploadState;
+				{
+					uploadState.id = (isServer() ? id : 0); // NOTE: this tells the chunk uploader which function to use
+					uploadState.serial = 0; // NOTE: this is set later below
+
+					uploadState.numUploadedOsuFileBytes = 0;
+					uploadState.numUploadedMusicFileBytes = 0;
+					uploadState.numUploadedBackgroundFileBytes = 0;
+
+					uploadState.osuFile = new File(diff->getFilePath());
+					uploadState.musicFile = new File(diff->getFullSoundFilePath());
+					uploadState.backgroundFile = new File(diff->getFullBackgroundImageFilePath());
+				}
+
+				if (uploadState.osuFile->canRead() && uploadState.musicFile->canRead()
+					&& uploadState.osuFile->getFileSize() > 0 && uploadState.musicFile->getFileSize() > 0)
+				{
+					// send acknowledgement to whoever requested the download
+					BEATMAP_DOWNLOAD_ACK_PACKET pp;
+					{
+						pp.serial = (uint32_t)rand(); // generate serial
+						pp.osuFileSizeBytes = uploadState.osuFile->getFileSize();
+						pp.musicFileSizeBytes = uploadState.musicFile->getFileSize();
+						pp.backgroundFileSizeBytes = uploadState.backgroundFile->getFileSize();
+						for (size_t i=0; i<32; i++)
+						{
+							pp.osuFileMD5Hash[i] = i < diff->getMD5Hash().length() ? diff->getMD5Hash()[i] : '\0';
+						}
+						for (int i=0; i<1023; i++)
+						{
+							pp.musicFileName[i] = i < diff->getAudioFileName().length() ? diff->getAudioFileName()[i] : '\0';
+						}
+						pp.musicFileName[1023] = '\0';
+						for (int i=0; i<1023; i++)
+						{
+							pp.backgroundFileName[i] = i < diff->getBackgroundImageFileName().length() ? diff->getBackgroundImageFileName()[i] : '\0';
+						}
+						pp.backgroundFileName[1023] = '\0';
+						size_t size = sizeof(BEATMAP_DOWNLOAD_ACK_PACKET);
+
+						PACKET_TYPE wrap = BEATMAP_DOWNLOAD_ACK_TYPE;
+						const int wrapperSize = sizeof(PACKET_TYPE);
+						char wrappedPacket[(wrapperSize + size)];
+						memcpy(&wrappedPacket, &wrap, wrapperSize);
+						memcpy((void*)(((char*)&wrappedPacket) + wrapperSize), &pp, size);
+
+						if (uploadState.id != 0)
+							engine->getNetworkHandler()->clientcast(wrappedPacket, size + wrapperSize, uploadState.id, true);
+						else
+							engine->getNetworkHandler()->servercast(wrappedPacket, size + wrapperSize, true);
+					}
+
+					// remember sent serial for uploader
+					uploadState.serial = pp.serial;
+
+					// start upload
+					m_uploads.push_back(uploadState);
+				}
+				else
+				{
+					delete uploadState.osuFile;
+					delete uploadState.musicFile;
+				}
+			}
+		}
+		return true;
+
+	case BEATMAP_DOWNLOAD_ACK_TYPE:
+		if (unwrappedSize >= sizeof(BEATMAP_DOWNLOAD_ACK_PACKET))
+		{
+			// execute
+			BEATMAP_DOWNLOAD_ACK_PACKET *pp = (struct BEATMAP_DOWNLOAD_ACK_PACKET*)unwrappedPacket;
+
+			// we have received acknowledgement for the download request, chunks will start being received soon
+			BeatmapDownloadState downloadState;
+			{
+				downloadState.serial = pp->serial;
+
+				downloadState.totalDownloadBytes = pp->osuFileSizeBytes + pp->musicFileSizeBytes + pp->backgroundFileSizeBytes;
+
+				downloadState.numDownloadedOsuFileBytes = 0;
+				downloadState.numDownloadedMusicFileBytes = 0;
+				downloadState.numDownloadedBackgroundFileBytes = 0;
+
+				for (int i=0; i<32; i++)
+				{
+					downloadState.osuFileMD5Hash.append((wchar_t)(pp->osuFileMD5Hash[i]));
+				}
+
+				pp->musicFileName[1023] = '\0';
+				for (size_t i=0; i<1023; i++)
+				{
+					if (pp->musicFileName[i] == '\0')
+						break;
+					else
+						downloadState.musicFileName.append(pp->musicFileName[i]);
+				}
+
+				pp->backgroundFileName[1023] = '\0';
+				for (size_t i=0; i<1023; i++)
+				{
+					if (pp->backgroundFileName[i] == '\0')
+						break;
+					else
+						downloadState.backgroundFileName.append(pp->backgroundFileName[i]);
+				}
+				downloadState.backgroundFileName = UString((const wchar_t*)pp->backgroundFileName);
+
+				debugLog("Started downloading %i %s %s %s\n", (int)downloadState.serial, downloadState.osuFileMD5Hash.toUtf8(), downloadState.musicFileName.toUtf8(), downloadState.backgroundFileName.toUtf8());
+			}
+			m_downloads.push_back(downloadState);
+
+			// update client state to downloading
+			onClientStatusUpdate(true, true, true);
+		}
+		return true;
+
+	case BEATMAP_DOWNLOAD_CHUNK_TYPE:
+		if (unwrappedSize >= sizeof(BEATMAP_DOWNLOAD_CHUNK_PACKET))
+		{
+			// execute
+			BEATMAP_DOWNLOAD_CHUNK_PACKET *pp = (struct BEATMAP_DOWNLOAD_CHUNK_PACKET*)unwrappedPacket;
+
+			//debugLog("received BEATMAP_DOWNLOAD_CHUNK_TYPE (serial = %i, fileType = %i)\n", (int)pp->serial, (int)pp->fileType);
+
+			if (unwrappedSize - sizeof(BEATMAP_DOWNLOAD_CHUNK_PACKET) >= pp->numDataBytes)
+			{
+				for (size_t i=0; i<m_downloads.size(); i++)
+				{
+					if (m_downloads[i].serial == pp->serial)
+					{
+						// append data to vectors
+						for (uint32_t c=0; c<pp->numDataBytes; c++)
+						{
+							switch (pp->fileType)
+							{
+							case 1:
+								m_downloads[i].osuFileBytes.push_back(*(unwrappedPacket + sizeof(BEATMAP_DOWNLOAD_CHUNK_PACKET) + c));
+								break;
+							case 2:
+								m_downloads[i].musicFileBytes.push_back(*(unwrappedPacket + sizeof(BEATMAP_DOWNLOAD_CHUNK_PACKET) + c));
+								break;
+							case 3:
+								m_downloads[i].backgroundFileBytes.push_back(*(unwrappedPacket + sizeof(BEATMAP_DOWNLOAD_CHUNK_PACKET) + c));
+								break;
+							}
+						}
+
+						// update counters
+						m_downloads[i].numDownloadedOsuFileBytes = m_downloads[i].osuFileBytes.size();
+						m_downloads[i].numDownloadedMusicFileBytes = m_downloads[i].musicFileBytes.size();
+						m_downloads[i].numDownloadedBackgroundFileBytes = m_downloads[i].backgroundFileBytes.size();
+					}
+				}
+			}
+			else
+				debugLog("invalid beatmap chunk numDataBytes ...\n");
+		}
+		return true;
+
 	default:
 		return false;
 	}
@@ -441,7 +744,10 @@ bool OsuMultiplayer::onServerReceive(uint32_t id, void *data, uint32_t size)
 			// execute
 			GAME_STATE_PACKET *pp = (struct GAME_STATE_PACKET*)unwrappedPacket;
 			if (pp->state == SELECT && !m_osu->isInPlayMode() && osu_mp_allow_client_beatmap_select.getBool())
+			{
+				m_iLastClientBeatmapSelectID = id;
 				return onClientReceiveInt(id, data, size, true);
+			}
 		}
 		return false;
 
@@ -479,6 +785,18 @@ bool OsuMultiplayer::onServerReceive(uint32_t id, void *data, uint32_t size)
 		}
 		return true;
 
+	case BEATMAP_DOWNLOAD_REQUEST_TYPE:
+		// we have received a download request from a client. start sending ack and then chunks once per frame etc. (client downloads from server)
+		return onClientReceiveInt(id, data, size);
+
+	case BEATMAP_DOWNLOAD_ACK_TYPE:
+		// we have received acknowledgement for the download request (server downloads from client)
+		return onClientReceiveInt(id, data, size);
+
+	case BEATMAP_DOWNLOAD_CHUNK_TYPE:
+		// we have received a new chunk (server downloads from client)
+		return onClientReceiveInt(id, data, size);
+
 	default:
 		return true; // HACKHACK: TODO: dangerous, forwarding all broadcasts!
 	}
@@ -497,6 +815,16 @@ void OsuMultiplayer::onClientDisconnectedFromServer()
 	m_osu->getNotificationOverlay()->addNotification("Disconnected.", 0xffff0000);
 
 	m_clientPlayers.clear();
+
+	// kill all downloads and uploads
+	m_downloads.clear();
+	for (size_t i=0; i<m_uploads.size(); i++)
+	{
+		delete m_uploads[i].osuFile;
+		delete m_uploads[i].musicFile;
+		delete m_uploads[i].backgroundFile;
+	}
+	m_uploads.clear();
 }
 
 void OsuMultiplayer::onServerClientChange(uint32_t id, UString name, bool connected)
@@ -567,6 +895,7 @@ void OsuMultiplayer::onServerClientChange(uint32_t id, UString name, bool connec
 		ply.name = name;
 
 		ply.missingBeatmap = false;
+		ply.downloadingBeatmap = false;
 		ply.waiting = true;
 
 		ply.combo = 0;
@@ -614,13 +943,14 @@ void OsuMultiplayer::onClientCmd()
 	engine->getNetworkHandler()->servercast(wrappedPacket, size + wrapperSize, false);
 }
 
-void OsuMultiplayer::onClientStatusUpdate(bool missingBeatmap, bool waiting)
+void OsuMultiplayer::onClientStatusUpdate(bool missingBeatmap, bool waiting, bool downloadingBeatmap)
 {
 	if (!engine->getNetworkHandler()->isClient()) return;
 
 	PLAYER_STATE_PACKET pp;
 	pp.id = engine->getNetworkHandler()->getLocalClientID();
 	pp.missingBeatmap = missingBeatmap;
+	pp.downloadingBeatmap = downloadingBeatmap;
 	pp.waiting = (waiting && !missingBeatmap); // only wait if we actually have the beatmap
 	size_t size = sizeof(PLAYER_STATE_PACKET);
 
@@ -630,7 +960,7 @@ void OsuMultiplayer::onClientStatusUpdate(bool missingBeatmap, bool waiting)
 	memcpy(&wrappedPacket, &wrap, wrapperSize);
 	memcpy((void*)(((char*)&wrappedPacket) + wrapperSize), &pp, size);
 
-	if (!engine->getNetworkHandler()->isServer())
+	if (!isServer())
 		onClientReceive(pp.id, wrappedPacket, size + wrapperSize);
 
 	engine->getNetworkHandler()->broadcast(wrappedPacket, size + wrapperSize, true);
@@ -654,17 +984,17 @@ void OsuMultiplayer::onClientScoreChange(int combo, float accuracy, unsigned lon
 	memcpy(&wrappedPacket, &wrap, wrapperSize);
 	memcpy((void*)(((char*)&wrappedPacket) + wrapperSize), &pp, size);
 
-	if (!engine->getNetworkHandler()->isServer())
+	if (!isServer())
 		onClientReceive(pp.id, wrappedPacket, size + wrapperSize);
 
 	engine->getNetworkHandler()->broadcast(wrappedPacket, size + wrapperSize, reliable);
 }
 
-bool OsuMultiplayer::onClientPlayStateChangeRequestBeatmap(OsuBeatmap *beatmap)
+bool OsuMultiplayer::onClientPlayStateChangeRequestBeatmap(OsuDatabaseBeatmap *beatmap)
 {
-	if (!engine->getNetworkHandler()->isClient() || engine->getNetworkHandler()->isServer()) return false;
+	if (!engine->getNetworkHandler()->isClient() || isServer()) return false;
 
-	const bool isBeatmapAndDiffValid = (beatmap != NULL && beatmap->getSelectedDifficulty() != NULL);
+	const bool isBeatmapAndDiffValid = (beatmap != NULL);
 
 	if (!isBeatmapAndDiffValid) return false;
 
@@ -674,12 +1004,12 @@ bool OsuMultiplayer::onClientPlayStateChangeRequestBeatmap(OsuBeatmap *beatmap)
 	pp.quickRestart = false;
 	for (int i=0; i<32; i++)
 	{
-		if (i < beatmap->getSelectedDifficulty()->md5hash.length())
-			pp.beatmapMD5Hash[i] = beatmap->getSelectedDifficulty()->md5hash[i];
+		if (i < beatmap->getMD5Hash().length())
+			pp.beatmapMD5Hash[i] = beatmap->getMD5Hash()[i];
 		else
 			pp.beatmapMD5Hash[i] = 0;
 	}
-	pp.beatmapId = beatmap->getSelectedDifficulty()->beatmapId;
+	pp.beatmapId = beatmap->getID();
 	size_t size = sizeof(GAME_STATE_PACKET);
 
 	PACKET_TYPE wrap = STATE_TYPE;
@@ -697,9 +1027,35 @@ bool OsuMultiplayer::onClientPlayStateChangeRequestBeatmap(OsuBeatmap *beatmap)
 	return true;
 }
 
+void OsuMultiplayer::onClientBeatmapDownloadRequest()
+{
+	if (!engine->getNetworkHandler()->isClient()) return;
+
+	BEATMAP_DOWNLOAD_REQUEST_PACKET pp;
+	pp.dummy = 0;
+	size_t size = sizeof(BEATMAP_DOWNLOAD_REQUEST_PACKET);
+
+	PACKET_TYPE wrap = BEATMAP_DOWNLOAD_REQUEST_TYPE;
+	const int wrapperSize = sizeof(PACKET_TYPE);
+	char wrappedPacket[(wrapperSize + size)];
+	memcpy(&wrappedPacket, &wrap, wrapperSize);
+	memcpy((void*)(((char*)&wrappedPacket) + wrapperSize), &pp, size);
+
+	if (!isServer())
+	{
+		// client asks server for download
+		engine->getNetworkHandler()->servercast(wrappedPacket, size + wrapperSize, true);
+	}
+	else
+	{
+		// server asks client for download (client which requested the beatmap select we don't have)
+		engine->getNetworkHandler()->clientcast(wrappedPacket, size + wrapperSize, m_iLastClientBeatmapSelectID, true);
+	}
+}
+
 void OsuMultiplayer::onServerModUpdate()
 {
-	if (!engine->getNetworkHandler()->isServer()) return;
+	if (!isServer()) return;
 
 	// server
 
@@ -777,11 +1133,11 @@ void OsuMultiplayer::onServerModUpdate()
 	onClientCommandInt(string, false);
 }
 
-void OsuMultiplayer::onServerPlayStateChange(OsuMultiplayer::STATE state, unsigned long seekMS, bool quickRestart, OsuBeatmap *beatmap)
+void OsuMultiplayer::onServerPlayStateChange(OsuMultiplayer::STATE state, unsigned long seekMS, bool quickRestart, OsuDatabaseBeatmap *beatmap)
 {
-	if (!engine->getNetworkHandler()->isServer()) return;
+	if (!isServer()) return;
 
-	const bool isBeatmapAndDiffValid = (beatmap != NULL && beatmap->getSelectedDifficulty() != NULL);
+	const bool isBeatmapAndDiffValid = (beatmap != NULL);
 
 	// server
 	debugLog("OsuMultiplayer::onServerPlayStateChange(%i)\n", (int)state);
@@ -792,12 +1148,12 @@ void OsuMultiplayer::onServerPlayStateChange(OsuMultiplayer::STATE state, unsign
 	pp.quickRestart = quickRestart;
 	for (int i=0; i<32; i++)
 	{
-		if (isBeatmapAndDiffValid && i < beatmap->getSelectedDifficulty()->md5hash.length())
-			pp.beatmapMD5Hash[i] = beatmap->getSelectedDifficulty()->md5hash[i];
+		if (isBeatmapAndDiffValid && i < beatmap->getMD5Hash().length())
+			pp.beatmapMD5Hash[i] = beatmap->getMD5Hash()[i];
 		else
 			pp.beatmapMD5Hash[i] = 0;
 	}
-	pp.beatmapId = (isBeatmapAndDiffValid ? beatmap->getSelectedDifficulty()->beatmapId : 0);
+	pp.beatmapId = (isBeatmapAndDiffValid ? beatmap->getID() : 0);
 	size_t size = sizeof(GAME_STATE_PACKET);
 
 	PACKET_TYPE wrap = STATE_TYPE;
@@ -812,10 +1168,10 @@ void OsuMultiplayer::onServerPlayStateChange(OsuMultiplayer::STATE state, unsign
 		onClientStatusUpdate(false);
 }
 
-void OsuMultiplayer::setBeatmap(OsuBeatmap *beatmap)
+void OsuMultiplayer::setBeatmap(OsuDatabaseBeatmap *beatmap)
 {
-	if (beatmap == NULL || beatmap->getSelectedDifficulty() == NULL) return;
-	setBeatmap(beatmap->getSelectedDifficulty()->md5hash);
+	if (beatmap == NULL) return;
+	setBeatmap(beatmap->getMD5Hash());
 }
 
 void OsuMultiplayer::setBeatmap(std::string md5hash)
@@ -852,11 +1208,21 @@ bool OsuMultiplayer::isInMultiplayer()
 	return engine->getNetworkHandler()->isClient() || engine->getNetworkHandler()->isServer();
 }
 
+bool OsuMultiplayer::isMissingBeatmap()
+{
+	for (size_t i=0; i<m_clientPlayers.size(); i++)
+	{
+		if (m_clientPlayers[i].id == engine->getNetworkHandler()->getLocalClientID())
+			return m_clientPlayers[i].missingBeatmap;
+	}
+	return false;
+}
+
 bool OsuMultiplayer::isWaitingForPlayers()
 {
 	for (int i=0; i<m_clientPlayers.size(); i++)
 	{
-		if (m_clientPlayers[i].waiting)
+		if (m_clientPlayers[i].waiting || m_clientPlayers[i].downloadingBeatmap)
 			return true;
 	}
 	return false;
@@ -867,9 +1233,18 @@ bool OsuMultiplayer::isWaitingForClient()
 	for (int i=0; i<m_clientPlayers.size(); i++)
 	{
 		if (m_clientPlayers[i].id == engine->getNetworkHandler()->getLocalClientID())
-			return m_clientPlayers[i].waiting;
+			return (m_clientPlayers[i].waiting || m_clientPlayers[i].downloadingBeatmap);
 	}
 	return false;
+}
+
+float OsuMultiplayer::getDownloadBeatmapPercentage() const
+{
+	if (!isDownloadingBeatmap() || m_downloads.size() < 1) return 0.0f;
+
+	const size_t totalDownloadedBytes = m_downloads[0].numDownloadedOsuFileBytes + m_downloads[0].numDownloadedMusicFileBytes + m_downloads[0].numDownloadedBackgroundFileBytes;
+
+	return ((float)totalDownloadedBytes / (float)m_downloads[0].totalDownloadBytes);
 }
 
 void OsuMultiplayer::onBroadcastCommand(UString command)
@@ -884,22 +1259,22 @@ void OsuMultiplayer::onClientcastCommand(UString command)
 
 void OsuMultiplayer::onClientCommandInt(UString string, bool executeLocallyToo)
 {
-	if (!engine->getNetworkHandler()->isServer() || string.length() < 1) return;
+	if (!isServer() || string.length() < 1) return;
 
 	// execute locally on server
 	if (executeLocallyToo)
 		Console::processCommand(string);
 
-	// WARNING: hardcoded max length (1024)
+	// WARNING: hardcoded max length (2048)
 	//debugLog("length = %i", string.length());
 
 	CONVAR_PACKET pp;
-	pp.len = clamp<int>(string.length(), 0, 1023);
+	pp.len = clamp<int>(string.length(), 0, 2047);
 	for (int i=0; i<pp.len; i++)
 	{
 		pp.str[i] = string[i];
 	}
-	pp.str[1023] = '\0';
+	pp.str[2047] = '\0';
 	size_t size = sizeof(CONVAR_PACKET);
 
 	PACKET_TYPE wrap = CONVAR_TYPE;
@@ -911,7 +1286,91 @@ void OsuMultiplayer::onClientCommandInt(UString string, bool executeLocallyToo)
 	engine->getNetworkHandler()->broadcast(wrappedPacket, size + wrapperSize, true);
 }
 
+void OsuMultiplayer::onMPForceClientBeatmapDownload()
+{
+	if (!isServer()) return;
+
+	onClientCommandInt(osu_mp_request_beatmap_download.getName(), false);
+}
+
 void OsuMultiplayer::onMPSelectBeatmap(UString md5hash)
 {
 	setBeatmap(std::string(md5hash.toUtf8()));
+}
+
+void OsuMultiplayer::onMPRequestBeatmapDownload()
+{
+	if (isServer()) return;
+
+	onClientBeatmapDownloadRequest();
+}
+
+void OsuMultiplayer::onBeatmapDownloadFinished(const BeatmapDownloadState &dl)
+{
+	// update client state to no-longer-downloading
+	onClientStatusUpdate(true, true, false);
+
+	// TODO: validate inputs
+
+	// create folder structure
+	UString beatmapFolderPath = "tmp/";
+	{
+		if (!env->directoryExists(beatmapFolderPath))
+			env->createDirectory(beatmapFolderPath);
+
+		beatmapFolderPath.append(dl.osuFileMD5Hash);
+		beatmapFolderPath.append("/");
+		if (!env->directoryExists(beatmapFolderPath))
+			env->createDirectory(beatmapFolderPath);
+	}
+
+	// write downloaded files to disk
+	{
+		UString osuFilePath = beatmapFolderPath;
+		osuFilePath.append(dl.osuFileMD5Hash);
+		osuFilePath.append(".osu");
+
+		if (!env->fileExists(osuFilePath))
+		{
+			File osuFile(osuFilePath, File::TYPE::WRITE);
+			osuFile.write((const char*)&dl.osuFileBytes[0], dl.osuFileBytes.size());
+		}
+	}
+	{
+		UString musicFilePath = beatmapFolderPath;
+		musicFilePath.append(dl.musicFileName);
+
+		if (!env->fileExists(musicFilePath))
+		{
+			File musicFile(musicFilePath, File::TYPE::WRITE);
+			musicFile.write((const char*)&dl.musicFileBytes[0], dl.musicFileBytes.size());
+		}
+	}
+	if (dl.backgroundFileName.length() > 1)
+	{
+		UString backgroundFilePath = beatmapFolderPath;
+		backgroundFilePath.append(dl.backgroundFileName);
+
+		if (!env->fileExists(backgroundFilePath))
+		{
+			File backgroundFile(backgroundFilePath, File::TYPE::WRITE);
+			backgroundFile.write((const char*)&dl.backgroundFileBytes[0], dl.backgroundFileBytes.size());
+		}
+	}
+
+	// and load the beatmap
+	OsuDatabaseBeatmap *beatmap = m_osu->getSongBrowser()->getDatabase()->addBeatmap(beatmapFolderPath);
+	if (beatmap != NULL)
+	{
+		m_osu->getSongBrowser()->addBeatmap(beatmap);
+		m_osu->getSongBrowser()->updateSongButtonSorting();
+		if (beatmap->getDifficulties().size() > 0) // NOTE: always assume only 1 diff exists for now
+		{
+			m_osu->getSongBrowser()->selectBeatmapMP(beatmap->getDifficulties()[0]);
+
+			// and update our state if we have the correct beatmap now
+			if (beatmap->getDifficulties()[0]->getMD5Hash() == m_sMPSelectBeatmapScheduledMD5Hash)
+				onClientStatusUpdate(false, true, false);
+		}
+	}
 }

@@ -12,18 +12,22 @@
 #include "SoundEngine.h"
 #include "ResourceManager.h"
 #include "Mouse.h"
+#include "Keyboard.h"
 
 #include "CBaseUIContainer.h"
 #include "CBaseUIScrollView.h"
 
 #include "Osu.h"
+#include "OsuIcons.h"
 #include "OsuSkin.h"
 #include "OsuReplay.h"
+#include "OsuHUD.h"
 #include "OsuOptionsMenu.h"
 #include "OsuSongBrowser2.h"
+#include "OsuModSelector.h"
 #include "OsuMultiplayer.h"
-#include "OsuBeatmapDifficulty.h"
 #include "OsuDatabase.h"
+#include "OsuDatabaseBeatmap.h"
 
 #include "OsuUIContextMenu.h"
 #include "OsuUISongBrowserScoreButton.h"
@@ -31,11 +35,242 @@
 
 ConVar osu_ui_top_ranks_max("osu_ui_top_ranks_max", 100, "maximum number of displayed scores, to keep the ui/scrollbar manageable");
 
+
+
+class OsuUserStatsScreenMenuButton : public CBaseUIButton
+{
+public:
+	OsuUserStatsScreenMenuButton(float xPos = 0, float yPos = 0, float xSize = 0, float ySize = 0, UString name = "", UString text = "") : CBaseUIButton(xPos, yPos, xSize, ySize, name, text)
+	{
+	}
+
+	virtual void drawText(Graphics *g)
+	{
+		// HACKHACK: force update string height to non-average line height for icon
+		m_fStringHeight = m_font->getStringHeight(m_sText);
+
+		if (m_font != NULL && m_sText.length() > 0)
+		{
+			g->pushClipRect(McRect(m_vPos.x+1, m_vPos.y+1, m_vSize.x-1, m_vSize.y-1));
+			{
+				g->setColor(m_textColor);
+				g->pushTransform();
+				{
+					g->translate((int)(m_vPos.x + m_vSize.x/2.0f - (m_fStringWidth/2.0f)), (int)(m_vPos.y + m_vSize.y/2.0f + (m_fStringHeight/2.0f)));
+					g->drawString(m_font, m_sText);
+				}
+				g->popTransform();
+			}
+			g->popClipRect();
+		}
+	}
+};
+
+class OsuUserStatsScreenBackgroundPPRecalculator : public Resource
+{
+public:
+	OsuUserStatsScreenBackgroundPPRecalculator(Osu *osu, UString userName, bool importLegacyScores) : Resource()
+	{
+		m_osu = osu;
+		m_sUserName = userName;
+		m_bImportLegacyScores = importLegacyScores;
+
+		m_iNumScoresToRecalculate = 0;
+		m_iNumScoresRecalculated = 0;
+	}
+
+	inline int getNumScoresToRecalculate() const {return m_iNumScoresToRecalculate.load();}
+	inline int getNumScoresRecalculated() const {return m_iNumScoresRecalculated.load();}
+
+private:
+	virtual void init()
+	{
+		m_bReady = true;
+	}
+
+	virtual void initAsync()
+	{
+		std::unordered_map<std::string, std::vector<OsuDatabase::Score>> *scores = m_osu->getSongBrowser()->getDatabase()->getScores();
+
+		// count number of scores to recalculate for UI
+		size_t numScoresToRecalculate = 0;
+		for (const auto &kv : *scores)
+		{
+			for (size_t i=0; i<kv.second.size(); i++)
+			{
+				const OsuDatabase::Score &score = kv.second[i];
+
+				if ((!score.isLegacyScore || m_bImportLegacyScores) && score.playerName == m_sUserName)
+					numScoresToRecalculate++;
+			}
+		}
+		m_iNumScoresToRecalculate = numScoresToRecalculate;
+
+		printf("PPRecalc will recalculate %i scores ...\n", (int)numScoresToRecalculate);
+
+		// actually recalculate them
+		for (auto &kv : *scores)
+		{
+			for (size_t i=0; i<kv.second.size(); i++)
+			{
+				OsuDatabase::Score &score = kv.second[i];
+
+				if ((!score.isLegacyScore || m_bImportLegacyScores) && score.playerName == m_sUserName)
+				{
+					if (m_bInterrupted.load())
+						break;
+					if (score.md5hash.length() < 1)
+						continue;
+
+					// NOTE: avoid importing the same score twice
+					if (m_bImportLegacyScores && score.isLegacyScore)
+					{
+						const std::vector<OsuDatabase::Score> &otherScores = (*scores)[score.md5hash];
+
+						bool isScoreAlreadyImported = false;
+						for (size_t s=0; s<otherScores.size(); s++)
+						{
+							if (score.isLegacyScoreEqualToImportedLegacyScore(otherScores[s]))
+							{
+								isScoreAlreadyImported = true;
+								break;
+							}
+						}
+
+						if (isScoreAlreadyImported)
+							continue;
+					}
+
+					// 1) get matching beatmap from db
+					OsuDatabaseBeatmap *diff2 = m_osu->getSongBrowser()->getDatabase()->getBeatmapDifficulty(score.md5hash);
+					if (diff2 == NULL)
+					{
+						if (Osu::debug->getBool())
+							printf("PPRecalc couldn't find %s\n", score.md5hash.c_str());
+
+						continue;
+					}
+
+					// 1.5) reload metadata for sanity (maybe osu!.db has outdated AR/CS/OD/HP or some other shit)
+					if (!OsuDatabaseBeatmap::loadMetadata(diff2))
+						continue;
+
+					const OsuReplay::BEATMAP_VALUES legacyValues = OsuReplay::getBeatmapValuesForModsLegacy(score.modsLegacy, diff2->getAR(), diff2->getCS(), diff2->getOD(), diff2->getHP());
+					const UString &osuFilePath = diff2->getFilePath();
+					const Osu::GAMEMODE gameMode = Osu::GAMEMODE::STD;
+					const float AR = (score.isLegacyScore ? legacyValues.AR : score.AR);
+					const float CS = (score.isLegacyScore ? legacyValues.CS : score.CS);
+					const float OD = (score.isLegacyScore ? legacyValues.OD : score.OD);
+					const float HP = (score.isLegacyScore ? legacyValues.HP : score.HP);
+					const float speedMultiplier = (score.isLegacyScore ? legacyValues.speedMultiplier : score.speedMultiplier);
+
+					// 2) load hitobjects for diffcalc
+					OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT diffres = OsuDatabaseBeatmap::loadDifficultyHitObjects(osuFilePath, gameMode, AR, CS, speedMultiplier);
+					if (diffres.diffobjects.size() < 1)
+					{
+						if (Osu::debug->getBool())
+							printf("PPRecalc couldn't load %s\n", osuFilePath.toUtf8());
+
+						continue;
+					}
+
+					// 3) calculate stars
+					double aimStars = 0.0;
+					double speedStars = 0.0;
+					const double totalStars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, CS, &aimStars, &speedStars);
+
+					// 4) calculate pp
+					double pp = 0.0;
+					int numHitObjects = 0;
+					int numSpinners = 0;
+					int numCircles = 0;
+					int maxPossibleCombo = 0;
+					{
+						// calculate a few values fresh from the beatmap data necessary for pp calculation
+						numHitObjects = diffres.diffobjects.size();
+
+						for (size_t h=0; h<diffres.diffobjects.size(); h++)
+						{
+							if (diffres.diffobjects[h].type == OsuDifficultyHitObject::TYPE::SPINNER)
+								numSpinners++;
+						}
+
+						for (size_t h=0; h<diffres.diffobjects.size(); h++)
+						{
+							if (diffres.diffobjects[h].type == OsuDifficultyHitObject::TYPE::CIRCLE)
+								numCircles++;
+						}
+
+						maxPossibleCombo = diffres.maxPossibleCombo;
+						if (maxPossibleCombo < 1)
+							continue;
+
+						pp = OsuDifficultyCalculator::calculatePPv2(score.modsLegacy, speedMultiplier, AR, OD, aimStars, speedStars, numHitObjects, numCircles, numSpinners, maxPossibleCombo, score.comboMax, score.numMisses, score.num300s, score.num100s, score.num50s);
+					}
+
+					// 5) overwrite score with new pp data (and handle imports)
+					const float oldPP = score.pp;
+					if (pp > 0.0f)
+					{
+						score.pp = pp;
+						score.version = OsuScore::VERSION;
+
+						if (m_bImportLegacyScores && score.isLegacyScore)
+						{
+							score.isLegacyScore = false;		// convert to McOsu (pp) score
+							score.isImportedLegacyScore = true;	// but remember that this score does not have all play data
+							{
+								score.numSliderBreaks = 0;
+								score.unstableRate = 0.0f;
+								score.hitErrorAvgMin = 0.0f;
+								score.hitErrorAvgMax = 0.0f;
+							}
+							score.starsTomTotal = totalStars;
+							score.starsTomAim = aimStars;
+							score.starsTomSpeed = speedStars;
+							score.speedMultiplier = speedMultiplier;
+							score.CS = CS;
+							score.AR = AR;
+							score.OD = OD;
+							score.HP = HP;
+							score.maxPossibleCombo = maxPossibleCombo;
+							score.numHitObjects = numHitObjects;
+							score.numCircles = numCircles;
+						}
+					}
+
+					m_iNumScoresRecalculated++;
+
+					if (Osu::debug->getBool())
+					{
+						printf("[%s] original = %f, new = %f, delta = %f\n", score.md5hash.c_str(), oldPP, score.pp, (score.pp - oldPP));
+						printf("at %i/%i\n", m_iNumScoresRecalculated.load(), m_iNumScoresToRecalculate.load());
+					}
+				}
+			}
+
+			if (m_bInterrupted.load())
+				break;
+		}
+
+		m_bAsyncReady = true;
+	}
+
+	virtual void destroy() {;}
+
+	Osu *m_osu;
+	UString m_sUserName;
+	bool m_bImportLegacyScores;
+
+	std::atomic<int> m_iNumScoresToRecalculate;
+	std::atomic<int> m_iNumScoresRecalculated;
+};
+
+
+
 OsuUserStatsScreen::OsuUserStatsScreen(Osu *osu) : OsuScreenBackable(osu)
 {
 	m_name_ref = convar->getConVarByName("name");
-
-	// TODO: (statistics panel with values (how many plays, average UR/offset+-/score/pp/etc.))
 
 	m_container = new CBaseUIContainer();
 
@@ -53,16 +288,33 @@ OsuUserStatsScreen::OsuUserStatsScreen(Osu *osu) : OsuScreenBackable(osu)
 	m_scores->setVerticalScrolling(true);
 	m_container->addBaseUIElement(m_scores);
 
+	m_menuButton = new OsuUserStatsScreenMenuButton();
+	m_menuButton->setFont(m_osu->getFontIcons());
+	{
+		UString iconString; iconString.insert(0, OsuIcons::GEAR);
+		m_menuButton->setText(iconString);
+	}
+	m_menuButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUserStatsScreen::onMenuClicked) );
+	m_container->addBaseUIElement(m_menuButton);
+
 	// the context menu gets added last (drawn on top of everything)
 	m_container->addBaseUIElement(m_contextMenu);
 
-	m_vInfoText.push_back("Old scores are not recalculated yet!");
-	m_vInfoText.push_back("Will be included in a future update.");
-	m_vInfoText.push_back("(Scores before 15.02.2019 = old pp)");
+	m_bRecalculatingPP = false;
+	m_backgroundPPRecalculator = NULL;
+
+	// TODO: (statistics panel with values (how many plays, average UR/offset+-/score/pp/etc.))
 }
 
 OsuUserStatsScreen::~OsuUserStatsScreen()
 {
+	if (m_backgroundPPRecalculator != NULL)
+	{
+		m_backgroundPPRecalculator->interruptLoad();
+		engine->getResourceManager()->destroyResource(m_backgroundPPRecalculator);
+		m_backgroundPPRecalculator = NULL;
+	}
+
 	SAFE_DELETE(m_container);
 }
 
@@ -70,28 +322,45 @@ void OsuUserStatsScreen::draw(Graphics *g)
 {
 	if (!m_bVisible) return;
 
-	if (m_vInfoText.size() > 0)
+	if (m_bRecalculatingPP)
 	{
-		const float dpiScale = Osu::getUIScale();
-
-		const float infoScale = 0.1f;
-		const float paddingScale = 0.4f;
-		McFont *infoFont = m_osu->getSubTitleFont();
-		g->setColor(0x77888888);
-		for (int i=0; i<m_vInfoText.size(); i++)
+		if (m_backgroundPPRecalculator != NULL)
 		{
+			const float numScoresToRecalculate = (float)m_backgroundPPRecalculator->getNumScoresToRecalculate();
+			const float percentFinished = (numScoresToRecalculate > 0 ? (float)m_backgroundPPRecalculator->getNumScoresRecalculated() / numScoresToRecalculate : 0.0f);
+			UString loadingMessage = UString::format("Recalculating scores ... (%i %%, %i/%i)", (int)(percentFinished*100.0f), m_backgroundPPRecalculator->getNumScoresRecalculated(), m_backgroundPPRecalculator->getNumScoresToRecalculate());
+
+			g->setColor(0xffffffff);
 			g->pushTransform();
 			{
-				const float scale = (m_scores->getPos().y / infoFont->getHeight())*infoScale;
-				const float height = infoFont->getHeight()*scale;
-				const float padding = height*paddingScale;
-
-				g->scale(scale, scale);
-				g->translate(m_userButton->getPos().x + m_userButton->getSize().x + 10 * dpiScale, m_scores->getPos().y/2 + height/2 - ((m_vInfoText.size()-1)*height + (m_vInfoText.size()-1)*padding)/2 + i*(height+padding));
-				g->drawString(infoFont, m_vInfoText[i]);
+				g->translate((int)(m_osu->getScreenWidth()/2 - m_osu->getSubTitleFont()->getStringWidth(loadingMessage)/2), m_osu->getScreenHeight() - 15);
+				g->drawString(m_osu->getSubTitleFont(), loadingMessage);
 			}
 			g->popTransform();
 		}
+
+		m_osu->getHUD()->drawBeatmapImportSpinner(g);
+
+		OsuScreenBackable::draw(g);
+		return;
+	}
+
+	// draw pp version info
+	{
+		const Vector2 center = m_userButton->getPos() + Vector2(0, m_userButton->getSize().y/2) - Vector2((m_userButton->getPos().x - m_scores->getPos().x)/2, 0);
+
+		McFont *font = engine->getResourceManager()->getFont("FONT_DEFAULT");
+		UString text = UString::format("pp Version: %i", OsuDifficultyCalculator::PP_ALGORITHM_VERSION);
+		const float stringWidth = font->getStringWidth(text);
+		const float overflow = (center.x + stringWidth/2) - m_userButton->getPos().x;
+
+		g->pushTransform();
+		{
+			g->translate((int)(center.x - stringWidth/2 - std::max(overflow, 0.0f)), (int)(center.y + font->getHeight()/2));
+			g->setColor(0x77888888);
+			g->drawString(font, text);
+		}
+		g->popTransform();
 	}
 
 	m_container->draw(g);
@@ -103,6 +372,23 @@ void OsuUserStatsScreen::update()
 {
 	OsuScreenBackable::update();
 	if (!m_bVisible) return;
+
+	if (m_bRecalculatingPP)
+	{
+		// wait until recalc is finished
+		if (m_backgroundPPRecalculator != NULL && m_backgroundPPRecalculator->isReady())
+		{
+			// force recalc + refresh UI
+			m_osu->getSongBrowser()->getDatabase()->forceScoreUpdateOnNextCalculatePlayerStats();
+			m_osu->getSongBrowser()->getDatabase()->forceScoresSaveOnNextShutdown();
+
+			rebuildScoreButtons(m_name_ref->getString());
+
+			m_bRecalculatingPP = false;
+		}
+		else
+			return; // don't update rest of UI while recalcing
+	}
 
 	m_container->update();
 
@@ -124,26 +410,58 @@ void OsuUserStatsScreen::setVisible(bool visible)
 	OsuScreenBackable::setVisible(visible);
 
 	if (m_bVisible)
+	{
 		rebuildScoreButtons(m_name_ref->getString());
+
+		// detect if any old pp scores exist, and notify the user if so
+		// TODO: the detection would have to know if we were able to recalculate, so very annoying for anyone with any deleted beatmap but score
+		/*
+		{
+			OsuDatabase *db = m_osu->getSongBrowser()->getDatabase();
+			const std::vector<OsuDatabase::Score*> scores = db->getPlayerPPScores(m_name_ref->getString()).ppScores;
+
+			bool foundOldScores;
+			for (size_t i=0; i<scores.size(); i++)
+			{
+				//debugLog("version = %i\n", scores[i]->version);
+				if (scores[i]->version < OsuScore::VERSION)
+				{
+					foundOldScores = true;
+					break;
+				}
+			}
+
+			if (foundOldScores)
+				m_osu->getNotificationOverlay()->addNotification("Old pp scores detected. Please recalculate as soon as convenient!");
+		}
+		*/
+	}
 	else
 		m_contextMenu->setVisible2(false);
 }
 
-void OsuUserStatsScreen::onScoreContextMenu(OsuUISongBrowserScoreButton *scoreButton, UString text)
+void OsuUserStatsScreen::onScoreContextMenu(OsuUISongBrowserScoreButton *scoreButton, int id)
 {
-	if (text == "Delete Score")
-	{
-		m_osu->getSongBrowser()->getDatabase()->deleteScore(std::string(scoreButton->getName().toUtf8()), scoreButton->getScoreUnixTimestamp());
+	// NOTE: see OsuUISongBrowserScoreButton::onContextMenu()
 
+	if (id == 2)
 		rebuildScoreButtons(m_name_ref->getString());
-		m_osu->getSongBrowser()->rebuildScoreButtons();
-	}
 }
 
 void OsuUserStatsScreen::onBack()
 {
-	engine->getSound()->play(m_osu->getSkin()->getMenuClick());
-	m_osu->toggleSongBrowser();
+	if (m_bRecalculatingPP)
+	{
+		if (m_backgroundPPRecalculator != NULL)
+			m_backgroundPPRecalculator->interruptLoad();
+		else
+			m_bRecalculatingPP = false; // this should never happen
+	}
+	else
+	{
+		engine->getSound()->play(m_osu->getSkin()->getMenuClick());
+		m_osu->toggleSongBrowser();
+	}
 }
 
 void OsuUserStatsScreen::rebuildScoreButtons(UString playerName)
@@ -154,23 +472,22 @@ void OsuUserStatsScreen::rebuildScoreButtons(UString playerName)
 	m_scores->getContainer()->clear();
 	m_scoreButtons.clear();
 
-	// TODO: optimize db accesses by caching a hashmap from md5hash -> OsuBeatmap*, currently it just does a loop over all diffs of all beatmaps (for every score here)
 	OsuDatabase *db = m_osu->getSongBrowser()->getDatabase();
 	std::vector<OsuDatabase::Score*> scores = db->getPlayerPPScores(playerName).ppScores;
 	for (int i=scores.size()-1; i>=std::max(0, (int)scores.size() - osu_ui_top_ranks_max.getInt()); i--)
 	{
 		const float weight = OsuDatabase::getWeightForIndex(scores.size()-1-i);
 
-		OsuBeatmapDifficulty *diff = db->getBeatmapDifficulty(scores[i]->md5hash);
+		const OsuDatabaseBeatmap *diff = db->getBeatmapDifficulty(scores[i]->md5hash);
 
 		UString title = "...";
 		if (diff != NULL)
 		{
-			title = diff->artist;
+			title = diff->getArtist();
 			title.append(" - ");
-			title.append(diff->title);
+			title.append(diff->getTitle());
 			title.append(" [");
-			title.append(diff->name);
+			title.append(diff->getDifficultyName());
 			title.append("]");
 		}
 
@@ -183,7 +500,7 @@ void OsuUserStatsScreen::rebuildScoreButtons(UString playerName)
 	}
 
 	m_userButton->setText(playerName);
-	m_osu->getOptionsMenu()->setUsername(playerName); // force update textbox to avoid shutdown inconsistency
+	m_osu->getOptionsMenu()->setUsername(playerName); // NOTE: force update options textbox to avoid shutdown inconsistency
 	m_userButton->updateUserStats();
 
 	updateLayout();
@@ -210,6 +527,7 @@ void OsuUserStatsScreen::onUserClicked(CBaseUIButton *button)
 		}
 		m_contextMenu->end();
 		m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUserStatsScreen::onUserButtonChange) );
+		OsuUIContextMenu::clampToRightScreenEdge(m_contextMenu);
 	}
 }
 
@@ -229,6 +547,156 @@ void OsuUserStatsScreen::onScoreClicked(CBaseUIButton *button)
 	m_osu->toggleSongBrowser();
 	m_osu->getMultiplayer()->setBeatmap(((OsuUISongBrowserScoreButton*)button)->getScore().md5hash);
 	m_osu->getSongBrowser()->highlightScore(((OsuUISongBrowserScoreButton*)button)->getScore().unixTimestamp);
+}
+
+void OsuUserStatsScreen::onMenuClicked(CBaseUIButton *button)
+{
+	m_contextMenu->setPos(m_menuButton->getPos() + Vector2(0, m_menuButton->getSize().y));
+	m_contextMenu->setRelPos(m_menuButton->getPos() + Vector2(0, m_menuButton->getSize().y));
+	m_contextMenu->begin();
+	{
+		m_contextMenu->addButton("Recalculate pp", 1);
+		CBaseUIButton *spacer = m_contextMenu->addButton("---");
+		spacer->setEnabled(false);
+		spacer->setTextColor(0xff888888);
+		spacer->setTextDarkColor(0xff000000);
+		{
+			UString importText = "Import osu! Scores of \"";
+			importText.append(m_name_ref->getString());
+			importText.append("\"");
+			m_contextMenu->addButton(importText, 2);
+		}
+		spacer = m_contextMenu->addButton("---");
+		spacer->setEnabled(false);
+		spacer->setTextColor(0xff888888);
+		spacer->setTextDarkColor(0xff000000);
+		{
+			UString deleteText = "Delete All Scores of \"";
+			deleteText.append(m_name_ref->getString());
+			deleteText.append("\"");
+			m_contextMenu->addButton(deleteText, 3);
+		}
+	}
+	m_contextMenu->end();
+	m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUserStatsScreen::onMenuSelected) );
+	OsuUIContextMenu::clampToRightScreenEdge(m_contextMenu);
+}
+
+void OsuUserStatsScreen::onMenuSelected(UString text, int id)
+{
+	if (id == 1)
+		onRecalculatePP(false);
+	else if (id == 2)
+		onRecalculatePPImportLegacyScoresClicked();
+	else if (id == 3)
+		onDeleteAllScoresClicked();
+}
+
+void OsuUserStatsScreen::onRecalculatePPImportLegacyScoresClicked()
+{
+	m_contextMenu->setPos(m_menuButton->getPos() + Vector2(0, m_menuButton->getSize().y));
+	m_contextMenu->setRelPos(m_menuButton->getPos() + Vector2(0, m_menuButton->getSize().y));
+	m_contextMenu->begin();
+	{
+		{
+			UString reallyText = "Really import all osu! scores of \"";
+			reallyText.append(m_name_ref->getString());
+			reallyText.append("\"?");
+			m_contextMenu->addButton(reallyText)->setEnabled(false);
+		}
+		CBaseUIButton *spacer = m_contextMenu->addButton("---");
+		spacer->setTextLeft(false);
+		spacer->setEnabled(false);
+		spacer->setTextColor(0xff888888);
+		spacer->setTextDarkColor(0xff000000);
+		m_contextMenu->addButton("Yes", 1)->setTextLeft(false);
+		m_contextMenu->addButton("No")->setTextLeft(false);
+	}
+	m_contextMenu->end();
+	m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUserStatsScreen::onRecalculatePPImportLegacyScoresConfirmed) );
+	OsuUIContextMenu::clampToRightScreenEdge(m_contextMenu);
+}
+
+void OsuUserStatsScreen::onRecalculatePPImportLegacyScoresConfirmed(UString text, int id)
+{
+	if (id != 1) return;
+
+	onRecalculatePP(true);
+}
+
+void OsuUserStatsScreen::onRecalculatePP(bool importLegacyScores)
+{
+	m_bRecalculatingPP = true;
+
+	if (m_backgroundPPRecalculator != NULL)
+	{
+		m_backgroundPPRecalculator->interruptLoad();
+		engine->getResourceManager()->destroyResource(m_backgroundPPRecalculator);
+		m_backgroundPPRecalculator = NULL;
+	}
+
+	m_backgroundPPRecalculator = new OsuUserStatsScreenBackgroundPPRecalculator(m_osu, m_name_ref->getString(), importLegacyScores);
+
+	// NOTE: force disable all runtime mods (including all experimental mods!), as they directly influence global OsuGameRules which are used during pp calculation
+	m_osu->getModSelector()->resetMods();
+
+	engine->getResourceManager()->requestNextLoadAsync();
+	engine->getResourceManager()->loadResource(m_backgroundPPRecalculator);
+}
+
+void OsuUserStatsScreen::onDeleteAllScoresClicked()
+{
+	m_contextMenu->setPos(m_menuButton->getPos() + Vector2(0, m_menuButton->getSize().y));
+	m_contextMenu->setRelPos(m_menuButton->getPos() + Vector2(0, m_menuButton->getSize().y));
+	m_contextMenu->begin();
+	{
+		{
+			UString reallyText = "Really delete all scores of \"";
+			reallyText.append(m_name_ref->getString());
+			reallyText.append("\"?");
+			m_contextMenu->addButton(reallyText)->setEnabled(false);
+		}
+		CBaseUIButton *spacer = m_contextMenu->addButton("---");
+		spacer->setTextLeft(false);
+		spacer->setEnabled(false);
+		spacer->setTextColor(0xff888888);
+		spacer->setTextDarkColor(0xff000000);
+		m_contextMenu->addButton("Yes", 1)->setTextLeft(false);
+		m_contextMenu->addButton("No")->setTextLeft(false);
+	}
+	m_contextMenu->end();
+	m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUserStatsScreen::onDeleteAllScoresConfirmed) );
+	OsuUIContextMenu::clampToRightScreenEdge(m_contextMenu);
+}
+
+void OsuUserStatsScreen::onDeleteAllScoresConfirmed(UString text, int id)
+{
+	if (id != 1) return;
+
+	const UString &playerName = m_name_ref->getString();
+
+	debugLog("Deleting all scores for \"%s\"\n", playerName.toUtf8());
+
+	std::unordered_map<std::string, std::vector<OsuDatabase::Score>> *scores = m_osu->getSongBrowser()->getDatabase()->getScores();
+
+	// delete every score matching the current playerName
+	for (auto &kv : *scores)
+	{
+		for (size_t i=0; i<kv.second.size(); i++)
+		{
+			if (kv.second[i].playerName == playerName)
+			{
+				kv.second.erase(kv.second.begin() + i);
+				i--;
+			}
+		}
+	}
+
+	// force recalc + refresh UI
+	m_osu->getSongBrowser()->getDatabase()->forceScoreUpdateOnNextCalculatePlayerStats();
+	m_osu->getSongBrowser()->getDatabase()->forceScoresSaveOnNextShutdown();
+
+	rebuildScoreButtons(playerName);
 }
 
 void OsuUserStatsScreen::updateLayout()
@@ -261,4 +729,7 @@ void OsuUserStatsScreen::updateLayout()
 	const int userButtonHeight = m_scores->getPos().y*0.6f;
 	m_userButton->setSize(userButtonHeight*3.5f, userButtonHeight);
 	m_userButton->setPos(m_osu->getScreenWidth()/2 - m_userButton->getSize().x/2, m_scores->getPos().y/2 - m_userButton->getSize().y/2);
+
+	m_menuButton->setSize(userButtonHeight*0.9f, userButtonHeight*0.9f);
+	m_menuButton->setPos(std::max(m_userButton->getPos().x + m_userButton->getSize().x, m_userButton->getPos().x + m_userButton->getSize().x + (m_userButton->getPos().x - m_scores->getPos().x)/2 - m_menuButton->getSize().x/2), m_userButton->getPos().y + m_userButton->getSize().y/2 - m_menuButton->getSize().y/2);
 }

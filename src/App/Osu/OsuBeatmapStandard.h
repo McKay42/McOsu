@@ -10,7 +10,7 @@
 
 #include "OsuBeatmap.h"
 
-class StarCacheLoader;
+class OsuBackgroundStarCacheLoader;
 
 class OsuBeatmapStandard : public OsuBeatmap
 {
@@ -38,32 +38,34 @@ public:
 	inline Vector2 getContinueCursorPoint() const {return m_vContinueCursorPoint;}
 
 	// playfield
-	inline Vector2 getPlayfieldSize() {return m_vPlayfieldSize;}
-	inline Vector2 getPlayfieldCenter() {return m_vPlayfieldCenter;}
+	inline Vector2 getPlayfieldSize() const {return m_vPlayfieldSize;}
+	inline Vector2 getPlayfieldCenter() const {return m_vPlayfieldCenter;}
 	inline float getPlayfieldRotation() const {return m_fPlayfieldRotation;}
 
 	// hitobjects
-	float getHitcircleDiameter(); // in actual scaled pixels to the current resolution
-	inline float getRawHitcircleDiameter() {return m_fRawHitcircleDiameter;} // in osu!pixels
-	inline float getHitcircleXMultiplier() {return m_fXMultiplier;} // multiply osu!pixels with this to get screen pixels
-	inline float getNumberScale() {return m_fNumberScale;}
-	inline float getHitcircleOverlapScale() {return m_fHitcircleOverlapScale;}
-	inline float getSliderFollowCircleDiameter() {return m_fSliderFollowCircleDiameter;}
-	inline float getRawSliderFollowCircleDiameter() {return m_fRawSliderFollowCircleDiameter;}
+	float getHitcircleDiameter() const; // in actual scaled pixels to the current resolution
+	inline float getRawHitcircleDiameter() const {return m_fRawHitcircleDiameter;} // in osu!pixels
+	inline float getHitcircleXMultiplier() const {return m_fXMultiplier;} // multiply osu!pixels with this to get screen pixels
+	inline float getNumberScale() const {return m_fNumberScale;}
+	inline float getHitcircleOverlapScale() const {return m_fHitcircleOverlapScale;}
+	inline float getSliderFollowCircleDiameter() const {return m_fSliderFollowCircleDiameter;}
+	inline float getRawSliderFollowCircleDiameter() const {return m_fRawSliderFollowCircleDiameter;}
 	inline bool isInMafhamRenderChunk() const {return m_bInMafhamRenderChunk;}
 
 	// score
-	inline int getNumHitObjects() {return m_hitobjects.size();}
-	inline float getAimStars() {return m_fAimStars;}
-	inline float getSpeedStars() {return m_fSpeedStars;}
+	inline int getNumHitObjects() const {return m_hitobjects.size();}
+	inline float getAimStars() const {return m_fAimStars;}
+	inline float getSpeedStars() const {return m_fSpeedStars;}
 
 	// hud
-	inline bool isSpinnerActive() {return m_bIsSpinnerActive;}
+	inline bool isSpinnerActive() const {return m_bIsSpinnerActive;}
 
 private:
 	static ConVar *m_osu_draw_statistics_pp_ref;
+	static ConVar *m_osu_draw_statistics_livestars_ref;
 	static ConVar *m_osu_mod_fullalternate_ref;
 	static ConVar *m_osu_mod_fposu_ref;
+	static ConVar *m_osu_slider_scorev2_ref;
 
 	virtual void onBeforeLoad();
 	virtual void onLoad();
@@ -88,8 +90,6 @@ private:
 	void stopStarCacheLoader();
 	bool isLoadingStarCache();
 	bool isLoadingInt();
-
-	void checkHandleStarDiscrepancy(OsuBeatmapDifficulty *selectedDiff, float stars);
 
 	// beatmap
 	bool m_bIsSpinnerActive;
@@ -118,7 +118,7 @@ private:
 	// pp calculation buffer (only needs to be recalculated in onModUpdate(), instead of on every hit)
 	float m_fAimStars;
 	float m_fSpeedStars;
-	StarCacheLoader *m_starCacheLoader;
+	OsuBackgroundStarCacheLoader *m_starCacheLoader;
 	float m_fStarCacheTime;
 
 	// dynamic slider vertex buffer and other recalculation checks (for live mod switching)
@@ -138,7 +138,6 @@ private:
 	int m_iPreLoadingIndex;
 	bool m_bIsVRDraw; // for switching legacy drawing to osuCoords2Pixels/osuCoords2VRPixels
 	bool m_bWasHREnabled; // dynamic stack recalculation
-	bool m_bWasStarDiffWarningIssued; // star diff warning once
 
 	RenderTarget *m_mafhamActiveRenderTarget;
 	RenderTarget *m_mafhamFinishedRenderTarget;

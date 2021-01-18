@@ -12,40 +12,33 @@
 #include "OsuScore.h"
 
 class OsuSongBrowser2;
-class OsuBeatmap;
-class OsuBeatmapDifficulty;
+class OsuDatabaseBeatmap;
 
 class OsuUISongBrowserSongButton : public OsuUISongBrowserButton
 {
 public:
-	OsuUISongBrowserSongButton(Osu *osu, OsuSongBrowser2 *songBrowser, CBaseUIScrollView *view, float xPos, float yPos, float xSize, float ySize, UString name, OsuBeatmap *beatmap);
+	OsuUISongBrowserSongButton(Osu *osu, OsuSongBrowser2 *songBrowser, CBaseUIScrollView *view, OsuUIContextMenu *contextMenu, float xPos, float yPos, float xSize, float ySize, UString name, OsuDatabaseBeatmap *databaseBeatmap);
 	virtual ~OsuUISongBrowserSongButton();
 
 	virtual void draw(Graphics *g);
-	virtual void update();
+
+	void sortChildren();
 
 	virtual void updateLayoutEx();
 	virtual void updateGrade() {;}
 
-	OsuUISongBrowserSongButton *setVisible(bool visible);
-	OsuUISongBrowserSongButton *setParent(OsuUISongBrowserSongButton *parent) {m_parent = parent; return this;}
-
-	virtual OsuBeatmap *getBeatmap() const {return m_beatmap;}
-	virtual std::vector<OsuUISongBrowserButton*> getChildren();
-
-	inline OsuBeatmapDifficulty *getDiff() const {return m_diff;}
-	inline OsuUISongBrowserSongButton *getParent() const {return m_parent;}
+	virtual OsuDatabaseBeatmap *getDatabaseBeatmap() const {return m_databaseBeatmap;}
 
 protected:
 	virtual void onSelected(bool wasSelected);
-	virtual void onDeselected();
+	virtual void onRightMouseUpInside();
+
+	void onContextMenu(UString text, int id = -1);
 
 	void drawBeatmapBackgroundThumbnail(Graphics *g, Image *image);
 	void drawGrade(Graphics *g);
-	void drawTitle(Graphics *g, float deselectedAlpha = 1.0f);
-	void drawSubTitle(Graphics *g, float deselectedAlpha = 1.0f);
-
-	void checkLoadUnloadImage();
+	void drawTitle(Graphics *g, float deselectedAlpha = 1.0f, bool forceSelectedStyle = false);
+	void drawSubTitle(Graphics *g, float deselectedAlpha = 1.0f, bool forceSelectedStyle = false);
 
 	float calculateGradeScale();
 	float calculateGradeWidth();
@@ -64,7 +57,7 @@ protected:
 		return subTitleString;
 	}
 
-	OsuBeatmapDifficulty *m_diff;
+	OsuDatabaseBeatmap *m_databaseBeatmap;
 
 	UString m_sTitle;
 	UString m_sArtist;
@@ -82,13 +75,10 @@ protected:
 
 private:
 	static float thumbnailYRatio;
-	static OsuUISongBrowserSongButton *previousButton;
 
-	OsuBeatmap *m_beatmap;
-	OsuUISongBrowserSongButton *m_parent;
-
-	float m_fImageLoadScheduledTime;
 	float m_fThumbnailFadeInTime;
+
+	OsuDatabaseBeatmap *m_representativeDatabaseBeatmap;
 };
 
 #endif

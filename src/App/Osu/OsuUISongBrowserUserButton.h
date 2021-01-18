@@ -39,7 +39,8 @@ private:
 	int m_iLevel;
 	float m_fPercentToNextLevel;
 
-	int m_iPPIncrease;
+	float m_fPPDelta;
+	float m_fPPDeltaAnim;
 
 	float m_fHoverAnim;
 	std::vector<UString> m_vTooltipLines;

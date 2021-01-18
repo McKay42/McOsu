@@ -15,11 +15,6 @@
 #include "Mouse.h"
 #include "ConVar.h"
 
-#include <string.h>
-#include <sstream>
-#include <cctype>
-#include <algorithm>
-
 #include "Osu.h"
 #include "OsuVR.h"
 #include "OsuMultiplayer.h"
@@ -30,8 +25,9 @@
 #include "OsuDatabase.h"
 #include "OsuSongBrowser2.h"
 #include "OsuNotificationOverlay.h"
-#include "OsuBeatmapDifficulty.h"
+#include "OsuDatabaseBeatmap.h"
 #include "OsuDifficultyCalculator.h"
+#include "OsuBackgroundStarCacheLoader.h"
 #include "OsuReplay.h"
 
 #include "OsuHitObject.h"
@@ -44,6 +40,10 @@
 #include "OpenGL3Interface.h"
 #include "OpenGLES2Interface.h"
 
+#include <string.h>
+#include <sstream>
+#include <cctype>
+#include <algorithm>
 #include <chrono>
 
 ConVar osu_draw_followpoints("osu_draw_followpoints", true);
@@ -91,65 +91,11 @@ ConVar osu_debug_hiterrorbar_misaims("osu_debug_hiterrorbar_misaims", false);
 
 ConVar osu_pp_live_timeout("osu_pp_live_timeout", 1.0f, "show message that we're still calculating stars after this many seconds, on the first start of the beatmap");
 
-ConVar osu_stars_discrepancy_warning_delta("osu_stars_discrepancy_warning_delta", 0.1f, "if the star rating differs more than this, notify the user upon score submission");
-
-
-
-class StarCacheLoader : public Resource
-{
-public:
-	StarCacheLoader(OsuBeatmap *beatmap) : Resource()
-	{
-		m_beatmap = beatmap;
-
-		m_bDead = true; // NOTE: start dead! need to revive() before use
-		m_iProgress = 0;
-
-		m_bAsyncReady = false;
-		m_bReady = false;
-	};
-
-	bool isDead() {return m_bDead.load();}
-	void kill() {m_bDead = true; m_iProgress = 0;}
-	void revive() {m_bDead = false; m_iProgress = 0;}
-
-	inline int getProgress() const {return m_iProgress.load();}
-
-protected:
-	virtual void init()
-	{
-		m_bReady = true;
-	}
-
-	virtual void initAsync()
-	{
-		if (m_bDead.load())
-		{
-			m_bAsyncReady = true;
-			return;
-		}
-
-		OsuBeatmapDifficulty *diff = m_beatmap->getSelectedDifficulty();
-		if (diff != NULL)
-			diff->rebuildStarCacheForUpToHitObjectIndex(m_beatmap, m_bDead, m_iProgress);
-
-		m_bAsyncReady = true;
-	}
-
-	virtual void destroy() {;}
-
-private:
-	OsuBeatmap *m_beatmap;
-
-	std::atomic<bool> m_bDead;
-	std::atomic<int> m_iProgress;
-};
-
-
-
 ConVar *OsuBeatmapStandard::m_osu_draw_statistics_pp_ref = NULL;
+ConVar *OsuBeatmapStandard::m_osu_draw_statistics_livestars_ref = NULL;
 ConVar *OsuBeatmapStandard::m_osu_mod_fullalternate_ref = NULL;
 ConVar *OsuBeatmapStandard::m_osu_mod_fposu_ref = NULL;
+ConVar *OsuBeatmapStandard::m_osu_slider_scorev2_ref = NULL;
 
 OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 {
@@ -170,7 +116,7 @@ OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 
 	m_fAimStars = 0.0f;
 	m_fSpeedStars = 0.0f;
-	m_starCacheLoader = new StarCacheLoader(this);
+	m_starCacheLoader = new OsuBackgroundStarCacheLoader(this);
 	m_fStarCacheTime = 0.0f;
 
 	m_bWasHREnabled = false;
@@ -189,7 +135,6 @@ OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 
 	m_bIsPreLoading = true;
 	m_iPreLoadingIndex = 0;
-	m_bWasStarDiffWarningIssued = false;
 
 	m_mafhamActiveRenderTarget = NULL;
 	m_mafhamFinishedRenderTarget = NULL;
@@ -203,10 +148,14 @@ OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 	// convar refs
 	if (m_osu_draw_statistics_pp_ref == NULL)
 		m_osu_draw_statistics_pp_ref = convar->getConVarByName("osu_draw_statistics_pp");
+	if (m_osu_draw_statistics_livestars_ref == NULL)
+		m_osu_draw_statistics_livestars_ref = convar->getConVarByName("osu_draw_statistics_livestars");
 	if (m_osu_mod_fullalternate_ref == NULL)
 		m_osu_mod_fullalternate_ref = convar->getConVarByName("osu_mod_fullalternate");
 	if (m_osu_mod_fposu_ref == NULL)
 		m_osu_mod_fposu_ref = convar->getConVarByName("osu_mod_fposu");
+	if (m_osu_slider_scorev2_ref == NULL)
+		m_osu_slider_scorev2_ref = convar->getConVarByName("osu_slider_scorev2");
 }
 
 OsuBeatmapStandard::~OsuBeatmapStandard()
@@ -231,8 +180,8 @@ void OsuBeatmapStandard::draw(Graphics *g)
 			progressPercent = (float)m_starCacheLoader->getProgress() / (float)m_hitobjects.size();
 
 		g->setColor(0x44ffffff);
-		UString loadingMessage = UString::format("Calculating stars for live pp (%i%%) ...", (int)(progressPercent*100.0f));
-		UString loadingMessage2 = "(To get rid of this delay, disable [Draw Statistics: pp])";
+		UString loadingMessage = UString::format("Calculating stars for realtime pp/stars (%i%%) ...", (int)(progressPercent*100.0f));
+		UString loadingMessage2 = "(To get rid of this delay, disable [Draw Statistics: pp/Stars***])";
 		g->pushTransform();
 		{
 			g->translate((int)(m_osu->getScreenWidth()/2 - m_osu->getSubTitleFont()->getStringWidth(loadingMessage)/2), m_osu->getScreenHeight() - m_osu->getSubTitleFont()->getHeight() - 25);
@@ -657,7 +606,6 @@ void OsuBeatmapStandard::drawFollowPoints(Graphics *g)
 	const float followPointSeparationMultiplier = std::max(osu_followpoints_separation_multiplier.getFloat(), 0.1f);
 	const float followPointPrevFadeTime = m_osu_followpoints_prevfadetime_ref->getFloat();
 	const float followPointScaleMultiplier = osu_followpoints_scale_multiplier.getFloat();
-	const float followPointSizeBaseRawX = skin->getFollowPoint2()->getSizeBaseRaw().x;
 
 	// include previous object in followpoints
 	int lastObjectIndex = -1;
@@ -751,7 +699,7 @@ void OsuBeatmapStandard::drawFollowPoints(Graphics *g)
 
 					// NOTE: getSizeBaseRaw() depends on the current animation time being set correctly beforehand! (otherwise you get incorrect scales, e.g. for animated elements with inconsistent @2x mixed in)
 					// the followpoints are scaled by one eighth of the hitcirclediameter (not the raw diameter, but the scaled diameter)
-					const float followPointImageScale = ((m_fHitcircleDiameter / 8.0f) / followPointSizeBaseRawX) * followPointScaleMultiplier;
+					const float followPointImageScale = ((m_fHitcircleDiameter / 8.0f) / skin->getFollowPoint2()->getSizeBaseRaw().x) * followPointScaleMultiplier;
 
 					skin->getFollowPoint2()->drawRaw(g, followPos, followPointImageScale*scale);
 				}
@@ -861,25 +809,6 @@ void OsuBeatmapStandard::update()
 		}
 	}
 
-	// star diff warning (after star cache loader has finished)
-	if (m_osu_draw_statistics_pp_ref->getBool())
-	{
-		if (m_selectedDifficulty->starsWereCalculatedAccurately)
-		{
-			if (!m_bWasStarDiffWarningIssued)
-			{
-				m_bWasStarDiffWarningIssued = true;
-
-				const double aim = m_selectedDifficulty->getAimStarsForUpToHitObjectIndex(m_selectedDifficulty->numObjects);
-				const double speed = m_selectedDifficulty->getSpeedStarsForUpToHitObjectIndex(m_selectedDifficulty->numObjects);
-
-				const float stars = OsuDifficultyCalculator::calculateTotalStarsFromSkills(aim, speed);
-
-				checkHandleStarDiscrepancy(m_selectedDifficulty, stars);
-			}
-		}
-	}
-
 	// full alternate mod lenience
 	if (m_osu_mod_fullalternate_ref->getBool())
 	{
@@ -966,7 +895,7 @@ void OsuBeatmapStandard::onModUpdate(bool rebuildSliderVertexBuffers, bool recom
 	}
 
 	// recalculate star cache for live pp
-	if (m_osu_draw_statistics_pp_ref->getBool()) // sanity + performance/usability
+	if (m_osu_draw_statistics_pp_ref->getBool() || m_osu_draw_statistics_livestars_ref->getBool()) // sanity + performance/usability
 	{
 		bool didCSChange = false;
 		if (getHitcircleDiameter() != m_fPrevHitCircleDiameterForStarCache && m_hitobjects.size() > 0)
@@ -984,7 +913,7 @@ void OsuBeatmapStandard::onModUpdate(bool rebuildSliderVertexBuffers, bool recom
 
 		if (didCSChange || didSpeedChange)
 		{
-			if (m_selectedDifficulty != NULL)
+			if (m_selectedDifficulty2 != NULL)
 				updateStarCache();
 		}
 	}
@@ -1266,7 +1195,7 @@ Vector2 OsuBeatmapStandard::getFirstPersonCursorDelta() const
 	return m_vPlayfieldCenter - (m_osu->getModAuto() || m_osu->getModAutopilot() ? m_vAutoCursorPos : engine->getMouse()->getPos());
 }
 
-float OsuBeatmapStandard::getHitcircleDiameter()
+float OsuBeatmapStandard::getHitcircleDiameter() const
 {
 	// in VR, there is no resolution to which the playfield would have to get scaled up to (since the entire playfield is scaled at once as the player sees fit)
 	// therefore just return the raw hitcircle diameter (osu!pixels)
@@ -1277,7 +1206,7 @@ void OsuBeatmapStandard::onBeforeLoad()
 {
 	debugLog("OsuBeatmapStandard::onBeforeLoad()\n");
 
-	m_osu->getMultiplayer()->onServerPlayStateChange(OsuMultiplayer::STATE::START, 0, false, this);
+	m_osu->getMultiplayer()->onServerPlayStateChange(OsuMultiplayer::STATE::START, 0, false, m_selectedDifficulty2);
 
 	// some hitobjects already need this information to be up-to-date before their constructor is called
 	updatePlayfieldMetrics();
@@ -1301,8 +1230,6 @@ void OsuBeatmapStandard::onLoad()
 	// build stars
 	m_fStarCacheTime = engine->getTime() + osu_pp_live_timeout.getFloat(); // first time delay only. subsequent updates should immediately show the loading spinner
 	updateStarCache();
-
-	m_bWasStarDiffWarningIssued = false; // reset
 }
 
 void OsuBeatmapStandard::onPlayStart()
@@ -1325,23 +1252,30 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 		debugLog("OsuBeatmapStandard::onBeforeStop() calculating pp ...\n");
 		double aim = 0.0;
 		double speed = 0.0;
-		const double totalStars = m_selectedDifficulty->calculateStarDiff(this, &aim, &speed);
+
+		// calculate stars
+		const UString &osuFilePath = m_selectedDifficulty2->getFilePath();
+		const Osu::GAMEMODE gameMode = Osu::GAMEMODE::STD;
+		const float AR = getAR();
+		const float CS = getCS();
+		const float speedMultiplier = m_osu->getSpeedMultiplier(); // NOTE: not this->getSpeedMultiplier()!
+
+		OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT diffres = OsuDatabaseBeatmap::loadDifficultyHitObjects(osuFilePath, gameMode, AR, CS, speedMultiplier);
+		const double totalStars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, CS, &aim, &speed);
+
 		m_fAimStars = (float)aim;
 		m_fSpeedStars = (float)speed;
 
-		// warn the user if osu stars differ too much from mcosu stars
-		if (m_selectedDifficulty->starsWereCalculatedAccurately)
-			checkHandleStarDiscrepancy(m_selectedDifficulty, totalStars);
-
 		const int numHitObjects = m_hitobjects.size();
-		const int numCircles = m_selectedDifficulty->hitcircles.size();
-		const int maxPossibleCombo = m_selectedDifficulty->getMaxCombo();
+		const int numCircles = m_selectedDifficulty2->getNumCircles();
+		const int numSpinners = m_selectedDifficulty2->getNumSpinners();
+		const int maxPossibleCombo = m_iMaxPossibleCombo;
 		const int highestCombo = m_osu->getScore()->getComboMax();
 		const int numMisses = m_osu->getScore()->getNumMisses();
 		const int num300s = m_osu->getScore()->getNum300s();
 		const int num100s = m_osu->getScore()->getNum100s();
 		const int num50s = m_osu->getScore()->getNum50s();
-		const float pp = OsuDifficultyCalculator::calculatePPv2(m_osu, this, aim, speed, numHitObjects, numCircles, maxPossibleCombo, highestCombo, numMisses, num300s, num100s, num50s);
+		const float pp = OsuDifficultyCalculator::calculatePPv2(m_osu, this, aim, speed, numHitObjects, numCircles, numSpinners, maxPossibleCombo, highestCombo, numMisses, num300s, num100s, num50s);
 		m_osu->getScore()->setStarsTomTotal(totalStars);
 		m_osu->getScore()->setStarsTomAim(m_fAimStars);
 		m_osu->getScore()->setStarsTomSpeed(m_fSpeedStars);
@@ -1352,16 +1286,25 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 		const bool isComplete = (num300s + num100s + num50s + numMisses >= numHitObjects);
 		const bool isZero = (m_osu->getScore()->getScore() < 1);
 		const bool isUnranked = (m_osu->getModAuto() || (m_osu->getModAutopilot() && m_osu->getModRelax())) || m_osu->getScore()->isUnranked();
+
+		//debugLog("isComplete = %i, isZero = %i, isUnranked = %i\n", (int)isComplete, (int)isZero, (int)isUnranked);
+
 		int scoreIndex = -1;
 		if (isComplete && !isZero && !isUnranked && !m_osu->getScore()->hasDied())
 		{
-			const int scoreVersion = 20190103;
+			const int scoreVersion = OsuScore::VERSION;
 
 			debugLog("OsuBeatmapStandard::onBeforeStop() saving score ...\n");
 			{
 				OsuDatabase::Score score;
 
 				score.isLegacyScore = false;
+
+				//if (scoreVersion > 20190103)
+				{
+					score.isImportedLegacyScore = false;
+				}
+
 				score.version = scoreVersion;
 				score.unixTimestamp = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
@@ -1378,6 +1321,11 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 				score.comboMax = m_osu->getScore()->getComboMax();
 				score.perfect = (maxPossibleCombo > 0 && score.comboMax > 0 && score.comboMax >= maxPossibleCombo);
 				score.modsLegacy = m_osu->getScore()->getModsLegacy();
+				{
+					// special case: manual slider accuracy has been enabled (affects pp but not score), so force scorev2 for potential future score recalculations
+					// NOTE: I forgot to add this before 20210103, so all old scores which were played without scorev2 but with osu_slider_scorev2 will get downgraded slighly :(
+					score.modsLegacy |= (m_osu_slider_scorev2_ref->getBool() ? OsuReplay::Mods::ScoreV2 : 0);
+				}
 
 				// custom
 				score.numSliderBreaks = m_osu->getScore()->getNumSliderBreaks();
@@ -1389,12 +1337,12 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 				score.starsTomAim = aim;
 				score.starsTomSpeed = speed;
 				score.speedMultiplier = m_osu->getSpeedMultiplier();
-				score.CS = getCS();
-				score.AR = getAR();
+				score.CS = CS;
+				score.AR = AR;
 				score.OD = getOD();
 				score.HP = getHP();
 
-				if (scoreVersion > 20180722)
+				//if (scoreVersion > 20180722)
 				{
 					score.maxPossibleCombo = maxPossibleCombo;
 					score.numHitObjects = numHitObjects;
@@ -1411,10 +1359,12 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 					}
 				}
 
+				score.md5hash = m_selectedDifficulty2->getMD5Hash(); // NOTE: necessary for "Use Mods"
+
 				// save it
-				scoreIndex = m_osu->getSongBrowser()->getDatabase()->addScore(m_selectedDifficulty->md5hash, score);
+				scoreIndex = m_osu->getSongBrowser()->getDatabase()->addScore(m_selectedDifficulty2->getMD5Hash(), score);
 				if (scoreIndex == -1)
-					m_osu->getNotificationOverlay()->addNotification(UString::format("Failed saving score! md5hash.length() = %i", m_selectedDifficulty->md5hash.length()), 0xffff0000, false, 3.0f);
+					m_osu->getNotificationOverlay()->addNotification(UString::format("Failed saving score! md5hash.length() = %i", m_selectedDifficulty2->getMD5Hash().length()), 0xffff0000, false, 3.0f);
 			}
 			debugLog("OsuBeatmapStandard::onBeforeStop() done.\n");
 		}
@@ -1737,7 +1687,7 @@ void OsuBeatmapStandard::calculateStacks()
 
 	const float approachTime = OsuGameRules::getApproachTimeForStacking(this);
 
-	if (getSelectedDifficulty()->version > 5)
+	if (getSelectedDifficulty2()->getVersion() > 5)
 	{
 		// peppy's algorithm
 		// https://gist.github.com/peppy/1167470
@@ -1767,7 +1717,7 @@ void OsuBeatmapStandard::calculateStacks()
 					if (isSpinnerN)
 						continue;
 
-					if (objectI->getTime() - (approachTime * m_selectedDifficulty->stackLeniency) > (objectN->getTime() + objectN->getDuration()))
+					if (objectI->getTime() - (approachTime * m_selectedDifficulty2->getStackLeniency()) > (objectN->getTime() + objectN->getDuration()))
 						break;
 
 					Vector2 objectNEndPosition = objectN->getOriginalRawPosAt(objectN->getTime() + objectN->getDuration());
@@ -1801,7 +1751,7 @@ void OsuBeatmapStandard::calculateStacks()
 					if (isSpinner)
 						continue;
 
-					if (objectI->getTime() - (approachTime * m_selectedDifficulty->stackLeniency) > objectN->getTime())
+					if (objectI->getTime() - (approachTime * m_selectedDifficulty2->getStackLeniency()) > objectN->getTime())
 						break;
 
 					if (((objectN->getDuration() != 0 ? objectN->getOriginalRawPosAt(objectN->getTime() + objectN->getDuration()) : objectN->getOriginalRawPosAt(objectN->getTime())) - objectI->getOriginalRawPosAt(objectI->getTime())).length() < STACK_LENIENCE)
@@ -1835,7 +1785,7 @@ void OsuBeatmapStandard::calculateStacks()
 			{
 				OsuHitObject *objectJ = m_hitobjects[j];
 
-				if (objectJ->getTime() - (approachTime * m_selectedDifficulty->stackLeniency) > startTime)
+				if (objectJ->getTime() - (approachTime * m_selectedDifficulty2->getStackLeniency()) > startTime)
 					break;
 
 				// "The start position of the hitobject, or the position at the end of the path if the hitobject is a slider"
@@ -1874,7 +1824,7 @@ void OsuBeatmapStandard::computeDrainRate()
 	m_fHpMultiplierNormal = 1.0;
 	m_fHpMultiplierComboEnd = 1.0;
 
-	if (m_osu->isInVRMode() || m_hitobjects.size() < 1 || m_selectedDifficulty == NULL) return;
+	if (m_osu->isInVRMode() || m_hitobjects.size() < 1 || m_selectedDifficulty2 == NULL) return;
 
 	debugLog("OsuBeatmapStandard: Calculating drain ...\n");
 
@@ -1949,7 +1899,7 @@ void OsuBeatmapStandard::computeDrainRate()
 		TestPlayer testPlayer((double)m_osu_drain_stable_hpbar_maximum_ref->getFloat());
 
 		const double HP = getHP();
-		const int version = m_selectedDifficulty->version;
+		const int version = m_selectedDifficulty2->getVersion();
 
 		double testDrop = 0.05;
 
@@ -1968,7 +1918,7 @@ void OsuBeatmapStandard::computeDrainRate()
 			int lastTime = (int)(m_hitobjects[0]->getTime() - (long)OsuGameRules::getApproachTime(this));
 			fail = false;
 
-			const int breakCount = m_selectedDifficulty->breaks.size();
+			const int breakCount = m_breaks.size();
 			int breakNumber = 0;
 
 			int comboTooLowCount = 0;
@@ -1984,7 +1934,7 @@ void OsuBeatmapStandard::computeDrainRate()
 				int breakTime = 0;
 				if (breakCount > 0 && breakNumber < breakCount)
 				{
-					const OsuBeatmapDifficulty::BREAK &e = m_selectedDifficulty->breaks[breakNumber];
+					const OsuDatabaseBeatmap::BREAK &e = m_breaks[breakNumber];
 					if (e.startTime >= localLastTime && e.endTime <= h->getTime())
 					{
 						// consider break start equal to object end time for version 8+ since drain stops during this time
@@ -2126,7 +2076,7 @@ void OsuBeatmapStandard::computeDrainRate()
 		}
 
 		const int numHealthIncreases = healthIncreases.size();
-		const int numBreaks = m_selectedDifficulty->breaks.size();
+		const int numBreaks = m_breaks.size();
 		const double drainStartTime = m_hitobjects[0]->getTime();
 
 		// see computeDrainRate() & https://github.com/ppy/osu/blob/master/osu.Game/Rulesets/Scoring/DrainingHealthProcessor.cs
@@ -2159,13 +2109,13 @@ void OsuBeatmapStandard::computeDrainRate()
 				if (numBreaks > 0)
 				{
 					// Advance the last break occuring before the current time
-					while (currentBreak + 1 < numBreaks && (double)m_selectedDifficulty->breaks[currentBreak + 1].endTime < currentTime)
+					while (currentBreak + 1 < numBreaks && (double)m_breaks[currentBreak + 1].endTime < currentTime)
 					{
 						currentBreak++;
 					}
 
 					if (currentBreak >= 0)
-						lastTime = std::max(lastTime, (double)m_selectedDifficulty->breaks[currentBreak].endTime);
+						lastTime = std::max(lastTime, (double)m_breaks[currentBreak].endTime);
 				}
 
 				// Apply health adjustments
@@ -2193,7 +2143,7 @@ void OsuBeatmapStandard::computeDrainRate()
 
 void OsuBeatmapStandard::updateStarCache()
 {
-	if (m_osu_draw_statistics_pp_ref->getBool())
+	if (m_osu_draw_statistics_pp_ref->getBool() || m_osu_draw_statistics_livestars_ref->getBool())
 	{
 		// so we don't get a useless double load inside onModUpdate()
 		m_fPrevHitCircleDiameterForStarCache = getHitcircleDiameter();
@@ -2204,7 +2154,7 @@ void OsuBeatmapStandard::updateStarCache()
 		engine->getResourceManager()->destroyResource(m_starCacheLoader);
 
 		// create new loader
-		m_starCacheLoader = new StarCacheLoader(this);
+		m_starCacheLoader = new OsuBackgroundStarCacheLoader(this);
 		m_starCacheLoader->revive(); // activate it
 		engine->getResourceManager()->requestNextLoadAsync();
 		engine->getResourceManager()->loadResource(m_starCacheLoader);
@@ -2219,34 +2169,23 @@ void OsuBeatmapStandard::stopStarCacheLoader()
 		double startTime = engine->getTimeReal();
 		while (!m_starCacheLoader->isAsyncReady()) // stall main thread until it's killed (this should be very quick, around max 1 ms, as the kill flag is checked in every iteration)
 		{
-			if (engine->getTimeReal() - startTime > 1)
+			if (engine->getTimeReal() - startTime > 2)
+			{
+				debugLog("WARNING: Ignoring stuck StarCacheLoader thread!\n");
 				break;
+			}
 		}
+
+		// NOTE: this only works safely because OsuBackgroundStarCacheLoader does no work in load(), because it might still be in the ResourceManager's sync load() queue, so future loadAsync() could crash with the old pending load()
 	}
 }
 
 bool OsuBeatmapStandard::isLoadingStarCache()
 {
-	return (m_osu_draw_statistics_pp_ref->getBool() && !m_starCacheLoader->isReady());
+	return ((m_osu_draw_statistics_pp_ref->getBool() || m_osu_draw_statistics_livestars_ref->getBool()) && !m_starCacheLoader->isReady());
 }
 
 bool OsuBeatmapStandard::isLoadingInt()
 {
 	return (OsuBeatmap::isLoading() || m_bIsPreLoading || isLoadingStarCache());
-}
-
-void OsuBeatmapStandard::checkHandleStarDiscrepancy(OsuBeatmapDifficulty *selectedDiff, float stars)
-{
-	// TODO: since we only have the base nomod stars from osu, this doesn't really work out that well
-	/*
-	if (m_osu->getSpeedMultiplier() == 1.0f
-			&& std::abs(getCS() - selectedDiff->CS) < 0.01
-			&& std::abs(getAR() - selectedDiff->AR) < 0.01
-			&& std::abs(getOD() - selectedDiff->OD) < 0.01
-			&& std::abs(getHP() - selectedDiff->HP) < 0.01
-			&& selectedDiff->starsNoMod > 0.1f
-			&& stars > 0.1f
-			&& std::abs(stars - selectedDiff->starsNoMod) > osu_stars_discrepancy_warning_delta.getFloat())
-		m_osu->getNotificationOverlay()->addNotification(UString::format("Star Discrepancy:  osu! = %.2f*  |  McOsu = %.2f*", selectedDiff->starsNoMod, stars), 0xffffff00, false, 4.0f);
-	*/
 }

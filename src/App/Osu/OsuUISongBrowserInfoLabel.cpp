@@ -15,10 +15,12 @@
 
 #include "Osu.h"
 #include "OsuBeatmap.h"
-#include "OsuBeatmapDifficulty.h"
+#include "OsuDatabaseBeatmap.h"
 #include "OsuNotificationOverlay.h"
 #include "OsuTooltipOverlay.h"
+#include "OsuSongBrowser2.h"
 #include "OsuGameRules.h"
+#include "OsuMultiplayer.h"
 
 #include "OsuOptionsMenu.h"
 
@@ -28,6 +30,7 @@ OsuUISongBrowserInfoLabel::OsuUISongBrowserInfoLabel(Osu *osu, float xPos, float
 	m_font = m_osu->getSubTitleFont();
 
 	m_osu_debug_ref = convar->getConVarByName("osu_debug");
+	m_osu_songbrowser_dynamic_star_recalc_ref = convar->getConVarByName("osu_songbrowser_dynamic_star_recalc");
 
 	m_iMargin = 10;
 
@@ -54,7 +57,6 @@ OsuUISongBrowserInfoLabel::OsuUISongBrowserInfoLabel(Osu *osu, float xPos, float
 	m_fOD = 5.0f;
 	m_fHP = 5.0f;
 	m_fStars = 5.0f;
-	m_bStarsRecalculating = false;
 
 	m_iLocalOffset = 0;
 	m_iOnlineOffset = 0;
@@ -75,7 +77,7 @@ void OsuUISongBrowserInfoLabel::draw(Graphics *g)
 	}
 
 	// build strings
-	const UString titleText = buildTitleString();
+	const UString titleText = (m_osu->getMultiplayer()->isDownloadingBeatmap() ? UString::format("DOWNLOADING: %i %%", (int)(m_osu->getMultiplayer()->getDownloadBeatmapPercentage() * 100.0f)) : buildTitleString());
 	const UString subTitleText = buildSubTitleString();
 	const UString songInfoText = buildSongInfoString();
 	const UString diffInfoText = buildDiffInfoString();
@@ -190,13 +192,13 @@ void OsuUISongBrowserInfoLabel::update()
 				m_osu->getTooltipOverlay()->addLine(UString::format("Spinner difficulty: %.2f", OsuGameRules::getSpinnerSpinsPerSecond(beatmap)));
 				m_osu->getTooltipOverlay()->addLine(UString::format("Hit object radius: %.2f", hitobjectRadiusRoundedCompensated));
 
-				if (beatmap->getSelectedDifficulty() != NULL)
+				if (beatmap->getSelectedDifficulty2() != NULL)
 				{
-					const float opm = (beatmap->getSelectedDifficulty()->lengthMS > 0 ? ((float)beatmap->getSelectedDifficulty()->numObjects / (float)(beatmap->getSelectedDifficulty()->lengthMS / 1000.0f / 60.0f)) : 0.0f) * m_osu->getSpeedMultiplier();
-					const float cpm = (beatmap->getSelectedDifficulty()->lengthMS > 0 ? ((float)beatmap->getSelectedDifficulty()->numCircles / (float)(beatmap->getSelectedDifficulty()->lengthMS / 1000.0f / 60.0f)) : 0.0f) * m_osu->getSpeedMultiplier();
-					const float spm = (beatmap->getSelectedDifficulty()->lengthMS > 0 ? ((float)beatmap->getSelectedDifficulty()->numSliders / (float)(beatmap->getSelectedDifficulty()->lengthMS / 1000.0f / 60.0f)) : 0.0f) * m_osu->getSpeedMultiplier();
+					const float opm = (beatmap->getSelectedDifficulty2()->getLengthMS() > 0 ? ((float)beatmap->getSelectedDifficulty2()->getNumObjects() / (float)(beatmap->getSelectedDifficulty2()->getLengthMS() / 1000.0f / 60.0f)) : 0.0f) * m_osu->getSpeedMultiplier();
+					const float cpm = (beatmap->getSelectedDifficulty2()->getLengthMS() > 0 ? ((float)beatmap->getSelectedDifficulty2()->getNumCircles() / (float)(beatmap->getSelectedDifficulty2()->getLengthMS() / 1000.0f / 60.0f)) : 0.0f) * m_osu->getSpeedMultiplier();
+					const float spm = (beatmap->getSelectedDifficulty2()->getLengthMS() > 0 ? ((float)beatmap->getSelectedDifficulty2()->getNumSliders() / (float)(beatmap->getSelectedDifficulty2()->getLengthMS() / 1000.0f / 60.0f)) : 0.0f) * m_osu->getSpeedMultiplier();
 
-					m_osu->getTooltipOverlay()->addLine(UString::format("Circles: %i, Sliders: %i, Spinners: %i", beatmap->getSelectedDifficulty()->numCircles, beatmap->getSelectedDifficulty()->numSliders, (beatmap->getSelectedDifficulty()->numObjects - beatmap->getSelectedDifficulty()->numCircles - beatmap->getSelectedDifficulty()->numSliders)));
+					m_osu->getTooltipOverlay()->addLine(UString::format("Circles: %i, Sliders: %i, Spinners: %i", beatmap->getSelectedDifficulty2()->getNumCircles(), beatmap->getSelectedDifficulty2()->getNumSliders(), (beatmap->getSelectedDifficulty2()->getNumObjects() - beatmap->getSelectedDifficulty2()->getNumCircles() - beatmap->getSelectedDifficulty2()->getNumSliders())));
 					m_osu->getTooltipOverlay()->addLine(UString::format("OPM: %i, CPM: %i, SPM: %i", (int)opm, (int)cpm, (int)spm));
 				}
 			}
@@ -205,34 +207,34 @@ void OsuUISongBrowserInfoLabel::update()
 	}
 }
 
-void OsuUISongBrowserInfoLabel::setFromBeatmap(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff)
+void OsuUISongBrowserInfoLabel::setFromBeatmap(OsuBeatmap *beatmap, OsuDatabaseBeatmap *diff2)
 {
-	m_iBeatmapId = diff->beatmapId;
+	m_iBeatmapId = diff2->getID();
 
-	setArtist(diff->artist);
-	setTitle(diff->title);
-	setDiff(diff->name);
-	setMapper(diff->creator);
+	setArtist(diff2->getArtist());
+	setTitle(diff2->getTitle());
+	setDiff(diff2->getDifficultyName());
+	setMapper(diff2->getCreator());
 
 	setLengthMS(beatmap->getLength());
-	setBPM(diff->minBPM, diff->maxBPM);
-	setNumObjects(diff->numObjects);
+	setBPM(diff2->getMinBPM(), diff2->getMaxBPM());
+	setNumObjects(diff2->getNumObjects());
 
-	setCS(diff->CS);
-	setAR(diff->AR);
-	setOD(diff->OD);
-	setHP(diff->HP);
-	setStars(diff->starsNoMod);
+	setCS(diff2->getCS());
+	setAR(diff2->getAR());
+	setOD(diff2->getOD());
+	setHP(diff2->getHP());
+	setStars(diff2->getStarsNomod());
 
-	setLocalOffset(diff->localoffset);
-	setOnlineOffset(diff->onlineOffset);
+	setLocalOffset(diff2->getLocalOffset());
+	setOnlineOffset(diff2->getOnlineOffset());
 }
 
 void OsuUISongBrowserInfoLabel::setFromMissingBeatmap(long beatmapId)
 {
 	m_iBeatmapId = beatmapId;
 
-	setArtist(m_iBeatmapId > 0 ? "CLICK HERE TO DOWNLOAD" : "MISSING BEATMAP!");
+	setArtist(m_iBeatmapId > 0 ? "CLICK HERE TO DOWNLOAD!" : "MISSING BEATMAP!");
 	setTitle("");
 	setDiff("no map");
 	setMapper("MISSING BEATMAP!");
@@ -261,6 +263,13 @@ void OsuUISongBrowserInfoLabel::onClicked()
 		m_osu->getNotificationOverlay()->addNotification("Opening browser, please wait ...", 0xffffffff, false, 0.75f);
 	}
 	*/
+
+	if (m_osu->getMultiplayer()->isInMultiplayer() && m_osu->getMultiplayer()->isMissingBeatmap() && !m_osu->getMultiplayer()->isDownloadingBeatmap())
+	{
+		m_osu->getNotificationOverlay()->addNotification("Requesting download from peer, please wait ...", 0xffffffff, false, 0.75f);
+		m_osu->getMultiplayer()->onClientBeatmapDownloadRequest();
+	}
+
 	CBaseUIButton::onClicked();
 }
 
@@ -289,8 +298,9 @@ UString OsuUISongBrowserInfoLabel::buildSongInfoString()
 	unsigned long lengthMS = m_iLengthMS;
 
 	OsuBeatmap *beatmap = m_osu->getSelectedBeatmap();
-	if (beatmap != NULL && beatmap->getSelectedDifficulty() != NULL)
-		lengthMS -= clamp<unsigned long>(beatmap->getSelectedDifficulty()->getBreakDurationTotal(), 0, m_iLengthMS);
+	// TODO: this has never worked. breaks are only loaded during gameplay, so even the old implementation did nothing
+	if (beatmap != NULL)
+		lengthMS -= clamp<unsigned long>(beatmap->getBreakDurationTotal(), 0, m_iLengthMS);
 
 	const unsigned long fullSeconds = (lengthMS*(1.0 / m_osu->getSpeedMultiplier())) / 1000.0;
 	const int minutes = fullSeconds / 60;
@@ -313,20 +323,31 @@ UString OsuUISongBrowserInfoLabel::buildDiffInfoString()
 	float HP = m_fHP;
 	float stars = m_fStars;
 
-	bool areStarsInaccurate = false;
+	const float modStars = (float)m_osu->getSongBrowser()->getDynamicStarCalculator()->getTotalStars();
+	const float modPp = (float)m_osu->getSongBrowser()->getDynamicStarCalculator()->getPPv2();
+	const bool areStarsInaccurate = (m_osu->getSongBrowser()->getDynamicStarCalculator()->isDead() || !m_osu->getSongBrowser()->getDynamicStarCalculator()->isAsyncReady());
+
 	OsuBeatmap *beatmap = m_osu->getSelectedBeatmap();
 	if (beatmap != NULL)
 	{
 		CS = beatmap->getCS();
 		AR = OsuGameRules::getApproachRateForSpeedMultiplier(beatmap);
 		OD = OsuGameRules::getOverallDifficultyForSpeedMultiplier(beatmap);
-
-		areStarsInaccurate = beatmap->getSpeedMultiplier() != 1.0f || CS != m_fCS || AR != m_fAR || OD != m_fOD;
+		HP = beatmap->getHP();
 	}
 
-	UString finalString = UString::format(areStarsInaccurate ? "CS:%.3g AR:%.3g OD:%.3g HP:%.3g Stars:? (%.3g)" : "CS:%.3g AR:%.3g OD:%.3g HP:%.3g Stars:%.3g", CS, AR, OD, HP, stars);
-	if (m_bStarsRecalculating)
-		finalString.append(" (recalculating ...)");
+	const float starComparisonEpsilon = 0.01f;
+	const bool starsAndModStarsAreEqual = (std::abs(stars - modStars) < starComparisonEpsilon);
+
+	UString finalString;
+	if (areStarsInaccurate && m_osu_songbrowser_dynamic_star_recalc_ref->getBool())
+		finalString = UString::format("CS:%.3g AR:%.3g OD:%.3g HP:%.3g Stars:%.3g *", CS, AR, OD, HP, stars);
+	else if (!starsAndModStarsAreEqual && m_osu_songbrowser_dynamic_star_recalc_ref->getBool())
+		finalString = UString::format("CS:%.3g AR:%.3g OD:%.3g HP:%.3g Stars:%.3g -> %.3g (%ipp)", CS, AR, OD, HP, stars, modStars, (int)(std::round(modPp)));
+	else if (m_osu_songbrowser_dynamic_star_recalc_ref->getBool())
+		finalString = UString::format("CS:%.3g AR:%.3g OD:%.3g HP:%.3g Stars:%.3g (%ipp)", CS, AR, OD, HP, stars, (int)(std::round(modPp)));
+	else
+		finalString = UString::format("CS:%.3g AR:%.3g OD:%.3g HP:%.3g Stars:%.3g", CS, AR, OD, HP, stars);
 
 	return finalString;
 }

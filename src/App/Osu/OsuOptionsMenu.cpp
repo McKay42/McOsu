@@ -208,9 +208,10 @@ private:
 class OsuOptionsMenuKeyBindLabel : public CBaseUILabel
 {
 public:
-	OsuOptionsMenuKeyBindLabel(float xPos, float yPos, float xSize, float ySize, UString name, UString text, ConVar *cvar) : CBaseUILabel(xPos, yPos, xSize, ySize, name, text)
+	OsuOptionsMenuKeyBindLabel(float xPos, float yPos, float xSize, float ySize, UString name, UString text, ConVar *cvar, CBaseUIButton *bindButton) : CBaseUILabel(xPos, yPos, xSize, ySize, name, text)
 	{
 		m_key = cvar;
+		m_bindButton = bindButton;
 
 		m_textColorBound = 0xffffd700;
 		m_textColorUnbound = 0xffbb0000;
@@ -245,7 +246,14 @@ public:
 	void setTextColorUnbound(Color textColorUnbound) {m_textColorUnbound = textColorUnbound;}
 
 private:
+	virtual void onMouseUpInside()
+	{
+		CBaseUILabel::onMouseUpInside();
+		m_bindButton->click();
+	}
+
 	ConVar *m_key;
+	CBaseUIButton *m_bindButton;
 
 	Color m_textColorBound;
 	Color m_textColorUnbound;
@@ -494,6 +502,8 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_osuFolderTextbox = addTextbox(convar->getConVarByName("osu_folder")->getString(), convar->getConVarByName("osu_folder"));
 	addSpacer();
 	addCheckbox("Use osu!.db database (read-only)", "If you have an existing osu! installation,\nthen this will speed up the initial loading process.", convar->getConVarByName("osu_database_enabled"));
+	if (env->getOS() != Environment::OS::OS_HORIZON)
+		addCheckbox("Load osu! collection.db (read-only)", "If you have an existing osu! installation,\nalso load and display your created collections from there.", convar->getConVarByName("osu_collections_legacy_enabled"));
 	if (env->getOS() != Environment::OS::OS_HORIZON)
 		addCheckbox("Load osu! scores.db (read-only)", "If you have an existing osu! installation,\nalso load and display your achieved scores from there.", convar->getConVarByName("osu_scores_legacy_enabled"));
 
@@ -858,11 +868,16 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	}
 
 	addSpacer();
-	const UString keyboardSectionTags = "keyboard keys binds keybinds";
+	const UString keyboardSectionTags = "keyboard keys key bindings binds keybinds keybindings";
 	CBaseUIElement *subSectionKeyboard = addSubSection("Keyboard", keyboardSectionTags);
 	addSubSection("Keys - osu! Standard Mode", keyboardSectionTags);
 	addKeyBindButton("Left Click", &OsuKeyBindings::LEFT_CLICK);
 	addKeyBindButton("Right Click", &OsuKeyBindings::RIGHT_CLICK);
+	addSpacer();
+	addKeyBindButton("Left Click (2)", &OsuKeyBindings::LEFT_CLICK_2);
+	addKeyBindButton("Right Click (2)", &OsuKeyBindings::RIGHT_CLICK_2);
+	addSubSection("Keys - FPoSu", keyboardSectionTags);
+	addKeyBindButton("Zoom", &OsuKeyBindings::FPOSU_ZOOM);
 	addSubSection("Keys - In-Game", keyboardSectionTags);
 	addKeyBindButton("Game Pause", &OsuKeyBindings::GAME_PAUSE);
 	addKeyBindButton("Skip Cutscene", &OsuKeyBindings::SKIP_CUTSCENE);
@@ -980,9 +995,13 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Draw Scrubbing Timeline", convar->getConVarByName("osu_draw_scrubbing_timeline"));
 	addCheckbox("Draw Miss Window on HitErrorBar", convar->getConVarByName("osu_hud_hiterrorbar_showmisswindow"));
 	addSpacer();
-	addCheckbox("Draw Stats: pp", "Realtime pp counter.\nDynamically calculates currently earned pp by incrementally updating the star rating.", convar->getConVarByName("osu_draw_statistics_pp"));
-	addCheckbox("Draw Stats: Misses", convar->getConVarByName("osu_draw_statistics_misses"));
-	addCheckbox("Draw Stats: SliderBreaks", convar->getConVarByName("osu_draw_statistics_sliderbreaks"));
+	addCheckbox("Draw Stats: pp", "Realtime pp counter.\nDynamically calculates earned pp by incrementally updating the star rating.", convar->getConVarByName("osu_draw_statistics_pp"));
+	addCheckbox("Draw Stats: pp (SS)", "Max possible total pp for active mods (full combo + perfect acc).", convar->getConVarByName("osu_draw_statistics_perfectpp"));
+	addCheckbox("Draw Stats: Misses", "Number of misses.", convar->getConVarByName("osu_draw_statistics_misses"));
+	addCheckbox("Draw Stats: SliderBreaks", "Number of slider breaks.", convar->getConVarByName("osu_draw_statistics_sliderbreaks"));
+	addCheckbox("Draw Stats: Max Possible Combo", convar->getConVarByName("osu_draw_statistics_maxpossiblecombo"));
+	addCheckbox("Draw Stats: Stars*** (Until Now)", "Incrementally updates the star rating (aka \"realtime stars\").", convar->getConVarByName("osu_draw_statistics_livestars"));
+	addCheckbox("Draw Stats: Stars* (Total)", "Total stars for active mods.", convar->getConVarByName("osu_draw_statistics_totalstars"));
 	addCheckbox("Draw Stats: BPM", convar->getConVarByName("osu_draw_statistics_bpm"));
 	addCheckbox("Draw Stats: AR", convar->getConVarByName("osu_draw_statistics_ar"));
 	addCheckbox("Draw Stats: CS", convar->getConVarByName("osu_draw_statistics_cs"));
@@ -1054,16 +1073,20 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Curved play area", convar->getConVarByName("fposu_curved"));
 	addCheckbox("Background cube", convar->getConVarByName("fposu_cube"));
 	addLabel("");
-	addLabel("NOTE: Use CTRL + O during gameplay to get here!")->setTextColor(0xff777777);
+	addLabel("NOTE: Use CTRL + O during gameplay to get here!")->setTextColor(0xff555555);
 	addLabel("");
-	CBaseUISlider *fposuDistanceSlider = addSlider("Distance:", 0.01f, 2.0f, convar->getConVarByName("fposu_distance"), -1.0f, true);
+	CBaseUISlider *fposuDistanceSlider = addSlider("Distance:", 0.01f, 5.0f, convar->getConVarByName("fposu_distance"), -1.0f, true);
 	fposuDistanceSlider->setKeyDelta(0.01f);
 	addCheckbox("Vertical FOV", "If enabled: Vertical FOV.\nIf disabled: Horizontal FOV (default).", convar->getConVarByName("fposu_vertical_fov"));
-	CBaseUISlider *fovSlider = addSlider("FOV:", 20.0f, 160.0f, convar->getConVarByName("fposu_fov"));
+	CBaseUISlider *fovSlider = addSlider("FOV:", 10.0f, 160.0f, convar->getConVarByName("fposu_fov"));
 	fovSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeOneDecimalPlace) );
 	fovSlider->setKeyDelta(0.1f);
+	CBaseUISlider *zoomedFovSlider = addSlider("FOV (Zoom):", 10.0f, 160.0f, convar->getConVarByName("fposu_zoom_fov"));
+	zoomedFovSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeOneDecimalPlace) );
+	zoomedFovSlider->setKeyDelta(0.1f);
+	addCheckbox("Zoom Key Toggle", "Enabled: Zoom key toggles zoom.\nDisabled: Zoom while zoom key is held.", convar->getConVarByName("fposu_zoom_toggle"));
 	addLabel("");
-	addLabel("LEFT/RIGHT arrow keys to precisely adjust sliders.")->setTextColor(0xff777777);
+	addLabel("LEFT/RIGHT arrow keys to precisely adjust sliders.")->setTextColor(0xff555555);
 
 	if (env->getOS() == Environment::OS::OS_WINDOWS)
 	{
@@ -1328,10 +1351,11 @@ void OsuOptionsMenu::update()
 	// force context menu focus
 	if (m_contextMenu->isVisible())
 	{
-		std::vector<CBaseUIElement*> *options = m_options->getContainer()->getAllBaseUIElementsPointer();
-		for (int i=0; i<options->size(); i++)
+		const std::vector<CBaseUIElement*> &elements = m_options->getContainer()->getElements();
+		for (int i=0; i<elements.size(); i++)
 		{
-			CBaseUIElement *e = ((*options)[i]);
+			CBaseUIElement *e = (elements[i]);
+
 			if (e == m_contextMenu)
 				continue;
 
@@ -2040,12 +2064,11 @@ void OsuOptionsMenu::updateLayout()
 			{
 				CBaseUIElement *e3 = m_elements[i].elements[2];
 
-				const float dividerBegin = 5.0f / 8.0f;
-				const float dividerMiddle = 1.0f / 8.0f;
+				const float dividerMiddle = 5.0f / 8.0f;
 				const float dividerEnd = 2.0f / 8.0f;
 
 				e1->setRelPos(sideMargin, yCounter);
-				e1->setSizeX(elementWidth*dividerBegin - spacing);
+				e1->setSizeX(e1->getSize().y);
 
 				e2->setRelPos(sideMargin + e1->getSize().x + 0.5f*spacing, yCounter);
 				e2->setSizeX(elementWidth*dividerMiddle - spacing);
@@ -2234,7 +2257,17 @@ void OsuOptionsMenu::updateFposuDPI()
 	if (m_dpiTextbox == NULL) return;
 
 	m_dpiTextbox->stealFocus();
-	convar->getConVarByName("fposu_mouse_dpi")->setValue(m_dpiTextbox->getText());
+
+	const UString &text = m_dpiTextbox->getText();
+	UString value;
+	for (int i=0; i<text.length(); i++)
+	{
+		if (text[i] == L',')
+			value.append(L'.');
+		else
+			value.append(text[i]);
+	}
+	convar->getConVarByName("fposu_mouse_dpi")->setValue(value);
 }
 
 void OsuOptionsMenu::updateFposuCMper360()
@@ -2242,7 +2275,17 @@ void OsuOptionsMenu::updateFposuCMper360()
 	if (m_cm360Textbox == NULL) return;
 
 	m_cm360Textbox->stealFocus();
-	convar->getConVarByName("fposu_mouse_cm_360")->setValue(m_cm360Textbox->getText());
+
+	const UString &text = m_cm360Textbox->getText();
+	UString value;
+	for (int i=0; i<text.length(); i++)
+	{
+		if (text[i] == L',')
+			value.append(L'.');
+		else
+			value.append(text[i]);
+	}
+	convar->getConVarByName("fposu_mouse_cm_360")->setValue(value);
 }
 
 void OsuOptionsMenu::updateVRRenderTargetResolutionLabel()
@@ -3611,35 +3654,35 @@ OsuOptionsMenu::OPTIONS_ELEMENT OsuOptionsMenu::addButtonButtonLabel(UString tex
 
 OsuUIButton *OsuOptionsMenu::addKeyBindButton(UString text, ConVar *cvar)
 {
-	OsuUIButton *button = new OsuUIButton(m_osu, 0, 0, m_options->getSize().x, 50, text, text);
-	button->setColor(0xff0e94b5);
-	button->setUseDefaultSkin();
-	button->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
-	m_options->getContainer()->addBaseUIElement(button);
+	///UString unbindIconString; unbindIconString.insert(0, OsuIcons::UNDO);
+	OsuUIButton *unbindButton = new OsuUIButton(m_osu, 0, 0, m_options->getSize().x, 50, text, "");
+	unbindButton->setTooltipText("Unbind");
+	unbindButton->setColor(0x77ff0000);
+	unbindButton->setUseDefaultSkin();
+	unbindButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyUnbindButtonPressed) );
+	///unbindButton->setFont(m_osu->getFontIcons());
+	m_options->getContainer()->addBaseUIElement(unbindButton);
 
-	///UString iconString; iconString.insert(0, OsuIcons::UNDO);
-	OsuUIButton *button2 = new OsuUIButton(m_osu, 0, 0, m_options->getSize().x, 50, text, "");
-	button2->setTooltipText("Unbind");
-	button2->setColor(0x77ff0000);
-	button2->setUseDefaultSkin();
-	button2->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyUnbindButtonPressed) );
-	///button2->setFont(m_osu->getFontIcons());
-	m_options->getContainer()->addBaseUIElement(button2);
+	OsuUIButton *bindButton = new OsuUIButton(m_osu, 0, 0, m_options->getSize().x, 50, text, text);
+	bindButton->setColor(0xff0e94b5);
+	bindButton->setUseDefaultSkin();
+	bindButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );
+	m_options->getContainer()->addBaseUIElement(bindButton);
 
-	OsuOptionsMenuKeyBindLabel *label = new OsuOptionsMenuKeyBindLabel(0, 0, m_options->getSize().x, 50, "", "", cvar);
+	OsuOptionsMenuKeyBindLabel *label = new OsuOptionsMenuKeyBindLabel(0, 0, m_options->getSize().x, 50, "", "", cvar, bindButton);
 	label->setDrawFrame(false);
 	label->setDrawBackground(false);
 	m_options->getContainer()->addBaseUIElement(label);
 
 	OPTIONS_ELEMENT e;
-	e.elements.push_back(button);
-	e.elements.push_back(button2);
+	e.elements.push_back(unbindButton);
+	e.elements.push_back(bindButton);
 	e.elements.push_back(label);
 	e.type = 5;
 	e.cvar = cvar;
 	m_elements.push_back(e);
 
-	return button;
+	return bindButton;
 }
 
 CBaseUICheckbox *OsuOptionsMenu::addCheckbox(UString text, ConVar *cvar)
