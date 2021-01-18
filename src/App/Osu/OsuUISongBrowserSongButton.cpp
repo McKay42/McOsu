@@ -278,9 +278,15 @@ void OsuUISongBrowserSongButton::onSelected(bool wasSelected)
 
 	m_songBrowser->onSelectionChange(this, false);
 
-	// now, automatically select the bottom child (hardest diff, assuming default sorting)
-	if (m_children.size() > 0)
-		m_children[m_children.size()-1]->select();
+	// now, automatically select the bottom child (hardest diff, assuming default sorting, and respecting the current search matches)
+	for (int i=m_children.size()-1; i>=0; i--)
+	{
+		if (m_children[i]->isSearchMatch()) // NOTE: if no search is active, then all search matches return true by default
+		{
+			m_children[i]->select();
+			break;
+		}
+	}
 }
 
 void OsuUISongBrowserSongButton::onRightMouseUpInside()
