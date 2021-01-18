@@ -36,6 +36,9 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 
 	CHANGELOG alpha316;
 	alpha316.title = UString::format("32 (Build Date: %s, %s)", __DATE__, __TIME__);
+	alpha316.changes.push_back("- Fixed collections not showing all contained beatmaps/diffs");
+	alpha316.changes.push_back("- Fixed invalid default selection when opening beatmap sets with active search");
+	alpha316.changes.push_back("");
 	alpha316.changes.push_back("- Fixed partial corrupt PNG skin images not loading due to newer/stricter lodepng library version (disabled CRC check)");
 	alpha316.changes.push_back("- Improved background star calc speed");
 	alpha316.changes.push_back("");
