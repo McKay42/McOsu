@@ -11,21 +11,12 @@
 
 #include "Osu.h"
 #include "OsuSkin.h"
-#include "OsuBeatmap.h"
 #include "OsuSongBrowser2.h"
 
-#include "OsuBeatmapDifficulty.h"
-
-#include "OsuUISongBrowserSongDifficultyButton.h"
-
-OsuUISongBrowserCollectionButton *OsuUISongBrowserCollectionButton::s_previousButton = NULL;
-
-OsuUISongBrowserCollectionButton::OsuUISongBrowserCollectionButton(Osu *osu, OsuSongBrowser2 *songBrowser, CBaseUIScrollView *view, float xPos, float yPos, float xSize, float ySize, UString name, UString collectionName, std::vector<OsuUISongBrowserButton*> children) : OsuUISongBrowserButton(osu, songBrowser, view, xPos, yPos, xSize, ySize, name)
+OsuUISongBrowserCollectionButton::OsuUISongBrowserCollectionButton(Osu *osu, OsuSongBrowser2 *songBrowser, CBaseUIScrollView *view, OsuUIContextMenu *contextMenu, float xPos, float yPos, float xSize, float ySize, UString name, UString collectionName, std::vector<OsuUISongBrowserButton*> children) : OsuUISongBrowserButton(osu, songBrowser, view, contextMenu, xPos, yPos, xSize, ySize, name)
 {
 	m_sCollectionName = collectionName;
 	m_children = children;
-
-	s_previousButton = NULL; // reset
 
 	m_fTitleScale = 0.35f;
 
@@ -60,97 +51,38 @@ void OsuUISongBrowserCollectionButton::draw(Graphics *g)
 	g->popTransform();
 }
 
-void OsuUISongBrowserCollectionButton::setPreviousButton(OsuUISongBrowserCollectionButton *previousButton)
-{
-	s_previousButton = previousButton;
-}
-
-OsuUISongBrowserCollectionButton *OsuUISongBrowserCollectionButton::getPreviousButton()
-{
-	return s_previousButton;
-}
-
-std::vector<OsuUISongBrowserButton*> OsuUISongBrowserCollectionButton::getChildren()
-{
-	std::vector<OsuUISongBrowserButton*> children;
-	if (m_bSelected)
-	{
-		for (int i=0; i<m_children.size(); i++)
-		{
-			OsuUISongBrowserButton *child = m_children[i];
-
-			// TODO:
-			// parent
-			// special case here, since the beatmap button is hidden while it is selected (gets replaced by the diff buttons)
-			///if (!m_children[i]->isSelected())
-			if (child->getCollectionSearchHack())
-			{
-				children.push_back(child);
-
-				// children
-				std::vector<OsuUISongBrowserButton*> recursiveChildren = child->getChildren();
-				if (recursiveChildren.size() > 0)
-				{
-					children.reserve(children.size() + recursiveChildren.size());
-					children.insert(children.end(), recursiveChildren.begin(), recursiveChildren.end());
-				}
-			}
-		}
-	}
-	return children;
-}
-
 void OsuUISongBrowserCollectionButton::onSelected(bool wasSelected)
 {
-	if (wasSelected)
-	{
-		deselect();
-		return;
-	}
+	OsuUISongBrowserButton::onSelected(wasSelected);
 
-	// automatically deselect previous selection
-	if (getPreviousButton() != NULL && getPreviousButton() != this)
-		getPreviousButton()->deselect();
-	else
-		m_songBrowser->rebuildSongButtons(); // this is in the else-branch to avoid double execution (since it is already executed in deselect())
-
-	setPreviousButton(this);
-
+	m_songBrowser->onSelectionChange(this, true);
 	m_songBrowser->scrollToSongButton(this, true);
-}
-
-void OsuUISongBrowserCollectionButton::onDeselected()
-{
-	m_songBrowser->rebuildSongButtons();
 }
 
 UString OsuUISongBrowserCollectionButton::buildTitleString()
 {
 	UString titleString = m_sCollectionName;
 
-	// count children
+	// count children (also with support for search results in collections)
 	int numChildren = 0;
-	for (int i=0; i<m_children.size(); i++)
 	{
-		if (m_children[i]->getCollectionSearchHack())
+		for (size_t c=0; c<m_children.size(); c++)
 		{
-			// OsuUISongBrowserButtons
-			numChildren += m_children[i]->getChildrenAbs().size();
-
-			// OsuUISongBrowserSongDifficultyButtons
-			if (m_children[i]->getChildrenAbs().size() < 1)
+			const std::vector<OsuUISongBrowserButton*> &childrenChildren = m_children[c]->getChildren();
+			if (childrenChildren.size() > 0)
+			{
+				for (size_t cc=0; cc<childrenChildren.size(); cc++)
+				{
+					if (childrenChildren[cc]->isSearchMatch())
+						numChildren++;
+				}
+			}
+			else if (m_children[c]->isSearchMatch())
 				numChildren++;
 		}
 	}
 
 	titleString.append(UString::format((numChildren == 1 ? " (%i map)" : " (%i maps)"), numChildren));
-
-	// debugging
-	/*
-	titleString.append(" ");
-	if (m_children.size() > 0)
-		titleString.append(UString::format("%i, %i", m_children[0]->getBeatmap()->getDifficulties()[0]->setID, m_children[0]->getBeatmap()->getDifficulties()[0]->ID));
-	*/
 
 	return titleString;
 }

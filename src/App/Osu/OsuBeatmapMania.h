@@ -23,10 +23,10 @@ public:
 	virtual void onKeyDown(KeyboardEvent &key);
 	virtual void onKeyUp(KeyboardEvent &key);
 
-	inline Vector2 getPlayfieldSize() {return m_vPlayfieldSize;}
-	inline Vector2 getPlayfieldCenter() {return m_vPlayfieldCenter;}
+	inline Vector2 getPlayfieldSize() const {return m_vPlayfieldSize;}
+	inline Vector2 getPlayfieldCenter() const {return m_vPlayfieldCenter;}
 
-	int getNumColumns();
+	int getNumColumns() const;
 
 private:
 	static int getColumnForKey(int numColumns, KeyboardEvent &key);

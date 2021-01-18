@@ -10,8 +10,10 @@
 
 #include "cbase.h"
 
+class File;
+
 class Osu;
-class OsuBeatmap;
+class OsuDatabaseBeatmap;
 
 class OsuMultiplayer
 {
@@ -45,6 +47,7 @@ public:
 
 		// state
 		bool missingBeatmap;
+		bool downloadingBeatmap;
 		bool waiting;
 
 		// score
@@ -82,26 +85,66 @@ public:
 
 	// clientside game events
 	void onClientCmd();
-	void onClientStatusUpdate(bool missingBeatmap, bool waiting = true);
+	void onClientStatusUpdate(bool missingBeatmap, bool waiting = true, bool downloadingBeatmap = false);
 	void onClientScoreChange(int combo, float accuracy, unsigned long long score, bool dead, bool reliable = false);
-	bool onClientPlayStateChangeRequestBeatmap(OsuBeatmap *beatmap);
+	bool onClientPlayStateChangeRequestBeatmap(OsuDatabaseBeatmap *beatmap);
+	void onClientBeatmapDownloadRequest();
 
 	// serverside game events
 	void onServerModUpdate();
-	void onServerPlayStateChange(STATE state, unsigned long seekMS = 0, bool quickRestart = false, OsuBeatmap *beatmap = NULL);
+	void onServerPlayStateChange(STATE state, unsigned long seekMS = 0, bool quickRestart = false, OsuDatabaseBeatmap *beatmap = NULL);
 
 	// tourney events
-	void setBeatmap(OsuBeatmap *beatmap);
+	void setBeatmap(OsuDatabaseBeatmap *beatmap);
 	void setBeatmap(std::string md5hash);
 
 	bool isServer();
 	bool isInMultiplayer();
 
+	bool isMissingBeatmap(); // are we missing the serverside beatmap
 	bool isWaitingForPlayers();	// are we waiting for any player
 	bool isWaitingForClient();	// is the waiting state set for the local player
 
+	inline bool isDownloadingBeatmap() const {return m_downloads.size() > 0;}
+
 	inline std::vector<PLAYER> *getPlayers() {return &m_clientPlayers;}
-	inline std::vector<PLAYER> *getServerPlayers() {return &m_serverPlayers;}
+	//inline std::vector<PLAYER> *getServerPlayers() {return &m_serverPlayers;}
+
+	float getDownloadBeatmapPercentage() const;
+
+private:
+	struct BeatmapUploadState
+	{
+		uint32_t id;
+		uint32_t serial;
+
+		size_t numUploadedOsuFileBytes;
+		size_t numUploadedMusicFileBytes;
+		size_t numUploadedBackgroundFileBytes;
+
+		File *osuFile;
+		File *musicFile;
+		File *backgroundFile;
+	};
+
+	struct BeatmapDownloadState
+	{
+		uint32_t serial;
+
+		size_t totalDownloadBytes;
+
+		size_t numDownloadedOsuFileBytes;
+		size_t numDownloadedMusicFileBytes;
+		size_t numDownloadedBackgroundFileBytes;
+
+		UString osuFileMD5Hash;
+		UString musicFileName;
+		UString backgroundFileName;
+
+		std::vector<char> osuFileBytes;
+		std::vector<char> musicFileBytes;
+		std::vector<char> backgroundFileBytes;
+	};
 
 private:
 	static unsigned long long sortHackCounter;
@@ -111,8 +154,13 @@ private:
 	void onBroadcastCommand(UString command);
 	void onClientCommandInt(UString string, bool executeLocallyToo);
 
+	void onMPForceClientBeatmapDownload();
 	void onMPSelectBeatmap(UString md5hash);
+	void onMPRequestBeatmapDownload();
 
+	void onBeatmapDownloadFinished(const BeatmapDownloadState &dl);
+
+private:
 	enum PACKET_TYPE
 	{
 		PLAYER_CHANGE_TYPE,
@@ -120,7 +168,10 @@ private:
 		PLAYER_CMD_TYPE,
 		CONVAR_TYPE,
 		STATE_TYPE,
-		SCORE_TYPE
+		SCORE_TYPE,
+		BEATMAP_DOWNLOAD_REQUEST_TYPE,
+		BEATMAP_DOWNLOAD_ACK_TYPE,
+		BEATMAP_DOWNLOAD_CHUNK_TYPE
 	};
 
 #pragma pack(1)
@@ -137,6 +188,7 @@ private:
 	{
 		uint32_t id;
 		bool missingBeatmap;	// this is only used visually
+		bool downloadingBeatmap;// this is also only used visually
 		bool waiting;			// this will block all players until everyone is ready
 	};
 
@@ -150,7 +202,7 @@ private:
 
 	struct CONVAR_PACKET
 	{
-		wchar_t str[1024];
+		wchar_t str[2048];
 		size_t len;
 	};
 
@@ -172,8 +224,38 @@ private:
 		bool dead;
 	};
 
+	struct BEATMAP_DOWNLOAD_REQUEST_PACKET
+	{
+		uint32_t dummy;
+
+		// TODO: add support for requesting a specific beatmap download, and not just whatever the peer currently has selected
+	};
+
+	struct BEATMAP_DOWNLOAD_ACK_PACKET
+	{
+		uint32_t serial;
+
+		uint32_t osuFileSizeBytes;
+		uint32_t musicFileSizeBytes;
+		uint32_t backgroundFileSizeBytes;
+
+		char osuFileMD5Hash[32];
+		wchar_t musicFileName[1024];
+		wchar_t backgroundFileName[1024];
+	};
+
+	struct BEATMAP_DOWNLOAD_CHUNK_PACKET
+	{
+		uint32_t serial;
+
+		uint8_t fileType; // 1 = .osu file, 2 = .mp3/.ogg file, 3 = .png/.jpeg file
+		uint32_t numDataBytes;
+		// ... (data bytes)
+	};
+
 #pragma pack()
 
+private:
 	Osu *m_osu;
 	std::vector<PLAYER> m_serverPlayers;
 	std::vector<PLAYER> m_clientPlayers;
@@ -183,6 +265,11 @@ private:
 
 	bool m_bMPSelectBeatmapScheduled;
 	std::string m_sMPSelectBeatmapScheduledMD5Hash;
+
+	std::vector<BeatmapUploadState> m_uploads;
+	std::vector<BeatmapDownloadState> m_downloads;
+
+	unsigned int m_iLastClientBeatmapSelectID;
 };
 
 #endif

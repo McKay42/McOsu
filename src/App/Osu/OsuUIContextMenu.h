@@ -19,6 +19,10 @@ class Osu;
 class OsuUIContextMenu : public CBaseUIElement
 {
 public:
+	static void clampToBottomScreenEdge(OsuUIContextMenu *menu);
+	static void clampToRightScreenEdge(OsuUIContextMenu *menu);
+
+public:
 	OsuUIContextMenu(Osu *osu, float xPos = 0, float yPos = 0, float xSize = 0, float ySize = 0, UString name = "", CBaseUIScrollView *parent = NULL);
 	virtual ~OsuUIContextMenu();
 
@@ -28,7 +32,7 @@ public:
 	typedef fastdelegate::FastDelegate2<UString, int> ButtonClickCallback;
 	void setClickCallback(ButtonClickCallback clickCallback) {m_clickCallback = clickCallback;}
 
-	void begin(int minWidth = 0);
+	void begin(int minWidth = 0, bool bigStyle = false);
 	CBaseUIButton *addButton(UString text, int id = -1);
 	void end(bool invertAnimation = false);
 
@@ -57,6 +61,8 @@ private:
 	bool m_bVisible2;
 	float m_fAnimation;
 	bool m_bInvertAnimation;
+
+	bool m_bBigStyle;
 };
 
 #endif

@@ -17,15 +17,9 @@
 #include "Osu.h"
 #include "OsuScore.h"
 #include "OsuKeyBindings.h"
-#include "OsuBeatmapDifficulty.h"
+#include "OsuDatabaseBeatmap.h"
+
 #include "OsuHitObject.h"
-
-#ifdef MCENGINE_FEATURE_MULTITHREADING
-
-#include <mutex>
-#include "WinMinGW.Mutex.h" // necessary due to incomplete implementation in mingw-w64
-
-#endif
 
 ConVar osu_mania_playfield_width_percent("osu_mania_playfield_width_percent", 0.25f);
 ConVar osu_mania_playfield_height_percent("osu_mania_playfield_height_percent", 0.85f);
@@ -175,13 +169,6 @@ void OsuBeatmapMania::onKeyDown(KeyboardEvent &key)
 {
 	OsuBeatmap::onKeyDown(key);
 
-	// lock asap
-#ifdef MCENGINE_FEATURE_MULTITHREADING
-
-	//std::lock_guard<std::mutex> lk(m_clicksMutex);
-
-#endif
-
 	const int column = getColumnForKey(getNumColumns(), key);
 	if (column != -1 && !m_bColumnKeyDown[column])
 	{
@@ -202,13 +189,6 @@ void OsuBeatmapMania::onKeyUp(KeyboardEvent &key)
 {
 	OsuBeatmap::onKeyUp(key);
 
-	// lock asap
-#ifdef MCENGINE_FEATURE_MULTITHREADING
-
-	//std::lock_guard<std::mutex> lk(m_clicksMutex);
-
-#endif
-
 	const int column = getColumnForKey(getNumColumns(), key);
 	if (column != -1 && m_bColumnKeyDown[column])
 	{
@@ -227,10 +207,10 @@ void OsuBeatmapMania::onPlayStart()
 	onModUpdate(); // if there are calculations in there that need the hitobjects to be loaded, also applies speed/pitch
 }
 
-int OsuBeatmapMania::getNumColumns()
+int OsuBeatmapMania::getNumColumns() const
 {
-	if (m_selectedDifficulty != NULL)
-		return (osu_mania_k_override.getInt() > 0 ? osu_mania_k_override.getInt() : (int)std::round(m_selectedDifficulty->CS));
+	if (m_selectedDifficulty2 != NULL)
+		return (osu_mania_k_override.getInt() > 0 ? osu_mania_k_override.getInt() : (int)std::round(m_selectedDifficulty2->getCS()));
 	else
 		return 4;
 }

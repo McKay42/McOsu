@@ -22,7 +22,8 @@ class OsuUISongBrowserScoreButton : public CBaseUIButton
 {
 public:
 	static OsuSkinImage *getGradeImage(Osu *osu, OsuScore::GRADE grade);
-	static UString getModsString(int mods);
+	static UString getModsStringForDisplay(int mods);
+	static UString getModsStringForConVar(int mods);
 
 	enum class STYLE
 	{
@@ -40,7 +41,7 @@ public:
 	void highlight();
 	void resetHighlight();
 
-	void setScore(OsuDatabase::Score score, int index = 1, UString titleString = "", float weight = 1.0f);
+	void setScore(const OsuDatabase::Score &score, int index = 1, UString titleString = "", float weight = 1.0f);
 	void setIndex(int index) {m_iScoreIndexNumber = index;}
 
 	inline OsuDatabase::Score getScore() const {return m_score;}
@@ -52,7 +53,13 @@ public:
 	inline int getIndex() const {return m_iScoreIndexNumber;}
 
 private:
-	static ConVar *m_osu_scores_sort_by_pp;
+	static ConVar *m_osu_scores_sort_by_pp_ref;
+	static ConVar *m_osu_mods_ref;
+	static ConVar *m_osu_speed_override_ref;
+	static ConVar *m_osu_ar_override_ref;
+	static ConVar *m_osu_cs_override_ref;
+	static ConVar *m_osu_od_override_ref;
+	static ConVar *m_osu_hp_override_ref;
 	static UString recentScoreIconString;
 
 	void updateElapsedTimeString();
@@ -66,6 +73,9 @@ private:
 
 	void onRightMouseUpInside();
 	void onContextMenu(UString text, int id = -1);
+	void onUseModsClicked();
+	void onDeleteScoreClicked();
+	void onDeleteScoreConfirmed(UString text, int id);
 
 	bool isContextMenuVisible();
 

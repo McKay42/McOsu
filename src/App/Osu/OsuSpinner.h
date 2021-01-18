@@ -20,6 +20,8 @@ public:
 	virtual void drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr);
 	virtual void update(long curPos);
 
+	virtual bool isSpinner() {return true;}
+
 	void updateStackPosition(float stackOffset) {;}
 	void miss(long curPos) {;}
 

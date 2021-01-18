@@ -26,7 +26,7 @@
 #include "OsuSkinImage.h"
 
 #include "OsuBeatmap.h"
-#include "OsuBeatmapDifficulty.h"
+#include "OsuDatabaseBeatmap.h"
 #include "OsuBeatmapStandard.h"
 #include "OsuBeatmapMania.h"
 
@@ -115,6 +115,7 @@ ConVar osu_hud_accuracy_scale("osu_hud_accuracy_scale", 1.0f);
 ConVar osu_hud_progressbar_scale("osu_hud_progressbar_scale", 1.0f);
 ConVar osu_hud_playfield_border_size("osu_hud_playfield_border_size", 5.0f);
 ConVar osu_hud_statistics_scale("osu_hud_statistics_scale", 1.0f);
+ConVar osu_hud_statistics_spacing_scale("osu_hud_statistics_spacing_scale", 1.1f);
 ConVar osu_hud_statistics_offset_x("osu_hud_statistics_offset_x", 5.0f);
 ConVar osu_hud_statistics_offset_y("osu_hud_statistics_offset_y", 50.0f);
 ConVar osu_hud_statistics_pp_decimal_places("osu_hud_statistics_pp_decimal_places", 0, "number of decimal places for the live pp counter (min = 0, max = 2)");
@@ -130,11 +131,11 @@ ConVar osu_hud_inputoverlay_anim_color_duration("osu_hud_inputoverlay_anim_color
 ConVar osu_hud_fps_smoothing("osu_hud_fps_smoothing", true);
 ConVar osu_hud_scrubbing_timeline_strains_height("osu_hud_scrubbing_timeline_strains_height", 200.0f);
 ConVar osu_hud_scrubbing_timeline_strains_alpha("osu_hud_scrubbing_timeline_strains_alpha", 0.4f);
-ConVar osu_hud_scrubbing_timeline_strains_aim_color_r("osu_hud_scrubbing_timeline_strains_aim_color_r", 255);
-ConVar osu_hud_scrubbing_timeline_strains_aim_color_g("osu_hud_scrubbing_timeline_strains_aim_color_g", 0);
+ConVar osu_hud_scrubbing_timeline_strains_aim_color_r("osu_hud_scrubbing_timeline_strains_aim_color_r", 0);
+ConVar osu_hud_scrubbing_timeline_strains_aim_color_g("osu_hud_scrubbing_timeline_strains_aim_color_g", 255);
 ConVar osu_hud_scrubbing_timeline_strains_aim_color_b("osu_hud_scrubbing_timeline_strains_aim_color_b", 0);
-ConVar osu_hud_scrubbing_timeline_strains_speed_color_r("osu_hud_scrubbing_timeline_strains_speed_color_r", 0);
-ConVar osu_hud_scrubbing_timeline_strains_speed_color_g("osu_hud_scrubbing_timeline_strains_speed_color_g", 255);
+ConVar osu_hud_scrubbing_timeline_strains_speed_color_r("osu_hud_scrubbing_timeline_strains_speed_color_r", 255);
+ConVar osu_hud_scrubbing_timeline_strains_speed_color_g("osu_hud_scrubbing_timeline_strains_speed_color_g", 0);
 ConVar osu_hud_scrubbing_timeline_strains_speed_color_b("osu_hud_scrubbing_timeline_strains_speed_color_b", 0);
 
 ConVar osu_draw_cursor_trail("osu_draw_cursor_trail", true);
@@ -154,12 +155,17 @@ ConVar osu_draw_accuracy("osu_draw_accuracy", true);
 ConVar osu_draw_target_heatmap("osu_draw_target_heatmap", true);
 ConVar osu_draw_scrubbing_timeline("osu_draw_scrubbing_timeline", true);
 ConVar osu_draw_scrubbing_timeline_breaks("osu_draw_scrubbing_timeline_breaks", true);
+ConVar osu_draw_scrubbing_timeline_strain_graph("osu_draw_scrubbing_timeline_strain_graph", false);
 ConVar osu_draw_continue("osu_draw_continue", true);
 ConVar osu_draw_scoreboard("osu_draw_scoreboard", true);
 ConVar osu_draw_inputoverlay("osu_draw_inputoverlay", true);
 
 ConVar osu_draw_statistics_misses("osu_draw_statistics_misses", false);
 ConVar osu_draw_statistics_sliderbreaks("osu_draw_statistics_sliderbreaks", false);
+ConVar osu_draw_statistics_perfectpp("osu_draw_statistics_perfectpp", false);
+ConVar osu_draw_statistics_maxpossiblecombo("osu_draw_statistics_maxpossiblecombo", false);
+ConVar osu_draw_statistics_livestars("osu_draw_statistics_livestars", false);
+ConVar osu_draw_statistics_totalstars("osu_draw_statistics_totalstars", false);
 ConVar osu_draw_statistics_bpm("osu_draw_statistics_bpm", false);
 ConVar osu_draw_statistics_ar("osu_draw_statistics_ar", false);
 ConVar osu_draw_statistics_cs("osu_draw_statistics_cs", false);
@@ -303,11 +309,11 @@ void OsuHUD::draw(Graphics *g)
 		{
 			if (m_osu->isInMultiplayer())
 				drawScoreBoardMP(g);
-			else if (beatmap->getSelectedDifficulty() != NULL)
-				drawScoreBoard(g, beatmap->getSelectedDifficulty()->md5hash, m_osu->getScore());
+			else if (beatmap->getSelectedDifficulty2() != NULL)
+				drawScoreBoard(g, (std::string&)beatmap->getSelectedDifficulty2()->getMD5Hash(), m_osu->getScore());
 		}
 
-		if (beatmap->isInSkippableSection() && ((m_osu_skip_intro_enabled_ref->getBool() && beatmap->getHitObjectIndexForCurrentTime() < 1) || (m_osu_skip_breaks_enabled_ref->getBool() && beatmap->getHitObjectIndexForCurrentTime() > 0)))
+		if (!m_osu->isSkipScheduled() && beatmap->isInSkippableSection() && ((m_osu_skip_intro_enabled_ref->getBool() && beatmap->getHitObjectIndexForCurrentTime() < 1) || (m_osu_skip_breaks_enabled_ref->getBool() && beatmap->getHitObjectIndexForCurrentTime() > 0)))
 			drawSkip(g);
 
 		g->pushTransform();
@@ -315,9 +321,14 @@ void OsuHUD::draw(Graphics *g)
 			if (m_osu->getModTarget() && osu_draw_target_heatmap.getBool() && beatmapStd != NULL)
 				g->translate(0, beatmapStd->getHitcircleDiameter()*(1.0f / (osu_hud_scale.getFloat()*osu_hud_statistics_scale.getFloat())));
 
+			const int hitObjectIndexForCurrentTime = (beatmap->getHitObjectIndexForCurrentTime() < 1 ? -1 : beatmap->getHitObjectIndexForCurrentTime());
+
 			drawStatistics(g,
 					m_osu->getScore()->getNumMisses(),
 					m_osu->getScore()->getNumSliderBreaks(),
+					beatmap->getMaxPossibleCombo(),
+					OsuDifficultyCalculator::calculateTotalStarsFromSkills(beatmap->getAimStarsForUpToHitObjectIndex(hitObjectIndexForCurrentTime), beatmap->getSpeedStarsForUpToHitObjectIndex(hitObjectIndexForCurrentTime)),
+					m_osu->getSongBrowser()->getDynamicStarCalculator()->getTotalStars(),
 					beatmap->getBPM(),
 					OsuGameRules::getApproachRateForSpeedMultiplier(beatmap, beatmap->getSpeedMultiplier()),
 					beatmap->getCS(),
@@ -327,6 +338,7 @@ void OsuHUD::draw(Graphics *g)
 					beatmap->getND(),
 					m_osu->getScore()->getUnstableRate(),
 					m_osu->getScore()->getPPv2(),
+					m_osu->getSongBrowser()->getDynamicStarCalculator()->getPPv2(),
 					((int)OsuGameRules::getHitWindow300(beatmap) - 0.5f) * (1.0f / m_osu->getSpeedMultiplier()), // see OsuUISongBrowserInfoLabel::update()
 					m_osu->getScore()->getHitErrorAvgCustomMin(),
 					m_osu->getScore()->getHitErrorAvgCustomMax());
@@ -406,32 +418,29 @@ void OsuHUD::draw(Graphics *g)
 			const unsigned long startTimePlayableMS = beatmap->getStartTimePlayable();
 			const unsigned long endTimePlayableMS = startTimePlayableMS + lengthPlayableMS;
 
-			if (beatmap->getSelectedDifficulty() != NULL)
+			const std::vector<OsuDatabaseBeatmap::BREAK> &beatmapBreaks = beatmap->getBreaks();
+
+			breaks.reserve(beatmapBreaks.size());
+
+			for (int i=0; i<beatmapBreaks.size(); i++)
 			{
-				breaks.reserve(beatmap->getSelectedDifficulty()->breaks.size());
+				const OsuDatabaseBeatmap::BREAK &bk = beatmapBreaks[i];
 
-				for (int i=0; i<beatmap->getSelectedDifficulty()->breaks.size(); i++)
-				{
-					const OsuBeatmapDifficulty::BREAK &bk = beatmap->getSelectedDifficulty()->breaks[i];
+				// ignore breaks after last hitobject
+				if (/*bk.endTime <= (int)startTimePlayableMS ||*/ bk.startTime >= (int)(startTimePlayableMS + lengthPlayableMS))
+					continue;
 
-					// ignore breaks after last hitobject
-					if (/*bk.endTime <= (int)startTimePlayableMS ||*/ bk.startTime >= (int)(startTimePlayableMS + lengthPlayableMS))
-						continue;
+				BREAK bk2;
 
-					BREAK bk2;
+				bk2.startPercent = (float)(bk.startTime) / (float)(endTimePlayableMS);
+				bk2.endPercent = (float)(bk.endTime) / (float)(endTimePlayableMS);
 
-					bk2.startPercent = (float)(bk.startTime) / (float)(endTimePlayableMS);
-					bk2.endPercent = (float)(bk.endTime) / (float)(endTimePlayableMS);
+				//debugLog("%i: s = %f, e = %f\n", i, bk2.startPercent, bk2.endPercent);
 
-					//debugLog("%i: s = %f, e = %f\n", i, bk2.startPercent, bk2.endPercent);
-
-					breaks.push_back(bk2);
-				}
+				breaks.push_back(bk2);
 			}
 		}
 
-		//if (beatmap->getSelectedDifficulty() != NULL) // TODO: dirty
-		//	drawScrubbingTimeline(g, beatmap->getTime(), beatmap->getLength(), beatmap->getLengthPlayable(), beatmap->getStartTimePlayable(), beatmap->getPercentFinishedPlayable(), breaks, beatmap->getSelectedDifficulty()->getAimStrains(), beatmap->getSelectedDifficulty()->getSpeedStrains(), beatmap->getSpeedMultiplier());
 		drawScrubbingTimeline(g, beatmap->getTime(), beatmap->getLength(), beatmap->getLengthPlayable(), beatmap->getStartTimePlayable(), beatmap->getPercentFinishedPlayable(), breaks);
 	}
 }
@@ -536,16 +545,17 @@ void OsuHUD::update()
 	{
 		animateVolumeChange();
 
-		for (int i=0; i<m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer()->size(); i++)
+		const std::vector<CBaseUIElement*> &elements = m_volumeSliderOverlayContainer->getElements();
+		for (int i=0; i<elements.size(); i++)
 		{
-			if (((OsuUIVolumeSlider*)(*m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer())[i])->checkWentMouseInside())
+			if (((OsuUIVolumeSlider*)elements[i])->checkWentMouseInside())
 			{
-				for (int c=0; c<m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer()->size(); c++)
+				for (int c=0; c<elements.size(); c++)
 				{
 					if (c != i)
-						((OsuUIVolumeSlider*)(*m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer())[c])->setSelected(false);
+						((OsuUIVolumeSlider*)elements[c])->setSelected(false);
 				}
-				((OsuUIVolumeSlider*)(*m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer())[i])->setSelected(true);
+				((OsuUIVolumeSlider*)elements[i])->setSelected(true);
 			}
 		}
 	}
@@ -594,6 +604,7 @@ void OsuHUD::drawDummy(Graphics *g)
 	scoreEntry.score = 12345678;
 	scoreEntry.accuracy = 1.0f;
 	scoreEntry.missingBeatmap = false;
+	scoreEntry.downloadingBeatmap = false;
 	scoreEntry.dead = false;
 	scoreEntry.highlight = true;
 	if (osu_draw_scoreboard.getBool())
@@ -605,7 +616,7 @@ void OsuHUD::drawDummy(Graphics *g)
 
 	drawSkip(g);
 
-	drawStatistics(g, 0, 0, 180, 9.0f, 4.0f, 8.0f, 6.0f, 4, 6, 90.0f, 123, 25, -5, 15);
+	drawStatistics(g, 0, 0, 727, 2.3f, 5.5f, 180, 9.0f, 4.0f, 8.0f, 6.0f, 4, 6, 90.0f, 123, 1234, 25, -5, 15);
 
 	drawWarningArrows(g);
 
@@ -645,16 +656,21 @@ void OsuHUD::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 			{
 				if (m_osu->isInMultiplayer())
 					drawScoreBoardMP(g);
-				else if (beatmap->getSelectedDifficulty() != NULL)
-					drawScoreBoard(g, beatmap->getSelectedDifficulty()->md5hash, m_osu->getScore());
+				else if (beatmap->getSelectedDifficulty2() != NULL)
+					drawScoreBoard(g, (std::string&)beatmap->getSelectedDifficulty2()->getMD5Hash(), m_osu->getScore());
 			}
 
-			if (beatmap->isInSkippableSection() && ((m_osu_skip_intro_enabled_ref->getBool() && beatmap->getHitObjectIndexForCurrentTime() < 1) || (m_osu_skip_breaks_enabled_ref->getBool() && beatmap->getHitObjectIndexForCurrentTime() > 0)))
+			if (!m_osu->isSkipScheduled() && beatmap->isInSkippableSection() && ((m_osu_skip_intro_enabled_ref->getBool() && beatmap->getHitObjectIndexForCurrentTime() < 1) || (m_osu_skip_breaks_enabled_ref->getBool() && beatmap->getHitObjectIndexForCurrentTime() > 0)))
 				drawSkip(g);
+
+			const int hitObjectIndexForCurrentTime = (beatmap->getHitObjectIndexForCurrentTime() < 1 ? -1 : beatmap->getHitObjectIndexForCurrentTime());
 
 			drawStatistics(g,
 					m_osu->getScore()->getNumMisses(),
 					m_osu->getScore()->getNumSliderBreaks(),
+					beatmap->getMaxPossibleCombo(),
+					OsuDifficultyCalculator::calculateTotalStarsFromSkills(beatmap->getAimStarsForUpToHitObjectIndex(hitObjectIndexForCurrentTime), beatmap->getSpeedStarsForUpToHitObjectIndex(hitObjectIndexForCurrentTime)),
+					m_osu->getSongBrowser()->getDynamicStarCalculator()->getTotalStars(),
 					beatmap->getBPM(),
 					OsuGameRules::getApproachRateForSpeedMultiplier(beatmap, beatmap->getSpeedMultiplier()),
 					beatmap->getCS(),
@@ -664,6 +680,7 @@ void OsuHUD::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 					beatmap->getND(),
 					m_osu->getScore()->getUnstableRate(),
 					m_osu->getScore()->getPPv2(),
+					m_osu->getSongBrowser()->getDynamicStarCalculator()->getPPv2(),
 					((int)OsuGameRules::getHitWindow300(beatmap) - 0.5f) * (1.0f / m_osu->getSpeedMultiplier()), // see OsuUISongBrowserInfoLabel::update()
 					m_osu->getScore()->getHitErrorAvgCustomMin(),
 					m_osu->getScore()->getHitErrorAvgCustomMax());
@@ -712,6 +729,7 @@ void OsuHUD::drawVRDummy(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 		scoreEntry.score = 12345678;
 		scoreEntry.accuracy = 1.0f;
 		scoreEntry.missingBeatmap = false;
+		scoreEntry.downloadingBeatmap = false;
 		scoreEntry.dead = false;
 		scoreEntry.highlight = true;
 		if (osu_draw_scoreboard.getBool())
@@ -723,7 +741,7 @@ void OsuHUD::drawVRDummy(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 
 		drawSkip(g);
 
-		drawStatistics(g, 0, 0, 180, 9.0f, 4.0f, 8.0f, 6.0f, 4, 6, 90.0f, 123, 25, -5, 15);
+		drawStatistics(g, 0, 0, 727, 2.3f, 5.5f, 180, 9.0f, 4.0f, 8.0f, 6.0f, 4, 6, 90.0f, 123, 1234, 25, -5, 15);
 
 		if (osu_draw_score.getBool())
 			drawScore(g, scoreEntry.score);
@@ -1708,6 +1726,7 @@ void OsuHUD::drawScoreBoard(Graphics *g, std::string &beatmapMD5Hash, OsuScore *
 		scoreEntry.accuracy = OsuScore::calculateAccuracy((*scores)[i].num300s, (*scores)[i].num100s, (*scores)[i].num50s, (*scores)[i].numMisses);
 
 		scoreEntry.missingBeatmap = false;
+		scoreEntry.downloadingBeatmap = false;
 		scoreEntry.dead = false;
 		scoreEntry.highlight = false;
 
@@ -1739,6 +1758,7 @@ void OsuHUD::drawScoreBoard(Graphics *g, std::string &beatmapMD5Hash, OsuScore *
 			}
 
 			currentScoreEntry.missingBeatmap = false;
+			currentScoreEntry.downloadingBeatmap = false;
 			currentScoreEntry.dead = currentScore->isDead();
 			currentScoreEntry.highlight = true;
 
@@ -1783,6 +1803,7 @@ void OsuHUD::drawScoreBoardMP(Graphics *g)
 		scoreEntry.accuracy = (*m_osu->getMultiplayer()->getPlayers())[i].accuracy;
 
 		scoreEntry.missingBeatmap = (*m_osu->getMultiplayer()->getPlayers())[i].missingBeatmap;
+		scoreEntry.downloadingBeatmap = (*m_osu->getMultiplayer()->getPlayers())[i].downloadingBeatmap;
 		scoreEntry.dead = (*m_osu->getMultiplayer()->getPlayers())[i].dead;
 		scoreEntry.highlight = ((*m_osu->getMultiplayer()->getPlayers())[i].id == engine->getNetworkHandler()->getLocalClientID());
 
@@ -1818,6 +1839,7 @@ void OsuHUD::drawScoreBoardInt(Graphics *g, const std::vector<OsuHUD::SCORE_ENTR
 	const Color nameScoreColor = 0xffaaaaaa;
 	const Color nameScoreColorHighlight = 0xffffffff;
 	const Color nameScoreColorTop = 0xffeeeeee;
+	const Color nameScoreColorDownloading = 0xffeeee00;
 	const Color nameScoreColorDead = 0xffee0000;
 
 	const Color comboAccuracyColor = 0xff5d9ca1;
@@ -1883,36 +1905,42 @@ void OsuHUD::drawScoreBoardInt(Graphics *g, const std::vector<OsuHUD::SCORE_ENTR
 		g->popTransform();
 
 		// draw name
+		const bool isDownloadingOrHasNoMap = (scoreEntries[i].downloadingBeatmap || scoreEntries[i].missingBeatmap);
 		const float nameScale = 0.315f;
-		g->pushTransform();
+		if (!isDownloadingOrHasNoMap)
 		{
-			const bool isInPlayModeAndAlsoNotInVR = m_osu->isInPlayMode() && !m_osu->isInVRMode();
-
-			if (isInPlayModeAndAlsoNotInVR)
-				g->pushClipRect(McRect(x, y, width - 2*padding, height));
-
-			UString nameString = scoreEntries[i].name;
-			if (scoreEntries[i].missingBeatmap)
-				nameString.append(" [no map]");
-
-			const float scale = (height / nameFont->getHeight())*nameScale;
-
-			g->scale(scale, scale);
-			g->translate(x + padding, y + padding + nameFont->getHeight()*scale);
-			if (drawTextShadow)
+			g->pushTransform();
 			{
-				g->translate(1, 1);
-				g->setColor(textShadowColor);
-				g->drawString(nameFont, nameString);
-				g->translate(-1, -1);
-			}
-			g->setColor((scoreEntries[i].dead || scoreEntries[i].missingBeatmap ? nameScoreColorDead : (scoreEntries[i].highlight ? nameScoreColorHighlight : (i == 0 ? nameScoreColorTop : nameScoreColor))));
-			g->drawString(nameFont, nameString);
+				const bool isInPlayModeAndAlsoNotInVR = m_osu->isInPlayMode() && !m_osu->isInVRMode();
 
-			if (isInPlayModeAndAlsoNotInVR)
-				g->popClipRect();
+				if (isInPlayModeAndAlsoNotInVR)
+					g->pushClipRect(McRect(x, y, width - 2*padding, height));
+
+				UString nameString = scoreEntries[i].name;
+				if (scoreEntries[i].downloadingBeatmap)
+					nameString.append(" [downloading]");
+				else if (scoreEntries[i].missingBeatmap)
+					nameString.append(" [no map]");
+
+				const float scale = (height / nameFont->getHeight())*nameScale;
+
+				g->scale(scale, scale);
+				g->translate(x + padding, y + padding + nameFont->getHeight()*scale);
+				if (drawTextShadow)
+				{
+					g->translate(1, 1);
+					g->setColor(textShadowColor);
+					g->drawString(nameFont, nameString);
+					g->translate(-1, -1);
+				}
+				g->setColor((scoreEntries[i].dead || scoreEntries[i].missingBeatmap ? (scoreEntries[i].downloadingBeatmap ? nameScoreColorDownloading : nameScoreColorDead) : (scoreEntries[i].highlight ? nameScoreColorHighlight : (i == 0 ? nameScoreColorTop : nameScoreColor))));
+				g->drawString(nameFont, nameString);
+
+				if (isInPlayModeAndAlsoNotInVR)
+					g->popClipRect();
+			}
+			g->popTransform();
 		}
-		g->popTransform();
 
 		// draw score
 		const float scoreScale = 0.26f;
@@ -1984,6 +2012,46 @@ void OsuHUD::drawScoreBoardInt(Graphics *g, const std::vector<OsuHUD::SCORE_ENTR
 			}
 			g->popTransform();
 		}
+
+
+
+		// HACKHACK: code duplication
+		if (isDownloadingOrHasNoMap)
+		{
+			g->pushTransform();
+			{
+				const bool isInPlayModeAndAlsoNotInVR = m_osu->isInPlayMode() && !m_osu->isInVRMode();
+
+				if (isInPlayModeAndAlsoNotInVR)
+					g->pushClipRect(McRect(x, y, width - 2*padding, height));
+
+				UString nameString = scoreEntries[i].name;
+				if (scoreEntries[i].downloadingBeatmap)
+					nameString.append(" [downloading]");
+				else if (scoreEntries[i].missingBeatmap)
+					nameString.append(" [no map]");
+
+				const float scale = (height / nameFont->getHeight())*nameScale;
+
+				g->scale(scale, scale);
+				g->translate(x + padding, y + padding + nameFont->getHeight()*scale);
+				if (drawTextShadow)
+				{
+					g->translate(1, 1);
+					g->setColor(textShadowColor);
+					g->drawString(nameFont, nameString);
+					g->translate(-1, -1);
+				}
+				g->setColor((scoreEntries[i].dead || scoreEntries[i].missingBeatmap ? (scoreEntries[i].downloadingBeatmap ? nameScoreColorDownloading : nameScoreColorDead) : (scoreEntries[i].highlight ? nameScoreColorHighlight : (i == 0 ? nameScoreColorTop : nameScoreColor))));
+				g->drawString(nameFont, nameString);
+
+				if (isInPlayModeAndAlsoNotInVR)
+					g->popClipRect();
+			}
+			g->popTransform();
+		}
+
+
 
 		if (m_osu->isInVRDraw())
 		{
@@ -2352,7 +2420,7 @@ void OsuHUD::drawProgressBarVR(Graphics *g, Matrix4 &mvp, OsuVR *vr, float perce
 	}
 }
 
-void OsuHUD::drawStatistics(Graphics *g, int misses, int sliderbreaks, int bpm, float ar, float cs, float od, float hp, int nps, int nd, int ur, float pp, float hitWindow300, int hitdeltaMin, int hitdeltaMax)
+void OsuHUD::drawStatistics(Graphics *g, int misses, int sliderbreaks, int maxPossibleCombo, float liveStars,  float totalStars, int bpm, float ar, float cs, float od, float hp, int nps, int nd, int ur, float pp, float ppfc, float hitWindow300, int hitdeltaMin, int hitdeltaMax)
 {
 	g->pushTransform();
 	{
@@ -2361,10 +2429,15 @@ void OsuHUD::drawStatistics(Graphics *g, int misses, int sliderbreaks, int bpm, 
 		g->scale(osu_hud_statistics_scale.getFloat()*osu_hud_scale.getFloat(), osu_hud_statistics_scale.getFloat()*osu_hud_scale.getFloat());
 		g->translate(osu_hud_statistics_offset_x.getInt()/* * offsetScale*/, (int)((m_osu->getTitleFont()->getHeight())*osu_hud_scale.getFloat()*osu_hud_statistics_scale.getFloat()) + (osu_hud_statistics_offset_y.getInt() * offsetScale));
 
-		const int yDelta = (int)((m_osu->getTitleFont()->getHeight() + 10)*osu_hud_scale.getFloat()*osu_hud_statistics_scale.getFloat());
+		const int yDelta = (int)((m_osu->getTitleFont()->getHeight() + 10)*osu_hud_scale.getFloat()*osu_hud_statistics_scale.getFloat()*osu_hud_statistics_spacing_scale.getFloat());
 		if (osu_draw_statistics_pp.getBool())
 		{
-			drawStatisticText(g, (osu_hud_statistics_pp_decimal_places.getInt() < 1 ? UString::format("%ipp", (int)pp) : (osu_hud_statistics_pp_decimal_places.getInt() > 1 ? UString::format("%.2fpp", pp) : UString::format("%.1fpp", pp))));
+			drawStatisticText(g, (osu_hud_statistics_pp_decimal_places.getInt() < 1 ? UString::format("%ipp", (int)std::round(pp)) : (osu_hud_statistics_pp_decimal_places.getInt() > 1 ? UString::format("%.2fpp", pp) : UString::format("%.1fpp", pp))));
+			g->translate(0, yDelta);
+		}
+		if (osu_draw_statistics_perfectpp.getBool())
+		{
+			drawStatisticText(g, (osu_hud_statistics_pp_decimal_places.getInt() < 1 ? UString::format("SS: %ipp", (int)std::round(ppfc)) : (osu_hud_statistics_pp_decimal_places.getInt() > 1 ? UString::format("SS: %.2fpp", ppfc) : UString::format("SS: %.1fpp", ppfc))));
 			g->translate(0, yDelta);
 		}
 		if (osu_draw_statistics_misses.getBool())
@@ -2374,7 +2447,22 @@ void OsuHUD::drawStatistics(Graphics *g, int misses, int sliderbreaks, int bpm, 
 		}
 		if (osu_draw_statistics_sliderbreaks.getBool())
 		{
-			drawStatisticText(g, UString::format("SBreak: %i", sliderbreaks));
+			drawStatisticText(g, UString::format("SBrk: %i", sliderbreaks));
+			g->translate(0, yDelta);
+		}
+		if (osu_draw_statistics_maxpossiblecombo.getBool())
+		{
+			drawStatisticText(g, UString::format("FC: %ix", maxPossibleCombo));
+			g->translate(0, yDelta);
+		}
+		if (osu_draw_statistics_livestars.getBool())
+		{
+			drawStatisticText(g, UString::format("%.3g***", liveStars));
+			g->translate(0, yDelta);
+		}
+		if (osu_draw_statistics_totalstars.getBool())
+		{
+			drawStatisticText(g, UString::format("%.3g*", totalStars));
 			g->translate(0, yDelta);
 		}
 		if (osu_draw_statistics_bpm.getBool())
@@ -2519,7 +2607,7 @@ void OsuHUD::drawTargetHeatmap(Graphics *g, float hitcircleDiameter)
 	}
 }
 
-void OsuHUD::drawScrubbingTimeline(Graphics *g, unsigned long beatmapTime, unsigned long beatmapLength, unsigned long beatmapLengthPlayable, unsigned long beatmapStartTimePlayable, float beatmapPercentFinishedPlayable, const std::vector<BREAK> &breaks/*, const std::vector<double> &aimStrains, const std::vector<double> &speedStrains, float speedMultiplier*/)
+void OsuHUD::drawScrubbingTimeline(Graphics *g, unsigned long beatmapTime, unsigned long beatmapLength, unsigned long beatmapLengthPlayable, unsigned long beatmapStartTimePlayable, float beatmapPercentFinishedPlayable, const std::vector<BREAK> &breaks)
 {
 	const float dpiScale = Osu::getUIScale();
 
@@ -2544,92 +2632,97 @@ void OsuHUD::drawScrubbingTimeline(Graphics *g, unsigned long beatmapTime, unsig
 	const unsigned long endTimeMS = startTimeMS + lengthMS;
 	const unsigned long currentTimeMS = beatmapTime;
 
-	/*
-	// TODO: strains
-	if (aimStrains.size() > 0 && aimStrains.size() == speedStrains.size())
+	// draw strain graph
+	if (osu_draw_scrubbing_timeline_strain_graph.getBool() && m_osu->getSongBrowser()->getDynamicStarCalculator()->isAsyncReady())
 	{
-		const float strainStepMS = 400.0f * speedMultiplier;
+		// this is still WIP
 
-		// TODO: multiply height by dpi scale
-		// TODO: add separate aim/speed strain drawing and convars/hotkeys
+		// TODO: should use strains from beatmap, not songbrowser (because songbrowser doesn't update onModUpdate() while playing)
+		const std::vector<double> &aimStrains = m_osu->getSongBrowser()->getDynamicStarCalculator()->getAimStrains();
+		const std::vector<double> &speedStrains = m_osu->getSongBrowser()->getDynamicStarCalculator()->getSpeedStrains();
+		const float speedMultiplier = m_osu->getSpeedMultiplier();
 
-		// get highest strain values for normalization
-		double highestAimStrain = 0.0;
-		double highestSpeedStrain = 0.0;
-		double highestStrain = 0.0;
-		int highestStrainIndex = -1;
-		for (int i=0; i<aimStrains.size(); i++)
+		if (aimStrains.size() > 0 && aimStrains.size() == speedStrains.size())
 		{
-			const double aimStrain = aimStrains[i];
-			const double speedStrain = speedStrains[i];
-			const double strain = aimStrain + speedStrain;
+			const float strainStepMS = 400.0f * speedMultiplier;
 
-			if (strain > highestStrain)
-			{
-				highestStrain = strain;
-				highestStrainIndex = i;
-			}
-			if (aimStrain > highestAimStrain)
-				highestAimStrain = aimStrain;
-			if (speedStrain > highestSpeedStrain)
-				highestSpeedStrain = speedStrain;
-		}
-
-		// draw strain bar graph
-		if (highestAimStrain > 0.0 && highestSpeedStrain > 0.0 && highestStrain > 0.0)
-		{
-			const float msPerPixel = (float)lengthMS / (float)(m_osu->getScreenWidth() - (((float)startTimeMS / (float)endTimeMS))*m_osu->getScreenWidth());
-			const float strainWidth = strainStepMS / msPerPixel;
-			const float strainHeightMultiplier = osu_hud_scrubbing_timeline_strains_height.getFloat();
-
-			const float offsetX = ((float)startTimeMS / (float)strainStepMS) * strainWidth; // compensate for startTimeMS
-
-			const float alpha = osu_hud_scrubbing_timeline_strains_alpha.getFloat();
-
-			const Color aimStrainColor = COLORf(alpha, osu_hud_scrubbing_timeline_strains_aim_color_r.getInt() / 255.0f, osu_hud_scrubbing_timeline_strains_aim_color_g.getInt() / 255.0f, osu_hud_scrubbing_timeline_strains_aim_color_b.getInt() / 255.0f);
-			const Color speedStrainColor = COLORf(alpha, osu_hud_scrubbing_timeline_strains_speed_color_r.getInt() / 255.0f, osu_hud_scrubbing_timeline_strains_speed_color_g.getInt() / 255.0f, osu_hud_scrubbing_timeline_strains_speed_color_b.getInt() / 255.0f);
-
-			g->setDepthBuffer(true);
+			// get highest strain values for normalization
+			double highestAimStrain = 0.0;
+			double highestSpeedStrain = 0.0;
+			double highestStrain = 0.0;
+			int highestStrainIndex = -1;
 			for (int i=0; i<aimStrains.size(); i++)
 			{
-				const double aimStrain = (aimStrains[i]) / highestStrain;
-				const double speedStrain = (speedStrains[i]) / highestStrain;
-				//const double strain = (aimStrains[i] + speedStrains[i]) / highestStrain;
+				const double aimStrain = aimStrains[i];
+				const double speedStrain = speedStrains[i];
+				const double strain = aimStrain + speedStrain;
 
-				const double aimStrainHeight = aimStrain * strainHeightMultiplier;
-				const double speedStrainHeight = speedStrain * strainHeightMultiplier;
-				//const double strainHeight = strain * strainHeightMultiplier;
-
-				g->setColor(aimStrainColor);
-				g->fillRect(i*strainWidth + offsetX, cursorPos.y - aimStrainHeight, std::max(1.0f, std::round(strainWidth + 0.5f)), aimStrainHeight);
-
-				g->setColor(speedStrainColor);
-				g->fillRect(i*strainWidth + offsetX, cursorPos.y - aimStrainHeight - speedStrainHeight, std::max(1.0f, std::round(strainWidth + 0.5f)), speedStrainHeight + 1);
+				if (strain > highestStrain)
+				{
+					highestStrain = strain;
+					highestStrainIndex = i;
+				}
+				if (aimStrain > highestAimStrain)
+					highestAimStrain = aimStrain;
+				if (speedStrain > highestSpeedStrain)
+					highestSpeedStrain = speedStrain;
 			}
-			g->setDepthBuffer(false);
 
-			// highlight highest total strain value (+- section block)
-			if (highestStrainIndex > -1)
+			// draw strain bar graph
+			if (highestAimStrain > 0.0 && highestSpeedStrain > 0.0 && highestStrain > 0.0)
 			{
-				const double aimStrain = (aimStrains[highestStrainIndex]) / highestStrain;
-				const double speedStrain = (speedStrains[highestStrainIndex]) / highestStrain;
-				//const double strain = (aimStrains[i] + speedStrains[i]) / highestStrain;
+				const float msPerPixel = (float)lengthMS / (float)(m_osu->getScreenWidth() - (((float)startTimeMS / (float)endTimeMS))*m_osu->getScreenWidth());
+				const float strainWidth = strainStepMS / msPerPixel;
+				const float strainHeightMultiplier = osu_hud_scrubbing_timeline_strains_height.getFloat() * dpiScale;
 
-				const double aimStrainHeight = aimStrain * strainHeightMultiplier;
-				const double speedStrainHeight = speedStrain * strainHeightMultiplier;
-				//const double strainHeight = strain * strainHeightMultiplier;
+				const float offsetX = ((float)startTimeMS / (float)strainStepMS) * strainWidth; // compensate for startTimeMS
 
-				Vector2 topLeftCenter = Vector2(highestStrainIndex*strainWidth + offsetX + strainWidth/2.0f, cursorPos.y - aimStrainHeight - speedStrainHeight);
+				const float alpha = osu_hud_scrubbing_timeline_strains_alpha.getFloat();
 
-				const float margin = 5.0f;
+				const Color aimStrainColor = COLORf(alpha, osu_hud_scrubbing_timeline_strains_aim_color_r.getInt() / 255.0f, osu_hud_scrubbing_timeline_strains_aim_color_g.getInt() / 255.0f, osu_hud_scrubbing_timeline_strains_aim_color_b.getInt() / 255.0f);
+				const Color speedStrainColor = COLORf(alpha, osu_hud_scrubbing_timeline_strains_speed_color_r.getInt() / 255.0f, osu_hud_scrubbing_timeline_strains_speed_color_g.getInt() / 255.0f, osu_hud_scrubbing_timeline_strains_speed_color_b.getInt() / 255.0f);
 
-				g->setColor(0xffffffff);
-				g->setAlpha(alpha);
-				g->drawRect(topLeftCenter.x - margin*strainWidth, topLeftCenter.y - margin*strainWidth, strainWidth*2*margin, aimStrainHeight + speedStrainHeight + 2*margin*strainWidth);
+				g->setDepthBuffer(true);
+				for (int i=0; i<aimStrains.size(); i++)
+				{
+					const double aimStrain = (aimStrains[i]) / highestStrain;
+					const double speedStrain = (speedStrains[i]) / highestStrain;
+					//const double strain = (aimStrains[i] + speedStrains[i]) / highestStrain;
+
+					const double aimStrainHeight = aimStrain * strainHeightMultiplier;
+					const double speedStrainHeight = speedStrain * strainHeightMultiplier;
+					//const double strainHeight = strain * strainHeightMultiplier;
+
+					g->setColor(aimStrainColor);
+					g->fillRect(i*strainWidth + offsetX, cursorPos.y - aimStrainHeight, std::max(1.0f, std::round(strainWidth + 0.5f)), aimStrainHeight);
+
+					g->setColor(speedStrainColor);
+					g->fillRect(i*strainWidth + offsetX, cursorPos.y - aimStrainHeight - speedStrainHeight, std::max(1.0f, std::round(strainWidth + 0.5f)), speedStrainHeight + 1);
+				}
+				g->setDepthBuffer(false);
+
+				// highlight highest total strain value (+- section block)
+				if (highestStrainIndex > -1)
+				{
+					const double aimStrain = (aimStrains[highestStrainIndex]) / highestStrain;
+					const double speedStrain = (speedStrains[highestStrainIndex]) / highestStrain;
+					//const double strain = (aimStrains[i] + speedStrains[i]) / highestStrain;
+
+					const double aimStrainHeight = aimStrain * strainHeightMultiplier;
+					const double speedStrainHeight = speedStrain * strainHeightMultiplier;
+					//const double strainHeight = strain * strainHeightMultiplier;
+
+					Vector2 topLeftCenter = Vector2(highestStrainIndex*strainWidth + offsetX + strainWidth/2.0f, cursorPos.y - aimStrainHeight - speedStrainHeight);
+
+					const float margin = 5.0f * dpiScale;
+
+					g->setColor(0xffffffff);
+					g->setAlpha(alpha);
+					g->drawRect(topLeftCenter.x - margin*strainWidth, topLeftCenter.y - margin*strainWidth, strainWidth*2*margin, aimStrainHeight + speedStrainHeight + 2*margin*strainWidth);
+				}
 			}
 		}
 	}
-	*/
 
 	// breaks
 	g->setColor(greyTransparent);
@@ -3096,13 +3189,14 @@ void OsuHUD::addCursorTrailPosition(std::vector<CURSORTRAIL> &trail, Vector2 pos
 
 void OsuHUD::selectVolumePrev()
 {
-	for (int i=0; i<m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer()->size(); i++)
+	const std::vector<CBaseUIElement*> &elements = m_volumeSliderOverlayContainer->getElements();
+	for (int i=0; i<elements.size(); i++)
 	{
-		if (((OsuUIVolumeSlider*)(*m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer())[i])->isSelected())
+		if (((OsuUIVolumeSlider*)elements[i])->isSelected())
 		{
-			const int prevIndex = (i == 0 ? m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer()->size()-1 : i-1);
-			((OsuUIVolumeSlider*)(*m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer())[i])->setSelected(false);
-			((OsuUIVolumeSlider*)(*m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer())[prevIndex])->setSelected(true);
+			const int prevIndex = (i == 0 ? elements.size()-1 : i-1);
+			((OsuUIVolumeSlider*)elements[i])->setSelected(false);
+			((OsuUIVolumeSlider*)elements[prevIndex])->setSelected(true);
 			break;
 		}
 	}
@@ -3111,13 +3205,14 @@ void OsuHUD::selectVolumePrev()
 
 void OsuHUD::selectVolumeNext()
 {
-	for (int i=0; i<m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer()->size(); i++)
+	const std::vector<CBaseUIElement*> &elements = m_volumeSliderOverlayContainer->getElements();
+	for (int i=0; i<elements.size(); i++)
 	{
-		if (((OsuUIVolumeSlider*)(*m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer())[i])->isSelected())
+		if (((OsuUIVolumeSlider*)elements[i])->isSelected())
 		{
-			const int nextIndex = (i == m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer()->size()-1 ? 0 : i+1);
-			((OsuUIVolumeSlider*)(*m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer())[i])->setSelected(false);
-			((OsuUIVolumeSlider*)(*m_volumeSliderOverlayContainer->getAllBaseUIElementsPointer())[nextIndex])->setSelected(true);
+			const int nextIndex = (i == elements.size()-1 ? 0 : i+1);
+			((OsuUIVolumeSlider*)elements[i])->setSelected(false);
+			((OsuUIVolumeSlider*)elements[nextIndex])->setSelected(true);
 			break;
 		}
 	}

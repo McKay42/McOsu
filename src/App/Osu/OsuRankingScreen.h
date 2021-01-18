@@ -18,7 +18,7 @@ class CBaseUIImage;
 class CBaseUILabel;
 
 class OsuBeatmap;
-class OsuBeatmapDifficulty;
+class OsuDatabaseBeatmap;
 class OsuSkinImage;
 
 class OsuUIRankingScreenInfoLabel;
@@ -43,7 +43,7 @@ public:
 
 	void setScore(OsuScore *score);
 	void setScore(OsuDatabase::Score score, UString dateTime);
-	void setBeatmapInfo(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff);
+	void setBeatmapInfo(OsuBeatmap *beatmap, OsuDatabaseBeatmap *diff2);
 
 private:
 	virtual void updateLayout();
@@ -115,6 +115,7 @@ private:
 	// custom
 	Vector2 m_vPPCursorMagnetAnimation;
 	bool m_bIsLegacyScore;
+	bool m_bIsImportedLegacyScore;
 	bool m_bIsUnranked;
 };
 

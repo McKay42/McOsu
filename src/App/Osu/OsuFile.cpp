@@ -9,6 +9,8 @@
 #include "Engine.h"
 #include "File.h"
 
+constexpr const uint64_t OsuFile::MAX_STRING_LENGTH;
+
 OsuFile::OsuFile(UString filepath, bool write)
 {
 	m_bWrite = write;
@@ -155,65 +157,72 @@ void OsuFile::writeStdString(std::string str)
 
 unsigned char OsuFile::readByte()
 {
-	if (!m_bReady || m_readPointer > (m_buffer + m_iFileSize - 1)) return 0;
+	if (!m_bReady || m_readPointer >= (m_buffer + m_iFileSize)) return 0;
 
 	const unsigned char value = (unsigned char)*m_readPointer;
 	m_readPointer += 1;
+
 	return value;
 }
 
 int16_t OsuFile::readShort()
 {
-	if (!m_bReady || m_readPointer > (m_buffer + m_iFileSize - 2)) return 0;
+	if (!m_bReady || (m_readPointer + 2) >= (m_buffer + m_iFileSize)) return 0;
 
 	const int16_t value = (int16_t)*(int16_t*)m_readPointer;
 	m_readPointer += 2;
+
 	return value;
 }
 
 int32_t OsuFile::readInt()
 {
-	if (!m_bReady || m_readPointer > (m_buffer + m_iFileSize - 4)) return 0;
+	if (!m_bReady || (m_readPointer + 4) >= (m_buffer + m_iFileSize)) return 0;
 
 	const int32_t value = (int32_t)*(int32_t*)m_readPointer;
 	m_readPointer += 4;
+
 	return value;
 }
 
 int64_t OsuFile::readLongLong()
 {
-	if (!m_bReady || m_readPointer > (m_buffer + m_iFileSize - 8)) return 0;
+	if (!m_bReady || (m_readPointer + 8) >= (m_buffer + m_iFileSize)) return 0;
 
 	const int64_t value = (int64_t)*(int64_t*)m_readPointer;
 	m_readPointer += 8;
+
 	return value;
 }
 
 uint64_t OsuFile::readULEB128()
 {
-	if (!m_bReady || m_readPointer > (m_buffer + m_iFileSize - 1)) return 0;
+	if (!m_bReady || m_readPointer >= (m_buffer + m_iFileSize)) return 0;
 
 	unsigned int numBytes = 0;
-	uint64_t value = decodeULEB128((const unsigned char*)m_readPointer, &numBytes);
+	const uint64_t value = decodeULEB128((const unsigned char*)m_readPointer, &numBytes);
 	m_readPointer += numBytes;
+
 	return value;
 }
 
 float OsuFile::readFloat()
 {
-	if (!m_bReady || m_readPointer > (m_buffer + m_iFileSize - 4)) return 0;
+	if (!m_bReady || (m_readPointer + 4) >= (m_buffer + m_iFileSize)) return 0;
 
 	const float value = (float)*(float*)m_readPointer;
 	m_readPointer += 4;
+
 	return value;
 }
 
 double OsuFile::readDouble()
 {
-	if (!m_bReady || m_readPointer > (m_buffer + m_iFileSize - 8)) return 0;
+	if (!m_bReady || (m_readPointer + 8) >= (m_buffer + m_iFileSize)) return 0;
 
 	const double value = (double)*(double*)m_readPointer;
 	m_readPointer += 8;
+
 	return value;
 }
 
@@ -229,48 +238,59 @@ UString OsuFile::readString()
 	const unsigned char flag = readByte();
 	if (flag > 0)
 	{
-		uint64_t strLength = readULEB128();
+		const uint64_t strLength = readULEB128();
 
 		if (strLength > 0)
 		{
 			std::vector<unsigned char> strData;
+			strData.reserve(std::min(strLength + 1, MAX_STRING_LENGTH));
 			for (uint64_t i=0; i<strLength; i++)
 			{
-				strData.push_back(readByte());
+				const unsigned char character = readByte();
+				if (i < std::min(strLength, MAX_STRING_LENGTH - 1))
+					strData.push_back(character);
 			}
 			strData.push_back('\0');
 
-			const char *rawStrData = (const char *)&strData[0];
-			value = UString(rawStrData);
+			if (strData.size() > 0)
+			{
+				const char *rawStrData = (const char*)&strData[0];
+				value = UString(rawStrData);
+			}
 		}
 	}
+
 	return value;
 }
 
 std::string OsuFile::readStdString()
 {
 	std::string value;
-	value.reserve(32);
 
 	const unsigned char flag = readByte();
 	if (flag > 0)
 	{
-		uint64_t strLength = readULEB128();
+		const uint64_t strLength = readULEB128();
 
 		if (strLength > 0)
 		{
+			value.reserve(std::min(strLength, MAX_STRING_LENGTH));
+
 			for (uint64_t i=0; i<strLength; i++)
 			{
-				value += readByte();
+				const unsigned char character = readByte();
+				if (i < std::min(strLength, MAX_STRING_LENGTH))
+					value += character;
 			}
 		}
 	}
+
 	return value;
 }
 
 void OsuFile::readDateTime()
 {
-	if (!m_bReady || m_readPointer > (m_buffer + m_iFileSize - 8)) return;
+	if (!m_bReady || (m_readPointer + 8) >= (m_buffer + m_iFileSize)) return;
 
 	m_readPointer += 8;
 }
@@ -292,7 +312,7 @@ void OsuFile::readByteArray()
 	}
 }
 
-uint64_t OsuFile::decodeULEB128(const uint8_t *p, unsigned *n)
+uint64_t OsuFile::decodeULEB128(const uint8_t *p, unsigned int *n)
 {
 	const uint8_t *backup = p;
 	uint64_t value = 0;
@@ -300,7 +320,7 @@ uint64_t OsuFile::decodeULEB128(const uint8_t *p, unsigned *n)
 
 	do
 	{
-		if (p > (const unsigned char*)(m_buffer + m_iFileSize - 1))
+		if (p >= (const uint8_t*)(m_buffer + m_iFileSize))
 			break;
 
 		value += uint64_t(*p & 0x7f) << shift;
@@ -308,8 +328,8 @@ uint64_t OsuFile::decodeULEB128(const uint8_t *p, unsigned *n)
 	}
 	while (*p++ >= 128);
 
-	if (n)
-		*n = (unsigned)(p - backup);
+	if (n != NULL)
+		*n = (unsigned int)(p - backup);
 
 	return value;
 }

@@ -15,6 +15,10 @@ class OsuKeyBindings
 public:
 	static ConVar LEFT_CLICK;
 	static ConVar RIGHT_CLICK;
+	static ConVar LEFT_CLICK_2;
+	static ConVar RIGHT_CLICK_2;
+
+	static ConVar FPOSU_ZOOM;
 
 	static ConVar INCREASE_SPEED;
 	static ConVar DECREASE_SPEED;

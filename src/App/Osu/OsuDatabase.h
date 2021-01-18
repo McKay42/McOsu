@@ -15,8 +15,7 @@ class ConVar;
 
 class Osu;
 class OsuFile;
-class OsuBeatmap;
-class OsuBeatmapDifficulty;
+class OsuDatabaseBeatmap;
 
 class OsuDatabaseLoader;
 
@@ -26,12 +25,13 @@ public:
 	struct Collection
 	{
 		UString name;
-		std::vector<std::pair<OsuBeatmap*, std::vector<OsuBeatmapDifficulty*>>> beatmaps;
+		std::vector<std::pair<OsuDatabaseBeatmap*, std::vector<OsuDatabaseBeatmap*>>> beatmaps;
 	};
 
 	struct Score
 	{
 		bool isLegacyScore;
+		bool isImportedLegacyScore; // used for identifying imported osu! scores (which were previously legacy scores, so they don't have any numSliderBreaks/unstableRate/hitErrorAvgMin/hitErrorAvgMax)
 		int version;
 		uint64_t unixTimestamp;
 
@@ -66,9 +66,37 @@ public:
 		int numCircles;
 		UString experimentalModsConVars;
 
-		// temp
+		// runtime
 		unsigned long long sortHack;
 		std::string md5hash;
+
+		bool isLegacyScoreEqualToImportedLegacyScore(const OsuDatabase::Score &importedLegacyScore) const
+		{
+			if (!isLegacyScore) return false;
+			if (!importedLegacyScore.isImportedLegacyScore) return false;
+
+			const bool isScoreValueEqual = (score == importedLegacyScore.score);
+			const bool isTimestampEqual = (unixTimestamp == importedLegacyScore.unixTimestamp);
+			const bool isComboMaxEqual = (comboMax == importedLegacyScore.comboMax);
+			const bool isModsLegacyEqual = (modsLegacy == importedLegacyScore.modsLegacy);
+			const bool isNum300sEqual = (num300s == importedLegacyScore.num300s);
+			const bool isNum100sEqual = (num100s == importedLegacyScore.num100s);
+			const bool isNum50sEqual = (num50s == importedLegacyScore.num50s);
+			const bool isNumGekisEqual = (numGekis == importedLegacyScore.numGekis);
+			const bool isNumKatusEqual = (numKatus == importedLegacyScore.numKatus);
+			const bool isNumMissesEqual = (numMisses == importedLegacyScore.numMisses);
+
+			return (isScoreValueEqual
+				 && isTimestampEqual
+				 && isComboMaxEqual
+				 && isModsLegacyEqual
+				 && isNum300sEqual
+				 && isNum100sEqual
+				 && isNum50sEqual
+				 && isNumGekisEqual
+				 && isNumKatusEqual
+				 && isNumMissesEqual);
+		}
 	};
 
 	struct PlayerStats
@@ -112,15 +140,19 @@ public:
 	void cancel();
 	void save();
 
+	OsuDatabaseBeatmap *addBeatmap(UString beatmapFolderPath);
+
 	int addScore(std::string beatmapMD5Hash, OsuDatabase::Score score);
 	void deleteScore(std::string beatmapMD5Hash, uint64_t scoreUnixTimestamp);
 	void sortScores(std::string beatmapMD5Hash);
+	void forceScoreUpdateOnNextCalculatePlayerStats() {m_bDidScoresChangeForStats = true;}
+	void forceScoresSaveOnNextShutdown() {m_bDidScoresChangeForSave = true;}
 
 	std::vector<UString> getPlayerNamesWithPPScores();
 	PlayerPPScores getPlayerPPScores(UString playerName);
 	PlayerStats calculatePlayerStats(UString playerName);
-	void recalculatePPForAllScores();
 	static float getWeightForIndex(int i);
+	static float getBonusPPForNumScores(int numScores);
 	unsigned long long getRequiredScoreForLevel(int level);
 	int getLevelForScore(unsigned long long score, int maxLevel = 120);
 
@@ -128,10 +160,9 @@ public:
 	inline bool isFinished() const {return (getProgress() >= 1.0f);}
 	inline bool foundChanges() const {return m_bFoundChanges;}
 
-	inline int getNumBeatmaps() const {return m_beatmaps.size();} // valid beatmaps
-	inline const std::vector<OsuBeatmap*> getBeatmaps() const {return m_beatmaps;}
-	OsuBeatmap *getBeatmap(std::string md5hash);
-	OsuBeatmapDifficulty *getBeatmapDifficulty(std::string md5hash);
+	inline const std::vector<OsuDatabaseBeatmap*> getDatabaseBeatmaps() const {return m_databaseBeatmaps;}
+	OsuDatabaseBeatmap *getBeatmap(const std::string &md5hash);
+	OsuDatabaseBeatmap *getBeatmapDifficulty(const std::string &md5hash);
 	inline int getNumCollections() const {return m_collections.size();}
 	inline const std::vector<Collection> getCollections() const {return m_collections;}
 
@@ -153,9 +184,12 @@ private:
 	void loadScores();
 	void saveScores();
 
-	OsuBeatmap *loadRawBeatmap(UString beatmapPath);	// only used for raw loading without db
+	void loadCollections(const std::unordered_map<std::string, OsuDatabaseBeatmap*> &hashToDiff2, const std::unordered_map<std::string, OsuDatabaseBeatmap*> &hashToBeatmap);
+	void saveCollections();
 
-	OsuBeatmap *createBeatmapForActiveGamemode();		// TEMP: workaround
+	OsuDatabaseBeatmap *loadRawBeatmap(UString beatmapPath); // only used for raw loading without db
+
+	void onScoresRename(UString args);
 
 	Osu *m_osu;
 	Timer *m_importTimer;
@@ -166,7 +200,7 @@ private:
 	int m_iNumBeatmapsToLoad;
 	std::atomic<float> m_fLoadingProgress;
 	std::atomic<bool> m_bInterruptLoad;
-	std::vector<OsuBeatmap*> m_beatmaps;
+	std::vector<OsuDatabaseBeatmap*> m_databaseBeatmaps;
 
 	// osu!.db
 	int m_iVersion;

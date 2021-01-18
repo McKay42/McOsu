@@ -15,6 +15,8 @@
 
 #include "Osu.h"
 
+
+
 class OsuUIContextMenuButton : public CBaseUIButton
 {
 public:
@@ -28,6 +30,8 @@ public:
 private:
 	int m_iID;
 };
+
+
 
 OsuUIContextMenu::OsuUIContextMenu(Osu *osu, float xPos, float yPos, float xSize, float ySize, UString name, CBaseUIScrollView *parent) : CBaseUIElement(xPos, yPos, xSize, ySize, name)
 {
@@ -43,6 +47,8 @@ OsuUIContextMenu::OsuUIContextMenu(Osu *osu, float xPos, float yPos, float xSize
 
 	m_fAnimation = 0.0f;
 	m_bInvertAnimation = false;
+
+	m_bBigStyle = false;
 }
 
 OsuUIContextMenu::~OsuUIContextMenu()
@@ -84,26 +90,35 @@ void OsuUIContextMenu::update()
 	m_container->update();
 }
 
-void OsuUIContextMenu::begin(int minWidth)
+void OsuUIContextMenu::begin(int minWidth, bool bigStyle)
 {
-	m_clickCallback = NULL;
-	m_iYCounter = 0;
 	m_iWidthCounter = minWidth;
+	m_bBigStyle = bigStyle;
+
+	m_iYCounter = 0;
+	m_clickCallback = NULL;
+
 	setSizeX(m_iWidthCounter);
+
 	m_container->clear();
 }
 
 CBaseUIButton *OsuUIContextMenu::addButton(UString text, int id)
 {
-	const int buttonHeight = 30 * Osu::getUIScale();
+	const int buttonHeight = 30 * Osu::getUIScale() * (m_bBigStyle ? 1.27f : 1.0f);
 	const int margin = 9 * Osu::getUIScale();
 
 	OsuUIContextMenuButton *button = new OsuUIContextMenuButton(margin, m_iYCounter + margin, 0, buttonHeight, text, text, id);
-	button->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUIContextMenu::onClick) );
-	button->setWidthToContent(3 * Osu::getUIScale());
-	button->setTextLeft(true);
-	button->setDrawFrame(false);
-	button->setDrawBackground(false);
+	{
+		if (m_bBigStyle)
+			button->setFont(m_osu->getSubTitleFont());
+
+		button->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUIContextMenu::onClick) );
+		button->setWidthToContent(3 * Osu::getUIScale());
+		button->setTextLeft(true);
+		button->setDrawFrame(false);
+		button->setDrawBackground(false);
+	}
 	m_container->addBaseUIElement(button);
 
 	if (button->getSize().x+2*margin > m_iWidthCounter)
@@ -124,10 +139,10 @@ void OsuUIContextMenu::end(bool invertAnimation)
 
 	const int margin = 9 * Osu::getUIScale();
 
-	std::vector<CBaseUIElement*> *elements = m_container->getAllBaseUIElementsPointer();
-	for (int i=0; i<elements->size(); i++)
+	const std::vector<CBaseUIElement*> &elements = m_container->getElements();
+	for (size_t i=0; i<elements.size(); i++)
 	{
-		((*elements)[i])->setSizeX(m_iWidthCounter - 2*margin);
+		(elements[i])->setSizeX(m_iWidthCounter - 2*margin);
 	}
 
 	setVisible2(true);
@@ -175,3 +190,22 @@ void OsuUIContextMenu::onClick(CBaseUIButton *button)
 		m_clickCallback(button->getName(), ((OsuUIContextMenuButton*)button)->getID());
 }
 
+void OsuUIContextMenu::clampToBottomScreenEdge(OsuUIContextMenu *menu)
+{
+	if (menu->getRelPos().y + menu->getSize().y > menu->m_osu->getScreenHeight())
+	{
+		int newRelPosY = menu->m_osu->getScreenHeight() - menu->getSize().y - 1;
+		menu->setRelPosY(newRelPosY);
+		menu->setPosY(newRelPosY);
+	}
+}
+
+void OsuUIContextMenu::clampToRightScreenEdge(OsuUIContextMenu *menu)
+{
+	if (menu->getRelPos().x + menu->getSize().x > menu->m_osu->getScreenWidth())
+	{
+		const int newRelPosX = menu->m_osu->getScreenWidth() - menu->getSize().x - 1;
+		menu->setRelPosX(newRelPosX);
+		menu->setPosX(newRelPosX);
+	}
+}

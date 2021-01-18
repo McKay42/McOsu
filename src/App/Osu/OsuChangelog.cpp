@@ -34,80 +34,127 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 
 	std::vector<CHANGELOG> changelogs;
 
+	CHANGELOG alpha316;
+	alpha316.title = UString::format("32 (Build Date: %s, %s)", __DATE__, __TIME__);
+	alpha316.changes.push_back("- Fixed collections not showing all contained beatmaps/diffs");
+	alpha316.changes.push_back("- Fixed invalid default selection when opening beatmap sets with active search");
+	alpha316.changes.push_back("");
+	alpha316.changes.push_back("- Fixed partial corrupt PNG skin images not loading due to newer/stricter lodepng library version (disabled CRC check)");
+	alpha316.changes.push_back("- Improved background star calc speed");
+	alpha316.changes.push_back("");
+	alpha316.changes.push_back("- Initial rewrite of songbrowser and entire internal database class architecture (not fully finished yet)");
+	alpha316.changes.push_back("- Songbrowser can now handle individual diff buttons and/or split from their parent beatmap/set button");
+	alpha316.changes.push_back("- Collections now correctly only show contained diffs (previously always showed entire set)");
+	alpha316.changes.push_back("- Similarly, searching will now match individual diffs, instead of always the entire set");
+	alpha316.changes.push_back("- However, sorting still only sorts by beatmap set heuristics, this will be fixed over time with one of the next updates");
+	alpha316.changes.push_back("- All pp scores can now be recalculated at will, so click on \"Recalculate pp\" as soon as possible (Songbrowser > User > Top Ranks > Menu)");
+	alpha316.changes.push_back("- Added new grouping options to songbrowser: \"By Artist\", \"By Creator\", \"By Difficulty\", \"By Length\", \"By Title\"");
+	alpha316.changes.push_back("- FPoSu: Added zooming/scoping (Options > Input > Keyboard > FPoSu > Zoom) (Options > FPoSu > \"FOV (Zoom)\")");
+	alpha316.changes.push_back("- Added dynamic star recalculation for all mods in songbrowser (stars will now recalculate to reflect active mods, including overrides and experimentals)");
+	alpha316.changes.push_back("- Added ability to recalculate all McOsu pp scores (Songbrowser > User > Top Ranks > Menu > Recalculate)");
+	alpha316.changes.push_back("- Added ability to convert/import osu! scores into McOsu pp scores (Songbrowser > User > Top Ranks > Menu > Import)");
+	alpha316.changes.push_back("- Added ability to delete all scores of active user (Songbrowser > User > Top Ranks > Menu > Delete)");
+	alpha316.changes.push_back("- Added menu button to \"Top Ranks\" screen (Recalculate pp, Import osu! Scores, Delete All Scores, etc.)");
+	alpha316.changes.push_back("- Added \"Use Mods\" to context menu for score buttons (sets all mods, including overrides and experimentals, to whatever the score has)");
+	alpha316.changes.push_back("- Added extra set of keybinds for key1/key2 (Options > Input > Keyboard)");
+	alpha316.changes.push_back("- Added bonus pp calculation to user stats (previously total user pp were without bonus. Bonus is purely based on number of scores.)");
+	alpha316.changes.push_back("- Added \"Max Possible pp\" to top left songbrowser info label (shows max possible pp with all active mods applied, including overrides and experimentals)");
+	alpha316.changes.push_back("- Added option \"Draw Stats: Max Possible Combo\" (Options > Gameplay > HUD)");
+	alpha316.changes.push_back("- Added option \"Draw Stats: pp (SS)\" (Options > Gameplay > HUD)");
+	alpha316.changes.push_back("- Added option \"Draw Stats: Stars* (Total)\" (Options > Gameplay > HUD)");
+	alpha316.changes.push_back("- Added option \"Draw Stats: Stars*** (Until Now)\" (aka live stars) (Options > Gameplay > HUD)");
+	alpha316.changes.push_back("- Added support for OGG files in skin sound samples");
+	alpha316.changes.push_back("- Added Tolerance2B handling to osu!stable notelock algorithm (unlock if within 3 ms overlap)");
+	alpha316.changes.push_back("- Added score multiplier info label to mod selection screen");
+	alpha316.changes.push_back("- Added ConVars (1): osu_spinner_use_ar_fadein, osu_notelock_stable_tolerance2b");
+	alpha316.changes.push_back("- Added ConVars (2): fposu_zoom_fov, fposu_zoom_sensitivity_ratio, fposu_zoom_anim_duration");
+	alpha316.changes.push_back("- Added ConVars (3): osu_scores_rename, osu_scores_bonus_pp, osu_collections_legacy_enabled");
+	alpha316.changes.push_back("- Added ConVars (4): osu_songbrowser_dynamic_star_recalc, osu_draw_songbrowser_strain_graph, osu_draw_scrubbing_timeline_strain_graph");
+	alpha316.changes.push_back("- Updated all right-click context menus to be bigger and easier to hit (score buttons, song buttons)");
+	alpha316.changes.push_back("- Updated SearchUIOverlay to simply move left on text overflow");
+	alpha316.changes.push_back("- Updated \"DPI\" and \"cm per 360\" textboxes to support decimal values with comma (e.g. 4,2 vs 4.2)");
+	alpha316.changes.push_back("- Updated mouse_raw_input_absolute_to_window to be ignored if raw input is disabled");
+	alpha316.changes.push_back("- Updated pp algorithm (12) (Reverted Xexxar's accidental AR8 buff), see https://github.com/ppy/osu-performance/pull/133");
+	alpha316.changes.push_back("- Updated pp algorithm (11) (Xexxar's miss curve changes), see https://github.com/ppy/osu-performance/pull/129/");
+	alpha316.changes.push_back("- Updated pp algorithm (10) (Xexxar's low acc speed nerf), see https://github.com/ppy/osu-performance/pull/128/");
+	alpha316.changes.push_back("- Updated pp algorithm (9) (StanR's NF multiplier based on amount of misses), see https://github.com/ppy/osu-performance/pull/127/");
+	alpha316.changes.push_back("- Updated pp algorithm (8) (StanR's SO multiplier based on amount of spinners in map), see https://github.com/ppy/osu-performance/pull/110/");
+	alpha316.changes.push_back("- Updated pp algorithm (7) (Xexxar's AR11 nerf and AR8 buff), see https://github.com/ppy/osu-performance/pull/125/");
+	alpha316.changes.push_back("- Linux: Updated BASS + BASSFX libraries");
+	alpha316.changes.push_back("- macOS: Updated BASS + BASSFX libraries");
+	alpha316.changes.push_back("- Fixed ScoreV2 score multipliers for HR and DT and NF (1.06x -> 1.10x, 1.12x -> 1.20x, 0.5x -> 1.0x)");
+	alpha316.changes.push_back("- Fixed UI toggle being hardcoded to SHIFT+TAB and not respecting \"Toggle Scoreboard\" keybind (in combination with SHIFT)");
+	alpha316.changes.push_back("- Fixed star cache not updating instantly when changing Speed Override with keyboard keys while playing (previously only recalculated upon closing mod selection screen)");
+	alpha316.changes.push_back("- Fixed drain not being recalculated instantly when changing HP Override while playing (previously only recalculated upon closing mod selection screen)");
+	alpha316.changes.push_back("- Fixed clicking mod selection screen buttons also triggering \"click on the orange cursor to continue play\" (unwanted click-through)");
+	alpha316.changes.push_back("- Fixed animated followpoint.png scaling not respecting inconsistent @2x frames");
+	alpha316.changes.push_back("- Fixed drawHitCircleNumber for variable number width skins (@yclee126)");
+	alpha316.changes.push_back("- Fixed spinners not using hardcoded 400 ms fadein (previously used same AR-dependent fadein as circles, because that makes sense compared to this insanity)");
+	alpha316.changes.push_back("- Fixed mod selection screen visually rounding non-1.0x difficulty multipliers to one decimal digit (e.g. HR CS showed 4.55 in songbrowser but 4.5 in override)");
+	alpha316.changes.push_back("- Fixed songbrowser visually always showing raw beatmap HP value (without applying mods or overrides)");
+	alpha316.changes.push_back("- Fixed skipping while loading potentially breaking hitobject state");
+	alpha316.changes.push_back("- Fixed very rare beatmaps ending prematurely with music (hitobjects at exact end of mp3) causing lost scores due to missing judgements");
+	changelogs.push_back(alpha316);
+
 	CHANGELOG alpha315;
-	alpha315.title = UString::format("31.12 (Build Date: %s, %s)", __DATE__, __TIME__);
-	alpha315.changes.push_back("- Updated mod selection screen to display two digits after comma for non-1.0x speed multipliers");
-	alpha315.changes.push_back("- Updated CPM/SPM/OPM metric calculations to multiply with speed multiplier (search, tooltip)");
-	alpha315.changes.push_back("- Fixed \"Inactive\" volume not applying when minimizing in windowed mode");
-	alpha315.changes.push_back("- Fixed disabled \"Show pp instead of score in scorebrowser\" applying to Top Ranks screen");
-	alpha315.changes.push_back("- Fixed aspire regression breaking timingpoints on old osu file format v5 beatmaps");
-	alpha315.changes.push_back("");
-	alpha315.changes.push_back("- Added option \"Inactive\" (Options > Audio > Volume)");
-	alpha315.changes.push_back("- Added hitresult fadein + scale wobble animations (previously became visible instantly as is)");
-	alpha315.changes.push_back("- Added ConVars (1): osu_hitresult_fadein_duration, osu_hitresult_fadeout_start_time, osu_hitresult_fadeout_duration");
-	alpha315.changes.push_back("- Added ConVars (2): osu_hitresult_miss_fadein_scale, osu_hitresult_animated, osu_volume_master_inactive");
-	alpha315.changes.push_back("- Improved hitresult animation timing and movement accuracy to exactly match osu!stable (fadein, fadeout, scaleanim)");
-	alpha315.changes.push_back("- Fixed hitresult animations not respecting speed multiplier (previously always faded at 1x time)");
-	alpha315.changes.push_back("- Fixed aspire freeze on mangled 3-point sliders (e.g. Ping)");
-	alpha315.changes.push_back("- Fixed aspire timingpoint handling (e.g. XNOR) (2)");
-	alpha315.changes.push_back("");
-	alpha315.changes.push_back("- Added 2 new notelock algorithms: McOsu, osu!lazer 2020 (Karoo13's algorithm)");
+	alpha315.title = UString::format("31.12 (14.02.2020 - 15.07.2020)", __DATE__, __TIME__);
+	alpha315.changes.push_back("- Added 3 new notelock algorithms: McOsu, osu!lazer 2018, osu!lazer 2020 (Karoo13's algorithm)");
 	alpha315.changes.push_back("- Added option \"Select Notelock\" (Options > Gameplay > Mechanics)");
+	alpha315.changes.push_back("- Added option \"Kill Player upon Failing\" (Options > Gameplay > Mechanics)");
+	alpha315.changes.push_back("- Added option \"Draw Stats: HP\" (Options > Gameplay > HUD)");
 	alpha315.changes.push_back("- Added support for ranking-perfect (skin element for full combo on ranking screen)");
 	alpha315.changes.push_back("- Added \"FC\" text after 123x to indicate a perfect full combo on highscore and top ranks list");
-	alpha315.changes.push_back("- Added ConVar: osu_slider_end_miss_breaks_combo");
-	alpha315.changes.push_back("- Updated osu_drain_lazer_break_before and osu_drain_lazer_break_after to match recent updates (Lazer 2020.602.0)");
-	alpha315.changes.push_back("- Updated hp drain type \"osu!lazer 2020\" for slider tails to match recent updates (Lazer 2020.603.0)");
-	alpha315.changes.push_back("- Updated scrubbing to cancel the failing animation");
-	alpha315.changes.push_back("- Fixed \"Quick Load\" keybind not working while in failing animation");
-	alpha315.changes.push_back("- Fixed very old beatmaps not using the old stacking algorithm (version < 6)");
-	alpha315.changes.push_back("");
-	alpha315.changes.push_back("- Windows: Workaround for Windows 10 bug in \"OS TabletPC Support\" in combination with raw mouse input:");
-	alpha315.changes.push_back("- Windows: Everyone who uses Windows 10 and plays with a mouse should DISABLE \"OS TabletPC Support\"!");
-	alpha315.changes.push_back("- VR: Updated option \"Draw Desktop Game (2D)\" to ignore screen clicks during gameplay if disabled");
-	alpha315.changes.push_back("- VR: Updated option \"Draw Desktop Game (2D)\" to not draw spectator/desktop cursors if disabled");
+	alpha315.changes.push_back("- Added new search keywords: opm, cpm, spm, objects, circles, sliders (objects/circles/sliders per minute, total count)");
+	alpha315.changes.push_back("- Added support for fail-background (skin element)");
+	alpha315.changes.push_back("- Added option \"Inactive\" (Options > Audio > Volume)");
+	alpha315.changes.push_back("- Added hitresult fadein + scale wobble animations (previously became visible instantly as is)");
 	alpha315.changes.push_back("- VR: Added option \"Draw Laser in Game\" (Options > Virtual Reality > Miscellaneous)");
 	alpha315.changes.push_back("- VR: Added option \"Draw Laser in Menu\" (Options > Virtual Reality > Miscellaneous)");
 	alpha315.changes.push_back("- VR: Added option \"Head Model Brightness\" (Options > Virtual Reality > Play Area / Playfield)");
-	alpha315.changes.push_back("- VR: Fixed slider bodies not being drawn on top of virtual screen (reversed depth buffer)");
+	alpha315.changes.push_back("- Windows: Added option \"Audio compatibility mode\" (Options > Audio > Devices)");
+	alpha315.changes.push_back("- Added ConVars (1): osu_slider_end_miss_breaks_combo");
+	alpha315.changes.push_back("- Added ConVars (2): osu_hitresult_fadein_duration, osu_hitresult_fadeout_start_time, osu_hitresult_fadeout_duration");
+	alpha315.changes.push_back("- Added ConVars (3): osu_hitresult_miss_fadein_scale, osu_hitresult_animated, osu_volume_master_inactive");
+	alpha315.changes.push_back("- Added ConVars (4): osu_drain_kill_notification_duration, snd_play_interp_duration, snd_play_interp_ratio");
+	alpha315.changes.push_back("- Linux: Added _NET_WM_BYPASS_COMPOSITOR extended window manager hint (avoids vsync)");
+	alpha315.changes.push_back("- Improved hitresult animation timing and movement accuracy to exactly match osu!stable (fadein, fadeout, scaleanim)");
+	alpha315.changes.push_back("- Increased maximum file size limit from 200 MB to 512 MB (giant osu!.db support)");
+	alpha315.changes.push_back("- Improved osu!.db database loading speed");
+	alpha315.changes.push_back("- Improved beatmap grouping for beatmaps with invalid SetID (find ID in folder name before falling back to artist/title)");
 	alpha315.changes.push_back("- Improved scroll wheel scrolling behavior");
 	alpha315.changes.push_back("- General engine improvements");
-	alpha315.changes.push_back("");
-	alpha315.changes.push_back("- Increased maximum file size limit from 200 MB to 512 MB (giant osu!.db support)");
-	alpha315.changes.push_back("- Linux: Added _NET_WM_BYPASS_COMPOSITOR extended window manager hint (avoids vsync)");
-	alpha315.changes.push_back("- Fixed quick retry sometimes causing weird small speedup/slowdown at start (3)");
-	alpha315.changes.push_back("");
-	alpha315.changes.push_back("- Fixed quick retry sometimes causing weird small speedup/slowdown at start (2)");
-	alpha315.changes.push_back("");
-	alpha315.changes.push_back("- Added new search keywords: opm, cpm, spm, objects, circles, sliders (objects/circles/sliders per minute, total count)");
-	alpha315.changes.push_back("- Only show ranking tooltip on left half of screen");
-	alpha315.changes.push_back("- Fixed section-pass/fail appearing in too small breaks");
-	alpha315.changes.push_back("- Fixed F1 as K1/K2 interfering with mod select during gameplay");
-	alpha315.changes.push_back("- Fixed approximate beatmap length (used for search) not getting populated during star calculation if without osu!.db");
-	alpha315.changes.push_back("");
-	alpha315.changes.push_back("- Improved osu!.db database loading speed (2)");
-	alpha315.changes.push_back("- Improved beatmap grouping for beatmaps with invalid SetID (find ID in folder name before falling back to artist/title)");
+	alpha315.changes.push_back("- Updated mod selection screen to display two digits after comma for non-1.0x speed multipliers");
+	alpha315.changes.push_back("- Updated CPM/SPM/OPM metric calculations to multiply with speed multiplier (search, tooltip)");
+	alpha315.changes.push_back("- Updated osu_drain_lazer_break_before and osu_drain_lazer_break_after to match recent updates (Lazer 2020.602.0)");
+	alpha315.changes.push_back("- Updated hp drain type \"osu!lazer 2020\" for slider tails to match recent updates (Lazer 2020.603.0)");
+	alpha315.changes.push_back("- Updated scrubbing to cancel the failing animation");
 	alpha315.changes.push_back("- Unhappily bring followpoint behavior back in line with osu!");
 	alpha315.changes.push_back("- NOTE (1): I hate osu!'s followpoint behavior, because it allows cheesing high AR reading. You WILL develop bad habits.");
 	alpha315.changes.push_back("- NOTE (2): osu! draws followpoints with a fixed hardcoded AR of ~7.68 (800 ms).");
 	alpha315.changes.push_back("- NOTE (3): Up until now, McOsu has clamped this to the real AR. To go back, use \"osu_followpoints_clamp 1\".");
 	alpha315.changes.push_back("- NOTE (4): This is more of an experiment, and the change may be reverted, we will see.");
-	alpha315.changes.push_back("- Fixed quick retry sometimes causing weird small speedup/slowdown at start (1)");
-	alpha315.changes.push_back("");
-	alpha315.changes.push_back("- Improved osu!.db database loading speed (1)");
-	alpha315.changes.push_back("");
-	alpha315.changes.push_back("- Added option \"Kill Player upon Failing\" (Options > Gameplay > Mechanics)");
-	alpha315.changes.push_back("- Added ConVars: osu_drain_kill_notification_duration, snd_play_interp_duration, snd_play_interp_ratio");
-	alpha315.changes.push_back("- FPoSu: Fixed hiterrorbar being drawn on the playfield instead of the HUD overlay");
-	alpha315.changes.push_back("- Fixed section-pass/fail appearing in empty sections which are not break events");
-	alpha315.changes.push_back("");
-	alpha315.changes.push_back("- Added new HP drain algorithm: osu!lazer 2018");
-	alpha315.changes.push_back("- Windows: Added option \"Audio compatibility mode\" (Options > Audio > Devices)");
+	alpha315.changes.push_back("- VR: Updated option \"Draw Desktop Game (2D)\" to ignore screen clicks during gameplay if disabled");
+	alpha315.changes.push_back("- VR: Updated option \"Draw Desktop Game (2D)\" to not draw spectator/desktop cursors if disabled");
+	alpha315.changes.push_back("- Only show ranking tooltip on left half of screen");
+	alpha315.changes.push_back("- Windows: Workaround for Windows 10 bug in \"OS TabletPC Support\" in combination with raw mouse input:");
+	alpha315.changes.push_back("- Windows: Everyone who uses Windows 10 and plays with a mouse should DISABLE \"OS TabletPC Support\"!");
+	alpha315.changes.push_back("- Fixed \"Inactive\" volume not applying when minimizing in windowed mode");
+	alpha315.changes.push_back("- Fixed disabled \"Show pp instead of score in scorebrowser\" applying to Top Ranks screen");
+	alpha315.changes.push_back("- Fixed aspire regression breaking timingpoints on old osu file format v5 beatmaps");
+	alpha315.changes.push_back("- Fixed hitresult animations not respecting speed multiplier (previously always faded at 1x time)");
+	alpha315.changes.push_back("- Fixed aspire freeze on mangled 3-point sliders (e.g. Ping)");
+	alpha315.changes.push_back("- Fixed aspire timingpoint handling (e.g. XNOR) (2)");
+	alpha315.changes.push_back("- Fixed \"Quick Load\" keybind not working while in failing animation");
+	alpha315.changes.push_back("- Fixed very old beatmaps not using the old stacking algorithm (version < 6)");
+	alpha315.changes.push_back("- VR: Fixed slider bodies not being drawn on top of virtual screen (reversed depth buffer)");
 	alpha315.changes.push_back("- VR: Fixed oversized scorebar-bg skin elements z-fighting with other HUD elements (like score)");
+	alpha315.changes.push_back("- FPoSu: Fixed hiterrorbar being drawn on the playfield instead of the HUD overlay");
+	alpha315.changes.push_back("- Fixed section-pass/fail appearing in too small breaks");
+	alpha315.changes.push_back("- Fixed F1 as K1/K2 interfering with mod select during gameplay");
+	alpha315.changes.push_back("- Fixed approximate beatmap length (used for search) not getting populated during star calculation if without osu!.db");
+	alpha315.changes.push_back("- Fixed quick retry sometimes causing weird small speedup/slowdown at start");
+	alpha315.changes.push_back("- Fixed section-pass/fail appearing in empty sections which are not break events");
 	alpha315.changes.push_back("- Fixed scorebar-ki always being drawn for legacy skins (unwanted default skin fallback)");
-	alpha315.changes.push_back("");
-	alpha315.changes.push_back("- Added option \"Draw Stats: HP\" (Options > Gameplay > HUD)");
-	alpha315.changes.push_back("- Added support for fail-background (skin element)");
 	alpha315.changes.push_back("- Fixed skip intro button appearing 1 second later than usual");
 	alpha315.changes.push_back("- Fixed warning arrows appearing 1 second later than usual");
 	changelogs.push_back(alpha315);
@@ -262,6 +309,7 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha294.changes.push_back("- Fixed another ArithmeticException in main menu (Aspire, Acid Rain - Covetous Beaver)");
 	changelogs.push_back(alpha294);
 
+	/*
 	CHANGELOG alpha293;
 	alpha293.title = "29.3 (15.02.2019)";
 	alpha293.changes.push_back("- NOTE: New stars/pp are accurate with an average delta of ~0.1% or ~0.003 stars, except for very few Aspire/2B maps with ~15%");
@@ -290,7 +338,6 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha293.changes.push_back("- Added ConVars: osu_stars_xexxar_angles_sliders, osu_stars_stacking, osu_ui_top_ranks_max");
 	changelogs.push_back(alpha293);
 
-	/*
 	CHANGELOG alpha292;
 	alpha292.title = "29.2 (06.01.2019)";
 	alpha292.changes.push_back("- Added \"Top Ranks\"/\"Best Performance\" screen showing all weighted scores (Songbrowser > User > Top Ranks)");
@@ -652,7 +699,28 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 		// changes
 		for (int c=0; c<changelogs[i].changes.size(); c++)
 		{
-			CBaseUILabel *change = new CBaseUILabel(0, 0, 0, 0, "", changelogs[i].changes[c]);
+			class CustomCBaseUILabel : public CBaseUILabel
+			{
+			public:
+				CustomCBaseUILabel(UString text) : CBaseUILabel(0, 0, 0, 0, "", text) {;}
+
+				virtual void draw(Graphics *g)
+				{
+					if (m_bVisible && isMouseInside())
+					{
+						g->setColor(0x3fffffff);
+
+						const int margin = 0;
+						const int marginX = margin + 10;
+						g->fillRect(m_vPos.x - marginX, m_vPos.y - margin, m_vSize.x + marginX*2, m_vSize.y + margin*2);
+					}
+
+					CBaseUILabel::draw(g);
+					if (!m_bVisible) return;
+				}
+			};
+
+			CBaseUILabel *change = new CustomCBaseUILabel(changelogs[i].changes[c]);
 
 			if (i > 0)
 				change->setTextColor(0xff888888);
@@ -729,13 +797,14 @@ void OsuChangelog::updateLayout()
 
 		yCounter += changelog.title->getSize().y;
 		changelog.title->setRelPos(15 * dpiScale, yCounter);
-		yCounter += 10 * dpiScale;
+		///yCounter += 10 * dpiScale;
 
 		for (CBaseUILabel *change : changelog.changes)
 		{
 			change->onResized(); // HACKHACK: framework, setSizeToContent() does not update string metrics
 			change->setSizeToContent();
-			yCounter += change->getSize().y + 7 * dpiScale;
+			change->setSizeY(change->getSize().y*2.0f);
+			yCounter += change->getSize().y/* + 13 * dpiScale*/;
 			change->setRelPos(35 * dpiScale, yCounter);
 		}
 

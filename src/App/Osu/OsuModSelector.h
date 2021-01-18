@@ -13,7 +13,6 @@
 class Osu;
 class OsuSkinImage;
 class OsuSongBrowser;
-class OsuBeatmapDifficulty;
 
 class CBaseUIElement;
 class CBaseUIContainer;
@@ -44,15 +43,16 @@ public:
 
 	virtual void setVisible(bool visible);
 
-	void checkUpdateBPMSliderSlaves();
 	void enableAuto();
 	void toggleAuto();
+	void resetMods();
 
 	void setWaitForF1KeyUp(bool waitForF1KeyUp) {m_bWaitForF1KeyUp = waitForF1KeyUp;}
 
 	bool isInCompactMode();
 	bool isCSOverrideSliderActive();
 	bool isMouseInScrollView();
+	bool isMouseInside();
 
 	void updateModConVar();
 
@@ -84,6 +84,7 @@ private:
 	};
 
 	void updateButtons(bool initial = false);
+	void updateScoreMultiplierLabelText();
 	void updateExperimentalButtons(bool initial);
 	void updateLayout();
 	void updateExperimentalLayout();
@@ -105,7 +106,6 @@ private:
 
 	OsuUIButton *addActionButton(UString text);
 
-	void resetMods();
 	void close();
 
 	float m_fAnimation;
@@ -120,17 +120,17 @@ private:
 
 	bool m_bWaitForCSChangeFinished;
 	bool m_bWaitForSpeedChangeFinished;
+	bool m_bWaitForHPChangeFinished;
 
 	// override sliders
 	std::vector<OVERRIDE_SLIDER> m_overrideSliders;
 	CBaseUISlider *m_CSSlider;
 	CBaseUISlider *m_ARSlider;
 	CBaseUISlider *m_ODSlider;
-	CBaseUISlider *m_BPMSlider;
+	CBaseUISlider *m_HPSlider;
 	CBaseUISlider *m_speedSlider;
 	CBaseUICheckbox *m_ARLock;
 	CBaseUICheckbox *m_ODLock;
-	OsuBeatmapDifficulty *m_previousDifficulty;
 	bool m_bShowOverrideSliderALTHint;
 
 	// mod grid buttons
@@ -154,6 +154,9 @@ private:
 
 	// experimental mods
 	std::vector<EXPERIMENTAL_MOD> m_experimentalMods;
+
+	// score multiplier info label
+	CBaseUILabel *m_scoreMultiplierLabel;
 
 	// action buttons
 	std::vector<OsuUIButton*> m_actionButtons;

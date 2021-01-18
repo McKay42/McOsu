@@ -11,15 +11,16 @@
 #include "CBaseUIButton.h"
 
 class Osu;
-class OsuBeatmap;
+class OsuDatabaseBeatmap;
 class OsuSongBrowser2;
+class OsuUIContextMenu;
 
 class CBaseUIScrollView;
 
 class OsuUISongBrowserButton : public CBaseUIButton
 {
 public:
-	OsuUISongBrowserButton(Osu *osu, OsuSongBrowser2 *songBrowser, CBaseUIScrollView *view, float xPos, float yPos, float xSize, float ySize, UString name);
+	OsuUISongBrowserButton(Osu *osu, OsuSongBrowser2 *songBrowser, CBaseUIScrollView *view, OsuUIContextMenu *contextMenu, float xPos, float yPos, float xSize, float ySize, UString name);
 	virtual ~OsuUISongBrowserButton();
 	void deleteAnimations();
 
@@ -28,53 +29,48 @@ public:
 
 	virtual void updateLayoutEx();
 
-	void select();
+	OsuUISongBrowserButton *setVisible(bool visible);
+
+	void select(bool fireCallbacks = true);
 	void deselect();
 
 	void resetAnimations();
 
-	OsuUISongBrowserButton *setVisible(bool visible);
 	void setTargetRelPosY(float targetRelPosY);
 	void setChildren(std::vector<OsuUISongBrowserButton*> children) {m_children = children;}
 	void setActiveBackgroundColor(Color activeBackgroundColor) {m_activeBackgroundColor = activeBackgroundColor;}
 	void setInactiveBackgroundColor(Color inactiveBackgroundColor) {m_inactiveBackgroundColor = inactiveBackgroundColor;}
 	void setOffsetPercent(float offsetPercent) {m_fOffsetPercent = offsetPercent;}
 	void setHideIfSelected(bool hideIfSelected) {m_bHideIfSelected = hideIfSelected;}
+	void setIsSearchMatch(bool isSearchMatch) {m_bIsSearchMatch = isSearchMatch;}
 
-	void setCollectionDiffHack(bool collectionDiffHack) {m_bCollectionDiffHack = collectionDiffHack;}
-	void setCollectionSearchHack(bool collectionSearchHack) {m_bCollectionSearchHack = collectionSearchHack;}
-
-	Vector2 getActualOffset();
-	inline Vector2 getActualSize() {return m_vSize - 2*getActualOffset();}
-	inline Vector2 getActualPos() {return m_vPos + getActualOffset();}
-	inline std::vector<OsuUISongBrowserButton*> &getChildrenAbs() {return m_children;}
-
-	inline bool getCollectionDiffHack() const {return m_bCollectionDiffHack;}
-	inline bool getCollectionSearchHack() const {return m_bCollectionSearchHack;}
+	Vector2 getActualOffset() const;
+	inline Vector2 getActualSize() const {return m_vSize - 2*getActualOffset();}
+	inline Vector2 getActualPos() const {return m_vPos + getActualOffset();}
+	inline std::vector<OsuUISongBrowserButton*> &getChildren() {return m_children;}
 	inline int getSortHack() const {return m_iSortHack;}
 
-	virtual OsuBeatmap *getBeatmap() const {return NULL;}
-	virtual std::vector<OsuUISongBrowserButton*> getChildren() {return m_children;}
+	virtual OsuDatabaseBeatmap *getDatabaseBeatmap() const {return NULL;}
 
 	inline bool isSelected() const {return m_bSelected;}
 	inline bool isHiddenIfSelected() const {return m_bHideIfSelected;}
+	inline bool isSearchMatch() const {return m_bIsSearchMatch;}
 
 protected:
 	void drawMenuButtonBackground(Graphics *g);
 
 	virtual void onSelected(bool wasSelected) {;}
-	virtual void onDeselected() {;}
+	virtual void onRightMouseUpInside() {;}
 
 	Osu *m_osu;
 	CBaseUIScrollView *m_view;
 	OsuSongBrowser2 *m_songBrowser;
+	OsuUIContextMenu *m_contextMenu;
 
 	McFont *m_font;
 	McFont *m_fontBold;
 
 	bool m_bSelected;
-	bool m_bCollectionDiffHack;
-	bool m_bCollectionSearchHack;
 
 	std::vector<OsuUISongBrowserButton*> m_children;
 
@@ -97,6 +93,9 @@ private:
 
 	void setMoveAwayState(MOVE_AWAY_STATE moveAwayState, bool animate = true);
 
+	bool m_bRightClick;
+	bool m_bRightClickCheck;
+
 	float m_fTargetRelPosY;
 	float m_fScale;
 	float m_fOffsetPercent;
@@ -106,6 +105,7 @@ private:
 	float m_fCenterOffsetVelocityAnimation;
 
 	int m_iSortHack;
+	bool m_bIsSearchMatch;
 
 	bool m_bHideIfSelected;
 

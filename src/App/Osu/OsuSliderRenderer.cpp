@@ -218,6 +218,47 @@ void OsuSliderRenderer::draw(Graphics *g, Osu *osu, VertexArrayObject *vao, cons
 
 	checkUpdateVars(osu, hitcircleDiameter);
 
+	// NOTE: this would add support for aspire slider distortions, but calculating the bounding box live is a waste of performance, not worth it
+	/*
+	{
+		m_fBoundingBoxMinX = std::numeric_limits<float>::max();
+		m_fBoundingBoxMaxX = std::numeric_limits<float>::min();
+		m_fBoundingBoxMinY = std::numeric_limits<float>::max();
+		m_fBoundingBoxMaxY = std::numeric_limits<float>::min();
+
+		// NOTE: to get the animated effect, would have to use from + to
+		for (int i=0; i<points.size(); i++)
+		{
+			const float &x = points[i].x;
+			const float &y = points[i].y;
+			const float radius = hitcircleDiameter/2.0f;
+
+			if (x-radius < m_fBoundingBoxMinX)
+				m_fBoundingBoxMinX = x-radius;
+			if (x+radius > m_fBoundingBoxMaxX)
+				m_fBoundingBoxMaxX = x+radius;
+			if (y-radius < m_fBoundingBoxMinY)
+				m_fBoundingBoxMinY = y-radius;
+			if (y+radius > m_fBoundingBoxMaxY)
+				m_fBoundingBoxMaxY = y+radius;
+		}
+
+		const Vector4 tLS = (g->getProjectionMatrix() * Vector4(m_fBoundingBoxMinX, m_fBoundingBoxMinY, 0, 0) + Vector4(1, 1, 0, 0)) * 0.5f;
+		const Vector4 bRS = (g->getProjectionMatrix() * Vector4(m_fBoundingBoxMaxX, m_fBoundingBoxMaxY, 0, 0) + Vector4(1, 1, 0, 0)) * 0.5f;
+
+		float scaleToApplyAfterTranslationX = 1.0f;
+		float scaleToApplyAfterTranslationY = 1.0f;
+
+		const float sclX = (32768.0f / (float)osu->getScreenWidth());
+		const float sclY = (32768.0f / (float)osu->getScreenHeight());
+
+		if (-tLS.x + bRS.x > sclX)
+			scaleToApplyAfterTranslationX = sclX / (-tLS.x + bRS.x);
+		if (-tLS.y + bRS.y > sclY)
+			scaleToApplyAfterTranslationY = sclY / (-tLS.y + bRS.y);
+	}
+	*/
+
 	// draw entire slider into framebuffer
 	g->setDepthBuffer(true);
 	g->setBlending(false);
@@ -265,6 +306,7 @@ void OsuSliderRenderer::draw(Graphics *g, Osu *osu, VertexArrayObject *vao, cons
 					{
 						g->scale(scale, scale);
 						g->translate(translation.x, translation.y);
+						///g->scale(scaleToApplyAfterTranslationX, scaleToApplyAfterTranslationY); // aspire slider distortions
 
 #ifdef MCENGINE_FEATURE_OPENGLES
 

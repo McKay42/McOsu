@@ -28,6 +28,8 @@ public:
 private:
 	Osu *m_osu;
 
+	McFont *m_font;
+
 	int m_iOffsetRight;
 	bool m_bDrawNumResults;
 

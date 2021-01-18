@@ -148,6 +148,7 @@ class OsuSliderCurveLinearBezier : public OsuSliderCurveEqualDistanceMulti
 {
 public:
 	OsuSliderCurveLinearBezier(std::vector<Vector2> controlPoints, float pixelLength, bool line, float curvePointsSeparation);
+	virtual ~OsuSliderCurveLinearBezier() {;}
 };
 
 
@@ -156,6 +157,7 @@ class OsuSliderCurveCatmull : public OsuSliderCurveEqualDistanceMulti
 {
 public:
 	OsuSliderCurveCatmull(std::vector<Vector2> controlPoints, float pixelLength, float curvePointsSeparation);
+	virtual ~OsuSliderCurveCatmull() {;}
 };
 
 
@@ -164,6 +166,7 @@ class OsuSliderCurveCircumscribedCircle : public OsuSliderCurve
 {
 public:
 	OsuSliderCurveCircumscribedCircle(std::vector<Vector2> controlPoints, float pixelLength, float curvePointsSeparation);
+	virtual ~OsuSliderCurveCircumscribedCircle() {;}
 
 	virtual Vector2 pointAt(float t);
 	virtual Vector2 originalPointAt(float t);

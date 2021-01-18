@@ -21,6 +21,7 @@ class OsuPauseMenu;
 class OsuOptionsMenu;
 class OsuModSelector;
 class OsuSongBrowser2;
+class OsuBackgroundImageHandler;
 class OsuRankingScreen;
 class OsuUserStatsScreen;
 class OsuUpdateHandler;
@@ -130,6 +131,7 @@ public:
 	inline OsuMultiplayer *getMultiplayer() const {return m_multiplayer;}
 	inline OsuOptionsMenu *getOptionsMenu() const {return m_optionsMenu;}
 	inline OsuSongBrowser2 *getSongBrowser() const {return m_songBrowser2;}
+	inline OsuBackgroundImageHandler *getBackgroundImageHandler() const {return m_backgroundImageHandler;}
 	inline OsuSkin *getSkin() const {return m_skin;}
 	inline OsuHUD *getHUD() const {return m_hud;}
 	inline OsuNotificationOverlay *getNotificationOverlay() const {return m_notificationOverlay;}
@@ -188,6 +190,7 @@ public:
 	bool isInMultiplayer();
 	inline bool isSkinLoading() const {return m_bSkinLoadScheduled;}
 
+	inline bool isSkipScheduled() const {return m_bSkipScheduled;}
 	inline bool isSeeking() const {return m_bSeeking;}
 	inline float getQuickSaveTime() const {return m_fQuickSaveTime;}
 
@@ -268,6 +271,7 @@ private:
 	OsuMainMenu *m_mainMenu;
 	OsuOptionsMenu *m_optionsMenu;
 	OsuSongBrowser2 *m_songBrowser2;
+	OsuBackgroundImageHandler *m_backgroundImageHandler;
 	OsuModSelector *m_modSelector;
 	OsuRankingScreen *m_rankingScreen;
 	OsuUserStatsScreen *m_userStatsScreen;
@@ -320,10 +324,11 @@ private:
 	bool m_bF1;
 	bool m_bUIToggleCheck;
 	bool m_bScoreboardToggleCheck;
-	bool m_bTab;
 	bool m_bEscape;
 	bool m_bKeyboardKey1Down;
+	bool m_bKeyboardKey12Down;
 	bool m_bKeyboardKey2Down;
+	bool m_bKeyboardKey22Down;
 	bool m_bMouseKey1Down;
 	bool m_bMouseKey2Down;
 	bool m_bSkipDownCheck;

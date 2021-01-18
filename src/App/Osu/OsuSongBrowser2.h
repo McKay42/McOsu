@@ -14,7 +14,9 @@
 class Osu;
 class OsuBeatmap;
 class OsuDatabase;
-class OsuBeatmapDifficulty;
+class OsuDatabaseBeatmap;
+
+class OsuDatabaseBeatmapStarCalculator;
 
 class OsuUIContextMenu;
 class OsuUISearchOverlay;
@@ -24,9 +26,8 @@ class OsuUISongBrowserUserButton;
 class OsuUISongBrowserScoreButton;
 class OsuUISongBrowserButton;
 class OsuUISongBrowserSongButton;
+class OsuUISongBrowserSongDifficultyButton;
 class OsuUISongBrowserCollectionButton;
-
-class OsuUISongBrowserDifficultyCollectionButton;
 
 class CBaseUIContainer;
 class CBaseUIImageButton;
@@ -45,7 +46,49 @@ public:
 	struct SORTING_COMPARATOR
 	{
 		virtual ~SORTING_COMPARATOR() {;}
-		virtual bool operator() (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const = 0;
+		virtual bool operator () (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const = 0;
+	};
+
+	struct SortByArtist : public SORTING_COMPARATOR
+	{
+		virtual ~SortByArtist() {;}
+		virtual bool operator () (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const;
+	};
+
+	struct SortByBPM : public SORTING_COMPARATOR
+	{
+		virtual ~SortByBPM() {;}
+		virtual bool operator () (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const;
+	};
+
+	struct SortByCreator : public SORTING_COMPARATOR
+	{
+		virtual ~SortByCreator() {;}
+		virtual bool operator () (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const;
+	};
+
+	struct SortByDateAdded : public SORTING_COMPARATOR
+	{
+		virtual ~SortByDateAdded() {;}
+		virtual bool operator () (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const;
+	};
+
+	struct SortByDifficulty : public SORTING_COMPARATOR
+	{
+		virtual ~SortByDifficulty() {;}
+		virtual bool operator () (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const;
+	};
+
+	struct SortByLength : public SORTING_COMPARATOR
+	{
+		virtual ~SortByLength() {;}
+		bool operator () (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const;
+	};
+
+	struct SortByTitle : public SORTING_COMPARATOR
+	{
+		virtual ~SortByTitle() {;}
+		bool operator () (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const;
 	};
 
 public:
@@ -61,44 +104,58 @@ public:
 
 	virtual void onResolutionChange(Vector2 newResolution);
 
-	void onPlayEnd(bool quit = true);	// called when a beatmap is finished playing (or the player quit)
+	virtual void setVisible(bool visible);
 
-	void onDifficultySelected(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff, bool play = false, bool mp = false);
-	void onDifficultySelectedMP(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff, bool play = false);
-	void selectBeatmapMP(OsuBeatmap *beatmap, OsuBeatmapDifficulty *diff);
+	void onPlayEnd(bool quit = true); // called when a beatmap is finished playing (or the player quit)
 
-	void onScoreContextMenu(OsuUISongBrowserScoreButton *scoreButton, UString text);
+	void onSelectionChange(OsuUISongBrowserButton *button, bool rebuild);
+	void onDifficultySelected(OsuDatabaseBeatmap *diff2, bool play = false, bool mp = false);
+	void onDifficultySelectedMP(OsuDatabaseBeatmap *diff2, bool play = false);
+	void selectBeatmapMP(OsuDatabaseBeatmap *diff2);
+
+	void onScoreContextMenu(OsuUISongBrowserScoreButton *scoreButton, int id);
 
 	void highlightScore(uint64_t unixTimestamp);
 	void playNextRandomBeatmap() {selectRandomBeatmap();playSelectedDifficulty();}
+	void recalculateStarsForSelectedBeatmap(bool force = false);
 
 	void refreshBeatmaps();
+	void addBeatmap(OsuDatabaseBeatmap *beatmap);
+	void readdBeatmap(OsuDatabaseBeatmap *diff2);
+
 	void scrollToSongButton(OsuUISongBrowserButton *songButton, bool alignOnTop = false);
 	void scrollToSelectedSongButton();
-	void rebuildSongButtons(bool unloadAllThumbnails = true);
+	void rebuildSongButtons();
 	void rebuildScoreButtons();
 	void updateSongButtonLayout();
+	void updateSongButtonSorting();
 
-	OsuUISongBrowserButton* findCurrentlySelectedSongButton() const;
+	OsuUISongBrowserButton *findCurrentlySelectedSongButton() const;
 
-	virtual void setVisible(bool visible);
+	inline bool hasSelectedAndIsPlaying() const {return m_bHasSelectedAndIsPlaying;}
+	inline bool isInSearch() const {return m_bInSearch;}
 
-	inline bool hasSelectedAndIsPlaying() {return m_bHasSelectedAndIsPlaying;}
-	inline OsuDatabase *getDatabase() {return m_db;}
+	inline OsuDatabase *getDatabase() const {return m_db;}
 	inline OsuBeatmap *getSelectedBeatmap() const {return m_selectedBeatmap;}
+	inline const OsuDatabaseBeatmapStarCalculator *getDynamicStarCalculator() const {return m_dynamicStarCalculator;}
 
 	inline OsuUISongBrowserInfoLabel *getInfoLabel() {return m_songInfo;}
 
 private:
-	static bool searchMatcher(OsuBeatmap *beatmap, UString searchString);
-	static bool findSubstringInDifficulty(OsuBeatmapDifficulty *diff, const UString &searchString);
+	static bool searchMatcher(const OsuDatabaseBeatmap *databaseBeatmap, const UString &searchString);
+	static bool findSubstringInDifficulty(const OsuDatabaseBeatmap *diff, const UString &searchString);
 
 	enum class GROUP
 	{
 		GROUP_NO_GROUPING,
-		GROUP_COLLECTIONS,
-		GROUP_DIFFICULTY
-		// incomplete
+		GROUP_ARTIST,
+		GROUP_BPM,
+		GROUP_CREATOR,
+		GROUP_DATEADDED,
+		GROUP_DIFFICULTY,
+		GROUP_LENGTH,
+		GROUP_TITLE,
+		GROUP_COLLECTIONS
 	};
 
 	enum class SORT
@@ -120,6 +177,13 @@ private:
 		SORTING_COMPARATOR *comparator;
 	};
 
+	struct GROUPING
+	{
+		GROUP type;
+		UString name;
+		int id;
+	};
+
 	virtual void updateLayout();
 	virtual void onBack();
 
@@ -127,8 +191,11 @@ private:
 
 	void scheduleSearchUpdate(bool immediately = false);
 
+	bool checkHandleKillDynamicStarCalculator(bool timeout);
+
 	OsuUISelectionButton *addBottombarNavButton(std::function<Image*()> getImageFunc, std::function<Image*()> getImageOverFunc);
 	CBaseUIButton *addTopBarRightTabButton(UString text);
+	CBaseUIButton *addTopBarRightGroupButton(UString text);
 	CBaseUIButton *addTopBarRightSortButton(UString text);
 	CBaseUIButton *addTopBarLeftTabButton(UString text);
 	CBaseUIButton *addTopBarLeftButton(UString text);
@@ -141,14 +208,24 @@ private:
 	void onSortScoresChange(UString text, int id = -1);
 	void onWebClicked(CBaseUIButton *button);
 
+	void onGroupClicked(CBaseUIButton *button);
+	void onGroupChange(UString text, int id = -1);
+
 	void onSortClicked(CBaseUIButton *button);
 	void onSortChange(UString text, int id = -1);
 
-	void onGroupNoGrouping(CBaseUIButton *b);
-	void onGroupCollections(CBaseUIButton *b);
-	void onGroupDifficulty(CBaseUIButton *b);
+	void onGroupTabButtonClicked(CBaseUIButton *groupTabButton);
+	void onGroupNoGrouping();
+	void onGroupCollections();
+	void onGroupArtist();
+	void onGroupDifficulty();
+	void onGroupBPM();
+	void onGroupCreator();
+	void onGroupDateadded();
+	void onGroupLength();
+	void onGroupTitle();
 
-	void onAfterSortingOrGroupChange(CBaseUIButton *b);
+	void onAfterSortingOrGroupChange();
 
 	void onSelectionMode();
 	void onSelectionMods();
@@ -169,10 +246,10 @@ private:
 	void playSelectedDifficulty();
 
 	ConVar *m_fps_max_ref;
-	ConVar *m_osu_database_dynamic_star_calculation_ref;
 	ConVar *m_osu_scores_enabled;
 	ConVar *m_name_ref;
 
+	ConVar *m_osu_draw_scrubbing_timeline_strain_graph_ref;
 	ConVar *m_osu_hud_scrubbing_timeline_strains_height_ref;
 	ConVar *m_osu_hud_scrubbing_timeline_strains_alpha_ref;
 	ConVar *m_osu_hud_scrubbing_timeline_strains_aim_color_r_ref;
@@ -182,9 +259,13 @@ private:
 	ConVar *m_osu_hud_scrubbing_timeline_strains_speed_color_g_ref;
 	ConVar *m_osu_hud_scrubbing_timeline_strains_speed_color_b_ref;
 
+	ConVar *m_osu_draw_statistics_perfectpp_ref;
+	ConVar *m_osu_draw_statistics_totalstars_ref;
+
 	Osu *m_osu;
 	std::mt19937 m_rngalg;
 	GROUP m_group;
+	std::vector<GROUPING> m_groupings;
 	SORT m_sortingMethod;
 	std::vector<SORTING_METHOD> m_sortingMethods;
 
@@ -202,10 +283,14 @@ private:
 	// top bar right
 	CBaseUIContainer *m_topbarRight;
 	std::vector<CBaseUIButton*> m_topbarRightTabButtons;
+	std::vector<CBaseUIButton*> m_topbarRightGroupButtons;
 	std::vector<CBaseUIButton*> m_topbarRightSortButtons;
 	CBaseUILabel *m_groupLabel;
+	CBaseUIButton *m_groupButton;
 	CBaseUIButton *m_noGroupingButton;
 	CBaseUIButton *m_collectionsButton;
+	CBaseUIButton *m_artistButton;
+	CBaseUIButton *m_difficultiesButton;
 	CBaseUILabel *m_sortLabel;
 	CBaseUIButton *m_sortButton;
 	OsuUIContextMenu *m_contextMenu;
@@ -225,13 +310,24 @@ private:
 	bool m_bSongBrowserRightClickScrollCheck;
 	bool m_bSongBrowserRightClickScrolling;
 
+	// song browser selection state logic
+	OsuUISongBrowserSongButton *m_selectionPreviousSongButton;
+	OsuUISongBrowserSongDifficultyButton *m_selectionPreviousSongDiffButton;
+	OsuUISongBrowserCollectionButton *m_selectionPreviousCollectionButton;
+
 	// beatmap database
 	OsuDatabase *m_db;
-	std::vector<OsuBeatmap*> m_beatmaps;
-	std::vector<OsuUISongBrowserButton*> m_visibleSongButtons;
+	std::vector<OsuDatabaseBeatmap*> m_beatmaps;
 	std::vector<OsuUISongBrowserSongButton*> m_songButtons;
+	std::vector<OsuUISongBrowserButton*> m_visibleSongButtons;
 	std::vector<OsuUISongBrowserCollectionButton*> m_collectionButtons;
-	std::vector<OsuUISongBrowserDifficultyCollectionButton*> m_difficultyCollectionButtons;
+	std::vector<OsuUISongBrowserCollectionButton*> m_artistCollectionButtons;
+	std::vector<OsuUISongBrowserCollectionButton*> m_difficultyCollectionButtons;
+	std::vector<OsuUISongBrowserCollectionButton*> m_bpmCollectionButtons;
+	std::vector<OsuUISongBrowserCollectionButton*> m_creatorCollectionButtons;
+	std::vector<OsuUISongBrowserCollectionButton*> m_dateaddedCollectionButtons;
+	std::vector<OsuUISongBrowserCollectionButton*> m_lengthCollectionButtons;
+	std::vector<OsuUISongBrowserCollectionButton*> m_titleCollectionButtons;
 	bool m_bBeatmapRefreshScheduled;
 	UString m_sLastOsuFolder;
 
@@ -249,18 +345,26 @@ private:
 	bool m_bHasSelectedAndIsPlaying;
 	float m_fPulseAnimation;
 	float m_fBackgroundFadeInTime;
-	std::vector<OsuBeatmap*> m_previousRandomBeatmaps;
+	std::vector<OsuDatabaseBeatmap*> m_previousRandomBeatmaps;
 
 	// search
 	OsuUISearchOverlay *m_search;
 	UString m_sSearchString;
+	UString m_sPrevSearchString;
 	float m_fSearchWaitTime;
 	bool m_bInSearch;
 	GROUP m_searchPrevGroup;
 
-	// background star calculation
+	// background star calculation (entire database)
 	float m_fBackgroundStarCalculationWorkNotificationTime;
 	int m_iBackgroundStarCalculationIndex;
+	OsuDatabaseBeatmapStarCalculator *m_backgroundStarCalculator;
+	OsuDatabaseBeatmap *m_backgroundStarCalcTempParent;
+
+	// background star calculation (currently selected beatmap)
+	bool m_bBackgroundStarCalcScheduled;
+	bool m_bBackgroundStarCalcScheduledForce;
+	OsuDatabaseBeatmapStarCalculator *m_dynamicStarCalculator;
 };
 
 #endif

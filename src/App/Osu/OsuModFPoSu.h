@@ -37,6 +37,9 @@ public:
 	void draw(Graphics *g);
 	void update();
 
+	void onKeyDown(KeyboardEvent &key);
+	void onKeyUp(KeyboardEvent &key);
+
 private:
 	static int SUBDIVISIONS;
 
@@ -49,6 +52,8 @@ private:
 
 		VertexPair(Vector3 a, Vector3 b, float tc) : a(a), b(b), textureCoordinate(tc) {;}
 	};
+
+	void handleZoomedChange();
 
 	void setMousePosCompensated(Vector2 newMousePos);
 	Vector2 intersectRayMesh(Vector3 pos, Vector3 dir);
@@ -72,6 +77,9 @@ private:
 	std::list<VertexPair> m_meshList;
 	float m_fCircumLength;
 	Camera *m_camera;
+	bool m_bZoomKeyDown;
+	bool m_bZoomed;
+	float m_fZoomFOVAnimPercent;
 
 	Matrix4 m_modelMatrix;
 

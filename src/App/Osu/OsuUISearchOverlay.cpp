@@ -16,6 +16,8 @@ OsuUISearchOverlay::OsuUISearchOverlay(Osu *osu, float xPos, float yPos, float x
 {
 	m_osu = osu;
 
+	m_font = engine->getResourceManager()->getFont("FONT_DEFAULT");
+
 	m_iOffsetRight = 0;
 	m_bDrawNumResults = true;
 
@@ -31,12 +33,12 @@ void OsuUISearchOverlay::draw(Graphics *g)
 
 	// draw search text and background
 	const float searchTextScale = 1.0f;
-	McFont *searchTextFont = engine->getResourceManager()->getFont("FONT_DEFAULT");
+	McFont *searchTextFont = m_font;
 
-	UString searchText1 = "Search: ";
-	UString searchText2 = "Type to search!";
-	UString noMatchesFoundText1 = "No matches found. Hit ESC to reset.";
-	UString noMatchesFoundText2 = "Hit ESC to reset.";
+	const UString searchText1 = "Search: ";
+	const UString searchText2 = "Type to search!";
+	const UString noMatchesFoundText1 = "No matches found. Hit ESC to reset.";
+	const UString noMatchesFoundText2 = "Hit ESC to reset.";
 
 	UString combinedSearchText = searchText1;
 	combinedSearchText.append(searchText2);
@@ -45,19 +47,33 @@ void OsuUISearchOverlay::draw(Graphics *g)
 
 	bool hasSearchSubTextVisible = m_sSearchString.length() > 0 && m_bDrawNumResults;
 
-	const int textWidth = searchTextFont->getStringWidth(offsetText)*searchTextScale + (searchTextFont->getHeight()*searchTextScale) + m_iOffsetRight;
-	g->setColor(COLOR(m_sSearchString.length() > 0 ? 100 : 30, 0, 0, 0));
-	g->fillRect(m_vPos.x + m_vSize.x - textWidth, m_vPos.y, textWidth, (searchTextFont->getHeight()*searchTextScale)*(hasSearchSubTextVisible ? 4.0f : 3.0f));
-	/*
-	g->setColor(0xffffff00);
-	g->drawRect(m_vPos.x + m_vSize.x - textWidth, m_vPos.y, textWidth, (searchTextFont->getHeight()*searchTextScale)*(hasSearchSubTextVisible ? 4.0f : 3.0f));
-	*/
+	const float searchStringWidth = searchTextFont->getStringWidth(m_sSearchString);
+	const float offsetTextStringWidth = searchTextFont->getStringWidth(offsetText);
+
+	const int offsetTextWidthWithoutOverflow = offsetTextStringWidth*searchTextScale + (searchTextFont->getHeight()*searchTextScale) + m_iOffsetRight;
+
+	// calc global x offset for overflowing line (don't wrap, just move everything to the left)
+	int textOverflowXOffset = 0;
+	{
+		const int actualXEnd = (int)(m_vPos.x + m_vSize.x - offsetTextStringWidth*searchTextScale - (searchTextFont->getHeight()*searchTextScale)*0.5f - m_iOffsetRight) + (int)(searchTextFont->getStringWidth(searchText1)*searchTextScale) + (int)(searchStringWidth*searchTextScale);
+		if (actualXEnd > m_osu->getScreenWidth())
+			textOverflowXOffset = actualXEnd - m_osu->getScreenWidth();
+	}
+
+	// draw background
+	{
+		const int offsetTextWidthWithOverflow = offsetTextWidthWithoutOverflow + textOverflowXOffset;
+		g->setColor(COLOR(m_sSearchString.length() > 0 ? 100 : 30, 0, 0, 0));
+		g->fillRect(m_vPos.x + m_vSize.x - offsetTextWidthWithOverflow, m_vPos.y, offsetTextWidthWithOverflow, (searchTextFont->getHeight()*searchTextScale)*(hasSearchSubTextVisible ? 4.0f : 3.0f));
+	}
+
+	// draw text
 	g->setColor(0xffffffff);
 	g->pushTransform();
 	{
 		g->translate(0, (int)(searchTextFont->getHeight() / 2.0f));
 		g->scale(searchTextScale, searchTextScale);
-		g->translate((int)(m_vPos.x + m_vSize.x - searchTextFont->getStringWidth(offsetText)*searchTextScale - (searchTextFont->getHeight()*searchTextScale)*0.5f - m_iOffsetRight), (int)(m_vPos.y + (searchTextFont->getHeight()*searchTextScale)*1.5f));
+		g->translate((int)(m_vPos.x + m_vSize.x - offsetTextStringWidth*searchTextScale - (searchTextFont->getHeight()*searchTextScale)*0.5f - m_iOffsetRight - textOverflowXOffset), (int)(m_vPos.y + (searchTextFont->getHeight()*searchTextScale)*1.5f));
 
 		// draw search text and text
 		g->pushTransform();
@@ -92,10 +108,10 @@ void OsuUISearchOverlay::draw(Graphics *g)
 			g->translate(0, (int)((searchTextFont->getHeight()*searchTextScale)*1.5f));
 			g->translate(1, 1);
 			g->setColor(0xff000000);
-			g->drawString(searchTextFont, m_iNumFoundResults > -1 ? (m_iNumFoundResults > 0 ? UString::format("%i matches found!", m_iNumFoundResults) : noMatchesFoundText1) : noMatchesFoundText2);
+			g->drawString(searchTextFont, m_iNumFoundResults > -1 ? (m_iNumFoundResults > 0 ? UString::format(m_iNumFoundResults == 1 ? "%i match found!" : "%i matches found!", m_iNumFoundResults) : noMatchesFoundText1) : noMatchesFoundText2);
 			g->translate(-1, -1);
 			g->setColor(0xffffffff);
-			g->drawString(searchTextFont, m_iNumFoundResults > -1 ? (m_iNumFoundResults > 0 ? UString::format("%i matches found!", m_iNumFoundResults) : noMatchesFoundText1) : noMatchesFoundText2);
+			g->drawString(searchTextFont, m_iNumFoundResults > -1 ? (m_iNumFoundResults > 0 ? UString::format(m_iNumFoundResults == 1 ? "%i match found!" : "%i matches found!", m_iNumFoundResults) : noMatchesFoundText1) : noMatchesFoundText2);
 		}
 	}
 	g->popTransform();

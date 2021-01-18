@@ -44,7 +44,8 @@ public:
 	virtual void miss(long curPos) = 0; // only used by notelock
 
 	virtual int getCombo() {return 1;} // how much combo this hitobject is "worth"
-	virtual bool isCircle() {return false;} // HACKHACK:
+	virtual bool isCircle() {return false;}
+	virtual bool isSpinner() {return false;}
 	void addHitResult(OsuScore::HIT result, long delta, bool isEndOfCombo, Vector2 posRaw, float targetDelta = 0.0f, float targetAngle = 0.0f, bool ignoreOnHitErrorBar = false, bool ignoreCombo = false, bool ignoreHealth = false);
 	void misAimed() {m_bMisAim = true;}
 
@@ -104,6 +105,7 @@ protected:
 	bool m_bOverrideHDApproachCircle;
 	bool m_bMisAim;
 	long m_iAutopilotDelta;
+	bool m_bUseFadeInTimeAsApproachTime;
 
 private:
 	static unsigned long long sortHackCounter;
