@@ -2996,22 +2996,34 @@ void OsuSongBrowser2::onDatabaseLoadingFinished()
 		{
 			for (size_t b=0; b<collections[i].beatmaps.size(); b++)
 			{
-				OsuDatabaseBeatmap *beatmap = collections[i].beatmaps[b].first;
+				const OsuDatabaseBeatmap *collectionBeatmap = collections[i].beatmaps[b].first;
 				const std::vector<OsuDatabaseBeatmap*> &colDiffs = collections[i].beatmaps[b].second;
 				for (size_t sb=0; sb<m_songButtons.size(); sb++)
 				{
-					// first search direct buttons
-					bool isMatchingSongButton = (m_songButtons[sb]->getDatabaseBeatmap() == beatmap);
+					// first: search direct buttons on collection beatmap
+					bool isMatchingSongButton = (m_songButtons[sb]->getDatabaseBeatmap() == collectionBeatmap);
 					if (!isMatchingSongButton)
 					{
-						// second search child buttons
-						const std::vector<OsuUISongBrowserButton*> &songButtonChildren = m_songButtons[sb]->getChildren();
-						for (size_t sbc=0; sbc<songButtonChildren.size(); sbc++)
+						// second: search direct buttons on collection diffs (e.g. standalone diffs which still have a wrapper beatmap)
+						for (size_t c=0; c<colDiffs.size(); c++)
 						{
-							if (songButtonChildren[sbc]->getDatabaseBeatmap() == beatmap)
-							{
-								isMatchingSongButton = true;
+							isMatchingSongButton = (m_songButtons[sb]->getDatabaseBeatmap() == colDiffs[c]);
+							if (isMatchingSongButton)
 								break;
+						}
+
+						if (!isMatchingSongButton)
+						{
+							// third: search child buttons
+							const std::vector<OsuUISongBrowserButton*> &songButtonChildren = m_songButtons[sb]->getChildren();
+							for (size_t sbc=0; sbc<songButtonChildren.size(); sbc++)
+							{
+								// check set match
+								if (songButtonChildren[sbc]->getDatabaseBeatmap() == collectionBeatmap)
+								{
+									isMatchingSongButton = true;
+									break;
+								}
 							}
 						}
 					}
@@ -3031,9 +3043,10 @@ void OsuSongBrowser2::onDatabaseLoadingFinished()
 							}
 						}
 
-						// new: only add matched diffs, instead of the whole beatmap
+						// new: only add matched diff buttons, instead of the set button
+						// however, if all diffs match, then add the set button instead (user added all diffs of beatmap into collection)
 						if (diffChildren.size() == matchingDiffs.size())
-							children.push_back(m_songButtons[sb]);
+							children.push_back(m_songButtons[sb]); // TODO: this is more of a convenience workaround until dynamic regrouping is implemented
 						else
 							children.insert(children.end(), matchingDiffs.begin(), matchingDiffs.end());
 
