@@ -545,24 +545,26 @@ void OsuDatabaseBeatmap::calculateSliderTimesClicksTicks(std::vector<SLIDER> &sl
 
 			// calculate ticks
 			// TODO: validate https://github.com/ppy/osu/pull/3595/files
-			const float minTickPixelDistanceFromEnd = 0.01f * SliderHelper::getSliderVelocity(s, timingInfo, sliderMultiplier, sliderTickRate);
-			const float tickPixelLength = SliderHelper::getSliderTickDistance(sliderMultiplier, sliderTickRate) / SliderHelper::getTimingPointMultiplierForSlider(s, timingInfo);
-			const float tickDurationPercentOfSliderLength = tickPixelLength / (s.pixelLength == 0.0f ? 1.0f : s.pixelLength);
-			const int tickCount = (int)std::ceil(s.pixelLength / tickPixelLength) - 1;
-
-			if (tickCount > 0 && !timingInfo.isNaN) // don't generate ticks for NaN timingpoints
 			{
-				const float tickTOffset = tickDurationPercentOfSliderLength;
-				float pixelDistanceToEnd = s.pixelLength;
-				float t = tickTOffset;
-				for (int i=0; i<tickCount; i++, t+=tickTOffset)
-				{
-					// skip ticks which are too close to the end of the slider
-					pixelDistanceToEnd -= tickPixelLength;
-					if (pixelDistanceToEnd <= minTickPixelDistanceFromEnd)
-						break;
+				const float minTickPixelDistanceFromEnd = 0.01f * SliderHelper::getSliderVelocity(s, timingInfo, sliderMultiplier, sliderTickRate);
+				const float tickPixelLength = SliderHelper::getSliderTickDistance(sliderMultiplier, sliderTickRate) / SliderHelper::getTimingPointMultiplierForSlider(s, timingInfo);
+				const float tickDurationPercentOfSliderLength = tickPixelLength / (s.pixelLength == 0.0f ? 1.0f : s.pixelLength);
+				const int tickCount = std::min((int)std::ceil(s.pixelLength / tickPixelLength) - 1, 65536/2); // NOTE: hard sanity limit number of ticks per slider
 
-					s.ticks.push_back(t);
+				if (tickCount > 0 && !timingInfo.isNaN && !std::isnan(s.pixelLength) && !std::isnan(tickPixelLength)) // don't generate ticks for NaN timingpoints and infinite values
+				{
+					const float tickTOffset = tickDurationPercentOfSliderLength;
+					float pixelDistanceToEnd = s.pixelLength;
+					float t = tickTOffset;
+					for (int i=0; i<tickCount; i++, t+=tickTOffset)
+					{
+						// skip ticks which are too close to the end of the slider
+						pixelDistanceToEnd -= tickPixelLength;
+						if (pixelDistanceToEnd <= minTickPixelDistanceFromEnd)
+							break;
+
+						s.ticks.push_back(t);
+					}
 				}
 			}
 
