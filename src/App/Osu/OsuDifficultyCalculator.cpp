@@ -574,7 +574,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 				// MCKAY:
 				{
 					// delay curve creation to when it's needed (1)
-					if (prev1.ho->scheduledCurveAlloc)
+					if (prev1.ho->scheduledCurveAlloc && prev1.ho->curve == NULL)
 						prev1.ho->curve = OsuSliderCurve::createCurve(prev1.ho->osuSliderCurveType, prev1.ho->scheduledCurveAllocControlPoints, prev1.ho->pixelLength, starsSliderCurvePointsSeparation);
 				}
 
@@ -586,13 +586,6 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 
 				const Vector2 lastCursorPosition = DistanceCalc::getEndCursorPosition(prev1, circleRadiusInOsuPixels);
 
-				// MCKAY:
-				{
-					// and also immediately delete afterwards (2)
-					if (prev1.ho->scheduledCurveAlloc)
-						SAFE_DELETE(prev1.ho->curve);
-				}
-
 				// don't need to jump to reach spinners
 				if (cur.ho->type != OsuDifficultyHitObject::TYPE::SPINNER)
 					cur.jumpDistance = (cur.norm_start - lastCursorPosition*radius_scaling_factor).length();
@@ -602,20 +595,18 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 				{
 					DiffObject &prev2 = diffObjects[i - 2];
 
-					// MCKAY:
-					{
-						// delay curve creation to when it's needed (1)
-						if (prev2.ho->scheduledCurveAlloc)
-							prev2.ho->curve = OsuSliderCurve::createCurve(prev2.ho->osuSliderCurveType, prev2.ho->scheduledCurveAllocControlPoints, prev2.ho->pixelLength, starsSliderCurvePointsSeparation);
-					}
-
 					const Vector2 lastLastCursorPosition = DistanceCalc::getEndCursorPosition(prev2, circleRadiusInOsuPixels);
 
 					// MCKAY:
 					{
 						// and also immediately delete afterwards (2)
-						if (prev2.ho->scheduledCurveAlloc)
-							SAFE_DELETE(prev2.ho->curve);
+						if (i > 2) // NOTE: this trivial sliding window implementation will keep the last 2 curves alive at the end, but they get auto deleted later anyway so w/e
+						{
+							DiffObject &prev3 = diffObjects[i - 3];
+
+							if (prev3.ho->scheduledCurveAlloc)
+								SAFE_DELETE(prev3.ho->curve);
+						}
 					}
 
 					const Vector2 v1 = lastLastCursorPosition - prev1.ho->pos;
