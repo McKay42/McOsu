@@ -103,12 +103,15 @@ OsuDifficultyHitObject& OsuDifficultyHitObject::operator = (OsuDifficultyHitObje
 	this->scoringTimes = std::move(dobj.scoringTimes);
 
 	this->curve = dobj.curve;
+	this->scheduledCurveAlloc = dobj.scheduledCurveAlloc;
+	this->scheduledCurveAllocControlPoints = std::move(dobj.scheduledCurveAllocControlPoints);
 	this->stack = dobj.stack;
 	this->originalPos = dobj.originalPos;
 	this->sortHack = dobj.sortHack;
 
 	// reset source
 	dobj.curve = NULL;
+	dobj.scheduledCurveAlloc = false;
 
 	return *this;
 }
