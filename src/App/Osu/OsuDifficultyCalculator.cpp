@@ -216,7 +216,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(const std::vector
 		double jumpDistance;	// precalc
 		double travelDistance;	// precalc
 
-		float delta_time;		// strain temp
+		double delta_time;		// strain temp
 
 		bool lazyCalcFinished;	// precalc temp
 		Vector2 lazyEndPos;		// precalc temp
@@ -239,7 +239,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(const std::vector
 			jumpDistance = 0.0;
 			travelDistance = 0.0;
 
-			delta_time = 0.0f;
+			delta_time = 0.0;
 
 			lazyCalcFinished = false;
 			lazyEndPos = ho->pos;
@@ -259,7 +259,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(const std::vector
 			const long time_elapsed = ho->time - prev.ho->time;
 
 			// update our delta time
-			delta_time = (float)time_elapsed;
+			delta_time = (double)time_elapsed;
 
 			switch (ho->type)
 			{
@@ -287,7 +287,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(const std::vector
 			// see Process() @ https://github.com/ppy/osu/blob/master/osu.Game/Rulesets/Difficulty/Skills/Skill.cs
 			double currentStrain = prev.strains[Skills::skillToIndex(dtype)];
 			{
-				currentStrain *= strainDecay(dtype, (double)delta_time);
+				currentStrain *= strainDecay(dtype, delta_time);
 				currentStrain += currentStrainOfDiffObject * weight_scaling[Skills::skillToIndex(dtype)];
 			}
 			strains[Skills::skillToIndex(dtype)] = currentStrain;
@@ -383,7 +383,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(const std::vector
 		}
 
 		// new implementation, Xexxar, (ppv2.1), see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/
-		static double spacing_weight2(const Skills::Skill diff_type, float jump_distance, float travel_distance, float delta_time, float prev_jump_distance, float prev_travel_distance, float prev_delta_time, float angle)
+		static double spacing_weight2(const Skills::Skill diff_type, double jump_distance, double travel_distance, double delta_time, double prev_jump_distance, double prev_travel_distance, double prev_delta_time, double angle)
 		{
 			static const double single_spacing_threshold = 125.0;
 
@@ -400,8 +400,8 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(const std::vector
 			static const double aim_angle_bonus_begin = (PI / 3.0);
 
 			// "Every strain interval is hard capped at the equivalent of 375 BPM streaming speed as a safety measure"
-			const double strain_time = std::max(delta_time, 50.0f);
-			const double prev_strain_time = std::max(prev_delta_time, 50.0f);
+			const double strain_time = std::max(delta_time, 50.0);
+			const double prev_strain_time = std::max(prev_delta_time, 50.0);
 
 			double angle_bonus = 1.0;
 
@@ -411,8 +411,8 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(const std::vector
 					{
 						// see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/Speed.cs
 
-						const double distance = std::min((float)single_spacing_threshold, travel_distance + jump_distance);
-						delta_time = std::max(delta_time, (float)max_speed_bonus);
+						const double distance = std::min(single_spacing_threshold, travel_distance + jump_distance);
+						delta_time = std::max(delta_time, max_speed_bonus);
 
 						double speed_bonus = 1.0;
 						if (delta_time < min_speed_bonus)
@@ -450,11 +450,11 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(const std::vector
 									* std::max(jump_distance - angle_bonus_scale, 0.0)
 							);
 
-							result = 1.5 * applyDiminishingExp((double)std::max(0.0, angle_bonus)) / std::max(aim_timing_threshold, prev_strain_time);
+							result = 1.5 * applyDiminishingExp(std::max(0.0, angle_bonus)) / std::max(aim_timing_threshold, prev_strain_time);
 						}
 
-						const double jumpDistanceExp = applyDiminishingExp((double)jump_distance);
-						const double travelDistanceExp = applyDiminishingExp((double)travel_distance);
+						const double jumpDistanceExp = applyDiminishingExp(jump_distance);
+						const double travelDistanceExp = applyDiminishingExp(travel_distance);
 
 						const double sqrtTravelMulJump = std::sqrt(travelDistanceExp * jumpDistanceExp);
 
