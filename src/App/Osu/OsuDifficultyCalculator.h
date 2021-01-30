@@ -61,6 +61,8 @@ public:
 
 	// custom
 	OsuSliderCurve *curve;
+	bool scheduledCurveAlloc;
+	std::vector<Vector2> scheduledCurveAllocControlPoints;
 	int stack;
 	Vector2 originalPos;
 	unsigned long long sortHack;
@@ -76,7 +78,7 @@ public:
 
 public:
 	// stars, fully static
-	static double calculateStarDiffForHitObjects(const std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, double *aim, double *speed, int upToObjectIndex = -1, std::vector<double> *outAimStrains = NULL, std::vector<double> *outSpeedStrains = NULL);
+	static double calculateStarDiffForHitObjects(std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, double *aim, double *speed, int upToObjectIndex = -1, std::vector<double> *outAimStrains = NULL, std::vector<double> *outSpeedStrains = NULL);
 
 	// pp, use runtime mods (convenience)
 	static double calculatePPv2(Osu *osu, OsuBeatmap *beatmap, double aim, double speed, int numHitObjects, int numCircles, int numSpinners, int maxPossibleCombo, int combo = -1, int misses = 0, int c300 = -1, int c100 = 0, int c50 = 0);
