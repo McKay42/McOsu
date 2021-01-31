@@ -1119,7 +1119,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSection("Bullshit");
 
 	addSubSection("Why");
-	addCheckbox("Rainbow ApproachCircles", convar->getConVarByName("osu_circle_rainbow"));
+	addCheckbox("Rainbow Circles", convar->getConVarByName("osu_circle_rainbow"));
 	addCheckbox("Rainbow Sliders", convar->getConVarByName("osu_slider_rainbow"));
 	addCheckbox("Rainbow Numbers", convar->getConVarByName("osu_circle_number_rainbow"));
 	addCheckbox("SliderBreak Epilepsy", convar->getConVarByName("osu_slider_break_epilepsy"));

@@ -146,6 +146,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_osu_folder_sub_skins_ref = convar->getConVarByName("osu_folder_sub_skins");
 	m_osu_draw_hud_ref = convar->getConVarByName("osu_draw_hud");
 	m_osu_draw_scoreboard = convar->getConVarByName("osu_draw_scoreboard");
+	m_osu_draw_cursor_ripples_ref = convar->getConVarByName("osu_draw_cursor_ripples");
 	m_osu_mod_fps_ref = convar->getConVarByName("osu_mod_fps");
 	m_osu_mod_minimize_ref = convar->getConVarByName("osu_mod_minimize");
 	m_osu_mod_wobble_ref = convar->getConVarByName("osu_mod_wobble");
@@ -655,6 +656,9 @@ void Osu::draw(Graphics *g)
 		m_hud->drawVolumeChange(g);
 
 		m_windowManager->draw(g);
+
+		if (isFPoSu && m_osu_draw_cursor_ripples_ref->getBool())
+			m_hud->drawCursorRipples(g);
 
 		if (isBufferedPlayfieldDraw)
 			m_playfieldBuffer->disable();
