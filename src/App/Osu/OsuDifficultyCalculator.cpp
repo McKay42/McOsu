@@ -28,11 +28,11 @@ OsuDifficultyHitObject::OsuDifficultyHitObject(TYPE type, Vector2 pos, long time
 {
 }
 
-OsuDifficultyHitObject::OsuDifficultyHitObject(TYPE type, Vector2 pos, long time, long endTime) : OsuDifficultyHitObject(type, pos, time, endTime, 0.0f, '\0', std::vector<Vector2>(), 0.0f, std::vector<long>())
+OsuDifficultyHitObject::OsuDifficultyHitObject(TYPE type, Vector2 pos, long time, long endTime) : OsuDifficultyHitObject(type, pos, time, endTime, 0.0f, '\0', std::vector<Vector2>(), 0.0f, std::vector<long>(), true)
 {
 }
 
-OsuDifficultyHitObject::OsuDifficultyHitObject(TYPE type, Vector2 pos, long time, long endTime, float spanDuration, char osuSliderCurveType, std::vector<Vector2> controlPoints, float pixelLength, std::vector<long> scoringTimes)
+OsuDifficultyHitObject::OsuDifficultyHitObject(TYPE type, Vector2 pos, long time, long endTime, float spanDuration, char osuSliderCurveType, std::vector<Vector2> controlPoints, float pixelLength, std::vector<long> scoringTimes, bool calculateSliderCurveInConstructor)
 {
 	this->type = type;
 	this->pos = pos;
@@ -45,6 +45,8 @@ OsuDifficultyHitObject::OsuDifficultyHitObject(TYPE type, Vector2 pos, long time
 
 	this->curve = NULL;
 	this->scheduledCurveAlloc = false;
+	this->scheduledCurveAllocStackOffset = 0.0f;
+
 	this->stack = 0;
 	this->originalPos = this->pos;
 	this->sortHack = sortHackCounter++;
@@ -52,12 +54,29 @@ OsuDifficultyHitObject::OsuDifficultyHitObject(TYPE type, Vector2 pos, long time
 	// build slider curve, if this is a (valid) slider
 	if (this->type == TYPE::SLIDER && osu_stars_xexxar_angles_sliders.getBool() && controlPoints.size() > 1)
 	{
-		// new: delay curve creation to when it's needed, and also immediately delete afterwards (at the cost of having to store a copy of the control points)
-		this->scheduledCurveAlloc = true;
-		this->scheduledCurveAllocControlPoints = controlPoints;
+		if (calculateSliderCurveInConstructor)
+		{
+			// old: too much kept memory allocations for over 14000 sliders in https://osu.ppy.sh/beatmapsets/592138#osu/1277649
 
-		// old: too much kept memory allocations for over 14000 sliders in https://osu.ppy.sh/beatmapsets/592138#osu/1277649
-		//this->curve = OsuSliderCurve::createCurve(this->osuSliderCurveType, controlPoints, this->pixelLength, osu_stars_slider_curve_points_separation.getFloat());
+			// NOTE: this is still used for beatmaps with less than 5000 sliders (because precomputing all curves is way faster, especially for star cache loader)
+			// NOTE: the 5000 slider threshold was chosen by looking at the longest non-aspire marathon maps
+			// NOTE: 15000 slider curves use ~1.6 GB of RAM, for 32-bit executables with 2GB cap limiting to 5000 sliders gives ~530 MB which should be survivable without crashing (even though the heap gets fragmented to fuck)
+
+			// 6000 sliders @ The Weather Channel - 139 Degrees (Tiggz Mumbson) [Special Weather Statement].osu
+			// 3674 sliders @ Various Artists - Alternator Compilation (Monstrata) [Marathon].osu
+			// 4599 sliders @ Renard - Because Maybe! (Mismagius) [- Nogard Marathon -].osu
+			// 4921 sliders @ Renard - Because Maybe! (Mismagius) [- Nogard Marathon v2 -].osu
+			// 14960 sliders @ pishifat - H E L L O  T H E R E (Kondou-Shinichi) [Sliders in the 69th centries].osu
+			// 5208 sliders @ MillhioreF - haitai but every hai adds another haitai in the background (Chewy-san) [Weriko Rank the dream (nerf) but loli].osu
+
+			this->curve = OsuSliderCurve::createCurve(this->osuSliderCurveType, controlPoints, this->pixelLength, osu_stars_slider_curve_points_separation.getFloat());
+		}
+		else
+		{
+			// new: delay curve creation to when it's needed, and also immediately delete afterwards (at the cost of having to store a copy of the control points)
+			this->scheduledCurveAlloc = true;
+			this->scheduledCurveAllocControlPoints = controlPoints;
+		}
 	}
 }
 
@@ -81,6 +100,8 @@ OsuDifficultyHitObject::OsuDifficultyHitObject(OsuDifficultyHitObject &&dobj)
 	this->curve = dobj.curve;
 	this->scheduledCurveAlloc = dobj.scheduledCurveAlloc;
 	this->scheduledCurveAllocControlPoints = std::move(dobj.scheduledCurveAllocControlPoints);
+	this->scheduledCurveAllocStackOffset = dobj.scheduledCurveAllocStackOffset;
+
 	this->stack = dobj.stack;
 	this->originalPos = dobj.originalPos;
 	this->sortHack = dobj.sortHack;
@@ -105,6 +126,8 @@ OsuDifficultyHitObject& OsuDifficultyHitObject::operator = (OsuDifficultyHitObje
 	this->curve = dobj.curve;
 	this->scheduledCurveAlloc = dobj.scheduledCurveAlloc;
 	this->scheduledCurveAllocControlPoints = std::move(dobj.scheduledCurveAllocControlPoints);
+	this->scheduledCurveAllocStackOffset = dobj.scheduledCurveAllocStackOffset;
+
 	this->stack = dobj.stack;
 	this->originalPos = dobj.originalPos;
 	this->sortHack = dobj.sortHack;
@@ -118,25 +141,57 @@ OsuDifficultyHitObject& OsuDifficultyHitObject::operator = (OsuDifficultyHitObje
 
 void OsuDifficultyHitObject::updateStackPosition(float stackOffset)
 {
+	scheduledCurveAllocStackOffset = stackOffset;
+
 	pos = originalPos - Vector2(stack * stackOffset, stack * stackOffset);
 
+	updateCurveStackPosition(stackOffset);
+}
+
+void OsuDifficultyHitObject::updateCurveStackPosition(float stackOffset)
+{
 	if (curve != NULL)
 		curve->updateStackPosition(stack * stackOffset, false);
 }
 
 Vector2 OsuDifficultyHitObject::getOriginalRawPosAt(long pos)
 {
-	if (type != TYPE::SLIDER || curve == NULL)
+	// NOTE: the delayed curve creation has been deliberately disabled here for stacking purposes for beatmaps with insane slider counts for performance reasons
+	// NOTE: this means that these aspire maps will have incorrect stars due to incorrect slider stacking, but the delta is below 0.02 even for the most insane maps which currently exist
+	// NOTE: if this were to ever get implemented properly, then a sliding window for curve allocation must be added to the stack algorithm itself (as doing it in here is O(n!) madness)
+	// NOTE: to validate the delta, use Acid Rain [Aspire] - Karoo13 (6.76* with slider stacks -> 6.75* without slider stacks)
+
+	if (type != TYPE::SLIDER || (curve == NULL/* && !scheduledCurveAlloc*/))
 		return originalPos;
 	else
 	{
+		/*
+		// MCKAY:
+		{
+			// delay curve creation to when it's needed (1)
+			if (curve == NULL && scheduledCurveAlloc)
+				curve = OsuSliderCurve::createCurve(osuSliderCurveType, scheduledCurveAllocControlPoints, pixelLength, osu_stars_slider_curve_points_separation.getFloat());
+		}
+		*/
+
         float progress = (float)(clamp<long>(pos, time, endTime)) / spanDuration;
         if (std::fmod(progress, 2.0f) >= 1.0f)
             progress = 1.0f - std::fmod(progress, 1.0f);
         else
             progress = std::fmod(progress, 1.0f);
 
-        return curve->originalPointAt(progress);
+        const Vector2 originalPointAt = curve->originalPointAt(progress);
+
+        /*
+        // MCKAY:
+        {
+        	// and delete it immediately afterwards (2)
+        	if (scheduledCurveAlloc)
+        		SAFE_DELETE(curve);
+        }
+		*/
+
+        return originalPointAt;
 	}
 }
 
@@ -575,7 +630,10 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 				{
 					// delay curve creation to when it's needed (1)
 					if (prev1.ho->scheduledCurveAlloc && prev1.ho->curve == NULL)
+					{
 						prev1.ho->curve = OsuSliderCurve::createCurve(prev1.ho->osuSliderCurveType, prev1.ho->scheduledCurveAllocControlPoints, prev1.ho->pixelLength, starsSliderCurvePointsSeparation);
+						prev1.ho->updateCurveStackPosition(prev1.ho->scheduledCurveAllocStackOffset); // NOTE: respect stacking
+					}
 				}
 
 				if (prev1.ho->type == OsuDifficultyHitObject::TYPE::SLIDER)

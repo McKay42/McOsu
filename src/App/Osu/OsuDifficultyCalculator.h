@@ -31,7 +31,7 @@ public:
 public:
 	OsuDifficultyHitObject(TYPE type, Vector2 pos, long time); // circle
 	OsuDifficultyHitObject(TYPE type, Vector2 pos, long time, long endTime); // spinner
-	OsuDifficultyHitObject(TYPE type, Vector2 pos, long time, long endTime, float spanDuration, char osuSliderCurveType, std::vector<Vector2> controlPoints, float pixelLength, std::vector<long> scoringTimes); // slider
+	OsuDifficultyHitObject(TYPE type, Vector2 pos, long time, long endTime, float spanDuration, char osuSliderCurveType, std::vector<Vector2> controlPoints, float pixelLength, std::vector<long> scoringTimes, bool calculateSliderCurveInConstructor); // slider
 	~OsuDifficultyHitObject();
 
 	OsuDifficultyHitObject(const OsuDifficultyHitObject&) = delete;
@@ -40,6 +40,7 @@ public:
 	OsuDifficultyHitObject& operator = (OsuDifficultyHitObject &&dobj);
 
 	void updateStackPosition(float stackOffset);
+	void updateCurveStackPosition(float stackOffset);
 
 	Vector2 getOriginalRawPosAt(long pos); // for stacking calculations, always returns the unstacked original position at that point in time
 
@@ -63,8 +64,11 @@ public:
 	OsuSliderCurve *curve;
 	bool scheduledCurveAlloc;
 	std::vector<Vector2> scheduledCurveAllocControlPoints;
+	float scheduledCurveAllocStackOffset;
+
 	int stack;
 	Vector2 originalPos;
+
 	unsigned long long sortHack;
 
 private:

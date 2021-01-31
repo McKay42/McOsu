@@ -648,6 +648,7 @@ OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT OsuDatabaseBeatmap::loadDifficultyHitObj
 				(long)c.hitcircles[i].time));
 	}
 
+	const bool calculateSliderCurveInConstructor = (c.sliders.size() < 5000); // NOTE: for explanation see OsuDifficultyHitObject constructor
 	for (int i=0; i<c.sliders.size(); i++)
 	{
 		if (!calculateStarsInaccurately)
@@ -661,7 +662,8 @@ OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT OsuDatabaseBeatmap::loadDifficultyHitObj
 					c.sliders[i].type,
 					c.sliders[i].points,
 					c.sliders[i].pixelLength,
-					c.sliders[i].scoringTimesForStarCalc));
+					c.sliders[i].scoringTimesForStarCalc,
+					calculateSliderCurveInConstructor));
 		}
 		else
 		{
@@ -674,7 +676,8 @@ OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT OsuDatabaseBeatmap::loadDifficultyHitObj
 					c.sliders[i].type,
 					std::vector<Vector2>(),	// NOTE: ignore curve when calculating inaccurately
 					c.sliders[i].pixelLength,
-					std::vector<long>()));	// NOTE: ignore curve when calculating inaccurately
+					std::vector<long>(),	// NOTE: ignore curve when calculating inaccurately
+					false));				// NOTE: ignore curve when calculating inaccurately
 		}
 	}
 
