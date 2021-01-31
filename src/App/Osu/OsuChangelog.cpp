@@ -42,6 +42,7 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha316.changes.push_back("- Fixed aspire infinite slider ticks crashes");
 	alpha316.changes.push_back("- Fixed object counts not being updated by background star calc");
 	alpha316.changes.push_back("- Fixed slider ball color handling (default to white instead of osu!default-skin special case)");
+	alpha316.changes.push_back("- Fixed cursor ripples in FPoSu mode being drawn on wrong layer");
 	alpha316.changes.push_back("");
 	alpha316.changes.push_back("- Fixed collections not showing all contained beatmaps/diffs");
 	alpha316.changes.push_back("- Fixed invalid default selection when opening beatmap sets with active search");
