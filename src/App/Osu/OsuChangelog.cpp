@@ -36,10 +36,12 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 
 	CHANGELOG alpha316;
 	alpha316.title = UString::format("32 (Build Date: %s, %s)", __DATE__, __TIME__);
-	alpha316.changes.push_back("- Added ConVar: osu_playfield_circular");
+	alpha316.changes.push_back("- Added ConVars: osu_playfield_circular, osu_quick_retry_time");
 	alpha316.changes.push_back("- Updated fposu_fov and fposu_zoom_fov to allow underscale + overscale (via console or cfg)");
 	alpha316.changes.push_back("- Improved star calc memory usage (slider curves, mostly fixes aspire out-of-memory crashes)");
 	alpha316.changes.push_back("- Fixed aspire infinite slider ticks crashes");
+	alpha316.changes.push_back("- Fixed object counts not being updated by background star calc");
+	alpha316.changes.push_back("- Fixed slider ball color handling (default to white instead of osu!default-skin special case)");
 	alpha316.changes.push_back("");
 	alpha316.changes.push_back("- Fixed collections not showing all contained beatmaps/diffs");
 	alpha316.changes.push_back("- Fixed invalid default selection when opening beatmap sets with active search");
