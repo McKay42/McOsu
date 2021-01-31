@@ -1411,6 +1411,12 @@ void OsuBeatmap::pause(bool quitIfWaiting)
 	const bool isFirstPause = !m_bContinueScheduled;
 	const bool forceContinueWithoutSchedule = m_osu->isInMultiplayer();
 
+	// NOTE: this assumes that no beatmap ever goes far beyond the end of the music
+	// NOTE: if pure virtual audio time is ever supported (playing without SoundEngine) then this needs to be adapted
+	// fix pausing after music ends breaking beatmap state (by just not allowing it to be paused)
+	if (m_fAfterMusicIsFinishedVirtualAudioTimeStart >= 0.0f)
+		return;
+
 	if (m_bIsPlaying) // if we are playing, aka if this is the first time pausing
 	{
 		if (m_bIsWaiting && quitIfWaiting) // if we are still m_bIsWaiting, pausing the game via the escape key is the same as stopping playing
