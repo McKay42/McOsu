@@ -231,7 +231,7 @@ OsuSkin::OsuSkin(Osu *osu, UString name, UString filepath, bool isDefaultSkin, b
 
 	m_spinnerApproachCircleColor = 0xffffffff;
 	m_sliderBorderColor = 0xffffffff;
-	m_sliderBallColor = 0xff02aaff;
+	m_sliderBallColor = 0xffffffff; // NOTE: 0xff02aaff is a hardcoded special case for osu!'s default skin, but it does not apply to user skins
 
 	m_songSelectActiveText = 0xff000000;
 	m_songSelectInactiveText = 0xffffffff;
