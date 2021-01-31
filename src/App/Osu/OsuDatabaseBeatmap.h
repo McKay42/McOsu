@@ -124,6 +124,11 @@ public:
 
 	void setStarsNoMod(float starsNoMod) {m_fStarsNomod = starsNoMod;}
 
+	void setNumObjects(int numObjects) {m_iNumObjects = numObjects;}
+	void setNumCircles(int numCircles) {m_iNumCircles = numCircles;}
+	void setNumSliders(int numSliders) {m_iNumSliders = numSliders;}
+	void setNumSpinners(int numSpinners) {m_iNumSpinners = numSpinners;}
+
 	void setLocalOffset(long localOffset) {m_iLocalOffset = localOffset;}
 
 
@@ -437,6 +442,10 @@ public:
 	inline const std::vector<double> &getAimStrains() const {return m_aimStrains;}
 	inline const std::vector<double> &getSpeedStrains() const {return m_speedStrains;}
 
+	inline const int getNumObjects() const {return m_iNumObjects.load();}
+	inline const int getNumCircles() const {return m_iNumCircles.load();}
+	inline const int getNumSpinners() const {return m_iNumSpinners.load();}
+
 private:
 	virtual void init();
 	virtual void initAsync();
@@ -462,9 +471,9 @@ private:
 
 	// custom
 	int m_iErrorCode;
-	int m_iNumObjects;
-	int m_iNumCircles;
-	int m_iNumSpinners;
+	std::atomic<int> m_iNumObjects;
+	std::atomic<int> m_iNumCircles;
+	std::atomic<int> m_iNumSpinners;
 	int m_iMaxPossibleCombo;
 };
 

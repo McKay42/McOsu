@@ -194,11 +194,25 @@ void OsuUISongBrowserInfoLabel::update()
 
 				if (beatmap->getSelectedDifficulty2() != NULL)
 				{
-					const float opm = (beatmap->getSelectedDifficulty2()->getLengthMS() > 0 ? ((float)beatmap->getSelectedDifficulty2()->getNumObjects() / (float)(beatmap->getSelectedDifficulty2()->getLengthMS() / 1000.0f / 60.0f)) : 0.0f) * m_osu->getSpeedMultiplier();
-					const float cpm = (beatmap->getSelectedDifficulty2()->getLengthMS() > 0 ? ((float)beatmap->getSelectedDifficulty2()->getNumCircles() / (float)(beatmap->getSelectedDifficulty2()->getLengthMS() / 1000.0f / 60.0f)) : 0.0f) * m_osu->getSpeedMultiplier();
-					const float spm = (beatmap->getSelectedDifficulty2()->getLengthMS() > 0 ? ((float)beatmap->getSelectedDifficulty2()->getNumSliders() / (float)(beatmap->getSelectedDifficulty2()->getLengthMS() / 1000.0f / 60.0f)) : 0.0f) * m_osu->getSpeedMultiplier();
+					int numObjects = beatmap->getSelectedDifficulty2()->getNumObjects();
+					int numCircles = beatmap->getSelectedDifficulty2()->getNumCircles();
+					int numSliders = beatmap->getSelectedDifficulty2()->getNumSliders();
+					unsigned long lengthMS = beatmap->getSelectedDifficulty2()->getLengthMS();
 
-					m_osu->getTooltipOverlay()->addLine(UString::format("Circles: %i, Sliders: %i, Spinners: %i", beatmap->getSelectedDifficulty2()->getNumCircles(), beatmap->getSelectedDifficulty2()->getNumSliders(), (beatmap->getSelectedDifficulty2()->getNumObjects() - beatmap->getSelectedDifficulty2()->getNumCircles() - beatmap->getSelectedDifficulty2()->getNumSliders())));
+					const bool areStarsInaccurate = (m_osu->getSongBrowser()->getDynamicStarCalculator()->isDead() || !m_osu->getSongBrowser()->getDynamicStarCalculator()->isAsyncReady());
+					if (!areStarsInaccurate)
+					{
+						numObjects = m_osu->getSongBrowser()->getDynamicStarCalculator()->getNumObjects();
+						numCircles = m_osu->getSongBrowser()->getDynamicStarCalculator()->getNumCircles();
+						numSliders = std::max(0, m_osu->getSongBrowser()->getDynamicStarCalculator()->getNumObjects() - m_osu->getSongBrowser()->getDynamicStarCalculator()->getNumCircles() - m_osu->getSongBrowser()->getDynamicStarCalculator()->getNumSpinners());
+						lengthMS = m_osu->getSongBrowser()->getDynamicStarCalculator()->getLengthMS();
+					}
+
+					const float opm = (lengthMS > 0 ? ((float)numObjects / (float)(lengthMS / 1000.0f / 60.0f)) : 0.0f) * m_osu->getSpeedMultiplier();
+					const float cpm = (lengthMS > 0 ? ((float)numCircles / (float)(lengthMS / 1000.0f / 60.0f)) : 0.0f) * m_osu->getSpeedMultiplier();
+					const float spm = (lengthMS > 0 ? ((float)numSliders / (float)(lengthMS / 1000.0f / 60.0f)) : 0.0f) * m_osu->getSpeedMultiplier();
+
+					m_osu->getTooltipOverlay()->addLine(UString::format("Circles: %i, Sliders: %i, Spinners: %i", numCircles, numSliders, std::max(0, numObjects - numCircles - numSliders)));
 					m_osu->getTooltipOverlay()->addLine(UString::format("OPM: %i, CPM: %i, SPM: %i", (int)opm, (int)cpm, (int)spm));
 				}
 			}
@@ -216,7 +230,7 @@ void OsuUISongBrowserInfoLabel::setFromBeatmap(OsuBeatmap *beatmap, OsuDatabaseB
 	setDiff(diff2->getDifficultyName());
 	setMapper(diff2->getCreator());
 
-	setLengthMS(beatmap->getLength());
+	setLengthMS(diff2->getLengthMS());
 	setBPM(diff2->getMinBPM(), diff2->getMaxBPM());
 	setNumObjects(diff2->getNumObjects());
 
@@ -297,10 +311,19 @@ UString OsuUISongBrowserInfoLabel::buildSongInfoString()
 {
 	unsigned long lengthMS = m_iLengthMS;
 
-	OsuBeatmap *beatmap = m_osu->getSelectedBeatmap();
+	const bool areStarsInaccurate = (m_osu->getSongBrowser()->getDynamicStarCalculator()->isDead() || !m_osu->getSongBrowser()->getDynamicStarCalculator()->isAsyncReady());
+
+	if (!areStarsInaccurate)
+		lengthMS = std::max(lengthMS, (unsigned long)m_osu->getSongBrowser()->getDynamicStarCalculator()->getLengthMS());
+
 	// TODO: this has never worked. breaks are only loaded during gameplay, so even the old implementation did nothing
-	if (beatmap != NULL)
-		lengthMS -= clamp<unsigned long>(beatmap->getBreakDurationTotal(), 0, m_iLengthMS);
+	/*
+	{
+		OsuBeatmap *beatmap = m_osu->getSelectedBeatmap();
+		if (beatmap != NULL)
+			lengthMS -= clamp<unsigned long>(beatmap->getBreakDurationTotal(), 0, m_iLengthMS);
+	}
+	*/
 
 	const unsigned long fullSeconds = (lengthMS*(1.0 / m_osu->getSpeedMultiplier())) / 1000.0;
 	const int minutes = fullSeconds / 60;
@@ -309,10 +332,15 @@ UString OsuUISongBrowserInfoLabel::buildSongInfoString()
 	const int minBPM = m_iMinBPM * m_osu->getSpeedMultiplier();
 	const int maxBPM = m_iMaxBPM * m_osu->getSpeedMultiplier();
 
+	int numObjects = m_iNumObjects;
+
+	if (!areStarsInaccurate)
+		numObjects = m_osu->getSongBrowser()->getDynamicStarCalculator()->getNumObjects();
+
 	if (m_iMinBPM == m_iMaxBPM)
-		return UString::format("Length: %02i:%02i BPM: %i Objects: %i", minutes, seconds, maxBPM, m_iNumObjects);
+		return UString::format("Length: %02i:%02i BPM: %i Objects: %i", minutes, seconds, maxBPM, numObjects);
 	else
-		return UString::format("Length: %02i:%02i BPM: %i-%i Objects: %i", minutes, seconds, minBPM, maxBPM, m_iNumObjects);
+		return UString::format("Length: %02i:%02i BPM: %i-%i Objects: %i", minutes, seconds, minBPM, maxBPM, numObjects);
 }
 
 UString OsuUISongBrowserInfoLabel::buildDiffInfoString()
