@@ -247,6 +247,7 @@ private:
 	ConVar *m_osu_folder_sub_skins_ref;
 	ConVar *m_osu_draw_hud_ref;
 	ConVar *m_osu_draw_scoreboard;
+	ConVar *m_osu_draw_cursor_ripples_ref;
 	ConVar *m_osu_mod_fps_ref;
 	ConVar *m_osu_mod_wobble_ref;
 	ConVar *m_osu_mod_wobble2_ref;

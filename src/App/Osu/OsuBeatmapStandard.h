@@ -67,6 +67,11 @@ private:
 	static ConVar *m_osu_mod_fposu_ref;
 	static ConVar *m_osu_slider_scorev2_ref;
 
+	static inline Vector2 mapNormalizedCoordsOntoUnitCircle(const Vector2 &in)
+	{
+		return Vector2(in.x * std::sqrt(1.0f - in.y * in.y / 2.0f), in.y * std::sqrt(1.0f - in.x * in.x / 2.0f));
+	}
+
 	virtual void onBeforeLoad();
 	virtual void onLoad();
 	virtual void onPlayStart();

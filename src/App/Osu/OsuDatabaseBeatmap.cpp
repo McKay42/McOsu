@@ -545,24 +545,26 @@ void OsuDatabaseBeatmap::calculateSliderTimesClicksTicks(std::vector<SLIDER> &sl
 
 			// calculate ticks
 			// TODO: validate https://github.com/ppy/osu/pull/3595/files
-			const float minTickPixelDistanceFromEnd = 0.01f * SliderHelper::getSliderVelocity(s, timingInfo, sliderMultiplier, sliderTickRate);
-			const float tickPixelLength = SliderHelper::getSliderTickDistance(sliderMultiplier, sliderTickRate) / SliderHelper::getTimingPointMultiplierForSlider(s, timingInfo);
-			const float tickDurationPercentOfSliderLength = tickPixelLength / (s.pixelLength == 0.0f ? 1.0f : s.pixelLength);
-			const int tickCount = (int)std::ceil(s.pixelLength / tickPixelLength) - 1;
-
-			if (tickCount > 0 && !timingInfo.isNaN) // don't generate ticks for NaN timingpoints
 			{
-				const float tickTOffset = tickDurationPercentOfSliderLength;
-				float pixelDistanceToEnd = s.pixelLength;
-				float t = tickTOffset;
-				for (int i=0; i<tickCount; i++, t+=tickTOffset)
-				{
-					// skip ticks which are too close to the end of the slider
-					pixelDistanceToEnd -= tickPixelLength;
-					if (pixelDistanceToEnd <= minTickPixelDistanceFromEnd)
-						break;
+				const float minTickPixelDistanceFromEnd = 0.01f * SliderHelper::getSliderVelocity(s, timingInfo, sliderMultiplier, sliderTickRate);
+				const float tickPixelLength = SliderHelper::getSliderTickDistance(sliderMultiplier, sliderTickRate) / SliderHelper::getTimingPointMultiplierForSlider(s, timingInfo);
+				const float tickDurationPercentOfSliderLength = tickPixelLength / (s.pixelLength == 0.0f ? 1.0f : s.pixelLength);
+				const int tickCount = std::min((int)std::ceil(s.pixelLength / tickPixelLength) - 1, 65536/2); // NOTE: hard sanity limit number of ticks per slider
 
-					s.ticks.push_back(t);
+				if (tickCount > 0 && !timingInfo.isNaN && !std::isnan(s.pixelLength) && !std::isnan(tickPixelLength)) // don't generate ticks for NaN timingpoints and infinite values
+				{
+					const float tickTOffset = tickDurationPercentOfSliderLength;
+					float pixelDistanceToEnd = s.pixelLength;
+					float t = tickTOffset;
+					for (int i=0; i<tickCount; i++, t+=tickTOffset)
+					{
+						// skip ticks which are too close to the end of the slider
+						pixelDistanceToEnd -= tickPixelLength;
+						if (pixelDistanceToEnd <= minTickPixelDistanceFromEnd)
+							break;
+
+						s.ticks.push_back(t);
+					}
 				}
 			}
 
@@ -646,6 +648,7 @@ OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT OsuDatabaseBeatmap::loadDifficultyHitObj
 				(long)c.hitcircles[i].time));
 	}
 
+	const bool calculateSliderCurveInConstructor = (c.sliders.size() < 5000); // NOTE: for explanation see OsuDifficultyHitObject constructor
 	for (int i=0; i<c.sliders.size(); i++)
 	{
 		if (!calculateStarsInaccurately)
@@ -659,7 +662,8 @@ OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT OsuDatabaseBeatmap::loadDifficultyHitObj
 					c.sliders[i].type,
 					c.sliders[i].points,
 					c.sliders[i].pixelLength,
-					c.sliders[i].scoringTimesForStarCalc));
+					c.sliders[i].scoringTimesForStarCalc,
+					calculateSliderCurveInConstructor));
 		}
 		else
 		{
@@ -672,7 +676,8 @@ OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT OsuDatabaseBeatmap::loadDifficultyHitObj
 					c.sliders[i].type,
 					std::vector<Vector2>(),	// NOTE: ignore curve when calculating inaccurately
 					c.sliders[i].pixelLength,
-					std::vector<long>()));	// NOTE: ignore curve when calculating inaccurately
+					std::vector<long>(),	// NOTE: ignore curve when calculating inaccurately
+					false));				// NOTE: ignore curve when calculating inaccurately
 		}
 	}
 
@@ -1683,7 +1688,7 @@ void OsuDatabaseBeatmapStarCalculator::init()
 	// NOTE: this accesses runtime mods, so must be run sync (not async)
 	// technically the getSelectedBeatmap() call here is a bit unsafe, since the beatmap could have changed already between async and sync, but in that case we recalculate immediately after anyways
 	if (!m_bDead.load() && m_iErrorCode == 0 && m_diff2->m_osu->getSelectedBeatmap() != NULL)
-		m_pp = OsuDifficultyCalculator::calculatePPv2(m_diff2->m_osu, m_diff2->m_osu->getSelectedBeatmap(), m_aimStars.load(), m_speedStars.load(), m_iNumObjects, m_iNumCircles, m_iNumSpinners, m_iMaxPossibleCombo);
+		m_pp = OsuDifficultyCalculator::calculatePPv2(m_diff2->m_osu, m_diff2->m_osu->getSelectedBeatmap(), m_aimStars.load(), m_speedStars.load(), m_iNumObjects.load(), m_iNumCircles.load(), m_iNumSpinners.load(), m_iMaxPossibleCombo);
 
 	m_bReady = true;
 }

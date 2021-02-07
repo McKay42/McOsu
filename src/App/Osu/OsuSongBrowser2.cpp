@@ -1107,7 +1107,11 @@ void OsuSongBrowser2::update()
 
 					OsuDatabaseBeatmap *calculatedDiff = m_backgroundStarCalculator->getBeatmapDifficulty();
 					calculatedDiff->setStarsNoMod(std::max(0.0001f, (float)m_backgroundStarCalculator->getTotalStars()));
-					calculatedDiff->setLengthMS(m_backgroundStarCalculator->getLengthMS());
+					calculatedDiff->setNumObjects(m_backgroundStarCalculator->getNumObjects());
+					calculatedDiff->setNumCircles(m_backgroundStarCalculator->getNumCircles());
+					calculatedDiff->setNumSliders(std::max(0, m_backgroundStarCalculator->getNumObjects() - m_backgroundStarCalculator->getNumCircles() - m_backgroundStarCalculator->getNumSpinners()));
+					calculatedDiff->setNumSpinners(m_backgroundStarCalculator->getNumSpinners());
+					calculatedDiff->setLengthMS(std::max(calculatedDiff->getLengthMS(), (unsigned long)m_backgroundStarCalculator->getLengthMS()));
 
 					// re-add (potentially changed stars, potentially changed length)
 					readdBeatmap(calculatedDiff);

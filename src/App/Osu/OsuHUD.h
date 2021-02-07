@@ -45,6 +45,7 @@ public:
 	void drawCursorSpectator2(Graphics *g, Vector2 pos, float alphaMultiplier = 1.0f);
 	void drawCursorVR1(Graphics *g, Matrix4 &mvp, Vector2 pos, float alphaMultiplier = 1.0f);
 	void drawCursorVR2(Graphics *g, Matrix4 &mvp, Vector2 pos, float alphaMultiplier = 1.0f);
+	void drawCursorRipples(Graphics *g);
 	void drawFps(Graphics *g) {drawFps(g, m_tempFont, m_fCurFps);}
 	void drawHitErrorBar(Graphics *g, OsuBeatmapStandard *beatmapStd);
 	void drawPlayfieldBorder(Graphics *g, Vector2 playfieldCenter, Vector2 playfieldSize, float hitcircleDiameter);
@@ -151,7 +152,6 @@ private:
 	void drawCursorInt(Graphics *g, Shader *trailShader, std::vector<CURSORTRAIL> &trail, Matrix4 &mvp, Vector2 pos, float alphaMultiplier = 1.0f, bool emptyTrailFrame = false);
 	void drawCursorRaw(Graphics *g, Vector2 pos, float alphaMultiplier = 1.0f);
 	void drawCursorTrailRaw(Graphics *g, float alpha, Vector2 pos);
-	void drawCursorRipples(Graphics *g);
 	void drawFps(Graphics *g, McFont *font, float fps);
 	void drawAccuracy(Graphics *g, float accuracy);
 	void drawCombo(Graphics *g, int combo);

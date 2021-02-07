@@ -1078,10 +1078,10 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	CBaseUISlider *fposuDistanceSlider = addSlider("Distance:", 0.01f, 5.0f, convar->getConVarByName("fposu_distance"), -1.0f, true);
 	fposuDistanceSlider->setKeyDelta(0.01f);
 	addCheckbox("Vertical FOV", "If enabled: Vertical FOV.\nIf disabled: Horizontal FOV (default).", convar->getConVarByName("fposu_vertical_fov"));
-	CBaseUISlider *fovSlider = addSlider("FOV:", 10.0f, 160.0f, convar->getConVarByName("fposu_fov"));
+	CBaseUISlider *fovSlider = addSlider("FOV:", 10.0f, 160.0f, convar->getConVarByName("fposu_fov"), -1.0f, true, true);
 	fovSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeOneDecimalPlace) );
 	fovSlider->setKeyDelta(0.1f);
-	CBaseUISlider *zoomedFovSlider = addSlider("FOV (Zoom):", 10.0f, 160.0f, convar->getConVarByName("fposu_zoom_fov"));
+	CBaseUISlider *zoomedFovSlider = addSlider("FOV (Zoom):", 10.0f, 160.0f, convar->getConVarByName("fposu_zoom_fov"), -1.0f, true, true);
 	zoomedFovSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeOneDecimalPlace) );
 	zoomedFovSlider->setKeyDelta(0.1f);
 	addCheckbox("Zoom Key Toggle", "Enabled: Zoom key toggles zoom.\nDisabled: Zoom while zoom key is held.", convar->getConVarByName("fposu_zoom_toggle"));
@@ -1119,7 +1119,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSection("Bullshit");
 
 	addSubSection("Why");
-	addCheckbox("Rainbow ApproachCircles", convar->getConVarByName("osu_circle_rainbow"));
+	addCheckbox("Rainbow Circles", convar->getConVarByName("osu_circle_rainbow"));
 	addCheckbox("Rainbow Sliders", convar->getConVarByName("osu_slider_rainbow"));
 	addCheckbox("Rainbow Numbers", convar->getConVarByName("osu_circle_number_rainbow"));
 	addCheckbox("SliderBreak Epilepsy", convar->getConVarByName("osu_slider_break_epilepsy"));

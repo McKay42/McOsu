@@ -71,6 +71,7 @@ ConVar osu_playfield_mirror_vertical("osu_playfield_mirror_vertical", false);
 ConVar osu_playfield_rotation("osu_playfield_rotation", 0.0f, "rotates the entire playfield by this many degrees");
 ConVar osu_playfield_stretch_x("osu_playfield_stretch_x", 0.0f, "offsets/multiplies all hitobject coordinates by it (0 = default 1x playfield size, -1 = on a line, -0.5 = 0.5x playfield size, 0.5 = 1.5x playfield size)");
 ConVar osu_playfield_stretch_y("osu_playfield_stretch_y", 0.0f, "offsets/multiplies all hitobject coordinates by it (0 = default 1x playfield size, -1 = on a line, -0.5 = 0.5x playfield size, 0.5 = 1.5x playfield size)");
+ConVar osu_playfield_circular("osu_playfield_circular", false, "whether the playfield area should be transformed from a rectangle into a circle/disc/oval");
 
 ConVar osu_drain_lazer_health_min("osu_drain_lazer_health_min", 0.95f);
 ConVar osu_drain_lazer_health_mid("osu_drain_lazer_health_mid", 0.70f);
@@ -1016,11 +1017,30 @@ Vector2 OsuBeatmapStandard::osuCoords2Pixels(Vector2 coords) const
 		coords.y = coords3.y + failTimePercentInv*OsuGameRules::OSU_COORD_HEIGHT*1.25f;
 	}
 
-	// playfield stretching
+	// playfield stretching/transforming
 	coords.x -= OsuGameRules::OSU_COORD_WIDTH/2; // center
 	coords.y -= OsuGameRules::OSU_COORD_HEIGHT/2;
-	coords.x *= 1.0f + osu_playfield_stretch_x.getFloat(); // stretch
-	coords.y *= 1.0f + osu_playfield_stretch_y.getFloat();
+	{
+		if (osu_playfield_circular.getBool())
+		{
+			// normalize to -1 +1
+			coords.x /= (float)OsuGameRules::OSU_COORD_WIDTH / 2.0f;
+			coords.y /= (float)OsuGameRules::OSU_COORD_HEIGHT / 2.0f;
+
+			// clamp (for sqrt) and transform
+			coords.x = clamp<float>(coords.x, -1.0f, 1.0f);
+			coords.y = clamp<float>(coords.y, -1.0f, 1.0f);
+			coords = mapNormalizedCoordsOntoUnitCircle(coords);
+
+			// and scale back up
+			coords.x *= (float)OsuGameRules::OSU_COORD_WIDTH / 2.0f;
+			coords.y *= (float)OsuGameRules::OSU_COORD_HEIGHT / 2.0f;
+		}
+
+		// stretch
+		coords.x *= 1.0f + osu_playfield_stretch_x.getFloat();
+		coords.y *= 1.0f + osu_playfield_stretch_y.getFloat();
+	}
 	coords.x += OsuGameRules::OSU_COORD_WIDTH/2; // undo center
 	coords.y += OsuGameRules::OSU_COORD_HEIGHT/2;
 
@@ -1124,6 +1144,22 @@ Vector2 OsuBeatmapStandard::osuCoords2VRPixels(Vector2 coords) const
 	coords.x -= OsuGameRules::OSU_COORD_WIDTH/2;
 	coords.y -= OsuGameRules::OSU_COORD_HEIGHT/2;
 
+	if (osu_playfield_circular.getBool())
+	{
+		// normalize to -1 +1
+		coords.x /= (float)OsuGameRules::OSU_COORD_WIDTH / 2.0f;
+		coords.y /= (float)OsuGameRules::OSU_COORD_HEIGHT / 2.0f;
+
+		// clamp (for sqrt) and transform
+		coords.x = clamp<float>(coords.x, -1.0f, 1.0f);
+		coords.y = clamp<float>(coords.y, -1.0f, 1.0f);
+		coords = mapNormalizedCoordsOntoUnitCircle(coords);
+
+		// and scale back up
+		coords.x *= (float)OsuGameRules::OSU_COORD_WIDTH / 2.0f;
+		coords.y *= (float)OsuGameRules::OSU_COORD_HEIGHT / 2.0f;
+	}
+
 	// VR scale
 	coords.x *= 1.0f + osu_playfield_stretch_x.getFloat();
 	coords.y *= 1.0f + osu_playfield_stretch_y.getFloat();
@@ -1161,6 +1197,22 @@ Vector2 OsuBeatmapStandard::osuCoords2LegacyPixels(Vector2 coords) const
 	// VR center
 	coords.x -= OsuGameRules::OSU_COORD_WIDTH/2;
 	coords.y -= OsuGameRules::OSU_COORD_HEIGHT/2;
+
+	if (osu_playfield_circular.getBool())
+	{
+		// normalize to -1 +1
+		coords.x /= (float)OsuGameRules::OSU_COORD_WIDTH / 2.0f;
+		coords.y /= (float)OsuGameRules::OSU_COORD_HEIGHT / 2.0f;
+
+		// clamp (for sqrt) and transform
+		coords.x = clamp<float>(coords.x, -1.0f, 1.0f);
+		coords.y = clamp<float>(coords.y, -1.0f, 1.0f);
+		coords = mapNormalizedCoordsOntoUnitCircle(coords);
+
+		// and scale back up
+		coords.x *= (float)OsuGameRules::OSU_COORD_WIDTH / 2.0f;
+		coords.y *= (float)OsuGameRules::OSU_COORD_HEIGHT / 2.0f;
+	}
 
 	// VR scale
 	coords.x *= 1.0f + osu_playfield_stretch_x.getFloat();

@@ -28,11 +28,11 @@ OsuDifficultyHitObject::OsuDifficultyHitObject(TYPE type, Vector2 pos, long time
 {
 }
 
-OsuDifficultyHitObject::OsuDifficultyHitObject(TYPE type, Vector2 pos, long time, long endTime) : OsuDifficultyHitObject(type, pos, time, endTime, 0.0f, '\0', std::vector<Vector2>(), 0.0f, std::vector<long>())
+OsuDifficultyHitObject::OsuDifficultyHitObject(TYPE type, Vector2 pos, long time, long endTime) : OsuDifficultyHitObject(type, pos, time, endTime, 0.0f, '\0', std::vector<Vector2>(), 0.0f, std::vector<long>(), true)
 {
 }
 
-OsuDifficultyHitObject::OsuDifficultyHitObject(TYPE type, Vector2 pos, long time, long endTime, float spanDuration, char osuSliderCurveType, std::vector<Vector2> controlPoints, float pixelLength, std::vector<long> scoringTimes)
+OsuDifficultyHitObject::OsuDifficultyHitObject(TYPE type, Vector2 pos, long time, long endTime, float spanDuration, char osuSliderCurveType, std::vector<Vector2> controlPoints, float pixelLength, std::vector<long> scoringTimes, bool calculateSliderCurveInConstructor)
 {
 	this->type = type;
 	this->pos = pos;
@@ -44,13 +44,40 @@ OsuDifficultyHitObject::OsuDifficultyHitObject(TYPE type, Vector2 pos, long time
 	this->scoringTimes = scoringTimes;
 
 	this->curve = NULL;
+	this->scheduledCurveAlloc = false;
+	this->scheduledCurveAllocStackOffset = 0.0f;
+
 	this->stack = 0;
 	this->originalPos = this->pos;
 	this->sortHack = sortHackCounter++;
 
 	// build slider curve, if this is a (valid) slider
 	if (this->type == TYPE::SLIDER && osu_stars_xexxar_angles_sliders.getBool() && controlPoints.size() > 1)
-		this->curve = OsuSliderCurve::createCurve(this->osuSliderCurveType, controlPoints, this->pixelLength, osu_stars_slider_curve_points_separation.getFloat());
+	{
+		if (calculateSliderCurveInConstructor)
+		{
+			// old: too much kept memory allocations for over 14000 sliders in https://osu.ppy.sh/beatmapsets/592138#osu/1277649
+
+			// NOTE: this is still used for beatmaps with less than 5000 sliders (because precomputing all curves is way faster, especially for star cache loader)
+			// NOTE: the 5000 slider threshold was chosen by looking at the longest non-aspire marathon maps
+			// NOTE: 15000 slider curves use ~1.6 GB of RAM, for 32-bit executables with 2GB cap limiting to 5000 sliders gives ~530 MB which should be survivable without crashing (even though the heap gets fragmented to fuck)
+
+			// 6000 sliders @ The Weather Channel - 139 Degrees (Tiggz Mumbson) [Special Weather Statement].osu
+			// 3674 sliders @ Various Artists - Alternator Compilation (Monstrata) [Marathon].osu
+			// 4599 sliders @ Renard - Because Maybe! (Mismagius) [- Nogard Marathon -].osu
+			// 4921 sliders @ Renard - Because Maybe! (Mismagius) [- Nogard Marathon v2 -].osu
+			// 14960 sliders @ pishifat - H E L L O  T H E R E (Kondou-Shinichi) [Sliders in the 69th centries].osu
+			// 5208 sliders @ MillhioreF - haitai but every hai adds another haitai in the background (Chewy-san) [Weriko Rank the dream (nerf) but loli].osu
+
+			this->curve = OsuSliderCurve::createCurve(this->osuSliderCurveType, controlPoints, this->pixelLength, osu_stars_slider_curve_points_separation.getFloat());
+		}
+		else
+		{
+			// new: delay curve creation to when it's needed, and also immediately delete afterwards (at the cost of having to store a copy of the control points)
+			this->scheduledCurveAlloc = true;
+			this->scheduledCurveAllocControlPoints = controlPoints;
+		}
+	}
 }
 
 OsuDifficultyHitObject::~OsuDifficultyHitObject()
@@ -71,12 +98,17 @@ OsuDifficultyHitObject::OsuDifficultyHitObject(OsuDifficultyHitObject &&dobj)
 	this->scoringTimes = std::move(dobj.scoringTimes);
 
 	this->curve = dobj.curve;
+	this->scheduledCurveAlloc = dobj.scheduledCurveAlloc;
+	this->scheduledCurveAllocControlPoints = std::move(dobj.scheduledCurveAllocControlPoints);
+	this->scheduledCurveAllocStackOffset = dobj.scheduledCurveAllocStackOffset;
+
 	this->stack = dobj.stack;
 	this->originalPos = dobj.originalPos;
 	this->sortHack = dobj.sortHack;
 
 	// reset source
 	dobj.curve = NULL;
+	dobj.scheduledCurveAlloc = false;
 }
 
 OsuDifficultyHitObject& OsuDifficultyHitObject::operator = (OsuDifficultyHitObject &&dobj)
@@ -92,37 +124,74 @@ OsuDifficultyHitObject& OsuDifficultyHitObject::operator = (OsuDifficultyHitObje
 	this->scoringTimes = std::move(dobj.scoringTimes);
 
 	this->curve = dobj.curve;
+	this->scheduledCurveAlloc = dobj.scheduledCurveAlloc;
+	this->scheduledCurveAllocControlPoints = std::move(dobj.scheduledCurveAllocControlPoints);
+	this->scheduledCurveAllocStackOffset = dobj.scheduledCurveAllocStackOffset;
+
 	this->stack = dobj.stack;
 	this->originalPos = dobj.originalPos;
 	this->sortHack = dobj.sortHack;
 
 	// reset source
 	dobj.curve = NULL;
+	dobj.scheduledCurveAlloc = false;
 
 	return *this;
 }
 
 void OsuDifficultyHitObject::updateStackPosition(float stackOffset)
 {
+	scheduledCurveAllocStackOffset = stackOffset;
+
 	pos = originalPos - Vector2(stack * stackOffset, stack * stackOffset);
 
+	updateCurveStackPosition(stackOffset);
+}
+
+void OsuDifficultyHitObject::updateCurveStackPosition(float stackOffset)
+{
 	if (curve != NULL)
 		curve->updateStackPosition(stack * stackOffset, false);
 }
 
 Vector2 OsuDifficultyHitObject::getOriginalRawPosAt(long pos)
 {
-	if (type != TYPE::SLIDER || curve == NULL)
+	// NOTE: the delayed curve creation has been deliberately disabled here for stacking purposes for beatmaps with insane slider counts for performance reasons
+	// NOTE: this means that these aspire maps will have incorrect stars due to incorrect slider stacking, but the delta is below 0.02 even for the most insane maps which currently exist
+	// NOTE: if this were to ever get implemented properly, then a sliding window for curve allocation must be added to the stack algorithm itself (as doing it in here is O(n!) madness)
+	// NOTE: to validate the delta, use Acid Rain [Aspire] - Karoo13 (6.76* with slider stacks -> 6.75* without slider stacks)
+
+	if (type != TYPE::SLIDER || (curve == NULL/* && !scheduledCurveAlloc*/))
 		return originalPos;
 	else
 	{
+		/*
+		// MCKAY:
+		{
+			// delay curve creation to when it's needed (1)
+			if (curve == NULL && scheduledCurveAlloc)
+				curve = OsuSliderCurve::createCurve(osuSliderCurveType, scheduledCurveAllocControlPoints, pixelLength, osu_stars_slider_curve_points_separation.getFloat());
+		}
+		*/
+
         float progress = (float)(clamp<long>(pos, time, endTime)) / spanDuration;
         if (std::fmod(progress, 2.0f) >= 1.0f)
             progress = 1.0f - std::fmod(progress, 1.0f);
         else
             progress = std::fmod(progress, 1.0f);
 
-        return curve->originalPointAt(progress);
+        const Vector2 originalPointAt = curve->originalPointAt(progress);
+
+        /*
+        // MCKAY:
+        {
+        	// and delete it immediately afterwards (2)
+        	if (scheduledCurveAlloc)
+        		SAFE_DELETE(curve);
+        }
+		*/
+
+        return originalPointAt;
 	}
 }
 
@@ -130,7 +199,7 @@ Vector2 OsuDifficultyHitObject::getOriginalRawPosAt(long pos)
 
 ConVar *OsuDifficultyCalculator::m_osu_slider_scorev2_ref = NULL;
 
-double OsuDifficultyCalculator::calculateStarDiffForHitObjects(const std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, double *aim, double *speed, int upToObjectIndex, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains)
+double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, double *aim, double *speed, int upToObjectIndex, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains)
 {
 	// NOTE: depends on speed multiplier + CS
 
@@ -216,7 +285,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(const std::vector
 		double jumpDistance;	// precalc
 		double travelDistance;	// precalc
 
-		float delta_time;		// strain temp
+		double delta_time;		// strain temp
 
 		bool lazyCalcFinished;	// precalc temp
 		Vector2 lazyEndPos;		// precalc temp
@@ -239,7 +308,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(const std::vector
 			jumpDistance = 0.0;
 			travelDistance = 0.0;
 
-			delta_time = 0.0f;
+			delta_time = 0.0;
 
 			lazyCalcFinished = false;
 			lazyEndPos = ho->pos;
@@ -259,7 +328,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(const std::vector
 			const long time_elapsed = ho->time - prev.ho->time;
 
 			// update our delta time
-			delta_time = (float)time_elapsed;
+			delta_time = (double)time_elapsed;
 
 			switch (ho->type)
 			{
@@ -287,7 +356,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(const std::vector
 			// see Process() @ https://github.com/ppy/osu/blob/master/osu.Game/Rulesets/Difficulty/Skills/Skill.cs
 			double currentStrain = prev.strains[Skills::skillToIndex(dtype)];
 			{
-				currentStrain *= strainDecay(dtype, (double)delta_time);
+				currentStrain *= strainDecay(dtype, delta_time);
 				currentStrain += currentStrainOfDiffObject * weight_scaling[Skills::skillToIndex(dtype)];
 			}
 			strains[Skills::skillToIndex(dtype)] = currentStrain;
@@ -383,7 +452,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(const std::vector
 		}
 
 		// new implementation, Xexxar, (ppv2.1), see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/
-		static double spacing_weight2(const Skills::Skill diff_type, float jump_distance, float travel_distance, float delta_time, float prev_jump_distance, float prev_travel_distance, float prev_delta_time, float angle)
+		static double spacing_weight2(const Skills::Skill diff_type, double jump_distance, double travel_distance, double delta_time, double prev_jump_distance, double prev_travel_distance, double prev_delta_time, double angle)
 		{
 			static const double single_spacing_threshold = 125.0;
 
@@ -400,8 +469,8 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(const std::vector
 			static const double aim_angle_bonus_begin = (PI / 3.0);
 
 			// "Every strain interval is hard capped at the equivalent of 375 BPM streaming speed as a safety measure"
-			const double strain_time = std::max(delta_time, 50.0f);
-			const double prev_strain_time = std::max(prev_delta_time, 50.0f);
+			const double strain_time = std::max(delta_time, 50.0);
+			const double prev_strain_time = std::max(prev_delta_time, 50.0);
 
 			double angle_bonus = 1.0;
 
@@ -411,8 +480,8 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(const std::vector
 					{
 						// see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/Speed.cs
 
-						const double distance = std::min((float)single_spacing_threshold, travel_distance + jump_distance);
-						delta_time = std::max(delta_time, (float)max_speed_bonus);
+						const double distance = std::min(single_spacing_threshold, travel_distance + jump_distance);
+						delta_time = std::max(delta_time, max_speed_bonus);
 
 						double speed_bonus = 1.0;
 						if (delta_time < min_speed_bonus)
@@ -450,11 +519,11 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(const std::vector
 									* std::max(jump_distance - angle_bonus_scale, 0.0)
 							);
 
-							result = 1.5 * applyDiminishingExp((double)std::max(0.0, angle_bonus)) / std::max(aim_timing_threshold, prev_strain_time);
+							result = 1.5 * applyDiminishingExp(std::max(0.0, angle_bonus)) / std::max(aim_timing_threshold, prev_strain_time);
 						}
 
-						const double jumpDistanceExp = applyDiminishingExp((double)jump_distance);
-						const double travelDistanceExp = applyDiminishingExp((double)travel_distance);
+						const double jumpDistanceExp = applyDiminishingExp(jump_distance);
+						const double travelDistanceExp = applyDiminishingExp(travel_distance);
 
 						const double sqrtTravelMulJump = std::sqrt(travelDistanceExp * jumpDistanceExp);
 
@@ -538,7 +607,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(const std::vector
 	diffObjects.reserve((upToObjectIndex < 0) ? sortedHitObjects.size() : upToObjectIndex+1);
 	for (size_t i=0; i<sortedHitObjects.size() && (upToObjectIndex < 0 || i < upToObjectIndex+1); i++) // respect upToObjectIndex!
 	{
-		diffObjects.push_back(DiffObject(const_cast<OsuDifficultyHitObject*>(&sortedHitObjects[i]), radius_scaling_factor)); // this already initializes the angle to NaN
+		diffObjects.push_back(DiffObject(&sortedHitObjects[i], radius_scaling_factor)); // this already initializes the angle to NaN
 	}
 
 	const int numDiffObjects = diffObjects.size();
@@ -546,6 +615,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(const std::vector
 	// calculate angles and travel/jump distances (before calculating strains)
 	if (osu_stars_xexxar_angles_sliders.getBool())
 	{
+		const float starsSliderCurvePointsSeparation = osu_stars_slider_curve_points_separation.getFloat();
 		for (size_t i=0; i<numDiffObjects; i++)
 		{
 			// see setDistances() @ https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Preprocessing/OsuDifficultyHitObject.cs
@@ -555,6 +625,16 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(const std::vector
 				// calculate travel/jump distances
 				DiffObject &cur = diffObjects[i];
 				DiffObject &prev1 = diffObjects[i - 1];
+
+				// MCKAY:
+				{
+					// delay curve creation to when it's needed (1)
+					if (prev1.ho->scheduledCurveAlloc && prev1.ho->curve == NULL)
+					{
+						prev1.ho->curve = OsuSliderCurve::createCurve(prev1.ho->osuSliderCurveType, prev1.ho->scheduledCurveAllocControlPoints, prev1.ho->pixelLength, starsSliderCurvePointsSeparation);
+						prev1.ho->updateCurveStackPosition(prev1.ho->scheduledCurveAllocStackOffset); // NOTE: respect stacking
+					}
+				}
 
 				if (prev1.ho->type == OsuDifficultyHitObject::TYPE::SLIDER)
 				{
@@ -574,6 +654,18 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(const std::vector
 					DiffObject &prev2 = diffObjects[i - 2];
 
 					const Vector2 lastLastCursorPosition = DistanceCalc::getEndCursorPosition(prev2, circleRadiusInOsuPixels);
+
+					// MCKAY:
+					{
+						// and also immediately delete afterwards (2)
+						if (i > 2) // NOTE: this trivial sliding window implementation will keep the last 2 curves alive at the end, but they get auto deleted later anyway so w/e
+						{
+							DiffObject &prev3 = diffObjects[i - 3];
+
+							if (prev3.ho->scheduledCurveAlloc)
+								SAFE_DELETE(prev3.ho->curve);
+						}
+					}
 
 					const Vector2 v1 = lastLastCursorPosition - prev1.ho->pos;
 					const Vector2 v2 = cur.ho->pos - lastCursorPosition;

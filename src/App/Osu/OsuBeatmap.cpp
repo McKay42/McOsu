@@ -89,6 +89,7 @@ ConVar osu_mod_arwobble_interval("osu_mod_arwobble_interval", 7.0f);
 ConVar osu_mod_fullalternate("osu_mod_fullalternate", false);
 
 ConVar osu_early_note_time("osu_early_note_time", 1000.0f, "Timeframe in ms at the beginning of a beatmap which triggers a starting delay for easier reading");
+ConVar osu_quick_retry_time("osu_quick_retry_time", 2000.0f, "Timeframe in ms subtracted from the first hitobject when quick retrying (not regular retry)");
 ConVar osu_end_delay_time("osu_end_delay_time", 750.0f, "Duration in ms which is added at the end of a beatmap after the last hitobject is finished but before the ranking screen is automatically shown");
 ConVar osu_end_skip_time("osu_end_skip_time", 400.0f, "Duration in ms which is added to the endTime of the last hitobject, after which pausing the game will immediately jump to the ranking screen");
 ConVar osu_skip_time("osu_skip_time", 5000.0f, "Timeframe in ms within a beatmap which allows skipping if it doesn't contain any hitobjects");
@@ -436,8 +437,8 @@ void OsuBeatmap::update()
 					m_music->setVolume(m_osu_volume_music_ref->getFloat());
 
 					// if we are quick restarting, jump just before the first hitobject (even if there is a long waiting period at the beginning with nothing etc.)
-					if (m_bIsRestartScheduledQuick && m_hitobjects.size() > 0)
-						m_music->setPositionMS(m_hitobjects[0]->getTime() - 1000);
+					if (m_bIsRestartScheduledQuick && m_hitobjects.size() > 0 && m_hitobjects[0]->getTime() > (long)osu_quick_retry_time.getInt())
+						m_music->setPositionMS(std::max((long)0, m_hitobjects[0]->getTime() - (long)osu_quick_retry_time.getInt()));
 
 					m_bIsRestartScheduledQuick = false;
 
@@ -1409,6 +1410,12 @@ void OsuBeatmap::pause(bool quitIfWaiting)
 
 	const bool isFirstPause = !m_bContinueScheduled;
 	const bool forceContinueWithoutSchedule = m_osu->isInMultiplayer();
+
+	// NOTE: this assumes that no beatmap ever goes far beyond the end of the music
+	// NOTE: if pure virtual audio time is ever supported (playing without SoundEngine) then this needs to be adapted
+	// fix pausing after music ends breaking beatmap state (by just not allowing it to be paused)
+	if (m_fAfterMusicIsFinishedVirtualAudioTimeStart >= 0.0f)
+		return;
 
 	if (m_bIsPlaying) // if we are playing, aka if this is the first time pausing
 	{

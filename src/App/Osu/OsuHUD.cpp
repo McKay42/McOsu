@@ -762,7 +762,7 @@ void OsuHUD::drawVRDummy(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 
 void OsuHUD::drawCursor(Graphics *g, Vector2 pos, float alphaMultiplier, bool secondTrail)
 {
-	if (osu_draw_cursor_ripples.getBool())
+	if (osu_draw_cursor_ripples.getBool() && (!m_osu_mod_fposu_ref->getBool() || !m_osu->isInPlayMode()))
 		drawCursorRipples(g);
 
 	const bool vrTrailJumpFix = (m_osu->isInVRMode() && !m_osu->getVR()->isVirtualCursorOnScreen());
