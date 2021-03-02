@@ -1746,6 +1746,16 @@ void Osu::onBeforePlayStart()
 		m_pauseMenu->setVisible(false);
 		m_rankingScreen->setVisible(false);
 	}
+
+	// HACKHACK: stuck key quickfix
+	{
+		m_bKeyboardKey1Down = false;
+		m_bKeyboardKey12Down = false;
+		m_bKeyboardKey2Down = false;
+		m_bKeyboardKey22Down = false;
+		m_bMouseKey1Down = false;
+		m_bMouseKey2Down = false;
+	}
 }
 
 void Osu::onPlayStart()
