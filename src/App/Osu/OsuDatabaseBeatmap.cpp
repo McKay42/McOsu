@@ -1180,6 +1180,7 @@ OsuDatabaseBeatmap::LOAD_GAMEPLAY_RESULT OsuDatabaseBeatmap::loadGameplay(OsuDat
 		return result;
 	}
 	result.breaks = std::move(c.breaks);
+	result.combocolors = std::move(c.combocolors);
 
 	// override some values with data from primitive load, even though they should already be loaded from metadata (sanity)
 	databaseBeatmap->m_timingpoints.swap(c.timingpoints);
