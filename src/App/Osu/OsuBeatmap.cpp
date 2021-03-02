@@ -1331,6 +1331,8 @@ bool OsuBeatmap::play()
 	anim->deleteExistingAnimation(&m_fBreakBackgroundFade);
 	m_fBreakBackgroundFade = osu_background_fade_after_load.getBool() ? 1.0f : 0.0f;
 	m_iPreviousSectionPassFailTime = -1;
+	m_fShouldFlashSectionPass = 0.0f;
+	m_fShouldFlashSectionFail = 0.0f;
 
 	m_music->setPosition(0.0);
 	m_iCurMusicPos = 0;
@@ -1394,6 +1396,8 @@ void OsuBeatmap::actualRestart()
 	anim->deleteExistingAnimation(&m_fBreakBackgroundFade);
 	m_fBreakBackgroundFade = 0.0f;
 	m_iPreviousSectionPassFailTime = -1;
+	m_fShouldFlashSectionPass = 0.0f;
+	m_fShouldFlashSectionFail = 0.0f;
 
 	onModUpdate(); // sanity
 
