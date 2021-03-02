@@ -1128,14 +1128,14 @@ void OsuSongBrowser2::update()
 				{
 					for (size_t d=0; d<diffs.size(); d++)
 					{
-						if (diffs[d]->getStarsNomod() == 0.0f)
+						if (diffs[d]->getStarsNomod() <= 0.0f)
 						{
 							diffToCalc = diffs[d];
 							break;
 						}
 					}
 				}
-				else if (diffToCalc->getStarsNomod() == 0.0f)
+				else if (diffToCalc->getStarsNomod() <= 0.0f)
 					diffToCalc = beatmap;
 
 				if (diffToCalc != NULL)
