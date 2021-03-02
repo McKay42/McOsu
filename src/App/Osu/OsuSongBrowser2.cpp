@@ -1357,28 +1357,35 @@ void OsuSongBrowser2::onKeyDown(KeyboardEvent &key)
 	{
 		m_bLeft = true;
 
+		const bool jumpToNextGroup = engine->getKeyboard()->isShiftDown();
+
 		const std::vector<CBaseUIElement*> &elements = m_songBrowser->getContainer()->getElements();
 
 		bool foundSelected = false;
 		for (int i=elements.size()-1; i>=0; i--)
 		{
 			const OsuUISongBrowserSongDifficultyButton *diffButtonPointer = dynamic_cast<OsuUISongBrowserSongDifficultyButton*>(elements[i]);
+			const OsuUISongBrowserCollectionButton *collectionButtonPointer = dynamic_cast<OsuUISongBrowserCollectionButton*>(elements[i]);
 
 			OsuUISongBrowserButton *button = dynamic_cast<OsuUISongBrowserButton*>(elements[i]);
 			const bool isSongDifficultyButtonAndNotIndependent = (diffButtonPointer != NULL && !diffButtonPointer->isIndependentDiffButton());
 
-			if (foundSelected && button != NULL && !button->isSelected() && !isSongDifficultyButtonAndNotIndependent)
+			if (foundSelected && button != NULL && !button->isSelected() && !isSongDifficultyButtonAndNotIndependent && (!jumpToNextGroup || collectionButtonPointer != NULL))
 			{
 				button->select();
 
-				// automatically open collection below and go to bottom child
-				OsuUISongBrowserCollectionButton *collectionButton = dynamic_cast<OsuUISongBrowserCollectionButton*>(elements[i]);
-				if (collectionButton != NULL)
+				if (!jumpToNextGroup || collectionButtonPointer == NULL)
 				{
-					std::vector<OsuUISongBrowserButton*> children = collectionButton->getChildren();
-					if (children.size() > 0 && !children[children.size()-1]->isSelected())
-						children[children.size()-1]->select();
+					// automatically open collection below and go to bottom child
+					OsuUISongBrowserCollectionButton *collectionButton = dynamic_cast<OsuUISongBrowserCollectionButton*>(elements[i]);
+					if (collectionButton != NULL)
+					{
+						std::vector<OsuUISongBrowserButton*> children = collectionButton->getChildren();
+						if (children.size() > 0 && !children[children.size()-1]->isSelected())
+							children[children.size()-1]->select();
+					}
 				}
+
 				break;
 			}
 
@@ -1390,6 +1397,8 @@ void OsuSongBrowser2::onKeyDown(KeyboardEvent &key)
 	if (key == KEY_RIGHT && !m_bRight)
 	{
 		m_bRight = true;
+
+		const bool jumpToNextGroup = engine->getKeyboard()->isShiftDown();
 
 		const std::vector<CBaseUIElement*> &elements = m_songBrowser->getContainer()->getElements();
 
@@ -1407,11 +1416,12 @@ void OsuSongBrowser2::onKeyDown(KeyboardEvent &key)
 			for (size_t i=selectedIndex; i<elements.size(); i++)
 			{
 				const OsuUISongBrowserSongDifficultyButton *diffButtonPointer = dynamic_cast<OsuUISongBrowserSongDifficultyButton*>(elements[i]);
+				const OsuUISongBrowserCollectionButton *collectionButtonPointer = dynamic_cast<OsuUISongBrowserCollectionButton*>(elements[i]);
 
 				OsuUISongBrowserButton *button = dynamic_cast<OsuUISongBrowserButton*>(elements[i]);
 				const bool isSongDifficultyButtonAndNotIndependent = (diffButtonPointer != NULL && !diffButtonPointer->isIndependentDiffButton());
 
-				if (button != NULL && !button->isSelected() && !isSongDifficultyButtonAndNotIndependent)
+				if (button != NULL && !button->isSelected() && !isSongDifficultyButtonAndNotIndependent && (!jumpToNextGroup || collectionButtonPointer != NULL))
 				{
 					button->select();
 					break;
@@ -1420,8 +1430,31 @@ void OsuSongBrowser2::onKeyDown(KeyboardEvent &key)
 		}
 	}
 
+	// group open/close
+	// NOTE: only closing works atm (no "focus" state on buttons yet)
+	if (key == KEY_ENTER && engine->getKeyboard()->isShiftDown())
+	{
+		const std::vector<CBaseUIElement*> &elements = m_songBrowser->getContainer()->getElements();
+
+		for (int i=0; i<elements.size(); i++)
+		{
+			const OsuUISongBrowserCollectionButton *collectionButtonPointer = dynamic_cast<OsuUISongBrowserCollectionButton*>(elements[i]);
+
+			OsuUISongBrowserButton *button = dynamic_cast<OsuUISongBrowserButton*>(elements[i]);
+
+			if (collectionButtonPointer != NULL && button != NULL && button->isSelected())
+			{
+				button->select(); // deselect
+
+				scrollToSongButton(button);
+
+				break;
+			}
+		}
+	}
+
 	// selection select
-	if (key == KEY_ENTER)
+	if (key == KEY_ENTER && !engine->getKeyboard()->isShiftDown())
 		playSelectedDifficulty();
 
 	// toggle auto
