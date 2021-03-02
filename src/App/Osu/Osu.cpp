@@ -1755,6 +1755,14 @@ void Osu::onBeforePlayStart()
 		m_bKeyboardKey22Down = false;
 		m_bMouseKey1Down = false;
 		m_bMouseKey2Down = false;
+
+		if (getSelectedBeatmap() != NULL)
+		{
+			getSelectedBeatmap()->keyReleased1(false);
+			getSelectedBeatmap()->keyReleased1(true);
+			getSelectedBeatmap()->keyReleased2(false);
+			getSelectedBeatmap()->keyReleased2(true);
+		}
 	}
 }
 
