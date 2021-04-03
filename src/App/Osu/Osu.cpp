@@ -65,7 +65,7 @@
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 32.01f);
+ConVar osu_version("osu_version", 32.02f);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr");
 #else
@@ -1745,6 +1745,24 @@ void Osu::onBeforePlayStart()
 		m_optionsMenu->setVisible(false);
 		m_pauseMenu->setVisible(false);
 		m_rankingScreen->setVisible(false);
+	}
+
+	// HACKHACK: stuck key quickfix
+	{
+		m_bKeyboardKey1Down = false;
+		m_bKeyboardKey12Down = false;
+		m_bKeyboardKey2Down = false;
+		m_bKeyboardKey22Down = false;
+		m_bMouseKey1Down = false;
+		m_bMouseKey2Down = false;
+
+		if (getSelectedBeatmap() != NULL)
+		{
+			getSelectedBeatmap()->keyReleased1(false);
+			getSelectedBeatmap()->keyReleased1(true);
+			getSelectedBeatmap()->keyReleased2(false);
+			getSelectedBeatmap()->keyReleased2(true);
+		}
 	}
 }
 

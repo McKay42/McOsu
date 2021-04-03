@@ -35,7 +35,12 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	std::vector<CHANGELOG> changelogs;
 
 	CHANGELOG alpha316;
-	alpha316.title = UString::format("32.01 (Build Date: %s, %s)", __DATE__, __TIME__);
+	alpha316.title = UString::format("32.02 (Build Date: %s, %s)", __DATE__, __TIME__);
+	alpha316.changes.push_back("- Added SHIFT hotkey support to LEFT/RIGHT songbrowser group navigation");
+	alpha316.changes.push_back("- Fixed beatmap combo colors not getting loaded");
+	alpha316.changes.push_back("- Fixed background star calc not calculating osu database entries with negative stars");
+	alpha316.changes.push_back("- Fixed keys getting stuck if held until after beatmap end");
+	alpha316.changes.push_back("");
 	alpha316.changes.push_back("- Added ConVars: osu_playfield_circular, osu_quick_retry_time");
 	alpha316.changes.push_back("- Updated fposu_fov and fposu_zoom_fov to allow underscale + overscale (via console or cfg)");
 	alpha316.changes.push_back("- Improved star calc memory usage (slider curves, mostly fixes aspire out-of-memory crashes)");

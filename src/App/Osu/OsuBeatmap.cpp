@@ -1208,11 +1208,6 @@ void OsuBeatmap::selectDifficulty2(OsuDatabaseBeatmap *difficulty2)
 	{
 		m_selectedDifficulty2 = difficulty2;
 
-		// quick direct load, but may cause lag if quickly select()-ing
-		// this forces the currently selected diff to load the background image immediately (and prioritized over all others since the songbuttons have a loading delay)
-		// TODO: load background image (?)
-		//m_selectedDifficulty->loadBackgroundImage();
-
 		// need to recheck/reload the music here since every difficulty might be using a different sound file
 		loadMusic();
 		handlePreviewPlay();
@@ -1331,6 +1326,8 @@ bool OsuBeatmap::play()
 	anim->deleteExistingAnimation(&m_fBreakBackgroundFade);
 	m_fBreakBackgroundFade = osu_background_fade_after_load.getBool() ? 1.0f : 0.0f;
 	m_iPreviousSectionPassFailTime = -1;
+	m_fShouldFlashSectionPass = 0.0f;
+	m_fShouldFlashSectionFail = 0.0f;
 
 	m_music->setPosition(0.0);
 	m_iCurMusicPos = 0;
@@ -1394,6 +1391,8 @@ void OsuBeatmap::actualRestart()
 	anim->deleteExistingAnimation(&m_fBreakBackgroundFade);
 	m_fBreakBackgroundFade = 0.0f;
 	m_iPreviousSectionPassFailTime = -1;
+	m_fShouldFlashSectionPass = 0.0f;
+	m_fShouldFlashSectionFail = 0.0f;
 
 	onModUpdate(); // sanity
 
@@ -2246,29 +2245,29 @@ unsigned long OsuBeatmap::getMusicPositionMSInterpolated()
 			newInterpolatedPos -= delta / 8.0 / interpolationMultiplier;
 			delta = newInterpolatedPos - curPos;
 
-            if (std::abs(delta) > interpolationDeltaLimit*2) // we're fucked, snap back to curPos
-            {
-            	m_fInterpolatedMusicPos = (double)curPos;
-            }
-            else if (delta < -interpolationDeltaLimit) // undershot
-            {
-            	m_fInterpolatedMusicPos += interpolationDelta * 2;
-            	m_fLastAudioTimeAccurateSet = realTime;
-            }
-            else if (delta < interpolationDeltaLimit) // normal
-            {
-            	m_fInterpolatedMusicPos = newInterpolatedPos;
-            }
-            else // overshot
-            {
-            	m_fInterpolatedMusicPos += interpolationDelta / 2;
-            	m_fLastAudioTimeAccurateSet = realTime;
-            }
+			if (std::abs(delta) > interpolationDeltaLimit*2) // we're fucked, snap back to curPos
+			{
+				m_fInterpolatedMusicPos = (double)curPos;
+			}
+			else if (delta < -interpolationDeltaLimit) // undershot
+			{
+				m_fInterpolatedMusicPos += interpolationDelta * 2;
+				m_fLastAudioTimeAccurateSet = realTime;
+			}
+			else if (delta < interpolationDeltaLimit) // normal
+			{
+				m_fInterpolatedMusicPos = newInterpolatedPos;
+			}
+			else // overshot
+			{
+				m_fInterpolatedMusicPos += interpolationDelta / 2;
+				m_fLastAudioTimeAccurateSet = realTime;
+			}
 
-            // calculate final return value
-            returnPos = (unsigned long)std::round(m_fInterpolatedMusicPos);
-            if (speed < 1.0f && osu_compensate_music_speed.getBool() && m_snd_speed_compensate_pitch_ref->getBool())
-            	returnPos += (unsigned long)((1.0f / speed) * 9);
+			// calculate final return value
+			returnPos = (unsigned long)std::round(m_fInterpolatedMusicPos);
+			if (speed < 1.0f && osu_compensate_music_speed.getBool() && m_snd_speed_compensate_pitch_ref->getBool())
+				returnPos += (unsigned long)((1.0f / speed) * 9);
 		}
 		else // no interpolation
 		{
