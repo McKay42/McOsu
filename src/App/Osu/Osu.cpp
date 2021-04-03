@@ -1326,6 +1326,11 @@ void Osu::onKeyDown(KeyboardEvent &key)
 					if (!getSelectedBeatmap()->hasFailed())
 						key.consume();
 				}
+				else if (isKeyLeftClick || isKeyLeftClick2)
+				{
+					if (!getSelectedBeatmap()->hasFailed())
+						key.consume();
+				}
 			}
 
 			// K2
@@ -1341,6 +1346,11 @@ void Osu::onKeyDown(KeyboardEvent &key)
 
 					onKey2Change(true, false);
 
+					if (!getSelectedBeatmap()->hasFailed())
+						key.consume();
+				}
+				else if (isKeyRightClick || isKeyRightClick2)
+				{
 					if (!getSelectedBeatmap()->hasFailed())
 						key.consume();
 				}
