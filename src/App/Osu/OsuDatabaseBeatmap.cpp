@@ -39,6 +39,8 @@ ConVar osu_show_approach_circle_on_first_hidden_object("osu_show_approach_circle
 
 ConVar osu_stars_stacking("osu_stars_stacking", true, "respect hitobject stacking before calculating stars/pp");
 
+ConVar osu_slider_max_repeat("osu_slider_max_repeat", 9000, "maximum number of repeats allowed per slider (clamp range)");
+
 unsigned long long OsuDatabaseBeatmap::sortHackCounter = 0;
 
 ConVar *OsuDatabaseBeatmap::m_osu_slider_curve_max_length_ref = NULL;
@@ -142,6 +144,9 @@ OsuDatabaseBeatmap::PRIMITIVE_CONTAINER OsuDatabaseBeatmap::loadPrimitiveObjects
 
 		c.version = 14;
 	}
+
+	const float sliderSanityRange = m_osu_slider_curve_max_length_ref->getFloat(); // infinity sanity check, same as before
+	const int sliderMaxRepeatRange = osu_slider_max_repeat.getInt(); // NOTE: osu! will refuse to play any beatmap which has sliders with more than 9000 repeats, here we just clamp it instead
 
 	// open osu file for parsing
 	{
@@ -363,7 +368,6 @@ OsuDatabaseBeatmap::PRIMITIVE_CONTAINER OsuDatabaseBeatmap::loadPrimitiveObjects
 								//return false;
 							}
 
-							const float sanityRange = m_osu_slider_curve_max_length_ref->getFloat(); // infinity sanity check, same as before
 							std::vector<Vector2> points;
 							for (int i=1; i<sliderTokens.size(); i++) // NOTE: starting at 1 due to slider type char
 							{
@@ -380,12 +384,12 @@ OsuDatabaseBeatmap::PRIMITIVE_CONTAINER OsuDatabaseBeatmap::loadPrimitiveObjects
 									//return false;
 								}
 
-								points.push_back(Vector2((int)clamp<float>(sliderXY[0].toFloat(), -sanityRange, sanityRange), (int)clamp<float>(sliderXY[1].toFloat(), -sanityRange, sanityRange)));
+								points.push_back(Vector2((int)clamp<float>(sliderXY[0].toFloat(), -sliderSanityRange, sliderSanityRange), (int)clamp<float>(sliderXY[1].toFloat(), -sliderSanityRange, sliderSanityRange)));
 							}
 
 							// special case: osu! logic for handling the hitobject point vs the controlpoints (since sliders have both, and older beatmaps store the start point inside the control points)
 							{
-								const Vector2 xy = Vector2(clamp<float>(x, -sanityRange, sanityRange), clamp<float>(y, -sanityRange, sanityRange));
+								const Vector2 xy = Vector2(clamp<float>(x, -sliderSanityRange, sliderSanityRange), clamp<float>(y, -sliderSanityRange, sliderSanityRange));
 								if (points.size() > 0)
 								{
 				                    if (points[0] != xy)
@@ -404,9 +408,9 @@ OsuDatabaseBeatmap::PRIMITIVE_CONTAINER OsuDatabaseBeatmap::loadPrimitiveObjects
 								s.x = x;
 								s.y = y;
 								s.type = sliderTokens[0][0];
-								s.repeat = (int)tokens[6].toFloat();
+								s.repeat = clamp<int>((int)tokens[6].toFloat(), -sliderMaxRepeatRange, sliderMaxRepeatRange);
 								s.repeat = s.repeat >= 0 ? s.repeat : 0; // sanity check
-								s.pixelLength = clamp<float>(tokens[7].toFloat(), -sanityRange, sanityRange);
+								s.pixelLength = clamp<float>(tokens[7].toFloat(), -sliderSanityRange, sliderSanityRange);
 								s.time = time;
 								s.sampleType = hitSound;
 								s.number = comboNumber++;
