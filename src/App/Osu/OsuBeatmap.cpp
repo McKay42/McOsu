@@ -134,6 +134,8 @@ ConVar *OsuBeatmap::m_osu_draw_scorebarbg_ref = NULL;
 ConVar *OsuBeatmap::m_osu_hud_scorebar_hide_during_breaks_ref = NULL;
 ConVar *OsuBeatmap::m_osu_drain_stable_hpbar_maximum_ref = NULL;
 ConVar *OsuBeatmap::m_osu_volume_music_ref = NULL;
+ConVar *OsuBeatmap::m_osu_mod_fposu_ref = NULL;
+ConVar *OsuBeatmap::m_fposu_draw_scorebarbg_on_top_ref = NULL;
 
 OsuBeatmap::OsuBeatmap(Osu *osu)
 {
@@ -153,6 +155,10 @@ OsuBeatmap::OsuBeatmap(Osu *osu)
 		m_osu_drain_stable_hpbar_maximum_ref = convar->getConVarByName("osu_drain_stable_hpbar_maximum");
 	if (m_osu_volume_music_ref == NULL)
 		m_osu_volume_music_ref = convar->getConVarByName("osu_volume_music");
+	if (m_osu_mod_fposu_ref == NULL)
+		m_osu_mod_fposu_ref = convar->getConVarByName("osu_mod_fposu");
+	if (m_fposu_draw_scorebarbg_on_top_ref == NULL)
+		m_fposu_draw_scorebarbg_on_top_ref = convar->getConVarByName("fposu_draw_scorebarbg_on_top");
 
 	// vars
 	m_osu = osu;
@@ -302,7 +308,7 @@ void OsuBeatmap::drawBackground(Graphics *g)
 	}
 
 	// draw scorebar-bg
-	if (m_osu_draw_hud_ref->getBool() && m_osu_draw_scorebarbg_ref->getBool())
+	if (m_osu_draw_hud_ref->getBool() && m_osu_draw_scorebarbg_ref->getBool() && (!m_osu_mod_fposu_ref->getBool() || !m_fposu_draw_scorebarbg_on_top_ref->getBool())) // NOTE: special case for FPoSu
 		m_osu->getHUD()->drawScorebarBg(g, m_osu_hud_scorebar_hide_during_breaks_ref->getBool() ? (1.0f - m_fBreakBackgroundFade) : 1.0f, m_osu->getHUD()->getScoreBarBreakAnim());
 
 	if (Osu::debug->getBool())

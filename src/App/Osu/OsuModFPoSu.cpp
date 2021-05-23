@@ -47,6 +47,8 @@ ConVar fposu_cube_tint_b("fposu_cube_tint_b", 255, "from 0 to 255");
 ConVar fposu_invert_vertical("fposu_invert_vertical", false);
 ConVar fposu_invert_horizontal("fposu_invert_horizontal", false);
 
+ConVar fposu_draw_scorebarbg_on_top("fposu_draw_scorebarbg_on_top", false);
+
 int OsuModFPoSu::SUBDIVISIONS = 4;
 
 OsuModFPoSu::OsuModFPoSu(Osu *osu)

@@ -198,6 +198,7 @@ OsuHUD::OsuHUD(Osu *osu) : OsuScreen(osu)
 	m_osu_mod_target_100_percent_ref = convar->getConVarByName("osu_mod_target_100_percent");
 	m_osu_mod_target_50_percent_ref = convar->getConVarByName("osu_mod_target_50_percent");
 	m_osu_mod_fposu_ref = convar->getConVarByName("osu_mod_fposu");
+	m_fposu_draw_scorebarbg_on_top_ref = convar->getConVarByName("fposu_draw_scorebarbg_on_top");
 	m_osu_playfield_stretch_x_ref = convar->getConVarByName("osu_playfield_stretch_x");
 	m_osu_playfield_stretch_y_ref = convar->getConVarByName("osu_playfield_stretch_y");
 	m_osu_mp_win_condition_accuracy_ref = convar->getConVarByName("osu_mp_win_condition_accuracy");
@@ -344,6 +345,10 @@ void OsuHUD::draw(Graphics *g)
 					m_osu->getScore()->getHitErrorAvgCustomMax());
 		}
 		g->popTransform();
+
+		// NOTE: special case for FPoSu, if players manually set fposu_draw_scorebarbg_on_top to 1
+		if (osu_draw_scorebarbg.getBool() && m_osu_mod_fposu_ref->getBool() && m_fposu_draw_scorebarbg_on_top_ref->getBool())
+			drawScorebarBg(g, osu_hud_scorebar_hide_during_breaks.getBool() ? (1.0f - beatmap->getBreakBackgroundFadeAnim()) : 1.0f, m_fScoreBarBreakAnim);
 
 		if (osu_draw_scorebar.getBool())
 			drawHPBar(g, m_fHealth, osu_hud_scorebar_hide_during_breaks.getBool() ? (1.0f - beatmap->getBreakBackgroundFadeAnim()) : 1.0f, m_fScoreBarBreakAnim);
@@ -647,7 +652,7 @@ void OsuHUD::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 		if (osu_draw_hud.getBool())
 		{
 			if (osu_draw_scorebarbg.getBool())
-				drawScorebarBg(g, 1.0f, m_fScoreBarBreakAnim);
+				drawScorebarBg(g, osu_hud_scorebar_hide_during_breaks.getBool() ? (1.0f - beatmap->getBreakBackgroundFadeAnim()) : 1.0f, m_fScoreBarBreakAnim);
 
 			if (osu_draw_scorebar.getBool())
 				drawHPBar(g, m_fHealth, osu_hud_scorebar_hide_during_breaks.getBool() ? (1.0f - beatmap->getBreakBackgroundFadeAnim()) : 1.0f, m_fScoreBarBreakAnim);

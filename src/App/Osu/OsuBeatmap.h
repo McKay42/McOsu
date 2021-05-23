@@ -183,6 +183,8 @@ protected:
 	static ConVar *m_osu_hud_scorebar_hide_during_breaks_ref;
 	static ConVar *m_osu_drain_stable_hpbar_maximum_ref;
 	static ConVar *m_osu_volume_music_ref;
+	static ConVar *m_osu_mod_fposu_ref;
+	static ConVar *m_fposu_draw_scorebarbg_on_top_ref;
 
 	// overridable child events
 	virtual void onBeforeLoad() {;}			 // called before hitobjects are loaded
