@@ -35,7 +35,17 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	std::vector<CHANGELOG> changelogs;
 
 	CHANGELOG alpha316;
-	alpha316.title = UString::format("32.02 (Build Date: %s, %s)", __DATE__, __TIME__);
+	alpha316.title = UString::format("32.03 (Build Date: %s, %s)", __DATE__, __TIME__); // (18.01.2021 - ?)
+	alpha316.changes.push_back("- Added ConVars (1): osu_hud_hiterrorbar_hide_during_spinner, osu_hud_inputoverlay_offset_x/y");
+	alpha316.changes.push_back("- Added ConVars (2): osu_slider_snake_duration_multiplier, osu_slider_reverse_arrow_fadein_duration");
+	alpha316.changes.push_back("- Updated universal offset handling by compensating for speed multiplier to match osu!\n");
+	alpha316.changes.push_back("- Updated beatmap length calc to include initial skippable section/break to match osu!");
+	alpha316.changes.push_back("- Updated slow speed (less than 1.0x) offset compensation to match osu!");
+	alpha316.changes.push_back("- Fixed disabled snd_speed_compensate_pitch causing broken speed multiplier calculations (e.g. always 1.0x for statistics overlay)");
+	alpha316.changes.push_back("- Fixed incorrect visually shown OPM/CPM/SPM values in songbrowser tooltip (multiplied by speed multiplier twice)");
+	alpha316.changes.push_back("- Fixed crash on star calc for sliders with 85899394 repeats (clamp to 9000 to match osu!)");
+	alpha316.changes.push_back("- Fixed K1/K2 keys triggering volume change when bound to both and held until key repeat during gameplay");
+	alpha316.changes.push_back("");
 	alpha316.changes.push_back("- Added SHIFT hotkey support to LEFT/RIGHT songbrowser group navigation");
 	alpha316.changes.push_back("- Fixed beatmap combo colors not getting loaded");
 	alpha316.changes.push_back("- Fixed background star calc not calculating osu database entries with negative stars");
@@ -43,17 +53,15 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha316.changes.push_back("");
 	alpha316.changes.push_back("- Added ConVars: osu_playfield_circular, osu_quick_retry_time");
 	alpha316.changes.push_back("- Updated fposu_fov and fposu_zoom_fov to allow underscale + overscale (via console or cfg)");
+	alpha316.changes.push_back("- Improved background star calc speed");
 	alpha316.changes.push_back("- Improved star calc memory usage (slider curves, mostly fixes aspire out-of-memory crashes)");
 	alpha316.changes.push_back("- Fixed aspire infinite slider ticks crashes");
 	alpha316.changes.push_back("- Fixed object counts not being updated by background star calc for people without osu!.db");
 	alpha316.changes.push_back("- Fixed slider ball color handling (default to white instead of osu!default-skin special case)");
 	alpha316.changes.push_back("- Fixed cursor ripples in FPoSu mode being drawn on wrong layer");
-	alpha316.changes.push_back("");
 	alpha316.changes.push_back("- Fixed collections not showing all contained beatmaps/diffs");
 	alpha316.changes.push_back("- Fixed invalid default selection when opening beatmap sets with active search");
-	alpha316.changes.push_back("");
 	alpha316.changes.push_back("- Fixed partial corrupt PNG skin images not loading due to newer/stricter lodepng library version (disabled CRC check)");
-	alpha316.changes.push_back("- Improved background star calc speed");
 	alpha316.changes.push_back("");
 	alpha316.changes.push_back("- Initial rewrite of songbrowser and entire internal database class architecture (not fully finished yet)");
 	alpha316.changes.push_back("- Songbrowser can now handle individual diff buttons and/or split from their parent beatmap/set button");
