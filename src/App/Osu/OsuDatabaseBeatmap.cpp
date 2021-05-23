@@ -1734,8 +1734,9 @@ void OsuDatabaseBeatmapStarCalculator::initAsync()
 		m_aimStars = aimStars;
 		m_speedStars = speedStars;
 
+		// NOTE: this matches osu, i.e. it is the time from the start of the music track until the end of the last hitobject (including all breaks and initial skippable sections!)
 		if (diffres.diffobjects.size() > 0)
-			m_iLengthMS = std::max((diffres.diffobjects[diffres.diffobjects.size() - 1].endTime - diffres.diffobjects[0].time), (long)0);
+			m_iLengthMS = (long)((float)std::max((diffres.diffobjects[diffres.diffobjects.size() - 1].endTime), (long)0) * m_fSpeedMultiplier); // NOTE: reverse compensate for diffobj speed compensation in order to get actual length
 	}
 
 	m_bAsyncReady = true;
