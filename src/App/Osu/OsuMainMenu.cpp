@@ -371,7 +371,7 @@ void OsuMainMenu::draw(Graphics *g)
 		haveTimingpoints = true;
 
 		const long curMusicPos = (long)m_osu->getSelectedBeatmap()->getMusic()->getPositionMS()
-			+ (long)m_osu_universal_offset_ref->getInt()
+			+ (long)(m_osu_universal_offset_ref->getFloat() * m_osu->getSpeedMultiplier())
 			+ (long)m_osu_universal_offset_hardcoded_ref->getInt()
 			+ (m_win_snd_fallback_dsound_ref->getBool() ? (long)m_osu_universal_offset_hardcoded_fallback_dsound_ref->getInt() : 0)
 			- m_osu->getSelectedBeatmap()->getSelectedDifficulty2()->getLocalOffset()

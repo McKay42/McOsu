@@ -451,7 +451,7 @@ void OsuBeatmap::update()
 
 		// ugh. force update all hitobjects while waiting (necessary because of pvs optimization)
 		long curPos = m_iCurMusicPos
-			+ (long)osu_universal_offset.getInt()
+			+ (long)(osu_universal_offset.getFloat() * m_osu->getSpeedMultiplier())
 			+ (long)osu_universal_offset_hardcoded.getInt()
 			+ (m_win_snd_fallback_dsound_ref->getBool() ? (long)osu_universal_offset_hardcoded_fallback_dsound.getInt() : 0)
 			- m_selectedDifficulty2->getLocalOffset()
@@ -521,7 +521,7 @@ void OsuBeatmap::update()
 
 	// update timing (points)
 	m_iCurMusicPosWithOffsets = m_iCurMusicPos
-		+ (long)osu_universal_offset.getInt()
+		+ (long)(osu_universal_offset.getFloat() * m_osu->getSpeedMultiplier())
 		+ (long)osu_universal_offset_hardcoded.getInt()
 		+ (m_win_snd_fallback_dsound_ref->getBool() ? (long)osu_universal_offset_hardcoded_fallback_dsound.getInt() : 0)
 		- m_selectedDifficulty2->getLocalOffset()
