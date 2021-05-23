@@ -1414,7 +1414,11 @@ void OsuBeatmap::pause(bool quitIfWaiting)
 	// NOTE: if pure virtual audio time is ever supported (playing without SoundEngine) then this needs to be adapted
 	// fix pausing after music ends breaking beatmap state (by just not allowing it to be paused)
 	if (m_fAfterMusicIsFinishedVirtualAudioTimeStart >= 0.0f)
-		return;
+	{
+		const float delta = engine->getTimeReal() - m_fAfterMusicIsFinishedVirtualAudioTimeStart;
+		if (delta < 5.0f) // WARNING: sanity limit, always allow escaping after 5 seconds of overflow time
+			return;
+	}
 
 	if (m_bIsPlaying) // if we are playing, aka if this is the first time pausing
 	{
