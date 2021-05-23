@@ -36,9 +36,11 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 
 	CHANGELOG alpha316;
 	alpha316.title = UString::format("32.03 (Build Date: %s, %s)", __DATE__, __TIME__); // (18.01.2021 - ?)
+	alpha316.changes.push_back("- Added 2B support to \"osu!lazer 2020\" and \"McOsu\" notelock types");
 	alpha316.changes.push_back("- Added ConVars (1): osu_hud_hiterrorbar_hide_during_spinner, osu_hud_inputoverlay_offset_x/y");
 	alpha316.changes.push_back("- Added ConVars (2): osu_slider_snake_duration_multiplier, osu_slider_reverse_arrow_fadein_duration");
-	alpha316.changes.push_back("- Updated universal offset handling by compensating for speed multiplier to match osu!\n");
+	alpha316.changes.push_back("- Added ConVars (3): fposu_draw_scorebarbg_on_top");
+	alpha316.changes.push_back("- Updated universal offset handling by compensating for speed multiplier to match osu!");
 	alpha316.changes.push_back("- Updated beatmap length calc to include initial skippable section/break to match osu!");
 	alpha316.changes.push_back("- Updated slow speed (less than 1.0x) offset compensation to match osu!");
 	alpha316.changes.push_back("- Fixed disabled snd_speed_compensate_pitch causing broken speed multiplier calculations (e.g. always 1.0x for statistics overlay)");
