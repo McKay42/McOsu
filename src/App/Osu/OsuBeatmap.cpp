@@ -576,7 +576,7 @@ void OsuBeatmap::update()
 			// determine previous & next object time, used for auto + followpoints + warning arrows + empty section skipping
 			if (m_iNextHitObjectTime == 0)
 			{
-				if (m_hitobjects[i]->getTime() > m_iCurMusicPos)
+				if (m_hitobjects[i]->getTime() > m_iCurMusicPosWithOffsets)
 					m_iNextHitObjectTime = m_hitobjects[i]->getTime();
 				else
 				{
@@ -584,7 +584,7 @@ void OsuBeatmap::update()
 					const long actualPrevHitObjectTime = m_hitobjects[i]->getTime() + m_hitobjects[i]->getDuration();
 					m_iPreviousHitObjectTime = actualPrevHitObjectTime;
 
-					if (m_iCurMusicPos > actualPrevHitObjectTime + (long)osu_followpoints_prevfadetime.getFloat())
+					if (m_iCurMusicPosWithOffsets > actualPrevHitObjectTime + (long)osu_followpoints_prevfadetime.getFloat())
 						m_iPreviousFollowPointObjectIndex = i;
 				}
 			}
@@ -676,7 +676,7 @@ void OsuBeatmap::update()
 
 						if (!isSpinner) // spinners are completely ignored (transparent)
 						{
-							blockNextNotes = (m_iCurMusicPos <= m_hitobjects[i]->getTime());
+							blockNextNotes = (m_iCurMusicPosWithOffsets <= m_hitobjects[i]->getTime());
 
 							// sliders are "finished" after their startcircle
 							{
@@ -724,7 +724,10 @@ void OsuBeatmap::update()
 							const bool isSpinner = (!isSlider && !isCircle);
 
 							if (!isSpinner) // spinners are completely ignored (transparent)
-								m_hitobjects[m]->miss(m_iCurMusicPos);
+							{
+								if (m_hitobjects[i]->getTime() > (m_hitobjects[m]->getTime() + m_hitobjects[m]->getDuration())) // NOTE: 2b exception. only force miss if objects are not overlapping.
+									m_hitobjects[m]->miss(m_iCurMusicPosWithOffsets);
+							}
 						}
 						else
 							break;
@@ -750,8 +753,11 @@ void OsuBeatmap::update()
 
 							if (!isSpinner) // spinners are completely ignored (transparent)
 							{
-								if (m_iCurMusicPos > m_hitobjects[m]->getTime())
-									m_hitobjects[m]->miss(m_iCurMusicPos);
+								if (m_iCurMusicPosWithOffsets > m_hitobjects[m]->getTime())
+								{
+									if (m_hitobjects[i]->getTime() > (m_hitobjects[m]->getTime() + m_hitobjects[m]->getDuration())) // NOTE: 2b exception. only force miss if objects are not overlapping.
+										m_hitobjects[m]->miss(m_iCurMusicPosWithOffsets);
+								}
 							}
 						}
 						else
@@ -843,8 +849,8 @@ void OsuBeatmap::update()
 	if (m_hitobjects.size() > 0)
 	{
 		const long legacyOffset = (m_iPreviousHitObjectTime < m_hitobjects[0]->getTime() ? 0 : 1000); // Mc
-		const long nextHitObjectDelta = m_iNextHitObjectTime - (long)m_iCurMusicPos;
-		if (nextHitObjectDelta > 0 && nextHitObjectDelta > (long)osu_skip_time.getInt() && m_iCurMusicPos > (m_iPreviousHitObjectTime + legacyOffset))
+		const long nextHitObjectDelta = m_iNextHitObjectTime - (long)m_iCurMusicPosWithOffsets;
+		if (nextHitObjectDelta > 0 && nextHitObjectDelta > (long)osu_skip_time.getInt() && m_iCurMusicPosWithOffsets > (m_iPreviousHitObjectTime + legacyOffset))
 			m_bIsInSkippableSection = true;
 		else
 			m_bIsInSkippableSection = false;
@@ -859,7 +865,7 @@ void OsuBeatmap::update()
 		const long blinkDelta = 100;
 
 		const long gapSize = m_iNextHitObjectTime - (m_iPreviousHitObjectTime + legacyOffset);
-		const long nextDelta = (m_iNextHitObjectTime - m_iCurMusicPos);
+		const long nextDelta = (m_iNextHitObjectTime - m_iCurMusicPosWithOffsets);
 		const bool drawWarningArrows = gapSize > minGapSize && nextDelta > 0;
 		if (drawWarningArrows && ((nextDelta <= lastVisibleMin+blinkDelta*13 && nextDelta > lastVisibleMin+blinkDelta*12)
 								|| (nextDelta <= lastVisibleMin+blinkDelta*11 && nextDelta > lastVisibleMin+blinkDelta*10)
@@ -874,8 +880,8 @@ void OsuBeatmap::update()
 	}
 
 	// break time detection, and background fade during breaks
-	const OsuDatabaseBeatmap::BREAK breakEvent = getBreakForTimeRange(m_iPreviousHitObjectTime, m_iCurMusicPos, m_iNextHitObjectTime);
-	const bool isInBreak = ((int)m_iCurMusicPos >= breakEvent.startTime && (int)m_iCurMusicPos <= breakEvent.endTime);
+	const OsuDatabaseBeatmap::BREAK breakEvent = getBreakForTimeRange(m_iPreviousHitObjectTime, m_iCurMusicPosWithOffsets, m_iNextHitObjectTime);
+	const bool isInBreak = ((int)m_iCurMusicPosWithOffsets >= breakEvent.startTime && (int)m_iCurMusicPosWithOffsets <= breakEvent.endTime);
 	if (isInBreak != m_bInBreak)
 	{
 		m_bInBreak = !m_bInBreak;
@@ -902,10 +908,10 @@ void OsuBeatmap::update()
 
 		const long gapSize = m_iNextHitObjectTime - m_iPreviousHitObjectTime;
 		const long start = (gapSize / 2 > minGapSize ? m_iPreviousHitObjectTime + (gapSize / 2) : m_iNextHitObjectTime - minGapSize);
-		const long nextDelta = m_iCurMusicPos - start;
+		const long nextDelta = m_iCurMusicPosWithOffsets - start;
 		const bool inSectionPassFail = (gapSize > minGapSize && nextDelta > 0)
-				&& m_iCurMusicPos > m_hitobjects[0]->getTime()
-				&& m_iCurMusicPos < (m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size() - 1]->getTime() + m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size() - 1]->getDuration())
+				&& m_iCurMusicPosWithOffsets > m_hitobjects[0]->getTime()
+				&& m_iCurMusicPosWithOffsets < (m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size() - 1]->getTime() + m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size() - 1]->getDuration())
 				&& !m_bFailed
 				&& m_bInBreak && (breakEvent.endTime - breakEvent.startTime) > minGapSize;
 
@@ -985,9 +991,9 @@ void OsuBeatmap::update()
 						drainBeforeFirstHitobjectAfterBreakEnd = osu_drain_lazer_break_after.getBool();
 					}
 
-					const bool isBetweenHitobjectsAndBreak = (int)m_iPreviousHitObjectTime <= breakEvent.startTime && (int)m_iNextHitObjectTime >= breakEvent.endTime && m_iCurMusicPos > m_iPreviousHitObjectTime;
-					const bool isLastHitobjectBeforeBreakStart = isBetweenHitobjectsAndBreak && (int)m_iCurMusicPos <= breakEvent.startTime;
-					const bool isFirstHitobjectAfterBreakEnd = isBetweenHitobjectsAndBreak && (int)m_iCurMusicPos >= breakEvent.endTime;
+					const bool isBetweenHitobjectsAndBreak = (int)m_iPreviousHitObjectTime <= breakEvent.startTime && (int)m_iNextHitObjectTime >= breakEvent.endTime && m_iCurMusicPosWithOffsets > m_iPreviousHitObjectTime;
+					const bool isLastHitobjectBeforeBreakStart = isBetweenHitobjectsAndBreak && (int)m_iCurMusicPosWithOffsets <= breakEvent.startTime;
+					const bool isFirstHitobjectAfterBreakEnd = isBetweenHitobjectsAndBreak && (int)m_iCurMusicPosWithOffsets >= breakEvent.endTime;
 
 					if (!isBetweenHitobjectsAndBreak
 						|| (drainAfterLastHitobjectBeforeBreakStart && isLastHitobjectBeforeBreakStart)
@@ -1124,7 +1130,7 @@ void OsuBeatmap::keyPressed1(bool mouse)
 	m_bPrevKeyWasKey1 = true;
 	m_bClick1Held = true;
 
-	//debugLog("async music pos = %lu, curMusicPos = %lu\n", m_music->getPositionMS(), m_iCurMusicPos);
+	//debugLog("async music pos = %lu, curMusicPos = %lu, curMusicPosWithOffsets = %lu\n", m_music->getPositionMS(), m_iCurMusicPos, m_iCurMusicPosWithOffsets);
 	//long curMusicPos = getMusicPositionMSInterpolated(); // this would only be useful if we also played hitsounds async! combined with checking which musicPos is bigger
 
 	CLICK click;
@@ -1158,7 +1164,7 @@ void OsuBeatmap::keyPressed2(bool mouse)
 	m_bPrevKeyWasKey1 = false;
 	m_bClick2Held = true;
 
-	//debugLog("async music pos = %lu, curMusicPos = %lu\n", m_music->getPositionMS(), m_iCurMusicPos);
+	//debugLog("async music pos = %lu, curMusicPos = %lu, curMusicPosWithOffsets = %lu\n", m_music->getPositionMS(), m_iCurMusicPos, m_iCurMusicPosWithOffsets);
 	//long curMusicPos = getMusicPositionMSInterpolated(); // this would only be useful if we also played hitsounds async! combined with checking which musicPos is bigger
 
 	CLICK click;
