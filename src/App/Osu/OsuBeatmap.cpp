@@ -2271,7 +2271,8 @@ unsigned long OsuBeatmap::getMusicPositionMSInterpolated()
 			// calculate final return value
 			returnPos = (unsigned long)std::round(m_fInterpolatedMusicPos);
 			if (speed < 1.0f && osu_compensate_music_speed.getBool() && m_snd_speed_compensate_pitch_ref->getBool())
-				returnPos += (unsigned long)((1.0f / speed) * 9);
+				returnPos += (unsigned long)(((1.0f - speed) / 0.75f) * 5); // osu (new)
+				///returnPos += (unsigned long)((1.0f / speed) * 9); // Mc (old)
 		}
 		else // no interpolation
 		{
