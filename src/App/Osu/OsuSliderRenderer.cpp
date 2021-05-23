@@ -41,11 +41,10 @@ float OsuSliderRenderer::m_fBoundingBoxMaxX = 0.0f;
 float OsuSliderRenderer::m_fBoundingBoxMinY = std::numeric_limits<float>::max();
 float OsuSliderRenderer::m_fBoundingBoxMaxY = 0.0f;
 
-ConVar osu_slider_debug("osu_slider_debug", false);
-ConVar osu_slider_debug_wireframe("osu_slider_debug_wireframe", false);
-ConVar osu_slider_debug_draw_caps("osu_slider_debug_draw_caps", true);
-ConVar osu_slider_rainbow("osu_slider_rainbow", false);
-ConVar osu_slider_use_gradient_image("osu_slider_use_gradient_image", false);
+ConVar osu_slider_debug_draw("osu_slider_debug_draw", false, "draw hitcircle at every curve point and nothing else (no vao, no rt, no shader, nothing) (requires enabling legacy slider renderer)");
+ConVar osu_slider_debug_draw_square_vao("osu_slider_debug_draw_square_vao", false, "generate square vaos and nothing else (no rt, no shader) (requires disabling legacy slider renderer)");
+ConVar osu_slider_debug_wireframe("osu_slider_debug_wireframe", false, "unused");
+ConVar osu_slider_debug_draw_caps("osu_slider_debug_draw_caps", true, "unused");
 
 ConVar osu_slider_alpha_multiplier("osu_slider_alpha_multiplier", 1.0f);
 ConVar osu_slider_body_alpha_multiplier("osu_slider_body_alpha_multiplier", 1.0f);
@@ -53,6 +52,8 @@ ConVar osu_slider_body_color_saturation("osu_slider_body_color_saturation", 1.0f
 ConVar osu_slider_border_size_multiplier("osu_slider_border_size_multiplier", 1.0f);
 ConVar osu_slider_border_tint_combo_color("osu_slider_border_tint_combo_color", false);
 ConVar osu_slider_osu_next_style("osu_slider_osu_next_style", false);
+ConVar osu_slider_rainbow("osu_slider_rainbow", false);
+ConVar osu_slider_use_gradient_image("osu_slider_use_gradient_image", false);
 
 ConVar osu_slider_body_unit_circle_subdivisions("osu_slider_body_unit_circle_subdivisions", 42);
 
@@ -63,18 +64,51 @@ VertexArrayObject *OsuSliderRenderer::generateVAO(Osu *osu, const std::vector<Ve
 
 	checkUpdateVars(osu, hitcircleDiameter);
 
+	const Vector3 xOffset = Vector3(hitcircleDiameter, 0, 0);
+	const Vector3 yOffset = Vector3(0, hitcircleDiameter, 0);
+
+	const bool debugSquareVao = osu_slider_debug_draw_square_vao.getBool();
+
 	for (int i=0; i<points.size(); i++)
 	{
 		// fuck oob sliders
 		if (points[i].x < -hitcircleDiameter-OsuGameRules::OSU_COORD_WIDTH*2 || points[i].x > osu->getScreenWidth()+hitcircleDiameter+OsuGameRules::OSU_COORD_WIDTH*2 || points[i].y < -hitcircleDiameter-OsuGameRules::OSU_COORD_HEIGHT*2 || points[i].y > osu->getScreenHeight()+hitcircleDiameter+OsuGameRules::OSU_COORD_HEIGHT*2)
 			continue;
 
-		const std::vector<Vector3> &meshVertices = UNIT_CIRCLE_VAO_TRIANGLES->getVertices();
-		const std::vector<std::vector<Vector2>> &meshTexCoords = UNIT_CIRCLE_VAO_TRIANGLES->getTexcoords();
-		for (int v=0; v<meshVertices.size(); v++)
+		if (!debugSquareVao)
 		{
-			vao->addVertex(meshVertices[v] + Vector3(points[i].x, points[i].y, 0) + translation);
-			vao->addTexcoord(meshTexCoords[0][v]);
+			const std::vector<Vector3> &meshVertices = UNIT_CIRCLE_VAO_TRIANGLES->getVertices();
+			const std::vector<std::vector<Vector2>> &meshTexCoords = UNIT_CIRCLE_VAO_TRIANGLES->getTexcoords();
+			for (int v=0; v<meshVertices.size(); v++)
+			{
+				vao->addVertex(meshVertices[v] + Vector3(points[i].x, points[i].y, 0) + translation);
+				vao->addTexcoord(meshTexCoords[0][v]);
+			}
+		}
+		else
+		{
+			const Vector3 topLeft = Vector3(points[i].x, points[i].y, 0) - xOffset/2.0f - yOffset/2.0f + translation;
+			const Vector3 topRight = topLeft + xOffset;
+			const Vector3 bottomLeft = topLeft + yOffset;
+			const Vector3 bottomRight = bottomLeft + xOffset;
+
+			vao->addVertex(topLeft);
+			vao->addTexcoord(0, 0);
+
+			vao->addVertex(bottomLeft);
+			vao->addTexcoord(0, 1);
+
+			vao->addVertex(bottomRight);
+			vao->addTexcoord(1, 1);
+
+			vao->addVertex(topLeft);
+			vao->addTexcoord(0, 0);
+
+			vao->addVertex(bottomRight);
+			vao->addTexcoord(1, 1);
+
+			vao->addVertex(topRight);
+			vao->addTexcoord(1, 0);
 		}
 	}
 
@@ -96,48 +130,52 @@ void OsuSliderRenderer::draw(Graphics *g, Osu *osu, const std::vector<Vector2> &
 	const int drawUpToIndex = clamp<int>((int)std::round(points.size() * to), 0, points.size());
 
 	// debug sliders
-	if (osu_slider_debug.getBool())
+	if (osu_slider_debug_draw.getBool())
 	{
-		const float circleImageScale = hitcircleDiameter / (float) osu->getSkin()->getHitCircle()->getWidth();
+		const float circleImageScale = hitcircleDiameter / (float)osu->getSkin()->getHitCircle()->getWidth();
+		const float circleImageScaleInv = (1.0f / circleImageScale);
 
-		g->setColor(color);
-		g->setAlpha(alpha);
-		for (int i=drawFromIndex; i<drawUpToIndex; i++)
+		const float width = (float)osu->getSkin()->getHitCircle()->getWidth();
+		const float height = (float)osu->getSkin()->getHitCircle()->getHeight();
+
+		const float x = (-width / 2.0f);
+		const float y = (-height / 2.0f);
+		const float z = -1.0f;
+
+		g->pushTransform();
 		{
-			VertexArrayObject vao(Graphics::PRIMITIVE::PRIMITIVE_QUADS);
-			Vector2 point = points[i];
+			g->scale(circleImageScale, circleImageScale);
 
-			int width = osu->getSkin()->getHitCircle()->getWidth();
-			int height = osu->getSkin()->getHitCircle()->getHeight();
-
-			g->pushTransform();
+			g->setColor(color);
+			g->setAlpha(alpha*osu_slider_alpha_multiplier.getFloat());
+			osu->getSkin()->getHitCircle()->bind();
 			{
-				g->scale(circleImageScale, circleImageScale);
-				g->translate(point.x, point.y);
-
-				int x = -width/2;
-				int y = -height/2;
-
-				vao.addTexcoord(0, 0);
-				vao.addVertex(x, y, -1.0f);
-
-				vao.addTexcoord(0, 1);
-				vao.addVertex(x, y+height, -1.0f);
-
-				vao.addTexcoord(1, 1);
-				vao.addVertex(x+width, y+height, -1.0f);
-
-				vao.addTexcoord(1, 0);
-				vao.addVertex(x+width, y, -1.0f);
-
-				osu->getSkin()->getHitCircle()->bind();
+				for (int i=drawFromIndex; i<drawUpToIndex; i++)
 				{
+					const Vector2 point = points[i] * circleImageScaleInv;
+
+					static VertexArrayObject vao(Graphics::PRIMITIVE::PRIMITIVE_QUADS);
+					vao.empty();
+					{
+						vao.addTexcoord(0, 0);
+						vao.addVertex(point.x + x, point.y + y, z);
+
+						vao.addTexcoord(0, 1);
+						vao.addVertex(point.x + x, point.y + y + height, z);
+
+						vao.addTexcoord(1, 1);
+						vao.addVertex(point.x + x + width, point.y + y + height, z);
+
+						vao.addTexcoord(1, 0);
+						vao.addVertex(point.x + x + width, point.y + y, z);
+					}
 					g->drawVAO(&vao);
 				}
-				osu->getSkin()->getHitCircle()->unbind();
 			}
-			g->popTransform();
+			osu->getSkin()->getHitCircle()->unbind();
 		}
+		g->popTransform();
+
 		return; // nothing more to draw here
 	}
 
@@ -217,6 +255,27 @@ void OsuSliderRenderer::draw(Graphics *g, Osu *osu, VertexArrayObject *vao, cons
 	if (osu_slider_alpha_multiplier.getFloat() <= 0.0f || alpha <= 0.0f || vao == NULL) return;
 
 	checkUpdateVars(osu, hitcircleDiameter);
+
+	if (osu_slider_debug_draw_square_vao.getBool())
+	{
+		g->setColor(color);
+		g->setAlpha(alpha*osu_slider_alpha_multiplier.getFloat());
+		osu->getSkin()->getHitCircle()->bind();
+
+		vao->setDrawPercent(from, to, 6); // HACKHACK: hardcoded magic number
+		{
+			g->pushTransform();
+			{
+				g->scale(scale, scale);
+				g->translate(translation.x, translation.y);
+
+				g->drawVAO(vao);
+			}
+			g->popTransform();
+		}
+
+		return; // nothing more to draw here
+	}
 
 	// NOTE: this would add support for aspire slider distortions, but calculating the bounding box live is a waste of performance, not worth it
 	/*

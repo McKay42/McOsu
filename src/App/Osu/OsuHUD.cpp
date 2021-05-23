@@ -42,9 +42,6 @@
 
 #include "OsuUIVolumeSlider.h"
 
-#include "OpenGLHeaders.h"
-#include "OpenGLLegacyInterface.h"
-#include "OpenGL3Interface.h"
 #include "OpenGLES2Interface.h"
 
 ConVar osu_automatic_cursor_size("osu_automatic_cursor_size", false);
@@ -856,16 +853,6 @@ void OsuHUD::drawCursorInt(Graphics *g, Shader *trailShader, std::vector<CURSORT
 		// draw new style continuous smooth trail
 		if (smoothCursorTrail)
 		{
-#if defined(MCENGINE_FEATURE_OPENGL)
-
-			const bool isOpenGLRendererHack = (dynamic_cast<OpenGLLegacyInterface*>(g) != NULL || dynamic_cast<OpenGL3Interface*>(g) != NULL);
-
-#elif defined(MCENGINE_FEATURE_OPENGLES)
-
-			const bool isOpenGLRendererHack = (dynamic_cast<OpenGLES2Interface*>(g) != NULL);
-
-#endif
-
 			trailShader->enable();
 			{
 				if (trailShader == m_cursorTrailShaderVR)
@@ -889,21 +876,11 @@ void OsuHUD::drawCursorInt(Graphics *g, Shader *trailShader, std::vector<CURSORT
 
 				trailImage->bind();
 				{
-#if defined(MCENGINE_FEATURE_OPENGL) || defined(MCENGINE_FEATURE_OPENGLES)
-
-					if (isOpenGLRendererHack)
-						glBlendFunc(GL_SRC_ALPHA, GL_ONE); // HACKHACK: OpenGL hardcoded
-
-#endif
-
-					g->drawVAO(m_cursorTrailVAO);
-
-#if defined(MCENGINE_FEATURE_OPENGL) || defined(MCENGINE_FEATURE_OPENGLES)
-
-					if (isOpenGLRendererHack)
-						glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // HACKHACK: OpenGL hardcoded
-
-#endif
+					g->setBlendMode(Graphics::BLEND_MODE::BLEND_MODE_ADDITIVE);
+					{
+						g->drawVAO(m_cursorTrailVAO);
+					}
+					g->setBlendMode(Graphics::BLEND_MODE::BLEND_MODE_ALPHA);
 				}
 				trailImage->unbind();
 			}
@@ -1000,22 +977,8 @@ void OsuHUD::drawCursorRipples(Graphics *g)
 	const float duration = std::max(osu_cursor_ripple_duration.getFloat(), 0.0001f);
 	const float fadeDuration = std::max(osu_cursor_ripple_duration.getFloat() - osu_cursor_ripple_anim_start_fadeout_delay.getFloat(), 0.0001f);
 
-#if defined(MCENGINE_FEATURE_OPENGL)
-
-	const bool isOpenGLRendererHack = (dynamic_cast<OpenGLLegacyInterface*>(g) != NULL || dynamic_cast<OpenGL3Interface*>(g) != NULL);
-
-#elif defined(MCENGINE_FEATURE_OPENGLES)
-
-	const bool isOpenGLRendererHack = (dynamic_cast<OpenGLES2Interface*>(g) != NULL);
-
-#endif
-
-#if defined(MCENGINE_FEATURE_OPENGL) || defined(MCENGINE_FEATURE_OPENGLES)
-
-	if (isOpenGLRendererHack && osu_cursor_ripple_additive.getBool())
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE); // HACKHACK: OpenGL hardcoded
-
-#endif
+	if (osu_cursor_ripple_additive.getBool())
+		g->setBlendMode(Graphics::BLEND_MODE::BLEND_MODE_ADDITIVE);
 
 	g->setColor(COLOR(255, clamp<int>(osu_cursor_ripple_tint_r.getInt(), 0, 255), clamp<int>(osu_cursor_ripple_tint_g.getInt(), 0, 255), clamp<int>(osu_cursor_ripple_tint_b.getInt(), 0, 255)));
 	m_osu->getSkin()->getCursorRipple()->bind();
@@ -1036,12 +999,8 @@ void OsuHUD::drawCursorRipples(Graphics *g)
 	}
 	m_osu->getSkin()->getCursorRipple()->unbind();
 
-#if defined(MCENGINE_FEATURE_OPENGL) || defined(MCENGINE_FEATURE_OPENGLES)
-
-	if (isOpenGLRendererHack && osu_cursor_ripple_additive.getBool())
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // HACKHACK: OpenGL hardcoded
-
-#endif
+	if (osu_cursor_ripple_additive.getBool())
+		g->setBlendMode(Graphics::BLEND_MODE::BLEND_MODE_ALPHA);
 }
 
 void OsuHUD::drawFps(Graphics *g, McFont *font, float fps)
