@@ -123,6 +123,8 @@ ConVar osu_hud_scoreboard_scale("osu_hud_scoreboard_scale", 1.0f);
 ConVar osu_hud_scoreboard_offset_y_percent("osu_hud_scoreboard_offset_y_percent", 0.11f);
 ConVar osu_hud_scoreboard_use_menubuttonbackground("osu_hud_scoreboard_use_menubuttonbackground", true);
 ConVar osu_hud_inputoverlay_scale("osu_hud_inputoverlay_scale", 1.0f);
+ConVar osu_hud_inputoverlay_offset_x("osu_hud_inputoverlay_offset_x", 0.0f);
+ConVar osu_hud_inputoverlay_offset_y("osu_hud_inputoverlay_offset_y", 0.0f);
 ConVar osu_hud_inputoverlay_anim_scale_duration("osu_hud_inputoverlay_anim_scale_duration", 0.16f);
 ConVar osu_hud_inputoverlay_anim_scale_multiplier("osu_hud_inputoverlay_anim_scale_multiplier", 0.8f);
 ConVar osu_hud_inputoverlay_anim_color_duration("osu_hud_inputoverlay_anim_color_duration", 0.1f);
@@ -2803,10 +2805,15 @@ void OsuHUD::drawInputOverlay(Graphics *g, int numK1, int numK2, int numM1, int 
 	OsuSkinImage *inputoverlayBackground = m_osu->getSkin()->getInputoverlayBackground();
 	OsuSkinImage *inputoverlayKey = m_osu->getSkin()->getInputoverlayKey();
 
-	const float scale = osu_hud_scale.getFloat() * osu_hud_inputoverlay_scale.getFloat(); // global scaler
-	const float oScale = inputoverlayBackground->getResolutionScale() * 1.6f; // for converting harcoded osu offset pixels to screen pixels
+	const float scale = osu_hud_scale.getFloat() * osu_hud_inputoverlay_scale.getFloat();	// global scaler
+	const float oScale = inputoverlayBackground->getResolutionScale() * 1.6f;				// for converting harcoded osu offset pixels to screen pixels
+	const float offsetScale = Osu::getImageScale(m_osu, Vector2(1.0f, 1.0f), 1.0f);			// for scaling the x/y offset convars relative to screen size
 
-	const float yStart = m_osu->getScreenHeight()/2 - (40.0f*oScale)*scale;
+	const float xStartOffset = osu_hud_inputoverlay_offset_x.getFloat()*offsetScale;
+	const float yStartOffset = osu_hud_inputoverlay_offset_y.getFloat()*offsetScale;
+
+	const float xStart = m_osu->getScreenWidth() - xStartOffset;
+	const float yStart = m_osu->getScreenHeight()/2 - (40.0f*oScale)*scale + yStartOffset;
 
 	// background
 	{
@@ -2821,7 +2828,7 @@ void OsuHUD::drawInputOverlay(Graphics *g, int numK1, int numK2, int numM1, int 
 		{
 			g->scale(xScale, 1.0f);
 			g->rotate(rot);
-			inputoverlayBackground->draw(g, Vector2(m_osu->getScreenWidth() - xOffset*scale + 1, yStart + yOffset*scale), scale);
+			inputoverlayBackground->draw(g, Vector2(xStart - xOffset*scale + 1, yStart + yOffset*scale), scale);
 		}
 		g->popTransform();
 	}
@@ -2881,7 +2888,7 @@ void OsuHUD::drawInputOverlay(Graphics *g, int numK1, int numK2, int numM1, int 
 			}
 
 			// key
-			const Vector2 pos = Vector2(m_osu->getScreenWidth() - (15.0f*oScale)*scale + 1, yStart + (19.0f*oScale + i*29.5f*oScale)*scale);
+			const Vector2 pos = Vector2(xStart - (15.0f*oScale)*scale + 1, yStart + (19.0f*oScale + i*29.5f*oScale)*scale);
 			g->setColor(COLORf(1.0f,
 					(1.0f - animColor)*COLOR_GET_Rf(colorIdle) + animColor*COLOR_GET_Rf(color),
 					(1.0f - animColor)*COLOR_GET_Gf(colorIdle) + animColor*COLOR_GET_Gf(color),
