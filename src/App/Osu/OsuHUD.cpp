@@ -103,6 +103,7 @@ ConVar osu_hud_hiterrorbar_offset_right_percent("osu_hud_hiterrorbar_offset_righ
 ConVar osu_hud_hiterrorbar_bar_width_scale("osu_hud_hiterrorbar_bar_width_scale", 0.6f);
 ConVar osu_hud_hiterrorbar_bar_height_scale("osu_hud_hiterrorbar_bar_height_scale", 3.4f);
 ConVar osu_hud_hiterrorbar_max_entries("osu_hud_hiterrorbar_max_entries", 32, "maximum number of entries/lines");
+ConVar osu_hud_hiterrorbar_hide_during_spinner("osu_hud_hiterrorbar_hide_during_spinner", true);
 ConVar osu_hud_scorebar_scale("osu_hud_scorebar_scale", 1.0f);
 ConVar osu_hud_scorebar_hide_during_breaks("osu_hud_scorebar_hide_during_breaks", true);
 ConVar osu_hud_scorebar_hide_anim_duration("osu_hud_scorebar_hide_anim_duration", 0.5f);
@@ -348,7 +349,7 @@ void OsuHUD::draw(Graphics *g)
 		// NOTE: moved to draw behind hitobjects in OsuBeatmapStandard::draw()
 		if (m_osu_mod_fposu_ref->getBool())
 		{
-			if (osu_draw_hiterrorbar.getBool() && (beatmapStd == NULL || !beatmapStd->isSpinnerActive()) && !beatmap->isLoading())
+			if (osu_draw_hiterrorbar.getBool() && (beatmapStd == NULL || (!beatmapStd->isSpinnerActive() || !osu_hud_hiterrorbar_hide_during_spinner.getBool())) && !beatmap->isLoading())
 			{
 				if (beatmapStd != NULL)
 					drawHitErrorBar(g, OsuGameRules::getHitWindow300(beatmap), OsuGameRules::getHitWindow100(beatmap), OsuGameRules::getHitWindow50(beatmap), OsuGameRules::getHitWindowMiss(beatmap));
@@ -384,7 +385,7 @@ void OsuHUD::draw(Graphics *g)
 		// NOTE: moved to draw behind hitobjects in OsuBeatmapStandard::draw()
 		if (m_osu_mod_fposu_ref->getBool())
 		{
-			if (osu_draw_hiterrorbar.getBool() && (beatmapStd == NULL || !beatmapStd->isSpinnerActive()) && !beatmap->isLoading())
+			if (osu_draw_hiterrorbar.getBool() && (beatmapStd == NULL || (!beatmapStd->isSpinnerActive() || !osu_hud_hiterrorbar_hide_during_spinner.getBool())) && !beatmap->isLoading())
 			{
 				if (beatmapStd != NULL)
 					drawHitErrorBar(g, OsuGameRules::getHitWindow300(beatmap), OsuGameRules::getHitWindow100(beatmap), OsuGameRules::getHitWindow50(beatmap), OsuGameRules::getHitWindowMiss(beatmap));
@@ -2067,7 +2068,7 @@ void OsuHUD::drawHitErrorBar(Graphics *g, OsuBeatmapStandard *beatmapStd)
 {
 	if (osu_draw_hud.getBool() || !osu_hud_shift_tab_toggles_everything.getBool())
 	{
-		if (osu_draw_hiterrorbar.getBool() && !beatmapStd->isSpinnerActive() && !beatmapStd->isLoading())
+		if (osu_draw_hiterrorbar.getBool() && (!beatmapStd->isSpinnerActive() || !osu_hud_hiterrorbar_hide_during_spinner.getBool()) && !beatmapStd->isLoading())
 			drawHitErrorBar(g, OsuGameRules::getHitWindow300(beatmapStd), OsuGameRules::getHitWindow100(beatmapStd), OsuGameRules::getHitWindow50(beatmapStd), OsuGameRules::getHitWindowMiss(beatmapStd));
 	}
 }
