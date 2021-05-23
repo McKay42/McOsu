@@ -1805,6 +1805,13 @@ void OsuSongBrowser2::refreshBeatmaps()
 	m_beatmaps.clear();
 	m_previousRandomBeatmaps.clear();
 
+	// clear potentially active search
+	m_bInSearch = false;
+	m_sSearchString = "";
+	m_sPrevSearchString = "";
+	m_fSearchWaitTime = 0.0f;
+	m_searchPrevGroup = GROUP::GROUP_NO_GROUPING;
+
 	// force no grouping
 	if (m_group != GROUP::GROUP_NO_GROUPING)
 		onGroupChange("", 0);
