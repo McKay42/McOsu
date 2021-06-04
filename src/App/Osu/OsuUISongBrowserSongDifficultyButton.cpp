@@ -22,11 +22,6 @@
 
 #include "OsuUISongBrowserScoreButton.h"
 
-#include "OpenGLHeaders.h"
-#include "OpenGLLegacyInterface.h"
-#include "OpenGL3Interface.h"
-#include "OpenGLES2Interface.h"
-
 ConVar *OsuUISongBrowserSongDifficultyButton::m_osu_scores_enabled = NULL;
 ConVar *OsuUISongBrowserSongDifficultyButton::m_osu_songbrowser_dynamic_star_recalc_ref = NULL;
 
@@ -145,41 +140,20 @@ void OsuUISongBrowserSongDifficultyButton::draw(Graphics *g)
 		g->setColor(0x1effffff);
 		const float backgroundStarScale = 0.6f;
 
-#if defined(MCENGINE_FEATURE_OPENGL)
-
-			const bool isOpenGLRendererHack = (dynamic_cast<OpenGLLegacyInterface*>(g) != NULL || dynamic_cast<OpenGL3Interface*>(g) != NULL);
-
-#elif defined(MCENGINE_FEATURE_OPENGLES)
-
-			const bool isOpenGLRendererHack = (dynamic_cast<OpenGLES2Interface*>(g) != NULL);
-
-#endif
-
-#if defined(MCENGINE_FEATURE_OPENGL) || defined(MCENGINE_FEATURE_OPENGLES)
-
-		if (isOpenGLRendererHack)
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE); // HACKHACK: OpenGL hardcoded
-
-#endif
-
-		for (int i=(numFullStars + 1); i<10; i++)
+		g->setBlendMode(Graphics::BLEND_MODE::BLEND_MODE_ADDITIVE);
 		{
-			g->pushTransform();
+			for (int i=(numFullStars + 1); i<10; i++)
 			{
-				g->scale(starScale*backgroundStarScale, starScale*backgroundStarScale);
-				g->translate(pos.x + m_fTextOffset + starWidth/2 + i*starWidth*1.75f, pos.y + starOffsetY);
-				g->drawImage(skin->getStar());
+				g->pushTransform();
+				{
+					g->scale(starScale*backgroundStarScale, starScale*backgroundStarScale);
+					g->translate(pos.x + m_fTextOffset + starWidth/2 + i*starWidth*1.75f, pos.y + starOffsetY);
+					g->drawImage(skin->getStar());
+				}
+				g->popTransform();
 			}
-			g->popTransform();
 		}
-
-#if defined(MCENGINE_FEATURE_OPENGL) || defined(MCENGINE_FEATURE_OPENGLES)
-
-		if (isOpenGLRendererHack)
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // HACKHACK: OpenGL hardcoded
-
-#endif
-
+		g->setBlendMode(Graphics::BLEND_MODE::BLEND_MODE_ALPHA);
 	}
 }
 

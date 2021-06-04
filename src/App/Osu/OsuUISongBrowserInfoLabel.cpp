@@ -316,15 +316,6 @@ UString OsuUISongBrowserInfoLabel::buildSongInfoString()
 	if (!areStarsInaccurate)
 		lengthMS = std::max(lengthMS, (unsigned long)m_osu->getSongBrowser()->getDynamicStarCalculator()->getLengthMS());
 
-	// TODO: this has never worked. breaks are only loaded during gameplay, so even the old implementation did nothing
-	/*
-	{
-		OsuBeatmap *beatmap = m_osu->getSelectedBeatmap();
-		if (beatmap != NULL)
-			lengthMS -= clamp<unsigned long>(beatmap->getBreakDurationTotal(), 0, m_iLengthMS);
-	}
-	*/
-
 	const unsigned long fullSeconds = (lengthMS*(1.0 / m_osu->getSpeedMultiplier())) / 1000.0;
 	const int minutes = fullSeconds / 60;
 	const int seconds = fullSeconds % 60;

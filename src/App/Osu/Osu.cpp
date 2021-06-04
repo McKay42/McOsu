@@ -65,7 +65,7 @@
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 32.02f);
+ConVar osu_version("osu_version", 32.03f);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr");
 #else
@@ -1326,6 +1326,11 @@ void Osu::onKeyDown(KeyboardEvent &key)
 					if (!getSelectedBeatmap()->hasFailed())
 						key.consume();
 				}
+				else if (isKeyLeftClick || isKeyLeftClick2)
+				{
+					if (!getSelectedBeatmap()->hasFailed())
+						key.consume();
+				}
 			}
 
 			// K2
@@ -1341,6 +1346,11 @@ void Osu::onKeyDown(KeyboardEvent &key)
 
 					onKey2Change(true, false);
 
+					if (!getSelectedBeatmap()->hasFailed())
+						key.consume();
+				}
+				else if (isKeyRightClick || isKeyRightClick2)
+				{
 					if (!getSelectedBeatmap()->hasFailed())
 						key.consume();
 				}

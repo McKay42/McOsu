@@ -50,11 +50,6 @@
 #include <iostream>
 #include <fstream>
 
-#include "OpenGLHeaders.h"
-#include "OpenGLLegacyInterface.h"
-#include "OpenGL3Interface.h"
-#include "OpenGLES2Interface.h"
-
 ConVar osu_options_save_on_back("osu_options_save_on_back", true);
 ConVar osu_options_high_quality_sliders("osu_options_high_quality_sliders", false);
 ConVar osu_mania_keylayout_wizard("osu_mania_keylayout_wizard");
@@ -1168,28 +1163,13 @@ void OsuOptionsMenu::draw(Graphics *g)
 	const bool isAnimating = anim->isAnimating(&m_fAnimation);
 	if (!m_bVisible && !isAnimating) return;
 
-#if defined(MCENGINE_FEATURE_OPENGL)
-
-			const bool isOpenGLRendererHack = (dynamic_cast<OpenGLLegacyInterface*>(g) != NULL || dynamic_cast<OpenGL3Interface*>(g) != NULL);
-
-#elif defined(MCENGINE_FEATURE_OPENGLES)
-
-			const bool isOpenGLRendererHack = (dynamic_cast<OpenGLES2Interface*>(g) != NULL);
-
-#endif
-
 	m_sliderPreviewElement->setDrawSliderHack(!isAnimating);
 
 	if (isAnimating)
 	{
 		m_osu->getSliderFrameBuffer()->enable();
 
-#if defined(MCENGINE_FEATURE_OPENGL) || defined(MCENGINE_FEATURE_OPENGLES)
-
-		if (isOpenGLRendererHack)
-			glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA); // HACKHACK: OpenGL hardcoded
-
-#endif
+		g->setBlendMode(Graphics::BLEND_MODE::BLEND_MODE_PREMUL_ALPHA);
 	}
 
 	const bool isPlayingBeatmap = m_osu->isInPlayMode();
@@ -1297,12 +1277,7 @@ void OsuOptionsMenu::draw(Graphics *g)
 		if (!m_bVisible)
 			m_backButton->draw(g);
 
-#if defined(MCENGINE_FEATURE_OPENGL) || defined(MCENGINE_FEATURE_OPENGLES)
-
-		if (isOpenGLRendererHack)
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // HACKHACK: OpenGL hardcoded
-
-#endif
+		g->setBlendMode(Graphics::BLEND_MODE::BLEND_MODE_ALPHA);
 
 		m_osu->getSliderFrameBuffer()->disable();
 
