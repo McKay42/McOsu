@@ -850,11 +850,13 @@ double OsuDifficultyCalculator::computeAimValue(const ScoreData &score, const Os
 	// ar bonus
 	double approachRateFactor = 0.0; // see https://github.com/ppy/osu-performance/pull/125/
 	if (attributes.ApproachRate > 10.33)
-		approachRateFactor += 0.4 * (attributes.ApproachRate - 10.33); // from 0.3 to 0.4 see https://github.com/ppy/osu-performance/pull/125/
+		approachRateFactor = attributes.ApproachRate - 10.33; // from 0.3 to 0.4 see https://github.com/ppy/osu-performance/pull/125/ // and completely changed the logic in https://github.com/ppy/osu-performance/pull/135/
 	else if (attributes.ApproachRate < 8.0)
-		approachRateFactor += 0.01 * (8.0 - attributes.ApproachRate); // from 0.01 to 0.1 see https://github.com/ppy/osu-performance/pull/125/ // and back again from 0.1 to 0.01 see https://github.com/ppy/osu-performance/pull/133/
+		approachRateFactor = 0.025 * (8.0 - attributes.ApproachRate); // from 0.01 to 0.1 see https://github.com/ppy/osu-performance/pull/125/ // and back again from 0.1 to 0.01 see https://github.com/ppy/osu-performance/pull/133/ // and completely changed the logic in https://github.com/ppy/osu-performance/pull/135/
 
-	aimValue *= 1.0 + std::min(approachRateFactor, approachRateFactor * ((double)score.totalHits / 1000.0)); // see https://github.com/ppy/osu-performance/pull/125/
+	double approachRateTotalHitsFactor = 1.0 / (1.0 + std::exp(-(0.007 * (static_cast<double>(score.totalHits) - 400.0)))); // see https://github.com/ppy/osu-performance/pull/135/
+
+	aimValue *= 1.0 + (0.03 + 0.37 * approachRateTotalHitsFactor) * approachRateFactor; // see https://github.com/ppy/osu-performance/pull/135/
 
 	// hidden
 	if (score.modsLegacy & OsuReplay::Mods::Hidden)
@@ -896,9 +898,11 @@ double OsuDifficultyCalculator::computeSpeedValue(const ScoreData &score, const 
 	// ar bonus
 	double approachRateFactor = 0.0; // see https://github.com/ppy/osu-performance/pull/125/
 	if (attributes.ApproachRate > 10.33)
-		approachRateFactor += 0.4 * (attributes.ApproachRate - 10.33); // from 0.3 to 0.4 see https://github.com/ppy/osu-performance/pull/125/
+		approachRateFactor = attributes.ApproachRate - 10.33; // from 0.3 to 0.4 see https://github.com/ppy/osu-performance/pull/125/ // and completely changed the logic in https://github.com/ppy/osu-performance/pull/135/
 
-	speedValue *= 1.0 + std::min(approachRateFactor, approachRateFactor * ((double)score.totalHits / 1000.0)); // see https://github.com/ppy/osu-performance/pull/125/
+	double approachRateTotalHitsFactor = 1.0 / (1.0 + std::exp(-(0.007 * (static_cast<double>(score.totalHits) - 400.0)))); // see https://github.com/ppy/osu-performance/pull/135/
+
+	speedValue *= 1.0 + (0.03 + 0.37 * approachRateTotalHitsFactor) * approachRateFactor; // see https://github.com/ppy/osu-performance/pull/135/
 
 	// hidden
 	if (score.modsLegacy & OsuReplay::Mods::Hidden)
