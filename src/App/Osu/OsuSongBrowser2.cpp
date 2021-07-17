@@ -3772,7 +3772,7 @@ void OsuSongBrowser2::onUserButtonClicked()
 {
 	engine->getSound()->play(m_osu->getSkin()->getMenuClick());
 
-	std::vector<UString> names = m_db->getPlayerNamesWithPPScores();
+	std::vector<UString> names = m_db->getPlayerNamesWithScores();
 	if (names.size() > 0)
 	{
 		m_contextMenu->setPos(m_userButton->getPos());

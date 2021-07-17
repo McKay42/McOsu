@@ -511,7 +511,7 @@ void OsuUserStatsScreen::onUserClicked(CBaseUIButton *button)
 	engine->getSound()->play(m_osu->getSkin()->getMenuClick());
 
 	// NOTE: code duplication (see OsuSongbrowser2.cpp)
-	std::vector<UString> names = m_osu->getSongBrowser()->getDatabase()->getPlayerNamesWithPPScores();
+	std::vector<UString> names = m_osu->getSongBrowser()->getDatabase()->getPlayerNamesWithScores();
 	if (names.size() > 0)
 	{
 		m_contextMenu->setPos(m_userButton->getPos() + Vector2(0, m_userButton->getSize().y));
@@ -603,6 +603,26 @@ void OsuUserStatsScreen::onRecalculatePPImportLegacyScoresClicked()
 			reallyText.append(m_name_ref->getString());
 			reallyText.append("\"?");
 			m_contextMenu->addButton(reallyText)->setEnabled(false);
+		}
+		{
+			UString reallyText2 = "NOTE: You can NOT mix-and-match-import.";
+			CBaseUIButton *reallyText2Button = m_contextMenu->addButton(reallyText2);
+			reallyText2Button->setEnabled(false);
+			reallyText2Button->setTextColor(0xff555555);
+			reallyText2Button->setTextDarkColor(0xff000000);
+		}
+		{
+			UString reallyText3 = "Only scores matching the EXACT username";
+			CBaseUIButton *reallyText3Button = m_contextMenu->addButton(reallyText3);
+			reallyText3Button->setEnabled(false);
+			reallyText3Button->setTextColor(0xff555555);
+			reallyText3Button->setTextDarkColor(0xff000000);
+
+			UString reallyText4 = "of your currently selected profile are imported.";
+			CBaseUIButton *reallyText4Button = m_contextMenu->addButton(reallyText4);
+			reallyText4Button->setEnabled(false);
+			reallyText4Button->setTextColor(0xff555555);
+			reallyText4Button->setTextDarkColor(0xff000000);
 		}
 		CBaseUIButton *spacer = m_contextMenu->addButton("---");
 		spacer->setTextLeft(false);
