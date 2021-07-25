@@ -856,19 +856,22 @@ double OsuDifficultyCalculator::computeAimValue(const ScoreData &score, const Os
 
 	double approachRateTotalHitsFactor = 1.0 / (1.0 + std::exp(-(0.007 * (static_cast<double>(score.totalHits) - 400.0)))); // see https://github.com/ppy/osu-performance/pull/135/
 
-	aimValue *= 1.0 + (0.03 + 0.37 * approachRateTotalHitsFactor) * approachRateFactor; // see https://github.com/ppy/osu-performance/pull/135/
+	double approachRateBonus = 1.0 + (0.03 + 0.37 * approachRateTotalHitsFactor) * approachRateFactor; // see https://github.com/ppy/osu-performance/pull/135/ // see https://github.com/ppy/osu-performance/pull/137/
 
 	// hidden
 	if (score.modsLegacy & OsuReplay::Mods::Hidden)
 		aimValue *= 1.0 + 0.04 * (std::max(12.0 - attributes.ApproachRate, 0.0)); // NOTE: clamped to 0 because McOsu allows AR > 12
 
 	// flashlight
+	double flashlightBonus = 1.0; // see https://github.com/ppy/osu-performance/pull/137/
 	if (score.modsLegacy & OsuReplay::Mods::Flashlight)
 	{
-		aimValue *= 1.0 + 0.35 * std::min(1.0, (double)score.totalHits / 200.0)
+		flashlightBonus = 1.0 + 0.35 * std::min(1.0, (double)score.totalHits / 200.0)
 			+ (score.totalHits > 200 ? 0.3 * std::min(1.0, (double)(score.totalHits - 200) / 300.0)
 			+ (score.totalHits > 500 ? (double)(score.totalHits - 500) / 1200.0 : 0.0) : 0.0);
 	}
+
+	aimValue *= std::max(flashlightBonus, approachRateBonus); // see https://github.com/ppy/osu-performance/pull/137/
 
 	// scale aim with acc slightly
 	aimValue *= 0.5 + score.accuracy / 2.0;
