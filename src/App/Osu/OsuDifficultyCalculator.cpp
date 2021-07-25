@@ -364,7 +364,8 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 
 		static double calculate_difficulty(const Skills::Skill type, const std::vector<DiffObject> &dobjects, std::vector<double> *outStrains = NULL)
 		{
-			// see https://github.com/ppy/osu/blob/master/osu.Game/Rulesets/Difficulty/Skills/Skill.cs
+			// (old) see https://github.com/ppy/osu/blob/master/osu.Game/Rulesets/Difficulty/Skills/Skill.cs
+			// (new) see https://github.com/ppy/osu/blob/master/osu.Game/Rulesets/Difficulty/Skills/StrainSkill.cs
 
 			static const double strain_step = 400.0;	// the length of each strain section
 			static const double decay_weight = 0.9;		// max strains are weighted from highest to lowest, and this is how much the weight decays.
@@ -403,21 +404,77 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 			if (outStrains != NULL)
 				(*outStrains) = highestStrains; // save a copy
 
-			// see DifficultyValue() @ https://github.com/ppy/osu/blob/master/osu.Game/Rulesets/Difficulty/Skills/Skill.cs
+
+
+			// (old) see DifficultyValue() @ https://github.com/ppy/osu/blob/master/osu.Game/Rulesets/Difficulty/Skills/Skill.cs
+			// (new) see DifficultyValue() @ https://github.com/ppy/osu/blob/master/osu.Game/Rulesets/Difficulty/Skills/StrainSkill.cs
+			// (new) see DifficultyValue() @ https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/OsuStrainSkill.cs
+
+			static const size_t reducedSectionCount = 10;
+			static const double reducedStrainBaseline = 0.75;
+			static const double difficultyMultiplier = 1.06;
+
 			double difficulty = 0.0;
 			double weight = 1.0;
 
 			// sort strains from greatest to lowest
 			std::sort(highestStrains.begin(), highestStrains.end(), std::greater<double>());
 
-			// weigh the top strains
-			for (size_t i=0; i<highestStrains.size(); i++)
+			// old implementation
+			/*
 			{
-				difficulty += highestStrains[i] * weight;
-				weight *= decay_weight;
+				// weigh the top strains
+				for (size_t i=0; i<highestStrains.size(); i++)
+				{
+					difficulty += highestStrains[i] * weight;
+					weight *= decay_weight;
+				}
 			}
 
 			return difficulty;
+			*/
+
+			// new implementation (https://github.com/ppy/osu/pull/13483/)
+			{
+				size_t skillSpecificReducedSectionCount = reducedSectionCount;
+				{
+					switch (type)
+					{
+					case Skills::Skill::SPEED:
+						skillSpecificReducedSectionCount = 5;
+						break;
+					}
+				}
+
+				// "We are reducing the highest strains first to account for extreme difficulty spikes"
+				for (size_t i=0; i<std::min(highestStrains.size(), skillSpecificReducedSectionCount); i++)
+				{
+					const double scale = std::log10(lerp<double>(1.0, 10.0, clamp<double>((double)i / (double)skillSpecificReducedSectionCount, 0.0, 1.0)));
+					highestStrains[i] *= lerp<double>(reducedStrainBaseline, 1.0, scale);
+				}
+
+				// re-sort
+				std::sort(highestStrains.begin(), highestStrains.end(), std::greater<double>());
+
+				// weigh the top strains
+				for (size_t i=0; i<highestStrains.size(); i++)
+				{
+					difficulty += highestStrains[i] * weight;
+					weight *= decay_weight;
+				}
+			}
+
+			double skillSpecificDifficultyMultiplier = difficultyMultiplier;
+			{
+				switch (type)
+				{
+				case Skills::Skill::SPEED:
+					skillSpecificDifficultyMultiplier = 1.04;
+					break;
+				}
+			}
+
+			return difficulty * skillSpecificDifficultyMultiplier;
 		}
 
 		// old implementation (ppv2.0)
@@ -519,7 +576,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 									* std::max(jump_distance - angle_bonus_scale, 0.0)
 							);
 
-							result = 1.5 * applyDiminishingExp(std::max(0.0, angle_bonus)) / std::max(aim_timing_threshold, prev_strain_time);
+							result = 1.4 * applyDiminishingExp(std::max(0.0, angle_bonus)) / std::max(aim_timing_threshold, prev_strain_time); // reduced from 1.5 to 1.4 in https://github.com/ppy/osu/pull/13483/
 						}
 
 						const double jumpDistanceExp = applyDiminishingExp(jump_distance);
