@@ -78,7 +78,7 @@ private:
 class OsuDifficultyCalculator
 {
 public:
-	static constexpr const int PP_ALGORITHM_VERSION = 20210716;
+	static constexpr const int PP_ALGORITHM_VERSION = 20210722;
 
 public:
 	// stars, fully static
