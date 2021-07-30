@@ -49,6 +49,9 @@ private:
 	void onRecalculatePPImportLegacyScoresClicked();
 	void onRecalculatePPImportLegacyScoresConfirmed(UString text, int id);
 	void onRecalculatePP(bool importLegacyScores);
+	void onCopyAllScoresClicked();
+	void onCopyAllScoresUserSelected(UString text, int id);
+	void onCopyAllScoresConfirmed(UString text, int id);
 	void onDeleteAllScoresClicked();
 	void onDeleteAllScoresConfirmed(UString text, int id);
 
@@ -64,6 +67,8 @@ private:
 	std::vector<OsuUISongBrowserScoreButton*> m_scoreButtons;
 
 	CBaseUIButton *m_menuButton;
+
+	UString m_sCopyAllScoresFromUser;
 
 	bool m_bRecalculatingPP;
 	OsuUserStatsScreenBackgroundPPRecalculator *m_backgroundPPRecalculator;

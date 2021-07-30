@@ -97,6 +97,45 @@ public:
 				 && isNumKatusEqual
 				 && isNumMissesEqual);
 		}
+
+		bool isScoreEqualToCopiedScoreIgnoringPlayerName(const OsuDatabase::Score &copiedScore) const
+		{
+			const bool isScoreValueEqual = (score == copiedScore.score);
+			const bool isTimestampEqual = (unixTimestamp == copiedScore.unixTimestamp);
+			const bool isComboMaxEqual = (comboMax == copiedScore.comboMax);
+			const bool isModsLegacyEqual = (modsLegacy == copiedScore.modsLegacy);
+			const bool isNum300sEqual = (num300s == copiedScore.num300s);
+			const bool isNum100sEqual = (num100s == copiedScore.num100s);
+			const bool isNum50sEqual = (num50s == copiedScore.num50s);
+			const bool isNumGekisEqual = (numGekis == copiedScore.numGekis);
+			const bool isNumKatusEqual = (numKatus == copiedScore.numKatus);
+			const bool isNumMissesEqual = (numMisses == copiedScore.numMisses);
+
+			const bool isSpeedMultiplierEqual = (speedMultiplier == copiedScore.speedMultiplier);
+			const bool isCSEqual = (CS == copiedScore.CS);
+			const bool isAREqual = (AR == copiedScore.AR);
+			const bool isODEqual = (OD == copiedScore.OD);
+			const bool isHPEqual = (HP == copiedScore.HP);
+			const bool areExperimentalModsConVarsEqual = (experimentalModsConVars == copiedScore.experimentalModsConVars);
+
+			return (isScoreValueEqual
+				 && isTimestampEqual
+				 && isComboMaxEqual
+				 && isModsLegacyEqual
+				 && isNum300sEqual
+				 && isNum100sEqual
+				 && isNum50sEqual
+				 && isNumGekisEqual
+				 && isNumKatusEqual
+				 && isNumMissesEqual
+
+				 && isSpeedMultiplierEqual
+				 && isCSEqual
+				 && isAREqual
+				 && isODEqual
+				 && isHPEqual
+				 && areExperimentalModsConVarsEqual);
+		}
 	};
 
 	struct PlayerStats
@@ -149,6 +188,7 @@ public:
 	void forceScoresSaveOnNextShutdown() {m_bDidScoresChangeForSave = true;}
 
 	std::vector<UString> getPlayerNamesWithPPScores();
+	std::vector<UString> getPlayerNamesWithScores();
 	PlayerPPScores getPlayerPPScores(UString playerName);
 	PlayerStats calculatePlayerStats(UString playerName);
 	static float getWeightForIndex(int i);
@@ -168,6 +208,8 @@ public:
 
 	inline std::unordered_map<std::string, std::vector<Score>> *getScores() {return &m_scores;}
 	inline const std::vector<SCORE_SORTING_METHOD> &getScoreSortingMethods() const {return m_scoreSortingMethods;}
+
+	inline unsigned long long getAndIncrementScoreSortHackCounter() {return m_iSortHackCounter++;}
 
 private:
 	friend class OsuDatabaseLoader;

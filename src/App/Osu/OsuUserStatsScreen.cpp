@@ -511,7 +511,7 @@ void OsuUserStatsScreen::onUserClicked(CBaseUIButton *button)
 	engine->getSound()->play(m_osu->getSkin()->getMenuClick());
 
 	// NOTE: code duplication (see OsuSongbrowser2.cpp)
-	std::vector<UString> names = m_osu->getSongBrowser()->getDatabase()->getPlayerNamesWithPPScores();
+	std::vector<UString> names = m_osu->getSongBrowser()->getDatabase()->getPlayerNamesWithScores();
 	if (names.size() > 0)
 	{
 		m_contextMenu->setPos(m_userButton->getPos() + Vector2(0, m_userButton->getSize().y));
@@ -566,6 +566,14 @@ void OsuUserStatsScreen::onMenuClicked(CBaseUIButton *button)
 			importText.append("\"");
 			m_contextMenu->addButton(importText, 2);
 		}
+		spacer = m_contextMenu->addButton("-");
+		spacer->setEnabled(false);
+		spacer->setTextColor(0xff888888);
+		spacer->setTextDarkColor(0xff000000);
+		{
+			UString copyText = "Copy All Scores from ...";
+			m_contextMenu->addButton(copyText, 3);
+		}
 		spacer = m_contextMenu->addButton("---");
 		spacer->setEnabled(false);
 		spacer->setTextColor(0xff888888);
@@ -574,7 +582,7 @@ void OsuUserStatsScreen::onMenuClicked(CBaseUIButton *button)
 			UString deleteText = "Delete All Scores of \"";
 			deleteText.append(m_name_ref->getString());
 			deleteText.append("\"");
-			m_contextMenu->addButton(deleteText, 3);
+			m_contextMenu->addButton(deleteText, 4);
 		}
 	}
 	m_contextMenu->end();
@@ -589,6 +597,8 @@ void OsuUserStatsScreen::onMenuSelected(UString text, int id)
 	else if (id == 2)
 		onRecalculatePPImportLegacyScoresClicked();
 	else if (id == 3)
+		onCopyAllScoresClicked();
+	else if (id == 4)
 		onDeleteAllScoresClicked();
 }
 
@@ -603,6 +613,26 @@ void OsuUserStatsScreen::onRecalculatePPImportLegacyScoresClicked()
 			reallyText.append(m_name_ref->getString());
 			reallyText.append("\"?");
 			m_contextMenu->addButton(reallyText)->setEnabled(false);
+		}
+		{
+			UString reallyText2 = "NOTE: You can NOT mix-and-match-import.";
+			CBaseUIButton *reallyText2Button = m_contextMenu->addButton(reallyText2);
+			reallyText2Button->setEnabled(false);
+			reallyText2Button->setTextColor(0xff555555);
+			reallyText2Button->setTextDarkColor(0xff000000);
+		}
+		{
+			UString reallyText3 = "Only scores matching the EXACT username";
+			CBaseUIButton *reallyText3Button = m_contextMenu->addButton(reallyText3);
+			reallyText3Button->setEnabled(false);
+			reallyText3Button->setTextColor(0xff555555);
+			reallyText3Button->setTextDarkColor(0xff000000);
+
+			UString reallyText4 = "of your currently selected profile are imported.";
+			CBaseUIButton *reallyText4Button = m_contextMenu->addButton(reallyText4);
+			reallyText4Button->setEnabled(false);
+			reallyText4Button->setTextColor(0xff555555);
+			reallyText4Button->setTextDarkColor(0xff000000);
 		}
 		CBaseUIButton *spacer = m_contextMenu->addButton("---");
 		spacer->setTextLeft(false);
@@ -642,6 +672,149 @@ void OsuUserStatsScreen::onRecalculatePP(bool importLegacyScores)
 
 	engine->getResourceManager()->requestNextLoadAsync();
 	engine->getResourceManager()->loadResource(m_backgroundPPRecalculator);
+}
+
+void OsuUserStatsScreen::onCopyAllScoresClicked()
+{
+	std::vector<UString> names = m_osu->getSongBrowser()->getDatabase()->getPlayerNamesWithPPScores();
+	{
+		// remove ourself
+		for (size_t i=0; i<names.size(); i++)
+		{
+			if (names[i] == m_name_ref->getString())
+			{
+				names.erase(names.begin() + i);
+				i--;
+			}
+		}
+	}
+
+	if (names.size() < 1)
+	{
+		m_osu->getNotificationOverlay()->addNotification("There are no valid users/scores to copy from.");
+		return;
+	}
+
+	m_contextMenu->setPos(m_menuButton->getPos() + Vector2(0, m_menuButton->getSize().y));
+	m_contextMenu->setRelPos(m_menuButton->getPos() + Vector2(0, m_menuButton->getSize().y));
+	m_contextMenu->begin();
+	{
+		m_contextMenu->addButton("Select user to copy from:", 0)->setTextColor(0xff888888)->setTextDarkColor(0xff000000)->setTextLeft(false)->setEnabled(false);
+		for (int i=0; i<names.size(); i++)
+		{
+			m_contextMenu->addButton(names[i]);
+		}
+	}
+	m_contextMenu->end();
+	m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUserStatsScreen::onCopyAllScoresUserSelected) );
+	OsuUIContextMenu::clampToRightScreenEdge(m_contextMenu);
+}
+
+void OsuUserStatsScreen::onCopyAllScoresUserSelected(UString text, int id)
+{
+	m_sCopyAllScoresFromUser = text;
+
+	m_contextMenu->setPos(m_menuButton->getPos() + Vector2(0, m_menuButton->getSize().y));
+	m_contextMenu->setRelPos(m_menuButton->getPos() + Vector2(0, m_menuButton->getSize().y));
+	m_contextMenu->begin();
+	{
+		{
+			UString reallyText = "Really copy all scores from \"";
+			reallyText.append(m_sCopyAllScoresFromUser);
+			reallyText.append("\" into \"");
+			reallyText.append(m_name_ref->getString());
+			reallyText.append("\"?");
+			m_contextMenu->addButton(reallyText)->setEnabled(false);
+		}
+		CBaseUIButton *spacer = m_contextMenu->addButton("---");
+		spacer->setTextLeft(false);
+		spacer->setEnabled(false);
+		spacer->setTextColor(0xff888888);
+		spacer->setTextDarkColor(0xff000000);
+		m_contextMenu->addButton("Yes", 1)->setTextLeft(false);
+		m_contextMenu->addButton("No")->setTextLeft(false);
+	}
+	m_contextMenu->end();
+	m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUserStatsScreen::onCopyAllScoresConfirmed) );
+	OsuUIContextMenu::clampToRightScreenEdge(m_contextMenu);
+}
+
+void OsuUserStatsScreen::onCopyAllScoresConfirmed(UString text, int id)
+{
+	if (id != 1) return;
+	if (m_sCopyAllScoresFromUser.length() < 1) return;
+
+	const UString &playerNameToCopyInto = m_name_ref->getString();
+
+	if (playerNameToCopyInto.length() < 1 || m_sCopyAllScoresFromUser == playerNameToCopyInto) return;
+
+	debugLog("Copying all scores from \"%s\" into \"%s\"\n", m_sCopyAllScoresFromUser.toUtf8(), playerNameToCopyInto.toUtf8());
+
+	std::unordered_map<std::string, std::vector<OsuDatabase::Score>> *scores = m_osu->getSongBrowser()->getDatabase()->getScores();
+
+	std::vector<OsuDatabase::Score> tempScoresToCopy;
+	for (auto &kv : *scores)
+	{
+		tempScoresToCopy.clear();
+
+		// collect all to-be-copied scores for this beatmap into tempScoresToCopy
+		for (size_t i=0; i<kv.second.size(); i++)
+		{
+			const OsuDatabase::Score &existingScore = kv.second[i];
+
+			// NOTE: only ever copy McOsu scores
+			if (!existingScore.isLegacyScore)
+			{
+				if (existingScore.playerName == m_sCopyAllScoresFromUser)
+				{
+					// check if this user already has this exact same score (copied previously) and don't copy if that is the case
+					bool alreadyCopied = false;
+					for (size_t j=0; j<kv.second.size(); j++)
+					{
+						const OsuDatabase::Score &alreadyCopiedScore = kv.second[j];
+
+						if (j == i) continue;
+
+						if (!alreadyCopiedScore.isLegacyScore)
+						{
+							if (alreadyCopiedScore.playerName == playerNameToCopyInto)
+							{
+								if (existingScore.isScoreEqualToCopiedScoreIgnoringPlayerName(alreadyCopiedScore))
+								{
+									alreadyCopied = true;
+									break;
+								}
+							}
+						}
+					}
+
+					if (!alreadyCopied)
+						tempScoresToCopy.push_back(existingScore);
+				}
+			}
+		}
+
+		// and copy them into the db
+		if (tempScoresToCopy.size() > 0)
+		{
+			if (Osu::debug->getBool())
+				debugLog("Copying %i for %s\n", (int)tempScoresToCopy.size(), kv.first.c_str());
+
+			for (size_t i=0; i<tempScoresToCopy.size(); i++)
+			{
+				tempScoresToCopy[i].playerName = playerNameToCopyInto; // take ownership of this copied score
+				tempScoresToCopy[i].sortHack = m_osu->getSongBrowser()->getDatabase()->getAndIncrementScoreSortHackCounter();
+
+				kv.second.push_back(tempScoresToCopy[i]); // copy into db
+			}
+		}
+	}
+
+	// force recalc + refresh UI
+	m_osu->getSongBrowser()->getDatabase()->forceScoreUpdateOnNextCalculatePlayerStats();
+	m_osu->getSongBrowser()->getDatabase()->forceScoresSaveOnNextShutdown();
+
+	rebuildScoreButtons(playerNameToCopyInto);
 }
 
 void OsuUserStatsScreen::onDeleteAllScoresClicked()
@@ -684,10 +857,16 @@ void OsuUserStatsScreen::onDeleteAllScoresConfirmed(UString text, int id)
 	{
 		for (size_t i=0; i<kv.second.size(); i++)
 		{
-			if (kv.second[i].playerName == playerName)
+			const OsuDatabase::Score &score = kv.second[i];
+
+			// NOTE: only ever delete McOsu scores
+			if (!score.isLegacyScore)
 			{
-				kv.second.erase(kv.second.begin() + i);
-				i--;
+				if (score.playerName == playerName)
+				{
+					kv.second.erase(kv.second.begin() + i);
+					i--;
+				}
 			}
 		}
 	}

@@ -35,7 +35,15 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	std::vector<CHANGELOG> changelogs;
 
 	CHANGELOG alpha316;
-	alpha316.title = UString::format("32.03 (Build Date: %s, %s)", __DATE__, __TIME__); // (18.01.2021 - ?)
+	alpha316.title = UString::format("32.04 (Build Date: %s, %s)", __DATE__, __TIME__); // (18.01.2021 - ?)
+	alpha316.changes.push_back("- Added ability to copy (all) scores between profiles (Songbrowser > User > Top Ranks > Menu > Copy All Scores from ...)");
+	alpha316.changes.push_back("- Added ConVar: cursor_trail_expand");
+	alpha316.changes.push_back("- Updated star algorithm (15) (Added emu1337's diff spike nerf), see https://github.com/ppy/osu/pull/13483/");
+	alpha316.changes.push_back("- Updated pp algorithm (14) (Added emu1337's AR/FL adjustments), see https://github.com/ppy/osu-performance/pull/137/");
+	alpha316.changes.push_back("- Updated pp algorithm (13) (Added StanR's AR11 buff), see https://github.com/ppy/osu-performance/pull/135/");
+	alpha316.changes.push_back("- Updated hiterrorbar colors to more closely match osu!");
+	alpha316.changes.push_back("- Updated profile switcher to show all usernames which have any score in any db (so both osu!/McOsu scores.db)");
+	alpha316.changes.push_back("");
 	alpha316.changes.push_back("- Added 2B support to \"osu!lazer 2020\" and \"McOsu\" notelock types");
 	alpha316.changes.push_back("- Added ConVars (1): osu_hud_hiterrorbar_hide_during_spinner, osu_hud_inputoverlay_offset_x/y");
 	alpha316.changes.push_back("- Added ConVars (2): osu_slider_snake_duration_multiplier, osu_slider_reverse_arrow_fadein_duration");
@@ -303,6 +311,7 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha30.changes.push_back("- Fixed custom ConVars being ignored in cfg: osu_mods, osu_speed/ar/od/cs_override");
 	changelogs.push_back(alpha30);
 
+	/*
 	CHANGELOG alpha295;
 	alpha295.title =  "29.5 (26.05.2019)";
 	alpha295.changes.push_back("- Added lock buttons to AR/OD override sliders (force constant AR/OD even with speed multiplier)");
@@ -332,7 +341,6 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha294.changes.push_back("- Fixed another ArithmeticException in main menu (Aspire, Acid Rain - Covetous Beaver)");
 	changelogs.push_back(alpha294);
 
-	/*
 	CHANGELOG alpha293;
 	alpha293.title = "29.3 (15.02.2019)";
 	alpha293.changes.push_back("- NOTE: New stars/pp are accurate with an average delta of ~0.1% or ~0.003 stars, except for very few Aspire/2B maps with ~15%");

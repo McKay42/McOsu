@@ -364,7 +364,8 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 
 		static double calculate_difficulty(const Skills::Skill type, const std::vector<DiffObject> &dobjects, std::vector<double> *outStrains = NULL)
 		{
-			// see https://github.com/ppy/osu/blob/master/osu.Game/Rulesets/Difficulty/Skills/Skill.cs
+			// (old) see https://github.com/ppy/osu/blob/master/osu.Game/Rulesets/Difficulty/Skills/Skill.cs
+			// (new) see https://github.com/ppy/osu/blob/master/osu.Game/Rulesets/Difficulty/Skills/StrainSkill.cs
 
 			static const double strain_step = 400.0;	// the length of each strain section
 			static const double decay_weight = 0.9;		// max strains are weighted from highest to lowest, and this is how much the weight decays.
@@ -403,21 +404,77 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 			if (outStrains != NULL)
 				(*outStrains) = highestStrains; // save a copy
 
-			// see DifficultyValue() @ https://github.com/ppy/osu/blob/master/osu.Game/Rulesets/Difficulty/Skills/Skill.cs
+
+
+			// (old) see DifficultyValue() @ https://github.com/ppy/osu/blob/master/osu.Game/Rulesets/Difficulty/Skills/Skill.cs
+			// (new) see DifficultyValue() @ https://github.com/ppy/osu/blob/master/osu.Game/Rulesets/Difficulty/Skills/StrainSkill.cs
+			// (new) see DifficultyValue() @ https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/OsuStrainSkill.cs
+
+			static const size_t reducedSectionCount = 10;
+			static const double reducedStrainBaseline = 0.75;
+			static const double difficultyMultiplier = 1.06;
+
 			double difficulty = 0.0;
 			double weight = 1.0;
 
 			// sort strains from greatest to lowest
 			std::sort(highestStrains.begin(), highestStrains.end(), std::greater<double>());
 
-			// weigh the top strains
-			for (size_t i=0; i<highestStrains.size(); i++)
+			// old implementation
+			/*
 			{
-				difficulty += highestStrains[i] * weight;
-				weight *= decay_weight;
+				// weigh the top strains
+				for (size_t i=0; i<highestStrains.size(); i++)
+				{
+					difficulty += highestStrains[i] * weight;
+					weight *= decay_weight;
+				}
 			}
 
 			return difficulty;
+			*/
+
+			// new implementation (https://github.com/ppy/osu/pull/13483/)
+			{
+				size_t skillSpecificReducedSectionCount = reducedSectionCount;
+				{
+					switch (type)
+					{
+					case Skills::Skill::SPEED:
+						skillSpecificReducedSectionCount = 5;
+						break;
+					}
+				}
+
+				// "We are reducing the highest strains first to account for extreme difficulty spikes"
+				for (size_t i=0; i<std::min(highestStrains.size(), skillSpecificReducedSectionCount); i++)
+				{
+					const double scale = std::log10(lerp<double>(1.0, 10.0, clamp<double>((double)i / (double)skillSpecificReducedSectionCount, 0.0, 1.0)));
+					highestStrains[i] *= lerp<double>(reducedStrainBaseline, 1.0, scale);
+				}
+
+				// re-sort
+				std::sort(highestStrains.begin(), highestStrains.end(), std::greater<double>());
+
+				// weigh the top strains
+				for (size_t i=0; i<highestStrains.size(); i++)
+				{
+					difficulty += highestStrains[i] * weight;
+					weight *= decay_weight;
+				}
+			}
+
+			double skillSpecificDifficultyMultiplier = difficultyMultiplier;
+			{
+				switch (type)
+				{
+				case Skills::Skill::SPEED:
+					skillSpecificDifficultyMultiplier = 1.04;
+					break;
+				}
+			}
+
+			return difficulty * skillSpecificDifficultyMultiplier;
 		}
 
 		// old implementation (ppv2.0)
@@ -519,7 +576,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 									* std::max(jump_distance - angle_bonus_scale, 0.0)
 							);
 
-							result = 1.5 * applyDiminishingExp(std::max(0.0, angle_bonus)) / std::max(aim_timing_threshold, prev_strain_time);
+							result = 1.4 * applyDiminishingExp(std::max(0.0, angle_bonus)) / std::max(aim_timing_threshold, prev_strain_time); // reduced from 1.5 to 1.4 in https://github.com/ppy/osu/pull/13483/
 						}
 
 						const double jumpDistanceExp = applyDiminishingExp(jump_distance);
@@ -850,23 +907,28 @@ double OsuDifficultyCalculator::computeAimValue(const ScoreData &score, const Os
 	// ar bonus
 	double approachRateFactor = 0.0; // see https://github.com/ppy/osu-performance/pull/125/
 	if (attributes.ApproachRate > 10.33)
-		approachRateFactor += 0.4 * (attributes.ApproachRate - 10.33); // from 0.3 to 0.4 see https://github.com/ppy/osu-performance/pull/125/
+		approachRateFactor = attributes.ApproachRate - 10.33; // from 0.3 to 0.4 see https://github.com/ppy/osu-performance/pull/125/ // and completely changed the logic in https://github.com/ppy/osu-performance/pull/135/
 	else if (attributes.ApproachRate < 8.0)
-		approachRateFactor += 0.01 * (8.0 - attributes.ApproachRate); // from 0.01 to 0.1 see https://github.com/ppy/osu-performance/pull/125/ // and back again from 0.1 to 0.01 see https://github.com/ppy/osu-performance/pull/133/
+		approachRateFactor = 0.025 * (8.0 - attributes.ApproachRate); // from 0.01 to 0.1 see https://github.com/ppy/osu-performance/pull/125/ // and back again from 0.1 to 0.01 see https://github.com/ppy/osu-performance/pull/133/ // and completely changed the logic in https://github.com/ppy/osu-performance/pull/135/
 
-	aimValue *= 1.0 + std::min(approachRateFactor, approachRateFactor * ((double)score.totalHits / 1000.0)); // see https://github.com/ppy/osu-performance/pull/125/
+	double approachRateTotalHitsFactor = 1.0 / (1.0 + std::exp(-(0.007 * (static_cast<double>(score.totalHits) - 400.0)))); // see https://github.com/ppy/osu-performance/pull/135/
+
+	double approachRateBonus = 1.0 + (0.03 + 0.37 * approachRateTotalHitsFactor) * approachRateFactor; // see https://github.com/ppy/osu-performance/pull/135/ // see https://github.com/ppy/osu-performance/pull/137/
 
 	// hidden
 	if (score.modsLegacy & OsuReplay::Mods::Hidden)
 		aimValue *= 1.0 + 0.04 * (std::max(12.0 - attributes.ApproachRate, 0.0)); // NOTE: clamped to 0 because McOsu allows AR > 12
 
 	// flashlight
+	double flashlightBonus = 1.0; // see https://github.com/ppy/osu-performance/pull/137/
 	if (score.modsLegacy & OsuReplay::Mods::Flashlight)
 	{
-		aimValue *= 1.0 + 0.35 * std::min(1.0, (double)score.totalHits / 200.0)
+		flashlightBonus = 1.0 + 0.35 * std::min(1.0, (double)score.totalHits / 200.0)
 			+ (score.totalHits > 200 ? 0.3 * std::min(1.0, (double)(score.totalHits - 200) / 300.0)
 			+ (score.totalHits > 500 ? (double)(score.totalHits - 500) / 1200.0 : 0.0) : 0.0);
 	}
+
+	aimValue *= std::max(flashlightBonus, approachRateBonus); // see https://github.com/ppy/osu-performance/pull/137/
 
 	// scale aim with acc slightly
 	aimValue *= 0.5 + score.accuracy / 2.0;
@@ -896,9 +958,11 @@ double OsuDifficultyCalculator::computeSpeedValue(const ScoreData &score, const 
 	// ar bonus
 	double approachRateFactor = 0.0; // see https://github.com/ppy/osu-performance/pull/125/
 	if (attributes.ApproachRate > 10.33)
-		approachRateFactor += 0.4 * (attributes.ApproachRate - 10.33); // from 0.3 to 0.4 see https://github.com/ppy/osu-performance/pull/125/
+		approachRateFactor = attributes.ApproachRate - 10.33; // from 0.3 to 0.4 see https://github.com/ppy/osu-performance/pull/125/ // and completely changed the logic in https://github.com/ppy/osu-performance/pull/135/
 
-	speedValue *= 1.0 + std::min(approachRateFactor, approachRateFactor * ((double)score.totalHits / 1000.0)); // see https://github.com/ppy/osu-performance/pull/125/
+	double approachRateTotalHitsFactor = 1.0 / (1.0 + std::exp(-(0.007 * (static_cast<double>(score.totalHits) - 400.0)))); // see https://github.com/ppy/osu-performance/pull/135/
+
+	speedValue *= 1.0 + (0.03 + 0.37 * approachRateTotalHitsFactor) * approachRateFactor; // see https://github.com/ppy/osu-performance/pull/135/
 
 	// hidden
 	if (score.modsLegacy & OsuReplay::Mods::Hidden)

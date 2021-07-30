@@ -605,7 +605,36 @@ std::vector<UString> OsuDatabase::getPlayerNamesWithPPScores()
 	names.reserve(tempNames.size());
 	for (auto k : tempNames)
 	{
-		names.push_back(UString(k.c_str()));
+		if (k.length() > 0)
+			names.push_back(UString(k.c_str()));
+	}
+
+	return names;
+}
+
+std::vector<UString> OsuDatabase::getPlayerNamesWithScores()
+{
+	// bit of a useless double string conversion going on here, but whatever
+
+	std::unordered_set<std::string> tempNames;
+	for (auto kv : m_scores)
+	{
+		const std::string &key = kv.first;
+		for (Score &score : m_scores[key])
+		{
+			tempNames.insert(std::string(score.playerName.toUtf8()));
+		}
+	}
+
+	// always add local user, even if there were no scores
+	tempNames.insert(std::string(m_name_ref->getString().toUtf8()));
+
+	std::vector<UString> names;
+	names.reserve(tempNames.size());
+	for (auto k : tempNames)
+	{
+		if (k.length() > 0)
+			names.push_back(UString(k.c_str()));
 	}
 
 	return names;
