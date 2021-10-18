@@ -556,7 +556,7 @@ void OsuUISongBrowserScoreButton::onRightMouseUpInside()
 				deleteButton->setTextDarkColor(0xff000000);
 			}
 		}
-		m_contextMenu->end();
+		m_contextMenu->end(false, false);
 		m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUISongBrowserScoreButton::onContextMenu) );
 		OsuUIContextMenu::clampToRightScreenEdge(m_contextMenu);
 		OsuUIContextMenu::clampToBottomScreenEdge(m_contextMenu);
@@ -686,7 +686,7 @@ void OsuUISongBrowserScoreButton::onDeleteScoreClicked()
 			m_contextMenu->addButton("Yes", 1)->setTextLeft(false);
 			m_contextMenu->addButton("No")->setTextLeft(false);
 		}
-		m_contextMenu->end();
+		m_contextMenu->end(false, false);
 		m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUISongBrowserScoreButton::onDeleteScoreConfirmed) );
 		OsuUIContextMenu::clampToRightScreenEdge(m_contextMenu);
 		OsuUIContextMenu::clampToBottomScreenEdge(m_contextMenu);

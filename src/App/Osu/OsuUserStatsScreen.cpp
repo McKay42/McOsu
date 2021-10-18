@@ -297,9 +297,6 @@ OsuUserStatsScreen::OsuUserStatsScreen(Osu *osu) : OsuScreenBackable(osu)
 	m_menuButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUserStatsScreen::onMenuClicked) );
 	m_container->addBaseUIElement(m_menuButton);
 
-	// the context menu gets added last (drawn on top of everything)
-	m_container->addBaseUIElement(m_contextMenu);
-
 	m_bRecalculatingPP = false;
 	m_backgroundPPRecalculator = NULL;
 
@@ -364,6 +361,7 @@ void OsuUserStatsScreen::draw(Graphics *g)
 	}
 
 	m_container->draw(g);
+	m_contextMenu->draw(g);
 
 	OsuScreenBackable::draw(g);
 }
@@ -390,6 +388,7 @@ void OsuUserStatsScreen::update()
 			return; // don't update rest of UI while recalcing
 	}
 
+	m_contextMenu->update();
 	m_container->update();
 
 	if (m_contextMenu->isMouseInside())
@@ -511,7 +510,7 @@ void OsuUserStatsScreen::onUserClicked(CBaseUIButton *button)
 	engine->getSound()->play(m_osu->getSkin()->getMenuClick());
 
 	// NOTE: code duplication (see OsuSongbrowser2.cpp)
-	std::vector<UString> names = m_osu->getSongBrowser()->getDatabase()->getPlayerNamesWithScores();
+	std::vector<UString> names = m_osu->getSongBrowser()->getDatabase()->getPlayerNamesWithScoresForUserSwitcher();
 	if (names.size() > 0)
 	{
 		m_contextMenu->setPos(m_userButton->getPos() + Vector2(0, m_userButton->getSize().y));
@@ -525,7 +524,7 @@ void OsuUserStatsScreen::onUserClicked(CBaseUIButton *button)
 			if (names[i] == m_name_ref->getString())
 				button->setTextBrightColor(0xff00ff00);
 		}
-		m_contextMenu->end();
+		m_contextMenu->end(false, true);
 		m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUserStatsScreen::onUserButtonChange) );
 		OsuUIContextMenu::clampToRightScreenEdge(m_contextMenu);
 	}
@@ -585,7 +584,7 @@ void OsuUserStatsScreen::onMenuClicked(CBaseUIButton *button)
 			m_contextMenu->addButton(deleteText, 4);
 		}
 	}
-	m_contextMenu->end();
+	m_contextMenu->end(false, false);
 	m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUserStatsScreen::onMenuSelected) );
 	OsuUIContextMenu::clampToRightScreenEdge(m_contextMenu);
 }
@@ -642,7 +641,7 @@ void OsuUserStatsScreen::onRecalculatePPImportLegacyScoresClicked()
 		m_contextMenu->addButton("Yes", 1)->setTextLeft(false);
 		m_contextMenu->addButton("No")->setTextLeft(false);
 	}
-	m_contextMenu->end();
+	m_contextMenu->end(false, false);
 	m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUserStatsScreen::onRecalculatePPImportLegacyScoresConfirmed) );
 	OsuUIContextMenu::clampToRightScreenEdge(m_contextMenu);
 }
@@ -705,7 +704,7 @@ void OsuUserStatsScreen::onCopyAllScoresClicked()
 			m_contextMenu->addButton(names[i]);
 		}
 	}
-	m_contextMenu->end();
+	m_contextMenu->end(false, true);
 	m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUserStatsScreen::onCopyAllScoresUserSelected) );
 	OsuUIContextMenu::clampToRightScreenEdge(m_contextMenu);
 }
@@ -734,7 +733,7 @@ void OsuUserStatsScreen::onCopyAllScoresUserSelected(UString text, int id)
 		m_contextMenu->addButton("Yes", 1)->setTextLeft(false);
 		m_contextMenu->addButton("No")->setTextLeft(false);
 	}
-	m_contextMenu->end();
+	m_contextMenu->end(false, false);
 	m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUserStatsScreen::onCopyAllScoresConfirmed) );
 	OsuUIContextMenu::clampToRightScreenEdge(m_contextMenu);
 }
@@ -837,7 +836,7 @@ void OsuUserStatsScreen::onDeleteAllScoresClicked()
 		m_contextMenu->addButton("Yes", 1)->setTextLeft(false);
 		m_contextMenu->addButton("No")->setTextLeft(false);
 	}
-	m_contextMenu->end();
+	m_contextMenu->end(false, false);
 	m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUserStatsScreen::onDeleteAllScoresConfirmed) );
 	OsuUIContextMenu::clampToRightScreenEdge(m_contextMenu);
 }

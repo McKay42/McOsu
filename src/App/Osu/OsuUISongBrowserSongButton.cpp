@@ -306,7 +306,7 @@ void OsuUISongBrowserSongButton::onRightMouseUpInside()
 			m_contextMenu->addButton("[-]   Remove from Collection");
 			m_contextMenu->addButton("[-Set]   Remove from Collection");
 		}
-		m_contextMenu->end();
+		m_contextMenu->end(false, false);
 		m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUISongBrowserSongButton::onContextMenu) );
 		OsuUIContextMenu::clampToRightScreenEdge(m_contextMenu);
 		OsuUIContextMenu::clampToBottomScreenEdge(m_contextMenu);
