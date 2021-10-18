@@ -18,6 +18,8 @@ class OsuDatabaseBeatmap;
 
 class OsuDatabaseBeatmapStarCalculator;
 
+class OsuSkinImage;
+
 class OsuUIContextMenu;
 class OsuUISearchOverlay;
 class OsuUISelectionButton;
@@ -193,7 +195,7 @@ private:
 
 	bool checkHandleKillDynamicStarCalculator(bool timeout);
 
-	OsuUISelectionButton *addBottombarNavButton(std::function<Image*()> getImageFunc, std::function<Image*()> getImageOverFunc);
+	OsuUISelectionButton *addBottombarNavButton(std::function<OsuSkinImage*()> getImageFunc, std::function<OsuSkinImage*()> getImageOverFunc);
 	CBaseUIButton *addTopBarRightTabButton(UString text);
 	CBaseUIButton *addTopBarRightGroupButton(UString text);
 	CBaseUIButton *addTopBarRightSortButton(UString text);
@@ -261,6 +263,8 @@ private:
 
 	ConVar *m_osu_draw_statistics_perfectpp_ref;
 	ConVar *m_osu_draw_statistics_totalstars_ref;
+
+	ConVar *m_osu_mod_fposu_ref;
 
 	Osu *m_osu;
 	std::mt19937 m_rngalg;

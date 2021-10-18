@@ -356,6 +356,8 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	m_osu_draw_statistics_perfectpp_ref = convar->getConVarByName("osu_draw_statistics_perfectpp");
 	m_osu_draw_statistics_totalstars_ref = convar->getConVarByName("osu_draw_statistics_totalstars");
 
+	m_osu_mod_fposu_ref = convar->getConVarByName("osu_mod_fposu");
+
 	// convar callbacks
 	osu_gamemode.setCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onModeChange) );
 
@@ -440,12 +442,10 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	// build bottombar
 	m_bottombar = new CBaseUIContainer(0, 0, 0, 0, "");
 
-	CBaseUIButton *modeButton = addBottombarNavButton([this]() -> Image *{return m_osu->getSkin()->getSelectionMode();}, [this]() -> Image *{return m_osu->getSkin()->getSelectionModeOver();});
-	modeButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onSelectionMode) );
-	modeButton->setVisible(false); // NOTE: hidden for now. can support weird skin songbrowser overlays later // NOTE: if visible, skins with very long selection-mode.png will overlap other buttons and break click handling
-	addBottombarNavButton([this]() -> Image *{return m_osu->getSkin()->getSelectionMods();}, [this]() -> Image *{return m_osu->getSkin()->getSelectionModsOver();})->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onSelectionMods) );
-	addBottombarNavButton([this]() -> Image *{return m_osu->getSkin()->getSelectionRandom();}, [this]() -> Image *{return m_osu->getSkin()->getSelectionRandomOver();})->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onSelectionRandom) );
-	//addBottombarNavButton([this]() -> Image *{return m_osu->getSkin()->getSelectionOptions();}, [this]() -> Image *{return m_osu->getSkin()->getSelectionOptionsOver();})->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser::onSelectionOptions) );
+	addBottombarNavButton([this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionMode();}, [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModeOver();})->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onSelectionMode) );
+	addBottombarNavButton([this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionMods();}, [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModsOver();})->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onSelectionMods) );
+	addBottombarNavButton([this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionRandom();}, [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionRandomOver();})->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onSelectionRandom) );
+	//addBottombarNavButton([this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionOptions();}, [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionOptionsOver();})->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser::onSelectionOptions) );
 
 	m_userButton = new OsuUISongBrowserUserButton(m_osu);
 	m_userButton->addTooltipLine("Click to change [User] or view [Top Ranks]");
@@ -987,13 +987,13 @@ void OsuSongBrowser2::update()
 		engine->getMouse()->resetWheelDelta();
 
 	// update and focus handling
+	m_contextMenu->update();
 	m_songBrowser->update();
 	m_songBrowser->getContainer()->update_pos(); // necessary due to constant animations
 	m_bottombar->update();
 	m_scoreBrowser->update();
 	m_topbarLeft->update();
 	m_topbarRight->update();
-	m_contextMenu->update();
 
 	if (m_contextMenu->isMouseInside() || m_osu->getHUD()->isVolumeOverlayBusy() || m_backButton->isMouseInside())
 	{
@@ -2822,7 +2822,7 @@ bool OsuSongBrowser2::checkHandleKillDynamicStarCalculator(bool timeout)
 		return true;
 }
 
-OsuUISelectionButton *OsuSongBrowser2::addBottombarNavButton(std::function<Image*()> getImageFunc, std::function<Image*()> getImageOverFunc)
+OsuUISelectionButton *OsuSongBrowser2::addBottombarNavButton(std::function<OsuSkinImage*()> getImageFunc, std::function<OsuSkinImage*()> getImageOverFunc)
 {
 	OsuUISelectionButton *btn = new OsuUISelectionButton(getImageFunc, getImageOverFunc, 0, 0, 0, 0, "");
 	m_bottombar->addBaseUIElement(btn);
@@ -3302,7 +3302,7 @@ void OsuSongBrowser2::onSortScoresClicked(CBaseUIButton *button)
 				button->setTextBrightColor(0xff00ff00);
 		}
 	}
-	m_contextMenu->end();
+	m_contextMenu->end(false, false);
 	m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onSortScoresChange) );
 }
 
@@ -3357,7 +3357,7 @@ void OsuSongBrowser2::onGroupClicked(CBaseUIButton *button)
 				button->setTextBrightColor(0xff00ff00);
 		}
 	}
-	m_contextMenu->end();
+	m_contextMenu->end(false, false);
 	m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onGroupChange) );
 }
 
@@ -3442,7 +3442,7 @@ void OsuSongBrowser2::onSortClicked(CBaseUIButton *button)
 				button->setTextBrightColor(0xff00ff00);
 		}
 	}
-	m_contextMenu->end();
+	m_contextMenu->end(false, false);
 	m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onSortChange) );
 
 	// NOTE: don't remember group setting on shutdown
@@ -3711,12 +3711,33 @@ void OsuSongBrowser2::onSelectionMode()
 
 	m_contextMenu->setPos(m_bottombarNavButtons[0]->getPos());
 	m_contextMenu->setRelPos(m_bottombarNavButtons[0]->getRelPos());
-	m_contextMenu->begin();
-	m_contextMenu->addButton("std");
-	m_contextMenu->addButton("mania");
-	m_contextMenu->setPos(m_contextMenu->getPos() - Vector2(0, m_contextMenu->getSize().y));
-	m_contextMenu->setRelPos(m_contextMenu->getRelPos() - Vector2(0, m_contextMenu->getSize().y));
-	m_contextMenu->end();
+	m_contextMenu->begin(0, true);
+	{
+		OsuUIContextMenuButton *standardButton = m_contextMenu->addButton("Standard", 0);
+		standardButton->setTextLeft(false);
+		standardButton->setTooltipText("Standard 2D circle clicking.");
+		//CBaseUIButton *maniaButton = m_contextMenu->addButton("Mania", 1);
+		//maniaButton->setTextLeft(false);
+		OsuUIContextMenuButton *fposuButton = m_contextMenu->addButton("FPoSu", 2);
+		fposuButton->setTextLeft(false);
+		fposuButton->setTooltipText("The real 3D FPS mod.\nPlay from a first person shooter perspective in a 3D environment.\nThis is only intended for mouse! (Enable \"Tablet/Absolute Mode\" for tablets.)");
+
+		CBaseUIButton *activeButton = NULL;
+		{
+			if (m_osu_mod_fposu_ref->getBool())
+				activeButton = fposuButton;
+			else if (m_osu->getGamemode() == Osu::GAMEMODE::STD)
+				activeButton = standardButton;
+			//else if (m_osu->getGamemode() == Osu::GAMEMODE::MANIA)
+			//	activeButton = maniaButton;
+		}
+		if (activeButton != NULL)
+			activeButton->setTextBrightColor(0xff00ff00);
+
+	}
+	m_contextMenu->setPos(m_contextMenu->getPos() - Vector2((m_contextMenu->getSize().x - m_bottombarNavButtons[0]->getSize().x)/2.0f, m_contextMenu->getSize().y));
+	m_contextMenu->setRelPos(m_contextMenu->getRelPos() - Vector2((m_contextMenu->getSize().x - m_bottombarNavButtons[0]->getSize().x)/2.0f, m_contextMenu->getSize().y));
+	m_contextMenu->end(true, false);
 	m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onModeChange2) );
 }
 
@@ -3747,10 +3768,10 @@ void OsuSongBrowser2::onModeChange(UString text)
 
 void OsuSongBrowser2::onModeChange2(UString text, int id)
 {
-	if (m_bottombarNavButtons.size() > 2)
-		m_bottombarNavButtons[0]->setText(text);
+	if (id != 2)
+		m_osu_mod_fposu_ref->setValue(0.0f);
 
-	if (text == "std")
+	if (id == 0)
 	{
 		if (m_osu->getGamemode() != Osu::GAMEMODE::STD)
 		{
@@ -3758,11 +3779,21 @@ void OsuSongBrowser2::onModeChange2(UString text, int id)
 			refreshBeatmaps();
 		}
 	}
-	else if (text == "mania")
+	else if (id == 1)
 	{
 		if (m_osu->getGamemode() != Osu::GAMEMODE::MANIA)
 		{
 			m_osu->setGamemode(Osu::GAMEMODE::MANIA);
+			refreshBeatmaps();
+		}
+	}
+	else if (id == 2)
+	{
+		m_osu_mod_fposu_ref->setValue(1.0f);
+
+		if (m_osu->getGamemode() != Osu::GAMEMODE::STD)
+		{
+			m_osu->setGamemode(Osu::GAMEMODE::STD);
 			refreshBeatmaps();
 		}
 	}
@@ -3772,7 +3803,7 @@ void OsuSongBrowser2::onUserButtonClicked()
 {
 	engine->getSound()->play(m_osu->getSkin()->getMenuClick());
 
-	std::vector<UString> names = m_db->getPlayerNamesWithScores();
+	std::vector<UString> names = m_db->getPlayerNamesWithScoresForUserSwitcher();
 	if (names.size() > 0)
 	{
 		m_contextMenu->setPos(m_userButton->getPos());
@@ -3791,7 +3822,7 @@ void OsuSongBrowser2::onUserButtonClicked()
 		m_contextMenu->addButton("", 0)->setEnabled(false);
 		m_contextMenu->setPos(m_contextMenu->getPos() - Vector2(0, m_contextMenu->getSize().y));
 		m_contextMenu->setRelPos(m_contextMenu->getRelPos() - Vector2(0, m_contextMenu->getSize().y));
-		m_contextMenu->end(true);
+		m_contextMenu->end(true, true);
 		m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onUserButtonChange) );
 		OsuUIContextMenu::clampToRightScreenEdge(m_contextMenu);
 	}

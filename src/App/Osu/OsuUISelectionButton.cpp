@@ -11,16 +11,14 @@
 #include "ResourceManager.h"
 #include "AnimationHandler.h"
 
-OsuUISelectionButton::OsuUISelectionButton(std::function<Image*()> getImageFunc, std::function<Image*()> getImageOverFunc, float xPos, float yPos, float xSize, float ySize, UString name) : CBaseUIButton(xPos, yPos, xSize, ySize, name)
+#include "OsuSkinImage.h"
+
+OsuUISelectionButton::OsuUISelectionButton(std::function<OsuSkinImage*()> getImageFunc, std::function<OsuSkinImage*()> getImageOverFunc, float xPos, float yPos, float xSize, float ySize, UString name) : CBaseUIButton(xPos, yPos, xSize, ySize, name)
 {
 	this->getImageFunc = getImageFunc;
 	this->getImageOverFunc = getImageOverFunc;
 
 	m_fAnimation = 0.0f;
-
-	m_vScale = Vector2(1, 1);
-	m_bScaleToFit = true;
-	m_bKeepAspectRatio = true;
 }
 
 void OsuUISelectionButton::draw(Graphics *g)
@@ -28,41 +26,31 @@ void OsuUISelectionButton::draw(Graphics *g)
 	if (!m_bVisible) return;
 
 	// draw image
-	Image *image = getImageFunc();
+	OsuSkinImage *image = getImageFunc();
 	if (image != NULL)
 	{
+		const Vector2 imageSize = image->getImageSizeForCurrentFrame();
+
+		const float scale = (m_vSize.x/imageSize.x < m_vSize.y/imageSize.y ? m_vSize.x/imageSize.x : m_vSize.y/imageSize.y);
+
 		g->setColor(0xffffffff);
-		g->pushTransform();
-
-			// scale
-			g->scale(m_vScale.x, m_vScale.y);
-
-			// center and draw
-			g->translate(m_vPos.x + (int)(m_vSize.x/2), m_vPos.y + (int)(m_vSize.y/2));
-			g->drawImage(image);
-
-		g->popTransform();
+		image->drawRaw(g, Vector2(m_vPos.x + (int)(m_vSize.x/2), m_vPos.y + (int)(m_vSize.y/2)), scale);
 	}
 
 	// draw over image
 	if (m_fAnimation > 0.0f)
 	{
-		Image *overImage = getImageOverFunc();
+		OsuSkinImage *overImage = getImageOverFunc();
 		if (overImage != NULL)
 		{
+			const Vector2 imageSize = overImage->getImageSizeForCurrentFrame();
+
+			const float scale = (m_vSize.x/imageSize.x < m_vSize.y/imageSize.y ? m_vSize.x/imageSize.x : m_vSize.y/imageSize.y);
+
 			g->setColor(0xffffffff);
 			g->setAlpha(m_fAnimation);
-			g->pushTransform();
-			{
-				// scale
-				float scale = (float)m_vSize.y / (float)overImage->getHeight(); // HACKHACK: force scale
-				g->scale(scale, scale);
 
-				// center and draw
-				g->translate(m_vPos.x + (int)(m_vSize.x/2), m_vPos.y + (int)(m_vSize.y/2));
-				g->drawImage(overImage);
-			}
-			g->popTransform();
+			overImage->drawRaw(g, Vector2(m_vPos.x + (int)(m_vSize.x/2), m_vPos.y + (int)(m_vSize.y/2)), scale);
 		}
 	}
 
@@ -87,22 +75,14 @@ void OsuUISelectionButton::onResized()
 {
 	CBaseUIButton::onResized();
 
-	Image *image = getImageFunc();
-	if (m_bScaleToFit && image != NULL)
+	// NOTE: we get the height set to the current bottombarheight, so use that with the aspect ratio to get the correct relative "hardcoded" width
+
+	OsuSkinImage *image = getImageFunc();
+	if (image != NULL)
 	{
-		if (!m_bKeepAspectRatio)
-		{
-			m_vScale = Vector2(m_vSize.x/image->getWidth(), m_vSize.y/image->getHeight());
-			m_vSize.x = (int)(image->getWidth()*m_vScale.x);
-			m_vSize.y = (int)(image->getHeight()*m_vScale.y);
-		}
-		else
-		{
-			float scaleFactor = m_vSize.x/image->getWidth() < m_vSize.y/image->getHeight() ? m_vSize.x/image->getWidth() : m_vSize.y/image->getHeight();
-			m_vScale = Vector2(scaleFactor, scaleFactor);
-			m_vSize.x = (int)(image->getWidth()*m_vScale.x);
-			m_vSize.y = (int)(image->getHeight()*m_vScale.y);
-		}
+		float aspectRatio = image->getSizeBaseRaw().x / image->getSizeBaseRaw().y;
+		aspectRatio += 0.025f; // very slightly overscale to make most skins fit better with the bottombar blue line
+		m_vSize.x = aspectRatio * m_vSize.y;
 	}
 }
 
