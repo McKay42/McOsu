@@ -187,14 +187,14 @@ public:
 	inline Image *getDefaultButtonMiddle() {return m_defaultButtonMiddle;}
 	inline Image *getDefaultButtonRight() {return m_defaultButtonRight;}
 	inline OsuSkinImage *getMenuBack2() {return m_menuBack;}
-	inline Image *getSelectionMode() {return m_selectionMode;}
-	inline Image *getSelectionModeOver() {return m_selectionModeOver;}
-	inline Image *getSelectionMods() {return m_selectionMods;}
-	inline Image *getSelectionModsOver() {return m_selectionModsOver;}
-	inline Image *getSelectionRandom() {return m_selectionRandom;}
-	inline Image *getSelectionRandomOver() {return m_selectionRandomOver;}
-	inline Image *getSelectionOptions() {return m_selectionOptions;}
-	inline Image *getSelectionOptionsOver() {return m_selectionOptionsOver;}
+	inline OsuSkinImage *getSelectionMode() {return m_selectionMode;}
+	inline OsuSkinImage *getSelectionModeOver() {return m_selectionModeOver;}
+	inline OsuSkinImage *getSelectionMods() {return m_selectionMods;}
+	inline OsuSkinImage *getSelectionModsOver() {return m_selectionModsOver;}
+	inline OsuSkinImage *getSelectionRandom() {return m_selectionRandom;}
+	inline OsuSkinImage *getSelectionRandomOver() {return m_selectionRandomOver;}
+	inline OsuSkinImage *getSelectionOptions() {return m_selectionOptions;}
+	inline OsuSkinImage *getSelectionOptionsOver() {return m_selectionOptionsOver;}
 
 	inline Image *getSongSelectTop() {return m_songSelectTop;}
 	inline Image *getSongSelectBottom() {return m_songSelectBottom;}
@@ -485,14 +485,14 @@ private:
 	Image *m_defaultButtonMiddle;
 	Image *m_defaultButtonRight;
 	OsuSkinImage *m_menuBack;
-	Image *m_selectionMode;
-	Image *m_selectionModeOver;
-	Image *m_selectionMods;
-	Image *m_selectionModsOver;
-	Image *m_selectionRandom;
-	Image *m_selectionRandomOver;
-	Image *m_selectionOptions;
-	Image *m_selectionOptionsOver;
+	OsuSkinImage *m_selectionMode;
+	OsuSkinImage *m_selectionModeOver;
+	OsuSkinImage *m_selectionMods;
+	OsuSkinImage *m_selectionModsOver;
+	OsuSkinImage *m_selectionRandom;
+	OsuSkinImage *m_selectionRandomOver;
+	OsuSkinImage *m_selectionOptions;
+	OsuSkinImage *m_selectionOptionsOver;
 
 	Image *m_songSelectTop;
 	Image *m_songSelectBottom;

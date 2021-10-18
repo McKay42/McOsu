@@ -30,7 +30,7 @@
 ConVar osu2_sound_source_id("osu2_sound_source_id", 1, "which instance/player/client should play hitsounds (e.g. master top left is always 1)");
 
 ConVar osu_volume_effects("osu_volume_effects", 1.0f);
-ConVar osu_skin_async("osu_skin_async", false, "load in background without blocking");
+ConVar osu_skin_async("osu_skin_async", true, "load in background without blocking");
 ConVar osu_skin_hd("osu_skin_hd", true, "load and use @2x versions of skin images, if available");
 ConVar osu_skin_mipmaps("osu_skin_mipmaps", false, "generate mipmaps for every skin image (only useful on lower game resolutions, requires more vram)");
 ConVar osu_skin_color_index_add("osu_skin_color_index_add", 0);
@@ -152,14 +152,6 @@ OsuSkin::OsuSkin(Osu *osu, UString name, UString filepath, bool isDefaultSkin, b
 	m_defaultButtonLeft = m_missingTexture;
 	m_defaultButtonMiddle = m_missingTexture;
 	m_defaultButtonRight = m_missingTexture;
-	m_selectionMode = m_missingTexture;
-	m_selectionModeOver = m_missingTexture;
-	m_selectionMods = m_missingTexture;
-	m_selectionModsOver = m_missingTexture;
-	m_selectionRandom = m_missingTexture;
-	m_selectionRandomOver = m_missingTexture;
-	m_selectionOptions = m_missingTexture;
-	m_selectionOptionsOver = m_missingTexture;
 
 	m_songSelectTop = m_missingTexture;
 	m_songSelectBottom = m_missingTexture;
@@ -666,14 +658,14 @@ void OsuSkin::load()
 	randomizeFilePath();
 	m_menuBack = createOsuSkinImage("menu-back", Vector2(225, 87), 54);
 	randomizeFilePath();
-	checkLoadImage(&m_selectionMode, "selection-mode", "OSU_SKIN_SELECTION_MODE");
-	checkLoadImage(&m_selectionModeOver, "selection-mode-over", "OSU_SKIN_SELECTION_MODE_OVER");
-	checkLoadImage(&m_selectionMods, "selection-mods", "OSU_SKIN_SELECTION_MODS");
-	checkLoadImage(&m_selectionModsOver, "selection-mods-over", "OSU_SKIN_SELECTION_MODS_OVER");
-	checkLoadImage(&m_selectionRandom, "selection-random", "OSU_SKIN_SELECTION_RANDOM");
-	checkLoadImage(&m_selectionRandomOver, "selection-random-over", "OSU_SKIN_SELECTION_RANDOM_OVER");
-	checkLoadImage(&m_selectionOptions, "selection-options", "OSU_SKIN_SELECTION_OPTIONS");
-	checkLoadImage(&m_selectionOptionsOver, "selection-options-over", "OSU_SKIN_SELECTION_OPTIONS_OVER");
+	m_selectionMode = createOsuSkinImage("selection-mode", Vector2(90, 90), 38); // NOTE: should actually be Vector2(88, 90), but slightly overscale to make most skins fit better on the bottombar blue line
+	m_selectionModeOver = createOsuSkinImage("selection-mode-over", Vector2(88, 90), 38);
+	m_selectionMods = createOsuSkinImage("selection-mods", Vector2(74, 90), 38);
+	m_selectionModsOver = createOsuSkinImage("selection-mods-over", Vector2(74, 90), 38);
+	m_selectionRandom = createOsuSkinImage("selection-random", Vector2(74, 90), 38);
+	m_selectionRandomOver = createOsuSkinImage("selection-random-over", Vector2(74, 90), 38);
+	m_selectionOptions = createOsuSkinImage("selection-options", Vector2(77, 90), 38);
+	m_selectionOptionsOver = createOsuSkinImage("selection-options-over", Vector2(77, 90), 38);
 
 	randomizeFilePath();
 	checkLoadImage(&m_songSelectTop, "songselect-top", "OSU_SKIN_SONGSELECT_TOP");
@@ -882,6 +874,16 @@ void OsuSkin::load()
 		m_osu->getNotificationOverlay()->addNotification("Error: Couldn't load skin.ini!", 0xffff0000);
 	else if (!parseSkinIni2Status)
 		m_osu->getNotificationOverlay()->addNotification("Error: Couldn't load DEFAULT skin.ini!!!", 0xffff0000);
+
+	// HACKHACK: speed up initial game startup time by async loading the skin (if osu_skin_async 1 in underride)
+	if (m_osu->getSkin() == NULL && osu_skin_async.getBool())
+	{
+		while (engine->getResourceManager()->isLoading())
+		{
+			engine->getResourceManager()->update();
+			env->sleep(0);
+		}
+	}
 }
 
 void OsuSkin::loadBeatmapOverride(UString filepath)
