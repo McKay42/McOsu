@@ -7,6 +7,8 @@
 
 #include "OsuUIContextMenu.h"
 
+#include "Engine.h"
+#include "Mouse.h"
 #include "AnimationHandler.h"
 
 #include "CBaseUIContainer.h"
@@ -14,22 +16,38 @@
 #include "CBaseUIButton.h"
 
 #include "Osu.h"
+#include "OsuTooltipOverlay.h"
 
 
 
-class OsuUIContextMenuButton : public CBaseUIButton
+OsuUIContextMenuButton::OsuUIContextMenuButton(Osu *osu, float xPos, float yPos, float xSize, float ySize, UString name, UString text, int id) : CBaseUIButton(xPos, yPos, xSize, ySize, name, text)
 {
-public:
-	OsuUIContextMenuButton(float xPos, float yPos, float xSize, float ySize, UString name, UString text, int id) : CBaseUIButton(xPos, yPos, xSize, ySize, name, text)
+	m_osu = osu;
+	m_iID = id;
+}
+
+void OsuUIContextMenuButton::update()
+{
+	CBaseUIButton::update();
+	if (!m_bVisible) return;
+
+	if (isMouseInside() && m_tooltipTextLines.size() > 0)
 	{
-		m_iID = id;
+		m_osu->getTooltipOverlay()->begin();
+		{
+			for (int i=0; i<m_tooltipTextLines.size(); i++)
+			{
+				m_osu->getTooltipOverlay()->addLine(m_tooltipTextLines[i]);
+			}
+		}
+		m_osu->getTooltipOverlay()->end();
 	}
+}
 
-	inline int getID() const {return m_iID;}
-
-private:
-	int m_iID;
-};
+void OsuUIContextMenuButton::setTooltipText(UString text)
+{
+	m_tooltipTextLines = text.split("\n");
+}
 
 
 
@@ -37,7 +55,10 @@ OsuUIContextMenu::OsuUIContextMenu(Osu *osu, float xPos, float yPos, float xSize
 {
 	m_osu = osu;
 	m_parent = parent;
-	m_container = new CBaseUIContainer(xPos, yPos, xSize, ySize, name);
+	m_container = new CBaseUIScrollView(xPos, yPos, xSize, ySize, name);
+	m_container->setHorizontalScrolling(false);
+	m_container->setDrawBackground(false);
+	m_container->setDrawFrame(false);
 	m_iYCounter = 0;
 	m_iWidthCounter = 0;
 
@@ -49,6 +70,7 @@ OsuUIContextMenu::OsuUIContextMenu(Osu *osu, float xPos, float yPos, float xSize
 	m_bInvertAnimation = false;
 
 	m_bBigStyle = false;
+	m_bClampUnderflowAndOverflowAndEnableScrollingIfNecessary = false;
 }
 
 OsuUIContextMenu::~OsuUIContextMenu()
@@ -88,6 +110,13 @@ void OsuUIContextMenu::update()
 	if (!m_bVisible || !m_bVisible2) return;
 
 	m_container->update();
+
+	// HACKHACK: mouse wheel handling order
+	if (m_bClampUnderflowAndOverflowAndEnableScrollingIfNecessary)
+	{
+		if (isMouseInside())
+			engine->getMouse()->resetWheelDelta();
+	}
 }
 
 void OsuUIContextMenu::begin(int minWidth, bool bigStyle)
@@ -103,12 +132,12 @@ void OsuUIContextMenu::begin(int minWidth, bool bigStyle)
 	m_container->clear();
 }
 
-CBaseUIButton *OsuUIContextMenu::addButton(UString text, int id)
+OsuUIContextMenuButton *OsuUIContextMenu::addButton(UString text, int id)
 {
 	const int buttonHeight = 30 * Osu::getUIScale() * (m_bBigStyle ? 1.27f : 1.0f);
 	const int margin = 9 * Osu::getUIScale();
 
-	OsuUIContextMenuButton *button = new OsuUIContextMenuButton(margin, m_iYCounter + margin, 0, buttonHeight, text, text, id);
+	OsuUIContextMenuButton *button = new OsuUIContextMenuButton(m_osu, margin, m_iYCounter + margin, 0, buttonHeight, text, text, id);
 	{
 		if (m_bBigStyle)
 			button->setFont(m_osu->getSubTitleFont());
@@ -119,7 +148,7 @@ CBaseUIButton *OsuUIContextMenu::addButton(UString text, int id)
 		button->setDrawFrame(false);
 		button->setDrawBackground(false);
 	}
-	m_container->addBaseUIElement(button);
+	m_container->getContainer()->addBaseUIElement(button);
 
 	if (button->getSize().x+2*margin > m_iWidthCounter)
 	{
@@ -133,16 +162,47 @@ CBaseUIButton *OsuUIContextMenu::addButton(UString text, int id)
 	return button;
 }
 
-void OsuUIContextMenu::end(bool invertAnimation)
+void OsuUIContextMenu::end(bool invertAnimation, bool clampUnderflowAndOverflowAndEnableScrollingIfNecessary)
 {
 	m_bInvertAnimation = invertAnimation;
+	m_bClampUnderflowAndOverflowAndEnableScrollingIfNecessary = clampUnderflowAndOverflowAndEnableScrollingIfNecessary;
 
 	const int margin = 9 * Osu::getUIScale();
 
-	const std::vector<CBaseUIElement*> &elements = m_container->getElements();
+	const std::vector<CBaseUIElement*> &elements = m_container->getContainer()->getElements();
 	for (size_t i=0; i<elements.size(); i++)
 	{
 		(elements[i])->setSizeX(m_iWidthCounter - 2*margin);
+	}
+
+	// scrollview handling and edge cases
+	{
+		m_container->setVerticalScrolling(false);
+
+		if (m_bClampUnderflowAndOverflowAndEnableScrollingIfNecessary)
+		{
+			if (m_vPos.y < 0)
+			{
+				const float underflow = std::abs(m_vPos.y);
+
+				setRelPosY(m_vPos.y + underflow);
+				setPosY(m_vPos.y + underflow);
+				setSizeY(m_vSize.y - underflow);
+
+				m_container->setVerticalScrolling(true);
+			}
+
+			if (m_vPos.y + m_vSize.y > m_osu->getScreenHeight())
+			{
+				const float overflow = std::abs(m_vPos.y + m_vSize.y - m_osu->getScreenHeight());
+
+				setSizeY(m_vSize.y - overflow - 1);
+
+				m_container->setVerticalScrolling(true);
+			}
+		}
+
+		m_container->setScrollSizeToContent();
 	}
 
 	setVisible2(true);
@@ -169,6 +229,7 @@ void OsuUIContextMenu::onResized()
 
 void OsuUIContextMenu::onMoved()
 {
+	m_container->setRelPos(m_vPos);
 	m_container->setPos(m_vPos);
 }
 

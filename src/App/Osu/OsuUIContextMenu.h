@@ -8,13 +8,14 @@
 #ifndef OSUUICONTEXTMENU_H
 #define OSUUICONTEXTMENU_H
 
-#include "CBaseUIElement.h"
+#include "CBaseUIButton.h"
 
 class CBaseUIContainer;
 class CBaseUIScrollView;
-class CBaseUIButton;
 
 class Osu;
+
+class OsuUIContextMenuButton;
 
 class OsuUIContextMenu : public CBaseUIElement
 {
@@ -33,8 +34,8 @@ public:
 	void setClickCallback(ButtonClickCallback clickCallback) {m_clickCallback = clickCallback;}
 
 	void begin(int minWidth = 0, bool bigStyle = false);
-	CBaseUIButton *addButton(UString text, int id = -1);
-	void end(bool invertAnimation = false);
+	OsuUIContextMenuButton *addButton(UString text, int id = -1);
+	void end(bool invertAnimation, bool clampUnderflowAndOverflowAndEnableScrollingIfNecessary);
 
 	void setVisible2(bool visible2);
 
@@ -50,7 +51,7 @@ private:
 
 	Osu *m_osu;
 
-	CBaseUIContainer *m_container;
+	CBaseUIScrollView *m_container;
 	CBaseUIScrollView *m_parent;
 
 	ButtonClickCallback m_clickCallback;
@@ -63,6 +64,27 @@ private:
 	bool m_bInvertAnimation;
 
 	bool m_bBigStyle;
+	bool m_bClampUnderflowAndOverflowAndEnableScrollingIfNecessary;
+};
+
+class OsuUIContextMenuButton : public CBaseUIButton
+{
+public:
+	OsuUIContextMenuButton(Osu *osu, float xPos, float yPos, float xSize, float ySize, UString name, UString text, int id);
+	virtual ~OsuUIContextMenuButton() {;}
+
+	virtual void update();
+
+	inline int getID() const {return m_iID;}
+
+	void setTooltipText(UString text);
+
+private:
+	Osu *m_osu;
+
+	int m_iID;
+
+	std::vector<UString> m_tooltipTextLines;
 };
 
 #endif
