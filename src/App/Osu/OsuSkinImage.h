@@ -35,6 +35,8 @@ public:
 	Vector2 getSizeBase(); // default assumed size scaled to the current resolution. this is the base resolution which is used for all scaling calculations (to allow skins to overscale or underscale objects)
 	Vector2 getSizeBaseRaw(); // default assumed size UNSCALED. that means that e.g. hitcircles will return either 128x128 or 256x256 depending on the @2x flag in the filename
 
+	Vector2 getImageSizeForCurrentFrame(); // width/height of the actual image texture as loaded from disk
+
 	float getResolutionScale();
 
 	bool isReady();
