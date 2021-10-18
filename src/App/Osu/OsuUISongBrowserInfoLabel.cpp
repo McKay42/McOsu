@@ -214,6 +214,7 @@ void OsuUISongBrowserInfoLabel::update()
 
 					m_osu->getTooltipOverlay()->addLine(UString::format("Circles: %i, Sliders: %i, Spinners: %i", numCircles, numSliders, std::max(0, numObjects - numCircles - numSliders)));
 					m_osu->getTooltipOverlay()->addLine(UString::format("OPM: %i, CPM: %i, SPM: %i", (int)opm, (int)cpm, (int)spm));
+					m_osu->getTooltipOverlay()->addLine(UString::format("ID: %i", beatmap->getSelectedDifficulty2()->getID()));
 				}
 			}
 			m_osu->getTooltipOverlay()->end();
