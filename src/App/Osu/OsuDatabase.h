@@ -188,7 +188,7 @@ public:
 	void forceScoresSaveOnNextShutdown() {m_bDidScoresChangeForSave = true;}
 
 	std::vector<UString> getPlayerNamesWithPPScores();
-	std::vector<UString> getPlayerNamesWithScores();
+	std::vector<UString> getPlayerNamesWithScoresForUserSwitcher();
 	PlayerPPScores getPlayerPPScores(UString playerName);
 	PlayerStats calculatePlayerStats(UString playerName);
 	static float getWeightForIndex(int i);

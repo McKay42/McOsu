@@ -59,6 +59,7 @@ ConVar osu_scores_bonus_pp("osu_scores_bonus_pp", true, "whether to add bonus pp
 ConVar osu_scores_rename("osu_scores_rename");
 ConVar osu_collections_legacy_enabled("osu_collections_legacy_enabled", true, "load osu!'s collection.db");
 ConVar osu_user_include_relax_and_autopilot_for_stats("osu_user_include_relax_and_autopilot_for_stats", false);
+ConVar osu_user_switcher_include_legacy_scores_for_names("osu_user_switcher_include_legacy_scores_for_names", true);
 
 
 
@@ -612,8 +613,10 @@ std::vector<UString> OsuDatabase::getPlayerNamesWithPPScores()
 	return names;
 }
 
-std::vector<UString> OsuDatabase::getPlayerNamesWithScores()
+std::vector<UString> OsuDatabase::getPlayerNamesWithScoresForUserSwitcher()
 {
+	const bool includeLegacyNames = osu_user_switcher_include_legacy_scores_for_names.getBool();
+
 	// bit of a useless double string conversion going on here, but whatever
 
 	std::unordered_set<std::string> tempNames;
@@ -622,7 +625,8 @@ std::vector<UString> OsuDatabase::getPlayerNamesWithScores()
 		const std::string &key = kv.first;
 		for (Score &score : m_scores[key])
 		{
-			tempNames.insert(std::string(score.playerName.toUtf8()));
+			if (!score.isLegacyScore || includeLegacyNames)
+				tempNames.insert(std::string(score.playerName.toUtf8()));
 		}
 	}
 
