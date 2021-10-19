@@ -476,6 +476,8 @@ void OsuSlider::draw2(Graphics *g)
 
 void OsuSlider::draw2(Graphics *g, bool drawApproachCircle, bool drawOnlyApproachCircle)
 {
+	OsuHitObject::draw2(g);
+
 	OsuSkin *skin = m_beatmap->getSkin();
 
 	// HACKHACK: so much code duplication aaaaaaah

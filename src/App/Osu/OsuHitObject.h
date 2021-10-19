@@ -34,10 +34,10 @@ public:
 	OsuHitObject(long time, int sampleType, int comboNumber, bool isEndOfCombo, int colorCounter, int colorOffset, OsuBeatmap *beatmap);
 	virtual ~OsuHitObject() {;}
 
-	virtual void draw(Graphics *g);
-	virtual void draw2(Graphics *g){;}
-	virtual void drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr){;}
-	virtual void drawVR2(Graphics *g, Matrix4 &mvp, OsuVR *vr){;}
+	virtual void draw(Graphics *g) {;}
+	virtual void draw2(Graphics *g);
+	virtual void drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr) {;}
+	virtual void drawVR2(Graphics *g, Matrix4 &mvp, OsuVR *vr) {;}
 	virtual void update(long curPos);
 
 	virtual void updateStackPosition(float stackOffset) = 0;

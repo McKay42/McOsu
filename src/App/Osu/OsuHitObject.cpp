@@ -252,7 +252,7 @@ OsuHitObject::OsuHitObject(long time, int sampleType, int comboNumber, bool isEn
 	m_iSortHack = sortHackCounter++;
 }
 
-void OsuHitObject::draw(Graphics *g)
+void OsuHitObject::draw2(Graphics *g)
 {
 	if ((m_hitresultanim1.time - osu_hitresult_duration.getFloat()) < engine->getTime())
 	{
