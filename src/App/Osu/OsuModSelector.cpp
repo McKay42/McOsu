@@ -331,6 +331,8 @@ void OsuModSelector::draw(Graphics *g)
 	const int margin = 10;
 	const Color backgroundColor = 0x88000000;
 
+	const float experimentalModsAnimationTranslation = -(m_experimentalContainer->getSize().x + 2.0f)*(1.0f - m_fExperimentalAnimation);
+
 	// if we are in compact mode, draw some backgrounds under the override sliders & mod grid buttons
 	if (isInCompactMode())
 	{
@@ -393,27 +395,38 @@ void OsuModSelector::draw(Graphics *g)
 	}
 	else // normal mode, just draw everything
 	{
-		// disabled because it looks like shit
-		/*
-		// HACKHACK: disable GL_TEXTURE_2D (needs proper definition for flat/textured rendering vaos)
-		g->drawPixel(-1, -1);
+		// draw hint text on left edge of screen
+		{
+			const float dpiScale = Osu::getUIScale();
 
-		// subtle background to guide users to move the cursor to the experimental mods
-		g->setColor(0xffffffff);
-		Color leftColor = 0x33ffffff;
-		Color rightColor = 0x00000000;
-		VertexArrayObject vao;
-		vao.setType(VertexArrayObject::TYPE_QUADS);
-		vao.addColor(leftColor);
-		vao.addVertex(Vector2(0,0));
-		vao.addColor(leftColor);
-		vao.addVertex(Vector2(0, m_osu->getScreenHeight()));
-		vao.addColor(rightColor);
-		vao.addVertex(Vector2(m_osu->getScreenWidth()*0.05f, m_osu->getScreenHeight()));
-		vao.addColor(rightColor);
-		vao.addVertex(Vector2(m_osu->getScreenWidth()*0.05f, 0));
-		g->drawVAO(&vao);
-		*/
+			UString experimentalText = "Experimental Mods";
+			McFont *experimentalFont = m_osu->getSubTitleFont();
+
+			const float experimentalTextWidth = experimentalFont->getStringWidth(experimentalText);
+			const float experimentalTextHeight = experimentalFont->getHeight();
+
+			const float rectMargin = 5 * dpiScale;
+			const float rectWidth = experimentalTextWidth + 2*rectMargin;
+			const float rectHeight = experimentalTextHeight + 2*rectMargin;
+
+			g->pushTransform();
+			{
+				g->rotate(90);
+				g->translate((int)(experimentalTextHeight/3.0f + std::max(0.0f, experimentalModsAnimationTranslation + m_experimentalContainer->getSize().x)), (int)(m_osu->getScreenHeight()/2 - experimentalTextWidth/2));
+				g->setColor(0xff777777);
+				g->setAlpha(1.0f - m_fExperimentalAnimation*m_fExperimentalAnimation);
+				g->drawString(experimentalFont, experimentalText);
+			}
+			g->popTransform();
+
+			g->pushTransform();
+			{
+				g->rotate(90);
+				g->translate((int)(rectHeight + std::max(0.0f, experimentalModsAnimationTranslation + m_experimentalContainer->getSize().x)), (int)(m_osu->getScreenHeight()/2 - rectWidth/2));
+				g->drawRect(0, 0, rectWidth, rectHeight);
+			}
+			g->popTransform();
+		}
 
 		m_container->draw(g);
 		m_overrideSliderContainer->draw(g);
@@ -422,7 +435,7 @@ void OsuModSelector::draw(Graphics *g)
 	// draw experimental mods
 	g->pushTransform();
 	{
-		g->translate(-(m_experimentalContainer->getSize().x + 2.0f)*(1.0f - m_fExperimentalAnimation), 0);
+		g->translate(experimentalModsAnimationTranslation, 0);
 		g->setColor(backgroundColor);
 		g->fillRect(m_experimentalContainer->getPos().x - margin, m_experimentalContainer->getPos().y - margin, m_experimentalContainer->getSize().x + 2*margin*m_fExperimentalAnimation, m_experimentalContainer->getSize().y + 2*margin);
 		m_experimentalContainer->draw(g);
