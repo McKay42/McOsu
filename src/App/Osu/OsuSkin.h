@@ -94,6 +94,18 @@ public:
 	inline Image *getScorePercent() {return m_scorePercent;}
 	inline Image *getScoreDot() {return m_scoreDot;}
 
+	inline Image *getCombo0() {return m_combo0;}
+	inline Image *getCombo1() {return m_combo1;}
+	inline Image *getCombo2() {return m_combo2;}
+	inline Image *getCombo3() {return m_combo3;}
+	inline Image *getCombo4() {return m_combo4;}
+	inline Image *getCombo5() {return m_combo5;}
+	inline Image *getCombo6() {return m_combo6;}
+	inline Image *getCombo7() {return m_combo7;}
+	inline Image *getCombo8() {return m_combo8;}
+	inline Image *getCombo9() {return m_combo9;}
+	inline Image *getComboX() {return m_comboX;}
+
 	inline OsuSkinImage *getPlaySkip() {return m_playSkip;}
 	inline Image *getPlayWarningArrow() {return m_playWarningArrow;}
 	inline OsuSkinImage *getPlayWarningArrow2() {return m_playWarningArrow2;}
@@ -389,6 +401,18 @@ private:
 	Image *m_scorePercent;
 	Image *m_scoreDot;
 	Image *m_scoreComma;
+
+	Image *m_combo0;
+	Image *m_combo1;
+	Image *m_combo2;
+	Image *m_combo3;
+	Image *m_combo4;
+	Image *m_combo5;
+	Image *m_combo6;
+	Image *m_combo7;
+	Image *m_combo8;
+	Image *m_combo9;
+	Image *m_comboX;
 
 	OsuSkinImage *m_playSkip;
 	Image *m_playWarningArrow;

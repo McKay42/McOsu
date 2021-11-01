@@ -108,6 +108,18 @@ OsuSkin::OsuSkin(Osu *osu, UString name, UString filepath, bool isDefaultSkin, b
 	m_scoreDot = m_missingTexture;
 	m_scoreComma = m_missingTexture;
 
+	m_combo0 = m_missingTexture;
+	m_combo1 = m_missingTexture;
+	m_combo2 = m_missingTexture;
+	m_combo3 = m_missingTexture;
+	m_combo4 = m_missingTexture;
+	m_combo5 = m_missingTexture;
+	m_combo6 = m_missingTexture;
+	m_combo7 = m_missingTexture;
+	m_combo8 = m_missingTexture;
+	m_combo9 = m_missingTexture;
+	m_comboX = m_missingTexture;
+
 	m_playWarningArrow = m_missingTexture;
 	m_circularmetre = m_missingTexture;
 
@@ -485,54 +497,130 @@ void OsuSkin::load()
 	m_followPoint2 = createOsuSkinImage("followpoint", Vector2(16, 22), 64);
 
 	randomizeFilePath();
-	UString hitCirclePrefix = m_sHitCirclePrefix.length() > 0 ? m_sHitCirclePrefix : "default";
-	UString hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-0");
-	checkLoadImage(&m_default0, hitCircleStringFinal, "OSU_SKIN_DEFAULT0");
-	if (m_default0 == m_missingTexture) checkLoadImage(&m_default0, "default-0", "OSU_SKIN_DEFAULT0"); // special cases: fallback to default skin hitcircle numbers if the defined prefix doesn't point to any valid files
-	hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-1");
-	checkLoadImage(&m_default1, hitCircleStringFinal, "OSU_SKIN_DEFAULT1");
-	if (m_default1 == m_missingTexture) checkLoadImage(&m_default1, "default-1", "OSU_SKIN_DEFAULT1");
-	hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-2");
-	checkLoadImage(&m_default2, hitCircleStringFinal, "OSU_SKIN_DEFAULT2");
-	if (m_default2 == m_missingTexture) checkLoadImage(&m_default2, "default-2", "OSU_SKIN_DEFAULT2");
-	hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-3");
-	checkLoadImage(&m_default3, hitCircleStringFinal, "OSU_SKIN_DEFAULT3");
-	if (m_default3 == m_missingTexture) checkLoadImage(&m_default3, "default-3", "OSU_SKIN_DEFAULT3");
-	hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-4");
-	checkLoadImage(&m_default4, hitCircleStringFinal, "OSU_SKIN_DEFAULT4");
-	if (m_default4 == m_missingTexture) checkLoadImage(&m_default4, "default-4", "OSU_SKIN_DEFAULT4");
-	hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-5");
-	checkLoadImage(&m_default5, hitCircleStringFinal, "OSU_SKIN_DEFAULT5");
-	if (m_default5 == m_missingTexture) checkLoadImage(&m_default5, "default-5", "OSU_SKIN_DEFAULT5");
-	hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-6");
-	checkLoadImage(&m_default6, hitCircleStringFinal, "OSU_SKIN_DEFAULT6");
-	if (m_default6 == m_missingTexture) checkLoadImage(&m_default6, "default-6", "OSU_SKIN_DEFAULT6");
-	hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-7");
-	checkLoadImage(&m_default7, hitCircleStringFinal, "OSU_SKIN_DEFAULT7");
-	if (m_default7 == m_missingTexture) checkLoadImage(&m_default7, "default-7", "OSU_SKIN_DEFAULT7");
-	hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-8");
-	checkLoadImage(&m_default8, hitCircleStringFinal, "OSU_SKIN_DEFAULT8");
-	if (m_default8 == m_missingTexture) checkLoadImage(&m_default8, "default-8", "OSU_SKIN_DEFAULT8");
-	hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-9");
-	checkLoadImage(&m_default9, hitCircleStringFinal, "OSU_SKIN_DEFAULT9");
-	if (m_default9 == m_missingTexture) checkLoadImage(&m_default9, "default-9", "OSU_SKIN_DEFAULT9");
+	{
+		UString hitCirclePrefix = m_sHitCirclePrefix.length() > 0 ? m_sHitCirclePrefix : "default";
+		UString hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-0");
+		checkLoadImage(&m_default0, hitCircleStringFinal, "OSU_SKIN_DEFAULT0");
+		if (m_default0 == m_missingTexture) checkLoadImage(&m_default0, "default-0", "OSU_SKIN_DEFAULT0"); // special cases: fallback to default skin hitcircle numbers if the defined prefix doesn't point to any valid files
+		hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-1");
+		checkLoadImage(&m_default1, hitCircleStringFinal, "OSU_SKIN_DEFAULT1");
+		if (m_default1 == m_missingTexture) checkLoadImage(&m_default1, "default-1", "OSU_SKIN_DEFAULT1");
+		hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-2");
+		checkLoadImage(&m_default2, hitCircleStringFinal, "OSU_SKIN_DEFAULT2");
+		if (m_default2 == m_missingTexture) checkLoadImage(&m_default2, "default-2", "OSU_SKIN_DEFAULT2");
+		hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-3");
+		checkLoadImage(&m_default3, hitCircleStringFinal, "OSU_SKIN_DEFAULT3");
+		if (m_default3 == m_missingTexture) checkLoadImage(&m_default3, "default-3", "OSU_SKIN_DEFAULT3");
+		hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-4");
+		checkLoadImage(&m_default4, hitCircleStringFinal, "OSU_SKIN_DEFAULT4");
+		if (m_default4 == m_missingTexture) checkLoadImage(&m_default4, "default-4", "OSU_SKIN_DEFAULT4");
+		hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-5");
+		checkLoadImage(&m_default5, hitCircleStringFinal, "OSU_SKIN_DEFAULT5");
+		if (m_default5 == m_missingTexture) checkLoadImage(&m_default5, "default-5", "OSU_SKIN_DEFAULT5");
+		hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-6");
+		checkLoadImage(&m_default6, hitCircleStringFinal, "OSU_SKIN_DEFAULT6");
+		if (m_default6 == m_missingTexture) checkLoadImage(&m_default6, "default-6", "OSU_SKIN_DEFAULT6");
+		hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-7");
+		checkLoadImage(&m_default7, hitCircleStringFinal, "OSU_SKIN_DEFAULT7");
+		if (m_default7 == m_missingTexture) checkLoadImage(&m_default7, "default-7", "OSU_SKIN_DEFAULT7");
+		hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-8");
+		checkLoadImage(&m_default8, hitCircleStringFinal, "OSU_SKIN_DEFAULT8");
+		if (m_default8 == m_missingTexture) checkLoadImage(&m_default8, "default-8", "OSU_SKIN_DEFAULT8");
+		hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-9");
+		checkLoadImage(&m_default9, hitCircleStringFinal, "OSU_SKIN_DEFAULT9");
+		if (m_default9 == m_missingTexture) checkLoadImage(&m_default9, "default-9", "OSU_SKIN_DEFAULT9");
+	}
 
 	randomizeFilePath();
-	checkLoadImage(&m_score0, "score-0", "OSU_SKIN_SCORE0");
-	checkLoadImage(&m_score1, "score-1", "OSU_SKIN_SCORE1");
-	checkLoadImage(&m_score2, "score-2", "OSU_SKIN_SCORE2");
-	checkLoadImage(&m_score3, "score-3", "OSU_SKIN_SCORE3");
-	checkLoadImage(&m_score4, "score-4", "OSU_SKIN_SCORE4");
-	checkLoadImage(&m_score5, "score-5", "OSU_SKIN_SCORE5");
-	checkLoadImage(&m_score6, "score-6", "OSU_SKIN_SCORE6");
-	checkLoadImage(&m_score7, "score-7", "OSU_SKIN_SCORE7");
-	checkLoadImage(&m_score8, "score-8", "OSU_SKIN_SCORE8");
-	checkLoadImage(&m_score9, "score-9", "OSU_SKIN_SCORE9");
+	{
+		UString scorePrefix = m_sScorePrefix.length() > 0 ? m_sScorePrefix : "score";
+		UString scoreStringFinal = scorePrefix; scoreStringFinal.append("-0");
+		checkLoadImage(&m_score0, scoreStringFinal, "OSU_SKIN_SCORE0");
+		if (m_score0 == m_missingTexture) checkLoadImage(&m_score0, "score-0", "OSU_SKIN_SCORE0"); // special cases: fallback to default skin score numbers if the defined prefix doesn't point to any valid files
+		scoreStringFinal = scorePrefix; scoreStringFinal.append("-1");
+		checkLoadImage(&m_score1, scoreStringFinal, "OSU_SKIN_SCORE1");
+		if (m_score1 == m_missingTexture) checkLoadImage(&m_score1, "score-1", "OSU_SKIN_SCORE1");
+		scoreStringFinal = scorePrefix; scoreStringFinal.append("-2");
+		checkLoadImage(&m_score2, scoreStringFinal, "OSU_SKIN_SCORE2");
+		if (m_score2 == m_missingTexture) checkLoadImage(&m_score2, "score-2", "OSU_SKIN_SCORE2");
+		scoreStringFinal = scorePrefix; scoreStringFinal.append("-3");
+		checkLoadImage(&m_score3, scoreStringFinal, "OSU_SKIN_SCORE3");
+		if (m_score3 == m_missingTexture) checkLoadImage(&m_score3, "score-3", "OSU_SKIN_SCORE3");
+		scoreStringFinal = scorePrefix; scoreStringFinal.append("-4");
+		checkLoadImage(&m_score4, scoreStringFinal, "OSU_SKIN_SCORE4");
+		if (m_score4 == m_missingTexture) checkLoadImage(&m_score4, "score-4", "OSU_SKIN_SCORE4");
+		scoreStringFinal = scorePrefix; scoreStringFinal.append("-5");
+		checkLoadImage(&m_score5, scoreStringFinal, "OSU_SKIN_SCORE5");
+		if (m_score5 == m_missingTexture) checkLoadImage(&m_score5, "score-5", "OSU_SKIN_SCORE5");
+		scoreStringFinal = scorePrefix; scoreStringFinal.append("-6");
+		checkLoadImage(&m_score6, scoreStringFinal, "OSU_SKIN_SCORE6");
+		if (m_score6 == m_missingTexture) checkLoadImage(&m_score6, "score-6", "OSU_SKIN_SCORE6");
+		scoreStringFinal = scorePrefix; scoreStringFinal.append("-7");
+		checkLoadImage(&m_score7, scoreStringFinal, "OSU_SKIN_SCORE7");
+		if (m_score7 == m_missingTexture) checkLoadImage(&m_score7, "score-7", "OSU_SKIN_SCORE7");
+		scoreStringFinal = scorePrefix; scoreStringFinal.append("-8");
+		checkLoadImage(&m_score8, scoreStringFinal, "OSU_SKIN_SCORE8");
+		if (m_score8 == m_missingTexture) checkLoadImage(&m_score8, "score-8", "OSU_SKIN_SCORE8");
+		scoreStringFinal = scorePrefix; scoreStringFinal.append("-9");
+		checkLoadImage(&m_score9, scoreStringFinal, "OSU_SKIN_SCORE9");
+		if (m_score9 == m_missingTexture) checkLoadImage(&m_score9, "score-9", "OSU_SKIN_SCORE9");
 
-	checkLoadImage(&m_scoreX, "score-x", "OSU_SKIN_SCOREX");
-	checkLoadImage(&m_scorePercent, "score-percent", "OSU_SKIN_SCOREPERCENT");
-	checkLoadImage(&m_scoreDot, "score-dot", "OSU_SKIN_SCOREDOT");
-	checkLoadImage(&m_scoreComma, "score-comma", "OSU_SKIN_SCORECOMMA");
+
+
+		scoreStringFinal = scorePrefix; scoreStringFinal.append("-x");
+		checkLoadImage(&m_scoreX, scoreStringFinal, "OSU_SKIN_SCOREX");
+		if (m_scoreX == m_missingTexture) checkLoadImage(&m_scoreX, "score-x", "OSU_SKIN_SCOREX");
+		scoreStringFinal = scorePrefix; scoreStringFinal.append("-percent");
+		checkLoadImage(&m_scorePercent, scoreStringFinal, "OSU_SKIN_SCOREPERCENT");
+		if (m_scorePercent == m_missingTexture) checkLoadImage(&m_scorePercent, "score-percent", "OSU_SKIN_SCOREPERCENT");
+		scoreStringFinal = scorePrefix; scoreStringFinal.append("-dot");
+		checkLoadImage(&m_scoreDot, scoreStringFinal, "OSU_SKIN_SCOREDOT");
+		if (m_scoreDot == m_missingTexture) checkLoadImage(&m_scoreDot, "score-dot", "OSU_SKIN_SCOREDOT");
+		scoreStringFinal = scorePrefix; scoreStringFinal.append("-comma");
+		checkLoadImage(&m_scoreComma, scoreStringFinal, "OSU_SKIN_SCORECOMMA");
+		if (m_scoreComma == m_missingTexture) checkLoadImage(&m_scoreComma, "score-comma", "OSU_SKIN_SCORECOMMA");
+	}
+
+	randomizeFilePath();
+	{
+		UString comboPrefix = m_sComboPrefix.length() > 0 ? m_sComboPrefix : "score"; // yes, "score" is the default value for the combo prefix
+		UString comboStringFinal = comboPrefix; comboStringFinal.append("-0");
+		checkLoadImage(&m_combo0, comboStringFinal, "OSU_SKIN_COMBO0");
+		if (m_combo0 == m_missingTexture) checkLoadImage(&m_combo0, "score-0", "OSU_SKIN_COMBO0"); // special cases: fallback to default skin combo numbers if the defined prefix doesn't point to any valid files
+		comboStringFinal = comboPrefix; comboStringFinal.append("-1");
+		checkLoadImage(&m_combo1, comboStringFinal, "OSU_SKIN_COMBO1");
+		if (m_combo1 == m_missingTexture) checkLoadImage(&m_combo1, "score-1", "OSU_SKIN_COMBO1");
+		comboStringFinal = comboPrefix; comboStringFinal.append("-2");
+		checkLoadImage(&m_combo2, comboStringFinal, "OSU_SKIN_COMBO2");
+		if (m_combo2 == m_missingTexture) checkLoadImage(&m_combo2, "score-2", "OSU_SKIN_COMBO2");
+		comboStringFinal = comboPrefix; comboStringFinal.append("-3");
+		checkLoadImage(&m_combo3, comboStringFinal, "OSU_SKIN_COMBO3");
+		if (m_combo3 == m_missingTexture) checkLoadImage(&m_combo3, "score-3", "OSU_SKIN_COMBO3");
+		comboStringFinal = comboPrefix; comboStringFinal.append("-4");
+		checkLoadImage(&m_combo4, comboStringFinal, "OSU_SKIN_COMBO4");
+		if (m_combo4 == m_missingTexture) checkLoadImage(&m_combo4, "score-4", "OSU_SKIN_COMBO4");
+		comboStringFinal = comboPrefix; comboStringFinal.append("-5");
+		checkLoadImage(&m_combo5, comboStringFinal, "OSU_SKIN_COMBO5");
+		if (m_combo5 == m_missingTexture) checkLoadImage(&m_combo5, "score-5", "OSU_SKIN_COMBO5");
+		comboStringFinal = comboPrefix; comboStringFinal.append("-6");
+		checkLoadImage(&m_combo6, comboStringFinal, "OSU_SKIN_COMBO6");
+		if (m_combo6 == m_missingTexture) checkLoadImage(&m_combo6, "score-6", "OSU_SKIN_COMBO6");
+		comboStringFinal = comboPrefix; comboStringFinal.append("-7");
+		checkLoadImage(&m_combo7, comboStringFinal, "OSU_SKIN_COMBO7");
+		if (m_combo7 == m_missingTexture) checkLoadImage(&m_combo7, "score-7", "OSU_SKIN_COMBO7");
+		comboStringFinal = comboPrefix; comboStringFinal.append("-8");
+		checkLoadImage(&m_combo8, comboStringFinal, "OSU_SKIN_COMBO8");
+		if (m_combo8 == m_missingTexture) checkLoadImage(&m_combo8, "score-8", "OSU_SKIN_COMBO8");
+		comboStringFinal = comboPrefix; comboStringFinal.append("-9");
+		checkLoadImage(&m_combo9, comboStringFinal, "OSU_SKIN_COMBO9");
+		if (m_combo9 == m_missingTexture) checkLoadImage(&m_combo9, "score-9", "OSU_SKIN_COMBO9");
+
+
+
+		comboStringFinal = comboPrefix; comboStringFinal.append("-x");
+		checkLoadImage(&m_comboX, comboStringFinal, "OSU_SKIN_COMBOX");
+		if (m_comboX == m_missingTexture) m_comboX = m_scoreX;
+	}
 
 	randomizeFilePath();
 	m_playSkip = createOsuSkinImage("play-skip", Vector2(193, 147), 94);
