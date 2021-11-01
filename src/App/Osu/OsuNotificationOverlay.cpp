@@ -179,6 +179,7 @@ void OsuNotificationOverlay::addNotification(UString text, Color textColor, bool
 void OsuNotificationOverlay::stopWaitingForKey()
 {
 	m_bWaitForKey = false;
+	m_bConsumeNextChar = false;
 }
 
 bool OsuNotificationOverlay::isVisible()

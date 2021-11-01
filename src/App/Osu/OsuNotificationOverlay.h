@@ -40,6 +40,8 @@ public:
 
 	virtual bool isVisible();
 
+	inline bool isWaitingForKey() {return m_bWaitForKey || m_bConsumeNextChar;}
+
 private:
 	struct NOTIFICATION
 	{

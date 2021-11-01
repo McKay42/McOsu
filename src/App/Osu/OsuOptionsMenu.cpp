@@ -1362,7 +1362,7 @@ void OsuOptionsMenu::update()
 		openvr->getController()->triggerHapticPulse(m_osu->getVR()->getSliderHapticPulseStrength());
 
 	// hack to avoid entering search text while binding keys
-	if (m_osu->getNotificationOverlay()->isVisible())
+	if (m_osu->getNotificationOverlay()->isVisible() && m_osu->getNotificationOverlay()->isWaitingForKey())
 		m_fSearchOnCharKeybindHackTime = engine->getTime() + 0.1f;
 
 	// highlight active category depending on scroll position
