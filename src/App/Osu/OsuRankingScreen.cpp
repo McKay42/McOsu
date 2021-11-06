@@ -198,7 +198,7 @@ OsuRankingScreen::OsuRankingScreen(Osu *osu) : OsuScreenBackable(osu)
 
 	m_rankingPanel = new OsuUIRankingScreenRankingPanel(osu);
 	m_rankingPanel->setDrawBackground(false);
-	m_rankingPanel->setDrawFrame(true);
+	m_rankingPanel->setDrawFrame(false);
 	m_rankings->getContainer()->addBaseUIElement(m_rankingPanel);
 
 	m_rankingGrade = new CBaseUIImage(m_osu->getSkin()->getRankingA()->getName(), 0, 0, 0, 0, "");
