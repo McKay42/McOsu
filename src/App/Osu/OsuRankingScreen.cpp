@@ -198,7 +198,7 @@ OsuRankingScreen::OsuRankingScreen(Osu *osu) : OsuScreenBackable(osu)
 
 	m_rankingPanel = new OsuUIRankingScreenRankingPanel(osu);
 	m_rankingPanel->setDrawBackground(false);
-	m_rankingPanel->setDrawFrame(false);
+	m_rankingPanel->setDrawFrame(true);
 	m_rankings->getContainer()->addBaseUIElement(m_rankingPanel);
 
 	m_rankingGrade = new CBaseUIImage(m_osu->getSkin()->getRankingA()->getName(), 0, 0, 0, 0, "");
@@ -657,7 +657,7 @@ void OsuRankingScreen::updateLayout()
 	const Vector2 hardcodedOsuRankingPanelImageSize = Vector2(622, 505) * (m_osu->getSkin()->isRankingPanel2x() ? 2.0f : 1.0f);
 	m_rankingPanel->setImage(m_osu->getSkin()->getRankingPanel());
 	m_rankingPanel->setScale(Osu::getImageScale(m_osu, hardcodedOsuRankingPanelImageSize, 317.0f), Osu::getImageScale(m_osu, hardcodedOsuRankingPanelImageSize, 317.0f));
-	m_rankingPanel->setSize(m_container->getSize());
+	m_rankingPanel->setSize(std::max(hardcodedOsuRankingPanelImageSize.x*m_rankingPanel->getScale().x, m_rankingPanel->getImage()->getWidth()*m_rankingPanel->getScale().x), std::max(hardcodedOsuRankingPanelImageSize.y*m_rankingPanel->getScale().y, m_rankingPanel->getImage()->getHeight()*m_rankingPanel->getScale().y));
 
 	m_rankingIndex->setSize(m_rankings->getSize().x + 2, m_osu->getScreenHeight()*0.07f * uiScale);
 	m_rankingIndex->setBackgroundColor(0xff745e13);
