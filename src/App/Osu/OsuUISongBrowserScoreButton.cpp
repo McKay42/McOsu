@@ -720,13 +720,15 @@ void OsuUISongBrowserScoreButton::setScore(const OsuDatabase::Score &score, int 
 	const bool modHidden = score.modsLegacy & OsuReplay::Mods::Hidden;
 	const bool modFlashlight = score.modsLegacy & OsuReplay::Mods::Flashlight;
 
+	const bool fullCombo = (!score.isImportedLegacyScore && !score.isLegacyScore && score.maxPossibleCombo > 0 && score.numMisses == 0 && score.numSliderBreaks == 0); // NOTE: allows dropped sliderends
+
 	// display
 	m_scoreGrade = OsuScore::calculateGrade(score.num300s, score.num100s, score.num50s, score.numMisses, modHidden, modFlashlight);
 	m_sScoreUsername = score.playerName;
-	m_sScoreScore = UString::format((score.perfect ? "Score: %llu (%ix FC)" : "Score: %llu (%ix)"), score.score, score.comboMax);
-	m_sScoreScorePP = UString::format((score.perfect ? "PP: %ipp (%ix FC)" : "PP: %ipp (%ix)"), (int)std::round(score.pp), score.comboMax);
+	m_sScoreScore = UString::format((score.perfect ? "Score: %llu (%ix PF)" : (fullCombo ? "Score: %llu (%ix FC)" : "Score: %llu (%ix)")), score.score, score.comboMax);
+	m_sScoreScorePP = UString::format((score.perfect ? "PP: %ipp (%ix PF)" : (fullCombo ? "PP: %ipp (%ix FC)" : "PP: %ipp (%ix)")), (int)std::round(score.pp), score.comboMax);
 	m_sScoreAccuracy = UString::format("%.2f%%", accuracy);
-	m_sScoreAccuracyFC = UString::format((score.perfect ? "FC %.2f%%" : "%.2f%%"), accuracy);
+	m_sScoreAccuracyFC = UString::format((score.perfect ? "PF %.2f%%" : (fullCombo ? "FC %.2f%%" : "%.2f%%")), accuracy);
 	m_sScoreMods = getModsStringForDisplay(score.modsLegacy);
 	if (score.experimentalModsConVars.length() > 0)
 	{
