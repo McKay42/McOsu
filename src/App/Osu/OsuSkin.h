@@ -267,6 +267,8 @@ public:
 	inline bool isHitCircle2x() {return m_bHitCircle2x;}
 	inline bool isDefault02x() {return m_bIsDefault02x;}
 	inline bool isDefault12x() {return m_bIsDefault12x;}
+	inline bool isScore02x() {return m_bIsScore02x;}
+	inline bool isCombo02x() {return m_bIsCombo02x;}
 	inline bool isSpinnerApproachCircle2x() {return m_bSpinnerApproachCircle2x;}
 	inline bool isSpinnerBottom2x() {return m_bSpinnerBottom2x;}
 	inline bool isSpinnerCircle2x() {return m_bSpinnerCircle2x;}
@@ -400,7 +402,6 @@ private:
 	Image *m_scoreX;
 	Image *m_scorePercent;
 	Image *m_scoreDot;
-	Image *m_scoreComma;
 
 	Image *m_combo0;
 	Image *m_combo1;
@@ -620,6 +621,8 @@ private:
 	bool m_bHitCircle2x;
 	bool m_bIsDefault02x;
 	bool m_bIsDefault12x;
+	bool m_bIsScore02x;
+	bool m_bIsCombo02x;
 	bool m_bSpinnerApproachCircle2x;
 	bool m_bSpinnerBottom2x;
 	bool m_bSpinnerCircle2x;

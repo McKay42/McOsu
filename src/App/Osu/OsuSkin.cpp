@@ -106,7 +106,6 @@ OsuSkin::OsuSkin(Osu *osu, UString name, UString filepath, bool isDefaultSkin, b
 	m_scoreX = m_missingTexture;
 	m_scorePercent = m_missingTexture;
 	m_scoreDot = m_missingTexture;
-	m_scoreComma = m_missingTexture;
 
 	m_combo0 = m_missingTexture;
 	m_combo1 = m_missingTexture;
@@ -250,6 +249,8 @@ OsuSkin::OsuSkin(Osu *osu, UString name, UString filepath, bool isDefaultSkin, b
 	m_bHitCircle2x = false;
 	m_bIsDefault02x = false;
 	m_bIsDefault12x = false;
+	m_bIsScore02x = false;
+	m_bIsCombo02x = false;
 	m_bSpinnerApproachCircle2x = false;
 	m_bSpinnerBottom2x= false;
 	m_bSpinnerCircle2x= false;
@@ -569,16 +570,13 @@ void OsuSkin::load()
 
 		scoreStringFinal = scorePrefix; scoreStringFinal.append("-x");
 		checkLoadImage(&m_scoreX, scoreStringFinal, "OSU_SKIN_SCOREX");
-		if (m_scoreX == m_missingTexture) checkLoadImage(&m_scoreX, "score-x", "OSU_SKIN_SCOREX");
+		//if (m_scoreX == m_missingTexture) checkLoadImage(&m_scoreX, "score-x", "OSU_SKIN_SCOREX"); // special case: ScorePrefix'd skins don't get default fallbacks, instead missing extraneous things like the X are simply not drawn
 		scoreStringFinal = scorePrefix; scoreStringFinal.append("-percent");
 		checkLoadImage(&m_scorePercent, scoreStringFinal, "OSU_SKIN_SCOREPERCENT");
-		if (m_scorePercent == m_missingTexture) checkLoadImage(&m_scorePercent, "score-percent", "OSU_SKIN_SCOREPERCENT");
+		//if (m_scorePercent == m_missingTexture) checkLoadImage(&m_scorePercent, "score-percent", "OSU_SKIN_SCOREPERCENT"); // special case: ScorePrefix'd skins don't get default fallbacks, instead missing extraneous things like the X are simply not drawn
 		scoreStringFinal = scorePrefix; scoreStringFinal.append("-dot");
 		checkLoadImage(&m_scoreDot, scoreStringFinal, "OSU_SKIN_SCOREDOT");
-		if (m_scoreDot == m_missingTexture) checkLoadImage(&m_scoreDot, "score-dot", "OSU_SKIN_SCOREDOT");
-		scoreStringFinal = scorePrefix; scoreStringFinal.append("-comma");
-		checkLoadImage(&m_scoreComma, scoreStringFinal, "OSU_SKIN_SCORECOMMA");
-		if (m_scoreComma == m_missingTexture) checkLoadImage(&m_scoreComma, "score-comma", "OSU_SKIN_SCORECOMMA");
+		//if (m_scoreDot == m_missingTexture) checkLoadImage(&m_scoreDot, "score-dot", "OSU_SKIN_SCOREDOT"); // special case: ScorePrefix'd skins don't get default fallbacks, instead missing extraneous things like the X are simply not drawn
 	}
 
 	randomizeFilePath();
@@ -619,7 +617,7 @@ void OsuSkin::load()
 
 		comboStringFinal = comboPrefix; comboStringFinal.append("-x");
 		checkLoadImage(&m_comboX, comboStringFinal, "OSU_SKIN_COMBOX");
-		if (m_comboX == m_missingTexture) m_comboX = m_scoreX;
+		//if (m_comboX == m_missingTexture) m_comboX = m_scoreX; // special case: ComboPrefix'd skins don't get default fallbacks, instead missing extraneous things like the X are simply not drawn
 	}
 
 	randomizeFilePath();
@@ -870,6 +868,10 @@ void OsuSkin::load()
 		m_bIsDefault02x = true;
 	if (m_default1 != NULL && m_default1->getFilePath().find("@2x") != -1)
 		m_bIsDefault12x = true;
+	if (m_score0 != NULL && m_score0->getFilePath().find("@2x") != -1)
+		m_bIsScore02x = true;
+	if (m_combo0 != NULL && m_combo0->getFilePath().find("@2x") != -1)
+		m_bIsCombo02x = true;
 	if (m_spinnerApproachCircle != NULL && m_spinnerApproachCircle->getFilePath().find("@2x") != -1)
 		m_bSpinnerApproachCircle2x = true;
 	if (m_spinnerBottom != NULL && m_spinnerBottom->getFilePath().find("@2x") != -1)
@@ -1088,17 +1090,50 @@ bool OsuSkin::parseSkinINI(UString filepath)
 
 					memset(stringBuffer, '\0', 1024);
 					if (sscanf(curLineChar, " ComboPrefix : %1023[^\n]", stringBuffer) == 1)
+					{
 						m_sComboPrefix = UString(stringBuffer);
+
+						for (int i=0; i<m_sComboPrefix.length(); i++)
+						{
+							if (m_sComboPrefix[i] == L'\\')
+							{
+								m_sComboPrefix.erase(i, 1);
+								m_sComboPrefix.insert(i, L'/');
+							}
+						}
+					}
 					if (sscanf(curLineChar, " ComboOverlap : %i \n", &val) == 1)
 						m_iComboOverlap = val;
 
 					if (sscanf(curLineChar, " ScorePrefix : %1023[^\n]", stringBuffer) == 1)
+					{
 						m_sScorePrefix = UString(stringBuffer);
+
+						for (int i=0; i<m_sScorePrefix.length(); i++)
+						{
+							if (m_sScorePrefix[i] == L'\\')
+							{
+								m_sScorePrefix.erase(i, 1);
+								m_sScorePrefix.insert(i, L'/');
+							}
+						}
+					}
 					if (sscanf(curLineChar, " ScoreOverlap : %i \n", &val) == 1)
 						m_iScoreOverlap = val;
 
 					if (sscanf(curLineChar, " HitCirclePrefix : %1023[^\n]", stringBuffer) == 1)
+					{
 						m_sHitCirclePrefix = UString(stringBuffer);
+
+						for (int i=0; i<m_sHitCirclePrefix.length(); i++)
+						{
+							if (m_sHitCirclePrefix[i] == L'\\')
+							{
+								m_sHitCirclePrefix.erase(i, 1);
+								m_sHitCirclePrefix.insert(i, L'/');
+							}
+						}
+					}
 					if (sscanf(curLineChar, " HitCircleOverlap : %i \n", &val) == 1)
 						m_iHitCircleOverlap = val;
 				}

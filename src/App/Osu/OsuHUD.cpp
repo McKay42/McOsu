@@ -1331,7 +1331,7 @@ void OsuHUD::drawScoreNumber(Graphics *g, unsigned long long number, float scale
 			break;
 		}
 
-		g->translate(-m_osu->getSkin()->getScoreOverlap()*2*scale, 0);
+		g->translate(-m_osu->getSkin()->getScoreOverlap()*(m_osu->getSkin()->isScore02x() ? 2 : 1)*scale, 0);
 	}
 }
 
@@ -1413,7 +1413,7 @@ void OsuHUD::drawComboNumber(Graphics *g, unsigned long long number, float scale
 			break;
 		}
 
-		g->translate(-m_osu->getSkin()->getComboOverlap()*2*scale, 0);
+		g->translate(-m_osu->getSkin()->getComboOverlap()*(m_osu->getSkin()->isCombo02x() ? 2 : 1)*scale, 0);
 	}
 }
 
@@ -1424,8 +1424,11 @@ void OsuHUD::drawComboSimple(Graphics *g, int combo, float scale)
 		drawComboNumber(g, combo, scale);
 
 		// draw 'x' at the end
-		g->translate(m_osu->getSkin()->getComboX()->getWidth()*0.5f*scale, 0);
-		g->drawImage(m_osu->getSkin()->getComboX());
+		if (m_osu->getSkin()->getComboX() != m_osu->getSkin()->getMissingTexture())
+		{
+			g->translate(m_osu->getSkin()->getComboX()->getWidth()*0.5f*scale, 0);
+			g->drawImage(m_osu->getSkin()->getComboX());
+		}
 	}
 	g->popTransform();
 }
@@ -1449,8 +1452,11 @@ void OsuHUD::drawCombo(Graphics *g, int combo)
 			drawComboNumber(g, combo, scale);
 
 			// draw 'x' at the end
-			g->translate(m_osu->getSkin()->getComboX()->getWidth()*0.5f*scale, 0);
-			g->drawImage(m_osu->getSkin()->getComboX());
+			if (m_osu->getSkin()->getComboX() != m_osu->getSkin()->getMissingTexture())
+			{
+				g->translate(m_osu->getSkin()->getComboX()->getWidth()*0.5f*scale, 0);
+				g->drawImage(m_osu->getSkin()->getComboX());
+			}
 		}
 		g->popTransform();
 	}
@@ -1467,8 +1473,11 @@ void OsuHUD::drawCombo(Graphics *g, int combo)
 		drawComboNumber(g, combo, scale);
 
 		// draw 'x' at the end
-		g->translate(m_osu->getSkin()->getComboX()->getWidth()*0.5f*scale, 0);
-		g->drawImage(m_osu->getSkin()->getComboX());
+		if (m_osu->getSkin()->getComboX() != m_osu->getSkin()->getMissingTexture())
+		{
+			g->translate(m_osu->getSkin()->getComboX()->getWidth()*0.5f*scale, 0);
+			g->drawImage(m_osu->getSkin()->getComboX());
+		}
 	}
 	g->popTransform();
 }
@@ -1489,7 +1498,7 @@ void OsuHUD::drawScore(Graphics *g, unsigned long long score)
 	g->pushTransform();
 	{
 		g->scale(scale, scale);
-		g->translate(m_osu->getScreenWidth() - m_osu->getSkin()->getScore0()->getWidth()*scale*numDigits + m_osu->getSkin()->getScoreOverlap()*2*scale*(numDigits-1), m_osu->getSkin()->getScore0()->getHeight()*scale/2);
+		g->translate(m_osu->getScreenWidth() - m_osu->getSkin()->getScore0()->getWidth()*scale*numDigits + m_osu->getSkin()->getScoreOverlap()*(m_osu->getSkin()->isScore02x() ? 2 : 1)*scale*(numDigits-1), m_osu->getSkin()->getScore0()->getHeight()*scale/2);
 		drawScoreNumber(g, score, scale, false);
 	}
 	g->popTransform();
@@ -1662,18 +1671,24 @@ void OsuHUD::drawAccuracySimple(Graphics *g, float accuracy, float scale)
 		drawScoreNumber(g, accuracyInt, scale, true);
 
 		// draw dot '.' between the integer and fractional part
-		g->setColor(0xffffffff);
-		g->translate(m_osu->getSkin()->getScoreDot()->getWidth()*0.5f*scale, 0);
-		g->drawImage(m_osu->getSkin()->getScoreDot());
-		g->translate(m_osu->getSkin()->getScoreDot()->getWidth()*0.5f*scale, 0);
-		g->translate(-m_osu->getSkin()->getScoreOverlap()*2*scale, 0);
+		if (m_osu->getSkin()->getScoreDot() != m_osu->getSkin()->getMissingTexture())
+		{
+			g->setColor(0xffffffff);
+			g->translate(m_osu->getSkin()->getScoreDot()->getWidth()*0.5f*scale, 0);
+			g->drawImage(m_osu->getSkin()->getScoreDot());
+			g->translate(m_osu->getSkin()->getScoreDot()->getWidth()*0.5f*scale, 0);
+			g->translate(-m_osu->getSkin()->getScoreOverlap()*(m_osu->getSkin()->isScore02x() ? 2 : 1)*scale, 0);
+		}
 
 		drawScoreNumber(g, accuracyFrac, scale, true);
 
 		// draw '%' at the end
-		g->setColor(0xffffffff);
-		g->translate(m_osu->getSkin()->getScorePercent()->getWidth()*0.5f*scale, 0);
-		g->drawImage(m_osu->getSkin()->getScorePercent());
+		if (m_osu->getSkin()->getScorePercent() != m_osu->getSkin()->getMissingTexture())
+		{
+			g->setColor(0xffffffff);
+			g->translate(m_osu->getSkin()->getScorePercent()->getWidth()*0.5f*scale, 0);
+			g->drawImage(m_osu->getSkin()->getScorePercent());
+		}
 	}
 	g->popTransform();
 }
@@ -1692,7 +1707,7 @@ void OsuHUD::drawAccuracy(Graphics *g, float accuracy)
 	g->pushTransform();
 	{
 		const int numDigits = (accuracyInt > 99 ? 5 : 4);
-		const float xOffset = m_osu->getSkin()->getScore0()->getWidth()*scale*numDigits + m_osu->getSkin()->getScoreDot()->getWidth()*scale + m_osu->getSkin()->getScorePercent()->getWidth()*scale - m_osu->getSkin()->getScoreOverlap()*2*scale*(numDigits+1);
+		const float xOffset = m_osu->getSkin()->getScore0()->getWidth()*scale*numDigits + (m_osu->getSkin()->getScoreDot() != m_osu->getSkin()->getMissingTexture() ? m_osu->getSkin()->getScoreDot()->getWidth() : 0)*scale + (m_osu->getSkin()->getScorePercent() != m_osu->getSkin()->getMissingTexture() ? m_osu->getSkin()->getScorePercent()->getWidth() : 0)*scale - m_osu->getSkin()->getScoreOverlap()*(m_osu->getSkin()->isScore02x() ? 2 : 1)*scale*(numDigits+1);
 
 		m_fAccuracyXOffset = m_osu->getScreenWidth() - xOffset - offset;
 		m_fAccuracyYOffset = (osu_draw_score.getBool() ? m_fScoreHeight : 0.0f) + m_osu->getSkin()->getScore0()->getHeight()*scale/2 + offset*2;
@@ -1703,18 +1718,24 @@ void OsuHUD::drawAccuracy(Graphics *g, float accuracy)
 		drawScoreNumber(g, accuracyInt, scale, true);
 
 		// draw dot '.' between the integer and fractional part
-		g->setColor(0xffffffff);
-		g->translate(m_osu->getSkin()->getScoreDot()->getWidth()*0.5f*scale, 0);
-		g->drawImage(m_osu->getSkin()->getScoreDot());
-		g->translate(m_osu->getSkin()->getScoreDot()->getWidth()*0.5f*scale, 0);
-		g->translate(-m_osu->getSkin()->getScoreOverlap()*2*scale, 0);
+		if (m_osu->getSkin()->getScoreDot() != m_osu->getSkin()->getMissingTexture())
+		{
+			g->setColor(0xffffffff);
+			g->translate(m_osu->getSkin()->getScoreDot()->getWidth()*0.5f*scale, 0);
+			g->drawImage(m_osu->getSkin()->getScoreDot());
+			g->translate(m_osu->getSkin()->getScoreDot()->getWidth()*0.5f*scale, 0);
+			g->translate(-m_osu->getSkin()->getScoreOverlap()*(m_osu->getSkin()->isScore02x() ? 2 : 1)*scale, 0);
+		}
 
 		drawScoreNumber(g, accuracyFrac, scale, true);
 
 		// draw '%' at the end
-		g->setColor(0xffffffff);
-		g->translate(m_osu->getSkin()->getScorePercent()->getWidth()*0.5f*scale, 0);
-		g->drawImage(m_osu->getSkin()->getScorePercent());
+		if (m_osu->getSkin()->getScorePercent() != m_osu->getSkin()->getMissingTexture())
+		{
+			g->setColor(0xffffffff);
+			g->translate(m_osu->getSkin()->getScorePercent()->getWidth()*0.5f*scale, 0);
+			g->drawImage(m_osu->getSkin()->getScorePercent());
+		}
 	}
 	g->popTransform();
 }
