@@ -18,6 +18,7 @@
 #include "Osu.h"
 #include "OsuSkinImage.h"
 #include "OsuBeatmap.h"
+#include "OsuGameRules.h"
 #include "OsuNotificationOverlay.h"
 #include "OsuSteamWorkshop.h"
 
@@ -38,6 +39,8 @@ ConVar osu_skin_animation_force("osu_skin_animation_force", false);
 ConVar osu_skin_use_skin_hitsounds("osu_skin_use_skin_hitsounds", true, "If enabled: Use skin's sound samples. If disabled: Use default skin's sound samples. For hitsounds only.");
 ConVar osu_skin_random("osu_skin_random", false, "select random skin from list");
 ConVar osu_skin_random_elements("osu_skin_random_elements", false, "sElECt RanDOM sKIn eLemENTs FRoM ranDom SkINs");
+ConVar osu_mod_fposu_sound_panning("osu_mod_fposu_sound_panning", false, "see osu_sound_panning");
+ConVar osu_mod_fps_sound_panning("osu_mod_fps_sound_panning", false, "see osu_sound_panning");
 ConVar osu_sound_panning("osu_sound_panning", true, "positional hitsound audio depending on the playfield position");
 ConVar osu_sound_panning_multiplier("osu_sound_panning_multiplier", 1.0f, "the final panning value is multiplied with this, e.g. if you want to reduce or increase the effect strength by a percentage");
 
@@ -54,6 +57,7 @@ ConVar *OsuSkin::m_osu_skin_async = &osu_skin_async;
 ConVar *OsuSkin::m_osu_skin_hd = &osu_skin_hd;
 
 ConVar *OsuSkin::m_osu_skin_ref = NULL;
+ConVar *OsuSkin::m_osu_mod_fposu_ref = NULL;
 
 OsuSkin::OsuSkin(Osu *osu, UString name, UString filepath, bool isDefaultSkin, bool isWorkshopSkin)
 {
@@ -68,6 +72,8 @@ OsuSkin::OsuSkin(Osu *osu, UString name, UString filepath, bool isDefaultSkin, b
 	// convar refs
 	if (m_osu_skin_ref == NULL)
 		m_osu_skin_ref = convar->getConVarByName("osu_skin");
+	if (m_osu_mod_fposu_ref == NULL)
+		m_osu_mod_fposu_ref = convar->getConVarByName("osu_mod_fposu");
 
 	if (m_missingTexture == NULL)
 		m_missingTexture = engine->getResourceManager()->getImage("MISSING_TEXTURE");
@@ -1286,7 +1292,7 @@ void OsuSkin::playHitCircleSound(int sampleType, float pan)
 {
 	if (m_iSampleVolume <= 0 || (m_osu->getInstanceID() > 0 && m_osu->getInstanceID() != osu2_sound_source_id.getInt())) return;
 
-	if (!osu_sound_panning.getBool())
+	if (!osu_sound_panning.getBool() || (m_osu_mod_fposu_ref->getBool() && !osu_mod_fposu_sound_panning.getBool()) || (OsuGameRules::osu_mod_fps.getBool() && !osu_mod_fps_sound_panning.getBool()))
 		pan = 0.0f;
 	else
 		pan *= osu_sound_panning_multiplier.getFloat();
@@ -1330,7 +1336,7 @@ void OsuSkin::playSliderTickSound(float pan)
 {
 	if (m_iSampleVolume <= 0 || (m_osu->getInstanceID() > 0 && m_osu->getInstanceID() != osu2_sound_source_id.getInt())) return;
 
-	if (!osu_sound_panning.getBool())
+	if (!osu_sound_panning.getBool() || (m_osu_mod_fposu_ref->getBool() && !osu_mod_fposu_sound_panning.getBool()) || (OsuGameRules::osu_mod_fps.getBool() && !osu_mod_fps_sound_panning.getBool()))
 		pan = 0.0f;
 	else
 		pan *= osu_sound_panning_multiplier.getFloat();
@@ -1353,7 +1359,7 @@ void OsuSkin::playSliderSlideSound(float pan)
 {
 	if ((m_osu->getInstanceID() > 0 && m_osu->getInstanceID() != osu2_sound_source_id.getInt())) return;
 
-	if (!osu_sound_panning.getBool())
+	if (!osu_sound_panning.getBool() || (m_osu_mod_fposu_ref->getBool() && !osu_mod_fposu_sound_panning.getBool()) || (OsuGameRules::osu_mod_fps.getBool() && !osu_mod_fps_sound_panning.getBool()))
 		pan = 0.0f;
 	else
 		pan *= osu_sound_panning_multiplier.getFloat();

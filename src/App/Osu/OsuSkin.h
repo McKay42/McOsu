@@ -338,6 +338,7 @@ public:
 
 private:
 	static ConVar *m_osu_skin_ref;
+	static ConVar *m_osu_mod_fposu_ref;
 
 	static Image *m_missingTexture;
 
