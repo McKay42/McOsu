@@ -204,7 +204,8 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen(osu)
 	}
 
 	// build experimental buttons
-	addExperimentalLabel(" Experimental Mods");
+	addExperimentalLabel(" Experimental Mods (!)");
+	addExperimentalCheckbox("FPoSu: Strafing", "Playfield moves in 3D space (see fposu_mod_strafing_...).\nOnly works in FPoSu mode!", convar->getConVarByName("fposu_mod_strafing"));
 	addExperimentalCheckbox("Wobble", "Playfield rotates and moves.", convar->getConVarByName("osu_mod_wobble"));
 	addExperimentalCheckbox("AR Wobble", "Approach rate oscillates between -1 and +1.", convar->getConVarByName("osu_mod_arwobble"));
 

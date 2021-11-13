@@ -49,6 +49,14 @@ ConVar fposu_invert_horizontal("fposu_invert_horizontal", false);
 
 ConVar fposu_draw_scorebarbg_on_top("fposu_draw_scorebarbg_on_top", false);
 
+ConVar fposu_mod_strafing("fposu_mod_strafing", false);
+ConVar fposu_mod_strafing_strength_x("fposu_mod_strafing_strength_x", 0.3f);
+ConVar fposu_mod_strafing_frequency_x("fposu_mod_strafing_frequency_x", 0.1f);
+ConVar fposu_mod_strafing_strength_y("fposu_mod_strafing_strength_y", 0.1f);
+ConVar fposu_mod_strafing_frequency_y("fposu_mod_strafing_frequency_y", 0.2f);
+ConVar fposu_mod_strafing_strength_z("fposu_mod_strafing_strength_z", 0.15f);
+ConVar fposu_mod_strafing_frequency_z("fposu_mod_strafing_frequency_z", 0.15f);
+
 int OsuModFPoSu::SUBDIVISIONS = 4;
 
 OsuModFPoSu::OsuModFPoSu(Osu *osu)
@@ -188,8 +196,25 @@ void OsuModFPoSu::update()
 	// laziness, also slightly move back by default to avoid aliasing with background cube
 	m_modelMatrix = Matrix4().translate(0, 0, -0.0015f).scale(1.0f, (m_osu->getPlayfieldBuffer()->getHeight() / m_osu->getPlayfieldBuffer()->getWidth())*(m_fCircumLength), 1.0f);
 
+	if (fposu_mod_strafing.getBool())
+	{
+		if (m_osu->isInPlayMode() && m_osu->getSelectedBeatmap() != NULL)
+		{
+			const long curMusicPos = m_osu->getSelectedBeatmap()->getCurMusicPos();
+
+			const float speedMultiplierCompensation = 1.0f / m_osu->getSelectedBeatmap()->getSpeedMultiplier();
+
+			const float x = std::sin((curMusicPos/1000.0f)*5*speedMultiplierCompensation*fposu_mod_strafing_frequency_x.getFloat())*fposu_mod_strafing_strength_x.getFloat();
+			const float y = std::sin((curMusicPos/1000.0f)*5*speedMultiplierCompensation*fposu_mod_strafing_frequency_y.getFloat())*fposu_mod_strafing_strength_y.getFloat();
+			const float z = std::sin((curMusicPos/1000.0f)*5*speedMultiplierCompensation*fposu_mod_strafing_frequency_z.getFloat())*fposu_mod_strafing_strength_z.getFloat();
+
+			m_modelMatrix.translate(x, y, z);
+		}
+	}
+
 	const bool isAutoCursor = (m_osu->getModAuto() || m_osu->getModAutopilot());
 
+	m_bCrosshairIntersectsScreen = true;
 	if (!fposu_absolute_mode.getBool() && !isAutoCursor && env->getOS() == Environment::OS::OS_WINDOWS) // HACKHACK: windows only for now (raw input support)
 	{
 		// calculate mouse delta
@@ -222,13 +247,18 @@ void OsuModFPoSu::update()
 		{
 			// special case: force to center of screen if no intersection
 			if (newMousePos.x == 0.0f && newMousePos.y == 0.0f)
+			{
+				m_bCrosshairIntersectsScreen = false;
 				newMousePos = m_osu->getScreenSize() / 2;
+			}
 
 			setMousePosCompensated(newMousePos);
 		}
 	}
 	else // absolute mouse position mode
 	{
+		m_bCrosshairIntersectsScreen = true;
+
 		// auto support, because it looks pretty cool
 		Vector2 mousePos = engine->getMouse()->getPos();
 		if (isAutoCursor && m_osu->isInPlayMode() && m_osu->getSelectedBeatmap() != NULL)
@@ -333,16 +363,19 @@ Vector2 OsuModFPoSu::intersectRayMesh(Vector3 pos, Vector3 dir)
 			{
 				if (v >= 0 && v <= (Down - TopLeft).dot(Down - TopLeft))
 				{
-					const float rightLength = (Right - TopLeft).length();
-					const float downLength = (Down - TopLeft).length();
-					const float x = u / (rightLength * rightLength);
-					const float y = v / (downLength * downLength);
-					const float distancePerFace = (float)m_osu->getScreenWidth() / std::pow(2.0f, (float)SUBDIVISIONS);
-					const float distanceInFace = distancePerFace * x;
+					if (denominator > 0.0f) // only allow forwards trace
+					{
+						const float rightLength = (Right - TopLeft).length();
+						const float downLength = (Down - TopLeft).length();
+						const float x = u / (rightLength * rightLength);
+						const float y = v / (downLength * downLength);
+						const float distancePerFace = (float)m_osu->getScreenWidth() / std::pow(2.0f, (float)SUBDIVISIONS);
+						const float distanceInFace = distancePerFace * x;
 
-					const Vector2 newMousePos = Vector2((distancePerFace * face) + distanceInFace, y * m_osu->getScreenHeight());
+						const Vector2 newMousePos = Vector2((distancePerFace * face) + distanceInFace, y * m_osu->getScreenHeight());
 
-					return newMousePos;
+						return newMousePos;
+					}
 				}
 			}
 		}
