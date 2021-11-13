@@ -291,32 +291,207 @@ void OsuUISongBrowserSongButton::onSelected(bool wasSelected)
 
 void OsuUISongBrowserSongButton::onRightMouseUpInside()
 {
-	///const Vector2 pos = engine->getMouse()->getPos();
+	const Vector2 pos = engine->getMouse()->getPos();
 
 	if (m_contextMenu != NULL)
 	{
-		// TODO: implement collection editing
-		/*
 		m_contextMenu->setPos(pos);
 		m_contextMenu->setRelPos(pos);
 		m_contextMenu->begin(0, true);
 		{
-			m_contextMenu->addButton("[+]   Add to Collection");
-			m_contextMenu->addButton("[+Set]   Add to Collection");
-			m_contextMenu->addButton("[-]   Remove from Collection");
-			m_contextMenu->addButton("[-Set]   Remove from Collection");
+			if (m_databaseBeatmap != NULL && m_databaseBeatmap->getDifficulties().size() < 1)
+				m_contextMenu->addButton("[+]         Add to Collection", 1);
+
+			m_contextMenu->addButton("[+Set]   Add to Collection", 2);
+
+			if (m_osu->getSongBrowser()->getGroupingMode() == OsuSongBrowser2::GROUP::GROUP_COLLECTIONS)
+			{
+				if (m_databaseBeatmap == NULL || m_databaseBeatmap->getDifficulties().size() < 1)
+					m_contextMenu->addButton("[-]          Remove from Collection", 3);
+
+				m_contextMenu->addButton("[-Set]    Remove from Collection", 4);
+			}
 		}
 		m_contextMenu->end(false, false);
 		m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUISongBrowserSongButton::onContextMenu) );
 		OsuUIContextMenu::clampToRightScreenEdge(m_contextMenu);
 		OsuUIContextMenu::clampToBottomScreenEdge(m_contextMenu);
-		*/
 	}
 }
 
 void OsuUISongBrowserSongButton::onContextMenu(UString text, int id)
 {
-	// TODO: implement
+	if (id == 1 || id == 2)
+	{
+		m_contextMenu->begin(0, true);
+		{
+			const std::vector<OsuDatabase::Collection> &collections = m_osu->getSongBrowser()->getDatabase()->getCollections();
+
+			m_contextMenu->addButton("[+]   Create new Collection?", -id*2);
+
+			if (collections.size() > 0)
+			{
+				CBaseUIButton *spacer = m_contextMenu->addButton("---");
+				spacer->setTextLeft(false);
+				spacer->setEnabled(false);
+				spacer->setTextColor(0xff888888);
+				spacer->setTextDarkColor(0xff000000);
+
+				for (size_t i=0; i<collections.size(); i++)
+				{
+					bool isDiffAndAlreadyContained = false;
+					if (m_databaseBeatmap != NULL && m_databaseBeatmap->getDifficulties().size() < 1)
+					{
+						for (size_t h=0; h<collections[i].hashes.size(); h++)
+						{
+							if (collections[i].hashes[h].hash == m_databaseBeatmap->getMD5Hash())
+							{
+								isDiffAndAlreadyContained = true;
+
+								// edge case: allow adding the set of this diff if it does not represent the entire set (and the set is not yet added completely)
+								if (id == 2)
+								{
+									const OsuUISongBrowserSongDifficultyButton *diffButtonPointer = dynamic_cast<OsuUISongBrowserSongDifficultyButton*>(this);
+									if (diffButtonPointer != NULL && diffButtonPointer->getParentSongButton() != NULL && diffButtonPointer->getParentSongButton()->getDatabaseBeatmap() != NULL)
+									{
+										const OsuDatabaseBeatmap *setContainer = diffButtonPointer->getParentSongButton()->getDatabaseBeatmap();
+
+										if (setContainer->getDifficulties().size() > 1)
+										{
+											const std::vector<OsuDatabaseBeatmap*> &diffs = setContainer->getDifficulties();
+
+											bool isSetAlreadyContained = true;
+											for (size_t s=0; s<diffs.size(); s++)
+											{
+												bool isDiffAlreadyContained = false;
+												for (size_t h2=0; h2<collections[i].hashes.size(); h2++)
+												{
+													if (diffs[s]->getMD5Hash() == collections[i].hashes[h2].hash)
+													{
+														isDiffAlreadyContained = true;
+														break;
+													}
+												}
+
+												if (!isDiffAlreadyContained)
+												{
+													isSetAlreadyContained = false;
+													break;
+												}
+											}
+
+											if (!isSetAlreadyContained)
+												isDiffAndAlreadyContained = false;
+										}
+									}
+								}
+
+								break;
+							}
+						}
+					}
+
+					bool isContainerAndSetAlreadyContained = false;
+					if (m_databaseBeatmap != NULL && m_databaseBeatmap->getDifficulties().size() > 0)
+					{
+						const std::vector<OsuDatabaseBeatmap*> &diffs = m_databaseBeatmap->getDifficulties();
+
+						bool foundAllDiffs = true;
+						for (size_t d=0; d<diffs.size(); d++)
+						{
+							const std::vector<OsuDatabaseBeatmap*> &diffs = m_databaseBeatmap->getDifficulties();
+
+							bool foundDiff = false;
+							for (size_t h=0; h<collections[i].hashes.size(); h++)
+							{
+								if (collections[i].hashes[h].hash == diffs[d]->getMD5Hash())
+								{
+									foundDiff = true;
+
+									break;
+								}
+							}
+
+							foundAllDiffs = foundDiff;
+							if (!foundAllDiffs)
+								break;
+						}
+
+						isContainerAndSetAlreadyContained = foundAllDiffs;
+					}
+
+					CBaseUIButton *collectionButton = m_contextMenu->addButton(collections[i].name, id);
+
+					if (isDiffAndAlreadyContained || isContainerAndSetAlreadyContained)
+					{
+						collectionButton->setEnabled(false);
+						collectionButton->setTextColor(0xff555555);
+						collectionButton->setTextDarkColor(0xff000000);
+					}
+				}
+			}
+		}
+		m_contextMenu->end(false, true);
+		m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUISongBrowserSongButton::onAddToCollectionConfirmed) );
+		OsuUIContextMenu::clampToRightScreenEdge(m_contextMenu);
+		OsuUIContextMenu::clampToBottomScreenEdge(m_contextMenu);
+	}
+	else
+	{
+		// just forward it
+		m_osu->getSongBrowser()->onSongButtonContextMenu(this, text, id);
+	}
+}
+
+void OsuUISongBrowserSongButton::onAddToCollectionConfirmed(UString text, int id)
+{
+	if (id == -2 || id == -4)
+	{
+		m_contextMenu->begin(0, true);
+		{
+			CBaseUIButton *label = m_contextMenu->addButton("Enter Collection Name:");
+			label->setTextLeft(false);
+			label->setEnabled(false);
+
+			CBaseUIButton *spacer = m_contextMenu->addButton("---");
+			spacer->setTextLeft(false);
+			spacer->setEnabled(false);
+			spacer->setTextColor(0xff888888);
+			spacer->setTextDarkColor(0xff000000);
+
+			m_contextMenu->addTextbox("", id);
+
+			spacer = m_contextMenu->addButton("---");
+			spacer->setTextLeft(false);
+			spacer->setEnabled(false);
+			spacer->setTextColor(0xff888888);
+			spacer->setTextDarkColor(0xff000000);
+
+			label = m_contextMenu->addButton("(Press ENTER to confirm.)");
+			label->setTextLeft(false);
+			label->setEnabled(false);
+			label->setTextColor(0xff555555);
+			label->setTextDarkColor(0xff000000);
+		}
+		m_contextMenu->end(false, false);
+		m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUISongBrowserSongButton::onCreateNewCollectionConfirmed) );
+		OsuUIContextMenu::clampToRightScreenEdge(m_contextMenu);
+		OsuUIContextMenu::clampToBottomScreenEdge(m_contextMenu);
+	}
+	else
+	{
+		// just forward it
+		m_osu->getSongBrowser()->onSongButtonContextMenu(this, text, id);
+	}
+}
+
+void OsuUISongBrowserSongButton::onCreateNewCollectionConfirmed(UString text, int id)
+{
+	if (id == -2 || id == -4)
+	{
+		// just forward it
+		m_osu->getSongBrowser()->onSongButtonContextMenu(this, text, id);
+	}
 }
 
 float OsuUISongBrowserSongButton::calculateGradeScale()

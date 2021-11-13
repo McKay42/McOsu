@@ -570,7 +570,7 @@ void OsuUISongBrowserScoreButton::onContextMenu(UString text, int id)
 	if (id == 2)
 	{
 		if (engine->getKeyboard()->isShiftDown())
-			onDeleteScoreConfirmed("", 1);
+			onDeleteScoreConfirmed(text, 1);
 		else
 			onDeleteScoreClicked();
 	}

@@ -19,6 +19,11 @@ public:
 
 private:
 	virtual void onSelected(bool wasSelected);
+	virtual void onRightMouseUpInside();
+
+	void onContextMenu(UString text, int id = -1);
+	void onRenameCollectionConfirmed(UString text, int id = -1);
+	void onDeleteCollectionConfirmed(UString text, int id = -1);
 
 	UString buildTitleString();
 

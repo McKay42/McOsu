@@ -9,6 +9,7 @@
 #define OSUUICONTEXTMENU_H
 
 #include "CBaseUIButton.h"
+#include "CBaseUITextbox.h"
 
 class CBaseUIContainer;
 class CBaseUIScrollView;
@@ -16,6 +17,7 @@ class CBaseUIScrollView;
 class Osu;
 
 class OsuUIContextMenuButton;
+class OsuUIContextMenuTextbox;
 
 class OsuUIContextMenu : public CBaseUIElement
 {
@@ -30,11 +32,17 @@ public:
 	virtual void draw(Graphics *g);
 	virtual void update();
 
+	virtual void onKeyUp(KeyboardEvent &e);
+	virtual void onKeyDown(KeyboardEvent &e);
+	virtual void onChar(KeyboardEvent &e);
+
 	typedef fastdelegate::FastDelegate2<UString, int> ButtonClickCallback;
 	void setClickCallback(ButtonClickCallback clickCallback) {m_clickCallback = clickCallback;}
 
 	void begin(int minWidth = 0, bool bigStyle = false);
 	OsuUIContextMenuButton *addButton(UString text, int id = -1);
+	OsuUIContextMenuTextbox *addTextbox(UString text, int id = -1);
+
 	void end(bool invertAnimation, bool clampUnderflowAndOverflowAndEnableScrollingIfNecessary);
 
 	void setVisible2(bool visible2);
@@ -48,11 +56,14 @@ private:
 	virtual void onFocusStolen();
 
 	void onClick(CBaseUIButton *button);
+	void onHitEnter(OsuUIContextMenuTextbox *textbox);
 
 	Osu *m_osu;
 
 	CBaseUIScrollView *m_container;
 	CBaseUIScrollView *m_parent;
+
+	OsuUIContextMenuTextbox *m_containedTextbox;
 
 	ButtonClickCallback m_clickCallback;
 
@@ -85,6 +96,18 @@ private:
 	int m_iID;
 
 	std::vector<UString> m_tooltipTextLines;
+};
+
+class OsuUIContextMenuTextbox : public CBaseUITextbox
+{
+public:
+	OsuUIContextMenuTextbox(float xPos, float yPos, float xSize, float ySize, UString name, int id);
+	virtual ~OsuUIContextMenuTextbox() {;}
+
+	inline int getID() const {return m_iID;}
+
+private:
+	int m_iID;
 };
 
 #endif

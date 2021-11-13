@@ -127,12 +127,12 @@ void OsuFile::writeBool(bool val)
 
 void OsuFile::writeString(UString &str)
 {
-	const bool flag = (str.length() > 0);
-	writeByte(flag ? 1 : 0);
+	const bool flag = (str.lengthUtf8() > 0);
+	writeByte(flag ? 0x0b : 0);
 	if (flag)
 	{
-		writeULEB128(str.length());
-		for (int i=0; i<str.length(); i++)
+		writeULEB128(str.lengthUtf8());
+		for (int i=0; i<str.lengthUtf8(); i++)
 		{
 			m_writeBuffer.push_back(str.toUtf8()[i]);
 		}
@@ -142,7 +142,7 @@ void OsuFile::writeString(UString &str)
 void OsuFile::writeStdString(std::string str)
 {
 	const bool flag = (str.length() > 0);
-	writeByte(flag ? 1 : 0);
+	writeByte(flag ? 0x0b : 0);
 	if (flag)
 	{
 		writeULEB128(str.length());
@@ -255,7 +255,7 @@ UString OsuFile::readString()
 			if (strData.size() > 0)
 			{
 				const char *rawStrData = (const char*)&strData[0];
-				value = UString(rawStrData);
+				value = UString(rawStrData, strData.size() - 1);
 			}
 		}
 	}

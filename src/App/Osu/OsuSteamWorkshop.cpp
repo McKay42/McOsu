@@ -182,7 +182,7 @@ protected:
 				if (!steamworkshopitemidtxt.canWrite())
 					debugLog("OsuSteamWorkshop Error: Can't write \"%s\"!!!\n", m_sWorkshopItemIdFilePath.toUtf8());
 
-				steamworkshopitemidtxt.write(publishedFileIdString.toUtf8(), publishedFileIdString.length());
+				steamworkshopitemidtxt.write(publishedFileIdString.toUtf8(), publishedFileIdString.lengthUtf8());
 			}
 
 			// 2) prepare item update

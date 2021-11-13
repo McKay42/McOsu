@@ -13,7 +13,6 @@
 
 #include "CBaseUIContainer.h"
 #include "CBaseUIScrollView.h"
-#include "CBaseUIButton.h"
 
 #include "Osu.h"
 #include "OsuTooltipOverlay.h"
@@ -51,14 +50,25 @@ void OsuUIContextMenuButton::setTooltipText(UString text)
 
 
 
+OsuUIContextMenuTextbox::OsuUIContextMenuTextbox(float xPos, float yPos, float xSize, float ySize, UString name, int id) : CBaseUITextbox(xPos, yPos, xSize, ySize, name)
+{
+	m_iID = id;
+}
+
+
+
 OsuUIContextMenu::OsuUIContextMenu(Osu *osu, float xPos, float yPos, float xSize, float ySize, UString name, CBaseUIScrollView *parent) : CBaseUIElement(xPos, yPos, xSize, ySize, name)
 {
 	m_osu = osu;
 	m_parent = parent;
+
 	m_container = new CBaseUIScrollView(xPos, yPos, xSize, ySize, name);
 	m_container->setHorizontalScrolling(false);
 	m_container->setDrawBackground(false);
 	m_container->setDrawFrame(false);
+
+	m_containedTextbox = NULL;
+
 	m_iYCounter = 0;
 	m_iWidthCounter = 0;
 
@@ -111,12 +121,39 @@ void OsuUIContextMenu::update()
 
 	m_container->update();
 
+	if (m_containedTextbox != NULL)
+	{
+		if (m_containedTextbox->hitEnter())
+			onHitEnter(m_containedTextbox);
+	}
+
 	// HACKHACK: mouse wheel handling order
 	if (m_bClampUnderflowAndOverflowAndEnableScrollingIfNecessary)
 	{
 		if (isMouseInside())
 			engine->getMouse()->resetWheelDelta();
 	}
+}
+
+void OsuUIContextMenu::onKeyUp(KeyboardEvent &e)
+{
+	if (!m_bVisible || !m_bVisible2) return;
+
+	m_container->onKeyUp(e);
+}
+
+void OsuUIContextMenu::onKeyDown(KeyboardEvent &e)
+{
+	if (!m_bVisible || !m_bVisible2) return;
+
+	m_container->onKeyDown(e);
+}
+
+void OsuUIContextMenu::onChar(KeyboardEvent &e)
+{
+	if (!m_bVisible || !m_bVisible2) return;
+
+	m_container->onChar(e);
 }
 
 void OsuUIContextMenu::begin(int minWidth, bool bigStyle)
@@ -130,6 +167,8 @@ void OsuUIContextMenu::begin(int minWidth, bool bigStyle)
 	setSizeX(m_iWidthCounter);
 
 	m_container->clear();
+
+	m_containedTextbox = NULL;
 }
 
 OsuUIContextMenuButton *OsuUIContextMenu::addButton(UString text, int id)
@@ -160,6 +199,31 @@ OsuUIContextMenuButton *OsuUIContextMenu::addButton(UString text, int id)
 	setSizeY(m_iYCounter + 2*margin);
 
 	return button;
+}
+
+OsuUIContextMenuTextbox *OsuUIContextMenu::addTextbox(UString text, int id)
+{
+	const int buttonHeight = 30 * Osu::getUIScale() * (m_bBigStyle ? 1.27f : 1.0f);
+	const int margin = 9 * Osu::getUIScale();
+
+	OsuUIContextMenuTextbox *textbox = new OsuUIContextMenuTextbox(margin, m_iYCounter + margin, 0, buttonHeight, text, id);
+	{
+		textbox->setText(text);
+
+		if (m_bBigStyle)
+			textbox->setFont(m_osu->getSubTitleFont());
+
+		textbox->setActive(true);
+	}
+	m_container->getContainer()->addBaseUIElement(textbox);
+
+	m_iYCounter += buttonHeight;
+	setSizeY(m_iYCounter + 2*margin);
+
+	// NOTE: only one single textbox is supported currently
+	m_containedTextbox = textbox;
+
+	return textbox;
 }
 
 void OsuUIContextMenu::end(bool invertAnimation, bool clampUnderflowAndOverflowAndEnableScrollingIfNecessary)
@@ -249,6 +313,14 @@ void OsuUIContextMenu::onClick(CBaseUIButton *button)
 
 	if (m_clickCallback != NULL)
 		m_clickCallback(button->getName(), ((OsuUIContextMenuButton*)button)->getID());
+}
+
+void OsuUIContextMenu::onHitEnter(OsuUIContextMenuTextbox *textbox)
+{
+	setVisible2(false);
+
+	if (m_clickCallback != NULL)
+		m_clickCallback(textbox->getText(), textbox->getID());
 }
 
 void OsuUIContextMenu::clampToBottomScreenEdge(OsuUIContextMenu *menu)

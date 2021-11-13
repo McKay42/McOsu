@@ -1193,6 +1193,10 @@ void OsuSongBrowser2::onKeyDown(KeyboardEvent &key)
 
 	if (m_bBeatmapRefreshScheduled) return;
 
+	// context menu
+	m_contextMenu->onKeyDown(key);
+	if (key.isConsumed()) return;
+
 	// searching text delete & escape key handling
 	if (m_sSearchString.length() > 0)
 	{
@@ -1466,6 +1470,10 @@ void OsuSongBrowser2::onKeyDown(KeyboardEvent &key)
 
 void OsuSongBrowser2::onKeyUp(KeyboardEvent &key)
 {
+	// context menu
+	m_contextMenu->onKeyUp(key);
+	if (key.isConsumed()) return;
+
 	if (key == KEY_SHIFT)
 		m_bShiftPressed = false;
 	if (key == KEY_LEFT)
@@ -1481,6 +1489,10 @@ void OsuSongBrowser2::onKeyUp(KeyboardEvent &key)
 
 void OsuSongBrowser2::onChar(KeyboardEvent &e)
 {
+	// context menu
+	m_contextMenu->onChar(e);
+	if (e.isConsumed()) return;
+
 	if (e.getCharCode() < 32 || !m_bVisible || m_bBeatmapRefreshScheduled || (engine->getKeyboard()->isControlDown() && !engine->getKeyboard()->isAltDown())) return;
 	if (m_bF1Pressed || m_bF2Pressed) return;
 
@@ -1804,6 +1816,8 @@ void OsuSongBrowser2::refreshBeatmaps()
 	m_visibleSongButtons.clear();
 	m_beatmaps.clear();
 	m_previousRandomBeatmaps.clear();
+
+	m_contextMenu->setVisible2(false);
 
 	// clear potentially active search
 	m_bInSearch = false;
@@ -3033,7 +3047,7 @@ void OsuSongBrowser2::onDatabaseLoadingFinished()
 	}
 
 	// build collections
-	std::vector<OsuDatabase::Collection> collections = m_db->getCollections();
+	const std::vector<OsuDatabase::Collection> &collections = m_db->getCollections();
 	for (size_t i=0; i<collections.size(); i++)
 	{
 		std::vector<OsuUISongBrowserButton*> children;
@@ -3768,10 +3782,10 @@ void OsuSongBrowser2::onModeChange(UString text)
 
 void OsuSongBrowser2::onModeChange2(UString text, int id)
 {
-	if (id != 2)
+	if (id != 2 && text != "fposu")
 		m_osu_mod_fposu_ref->setValue(0.0f);
 
-	if (id == 0)
+	if (id == 0 || text == "std")
 	{
 		if (m_osu->getGamemode() != Osu::GAMEMODE::STD)
 		{
@@ -3779,7 +3793,7 @@ void OsuSongBrowser2::onModeChange2(UString text, int id)
 			refreshBeatmaps();
 		}
 	}
-	else if (id == 1)
+	else if (id == 1 || text == "mania")
 	{
 		if (m_osu->getGamemode() != Osu::GAMEMODE::MANIA)
 		{
@@ -3787,7 +3801,7 @@ void OsuSongBrowser2::onModeChange2(UString text, int id)
 			refreshBeatmaps();
 		}
 	}
-	else if (id == 2)
+	else if (id == 2 || text == "fposu")
 	{
 		m_osu_mod_fposu_ref->setValue(1.0f);
 
@@ -3867,6 +3881,46 @@ void OsuSongBrowser2::onScoreContextMenu(OsuUISongBrowserScoreButton *scoreButto
 
 		rebuildScoreButtons();
 		m_userButton->updateUserStats();
+	}
+}
+
+void OsuSongBrowser2::onSongButtonContextMenu(OsuUISongBrowserSongButton *songButton, UString text, int id)
+{
+	// TODO: implement logic for adding/removing sets/diffs from collections
+
+	debugLog("TODO: OsuSongBrowser2::onSongButtonContextMenu(%p, %s, %i)\n", songButton, text.toUtf8(), id);
+
+	if (id == 1)
+	{
+		// add diff to collection
+	}
+	else if (id == 2)
+	{
+		// add set to collection
+	}
+	else if (id == 3)
+	{
+		// remove diff from collection
+	}
+	else if (id == 4)
+	{
+		// remove set from collection
+	}
+	else if (id == -2 || id == -4)
+	{
+		// add new collection with name text
+	}
+}
+
+void OsuSongBrowser2::onCollectionButtonContextMenu(OsuUISongBrowserCollectionButton *collectionButton, UString text, int id)
+{
+	// TODO: implement logic for deleting existing collections
+
+	if (id == 2)
+	{
+		// TODO: delete collection in both db + collectionbuttons in UI here too
+		//m_db->deleteCollection(text);
+		debugLog("TODO: delete collection %s\n", text.toUtf8());
 	}
 }
 

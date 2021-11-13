@@ -58,6 +58,7 @@ ConVar osu_scores_sort_by_pp("osu_scores_sort_by_pp", true, "display pp in score
 ConVar osu_scores_bonus_pp("osu_scores_bonus_pp", true, "whether to add bonus pp to total (real) pp or not");
 ConVar osu_scores_rename("osu_scores_rename");
 ConVar osu_collections_legacy_enabled("osu_collections_legacy_enabled", true, "load osu!'s collection.db");
+ConVar osu_collections_custom_enabled("osu_collections_custom_enabled", true, "load custom collections.db");
 ConVar osu_user_include_relax_and_autopilot_for_stats("osu_user_include_relax_and_autopilot_for_stats", false);
 ConVar osu_user_switcher_include_legacy_scores_for_names("osu_user_switcher_include_legacy_scores_for_names", true);
 
@@ -335,6 +336,8 @@ OsuDatabase::OsuDatabase(Osu *osu)
 	m_iFolderCount = 0;
 	m_sPlayerName = "";
 
+	m_bDidCollectionsChangeForSave = false;
+
 	m_bScoresLoaded = false;
 	m_bDidScoresChangeForSave = false;
 	m_bDidScoresChangeForStats = true;
@@ -453,6 +456,7 @@ void OsuDatabase::cancel()
 void OsuDatabase::save()
 {
 	saveScores();
+	saveCollections();
 }
 
 OsuDatabaseBeatmap *OsuDatabase::addBeatmap(UString beatmapFolderPath)
@@ -521,7 +525,7 @@ void OsuDatabase::addScoreRaw(const std::string &beatmapMD5Hash, const OsuDataba
 			{
 				for (OsuDatabase::Score &s : m_scores[beatmapMD5Hash])
 				{
-					if (s.version <= 20180722)
+					if (s.version <= 20180722 || s.maxPossibleCombo < 1) // also set on scores which have broken maxPossibleCombo values for whatever reason
 						s.perfect = (s.comboMax > 0 && s.comboMax >= maxPossibleCombo);
 				}
 			}
@@ -575,6 +579,208 @@ void OsuDatabase::sortScores(std::string beatmapMD5Hash)
 	}
 
 	debugLog("ERROR: Invalid score sortingtype \"%s\"\n", m_osu_songbrowser_scores_sortingtype_ref->getString().toUtf8());
+}
+
+bool OsuDatabase::addCollection(UString collectionName)
+{
+	// don't want duplicates
+	for (size_t i=0; i<m_collections.size(); i++)
+	{
+		if (m_collections[i].name == collectionName)
+			return false;
+	}
+
+	Collection c;
+	{
+		c.name = collectionName;
+	}
+	m_collections.push_back(c);
+
+	m_bDidCollectionsChangeForSave = true;
+
+	return true;
+}
+
+bool OsuDatabase::renameCollection(UString oldCollectionName, UString newCollectionName)
+{
+	if (oldCollectionName == newCollectionName) return false;
+
+	// don't want duplicates
+	for (size_t i=0; i<m_collections.size(); i++)
+	{
+		if (m_collections[i].name == newCollectionName)
+			return false;
+	}
+
+	for (size_t i=0; i<m_collections.size(); i++)
+	{
+		if (m_collections[i].name == oldCollectionName)
+		{
+			// can't rename loaded osu! collections
+			if (!m_collections[i].isLegacyCollection)
+			{
+				m_collections[i].name = newCollectionName;
+
+				m_bDidCollectionsChangeForSave = true;
+
+				return true;
+			}
+			else
+				return false;
+		}
+	}
+
+	return false;
+}
+
+void OsuDatabase::deleteCollection(UString collectionName)
+{
+	for (size_t i=0; i<m_collections.size(); i++)
+	{
+		if (m_collections[i].name == collectionName)
+		{
+			// can't delete loaded osu! collections
+			if (!m_collections[i].isLegacyCollection)
+			{
+				m_collections.erase(m_collections.begin() + i);
+
+				m_bDidCollectionsChangeForSave = true;
+			}
+
+			break;
+		}
+	}
+}
+
+void OsuDatabase::addBeatmapToCollection(UString collectionName, std::string beatmapMD5Hash)
+{
+	if (beatmapMD5Hash.length() != 32) return;
+
+	for (size_t i=0; i<m_collections.size(); i++)
+	{
+		if (m_collections[i].name == collectionName)
+		{
+			bool containedAlready = false;
+			for (size_t h=0; h<m_collections[i].hashes.size(); h++)
+			{
+				if (m_collections[i].hashes[h].hash == beatmapMD5Hash)
+				{
+					containedAlready = true;
+					break;
+				}
+			}
+
+			if (!containedAlready)
+			{
+				CollectionEntry entry;
+				{
+					entry.isLegacyEntry = false;
+
+					entry.hash = beatmapMD5Hash;
+				}
+				m_collections[i].hashes.push_back(entry);
+
+				m_bDidCollectionsChangeForSave = true;
+
+				// also update .beatmaps for convenience (songbrowser will use that to rebuild the UI)
+				{
+					OsuDatabaseBeatmap *beatmap = getBeatmap(beatmapMD5Hash);
+					OsuDatabaseBeatmap *diff2 = getBeatmapDifficulty(beatmapMD5Hash);
+
+					if (beatmap != NULL && diff2 != NULL)
+					{
+						bool beatmapContainedAlready = false;
+						for (size_t b=0; b<m_collections[i].beatmaps.size(); b++)
+						{
+							if (m_collections[i].beatmaps[b].first == beatmap)
+							{
+								beatmapContainedAlready = true;
+
+								bool diffContainedAlready = false;
+								for (size_t d=0; d<m_collections[i].beatmaps[b].second.size(); d++)
+								{
+									if (m_collections[i].beatmaps[b].second[d] == diff2)
+									{
+										diffContainedAlready = true;
+										break;
+									}
+								}
+
+								if (!diffContainedAlready)
+									m_collections[i].beatmaps[b].second.push_back(diff2);
+
+								break;
+							}
+						}
+
+						if (!beatmapContainedAlready)
+						{
+							std::vector<OsuDatabaseBeatmap*> diffs2;
+							{
+								diffs2.push_back(diff2);
+							}
+							m_collections[i].beatmaps.push_back(std::pair<OsuDatabaseBeatmap*, std::vector<OsuDatabaseBeatmap*>>(beatmap, diffs2));
+						}
+					}
+				}
+			}
+
+			break;
+		}
+	}
+}
+
+void OsuDatabase::removeBeatmapFromCollection(UString collectionName, std::string beatmapMD5Hash)
+{
+	if (beatmapMD5Hash.length() != 32) return;
+
+	for (size_t i=0; i<m_collections.size(); i++)
+	{
+		if (m_collections[i].name == collectionName)
+		{
+			bool didRemove = false;
+			for (size_t h=0; h<m_collections[i].hashes.size(); h++)
+			{
+				if (m_collections[i].hashes[h].hash == beatmapMD5Hash)
+				{
+					// can't delete loaded osu! collection entries
+					if (!m_collections[i].hashes[h].isLegacyEntry)
+					{
+						m_collections[i].hashes.erase(m_collections[i].hashes.begin() + h);
+
+						didRemove = true;
+
+						m_bDidCollectionsChangeForSave = true;
+					}
+
+					break;
+				}
+			}
+
+			// also update .beatmaps for convenience (songbrowser will use that to rebuild the UI)
+			if (didRemove)
+			{
+				for (size_t b=0; b<m_collections[i].beatmaps.size(); b++)
+				{
+					bool found = false;
+					for (size_t d=0; d<m_collections[i].beatmaps[b].second.size(); d++)
+					{
+						if (m_collections[i].beatmaps[b].second[d]->getMD5Hash() == beatmapMD5Hash)
+						{
+							found = true;
+
+							m_collections[i].beatmaps[b].second.erase(m_collections[i].beatmaps[b].second.begin() + d);
+
+							break;
+						}
+					}
+
+					if (found)
+						break;
+				}
+			}
+		}
+	}
 }
 
 std::vector<UString> OsuDatabase::getPlayerNamesWithPPScores()
@@ -1945,12 +2151,6 @@ void OsuDatabase::loadCollections(const std::unordered_map<std::string, OsuDatab
 		OsuFile collectionFile(collectionFilePath);
 		if (collectionFile.isReady())
 		{
-			struct RawCollection
-			{
-				UString name;
-				std::vector<std::string> hashes;
-			};
-
 			const int version = collectionFile.readInt();
 			const int numCollections = collectionFile.readInt();
 
@@ -1968,38 +2168,44 @@ void OsuDatabase::loadCollections(const std::unordered_map<std::string, OsuDatab
 					m_fLoadingProgress = 0.75f + 0.24f*((float)(i+1)/(float)numCollections);
 
 					UString name = collectionFile.readString();
-					int numBeatmaps = collectionFile.readInt();
-
-					RawCollection rc;
-					rc.name = name;
+					const int numBeatmaps = collectionFile.readInt();
 
 					if (Osu::debug->getBool())
 						debugLog("Raw Collection #%i: name = %s, numBeatmaps = %i\n", i, name.toUtf8(), numBeatmaps);
+
+					Collection c;
+					c.isLegacyCollection = true;
+					c.name = name;
 
 					for (int b=0; b<numBeatmaps; b++)
 					{
 						if (m_bInterruptLoad.load()) break; // cancellation point
 
 						std::string md5hash = collectionFile.readStdString();
-						rc.hashes.push_back(md5hash);
+
+						CollectionEntry entry;
+						{
+							entry.isLegacyEntry = true;
+
+							entry.hash = md5hash;
+						}
+						c.hashes.push_back(entry);
 					}
 
-					if (rc.hashes.size() > 0)
+					if (c.hashes.size() > 0)
 					{
 						// collect OsuBeatmaps corresponding to this collection
-						Collection c;
-						c.name = rc.name;
 
 						// go through every hash of the collection
 						std::vector<OsuDatabaseBeatmap*> matchingDiffs2;
-						for (int h=0; h<rc.hashes.size(); h++)
+						for (int h=0; h<c.hashes.size(); h++)
 						{
 							if (m_bInterruptLoad.load()) break; // cancellation point
 
 							// new: use hashmap
-							if (rc.hashes[h].length() == 32)
+							if (c.hashes[h].hash.length() == 32)
 							{
-								const auto result = hashToDiff2.find(rc.hashes[h]);
+								const auto result = hashToDiff2.find(c.hashes[h].hash);
 								if (result != hashToDiff2.end())
 									matchingDiffs2.push_back(result->second);
 							}
@@ -2066,11 +2272,10 @@ void OsuDatabase::loadCollections(const std::unordered_map<std::string, OsuDatab
 								}
 							}
 						}
-
-						// add the collection
-						if (c.beatmaps.size() > 0) // sanity check
-							m_collections.push_back(c);
 					}
+
+					// add the collection
+					m_collections.push_back(c);
 				}
 			}
 
@@ -2089,7 +2294,41 @@ void OsuDatabase::loadCollections(const std::unordered_map<std::string, OsuDatab
 
 void OsuDatabase::saveCollections()
 {
-	// TODO: implement
+	if (!m_bDidCollectionsChangeForSave) return;
+	m_bDidCollectionsChangeForSave = false;
+
+	const int32_t dbVersion = 20211107;
+
+	if (m_collections.size() > 0)
+	{
+		debugLog("Osu: Saving collections ...\n");
+
+		OsuFile db("collections.db", true);
+		if (db.isReady())
+		{
+			const double startTime = engine->getTimeReal();
+
+			db.writeInt(dbVersion);
+			db.writeInt((int32_t)m_collections.size());
+
+			for (size_t c=0; c<m_collections.size(); c++)
+			{
+				db.writeString(m_collections[c].name);
+				db.writeInt((int32_t)m_collections[c].hashes.size());
+
+				for (size_t h=0; h<m_collections[c].hashes.size(); h++)
+				{
+					db.writeStdString(m_collections[c].hashes[h].hash);
+				}
+			}
+
+			db.write();
+
+			debugLog("Took %f seconds.\n", (engine->getTimeReal() - startTime));
+		}
+		else
+			debugLog("Couldn't write collections.db!\n");
+	}
 }
 
 OsuDatabaseBeatmap *OsuDatabase::loadRawBeatmap(UString beatmapPath)

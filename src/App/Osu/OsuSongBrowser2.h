@@ -93,6 +93,19 @@ public:
 		bool operator () (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const;
 	};
 
+	enum class GROUP
+	{
+		GROUP_NO_GROUPING,
+		GROUP_ARTIST,
+		GROUP_BPM,
+		GROUP_CREATOR,
+		GROUP_DATEADDED,
+		GROUP_DIFFICULTY,
+		GROUP_LENGTH,
+		GROUP_TITLE,
+		GROUP_COLLECTIONS
+	};
+
 public:
 	OsuSongBrowser2(Osu *osu);
 	virtual ~OsuSongBrowser2();
@@ -116,6 +129,8 @@ public:
 	void selectBeatmapMP(OsuDatabaseBeatmap *diff2);
 
 	void onScoreContextMenu(OsuUISongBrowserScoreButton *scoreButton, int id);
+	void onSongButtonContextMenu(OsuUISongBrowserSongButton *songButton, UString text, int id);
+	void onCollectionButtonContextMenu(OsuUISongBrowserCollectionButton *collectionButton, UString text, int id);
 
 	void highlightScore(uint64_t unixTimestamp);
 	void playNextRandomBeatmap() {selectRandomBeatmap();playSelectedDifficulty();}
@@ -143,22 +158,11 @@ public:
 
 	inline OsuUISongBrowserInfoLabel *getInfoLabel() {return m_songInfo;}
 
+	inline GROUP getGroupingMode() const {return m_group;}
+
 private:
 	static bool searchMatcher(const OsuDatabaseBeatmap *databaseBeatmap, const UString &searchString);
 	static bool findSubstringInDifficulty(const OsuDatabaseBeatmap *diff, const UString &searchString);
-
-	enum class GROUP
-	{
-		GROUP_NO_GROUPING,
-		GROUP_ARTIST,
-		GROUP_BPM,
-		GROUP_CREATOR,
-		GROUP_DATEADDED,
-		GROUP_DIFFICULTY,
-		GROUP_LENGTH,
-		GROUP_TITLE,
-		GROUP_COLLECTIONS
-	};
 
 	enum class SORT
 	{

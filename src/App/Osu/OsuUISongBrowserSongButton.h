@@ -34,6 +34,8 @@ protected:
 	virtual void onRightMouseUpInside();
 
 	void onContextMenu(UString text, int id = -1);
+	void onAddToCollectionConfirmed(UString text, int id = -1);
+	void onCreateNewCollectionConfirmed(UString text, int id = -1);
 
 	void drawBeatmapBackgroundThumbnail(Graphics *g, Image *image);
 	void drawGrade(Graphics *g);
