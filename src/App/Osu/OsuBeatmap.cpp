@@ -624,6 +624,7 @@ void OsuBeatmap::update()
 			m_hitobjects[i]->update(m_iCurMusicPosWithOffsets);
 
 			// note blocking / notelock (1)
+			const OsuSlider *currentSliderPointer = dynamic_cast<OsuSlider*>(m_hitobjects[i]);
 			if (notelockType > 0)
 			{
 				m_hitobjects[i]->setBlocked(blockNextNotes);
@@ -655,16 +656,14 @@ void OsuBeatmap::update()
 						// extra handling for simultaneous/2b hitobjects, as these would now otherwise get blocked completely
 						// NOTE: this will (same as the old implementation) still unlock some simultaneous/2b patterns too early (slider slider circle [circle]), but nobody from that niche has complained so far
 						{
-							const OsuSlider *sliderPointer = dynamic_cast<OsuSlider*>(m_hitobjects[i]);
-
-							const bool isSlider = (sliderPointer != NULL);
+							const bool isSlider = (currentSliderPointer != NULL);
 							const bool isSpinner = (!isSlider && !isCircle);
 
 							if (isSlider || isSpinner)
 							{
 								if ((i + 1) < m_hitobjects.size())
 								{
-									if ((isSpinner || sliderPointer->isStartCircleFinished()) && (m_hitobjects[i + 1]->getTime() <= (m_hitobjects[i]->getTime() + m_hitobjects[i]->getDuration() + tolerance2B)))
+									if ((isSpinner || currentSliderPointer->isStartCircleFinished()) && (m_hitobjects[i + 1]->getTime() <= (m_hitobjects[i]->getTime() + m_hitobjects[i]->getDuration() + tolerance2B)))
 										blockNextNotes = false;
 								}
 							}
@@ -675,9 +674,7 @@ void OsuBeatmap::update()
 				{
 					if (!m_hitobjects[i]->isFinished())
 					{
-						const OsuSlider *sliderPointer = dynamic_cast<OsuSlider*>(m_hitobjects[i]);
-
-						const bool isSlider = (sliderPointer != NULL);
+						const bool isSlider = (currentSliderPointer != NULL);
 						const bool isSpinner = (!isSlider && !isCircle);
 
 						if (!isSpinner) // spinners are completely ignored (transparent)
@@ -687,7 +684,7 @@ void OsuBeatmap::update()
 							// sliders are "finished" after their startcircle
 							{
 								// sliders with finished startcircles do not block
-								if (sliderPointer != NULL && sliderPointer->isStartCircleFinished())
+								if (currentSliderPointer != NULL && currentSliderPointer->isStartCircleFinished())
 									blockNextNotes = false;
 							}
 						}
@@ -698,6 +695,7 @@ void OsuBeatmap::update()
 				m_hitobjects[i]->setBlocked(false);
 
 			// click events (this also handles hitsounds!)
+			const bool isCurrentHitObjectASliderAndHasItsStartCircleFinishedBeforeClickEvents = (currentSliderPointer != NULL && currentSliderPointer->isStartCircleFinished());
 			const bool isCurrentHitObjectFinishedBeforeClickEvents = m_hitobjects[i]->isFinished();
 			{
 				if (m_clicks.size() > 0)
@@ -707,11 +705,30 @@ void OsuBeatmap::update()
 					m_hitobjects[i]->onKeyUpEvent(m_keyUps);
 			}
 			const bool isCurrentHitObjectFinishedAfterClickEvents = m_hitobjects[i]->isFinished();
+			const bool isCurrentHitObjectASliderAndHasItsStartCircleFinishedAfterClickEvents = (currentSliderPointer != NULL && currentSliderPointer->isStartCircleFinished());
 
-			// note blocking / notelock (2)
+			// note blocking / notelock (2.1)
+			if (!isCurrentHitObjectASliderAndHasItsStartCircleFinishedBeforeClickEvents && isCurrentHitObjectASliderAndHasItsStartCircleFinishedAfterClickEvents)
+			{
+				// in here if a slider had its startcircle clicked successfully in this update iteration
+
+				if (notelockType == 2) // osu!stable
+				{
+					// edge case: frame perfect double tapping on overlapping sliders would incorrectly eat the second input, because the isStartCircleFinished() 2b edge case check handling happens before m_hitobjects[i]->onClickEvent(m_clicks);
+					// so, we check if the currentSliderPointer got its isStartCircleFinished() within this m_hitobjects[i]->onClickEvent(m_clicks); and unlock blockNextNotes if that is the case
+					// note that we still only unlock within duration + tolerance2B (same as in (1))
+					if ((i + 1) < m_hitobjects.size())
+					{
+						if ((m_hitobjects[i + 1]->getTime() <= (m_hitobjects[i]->getTime() + m_hitobjects[i]->getDuration() + tolerance2B)))
+							blockNextNotes = false;
+					}
+				}
+			}
+
+			// note blocking / notelock (2.2)
 			if (!isCurrentHitObjectFinishedBeforeClickEvents && isCurrentHitObjectFinishedAfterClickEvents)
 			{
-				// in here if a hitobject has been clicked successfully in this update iteration
+				// in here if a hitobject has been clicked (and finished completely) successfully in this update iteration
 
 				blockNextNotes = false;
 
@@ -741,7 +758,7 @@ void OsuBeatmap::update()
 				}
 				else if (notelockType == 2) // osu!stable
 				{
-					// (nothing, handled in (1) block)
+					// (nothing, handled in (1) and (2.1) blocks)
 				}
 				else if (notelockType == 3) // osu!lazer 2020
 				{
