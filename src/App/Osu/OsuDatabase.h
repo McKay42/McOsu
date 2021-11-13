@@ -182,8 +182,6 @@ public:
 	OsuDatabase(Osu *osu);
 	~OsuDatabase();
 
-	void reset();
-
 	void update();
 
 	void load();

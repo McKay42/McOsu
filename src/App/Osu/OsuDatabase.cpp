@@ -59,6 +59,7 @@ ConVar osu_scores_bonus_pp("osu_scores_bonus_pp", true, "whether to add bonus pp
 ConVar osu_scores_rename("osu_scores_rename");
 ConVar osu_collections_legacy_enabled("osu_collections_legacy_enabled", true, "load osu!'s collection.db");
 ConVar osu_collections_custom_enabled("osu_collections_custom_enabled", true, "load custom collections.db");
+ConVar osu_collections_save_immediately("osu_collections_save_immediately", true, "write collections.db as soon as anything is changed");
 ConVar osu_user_include_relax_and_autopilot_for_stats("osu_user_include_relax_and_autopilot_for_stats", false);
 ConVar osu_user_switcher_include_legacy_scores_for_names("osu_user_switcher_include_legacy_scores_for_names", true);
 
@@ -376,21 +377,6 @@ OsuDatabase::~OsuDatabase()
 	}
 }
 
-void OsuDatabase::reset()
-{
-	m_collections.clear();
-	for (int i=0; i<m_databaseBeatmaps.size(); i++)
-	{
-		delete m_databaseBeatmaps[i];
-	}
-	m_databaseBeatmaps.clear();
-
-	m_bIsFirstLoad = true;
-	m_bFoundChanges = true;
-
-	m_osu->getNotificationOverlay()->addNotification("Rebuilding.", 0xff00ff00);
-}
-
 void OsuDatabase::update()
 {
 	// loadRaw() logic
@@ -425,7 +411,9 @@ void OsuDatabase::update()
 				m_bRawBeatmapLoadScheduled = false;
 				m_fLoadingProgress = 1.0f;
 				m_importTimer->update();
+
 				debugLog("Refresh finished, added %i beatmaps in %f seconds.\n", m_databaseBeatmaps.size(), m_importTimer->getElapsedTime());
+
 				break;
 			}
 
@@ -436,6 +424,8 @@ void OsuDatabase::update()
 
 void OsuDatabase::load()
 {
+	m_bDidCollectionsChangeForSave = false;
+
 	m_bInterruptLoad = false;
 	m_fLoadingProgress = 0.0f;
 
@@ -546,9 +536,12 @@ void OsuDatabase::deleteScore(std::string beatmapMD5Hash, uint64_t scoreUnixTime
 		if (m_scores[beatmapMD5Hash][i].unixTimestamp == scoreUnixTimestamp)
 		{
 			m_scores[beatmapMD5Hash].erase(m_scores[beatmapMD5Hash].begin() + i);
+
 			m_bDidScoresChangeForSave = true;
 			m_bDidScoresChangeForStats = true;
+
 			//debugLog("Deleted score for %s at %llu\n", beatmapMD5Hash.c_str(), scoreUnixTimestamp);
+
 			break;
 		}
 	}
@@ -598,6 +591,9 @@ bool OsuDatabase::addCollection(UString collectionName)
 
 	m_bDidCollectionsChangeForSave = true;
 
+	if (osu_collections_save_immediately.getBool())
+		saveCollections();
+
 	return true;
 }
 
@@ -623,6 +619,9 @@ bool OsuDatabase::renameCollection(UString oldCollectionName, UString newCollect
 
 				m_bDidCollectionsChangeForSave = true;
 
+				if (osu_collections_save_immediately.getBool())
+					saveCollections();
+
 				return true;
 			}
 			else
@@ -645,12 +644,18 @@ void OsuDatabase::deleteCollection(UString collectionName)
 				m_collections.erase(m_collections.begin() + i);
 
 				m_bDidCollectionsChangeForSave = true;
+
+				if (osu_collections_save_immediately.getBool())
+					saveCollections();
 			}
 
 			break;
 		}
 	}
 }
+
+// TODO: write addBeatmapSetToCollection() + removeBeatmapSetFromCollection()
+// TODO: also add if (osu_collections_save_immediately.getBool()) saveCollections(); support to those
 
 void OsuDatabase::addBeatmapToCollection(UString collectionName, std::string beatmapMD5Hash)
 {
@@ -681,6 +686,9 @@ void OsuDatabase::addBeatmapToCollection(UString collectionName, std::string bea
 				m_collections[i].hashes.push_back(entry);
 
 				m_bDidCollectionsChangeForSave = true;
+
+				if (osu_collections_save_immediately.getBool())
+					saveCollections();
 
 				// also update .beatmaps for convenience (songbrowser will use that to rebuild the UI)
 				{
@@ -751,6 +759,9 @@ void OsuDatabase::removeBeatmapFromCollection(UString collectionName, std::strin
 						didRemove = true;
 
 						m_bDidCollectionsChangeForSave = true;
+
+						if (osu_collections_save_immediately.getBool())
+							saveCollections();
 					}
 
 					break;

@@ -222,7 +222,7 @@ private:
 
 	void onGroupTabButtonClicked(CBaseUIButton *groupTabButton);
 	void onGroupNoGrouping();
-	void onGroupCollections();
+	void onGroupCollections(bool autoScroll = true);
 	void onGroupArtist();
 	void onGroupDifficulty();
 	void onGroupBPM();
@@ -231,7 +231,7 @@ private:
 	void onGroupLength();
 	void onGroupTitle();
 
-	void onAfterSortingOrGroupChange();
+	void onAfterSortingOrGroupChange(bool autoScroll = true);
 
 	void onSelectionMode();
 	void onSelectionMods();

@@ -306,6 +306,12 @@ void OsuUISongBrowserSongButton::onRightMouseUpInside()
 
 			if (m_osu->getSongBrowser()->getGroupingMode() == OsuSongBrowser2::GROUP::GROUP_COLLECTIONS)
 			{
+				CBaseUIButton *spacer = m_contextMenu->addButton("---");
+				spacer->setTextLeft(false);
+				spacer->setEnabled(false);
+				spacer->setTextColor(0xff888888);
+				spacer->setTextDarkColor(0xff000000);
+
 				if (m_databaseBeatmap == NULL || m_databaseBeatmap->getDifficulties().size() < 1)
 					m_contextMenu->addButton("[-]          Remove from Collection", 3);
 

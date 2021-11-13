@@ -17,6 +17,8 @@ public:
 
 	virtual void draw(Graphics *g);
 
+	const UString &getCollectionName() {return m_sCollectionName;}
+
 private:
 	virtual void onSelected(bool wasSelected);
 	virtual void onRightMouseUpInside();

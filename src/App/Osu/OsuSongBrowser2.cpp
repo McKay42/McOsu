@@ -3606,7 +3606,7 @@ void OsuSongBrowser2::onGroupNoGrouping()
 	onAfterSortingOrGroupChange();
 }
 
-void OsuSongBrowser2::onGroupCollections()
+void OsuSongBrowser2::onGroupCollections(bool autoScroll)
 {
 	m_group = GROUP::GROUP_COLLECTIONS;
 
@@ -3614,7 +3614,7 @@ void OsuSongBrowser2::onGroupCollections()
 	m_visibleSongButtons.insert(m_visibleSongButtons.end(), m_collectionButtons.begin(), m_collectionButtons.end());
 
 	rebuildSongButtons();
-	onAfterSortingOrGroupChange();
+	onAfterSortingOrGroupChange(autoScroll);
 }
 
 void OsuSongBrowser2::onGroupArtist()
@@ -3694,7 +3694,7 @@ void OsuSongBrowser2::onGroupTitle()
 	onAfterSortingOrGroupChange();
 }
 
-void OsuSongBrowser2::onAfterSortingOrGroupChange()
+void OsuSongBrowser2::onAfterSortingOrGroupChange(bool autoScroll)
 {
 	// keep search state consistent between tab changes
 	if (m_bInSearch)
@@ -3713,10 +3713,13 @@ void OsuSongBrowser2::onAfterSortingOrGroupChange()
 		}
 	}
 
-	if (isAnythingSelected)
-		scrollToSelectedSongButton();
-	else
-		m_songBrowser->scrollToTop();
+	if (autoScroll)
+	{
+		if (isAnythingSelected)
+			scrollToSelectedSongButton();
+		else
+			m_songBrowser->scrollToTop();
+	}
 }
 
 void OsuSongBrowser2::onSelectionMode()
@@ -3909,18 +3912,31 @@ void OsuSongBrowser2::onSongButtonContextMenu(OsuUISongBrowserSongButton *songBu
 	else if (id == -2 || id == -4)
 	{
 		// add new collection with name text
+
+		// id == -2 means add diff to the just-created new collection
+		// id == -4 means add set to the just-created new collection
 	}
 }
 
 void OsuSongBrowser2::onCollectionButtonContextMenu(OsuUISongBrowserCollectionButton *collectionButton, UString text, int id)
 {
-	// TODO: implement logic for deleting existing collections
-
-	if (id == 2)
+	if (id == 2) // delete collection
 	{
-		// TODO: delete collection in both db + collectionbuttons in UI here too
-		//m_db->deleteCollection(text);
-		debugLog("TODO: delete collection %s\n", text.toUtf8());
+		for (size_t i=0; i<m_collectionButtons.size(); i++)
+		{
+			if (m_collectionButtons[i]->getCollectionName() == text)
+			{
+				delete m_collectionButtons[i];
+				m_collectionButtons.erase(m_collectionButtons.begin() + i);
+				m_selectionPreviousCollectionButton = NULL;
+
+				m_db->deleteCollection(text);
+
+				onGroupCollections(false);
+
+				break;
+			}
+		}
 	}
 }
 

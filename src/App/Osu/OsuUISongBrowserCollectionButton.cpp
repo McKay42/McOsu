@@ -16,6 +16,7 @@
 #include "OsuSkin.h"
 #include "OsuSongBrowser2.h"
 #include "OsuDatabase.h"
+#include "OsuNotificationOverlay.h"
 
 #include "OsuUIContextMenu.h"
 
@@ -71,14 +72,44 @@ void OsuUISongBrowserCollectionButton::onRightMouseUpInside()
 
 	const Vector2 pos = engine->getMouse()->getPos();
 
+	bool isLegacyCollection = false;
+	{
+		const std::vector<OsuDatabase::Collection> &collections = m_osu->getSongBrowser()->getDatabase()->getCollections();
+		for (size_t i=0; i<collections.size(); i++)
+		{
+			if (collections[i].name == m_sCollectionName)
+			{
+				isLegacyCollection = collections[i].isLegacyCollection;
+
+				break;
+			}
+		}
+	}
+
 	if (m_contextMenu != NULL)
 	{
 		m_contextMenu->setPos(pos);
 		m_contextMenu->setRelPos(pos);
 		m_contextMenu->begin(0, true);
 		{
-			m_contextMenu->addButton("[...]      Rename Collection", 1);
-			m_contextMenu->addButton("[-]         Delete Collection", 2);
+			CBaseUIButton *renameButton = m_contextMenu->addButton("[...]      Rename Collection", 1);
+
+			CBaseUIButton *spacer = m_contextMenu->addButton("---");
+			spacer->setTextLeft(false);
+			spacer->setEnabled(false);
+			spacer->setTextColor(0xff888888);
+			spacer->setTextDarkColor(0xff000000);
+
+			CBaseUIButton *deleteButton = m_contextMenu->addButton("[-]         Delete Collection", 2);
+
+			if (isLegacyCollection)
+			{
+				renameButton->setTextColor(0xff888888);
+				renameButton->setTextDarkColor(0xff000000);
+
+				deleteButton->setTextColor(0xff888888);
+				deleteButton->setTextDarkColor(0xff000000);
+			}
 		}
 		m_contextMenu->end(false, false);
 		m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUISongBrowserCollectionButton::onContextMenu) );
@@ -89,61 +120,85 @@ void OsuUISongBrowserCollectionButton::onRightMouseUpInside()
 
 void OsuUISongBrowserCollectionButton::onContextMenu(UString text, int id)
 {
+	bool isLegacyCollection = false;
+	{
+		const std::vector<OsuDatabase::Collection> &collections = m_osu->getSongBrowser()->getDatabase()->getCollections();
+		for (size_t i=0; i<collections.size(); i++)
+		{
+			if (collections[i].name == m_sCollectionName)
+			{
+				isLegacyCollection = collections[i].isLegacyCollection;
+
+				break;
+			}
+		}
+	}
+
 	if (id == 1)
 	{
-		m_contextMenu->begin(0, true);
-		{
-			CBaseUIButton *label = m_contextMenu->addButton("Enter Collection Name:");
-			label->setTextLeft(false);
-			label->setEnabled(false);
-
-			CBaseUIButton *spacer = m_contextMenu->addButton("---");
-			spacer->setTextLeft(false);
-			spacer->setEnabled(false);
-			spacer->setTextColor(0xff888888);
-			spacer->setTextDarkColor(0xff000000);
-
-			m_contextMenu->addTextbox(m_sCollectionName, id)->setCursorPosRight();
-
-			spacer = m_contextMenu->addButton("---");
-			spacer->setTextLeft(false);
-			spacer->setEnabled(false);
-			spacer->setTextColor(0xff888888);
-			spacer->setTextDarkColor(0xff000000);
-
-			label = m_contextMenu->addButton("(Press ENTER to confirm.)");
-			label->setTextLeft(false);
-			label->setEnabled(false);
-			label->setTextColor(0xff555555);
-			label->setTextDarkColor(0xff000000);
-		}
-		m_contextMenu->end(false, false);
-		m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUISongBrowserCollectionButton::onRenameCollectionConfirmed) );
-		OsuUIContextMenu::clampToRightScreenEdge(m_contextMenu);
-		OsuUIContextMenu::clampToBottomScreenEdge(m_contextMenu);
-	}
-	else if (id == 2)
-	{
-		if (engine->getKeyboard()->isShiftDown())
-			onDeleteCollectionConfirmed(text, id);
-		else
+		if (!isLegacyCollection)
 		{
 			m_contextMenu->begin(0, true);
 			{
-				m_contextMenu->addButton("Really delete collection?")->setEnabled(false);
+				CBaseUIButton *label = m_contextMenu->addButton("Enter Collection Name:");
+				label->setTextLeft(false);
+				label->setEnabled(false);
+
 				CBaseUIButton *spacer = m_contextMenu->addButton("---");
 				spacer->setTextLeft(false);
 				spacer->setEnabled(false);
 				spacer->setTextColor(0xff888888);
 				spacer->setTextDarkColor(0xff000000);
-				m_contextMenu->addButton("Yes", 2)->setTextLeft(false);
-				m_contextMenu->addButton("No")->setTextLeft(false);
+
+				m_contextMenu->addTextbox(m_sCollectionName, id)->setCursorPosRight();
+
+				spacer = m_contextMenu->addButton("---");
+				spacer->setTextLeft(false);
+				spacer->setEnabled(false);
+				spacer->setTextColor(0xff888888);
+				spacer->setTextDarkColor(0xff000000);
+
+				label = m_contextMenu->addButton("(Press ENTER to confirm.)");
+				label->setTextLeft(false);
+				label->setEnabled(false);
+				label->setTextColor(0xff555555);
+				label->setTextDarkColor(0xff000000);
 			}
 			m_contextMenu->end(false, false);
-			m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUISongBrowserCollectionButton::onDeleteCollectionConfirmed) );
+			m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUISongBrowserCollectionButton::onRenameCollectionConfirmed) );
 			OsuUIContextMenu::clampToRightScreenEdge(m_contextMenu);
 			OsuUIContextMenu::clampToBottomScreenEdge(m_contextMenu);
 		}
+		else
+			m_osu->getNotificationOverlay()->addNotification("Can't rename collections loaded from osu!", 0xffffff00);
+	}
+	else if (id == 2)
+	{
+		if (!isLegacyCollection)
+		{
+			if (engine->getKeyboard()->isShiftDown())
+				onDeleteCollectionConfirmed(text, id);
+			else
+			{
+				m_contextMenu->begin(0, true);
+				{
+					m_contextMenu->addButton("Really delete collection?")->setEnabled(false);
+					CBaseUIButton *spacer = m_contextMenu->addButton("---");
+					spacer->setTextLeft(false);
+					spacer->setEnabled(false);
+					spacer->setTextColor(0xff888888);
+					spacer->setTextDarkColor(0xff000000);
+					m_contextMenu->addButton("Yes", 2)->setTextLeft(false);
+					m_contextMenu->addButton("No")->setTextLeft(false);
+				}
+				m_contextMenu->end(false, false);
+				m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUISongBrowserCollectionButton::onDeleteCollectionConfirmed) );
+				OsuUIContextMenu::clampToRightScreenEdge(m_contextMenu);
+				OsuUIContextMenu::clampToBottomScreenEdge(m_contextMenu);
+			}
+		}
+		else
+			m_osu->getNotificationOverlay()->addNotification("Can't delete collections loaded from osu!", 0xffffff00);
 	}
 }
 
