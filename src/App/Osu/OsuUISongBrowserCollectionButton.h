@@ -17,6 +17,8 @@ public:
 
 	virtual void draw(Graphics *g);
 
+	void triggerContextMenu(Vector2 pos);
+
 	const UString &getCollectionName() {return m_sCollectionName;}
 
 private:

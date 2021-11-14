@@ -371,6 +371,7 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 
 	m_bF1Pressed = false;
 	m_bF2Pressed = false;
+	m_bF3Pressed = false;
 	m_bShiftPressed = false;
 	m_bLeft = false;
 	m_bRight = false;
@@ -445,7 +446,7 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	addBottombarNavButton([this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionMode();}, [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModeOver();})->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onSelectionMode) );
 	addBottombarNavButton([this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionMods();}, [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModsOver();})->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onSelectionMods) );
 	addBottombarNavButton([this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionRandom();}, [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionRandomOver();})->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onSelectionRandom) );
-	//addBottombarNavButton([this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionOptions();}, [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionOptionsOver();})->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser::onSelectionOptions) );
+	addBottombarNavButton([this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionOptions();}, [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionOptionsOver();})->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onSelectionOptions) );
 
 	m_userButton = new OsuUISongBrowserUserButton(m_osu);
 	m_userButton->addTooltipLine("Click to change [User] or view [Top Ranks]");
@@ -1274,8 +1275,12 @@ void OsuSongBrowser2::onKeyDown(KeyboardEvent &key)
 		m_bottombarNavButtons[m_bottombarNavButtons.size() > 2 ? 2 : 1]->keyboardPulse();
 		onSelectionRandom();
 	}
-	if (key == KEY_F3)
+	if (key == KEY_F3 && !m_bF3Pressed)
+	{
+		m_bF3Pressed = true;
+		m_bottombarNavButtons[m_bottombarNavButtons.size() > 3 ? 3 : 2]->keyboardPulse();
 		onSelectionOptions();
+	}
 
 	if (key == KEY_F5)
 		refreshBeatmaps();
@@ -1485,6 +1490,8 @@ void OsuSongBrowser2::onKeyUp(KeyboardEvent &key)
 		m_bF1Pressed = false;
 	if (key == KEY_F2 || key == (KEYCODE)OsuKeyBindings::RANDOM_BEATMAP.getInt())
 		m_bF2Pressed = false;
+	if (key == KEY_F3)
+		m_bF3Pressed = false;
 }
 
 void OsuSongBrowser2::onChar(KeyboardEvent &e)
@@ -1494,7 +1501,7 @@ void OsuSongBrowser2::onChar(KeyboardEvent &e)
 	if (e.isConsumed()) return;
 
 	if (e.getCharCode() < 32 || !m_bVisible || m_bBeatmapRefreshScheduled || (engine->getKeyboard()->isControlDown() && !engine->getKeyboard()->isAltDown())) return;
-	if (m_bF1Pressed || m_bF2Pressed) return;
+	if (m_bF1Pressed || m_bF2Pressed || m_bF3Pressed) return;
 
 	// handle searching
 	KEYCODE charCode = e.getCharCode();
@@ -3776,6 +3783,21 @@ void OsuSongBrowser2::onSelectionRandom()
 void OsuSongBrowser2::onSelectionOptions()
 {
 	engine->getSound()->play(m_osu->getSkin()->getMenuClick());
+
+	OsuUISongBrowserButton *currentlySelectedSongButton = findCurrentlySelectedSongButton();
+	if (currentlySelectedSongButton != NULL)
+	{
+		scrollToSongButton(currentlySelectedSongButton);
+
+		const Vector2 heuristicSongButtonPositionAfterSmoothScrollFinishes = (m_songBrowser->getPos() + m_songBrowser->getSize()/2);
+
+		OsuUISongBrowserSongButton *songButtonPointer = dynamic_cast<OsuUISongBrowserSongButton*>(currentlySelectedSongButton);
+		OsuUISongBrowserCollectionButton *collectionButtonPointer = dynamic_cast<OsuUISongBrowserCollectionButton*>(currentlySelectedSongButton);
+		if (songButtonPointer != NULL)
+			songButtonPointer->triggerContextMenu(heuristicSongButtonPositionAfterSmoothScrollFinishes);
+		else if (collectionButtonPointer != NULL)
+			collectionButtonPointer->triggerContextMenu(heuristicSongButtonPositionAfterSmoothScrollFinishes);
+	}
 }
 
 void OsuSongBrowser2::onModeChange(UString text)

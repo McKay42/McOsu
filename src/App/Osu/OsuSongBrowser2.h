@@ -342,6 +342,7 @@ private:
 	// keys
 	bool m_bF1Pressed;
 	bool m_bF2Pressed;
+	bool m_bF3Pressed;
 	bool m_bShiftPressed;
 	bool m_bLeft;
 	bool m_bRight;

@@ -68,9 +68,12 @@ void OsuUISongBrowserCollectionButton::onSelected(bool wasSelected)
 
 void OsuUISongBrowserCollectionButton::onRightMouseUpInside()
 {
-	if (m_osu->getSongBrowser()->getGroupingMode() != OsuSongBrowser2::GROUP::GROUP_COLLECTIONS) return;
+	triggerContextMenu(engine->getMouse()->getPos());
+}
 
-	const Vector2 pos = engine->getMouse()->getPos();
+void OsuUISongBrowserCollectionButton::triggerContextMenu(Vector2 pos)
+{
+	if (m_osu->getSongBrowser()->getGroupingMode() != OsuSongBrowser2::GROUP::GROUP_COLLECTIONS) return;
 
 	bool isLegacyCollection = false;
 	{

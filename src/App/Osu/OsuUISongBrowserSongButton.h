@@ -22,6 +22,8 @@ public:
 
 	virtual void draw(Graphics *g);
 
+	void triggerContextMenu(Vector2 pos);
+
 	void sortChildren();
 
 	virtual void updateLayoutEx();

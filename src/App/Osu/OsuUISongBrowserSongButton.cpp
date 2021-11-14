@@ -291,8 +291,11 @@ void OsuUISongBrowserSongButton::onSelected(bool wasSelected)
 
 void OsuUISongBrowserSongButton::onRightMouseUpInside()
 {
-	const Vector2 pos = engine->getMouse()->getPos();
+	triggerContextMenu(engine->getMouse()->getPos());
+}
 
+void OsuUISongBrowserSongButton::triggerContextMenu(Vector2 pos)
+{
 	if (m_contextMenu != NULL)
 	{
 		m_contextMenu->setPos(pos);
