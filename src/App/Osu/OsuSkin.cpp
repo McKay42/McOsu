@@ -756,8 +756,8 @@ void OsuSkin::load()
 	m_selectionModsOver = createOsuSkinImage("selection-mods-over", Vector2(74, 90), 38);
 	m_selectionRandom = createOsuSkinImage("selection-random", Vector2(74, 90), 38);
 	m_selectionRandomOver = createOsuSkinImage("selection-random-over", Vector2(74, 90), 38);
-	m_selectionOptions = createOsuSkinImage("selection-options", Vector2(77, 90), 38);
-	m_selectionOptionsOver = createOsuSkinImage("selection-options-over", Vector2(77, 90), 38);
+	m_selectionOptions = createOsuSkinImage("selection-options", Vector2(74, 90), 38);
+	m_selectionOptionsOver = createOsuSkinImage("selection-options-over", Vector2(74, 90), 38);
 
 	randomizeFilePath();
 	checkLoadImage(&m_songSelectTop, "songselect-top", "OSU_SKIN_SONGSELECT_TOP");
