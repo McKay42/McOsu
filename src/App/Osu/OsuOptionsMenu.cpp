@@ -510,6 +510,10 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Always enable touch device pp nerf mod", "Keep touch device pp nerf mod active even when resetting all mods.", convar->getConVarByName("osu_mod_touchdevice"));
 	addCheckbox("Show osu! scores.db user names in user switcher", "Only relevant if \"Load osu! scores.db\" is enabled.\nShould the user switcher show ALL user names from ALL scores?\n(Even from ones you got in your database because you watched a replay?)", convar->getConVarByName("osu_user_switcher_include_legacy_scores_for_names"));
 
+	addSubSection("Songbrowser");
+	addCheckbox("Draw Strain Graph in Songbrowser", "Hold either SHIFT/CTRL to show only speed/aim strains.\nSpeed strain is red, aim strain is green.\n(See osu_hud_scrubbing_timeline_strains_*)", convar->getConVarByName("osu_draw_songbrowser_strain_graph"));
+	addCheckbox("Draw Strain Graph in Scrubbing Timeline", "Speed strain is red, aim strain is green.\n(See osu_hud_scrubbing_timeline_strains_*)", convar->getConVarByName("osu_draw_scrubbing_timeline_strain_graph"));
+
 	addSubSection("Window");
 	addCheckbox("Pause on Focus Loss", "Should the game pause when you switch to another application?", convar->getConVarByName("osu_pause_on_focus_loss"));
 
@@ -1041,7 +1045,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_statisticsOverlayScaleSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
 	m_statisticsOverlayScaleSlider->setKeyDelta(0.01f);
 	addSpacer();
-	m_statisticsOverlayXOffsetSlider = addSlider("Statistics X Offset:", 0.0f, 1000.0f, convar->getConVarByName("osu_hud_statistics_offset_x"), 165.0f, true);
+	m_statisticsOverlayXOffsetSlider = addSlider("Statistics X Offset:", 0.0f, 2000.0f, convar->getConVarByName("osu_hud_statistics_offset_x"), 165.0f, true);
 	m_statisticsOverlayXOffsetSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeInt) );
 	m_statisticsOverlayXOffsetSlider->setKeyDelta(1.0f);
 	m_statisticsOverlayYOffsetSlider = addSlider("Statistics Y Offset:", 0.0f, 1000.0f, convar->getConVarByName("osu_hud_statistics_offset_y"), 165.0f, true);
