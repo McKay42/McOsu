@@ -47,7 +47,27 @@
 class OsuModSelectorOverrideSliderDescButton : public CBaseUIButton
 {
 public:
-	OsuModSelectorOverrideSliderDescButton(float xPos, float yPos, float xSize, float ySize, UString name, UString text) : CBaseUIButton(xPos, yPos, xSize, ySize, name, text) {}
+	OsuModSelectorOverrideSliderDescButton(Osu *osu, float xPos, float yPos, float xSize, float ySize, UString name, UString text) : CBaseUIButton(xPos, yPos, xSize, ySize, name, text)
+	{
+		m_osu = osu;
+	}
+
+	virtual void update()
+	{
+		CBaseUIButton::update();
+		if (!m_bVisible) return;
+
+		if (isMouseInside() && m_sTooltipText.length() > 0)
+		{
+			m_osu->getTooltipOverlay()->begin();
+			{
+				m_osu->getTooltipOverlay()->addLine(m_sTooltipText);
+			}
+			m_osu->getTooltipOverlay()->end();
+		}
+	}
+
+	void setTooltipText(UString tooltipText) {m_sTooltipText = tooltipText;}
 
 private:
 	virtual void drawText(Graphics *g)
@@ -69,6 +89,9 @@ private:
 			//g->popClipRect();
 		}
 	}
+
+	Osu *m_osu;
+	UString m_sTooltipText;
 };
 
 
@@ -171,10 +194,10 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen(osu)
 	}
 
 	// build override sliders
-	OVERRIDE_SLIDER overrideCS = addOverrideSlider("CS Override", "CS:", convar->getConVarByName("osu_cs_override"), 0.0f, 12.5f);
-	OVERRIDE_SLIDER overrideAR = addOverrideSlider("AR Override", "AR:", convar->getConVarByName("osu_ar_override"), 0.0f, 12.5f, convar->getConVarByName("osu_ar_override_lock"));
-	OVERRIDE_SLIDER overrideOD = addOverrideSlider("OD Override", "OD:", convar->getConVarByName("osu_od_override"), 0.0f, 12.5f, convar->getConVarByName("osu_od_override_lock"));
-	OVERRIDE_SLIDER overrideHP = addOverrideSlider("HP Override", "HP:", convar->getConVarByName("osu_hp_override"), 0.0f, 12.5f);
+	OVERRIDE_SLIDER overrideCS = addOverrideSlider("CS Override", "CS:", convar->getConVarByName("osu_cs_override"), 0.0f, 12.5f, "Circle Size (higher number = smaller circles).");
+	OVERRIDE_SLIDER overrideAR = addOverrideSlider("AR Override", "AR:", convar->getConVarByName("osu_ar_override"), 0.0f, 12.5f, "Approach Rate (higher number = faster circles).", convar->getConVarByName("osu_ar_override_lock"));
+	OVERRIDE_SLIDER overrideOD = addOverrideSlider("OD Override", "OD:", convar->getConVarByName("osu_od_override"), 0.0f, 12.5f, "Overall Difficulty (higher number = harder accuracy).", convar->getConVarByName("osu_od_override_lock"));
+	OVERRIDE_SLIDER overrideHP = addOverrideSlider("HP Override", "HP:", convar->getConVarByName("osu_hp_override"), 0.0f, 12.5f, "Hit/Health Points (higher number = harder survival).");
 
 	overrideCS.slider->setAnimated(false); // quick fix for otherwise possible inconsistencies due to slider vertex buffers and animated CS changes
 	overrideCS.slider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
@@ -994,7 +1017,7 @@ OsuUIModSelectorModButton *OsuModSelector::getModButtonOnGrid(int x, int y)
 		return NULL;
 }
 
-OsuModSelector::OVERRIDE_SLIDER OsuModSelector::addOverrideSlider(UString text, UString labelText, ConVar *cvar, float min, float max, ConVar *lockCvar)
+OsuModSelector::OVERRIDE_SLIDER OsuModSelector::addOverrideSlider(UString text, UString labelText, ConVar *cvar, float min, float max, UString tooltipText, ConVar *lockCvar)
 {
 	int height = 25;
 
@@ -1004,7 +1027,8 @@ OsuModSelector::OVERRIDE_SLIDER OsuModSelector::addOverrideSlider(UString text, 
 		os.lock = new OsuModSelectorOverrideSliderLockButton(m_osu, 0, 0, height, height, "", "");
 		os.lock->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onOverrideSliderLockChange) );
 	}
-	os.desc = new OsuModSelectorOverrideSliderDescButton(0, 0, 100, height, "", text);
+	os.desc = new OsuModSelectorOverrideSliderDescButton(m_osu, 0, 0, 100, height, "", text);
+	os.desc->setTooltipText(tooltipText);
 	os.slider = new OsuUISlider(m_osu, 0, 0, 100, height, "");
 	os.label = new CBaseUILabel(0, 0, 100, height, labelText, labelText);
 	os.cvar = cvar;
