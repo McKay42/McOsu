@@ -744,16 +744,19 @@ void OsuUISongBrowserScoreButton::setScore(const OsuDatabase::Score &score, cons
 		}
 	}
 	m_sCustom = (score.speedMultiplier != 1.0f ? UString::format("Spd: %gx", score.speedMultiplier) : "");
-	if (diff2 != NULL)
+	if (diff2 != NULL && !score.isImportedLegacyScore && !score.isLegacyScore)
 	{
+		const OsuReplay::BEATMAP_VALUES beatmapValuesForModsLegacy = OsuReplay::getBeatmapValuesForModsLegacy(score.modsLegacy, diff2->getAR(), diff2->getCS(), diff2->getOD(), diff2->getHP());
+
 		const float compensatedCS = std::round(score.CS * 100.0f) / 100.0f;
 		const float compensatedAR = std::round(OsuGameRules::getRawApproachRateForSpeedMultiplier(OsuGameRules::getRawApproachTime(score.AR), score.speedMultiplier) * 100.0f) / 100.0f;
 		const float compensatedOD = std::round(OsuGameRules::getRawOverallDifficultyForSpeedMultiplier(OsuGameRules::getRawHitWindow300(score.OD), score.speedMultiplier) * 100.0f) / 100.0f;
 		const float compensatedHP = std::round(score.HP * 100.0f) / 100.0f;
 
-		// only show these values if they are not default
+		// only show these values if they are not default (or default with applied mods)
+		// only show these values if they are not default with applied mods
 
-		if (diff2->getCS() != score.CS)
+		if (beatmapValuesForModsLegacy.CS != score.CS)
 		{
 			if (m_sCustom.length() > 0)
 				m_sCustom.append(", ");
@@ -761,7 +764,7 @@ void OsuUISongBrowserScoreButton::setScore(const OsuDatabase::Score &score, cons
 			m_sCustom.append(UString::format("CS:%.4g", compensatedCS));
 		}
 
-		if (diff2->getAR() != score.AR)
+		if (beatmapValuesForModsLegacy.AR != score.AR)
 		{
 			if (m_sCustom.length() > 0)
 				m_sCustom.append(", ");
@@ -769,7 +772,7 @@ void OsuUISongBrowserScoreButton::setScore(const OsuDatabase::Score &score, cons
 			m_sCustom.append(UString::format("AR:%.4g", compensatedAR));
 		}
 
-		if (diff2->getOD() != score.OD)
+		if (beatmapValuesForModsLegacy.OD != score.OD)
 		{
 			if (m_sCustom.length() > 0)
 				m_sCustom.append(", ");
@@ -777,7 +780,7 @@ void OsuUISongBrowserScoreButton::setScore(const OsuDatabase::Score &score, cons
 			m_sCustom.append(UString::format("OD:%.4g", compensatedOD));
 		}
 
-		if (diff2->getHP() != score.HP)
+		if (beatmapValuesForModsLegacy.HP != score.HP)
 		{
 			if (m_sCustom.length() > 0)
 				m_sCustom.append(", ");
