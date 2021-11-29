@@ -41,7 +41,7 @@ public:
 	void highlight();
 	void resetHighlight();
 
-	void setScore(const OsuDatabase::Score &score, int index = 1, UString titleString = "", float weight = 1.0f);
+	void setScore(const OsuDatabase::Score &score, const OsuDatabaseBeatmap *diff2 = NULL, int index = 1, UString titleString = "", float weight = 1.0f);
 	void setIndex(int index) {m_iScoreIndexNumber = index;}
 
 	inline OsuDatabase::Score getScore() const {return m_score;}

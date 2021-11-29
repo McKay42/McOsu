@@ -29,6 +29,7 @@
 #include "OsuModSelector.h"
 #include "OsuDatabase.h"
 #include "OsuDatabaseBeatmap.h"
+#include "OsuGameRules.h"
 
 #include "OsuUIContextMenu.h"
 
@@ -711,7 +712,7 @@ void OsuUISongBrowserScoreButton::onDeleteScoreConfirmed(UString text, int id)
 	}
 }
 
-void OsuUISongBrowserScoreButton::setScore(const OsuDatabase::Score &score, int index, UString titleString, float weight)
+void OsuUISongBrowserScoreButton::setScore(const OsuDatabase::Score &score, const OsuDatabaseBeatmap *diff2, int index, UString titleString, float weight)
 {
 	m_score = score;
 	m_iScoreIndexNumber = index;
@@ -742,7 +743,48 @@ void OsuUISongBrowserScoreButton::setScore(const OsuDatabase::Score &score, int 
 				m_sScoreMods.append("+");
 		}
 	}
-	m_sCustom = (score.speedMultiplier != 1.0f ? UString::format("Speed: %gx", score.speedMultiplier) : "");
+	m_sCustom = (score.speedMultiplier != 1.0f ? UString::format("Spd: %gx", score.speedMultiplier) : "");
+	if (diff2 != NULL)
+	{
+		const float compensatedCS = std::round(score.CS * 100.0f) / 100.0f;
+		const float compensatedAR = std::round(OsuGameRules::getRawApproachRateForSpeedMultiplier(OsuGameRules::getRawApproachTime(score.AR), score.speedMultiplier) * 100.0f) / 100.0f;
+		const float compensatedOD = std::round(OsuGameRules::getRawOverallDifficultyForSpeedMultiplier(OsuGameRules::getRawHitWindow300(score.OD), score.speedMultiplier) * 100.0f) / 100.0f;
+		const float compensatedHP = std::round(score.HP * 100.0f) / 100.0f;
+
+		// only show these values if they are not default
+
+		if (diff2->getCS() != score.CS)
+		{
+			if (m_sCustom.length() > 0)
+				m_sCustom.append(", ");
+
+			m_sCustom.append(UString::format("CS:%.4g", compensatedCS));
+		}
+
+		if (diff2->getAR() != score.AR)
+		{
+			if (m_sCustom.length() > 0)
+				m_sCustom.append(", ");
+
+			m_sCustom.append(UString::format("AR:%.4g", compensatedAR));
+		}
+
+		if (diff2->getOD() != score.OD)
+		{
+			if (m_sCustom.length() > 0)
+				m_sCustom.append(", ");
+
+			m_sCustom.append(UString::format("OD:%.4g", compensatedOD));
+		}
+
+		if (diff2->getHP() != score.HP)
+		{
+			if (m_sCustom.length() > 0)
+				m_sCustom.append(", ");
+
+			m_sCustom.append(UString::format("HP:%.4g", compensatedHP));
+		}
+	}
 
 	char dateString[64];
 	memset(dateString, '\0', 64);

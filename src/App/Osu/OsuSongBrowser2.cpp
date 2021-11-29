@@ -2784,7 +2784,7 @@ void OsuSongBrowser2::rebuildScoreButtons()
 		{
 			OsuUISongBrowserScoreButton *button = m_scoreButtonCache[i];
 			button->setName(UString(m_selectedBeatmap->getSelectedDifficulty2()->getMD5Hash().c_str()));
-			button->setScore((*m_db->getScores())[m_selectedBeatmap->getSelectedDifficulty2()->getMD5Hash()][i], i+1);
+			button->setScore((*m_db->getScores())[m_selectedBeatmap->getSelectedDifficulty2()->getMD5Hash()][i], m_selectedBeatmap->getSelectedDifficulty2(), i+1);
 			scoreButtons.push_back(button);
 		}
 

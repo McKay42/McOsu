@@ -491,7 +491,7 @@ void OsuUserStatsScreen::rebuildScoreButtons(UString playerName)
 		}
 
 		OsuUISongBrowserScoreButton *button = new OsuUISongBrowserScoreButton(m_osu, m_contextMenu, 0, 0, 300, 100, UString(scores[i]->md5hash.c_str()), OsuUISongBrowserScoreButton::STYLE::TOP_RANKS);
-		button->setScore(*scores[i], scores.size()-i, title, weight);
+		button->setScore(*scores[i], NULL, scores.size()-i, title, weight);
 		button->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUserStatsScreen::onScoreClicked) );
 
 		m_scoreButtons.push_back(button);
