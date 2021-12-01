@@ -1347,7 +1347,7 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 		float OD = db->readFloat();
 		double sliderMultiplier = db->readDouble();
 
-		//debugLog("Database: Entry #%i: size = %u, artist = %s, songtitle = %s, creator = %s, diff = %s, audiofilename = %s, md5hash = %s, osufilename = %s\n", i, size, artistName.toUtf8(), songTitle.toUtf8(), creatorName.toUtf8(), difficultyName.toUtf8(), audioFileName.toUtf8(), md5hash.toUtf8(), osuFileName.toUtf8());
+		//debugLog("Database: Entry #%i: artist = %s, songtitle = %s, creator = %s, diff = %s, audiofilename = %s, md5hash = %s, osufilename = %s\n", i, artistName.toUtf8(), songTitle.toUtf8(), creatorName.toUtf8(), difficultyName.toUtf8(), audioFileName.toUtf8(), md5hash.c_str(), osuFileName.toUtf8());
 		//debugLog("rankedStatus = %i, numCircles = %i, numSliders = %i, numSpinners = %i, lastModificationTime = %ld\n", (int)rankedStatus, numCircles, numSliders, numSpinners, lastModificationTime);
 		//debugLog("AR = %f, CS = %f, HP = %f, OD = %f, sliderMultiplier = %f\n", AR, CS, HP, OD, sliderMultiplier);
 
@@ -1455,6 +1455,12 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 		beatmapPath.append("/");
 		UString fullFilePath = beatmapPath;
 		fullFilePath.append(osuFileName);
+
+		// skip invalid/corrupt entries
+		// the good way would be to check if the .osu file actually exists on disk, but that is slow af, ain't nobody got time for that
+		// so, since I've seen some concrete examples of what happens in such cases, we just exclude those
+		if (artistName.length() < 1 && songTitle.length() < 1 && creatorName.length() < 1 && difficultyName.length() < 1 && md5hash.length() < 1)
+			continue;
 
 		// fill diff with data
 		if ((mode == 0 && m_osu->getGamemode() == Osu::GAMEMODE::STD) || (mode == 0x03 && m_osu->getGamemode() == Osu::GAMEMODE::MANIA)) // gamemode filter
