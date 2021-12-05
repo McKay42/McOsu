@@ -589,7 +589,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 		addSpacer();
 		m_vrRenderTargetResolutionLabel = addLabel("Final Resolution: %ix%i");
 		addSpacer();
-		CBaseUISlider *ssSlider = addSlider("SuperSampling Multiplier", 0.5f, 2.5f, convar->getConVarByName("vr_ss"), 230.0f);
+		CBaseUISlider *ssSlider = addSlider("SuperSampling Multiplier", 0.5f, 2.0f, convar->getConVarByName("vr_ss"), 230.0f);
 		ssSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeVRSuperSampling) );
 		ssSlider->setKeyDelta(0.1f);
 		ssSlider->setAnimated(false);
