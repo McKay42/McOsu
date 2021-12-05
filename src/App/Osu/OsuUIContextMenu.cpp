@@ -66,6 +66,7 @@ OsuUIContextMenu::OsuUIContextMenu(Osu *osu, float xPos, float yPos, float xSize
 	m_container->setHorizontalScrolling(false);
 	m_container->setDrawBackground(false);
 	m_container->setDrawFrame(false);
+	m_container->setScrollbarSizeMultiplier(0.5f);
 
 	m_containedTextbox = NULL;
 
