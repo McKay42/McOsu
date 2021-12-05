@@ -17,8 +17,10 @@
 #include "OsuSkinImage.h"
 #include "OsuDatabaseBeatmap.h"
 #include "OsuSongBrowser2.h"
+#include "OsuNotificationOverlay.h"
 #include "OsuBackgroundImageHandler.h"
 
+#include "OsuUISongBrowserCollectionButton.h"
 #include "OsuUISongBrowserSongDifficultyButton.h"
 #include "OsuUISongBrowserScoreButton.h"
 #include "OsuUIContextMenu.h"
@@ -309,16 +311,93 @@ void OsuUISongBrowserSongButton::triggerContextMenu(Vector2 pos)
 
 			if (m_osu->getSongBrowser()->getGroupingMode() == OsuSongBrowser2::GROUP::GROUP_COLLECTIONS)
 			{
+				// get the collection name for this diff/set
+				UString collectionName;
+				{
+					const std::vector<OsuUISongBrowserCollectionButton*> &collectionButtons = m_osu->getSongBrowser()->getCollectionButtons();
+					for (size_t i=0; i<collectionButtons.size(); i++)
+					{
+						if (collectionButtons[i]->isSelected())
+						{
+							collectionName = collectionButtons[i]->getCollectionName();
+							break;
+						}
+					}
+				}
+
+				// check if this entry in the collection is coming from osu! or not
+				// the entry could be either a set button, or an independent diff button
+				bool isLegacyEntry = false;
+				{
+					const std::vector<OsuDatabase::Collection> &collections = m_osu->getSongBrowser()->getDatabase()->getCollections();
+					for (size_t i=0; i<collections.size(); i++)
+					{
+						if (collections[i].name == collectionName)
+						{
+							for (size_t e=0; e<collections[i].hashes.size(); e++)
+							{
+								if (m_databaseBeatmap->getDifficulties().size() < 1)
+								{
+									// independent diff
+
+									if (collections[i].hashes[e].hash == m_databaseBeatmap->getMD5Hash())
+									{
+										isLegacyEntry = collections[i].hashes[e].isLegacyEntry;
+										break;
+									}
+								}
+								else
+								{
+									// set
+
+									const std::vector<OsuDatabaseBeatmap*> &diffs = m_databaseBeatmap->getDifficulties();
+
+									for (size_t d=0; d<diffs.size(); d++)
+									{
+										if (collections[i].hashes[e].hash == diffs[d]->getMD5Hash())
+										{
+											// one single entry of the set coming from osu! is enough to deny removing the set (as a whole)
+											if (collections[i].hashes[e].isLegacyEntry)
+											{
+												isLegacyEntry = true;
+												break;
+											}
+										}
+									}
+
+									if (isLegacyEntry)
+										break;
+								}
+							}
+
+							break;
+						}
+					}
+				}
+
 				CBaseUIButton *spacer = m_contextMenu->addButton("---");
 				spacer->setTextLeft(false);
 				spacer->setEnabled(false);
 				spacer->setTextColor(0xff888888);
 				spacer->setTextDarkColor(0xff000000);
 
+				CBaseUIButton *removeDiffButton = NULL;
 				if (m_databaseBeatmap == NULL || m_databaseBeatmap->getDifficulties().size() < 1)
-					m_contextMenu->addButton("[-]          Remove from Collection", 3);
+					removeDiffButton = m_contextMenu->addButton("[-]          Remove from Collection", 3);
 
-				m_contextMenu->addButton("[-Set]    Remove from Collection", 4);
+				CBaseUIButton *removeSetButton = m_contextMenu->addButton("[-Set]    Remove from Collection", 4);
+
+				if (isLegacyEntry)
+				{
+					if (removeDiffButton != NULL)
+					{
+						removeDiffButton->setTextColor(0xff888888);
+						removeDiffButton->setTextDarkColor(0xff000000);
+					}
+
+					removeSetButton->setTextColor(0xff888888);
+					removeSetButton->setTextDarkColor(0xff000000);
+				}
 			}
 		}
 		m_contextMenu->end(false, false);
@@ -445,10 +524,81 @@ void OsuUISongBrowserSongButton::onContextMenu(UString text, int id)
 		OsuUIContextMenu::clampToRightScreenEdge(m_contextMenu);
 		OsuUIContextMenu::clampToBottomScreenEdge(m_contextMenu);
 	}
-	else
+	else if (id == 3 || id == 4)
 	{
-		// just forward it
-		m_osu->getSongBrowser()->onSongButtonContextMenu(this, text, id);
+		// get the collection name for this diff/set
+		UString collectionName;
+		{
+			const std::vector<OsuUISongBrowserCollectionButton*> &collectionButtons = m_osu->getSongBrowser()->getCollectionButtons();
+			for (size_t i=0; i<collectionButtons.size(); i++)
+			{
+				if (collectionButtons[i]->isSelected())
+				{
+					collectionName = collectionButtons[i]->getCollectionName();
+					break;
+				}
+			}
+		}
+
+		// check if this entry in the collection is coming from osu! or not
+		// the entry could be either a set button, or an independent diff button
+		bool isLegacyEntry = false;
+		{
+			const std::vector<OsuDatabase::Collection> &collections = m_osu->getSongBrowser()->getDatabase()->getCollections();
+			for (size_t i=0; i<collections.size(); i++)
+			{
+				if (collections[i].name == collectionName)
+				{
+					for (size_t e=0; e<collections[i].hashes.size(); e++)
+					{
+						if (m_databaseBeatmap->getDifficulties().size() < 1)
+						{
+							// independent diff
+
+							if (collections[i].hashes[e].hash == m_databaseBeatmap->getMD5Hash())
+							{
+								isLegacyEntry = collections[i].hashes[e].isLegacyEntry;
+								break;
+							}
+						}
+						else
+						{
+							// set
+
+							const std::vector<OsuDatabaseBeatmap*> &diffs = m_databaseBeatmap->getDifficulties();
+
+							for (size_t d=0; d<diffs.size(); d++)
+							{
+								if (collections[i].hashes[e].hash == diffs[d]->getMD5Hash())
+								{
+									// one single entry of the set coming from osu! is enough to deny removing the set (as a whole)
+									if (collections[i].hashes[e].isLegacyEntry)
+									{
+										isLegacyEntry = true;
+										break;
+									}
+								}
+							}
+
+							if (isLegacyEntry)
+								break;
+						}
+					}
+
+					break;
+				}
+			}
+		}
+
+		if (isLegacyEntry)
+		{
+			if (id == 3)
+				m_osu->getNotificationOverlay()->addNotification("Can't remove collection entry loaded from osu!", 0xffffff00);
+			else if (id == 4)
+				m_osu->getNotificationOverlay()->addNotification("Can't remove collection set loaded from osu!", 0xffffff00);
+		}
+		else
+			m_osu->getSongBrowser()->onSongButtonContextMenu(this, text, id);
 	}
 }
 

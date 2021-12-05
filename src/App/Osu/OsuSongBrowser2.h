@@ -148,6 +148,7 @@ public:
 	void updateSongButtonSorting();
 
 	OsuUISongBrowserButton *findCurrentlySelectedSongButton() const;
+	inline const std::vector<OsuUISongBrowserCollectionButton*> &getCollectionButtons() const {return m_collectionButtons;}
 
 	inline bool hasSelectedAndIsPlaying() const {return m_bHasSelectedAndIsPlaying;}
 	inline bool isInSearch() const {return m_bInSearch;}
