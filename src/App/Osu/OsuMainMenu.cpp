@@ -1119,7 +1119,7 @@ void OsuMainMenu::onKeyDown(KeyboardEvent &e)
 			onPlayButtonPressed();
 		if (e == KEY_O)
 			onOptionsButtonPressed();
-		if (e == KEY_E)
+		if (e == KEY_E || e == KEY_X)
 			onExitButtonPressed();
 
 		if (e == KEY_ESCAPE)
