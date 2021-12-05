@@ -2325,17 +2325,67 @@ void OsuDatabase::saveCollections()
 		{
 			const double startTime = engine->getTimeReal();
 
-			db.writeInt(dbVersion);
-			db.writeInt((int32_t)m_collections.size());
-
+			// check how much we actually have to save
+			// note that we are only saving non-legacy collections and entries (i.e. things which were added/deleted inside mcosu)
+			// reason being that it is more annoying to have osu!-side collections modifications be completely ignored (because we would make a full copy initially)
+			// if a collection or entry is deleted in osu!, then you would expect it to also be deleted here
+			// but, if a collection or entry is added in mcosu, then deleting the collection in osu! should only delete all osu!-side entries
+			int32_t numNonLegacyCollectionsOrCollectionsWithNonLegacyEntries = 0;
 			for (size_t c=0; c<m_collections.size(); c++)
 			{
-				db.writeString(m_collections[c].name);
-				db.writeInt((int32_t)m_collections[c].hashes.size());
-
-				for (size_t h=0; h<m_collections[c].hashes.size(); h++)
+				if (!m_collections[c].isLegacyCollection)
+					numNonLegacyCollectionsOrCollectionsWithNonLegacyEntries++;
+				else
 				{
-					db.writeStdString(m_collections[c].hashes[h].hash);
+					// does this legacy collection have any non-legacy entries?
+					for (size_t h=0; h<m_collections[c].hashes.size(); h++)
+					{
+						if (!m_collections[c].hashes[h].isLegacyEntry)
+						{
+							numNonLegacyCollectionsOrCollectionsWithNonLegacyEntries++;
+							break;
+						}
+					}
+				}
+			}
+
+			db.writeInt(dbVersion);
+			db.writeInt(numNonLegacyCollectionsOrCollectionsWithNonLegacyEntries);
+
+			if (numNonLegacyCollectionsOrCollectionsWithNonLegacyEntries > 0)
+			{
+				for (size_t c=0; c<m_collections.size(); c++)
+				{
+					bool hasNonLegacyEntries = false;
+					{
+						for (size_t h=0; h<m_collections[c].hashes.size(); h++)
+						{
+							if (!m_collections[c].hashes[h].isLegacyEntry)
+							{
+								hasNonLegacyEntries = true;
+								break;
+							}
+						}
+					}
+
+					if (!m_collections[c].isLegacyCollection || hasNonLegacyEntries)
+					{
+						int32_t numNonLegacyEntries = 0;
+						for (size_t h=0; h<m_collections[c].hashes.size(); h++)
+						{
+							if (!m_collections[c].hashes[h].isLegacyEntry)
+								numNonLegacyEntries++;
+						}
+
+						db.writeString(m_collections[c].name);
+						db.writeInt(numNonLegacyEntries);
+
+						for (size_t h=0; h<m_collections[c].hashes.size(); h++)
+						{
+							if (!m_collections[c].hashes[h].isLegacyEntry)
+								db.writeStdString(m_collections[c].hashes[h].hash);
+						}
+					}
 				}
 			}
 
