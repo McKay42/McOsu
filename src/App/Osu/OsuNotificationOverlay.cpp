@@ -95,7 +95,7 @@ void OsuNotificationOverlay::onKeyDown(KeyboardEvent &e)
 		osu_notification_duration.setValue(prevDuration); // restore convar
 		*/
 
-		stopWaitingForKey();
+		stopWaitingForKey(true);
 
 		debugLog("keyCode = %lu\n", e.getKeyCode());
 
@@ -176,10 +176,10 @@ void OsuNotificationOverlay::addNotification(UString text, Color textColor, bool
 	anim->moveQuadOut(&m_notification1.backgroundAnim, 1.0f, 0.15f, 0.0f, true);
 }
 
-void OsuNotificationOverlay::stopWaitingForKey()
+void OsuNotificationOverlay::stopWaitingForKey(bool stillConsumeNextChar)
 {
 	m_bWaitForKey = false;
-	m_bConsumeNextChar = false;
+	m_bConsumeNextChar = stillConsumeNextChar;
 }
 
 bool OsuNotificationOverlay::isVisible()
