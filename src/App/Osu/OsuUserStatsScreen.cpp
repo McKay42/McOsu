@@ -16,6 +16,7 @@
 
 #include "CBaseUIContainer.h"
 #include "CBaseUIScrollView.h"
+#include "CBaseUILabel.h"
 
 #include "Osu.h"
 #include "OsuIcons.h"
@@ -25,6 +26,7 @@
 #include "OsuOptionsMenu.h"
 #include "OsuSongBrowser2.h"
 #include "OsuModSelector.h"
+#include "OsuTooltipOverlay.h"
 #include "OsuMultiplayer.h"
 #include "OsuDatabase.h"
 #include "OsuDatabaseBeatmap.h"
@@ -36,6 +38,56 @@
 ConVar osu_ui_top_ranks_max("osu_ui_top_ranks_max", 100, "maximum number of displayed scores, to keep the ui/scrollbar manageable");
 
 
+
+class OsuUserStatsScreenLabel : public CBaseUILabel
+{
+public:
+	OsuUserStatsScreenLabel(Osu *osu, float xPos=0, float yPos=0, float xSize=0, float ySize=0, UString name="", UString text="")
+	{
+		m_osu = osu;
+	}
+
+	virtual void update()
+	{
+		CBaseUILabel::update();
+		if (!m_bVisible) return;
+
+		if (isMouseInside())
+		{
+			bool isEmpty = true;
+			for (size_t i=0; i<m_tooltipTextLines.size(); i++)
+			{
+				if (m_tooltipTextLines[i].length() > 0)
+				{
+					isEmpty = false;
+					break;
+				}
+			}
+
+			if (!isEmpty)
+			{
+				m_osu->getTooltipOverlay()->begin();
+				{
+					for (size_t i=0; i<m_tooltipTextLines.size(); i++)
+					{
+						if (m_tooltipTextLines[i].length() > 0)
+							m_osu->getTooltipOverlay()->addLine(m_tooltipTextLines[i]);
+					}
+				}
+				m_osu->getTooltipOverlay()->end();
+			}
+		}
+	}
+
+	void setTooltipText(UString text)
+	{
+		m_tooltipTextLines = text.split("\n");
+	}
+
+private:
+	Osu *m_osu;
+	std::vector<UString> m_tooltipTextLines;
+};
 
 class OsuUserStatsScreenMenuButton : public CBaseUIButton
 {
@@ -277,6 +329,14 @@ OsuUserStatsScreen::OsuUserStatsScreen(Osu *osu) : OsuScreenBackable(osu)
 	m_contextMenu = new OsuUIContextMenu(m_osu);
 	m_contextMenu->setVisible(true);
 
+	m_ppVersionInfoLabel = new OsuUserStatsScreenLabel(m_osu);
+	m_ppVersionInfoLabel->setText(UString::format("pp Version: %i", OsuDifficultyCalculator::PP_ALGORITHM_VERSION));
+	m_ppVersionInfoLabel->setTooltipText("WARNING: McOsu's star/pp algorithm is currently lagging behind the \"official\" version.\n \nReason being that keeping up-to-date requires a LOT of changes now.\nThe next goal is rewriting the algorithm architecture to be more similar to osu!lazer,\nas that will make porting star/pp changes infinitely easier for the foreseeable future.\n \nMaybe all of that will be finished by the end of 2021, but no promises.");
+	m_ppVersionInfoLabel->setTextColor(/*0x77888888*/0xbbbb0000);
+	m_ppVersionInfoLabel->setDrawBackground(false);
+	m_ppVersionInfoLabel->setDrawFrame(false);
+	m_container->addBaseUIElement(m_ppVersionInfoLabel);
+
 	m_userButton = new OsuUISongBrowserUserButton(m_osu);
 	m_userButton->addTooltipLine("Click to change [User]");
 	m_userButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUserStatsScreen::onUserClicked) );
@@ -340,24 +400,6 @@ void OsuUserStatsScreen::draw(Graphics *g)
 
 		OsuScreenBackable::draw(g);
 		return;
-	}
-
-	// draw pp version info
-	{
-		const Vector2 center = m_userButton->getPos() + Vector2(0, m_userButton->getSize().y/2) - Vector2((m_userButton->getPos().x - m_scores->getPos().x)/2, 0);
-
-		McFont *font = engine->getResourceManager()->getFont("FONT_DEFAULT");
-		UString text = UString::format("pp Version: %i", OsuDifficultyCalculator::PP_ALGORITHM_VERSION);
-		const float stringWidth = font->getStringWidth(text);
-		const float overflow = (center.x + stringWidth/2) - m_userButton->getPos().x;
-
-		g->pushTransform();
-		{
-			g->translate((int)(center.x - stringWidth/2 - std::max(overflow, 0.0f)), (int)(center.y + font->getHeight()/2));
-			g->setColor(0x77888888);
-			g->drawString(font, text);
-		}
-		g->popTransform();
 	}
 
 	m_container->draw(g);
@@ -910,4 +952,14 @@ void OsuUserStatsScreen::updateLayout()
 
 	m_menuButton->setSize(userButtonHeight*0.9f, userButtonHeight*0.9f);
 	m_menuButton->setPos(std::max(m_userButton->getPos().x + m_userButton->getSize().x, m_userButton->getPos().x + m_userButton->getSize().x + (m_userButton->getPos().x - m_scores->getPos().x)/2 - m_menuButton->getSize().x/2), m_userButton->getPos().y + m_userButton->getSize().y/2 - m_menuButton->getSize().y/2);
+
+	m_ppVersionInfoLabel->setSizeToContent(1, 10);
+	{
+		const Vector2 center = m_userButton->getPos() + Vector2(0, m_userButton->getSize().y/2) - Vector2((m_userButton->getPos().x - m_scores->getPos().x)/2, 0);
+		const Vector2 topLeft = center - m_ppVersionInfoLabel->getSize()/2;
+		const float overflow = (center.x + m_ppVersionInfoLabel->getSize().x/2) - m_userButton->getPos().x;
+
+		m_ppVersionInfoLabel->setPos((int)(topLeft.x - std::max(overflow, 0.0f)), (int)(topLeft.y));
+	}
 }
+
