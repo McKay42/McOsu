@@ -2419,8 +2419,10 @@ void OsuDatabase::onScoresRename(UString args)
 	if (numRenamedScores < 1)
 		m_osu->getNotificationOverlay()->addNotification("No (pp) scores for active user.");
 	else
+	{
 		m_osu->getNotificationOverlay()->addNotification(UString::format("Renamed %i scores.", numRenamedScores));
 
-	m_bDidScoresChangeForSave = true;
-	m_bDidScoresChangeForStats = true;
+		m_bDidScoresChangeForSave = true;
+		m_bDidScoresChangeForStats = true;
+	}
 }
