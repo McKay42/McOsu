@@ -43,7 +43,7 @@ public:
 	void setSampleSet(int sampleSet);
 	void setSampleVolume(float volume, bool force = false);
 
-	void playHitCircleSound(int sampleType, float pan = 0.0f);
+	void playHitCircleSound(int sampleType, float pan, long delta);
 	void playSliderTickSound(float pan = 0.0f);
 	void playSliderSlideSound(float pan = 0.0f);
 	void playSpinnerSpinSound();
@@ -563,6 +563,8 @@ private:
 	Sound *m_spinnerSpinSound;
 
 	Sound *m_combobreak;
+	Sound *m_tooslow;
+	Sound *m_toofast;
 	Sound *m_failsound;
 	Sound *m_applause;
 	Sound *m_menuHit;

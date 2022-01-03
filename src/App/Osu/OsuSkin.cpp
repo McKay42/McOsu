@@ -27,6 +27,7 @@
 #define OSU_BITMASK_HITFINISH 0x4
 #define OSU_BITMASK_HITCLAP 0x8
 
+ConVar osu_pitch_hitsounds_when_not_300("osu_pitch_hitsounds_when_not_300", true, "Lowers or raises the pitch of the hitsound when hitting before or after the correct timing.");
 ConVar osu2_sound_source_id("osu2_sound_source_id", 1, "which instance/player/client should play hitsounds (e.g. master top left is always 1)");
 
 ConVar osu_volume_effects("osu_volume_effects", 1.0f);
@@ -762,6 +763,8 @@ void OsuSkin::load()
 
 	// others
 	checkLoadSound(&m_combobreak, "combobreak", "OSU_SKIN_COMBOBREAK_SND", true);
+	checkLoadSound(&m_tooslow, "tooslow", "OSU_SKIN_TOO_SLOW_SND", true);
+	checkLoadSound(&m_toofast, "toofast", "OSU_SKIN_TOO_FAST_SND", true);
 	checkLoadSound(&m_failsound, "failsound", "OSU_SKIN_FAILSOUND_SND");
 	checkLoadSound(&m_applause, "applause", "OSU_SKIN_APPLAUSE_SND");
 	checkLoadSound(&m_menuHit, "menuhit", "OSU_SKIN_MENUHIT_SND", true);
@@ -1157,7 +1160,7 @@ void OsuSkin::setBeatmapComboColors(std::vector<Color> colors)
 	m_beatmapComboColors = colors;
 }
 
-void OsuSkin::playHitCircleSound(int sampleType, float pan)
+void OsuSkin::playHitCircleSound(int sampleType, float pan, long delta)
 {
 	if (m_iSampleVolume <= 0 || (m_osu->getInstanceID() > 0 && m_osu->getInstanceID() != osu2_sound_source_id.getInt())) return;
 
@@ -1165,6 +1168,16 @@ void OsuSkin::playHitCircleSound(int sampleType, float pan)
 		pan = 0.0f;
 	else
 		pan *= osu_sound_panning_multiplier.getFloat();
+
+	if(osu_pitch_hitsounds_when_not_300.getBool()) {
+		if(delta > 0) {
+			engine->getSound()->play(m_tooslow, pan);
+			return;
+		} else if(delta < 0) {
+			engine->getSound()->play(m_toofast, pan);
+			return;
+		}
+	}
 
 	switch (m_iSampleSet)
 	{

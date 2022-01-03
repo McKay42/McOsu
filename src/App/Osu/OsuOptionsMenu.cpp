@@ -736,6 +736,8 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSlider("Music:", 0.0f, 1.0f, convar->getConVarByName("osu_volume_music"), 70.0f)->setKeyDelta(0.01f);
 	addSlider("Effects:", 0.0f, 1.0f, convar->getConVarByName("osu_volume_effects"), 70.0f)->setKeyDelta(0.01f);
 
+	addCheckbox("Play miss sound when not hitting 300s", "Plays tooslow.wav or toofast.wav when too slow or too fast.", convar->getConVarByName("osu_pitch_hitsounds_when_not_300"));
+
 	addSubSection("Offset Adjustment");
 	CBaseUISlider *offsetSlider = addSlider("Universal Offset:", -300.0f, 300.0f, convar->getConVarByName("osu_universal_offset"));
 	offsetSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeIntMS) );

@@ -281,7 +281,8 @@ void OsuManiaNote::onHit(OsuScore::HIT result, long delta, bool start, bool igno
 		if (m_osu_timingpoints_force->getBool())
 			m_beatmap->updateTimingPoints(start ? m_iTime : m_iTime + m_iObjectDuration);
 
-		m_beatmap->getSkin()->playHitCircleSound(m_iSampleType);
+		const long sound_delta = result == OsuScore::HIT::HIT_300 ? 0 : delta;
+		m_beatmap->getSkin()->playHitCircleSound(m_iSampleType, 0.f, sound_delta);
 	}
 
 	// add it, and we are finished
