@@ -514,8 +514,6 @@ void OsuModSelector::update()
 	m_overrideSliderContainer->update();
 
 	// override slider tooltips (ALT)
-	// seems too annoying, commented for now
-	/*
 	if (m_bShowOverrideSliderALTHint)
 	{
 		for (int i=0; i<m_overrideSliders.size(); i++)
@@ -533,7 +531,6 @@ void OsuModSelector::update()
 			}
 		}
 	}
-	*/
 
 	// handle experimental mods visibility
 	bool experimentalModEnabled = false;
