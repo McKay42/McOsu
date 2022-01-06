@@ -1031,7 +1031,7 @@ void OsuSongBrowser2::update()
 
 	// handle right click absolute scrolling
 	{
-		if (engine->getMouse()->isRightDown())
+		if (engine->getMouse()->isRightDown() && !m_contextMenu->isMouseInside())
 		{
 			if (!m_bSongBrowserRightClickScrollCheck)
 			{
