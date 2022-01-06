@@ -21,6 +21,8 @@
 
 #include "OsuDatabaseBeatmap.h"
 
+#include <fstream>
+
 #if defined(_WIN32) || defined(_WIN64) || defined(__WIN32__) || defined(__CYGWIN__) || defined(__CYGWIN32__) || defined(__TOS_WIN__) || defined(__WINDOWS__)
 
 ConVar osu_folder("osu_folder", "C:/Program Files (x86)/osu!/");
@@ -57,6 +59,7 @@ ConVar osu_scores_save_immediately("osu_scores_save_immediately", true, "write s
 ConVar osu_scores_sort_by_pp("osu_scores_sort_by_pp", true, "display pp in score browser instead of score");
 ConVar osu_scores_bonus_pp("osu_scores_bonus_pp", true, "whether to add bonus pp to total (real) pp or not");
 ConVar osu_scores_rename("osu_scores_rename");
+ConVar osu_scores_export("osu_scores_export");
 ConVar osu_collections_legacy_enabled("osu_collections_legacy_enabled", true, "load osu!'s collection.db");
 ConVar osu_collections_custom_enabled("osu_collections_custom_enabled", true, "load custom collections.db");
 ConVar osu_collections_save_immediately("osu_collections_save_immediately", true, "write collections.db as soon as anything is changed");
@@ -322,6 +325,7 @@ OsuDatabase::OsuDatabase(Osu *osu)
 		m_osu_songbrowser_scores_sortingtype_ref = convar->getConVarByName("osu_songbrowser_scores_sortingtype");
 
 	osu_scores_rename.setCallback( fastdelegate::MakeDelegate(this, &OsuDatabase::onScoresRename) );
+	osu_scores_export.setCallback( fastdelegate::MakeDelegate(this, &OsuDatabase::onScoresExport) );
 
 	// vars
 	m_importTimer = new Timer();
@@ -2475,4 +2479,104 @@ void OsuDatabase::onScoresRename(UString args)
 		m_bDidScoresChangeForSave = true;
 		m_bDidScoresChangeForStats = true;
 	}
+}
+
+void OsuDatabase::onScoresExport()
+{
+	const UString exportFilePath = "scores.csv";
+
+	debugLog("Exporting currently loaded scores to \"%s\" (overwriting existing file) ...\n", exportFilePath.toUtf8());
+
+	std::ofstream out(exportFilePath.toUtf8());
+	if (!out.good())
+	{
+		debugLog("ERROR: Couldn't write %s\n", exportFilePath.toUtf8());
+		return;
+	}
+
+	out << "#beatmapMD5hash,isImportedLegacyScore,version,unixTimestamp,playerName,num300s,num100s,num50s,numGekis,numKatus,numMisses,score,comboMax,perfect,modsLegacy,numSliderBreaks,pp,unstableRate,hitErrorAvgMin,hitErrorAvgMax,starsTomTotal,starsTomAim,starsTomSpeed,speedMultiplier,CS,AR,OD,HP,maxPossibleCombo,numHitObjects,numCircles,experimentalModsConVars\n";
+
+	for (auto beatmapScores : m_scores)
+	{
+		for (const Score &score : beatmapScores.second)
+		{
+			if (!score.isLegacyScore)
+			{
+				out << beatmapScores.first;
+				out << ",";
+
+				out << score.isImportedLegacyScore;
+				out << ",";
+				out << score.version;
+				out << ",";
+				out << score.unixTimestamp;
+				out << ",";
+
+				out << std::string(score.playerName.toUtf8());
+				out << ",";
+
+				out << score.num300s;
+				out << ",";
+				out << score.num100s;
+				out << ",";
+				out << score.num50s;
+				out << ",";
+				out << score.numGekis;
+				out << ",";
+				out << score.numKatus;
+				out << ",";
+				out << score.numMisses;
+				out << ",";
+
+				out << score.score;
+				out << ",";
+				out << score.comboMax;
+				out << ",";
+				out << score.perfect;
+				out << ",";
+				out << score.modsLegacy;
+				out << ",";
+
+				out << score.numSliderBreaks;
+				out << ",";
+				out << score.pp;
+				out << ",";
+				out << score.unstableRate;
+				out << ",";
+				out << score.hitErrorAvgMin;
+				out << ",";
+				out << score.hitErrorAvgMax;
+				out << ",";
+				out << score.starsTomTotal;
+				out << ",";
+				out << score.starsTomAim;
+				out << ",";
+				out << score.starsTomSpeed;
+				out << ",";
+				out << score.speedMultiplier;
+				out << ",";
+				out << score.CS;
+				out << ",";
+				out << score.AR;
+				out << ",";
+				out << score.OD;
+				out << ",";
+				out << score.HP;
+				out << ",";
+				out << score.maxPossibleCombo;
+				out << ",";
+				out << score.numHitObjects;
+				out << ",";
+				out << score.numCircles;
+				out << ",";
+				out << std::string(score.experimentalModsConVars.toUtf8());
+
+				out << "\n";
+			}
+		}
+	}
+
+	out.close();
+
+	debugLog("Done.\n");
 }
