@@ -10,6 +10,7 @@
 #include "Engine.h"
 #include "Mouse.h"
 #include "AnimationHandler.h"
+#include "Keyboard.h"
 
 #include "CBaseUIContainer.h"
 #include "CBaseUIScrollView.h"
@@ -148,6 +149,16 @@ void OsuUIContextMenu::onKeyDown(KeyboardEvent &e)
 	if (!m_bVisible || !m_bVisible2) return;
 
 	m_container->onKeyDown(e);
+
+	// also force ENTER event if context menu textbox has lost focus (but context menu is still visible, e.g. if the user clicks inside the context menu but outside the textbox)
+	if (m_containedTextbox != NULL)
+	{
+		if (e == KEY_ENTER)
+		{
+			e.consume();
+			onHitEnter(m_containedTextbox);
+		}
+	}
 }
 
 void OsuUIContextMenu::onChar(KeyboardEvent &e)
