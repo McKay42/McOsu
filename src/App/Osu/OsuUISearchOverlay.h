@@ -25,6 +25,8 @@ public:
 	void setSearchString(UString searchString) {m_sSearchString = searchString;}
 	void setNumFoundResults(int numFoundResults) {m_iNumFoundResults = numFoundResults;}
 
+	void setSearching(bool searching) {m_bSearching = searching;}
+
 private:
 	Osu *m_osu;
 
@@ -35,6 +37,8 @@ private:
 
 	UString m_sSearchString;
 	int m_iNumFoundResults;
+
+	bool m_bSearching;
 };
 
 #endif
