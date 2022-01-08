@@ -15,9 +15,7 @@ class Osu;
 class OsuBeatmap;
 class OsuDatabase;
 class OsuDatabaseBeatmap;
-
 class OsuDatabaseBeatmapStarCalculator;
-
 class OsuSkinImage;
 
 class OsuUIContextMenu;
@@ -39,6 +37,8 @@ class CBaseUILabel;
 
 class McFont;
 class ConVar;
+
+class OsuSongBrowserBackgroundSearchMatcher;
 
 class OsuSongBrowser2 : public OsuScreenBackable
 {
@@ -107,6 +107,8 @@ public:
 	};
 
 public:
+	friend class OsuSongBrowserBackgroundSearchMatcher;
+
 	OsuSongBrowser2(Osu *osu);
 	virtual ~OsuSongBrowser2();
 
@@ -162,9 +164,6 @@ public:
 	inline GROUP getGroupingMode() const {return m_group;}
 
 private:
-	static bool searchMatcher(const OsuDatabaseBeatmap *databaseBeatmap, const UString &searchString);
-	static bool findSubstringInDifficulty(const OsuDatabaseBeatmap *diff, const UString &searchString);
-
 	enum class SORT
 	{
 		SORT_ARTIST,
@@ -191,6 +190,10 @@ private:
 		int id;
 	};
 
+private:
+	static bool searchMatcher(const OsuDatabaseBeatmap *databaseBeatmap, const UString &searchString);
+	static bool findSubstringInDifficulty(const OsuDatabaseBeatmap *diff, const UString &searchString);
+
 	virtual void updateLayout();
 	virtual void onBack();
 
@@ -198,7 +201,9 @@ private:
 
 	void scheduleSearchUpdate(bool immediately = false);
 
+	void checkHandleKillBackgroundStarCalculator();
 	bool checkHandleKillDynamicStarCalculator(bool timeout);
+	void checkHandleKillBackgroundSearchMatcher();
 
 	OsuUISelectionButton *addBottombarNavButton(std::function<OsuSkinImage*()> getImageFunc, std::function<OsuSkinImage*()> getImageOverFunc);
 	CBaseUIButton *addTopBarRightTabButton(UString text);
@@ -210,6 +215,7 @@ private:
 	void onDatabaseLoadingFinished();
 
 	void onSearchUpdate();
+	void onSearchUpdateInt();
 
 	void onSortScoresClicked(CBaseUIButton *button);
 	void onSortScoresChange(UString text, int id = -1);
@@ -233,6 +239,7 @@ private:
 	void onGroupTitle();
 
 	void onAfterSortingOrGroupChange(bool autoScroll = true);
+	void onAfterSortingOrGroupChangeUpdateInt(bool autoScroll);
 
 	void onSelectionMode();
 	void onSelectionMods();
@@ -364,6 +371,9 @@ private:
 	float m_fSearchWaitTime;
 	bool m_bInSearch;
 	GROUP m_searchPrevGroup;
+	OsuSongBrowserBackgroundSearchMatcher *m_backgroundSearchMatcher;
+	bool m_bOnAfterSortingOrGroupChangeUpdateScheduled;
+	bool m_bOnAfterSortingOrGroupChangeUpdateScheduledAutoScroll;
 
 	// background star calculation (entire database)
 	float m_fBackgroundStarCalculationWorkNotificationTime;

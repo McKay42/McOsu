@@ -54,7 +54,7 @@ public:
 
 	inline bool isSelected() const {return m_bSelected;}
 	inline bool isHiddenIfSelected() const {return m_bHideIfSelected;}
-	inline bool isSearchMatch() const {return m_bIsSearchMatch;}
+	inline bool isSearchMatch() const {return m_bIsSearchMatch.load();}
 
 protected:
 	void drawMenuButtonBackground(Graphics *g);
@@ -105,7 +105,7 @@ private:
 	float m_fCenterOffsetVelocityAnimation;
 
 	int m_iSortHack;
-	bool m_bIsSearchMatch;
+	std::atomic<bool> m_bIsSearchMatch;
 
 	bool m_bHideIfSelected;
 
