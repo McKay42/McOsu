@@ -322,7 +322,7 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen(osu)
 	m_versionButton = new CBaseUIButton(0, 0, 0, 0, "", "");
 	UString versionString = MCOSU_VERSION_TEXT;
 	versionString.append(" ");
-	versionString.append(UString::format("%.2f", Osu::version->getFloat()));
+	versionString.append(UString::format("%g", Osu::version->getFloat()));
 	m_versionButton->setText(versionString);
 	m_versionButton->setDrawBackground(false);
 	m_versionButton->setDrawFrame(false);
