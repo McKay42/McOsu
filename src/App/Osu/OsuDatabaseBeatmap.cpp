@@ -41,6 +41,9 @@ ConVar osu_stars_stacking("osu_stars_stacking", true, "respect hitobject stackin
 
 ConVar osu_slider_max_repeat("osu_slider_max_repeat", 9000, "maximum number of repeats allowed per slider (clamp range)");
 
+ConVar osu_number_max("osu_number_max", 0, "0 = disabled, 1/2/3/4/etc. limits visual circle numbers to this number");
+ConVar osu_ignore_beatmap_combo_numbers("osu_ignore_beatmap_combo_numbers", false, "may be used in conjunction with osu_number_max");
+
 unsigned long long OsuDatabaseBeatmap::sortHackCounter = 0;
 
 ConVar *OsuDatabaseBeatmap::m_osu_slider_curve_max_length_ref = NULL;
@@ -1225,7 +1228,7 @@ OsuDatabaseBeatmap::LOAD_GAMEPLAY_RESULT OsuDatabaseBeatmap::loadGameplay(OsuDat
 			// also calculate max possible combo
 			int maxPossibleCombo = 0;
 
-			for (int i=0; i<c.hitcircles.size(); i++)
+			for (size_t i=0; i<c.hitcircles.size(); i++)
 			{
 				HITCIRCLE &h = c.hitcircles[i];
 
@@ -1280,7 +1283,7 @@ OsuDatabaseBeatmap::LOAD_GAMEPLAY_RESULT OsuDatabaseBeatmap::loadGameplay(OsuDat
 			}
 			maxPossibleCombo += c.hitcircles.size();
 
-			for (int i=0; i<c.sliders.size(); i++)
+			for (size_t i=0; i<c.sliders.size(); i++)
 			{
 				SLIDER &s = c.sliders[i];
 
@@ -1302,7 +1305,7 @@ OsuDatabaseBeatmap::LOAD_GAMEPLAY_RESULT OsuDatabaseBeatmap::loadGameplay(OsuDat
 				maxPossibleCombo += 2 + repeats + (repeats+1)*s.ticks.size(); // start/end + repeat arrow + ticks
 			}
 
-			for (int i=0; i<c.spinners.size(); i++)
+			for (size_t i=0; i<c.spinners.size(); i++)
 			{
 				SPINNER &s = c.spinners[i];
 
@@ -1397,7 +1400,7 @@ OsuDatabaseBeatmap::LOAD_GAMEPLAY_RESULT OsuDatabaseBeatmap::loadGameplay(OsuDat
 			scoreV2ComboPortionMaximum = 0;
 
 		int combo = 0;
-		for (int i=0; i<result.hitobjects.size(); i++)
+		for (size_t i=0; i<result.hitobjects.size(); i++)
 		{
 			OsuHitObject *currentHitObject = result.hitobjects[i];
 			const OsuHitObject *nextHitObject = (i + 1 < result.hitobjects.size() ? result.hitobjects[i + 1] : NULL);
@@ -1433,6 +1436,42 @@ OsuDatabaseBeatmap::LOAD_GAMEPLAY_RESULT OsuDatabaseBeatmap::loadGameplay(OsuDat
 	{
 		if (result.hitobjects.size() > 0)
 			result.hitobjects[0]->setForceDrawApproachCircle(true);
+	}
+
+	// custom override for forcing a hard number cap and/or sequence (visually only)
+	// NOTE: this is done after we have already calculated/set isEndOfCombos
+	{
+		if (osu_ignore_beatmap_combo_numbers.getBool())
+		{
+			// NOTE: spinners don't increment the combo number
+			int comboNumber = 1;
+			for (size_t i=0; i<result.hitobjects.size(); i++)
+			{
+				OsuHitObject *currentHitObject = result.hitobjects[i];
+
+				const OsuSpinner *spinnerPointer = dynamic_cast<OsuSpinner*>(currentHitObject);
+
+				if (spinnerPointer == NULL)
+				{
+					currentHitObject->setComboNumber(comboNumber);
+					comboNumber++;
+				}
+			}
+		}
+
+		const int numberMax = osu_number_max.getInt();
+		if (numberMax > 0)
+		{
+			for (size_t i=0; i<result.hitobjects.size(); i++)
+			{
+				OsuHitObject *currentHitObject = result.hitobjects[i];
+
+				const int currentComboNumber = currentHitObject->getComboNumber();
+				const int newComboNumber = (currentComboNumber % numberMax);
+
+				currentHitObject->setComboNumber(newComboNumber == 0 ? numberMax : newComboNumber);
+			}
+		}
 	}
 
 	debugLog("OsuDatabaseBeatmap::load() loaded %i hitobjects\n", result.hitobjects.size());

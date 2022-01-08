@@ -54,6 +54,7 @@ public:
 	void setForceDrawApproachCircle(bool firstNote) {m_bOverrideHDApproachCircle = firstNote;}
 	void setAutopilotDelta(long delta) {m_iAutopilotDelta = delta;}
 	void setBlocked(bool blocked) {m_bBlocked = blocked;}
+	void setComboNumber(int comboNumber) {m_iComboNumber = comboNumber;}
 
 	virtual Vector2 getRawPosAt(long pos) = 0; // with stack calculation modifications
 	virtual Vector2 getOriginalRawPosAt(long pos) = 0; // without stack calculations

@@ -590,7 +590,9 @@ void OsuBeatmapStandard::drawFollowPoints(Graphics *g)
 		}
 
 		// NOTE: "m_hitobjects[index]->getComboNumber() != 1" breaks (not literally) on new combos
-		if (lastObjectIndex >= 0 && (m_hitobjects[index]->getComboNumber() != 1 || followPointsConnectCombos))
+		// NOTE: the "getComboNumber()" call has been replaced with isEndOfCombo() because of osu_ignore_beatmap_combo_numbers and osu_number_max
+		const bool isCurrentHitObjectNewCombo = (lastObjectIndex >= 0 ? m_hitobjects[lastObjectIndex]->isEndOfCombo() : false);
+		if (lastObjectIndex >= 0 && (!isCurrentHitObjectNewCombo || followPointsConnectCombos))
 		{
 			// ignore previous spinners
 			spinnerPointer = dynamic_cast<OsuSpinner*>(m_hitobjects[lastObjectIndex]);
