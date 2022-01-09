@@ -1168,7 +1168,7 @@ void OsuSongBrowser2::update()
 		if (!m_backgroundSearchMatcher->isDead() && m_backgroundSearchMatcher->isAsyncReady())
 		{
 			// we have the results, now update the UI
-			onSearchUpdateInt();
+			rebuildSongButtonsAndVisibleSongButtonsWithSearchMatchSupport(true);
 
 			m_backgroundSearchMatcher->kill();
 		}
@@ -3295,7 +3295,7 @@ void OsuSongBrowser2::onSearchUpdate()
 			engine->getResourceManager()->loadResource(m_backgroundSearchMatcher);
 		}
 		else
-			onSearchUpdateInt();
+			rebuildSongButtonsAndVisibleSongButtonsWithSearchMatchSupport(true);
 
 		// (results are handled in update() once available)
 	}
@@ -3337,7 +3337,7 @@ void OsuSongBrowser2::onSearchUpdate()
 	m_sPrevSearchString = m_sSearchString;
 }
 
-void OsuSongBrowser2::onSearchUpdateInt()
+void OsuSongBrowser2::rebuildSongButtonsAndVisibleSongButtonsWithSearchMatchSupport(bool scrollToTop)
 {
 	// reset container and visible buttons list
 	m_songBrowser->getContainer()->empty();
@@ -3444,13 +3444,16 @@ void OsuSongBrowser2::onSearchUpdateInt()
 
 		rebuildSongButtons();
 
-		// scroll to top result, or auto select the only result
-		if (m_visibleSongButtons.size() > 1)
-			scrollToSongButton(m_visibleSongButtons[0]);
-		else if (m_visibleSongButtons.size() > 0)
+		// scroll to top search result, or auto select the only result
+		if (scrollToTop)
 		{
-			selectSongButton(m_visibleSongButtons[0]);
-			m_songBrowser->scrollY(1);
+			if (m_visibleSongButtons.size() > 1)
+				scrollToSongButton(m_visibleSongButtons[0]);
+			else if (m_visibleSongButtons.size() > 0)
+			{
+				selectSongButton(m_visibleSongButtons[0]);
+				m_songBrowser->scrollY(1);
+			}
 		}
 	}
 }
@@ -4071,27 +4074,96 @@ void OsuSongBrowser2::onSongButtonContextMenu(OsuUISongBrowserSongButton *songBu
 	if (id == 1)
 	{
 		// add diff to collection
+
+		m_db->addBeatmapToCollection(text, songButton->getDatabaseBeatmap()->getMD5Hash());
+
+		for (size_t i=0; i<m_collectionButtons.size(); i++)
+		{
+			if (m_collectionButtons[i]->getCollectionName() == text)
+			{
+				m_collectionButtons[i]->getChildren().insert(m_collectionButtons[i]->getChildren().begin(), songButton);
+				break;
+			}
+		}
+
+		rebuildSongButtons();
 	}
 	else if (id == 2)
 	{
-		// add set to collection
+		// TODO: add set to collection
 	}
 	else if (id == 3)
 	{
 		// remove diff from collection
+
+		UString collectionName;
+		{
+			for (size_t i=0; i<m_collectionButtons.size(); i++)
+			{
+				if (m_collectionButtons[i]->isSelected())
+				{
+					collectionName = m_collectionButtons[i]->getCollectionName();
+					break;
+				}
+			}
+		}
+
+		m_db->removeBeatmapFromCollection(collectionName, songButton->getDatabaseBeatmap()->getMD5Hash());
+
+		for (size_t i=0; i<m_collectionButtons.size(); i++)
+		{
+			if (m_collectionButtons[i]->getCollectionName() == collectionName)
+			{
+				std::vector<OsuUISongBrowserButton*> &children = m_collectionButtons[i]->getChildren();
+
+				for (size_t c=0; c<children.size(); c++)
+				{
+					if (children[c] == songButton)
+					{
+						children.erase(children.begin() + c);
+						break;
+					}
+				}
+
+				break;
+			}
+		}
+
+		rebuildSongButtons();
 	}
 	else if (id == 4)
 	{
-		// remove set from collection
+		// TODO: remove set from collection
 	}
 	else if (id == -2 || id == -4)
 	{
-		// add new collection with name text
+		// TODO: add new collection with name text
 
-		// id == -2 means add diff to the just-created new collection
-		// id == -4 means add set to the just-created new collection
+		if (!m_db->addCollection(text))
+			m_osu->getNotificationOverlay()->addNotification("Error: Collection name already exists.", 0xffffff00);
+		else
+		{
+			if (id == -2)
+			{
+				// id == -2 means add diff to the just-created new collection
 
-		// TODO: if collection name already exists in collections, ignore it and maybe notify warning
+				m_db->addBeatmapToCollection(text, songButton->getDatabaseBeatmap()->getMD5Hash());
+
+				std::vector<OsuUISongBrowserButton*> children;
+				{
+					children.push_back(songButton);
+				}
+				m_collectionButtons.push_back(new OsuUISongBrowserCollectionButton(m_osu, this, m_songBrowser, m_contextMenu, 250, 250 + m_beatmaps.size()*50, 200, 50, "", text, children));
+
+				rebuildSongButtonsAndVisibleSongButtonsWithSearchMatchSupport(false); // special case: need to also update the visible buttons if we are creating a collection while in collection grouping mode
+			}
+			else if (id == -4)
+			{
+				// TODO: id == -4 means add set to the just-created new collection
+			}
+
+			// TODO: re-sort collection buttons by name alphabetically
+		}
 	}
 }
 

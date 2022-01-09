@@ -215,7 +215,7 @@ private:
 	void onDatabaseLoadingFinished();
 
 	void onSearchUpdate();
-	void onSearchUpdateInt();
+	void rebuildSongButtonsAndVisibleSongButtonsWithSearchMatchSupport(bool scrollToTop);
 
 	void onSortScoresClicked(CBaseUIButton *button);
 	void onSortScoresChange(UString text, int id = -1);
