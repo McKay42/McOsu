@@ -145,6 +145,7 @@ public:
 	void scrollToSongButton(OsuUISongBrowserButton *songButton, bool alignOnTop = false);
 	void scrollToSelectedSongButton();
 	void rebuildSongButtons();
+	void recreateCollectionsButtons();
 	void rebuildScoreButtons();
 	void updateSongButtonLayout();
 	void updateSongButtonSorting();
@@ -215,7 +216,7 @@ private:
 	void onDatabaseLoadingFinished();
 
 	void onSearchUpdate();
-	void rebuildSongButtonsAndVisibleSongButtonsWithSearchMatchSupport(bool scrollToTop);
+	void rebuildSongButtonsAndVisibleSongButtonsWithSearchMatchSupport(bool scrollToTop, bool doRebuildSongButtons = true);
 
 	void onSortScoresClicked(CBaseUIButton *button);
 	void onSortScoresChange(UString text, int id = -1);
@@ -226,6 +227,7 @@ private:
 
 	void onSortClicked(CBaseUIButton *button);
 	void onSortChange(UString text, int id = -1);
+	void onSortChangeInt(UString text, bool autoScroll);
 
 	void onGroupTabButtonClicked(CBaseUIButton *groupTabButton);
 	void onGroupNoGrouping();

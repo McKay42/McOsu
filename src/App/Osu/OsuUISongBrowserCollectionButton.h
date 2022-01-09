@@ -19,7 +19,7 @@ public:
 
 	void triggerContextMenu(Vector2 pos);
 
-	const UString &getCollectionName() {return m_sCollectionName;}
+	const UString &getCollectionName() const {return m_sCollectionName;}
 
 private:
 	virtual void onSelected(bool wasSelected);

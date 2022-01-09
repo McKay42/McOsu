@@ -236,6 +236,20 @@ struct SortScoreByPP : public OsuDatabase::SCORE_SORTING_COMPARATOR
 
 
 
+struct SortCollectionByName
+{
+	bool operator () (OsuDatabase::Collection const &a, OsuDatabase::Collection const &b)
+	{
+		// strict weak ordering!
+		if (a.name == b.name)
+			return &a < &b;
+
+		return a.name.lessThanIgnoreCase(b.name);
+	}
+};
+
+
+
 class OsuDatabaseLoader : public Resource
 {
 public:
@@ -599,6 +613,8 @@ bool OsuDatabase::addCollection(UString collectionName)
 	}
 	m_collections.push_back(c);
 
+	std::sort(m_collections.begin(), m_collections.end(), SortCollectionByName());
+
 	m_bDidCollectionsChangeForSave = true;
 
 	if (osu_collections_save_immediately.getBool())
@@ -626,6 +642,8 @@ bool OsuDatabase::renameCollection(UString oldCollectionName, UString newCollect
 			if (!m_collections[i].isLegacyCollection)
 			{
 				m_collections[i].name = newCollectionName;
+
+				std::sort(m_collections.begin(), m_collections.end(), SortCollectionByName());
 
 				m_bDidCollectionsChangeForSave = true;
 

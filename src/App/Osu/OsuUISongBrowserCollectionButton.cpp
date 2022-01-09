@@ -210,7 +210,12 @@ void OsuUISongBrowserCollectionButton::onRenameCollectionConfirmed(UString text,
 	if (text.length() > 0)
 	{
 		if (m_osu->getSongBrowser()->getDatabase()->renameCollection(m_sCollectionName, text))
+		{
 			m_sCollectionName = text;
+
+			// (trigger re-sorting of collection buttons)
+			m_osu->getSongBrowser()->onCollectionButtonContextMenu(this, m_sCollectionName, 3);
+		}
 	}
 }
 
