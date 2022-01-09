@@ -1459,6 +1459,19 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 		/*unsigned char maniaScrollSpeed = */db->readByte();
 		//debugLog("ignoreBeatmapSounds = %i, ignoreBeatmapSkin = %i, disableStoryboard = %i, disableVideo = %i, visualOverride = %i, maniaScrollSpeed = %i\n", (int)ignoreBeatmapSounds, (int)ignoreBeatmapSkin, (int)disableStoryboard, (int)disableVideo, (int)visualOverride, maniaScrollSpeed);
 
+		// HACKHACK: workaround for linux and macos: it can happen that nested beatmaps are stored in the database, and that osu! stores that filepath with a backslash (because windows)
+		if (env->getOS() == Environment::OS::OS_LINUX || env->getOS() == Environment::OS::OS_MACOS)
+		{
+			for (int c=0; c<path.length(); c++)
+			{
+				if (path[c] == L'\\')
+				{
+					path.erase(c, 1);
+					path.insert(c, L'/');
+				}
+			}
+		}
+
 		// build beatmap & diffs from all the data
 		UString beatmapPath = songFolder;
 		beatmapPath.append(path);
