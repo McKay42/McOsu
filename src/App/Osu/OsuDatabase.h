@@ -199,8 +199,9 @@ public:
 	bool addCollection(UString collectionName);
 	bool renameCollection(UString oldCollectionName, UString newCollectionName);
 	void deleteCollection(UString collectionName);
-	void addBeatmapToCollection(UString collectionName, std::string beatmapMD5Hash);
-	void removeBeatmapFromCollection(UString collectionName, std::string beatmapMD5Hash);
+	void addBeatmapToCollection(UString collectionName, std::string beatmapMD5Hash, bool doSaveImmediatelyIfEnabled = true);
+	void removeBeatmapFromCollection(UString collectionName, std::string beatmapMD5Hash, bool doSaveImmediatelyIfEnabled = true);
+	void triggerSaveCollections() {saveCollections();}
 
 	std::vector<UString> getPlayerNamesWithPPScores();
 	std::vector<UString> getPlayerNamesWithScoresForUserSwitcher();

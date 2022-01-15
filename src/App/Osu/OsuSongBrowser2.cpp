@@ -3598,7 +3598,6 @@ void OsuSongBrowser2::onSortChangeInt(UString text, bool autoScroll)
 
 	// resort Collection buttons (one button for each collection)
 	// these are always sorted alphabetically by name
-	for (size_t i=0; i<m_collectionButtons.size(); i++)
 	{
 		struct COLLECTION_NAME_SORTING_COMPARATOR
 		{
@@ -4024,42 +4023,148 @@ void OsuSongBrowser2::onScoreContextMenu(OsuUISongBrowserScoreButton *scoreButto
 
 void OsuSongBrowser2::onSongButtonContextMenu(OsuUISongBrowserSongButton *songButton, UString text, int id)
 {
-	// TODO: implement logic for adding/removing sets/diffs from collections (similar to readdBeatmap())
+	//debugLog("OsuSongBrowser2::onSongButtonContextMenu(%p, %s, %i)\n", songButton, text.toUtf8(), id);
 
-	debugLog("TODO: OsuSongBrowser2::onSongButtonContextMenu(%p, %s, %i)\n", songButton, text.toUtf8(), id);
+	// TODO: why is the currently selected diff vanishing if the last entry inside that collection is removed? (collection still actually exists, just with 0 entries!)
 
-	if (id == 1)
+	struct CollectionManagementHelper
 	{
-		// add diff to collection
-
-		m_db->addBeatmapToCollection(text, songButton->getDatabaseBeatmap()->getMD5Hash());
-
-		recreateCollectionsButtons();
-		onSortChangeInt(osu_songbrowser_sortingtype.getString(), false); // (this also does rebuildSongButtons())
-	}
-	else if (id == 2)
-	{
-		// TODO: add set to collection
-		// TODO: this can come from either a set songButton or an individual diff songbutton!
-	}
-	else if (id == 3)
-	{
-		// remove diff from collection
-
-		UString collectionName;
+		static std::vector<std::string> getBeatmapSetHashesForSongButton(OsuUISongBrowserSongButton *songButton, OsuDatabase *db)
 		{
-			for (size_t i=0; i<m_collectionButtons.size(); i++)
+			std::vector<std::string> beatmapSetHashes;
 			{
-				if (m_collectionButtons[i]->isSelected())
+				const std::vector<OsuUISongBrowserButton*> &songButtonChildren = songButton->getChildren();
+				if (songButtonChildren.size() > 0)
 				{
-					collectionName = m_collectionButtons[i]->getCollectionName();
-					break;
+					for (size_t i=0; i<songButtonChildren.size(); i++)
+					{
+						beatmapSetHashes.push_back(songButtonChildren[i]->getDatabaseBeatmap()->getMD5Hash());
+					}
+				}
+				else
+				{
+					const OsuDatabaseBeatmap *beatmap = db->getBeatmap(songButton->getDatabaseBeatmap()->getMD5Hash());
+					if (beatmap != NULL)
+					{
+						const std::vector<OsuDatabaseBeatmap*> &diffs = beatmap->getDifficulties();
+						for (size_t i=0; i<diffs.size(); i++)
+						{
+							beatmapSetHashes.push_back(diffs[i]->getMD5Hash());
+						}
+					}
+				}
+			}
+			return beatmapSetHashes;
+		}
+	};
+
+	bool updateUIScheduled = false;
+	bool updateUIRestoresScrollPosY = true;
+	{
+		if (id == 1)
+		{
+			// add diff to collection
+
+			m_db->addBeatmapToCollection(text, songButton->getDatabaseBeatmap()->getMD5Hash());
+
+			updateUIScheduled = true;
+		}
+		else if (id == 2)
+		{
+			// add set to collection
+
+			const std::vector<std::string> beatmapSetHashes = CollectionManagementHelper::getBeatmapSetHashesForSongButton(songButton, m_db);
+			for (size_t i=0; i<beatmapSetHashes.size(); i++)
+			{
+				m_db->addBeatmapToCollection(text, beatmapSetHashes[i], false); // (don't save here every time) (this will ignore already added parts of the set, so nothing to worry about)
+			}
+			m_db->triggerSaveCollections(); // (but do save here once at the end)
+
+			updateUIScheduled = true;
+		}
+		else if (id == 3)
+		{
+			// remove diff from collection
+
+			// get collection name by selection
+			UString collectionName;
+			{
+				for (size_t i=0; i<m_collectionButtons.size(); i++)
+				{
+					if (m_collectionButtons[i]->isSelected())
+					{
+						collectionName = m_collectionButtons[i]->getCollectionName();
+						break;
+					}
+				}
+			}
+
+			m_db->removeBeatmapFromCollection(collectionName, songButton->getDatabaseBeatmap()->getMD5Hash());
+
+			updateUIScheduled = true;
+		}
+		else if (id == 4)
+		{
+			// remove entire set from collection
+
+			// get collection name by selection
+			UString collectionName;
+			{
+				for (size_t i=0; i<m_collectionButtons.size(); i++)
+				{
+					if (m_collectionButtons[i]->isSelected())
+					{
+						collectionName = m_collectionButtons[i]->getCollectionName();
+						break;
+					}
+				}
+			}
+
+			const std::vector<std::string> beatmapSetHashes = CollectionManagementHelper::getBeatmapSetHashesForSongButton(songButton, m_db);
+			for (size_t i=0; i<beatmapSetHashes.size(); i++)
+			{
+				m_db->removeBeatmapFromCollection(collectionName, beatmapSetHashes[i], false); // (don't save here every time)
+			}
+			m_db->triggerSaveCollections(); // (but do save here once at the end)
+
+			updateUIScheduled = true;
+			updateUIRestoresScrollPosY = false;
+		}
+		else if (id == -2 || id == -4)
+		{
+			// add new collection with name text
+
+			if (!m_db->addCollection(text))
+				m_osu->getNotificationOverlay()->addNotification("Error: Collection name already exists.", 0xffffff00);
+			else
+			{
+				if (id == -2)
+				{
+					// id == -2 means add diff to the just-created new collection
+
+					m_db->addBeatmapToCollection(text, songButton->getDatabaseBeatmap()->getMD5Hash());
+
+					updateUIScheduled = true;
+				}
+				else if (id == -4)
+				{
+					// id == -4 means add set to the just-created new collection
+
+					const std::vector<std::string> beatmapSetHashes = CollectionManagementHelper::getBeatmapSetHashesForSongButton(songButton, m_db);
+					for (size_t i=0; i<beatmapSetHashes.size(); i++)
+					{
+						m_db->addBeatmapToCollection(text, beatmapSetHashes[i], false); // (don't save here every time)
+					}
+					m_db->triggerSaveCollections(); // (but do save here once at the end)
+
+					updateUIScheduled = true;
 				}
 			}
 		}
+	}
 
-		m_db->removeBeatmapFromCollection(collectionName, songButton->getDatabaseBeatmap()->getMD5Hash());
-
+	if (updateUIScheduled)
+	{
 		const float prevScrollPosY = m_songBrowser->getScrollPosY(); // usability
 		const UString previouslySelectedCollectionName = (m_selectionPreviousCollectionButton != NULL ? m_selectionPreviousCollectionButton->getCollectionName() : ""); // usability
 		{
@@ -4074,42 +4179,12 @@ void OsuSongBrowser2::onSongButtonContextMenu(OsuUISongBrowserSongButton *songBu
 				if (m_collectionButtons[i]->getCollectionName() == previouslySelectedCollectionName)
 				{
 					m_collectionButtons[i]->select();
-					m_songBrowser->scrollToY(prevScrollPosY, false);
+
+					if (updateUIRestoresScrollPosY)
+						m_songBrowser->scrollToY(prevScrollPosY, false);
+
 					break;
 				}
-			}
-		}
-
-		// TODO: why is the currently selected diff vanishing if the last entry inside that collection is removed? (collection still exists, just with 0 entries!)
-	}
-	else if (id == 4)
-	{
-		// TODO: remove set from collection
-		// TODO: this can come from either a set songButton or an individual diff songbutton!
-	}
-	else if (id == -2 || id == -4)
-	{
-		// add new collection with name text
-
-		if (!m_db->addCollection(text))
-			m_osu->getNotificationOverlay()->addNotification("Error: Collection name already exists.", 0xffffff00);
-		else
-		{
-			if (id == -2)
-			{
-				// id == -2 means add diff to the just-created new collection
-
-				m_db->addBeatmapToCollection(text, songButton->getDatabaseBeatmap()->getMD5Hash());
-
-				recreateCollectionsButtons();
-				rebuildSongButtonsAndVisibleSongButtonsWithSearchMatchSupport(false, false); // special case: need to also update the visible buttons if we are creating a collection while in collection grouping mode. (last false = skipping rebuildSongButtons() here)
-				onSortChangeInt(osu_songbrowser_sortingtype.getString(), false); // (because this does the rebuildSongButtons())
-			}
-			else if (id == -4)
-			{
-				// TODO: id == -4 means add set to the just-created new collection
-				// TODO: this can come from either a set songButton or an individual diff songbutton!
-				//m_collectionButtons;
 			}
 		}
 	}
@@ -4123,13 +4198,19 @@ void OsuSongBrowser2::onCollectionButtonContextMenu(OsuUISongBrowserCollectionBu
 		{
 			if (m_collectionButtons[i]->getCollectionName() == text)
 			{
+				// delete UI
 				delete m_collectionButtons[i];
 				m_collectionButtons.erase(m_collectionButtons.begin() + i);
+
+				// reset UI state
 				m_selectionPreviousCollectionButton = NULL;
 
 				m_db->deleteCollection(text);
 
-				onGroupCollections(false);
+				// update UI
+				{
+					onGroupCollections(false);
+				}
 
 				break;
 			}
@@ -4137,7 +4218,10 @@ void OsuSongBrowser2::onCollectionButtonContextMenu(OsuUISongBrowserCollectionBu
 	}
 	else if (id == 3) // collection has been renamed
 	{
-		onSortChangeInt(osu_songbrowser_sortingtype.getString(), false);
+		// update UI
+		{
+			onSortChangeInt(osu_songbrowser_sortingtype.getString(), false);
+		}
 	}
 }
 

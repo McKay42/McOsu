@@ -682,10 +682,7 @@ void OsuDatabase::deleteCollection(UString collectionName)
 	}
 }
 
-// TODO: write addBeatmapSetToCollection() + removeBeatmapSetFromCollection()
-// TODO: also add if (osu_collections_save_immediately.getBool()) saveCollections(); support to those when implementing addBeatmapSetToCollection() + removeBeatmapSetFromCollection()
-
-void OsuDatabase::addBeatmapToCollection(UString collectionName, std::string beatmapMD5Hash)
+void OsuDatabase::addBeatmapToCollection(UString collectionName, std::string beatmapMD5Hash, bool doSaveImmediatelyIfEnabled)
 {
 	if (beatmapMD5Hash.length() != 32) return;
 
@@ -715,7 +712,7 @@ void OsuDatabase::addBeatmapToCollection(UString collectionName, std::string bea
 
 				m_bDidCollectionsChangeForSave = true;
 
-				if (osu_collections_save_immediately.getBool())
+				if (doSaveImmediatelyIfEnabled && osu_collections_save_immediately.getBool())
 					saveCollections();
 
 				// also update .beatmaps for convenience (songbrowser will use that to rebuild the UI)
@@ -766,7 +763,7 @@ void OsuDatabase::addBeatmapToCollection(UString collectionName, std::string bea
 	}
 }
 
-void OsuDatabase::removeBeatmapFromCollection(UString collectionName, std::string beatmapMD5Hash)
+void OsuDatabase::removeBeatmapFromCollection(UString collectionName, std::string beatmapMD5Hash, bool doSaveImmediatelyIfEnabled)
 {
 	if (beatmapMD5Hash.length() != 32) return;
 
@@ -788,7 +785,7 @@ void OsuDatabase::removeBeatmapFromCollection(UString collectionName, std::strin
 
 						m_bDidCollectionsChangeForSave = true;
 
-						if (osu_collections_save_immediately.getBool())
+						if (doSaveImmediatelyIfEnabled && osu_collections_save_immediately.getBool())
 							saveCollections();
 					}
 
