@@ -76,6 +76,8 @@ ConVar osu_hiterrorbar_misaims("osu_hiterrorbar_misaims", true);
 
 ConVar osu_followpoints_prevfadetime("osu_followpoints_prevfadetime", 400.0f); // TODO: this shouldn't be in this class
 
+ConVar osu_auto_and_relax_block_user_input("osu_auto_and_relax_block_user_input", true);
+
 ConVar osu_mod_timewarp("osu_mod_timewarp", false);
 ConVar osu_mod_timewarp_multiplier("osu_mod_timewarp_multiplier", 1.5f);
 ConVar osu_mod_minimize("osu_mod_minimize", false);
@@ -1160,7 +1162,8 @@ void OsuBeatmap::keyPressed1(bool mouse)
 	click.musicPos = m_iCurMusicPosWithOffsets;
 	click.maniaColumn = -1;
 
-	m_clicks.push_back(click);
+	if ((!m_osu->getModAuto() && !m_osu->getModRelax()) || !osu_auto_and_relax_block_user_input.getBool())
+		m_clicks.push_back(click);
 }
 
 void OsuBeatmap::keyPressed2(bool mouse)
@@ -1194,7 +1197,8 @@ void OsuBeatmap::keyPressed2(bool mouse)
 	click.musicPos = m_iCurMusicPosWithOffsets;
 	click.maniaColumn = -1;
 
-	m_clicks.push_back(click);
+	if ((!m_osu->getModAuto() && !m_osu->getModRelax()) || !osu_auto_and_relax_block_user_input.getBool())
+		m_clicks.push_back(click);
 }
 
 void OsuBeatmap::keyReleased1(bool mouse)
