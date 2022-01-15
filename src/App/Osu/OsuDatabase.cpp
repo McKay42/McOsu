@@ -436,6 +436,9 @@ void OsuDatabase::update()
 				// TODO: implement support for custom collections when raw loading, need to also build the hash tables (and maybe even set tables) ffs
 				///loadCollections("collections.db", false, hashToDiff2, hashToBeatmap);
 
+				// TODO: also sort them of course
+				///std::sort(m_collections.begin(), m_collections.end(), SortCollectionByName());
+
 				break;
 			}
 
@@ -1737,6 +1740,8 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 	if (osu_collections_custom_enabled.getBool())
 		loadCollections("collections.db", false, hashToDiff2, hashToBeatmap);
 
+	std::sort(m_collections.begin(), m_collections.end(), SortCollectionByName());
+
 	// signal that we are done
 	m_fLoadingProgress = 1.0f;
 }
@@ -2333,7 +2338,7 @@ void OsuDatabase::loadCollections(UString collectionFilePath, bool isLegacy, con
 				}
 
 				// add the collection
-				// check if we already have a collection with that name, if so then just add our new entries to it (necessary since this function will load both osu!'s collection.db as well as our custom collections.db)
+				// check if we already have a collection with that name, if so then just add our new entries to it (necessary since this function will load both osu!'s collection.db as well as our own custom collections.db)
 				// TODO: this handles all the merging between both legacy and custom collections
 				{
 					bool collectionAlreadyExists = false;
