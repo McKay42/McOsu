@@ -3368,7 +3368,7 @@ void OsuSongBrowser2::rebuildSongButtonsAndVisibleSongButtonsWithSearchMatchSupp
 						}
 					}
 
-					if (isAnyMatchInGroup)
+					if (isAnyMatchInGroup || !m_bInSearch)
 						m_visibleSongButtons.push_back((*groupButtons)[i]);
 				}
 			}
