@@ -4025,8 +4025,6 @@ void OsuSongBrowser2::onSongButtonContextMenu(OsuUISongBrowserSongButton *songBu
 {
 	//debugLog("OsuSongBrowser2::onSongButtonContextMenu(%p, %s, %i)\n", songButton, text.toUtf8(), id);
 
-	// TODO: why is the currently selected diff vanishing if the last entry inside that collection is removed? (collection still actually exists, just with 0 entries!)
-
 	struct CollectionManagementHelper
 	{
 		static std::vector<std::string> getBeatmapSetHashesForSongButton(OsuUISongBrowserSongButton *songButton, OsuDatabase *db)
@@ -4059,7 +4057,6 @@ void OsuSongBrowser2::onSongButtonContextMenu(OsuUISongBrowserSongButton *songBu
 	};
 
 	bool updateUIScheduled = false;
-	bool updateUIRestoresScrollPosY = true;
 	{
 		if (id == 1)
 		{
@@ -4128,7 +4125,6 @@ void OsuSongBrowser2::onSongButtonContextMenu(OsuUISongBrowserSongButton *songBu
 			m_db->triggerSaveCollections(); // (but do save here once at the end)
 
 			updateUIScheduled = true;
-			updateUIRestoresScrollPosY = false;
 		}
 		else if (id == -2 || id == -4)
 		{
@@ -4179,10 +4175,7 @@ void OsuSongBrowser2::onSongButtonContextMenu(OsuUISongBrowserSongButton *songBu
 				if (m_collectionButtons[i]->getCollectionName() == previouslySelectedCollectionName)
 				{
 					m_collectionButtons[i]->select();
-
-					if (updateUIRestoresScrollPosY)
-						m_songBrowser->scrollToY(prevScrollPosY, false);
-
+					m_songBrowser->scrollToY(prevScrollPosY, false);
 					break;
 				}
 			}
