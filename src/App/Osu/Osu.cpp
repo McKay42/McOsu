@@ -504,7 +504,10 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	//m_userStatsScreen->setVisible(true);
 
 	if (isInVRMode() && osu_vr_tutorial.getBool())
+	{
+		m_mainMenu->setStartupAnim(false);
 		m_vrTutorial->setVisible(true);
+	}
 	else
 		m_mainMenu->setVisible(true);
 

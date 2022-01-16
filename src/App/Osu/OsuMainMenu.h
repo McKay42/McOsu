@@ -55,6 +55,8 @@ public:
 
 	virtual void setVisible(bool visible);
 
+	void setStartupAnim(bool startupAnim) {m_bStartupAnim = startupAnim; m_fStartupAnim = (m_bStartupAnim ? 0.0f : 1.0f);}
+
 	inline Osu* getOsu() const {return m_osu;}
 
 private:
