@@ -1335,7 +1335,7 @@ void OsuSongBrowser2::onKeyDown(KeyboardEvent &key)
 			break;
 		}
 	}
-	else
+	else if (!m_contextMenu->isVisible())
 	{
 		if (key == KEY_ESCAPE) // can't support GAME_PAUSE hotkey here because of text searching
 			m_osu->toggleSongBrowser();
@@ -4132,7 +4132,7 @@ void OsuSongBrowser2::onSongButtonContextMenu(OsuUISongBrowserSongButton *songBu
 			// add new collection with name text
 
 			if (!m_db->addCollection(text))
-				m_osu->getNotificationOverlay()->addNotification("Error: Collection name already exists.", 0xffffff00);
+				m_osu->getNotificationOverlay()->addNotification("Error: Collection name already exists or is invalid.", 0xffffff00);
 			else
 			{
 				if (id == -2)

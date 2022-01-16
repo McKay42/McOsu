@@ -135,6 +135,16 @@ void OsuUIContextMenu::update()
 		if (isMouseInside())
 			engine->getMouse()->resetWheelDelta();
 	}
+
+	if (m_selfDeletionCrashWorkaroundScheduledElementDeleteHack.size() > 0)
+	{
+		for (size_t i=0; i<m_selfDeletionCrashWorkaroundScheduledElementDeleteHack.size(); i++)
+		{
+			delete m_selfDeletionCrashWorkaroundScheduledElementDeleteHack[i];
+		}
+
+		m_selfDeletionCrashWorkaroundScheduledElementDeleteHack.clear();
+	}
 }
 
 void OsuUIContextMenu::onKeyUp(KeyboardEvent &e)
@@ -159,6 +169,16 @@ void OsuUIContextMenu::onKeyDown(KeyboardEvent &e)
 			onHitEnter(m_containedTextbox);
 		}
 	}
+
+	// hide on ESC
+	if (!e.isConsumed())
+	{
+		if (e == KEY_ESCAPE)
+		{
+			e.consume();
+			setVisible2(false);
+		}
+	}
 }
 
 void OsuUIContextMenu::onChar(KeyboardEvent &e)
@@ -177,6 +197,15 @@ void OsuUIContextMenu::begin(int minWidth, bool bigStyle)
 	m_clickCallback = NULL;
 
 	setSizeX(m_iWidthCounter);
+
+	// HACKHACK: bad design workaround.
+	// HACKHACK: callbacks from the same context menu which call begin() to create a new context menu may crash because begin() deletes the object the callback is currently being called from
+	// HACKHACK: so, instead we just keep a list of things to delete whenever we get to the next update() tick
+	{
+		const std::vector<CBaseUIElement*> &oldElementsWeCanNotDeleteYet = m_container->getContainer()->getElements();
+		m_selfDeletionCrashWorkaroundScheduledElementDeleteHack.insert(m_selfDeletionCrashWorkaroundScheduledElementDeleteHack.end(), oldElementsWeCanNotDeleteYet.begin(), oldElementsWeCanNotDeleteYet.end());
+		m_container->getContainer()->empty(); // ensure nothing is deleted yet
+	}
 
 	m_container->clear();
 
