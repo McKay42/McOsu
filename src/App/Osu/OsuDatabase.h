@@ -284,6 +284,8 @@ private:
 	UString m_sRawBeatmapLoadOsuSongFolder;
 	std::vector<UString> m_rawBeatmapFolders;
 	std::vector<UString> m_rawLoadBeatmapFolders;
+	std::unordered_map<std::string, OsuDatabaseBeatmap*> m_rawHashToDiff2;
+	std::unordered_map<std::string, OsuDatabaseBeatmap*> m_rawHashToBeatmap;
 };
 
 #endif

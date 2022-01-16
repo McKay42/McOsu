@@ -428,16 +428,19 @@ void OsuDatabase::update()
 			{
 				m_rawLoadBeatmapFolders.clear();
 				m_bRawBeatmapLoadScheduled = false;
-				m_fLoadingProgress = 1.0f;
 				m_importTimer->update();
 
 				debugLog("Refresh finished, added %i beatmaps in %f seconds.\n", m_databaseBeatmaps.size(), m_importTimer->getElapsedTime());
 
-				// TODO: implement support for custom collections when raw loading, need to also build the hash tables (and maybe even set tables) ffs
-				///loadCollections("collections.db", false, hashToDiff2, hashToBeatmap);
+				// TODO: improve loading progress feedback here, currently we just freeze everything if this takes too long
+				// load custom collections after we have all beatmaps available (and m_rawHashToDiff2 + m_rawHashToBeatmap populated)
+				{
+					loadCollections("collections.db", false, m_rawHashToDiff2, m_rawHashToBeatmap);
 
-				// TODO: also sort them of course
-				///std::sort(m_collections.begin(), m_collections.end(), SortCollectionByName());
+					std::sort(m_collections.begin(), m_collections.end(), SortCollectionByName());
+				}
+
+				m_fLoadingProgress = 1.0f;
 
 				break;
 			}
@@ -1244,6 +1247,13 @@ void OsuDatabase::scheduleLoadRaw()
 
 		m_bRawBeatmapLoadScheduled = true;
 		m_importTimer->start();
+
+		if (m_bIsFirstLoad)
+		{
+			// reset
+			m_rawHashToDiff2.clear();
+			m_rawHashToBeatmap.clear();
+		}
 	}
 	else
 		m_fLoadingProgress = 1.0f;
@@ -2567,38 +2577,59 @@ OsuDatabaseBeatmap *OsuDatabase::loadRawBeatmap(UString beatmapPath)
 
 	// try loading all diffs
 	std::vector<OsuDatabaseBeatmap*> diffs2;
-	std::vector<UString> beatmapFiles = env->getFilesInFolder(beatmapPath);
-	for (int i=0; i<beatmapFiles.size(); i++)
 	{
-		UString ext = env->getFileExtensionFromFilePath(beatmapFiles[i]);
-
-		UString fullFilePath = beatmapPath;
-		fullFilePath.append(beatmapFiles[i]);
-
-		// load diffs
-		if (ext == "osu")
+		std::vector<UString> beatmapFiles = env->getFilesInFolder(beatmapPath);
+		for (int i=0; i<beatmapFiles.size(); i++)
 		{
-			OsuDatabaseBeatmap *diff2 = new OsuDatabaseBeatmap(m_osu, fullFilePath, beatmapPath);
+			UString ext = env->getFileExtensionFromFilePath(beatmapFiles[i]);
 
-			// try to load it. if successful save it, else cleanup and continue to the next osu file
-			if (!OsuDatabaseBeatmap::loadMetadata(diff2))
+			UString fullFilePath = beatmapPath;
+			fullFilePath.append(beatmapFiles[i]);
+
+			// load diffs
+			if (ext == "osu")
 			{
-				if (Osu::debug->getBool())
-				{
-					debugLog("OsuBeatmapDatabase::loadRawBeatmap() : Couldn't loadMetadata(), deleting object.\n");
-					if (diff2->getGameMode() == 0)
-						engine->showMessageWarning("OsuBeatmapDatabase::loadRawBeatmap()", "Couldn't loadMetadata()\n");
-				}
-				SAFE_DELETE(diff2);
-				continue;
-			}
+				OsuDatabaseBeatmap *diff2 = new OsuDatabaseBeatmap(m_osu, fullFilePath, beatmapPath);
 
-			diffs2.push_back(diff2);
+				// try to load it. if successful save it, else cleanup and continue to the next osu file
+				if (!OsuDatabaseBeatmap::loadMetadata(diff2))
+				{
+					if (Osu::debug->getBool())
+					{
+						debugLog("OsuBeatmapDatabase::loadRawBeatmap() : Couldn't loadMetadata(), deleting object.\n");
+						if (diff2->getGameMode() == 0)
+							engine->showMessageWarning("OsuBeatmapDatabase::loadRawBeatmap()", "Couldn't loadMetadata()\n");
+					}
+					SAFE_DELETE(diff2);
+					continue;
+				}
+
+				diffs2.push_back(diff2);
+			}
 		}
 	}
 
-	// if we found any valid diffs, create beatmap
-	return (diffs2.size() > 0 ? new OsuDatabaseBeatmap(m_osu, diffs2) : NULL);
+	// build beatmap from diffs
+	OsuDatabaseBeatmap *beatmap = NULL;
+	{
+		if (diffs2.size() > 0)
+		{
+			beatmap = new OsuDatabaseBeatmap(m_osu, diffs2);
+
+			// and add entries in our hashmaps
+			for (size_t i=0; i<diffs2.size(); i++)
+			{
+				OsuDatabaseBeatmap *diff2 = diffs2[i];
+				if (diff2->getMD5Hash().length() == 32)
+				{
+					m_rawHashToDiff2[diff2->getMD5Hash()] = diff2;
+					m_rawHashToBeatmap[diff2->getMD5Hash()] = beatmap;
+				}
+			}
+		}
+	}
+
+	return beatmap;
 }
 
 void OsuDatabase::onScoresRename(UString args)
