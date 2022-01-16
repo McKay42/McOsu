@@ -264,7 +264,6 @@ private:
 	// osu!.db
 	int m_iVersion;
 	int m_iFolderCount;
-	UString m_sPlayerName;
 
 	// collection.db (legacy and custom)
 	std::vector<Collection> m_collections;

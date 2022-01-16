@@ -55,6 +55,7 @@ ConVar osu_database_ignore_version("osu_database_ignore_version", false, "ignore
 ConVar osu_scores_enabled("osu_scores_enabled", true);
 ConVar osu_scores_legacy_enabled("osu_scores_legacy_enabled", true, "load osu!'s scores.db");
 ConVar osu_scores_custom_enabled("osu_scores_custom_enabled", true, "load custom scores.db");
+ConVar osu_scores_custom_version("osu_scores_custom_version", 20210108, "maximum supported custom scores.db/scoresvr.db version");
 ConVar osu_scores_save_immediately("osu_scores_save_immediately", true, "write scores.db as soon as a new score is added");
 ConVar osu_scores_sort_by_pp("osu_scores_sort_by_pp", true, "display pp in score browser instead of score");
 ConVar osu_scores_bonus_pp("osu_scores_bonus_pp", true, "whether to add bonus pp to total (real) pp or not");
@@ -62,7 +63,7 @@ ConVar osu_scores_rename("osu_scores_rename");
 ConVar osu_scores_export("osu_scores_export");
 ConVar osu_collections_legacy_enabled("osu_collections_legacy_enabled", true, "load osu!'s collection.db");
 ConVar osu_collections_custom_enabled("osu_collections_custom_enabled", true, "load custom collections.db");
-ConVar osu_collections_custom_version("osu_collections_custom_version", 20220109, "maximum supported custom collections.db version");
+ConVar osu_collections_custom_version("osu_collections_custom_version", 20220108, "maximum supported custom collections.db version");
 ConVar osu_collections_save_immediately("osu_collections_save_immediately", true, "write collections.db as soon as anything is changed");
 ConVar osu_user_include_relax_and_autopilot_for_stats("osu_user_include_relax_and_autopilot_for_stats", false);
 ConVar osu_user_switcher_include_legacy_scores_for_names("osu_user_switcher_include_legacy_scores_for_names", true);
@@ -354,7 +355,6 @@ OsuDatabase::OsuDatabase(Osu *osu)
 	m_osu = osu;
 	m_iVersion = 0;
 	m_iFolderCount = 0;
-	m_sPlayerName = "";
 
 	m_bDidCollectionsChangeForSave = false;
 
@@ -1287,10 +1287,10 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 	m_iFolderCount = db->readInt();
 	db->readBool();
 	db->readDateTime();
-	m_sPlayerName = db->readString();
+	UString playerName = db->readString();
 	m_iNumBeatmapsToLoad = db->readInt();
 
-	debugLog("Database: version = %i, folderCount = %i, playerName = %s, numDiffs = %i\n", m_iVersion, m_iFolderCount, m_sPlayerName.toUtf8(), m_iNumBeatmapsToLoad);
+	debugLog("Database: version = %i, folderCount = %i, playerName = %s, numDiffs = %i\n", m_iVersion, m_iFolderCount, playerName.toUtf8(), m_iNumBeatmapsToLoad);
 
 	if (m_iVersion < 20140609)
 	{
@@ -1299,6 +1299,7 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 		m_fLoadingProgress = 1.0f;
 		return;
 	}
+
 	if (m_iVersion < 20170222)
 	{
 		debugLog("Database: Version is quite old, below 20170222 ...\n");
@@ -1760,7 +1761,7 @@ void OsuDatabase::loadScores()
 	size_t customScoresFileSize = 0;
 	if (osu_scores_custom_enabled.getBool())
 	{
-		const int maxSupportedCustomDbVersion = 20210106;
+		const int maxSupportedCustomDbVersion = osu_scores_custom_version.getInt();
 		const unsigned char hackIsImportedLegacyScoreFlag = 0xA9; // TODO: remove this once all builds on steam (even previous-version) have loading version cap logic
 
 		int makeBackupType = 0;
@@ -1930,7 +1931,7 @@ void OsuDatabase::loadScores()
 			if (originalScoresFile.canRead())
 			{
 				UString backupScoresFilePath = scoresFilePath;
-				backupScoresFilePath.append(UString::format(".%i.backup", (makeBackupType < 2 ? backupLessThanVersion : backupMoreThanVersion)));
+				backupScoresFilePath.append(UString::format(".%i.backup", (makeBackupType < 2 ? backupLessThanVersion : maxSupportedCustomDbVersion)));
 
 				File backupScoresFile(backupScoresFilePath, File::TYPE::WRITE);
 				if (backupScoresFile.canWrite())
@@ -2098,7 +2099,7 @@ void OsuDatabase::saveScores()
 	if (!m_bDidScoresChangeForSave) return;
 	m_bDidScoresChangeForSave = false;
 
-	const int dbVersion = 20210106;
+	const int dbVersion = osu_scores_custom_version.getInt();
 	const unsigned char hackIsImportedLegacyScoreFlag = 0xA9; // TODO: remove this once all builds on steam (even previous-version) have loading version cap logic
 
 	if (m_scores.size() > 0)
@@ -2211,6 +2212,57 @@ void OsuDatabase::saveScores()
 
 void OsuDatabase::loadCollections(UString collectionFilePath, bool isLegacy, const std::unordered_map<std::string, OsuDatabaseBeatmap*> &hashToDiff2, const std::unordered_map<std::string, OsuDatabaseBeatmap*> &hashToBeatmap)
 {
+	bool wasInterrupted = false;
+
+	struct CollectionLoadingHelper
+	{
+		static void addBeatmapsEntryForBeatmapAndDiff2(Collection &c, OsuDatabaseBeatmap *beatmap, OsuDatabaseBeatmap *diff2, std::atomic<bool> &interruptLoad, bool &wasInterrupted)
+		{
+			if (beatmap == NULL || diff2 == NULL) return;
+
+			// we now have one matching OsuBeatmap and OsuBeatmapDifficulty, add either of them if they don't exist yet
+			bool beatmapIsAlreadyInCollection = false;
+			{
+				for (int m=0; m<c.beatmaps.size(); m++)
+				{
+					if (interruptLoad.load()) {wasInterrupted = true; break;} // cancellation point
+
+					if (c.beatmaps[m].first == beatmap)
+					{
+						beatmapIsAlreadyInCollection = true;
+
+						// the beatmap already exists, check if we have to add the current diff
+						bool diffIsAlreadyInCollection = false;
+						{
+							for (int d=0; d<c.beatmaps[m].second.size(); d++)
+							{
+								if (interruptLoad.load()) {wasInterrupted = true; break;} // cancellation point
+
+								if (c.beatmaps[m].second[d] == diff2)
+								{
+									diffIsAlreadyInCollection = true;
+									break;
+								}
+							}
+						}
+						if (!diffIsAlreadyInCollection)
+							c.beatmaps[m].second.push_back(diff2);
+
+						break;
+					}
+				}
+			}
+			if (!beatmapIsAlreadyInCollection)
+			{
+				std::vector<OsuDatabaseBeatmap*> diffs2;
+				{
+					diffs2.push_back(diff2);
+				}
+				c.beatmaps.push_back(std::pair<OsuDatabaseBeatmap*, std::vector<OsuDatabaseBeatmap*>>(beatmap, diffs2));
+			}
+		}
+	};
+
 	OsuFile collectionFile(collectionFilePath);
 	if (collectionFile.isReady())
 	{
@@ -2226,7 +2278,7 @@ void OsuDatabase::loadCollections(UString collectionFilePath, bool isLegacy, con
 		{
 			for (int i=0; i<numCollections; i++)
 			{
-				if (m_bInterruptLoad.load()) break; // cancellation point
+				if (m_bInterruptLoad.load()) {wasInterrupted = true; break;} // cancellation point
 
 				m_fLoadingProgress = 0.75f + 0.24f*((float)(i+1)/(float)numCollections);
 
@@ -2242,7 +2294,7 @@ void OsuDatabase::loadCollections(UString collectionFilePath, bool isLegacy, con
 
 				for (int b=0; b<numBeatmaps; b++)
 				{
-					if (m_bInterruptLoad.load()) break; // cancellation point
+					if (m_bInterruptLoad.load()) {wasInterrupted = true; break;} // cancellation point
 
 					std::string md5hash = collectionFile.readStdString();
 
@@ -2263,7 +2315,7 @@ void OsuDatabase::loadCollections(UString collectionFilePath, bool isLegacy, con
 					std::vector<OsuDatabaseBeatmap*> matchingDiffs2;
 					for (int h=0; h<c.hashes.size(); h++)
 					{
-						if (m_bInterruptLoad.load()) break; // cancellation point
+						if (m_bInterruptLoad.load()) {wasInterrupted = true; break;} // cancellation point
 
 						// new: use hashmap
 						if (c.hashes[h].hash.length() == 32)
@@ -2279,9 +2331,11 @@ void OsuDatabase::loadCollections(UString collectionFilePath, bool isLegacy, con
 					// go through every found OsuBeatmapDifficulty
 					for (int md=0; md<matchingDiffs2.size(); md++)
 					{
-						if (m_bInterruptLoad.load()) break; // cancellation point
+						if (m_bInterruptLoad.load()) {wasInterrupted = true; break;} // cancellation point
 
 						OsuDatabaseBeatmap *diff2 = matchingDiffs2[md];
+
+						if (diff2 == NULL) continue;
 
 						// find the OsuBeatmap object corresponding to this diff
 						OsuDatabaseBeatmap *beatmap = NULL;
@@ -2293,77 +2347,83 @@ void OsuDatabase::loadCollections(UString collectionFilePath, bool isLegacy, con
 								beatmap = result->second;
 						}
 
-						if (beatmap != NULL)
-						{
-							// we now have one matching OsuBeatmap and OsuBeatmapDifficulty, add either of them if they don't exist yet
-							bool beatmapIsAlreadyInCollection = false;
-							for (int m=0; m<c.beatmaps.size(); m++)
-							{
-								if (m_bInterruptLoad.load()) break; // cancellation point
-
-								if (c.beatmaps[m].first == beatmap)
-								{
-									beatmapIsAlreadyInCollection = true;
-
-									// the beatmap already exists, check if we have to add the current diff
-									bool diffIsAlreadyInCollection = false;
-									for (int d=0; d<c.beatmaps[m].second.size(); d++)
-									{
-										if (m_bInterruptLoad.load()) break; // cancellation point
-
-										if (c.beatmaps[m].second[d] == diff2)
-										{
-											diffIsAlreadyInCollection = true;
-											break;
-										}
-									}
-
-									// add diff
-									if (!diffIsAlreadyInCollection && diff2 != NULL)
-										c.beatmaps[m].second.push_back(diff2);
-
-									break;
-								}
-							}
-
-							// add beatmap
-							if (!beatmapIsAlreadyInCollection && diff2 != NULL)
-							{
-								std::vector<OsuDatabaseBeatmap*> diffs2;
-								diffs2.push_back(diff2);
-								c.beatmaps.push_back(std::pair<OsuDatabaseBeatmap*, std::vector<OsuDatabaseBeatmap*>>(beatmap, diffs2));
-							}
-						}
+						CollectionLoadingHelper::addBeatmapsEntryForBeatmapAndDiff2(c, beatmap, diff2, m_bInterruptLoad, wasInterrupted);
 					}
 				}
 
 				// add the collection
 				// check if we already have a collection with that name, if so then just add our new entries to it (necessary since this function will load both osu!'s collection.db as well as our own custom collections.db)
-				// TODO: this handles all the merging between both legacy and custom collections
+				// this handles all the merging between both legacy and custom collections
 				{
 					bool collectionAlreadyExists = false;
 					for (size_t cc=0; cc<m_collections.size(); cc++)
 					{
-						Collection &existingCollection = m_collections[cc];
+						if (m_bInterruptLoad.load()) {wasInterrupted = true; break;} // cancellation point
 
+						Collection &existingCollection = m_collections[cc];
 						if (existingCollection.name == c.name)
 						{
 							collectionAlreadyExists = true;
 
-							// TODO: primitive method first, believing there will be no collisions or merges necessary, ok works fine
-							/*
-							existingCollection.hashes.insert(existingCollection.hashes.end(), c.hashes.begin(), c.hashes.end());
-							existingCollection.beatmaps.insert(existingCollection.beatmaps.end(), c.beatmaps.begin(), c.beatmaps.end());
-							*/
-
-
-							// TODO: implement actually intelligent merging ffs
-							/*
-							for (size_t e=0; e<m_collections[cc].hashes.size(); e++)
+							// merge with existing collection
 							{
+								for (size_t e=0; e<c.hashes.size(); e++)
+								{
+									const std::string &toBeAddedEntryHash = c.hashes[e].hash;
 
+									bool entryAlreadyExists = false;
+									{
+										for (size_t ee=0; ee<existingCollection.hashes.size(); ee++)
+										{
+											const std::string &existingEntryHash = existingCollection.hashes[ee].hash;
+											if (existingEntryHash == toBeAddedEntryHash)
+											{
+												entryAlreadyExists = true;
+												break;
+											}
+										}
+									}
+
+									// if the entry does not yet exist in the existing collection, then add that entry
+									if (!entryAlreadyExists)
+									{
+										// add to .hashes
+										{
+											CollectionEntry toBeAddedEntry;
+											{
+												toBeAddedEntry.isLegacyEntry = isLegacy;
+
+												toBeAddedEntry.hash = toBeAddedEntryHash;
+											}
+											existingCollection.hashes.push_back(toBeAddedEntry);
+										}
+
+										// add to .beatmaps
+										{
+											const auto result = hashToDiff2.find(toBeAddedEntryHash);
+											if (result != hashToDiff2.end())
+											{
+												OsuDatabaseBeatmap *diff2 = result->second;
+
+												if (diff2 != NULL)
+												{
+													// find the OsuBeatmap object corresponding to this diff
+													OsuDatabaseBeatmap *beatmap = NULL;
+													if (diff2->getMD5Hash().length() == 32)
+													{
+														// new: use hashmap
+														const auto result = hashToBeatmap.find(diff2->getMD5Hash());
+														if (result != hashToBeatmap.end())
+															beatmap = result->second;
+													}
+
+													CollectionLoadingHelper::addBeatmapsEntryForBeatmapAndDiff2(existingCollection, beatmap, diff2, m_bInterruptLoad, wasInterrupted);
+												}
+											}
+										}
+									}
+								}
 							}
-							*/
 
 							break;
 						}
@@ -2386,6 +2446,29 @@ void OsuDatabase::loadCollections(UString collectionFilePath, bool isLegacy, con
 	}
 	else
 		debugLog("OsuBeatmapDatabase::loadDB() : Couldn't load %s", collectionFilePath.toUtf8());
+
+	// backup
+	if (!isLegacy)
+	{
+		File originalCollectionsFile(collectionFilePath);
+		if (originalCollectionsFile.canRead())
+		{
+			UString backupCollectionsFilePath = collectionFilePath;
+			backupCollectionsFilePath.append(UString::format(".%i.backup", osu_collections_custom_version.getInt()));
+
+			File backupCollectionsFile(backupCollectionsFilePath, File::TYPE::WRITE);
+			if (backupCollectionsFile.canWrite())
+			{
+				const char *originalCollectionsFileBytes = originalCollectionsFile.readFile();
+				if (originalCollectionsFileBytes != NULL)
+					backupCollectionsFile.write(originalCollectionsFileBytes, originalCollectionsFile.getFileSize());
+			}
+		}
+	}
+
+	// don't keep partially loaded collections. the user should notice at that point that it's not a good idea to edit collections after having interrupted loading.
+	if (wasInterrupted)
+		m_collections.clear();
 }
 
 void OsuDatabase::saveCollections()
@@ -2393,7 +2476,7 @@ void OsuDatabase::saveCollections()
 	if (!m_bDidCollectionsChangeForSave) return;
 	m_bDidCollectionsChangeForSave = false;
 
-	const int32_t dbVersion = 20211107;
+	const int32_t dbVersion = osu_collections_custom_version.getInt();
 
 	if (m_collections.size() > 0)
 	{
