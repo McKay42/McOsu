@@ -169,6 +169,16 @@ void OsuUIContextMenu::onKeyDown(KeyboardEvent &e)
 			onHitEnter(m_containedTextbox);
 		}
 	}
+
+	// hide on ESC
+	if (!e.isConsumed())
+	{
+		if (e == KEY_ESCAPE)
+		{
+			e.consume();
+			setVisible2(false);
+		}
+	}
 }
 
 void OsuUIContextMenu::onChar(KeyboardEvent &e)

@@ -1335,7 +1335,7 @@ void OsuSongBrowser2::onKeyDown(KeyboardEvent &key)
 			break;
 		}
 	}
-	else
+	else if (!m_contextMenu->isVisible())
 	{
 		if (key == KEY_ESCAPE) // can't support GAME_PAUSE hotkey here because of text searching
 			m_osu->toggleSongBrowser();
