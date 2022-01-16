@@ -76,6 +76,8 @@ private:
 
 	bool m_bBigStyle;
 	bool m_bClampUnderflowAndOverflowAndEnableScrollingIfNecessary;
+
+	std::vector<CBaseUIElement*> m_selfDeletionCrashWorkaroundScheduledElementDeleteHack;
 };
 
 class OsuUIContextMenuButton : public CBaseUIButton
