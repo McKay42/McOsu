@@ -1153,7 +1153,8 @@ void OsuSongBrowser2::update()
 	}
 
 	// if cursor is to the left edge of the screen, force center currently selected beatmap/diff
-	if (engine->getMouse()->getPos().x < m_osu->getScreenWidth()*0.1f)
+	// but only if the context menu is currently not visible (since we don't want move things while e.g. managing collections etc.)
+	if (engine->getMouse()->getPos().x < m_osu->getScreenWidth()*0.1f && !m_contextMenu->isVisible())
 		scrollToSelectedSongButton();
 
 	// handle searching
