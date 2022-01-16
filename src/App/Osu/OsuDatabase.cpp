@@ -604,6 +604,8 @@ void OsuDatabase::sortScores(std::string beatmapMD5Hash)
 
 bool OsuDatabase::addCollection(UString collectionName)
 {
+	if (collectionName.length() < 1) return false;
+
 	// don't want duplicates
 	for (size_t i=0; i<m_collections.size(); i++)
 	{
