@@ -137,6 +137,9 @@ private:
 
 	float m_fShutdownScheduledTime;
 	bool m_bWasCleanShutdown;
+
+	bool m_bStartupAnim;
+	float m_fStartupAnim;
 };
 
 #endif

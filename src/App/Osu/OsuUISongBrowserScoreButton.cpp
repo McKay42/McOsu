@@ -29,6 +29,7 @@
 #include "OsuModSelector.h"
 #include "OsuDatabase.h"
 #include "OsuDatabaseBeatmap.h"
+#include "OsuGameRules.h"
 
 #include "OsuUIContextMenu.h"
 
@@ -556,7 +557,7 @@ void OsuUISongBrowserScoreButton::onRightMouseUpInside()
 				deleteButton->setTextDarkColor(0xff000000);
 			}
 		}
-		m_contextMenu->end();
+		m_contextMenu->end(false, false);
 		m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUISongBrowserScoreButton::onContextMenu) );
 		OsuUIContextMenu::clampToRightScreenEdge(m_contextMenu);
 		OsuUIContextMenu::clampToBottomScreenEdge(m_contextMenu);
@@ -570,7 +571,7 @@ void OsuUISongBrowserScoreButton::onContextMenu(UString text, int id)
 	if (id == 2)
 	{
 		if (engine->getKeyboard()->isShiftDown())
-			onDeleteScoreConfirmed("", 1);
+			onDeleteScoreConfirmed(text, 1);
 		else
 			onDeleteScoreClicked();
 	}
@@ -686,7 +687,7 @@ void OsuUISongBrowserScoreButton::onDeleteScoreClicked()
 			m_contextMenu->addButton("Yes", 1)->setTextLeft(false);
 			m_contextMenu->addButton("No")->setTextLeft(false);
 		}
-		m_contextMenu->end();
+		m_contextMenu->end(false, false);
 		m_contextMenu->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUISongBrowserScoreButton::onDeleteScoreConfirmed) );
 		OsuUIContextMenu::clampToRightScreenEdge(m_contextMenu);
 		OsuUIContextMenu::clampToBottomScreenEdge(m_contextMenu);
@@ -711,7 +712,7 @@ void OsuUISongBrowserScoreButton::onDeleteScoreConfirmed(UString text, int id)
 	}
 }
 
-void OsuUISongBrowserScoreButton::setScore(const OsuDatabase::Score &score, int index, UString titleString, float weight)
+void OsuUISongBrowserScoreButton::setScore(const OsuDatabase::Score &score, const OsuDatabaseBeatmap *diff2, int index, UString titleString, float weight)
 {
 	m_score = score;
 	m_iScoreIndexNumber = index;
@@ -720,13 +721,15 @@ void OsuUISongBrowserScoreButton::setScore(const OsuDatabase::Score &score, int 
 	const bool modHidden = score.modsLegacy & OsuReplay::Mods::Hidden;
 	const bool modFlashlight = score.modsLegacy & OsuReplay::Mods::Flashlight;
 
+	const bool fullCombo = (!score.isImportedLegacyScore && !score.isLegacyScore && score.maxPossibleCombo > 0 && score.numMisses == 0 && score.numSliderBreaks == 0); // NOTE: allows dropped sliderends
+
 	// display
 	m_scoreGrade = OsuScore::calculateGrade(score.num300s, score.num100s, score.num50s, score.numMisses, modHidden, modFlashlight);
 	m_sScoreUsername = score.playerName;
-	m_sScoreScore = UString::format((score.perfect ? "Score: %llu (%ix FC)" : "Score: %llu (%ix)"), score.score, score.comboMax);
-	m_sScoreScorePP = UString::format((score.perfect ? "PP: %ipp (%ix FC)" : "PP: %ipp (%ix)"), (int)std::round(score.pp), score.comboMax);
+	m_sScoreScore = UString::format((score.perfect ? "Score: %llu (%ix PFC)" : (fullCombo ? "Score: %llu (%ix FC)" : "Score: %llu (%ix)")), score.score, score.comboMax);
+	m_sScoreScorePP = UString::format((score.perfect ? "PP: %ipp (%ix PFC)" : (fullCombo ? "PP: %ipp (%ix FC)" : "PP: %ipp (%ix)")), (int)std::round(score.pp), score.comboMax);
 	m_sScoreAccuracy = UString::format("%.2f%%", accuracy);
-	m_sScoreAccuracyFC = UString::format((score.perfect ? "FC %.2f%%" : "%.2f%%"), accuracy);
+	m_sScoreAccuracyFC = UString::format((score.perfect ? "PFC %.2f%%" : (fullCombo ? "FC %.2f%%" : "%.2f%%")), accuracy);
 	m_sScoreMods = getModsStringForDisplay(score.modsLegacy);
 	if (score.experimentalModsConVars.length() > 0)
 	{
@@ -737,10 +740,54 @@ void OsuUISongBrowserScoreButton::setScore(const OsuDatabase::Score &score, int 
 		for (int i=0; i<experimentalMods.size(); i++)
 		{
 			if (experimentalMods[i].length() > 0)
-				m_sScoreMods.append("++");
+				m_sScoreMods.append("+");
 		}
 	}
-	m_sCustom = (score.speedMultiplier != 1.0f ? UString::format("Speed: %gx", score.speedMultiplier) : "");
+	m_sCustom = (score.speedMultiplier != 1.0f ? UString::format("Spd: %gx", score.speedMultiplier) : "");
+	if (diff2 != NULL && !score.isImportedLegacyScore && !score.isLegacyScore)
+	{
+		const OsuReplay::BEATMAP_VALUES beatmapValuesForModsLegacy = OsuReplay::getBeatmapValuesForModsLegacy(score.modsLegacy, diff2->getAR(), diff2->getCS(), diff2->getOD(), diff2->getHP());
+
+		const float compensatedCS = std::round(score.CS * 100.0f) / 100.0f;
+		const float compensatedAR = std::round(OsuGameRules::getRawApproachRateForSpeedMultiplier(OsuGameRules::getRawApproachTime(score.AR), score.speedMultiplier) * 100.0f) / 100.0f;
+		const float compensatedOD = std::round(OsuGameRules::getRawOverallDifficultyForSpeedMultiplier(OsuGameRules::getRawHitWindow300(score.OD), score.speedMultiplier) * 100.0f) / 100.0f;
+		const float compensatedHP = std::round(score.HP * 100.0f) / 100.0f;
+
+		// only show these values if they are not default (or default with applied mods)
+		// only show these values if they are not default with applied mods
+
+		if (beatmapValuesForModsLegacy.CS != score.CS)
+		{
+			if (m_sCustom.length() > 0)
+				m_sCustom.append(", ");
+
+			m_sCustom.append(UString::format("CS:%.4g", compensatedCS));
+		}
+
+		if (beatmapValuesForModsLegacy.AR != score.AR)
+		{
+			if (m_sCustom.length() > 0)
+				m_sCustom.append(", ");
+
+			m_sCustom.append(UString::format("AR:%.4g", compensatedAR));
+		}
+
+		if (beatmapValuesForModsLegacy.OD != score.OD)
+		{
+			if (m_sCustom.length() > 0)
+				m_sCustom.append(", ");
+
+			m_sCustom.append(UString::format("OD:%.4g", compensatedOD));
+		}
+
+		if (beatmapValuesForModsLegacy.HP != score.HP)
+		{
+			if (m_sCustom.length() > 0)
+				m_sCustom.append(", ");
+
+			m_sCustom.append(UString::format("HP:%.4g", compensatedHP));
+		}
+	}
 
 	char dateString[64];
 	memset(dateString, '\0', 64);

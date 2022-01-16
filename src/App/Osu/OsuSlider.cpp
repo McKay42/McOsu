@@ -476,6 +476,8 @@ void OsuSlider::draw2(Graphics *g)
 
 void OsuSlider::draw2(Graphics *g, bool drawApproachCircle, bool drawOnlyApproachCircle)
 {
+	OsuHitObject::draw2(g);
+
 	OsuSkin *skin = m_beatmap->getSkin();
 
 	// HACKHACK: so much code duplication aaaaaaah
@@ -1504,7 +1506,7 @@ void OsuSlider::onHit(OsuScore::HIT result, long delta, bool startOrEnd, float t
 		if (!m_beatmap->getOsu()->getModTarget())
 			m_beatmap->addHitResult(this, result, delta, false, false, true, false, true, true); // not end of combo, show in hiterrorbar, ignore for accuracy, increase combo, don't count towards score, depending on scorev2 ignore for health or not
 		else
-			addHitResult(result, delta, false, m_curve->pointAt(0.0f), targetDelta, targetAngle, false, false, true); // not end of combo, show in hiterrorbar, use for accuracy, increase combo, increase score, ignore for health
+			addHitResult(result, delta, false, m_curve->pointAt(0.0f), targetDelta, targetAngle, false, false, true, false); // not end of combo, show in hiterrorbar, use for accuracy, increase combo, increase score, ignore for health, don't add object duration to result anim
 
 		// add bonus score + health manually
 		if (result != OsuScore::HIT::HIT_MISS)

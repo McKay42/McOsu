@@ -46,6 +46,7 @@ ConVar osu_draw_reverse_order("osu_draw_reverse_order", false);
 ConVar osu_draw_playfield_border("osu_draw_playfield_border", true);
 
 ConVar osu_stacking("osu_stacking", true, "Whether to use stacking calculations or not");
+ConVar osu_stacking_leniency_override("osu_stacking_leniency_override", -1.0f);
 
 ConVar osu_auto_snapping_strength("osu_auto_snapping_strength", 1.0f, "How many iterations of quadratic interpolation to use, more = snappier, 0 = linear");
 ConVar osu_auto_cursordance("osu_auto_cursordance", false);
@@ -589,7 +590,9 @@ void OsuBeatmapStandard::drawFollowPoints(Graphics *g)
 		}
 
 		// NOTE: "m_hitobjects[index]->getComboNumber() != 1" breaks (not literally) on new combos
-		if (lastObjectIndex >= 0 && (m_hitobjects[index]->getComboNumber() != 1 || followPointsConnectCombos))
+		// NOTE: the "getComboNumber()" call has been replaced with isEndOfCombo() because of osu_ignore_beatmap_combo_numbers and osu_number_max
+		const bool isCurrentHitObjectNewCombo = (lastObjectIndex >= 0 ? m_hitobjects[lastObjectIndex]->isEndOfCombo() : false);
+		if (lastObjectIndex >= 0 && (!isCurrentHitObjectNewCombo || followPointsConnectCombos))
 		{
 			// ignore previous spinners
 			spinnerPointer = dynamic_cast<OsuSpinner*>(m_hitobjects[lastObjectIndex]);
@@ -1704,6 +1707,8 @@ void OsuBeatmapStandard::calculateStacks()
 
 	const float approachTime = OsuGameRules::getApproachTimeForStacking(this);
 
+	const float stackLeniency = (osu_stacking_leniency_override.getFloat() >= 0.0f ? osu_stacking_leniency_override.getFloat() : m_selectedDifficulty2->getStackLeniency());
+
 	if (getSelectedDifficulty2()->getVersion() > 5)
 	{
 		// peppy's algorithm
@@ -1734,7 +1739,7 @@ void OsuBeatmapStandard::calculateStacks()
 					if (isSpinnerN)
 						continue;
 
-					if (objectI->getTime() - (approachTime * m_selectedDifficulty2->getStackLeniency()) > (objectN->getTime() + objectN->getDuration()))
+					if (objectI->getTime() - (approachTime * stackLeniency) > (objectN->getTime() + objectN->getDuration()))
 						break;
 
 					Vector2 objectNEndPosition = objectN->getOriginalRawPosAt(objectN->getTime() + objectN->getDuration());
@@ -1768,7 +1773,7 @@ void OsuBeatmapStandard::calculateStacks()
 					if (isSpinner)
 						continue;
 
-					if (objectI->getTime() - (approachTime * m_selectedDifficulty2->getStackLeniency()) > objectN->getTime())
+					if (objectI->getTime() - (approachTime * stackLeniency) > objectN->getTime())
 						break;
 
 					if (((objectN->getDuration() != 0 ? objectN->getOriginalRawPosAt(objectN->getTime() + objectN->getDuration()) : objectN->getOriginalRawPosAt(objectN->getTime())) - objectI->getOriginalRawPosAt(objectI->getTime())).length() < STACK_LENIENCE)
@@ -1802,7 +1807,7 @@ void OsuBeatmapStandard::calculateStacks()
 			{
 				OsuHitObject *objectJ = m_hitobjects[j];
 
-				if (objectJ->getTime() - (approachTime * m_selectedDifficulty2->getStackLeniency()) > startTime)
+				if (objectJ->getTime() - (approachTime * stackLeniency) > startTime)
 					break;
 
 				// "The start position of the hitobject, or the position at the end of the path if the hitobject is a slider"

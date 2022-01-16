@@ -47,7 +47,27 @@
 class OsuModSelectorOverrideSliderDescButton : public CBaseUIButton
 {
 public:
-	OsuModSelectorOverrideSliderDescButton(float xPos, float yPos, float xSize, float ySize, UString name, UString text) : CBaseUIButton(xPos, yPos, xSize, ySize, name, text) {}
+	OsuModSelectorOverrideSliderDescButton(Osu *osu, float xPos, float yPos, float xSize, float ySize, UString name, UString text) : CBaseUIButton(xPos, yPos, xSize, ySize, name, text)
+	{
+		m_osu = osu;
+	}
+
+	virtual void update()
+	{
+		CBaseUIButton::update();
+		if (!m_bVisible) return;
+
+		if (isMouseInside() && m_sTooltipText.length() > 0)
+		{
+			m_osu->getTooltipOverlay()->begin();
+			{
+				m_osu->getTooltipOverlay()->addLine(m_sTooltipText);
+			}
+			m_osu->getTooltipOverlay()->end();
+		}
+	}
+
+	void setTooltipText(UString tooltipText) {m_sTooltipText = tooltipText;}
 
 private:
 	virtual void drawText(Graphics *g)
@@ -69,6 +89,9 @@ private:
 			//g->popClipRect();
 		}
 	}
+
+	Osu *m_osu;
+	UString m_sTooltipText;
 };
 
 
@@ -171,10 +194,10 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen(osu)
 	}
 
 	// build override sliders
-	OVERRIDE_SLIDER overrideCS = addOverrideSlider("CS Override", "CS:", convar->getConVarByName("osu_cs_override"), 0.0f, 12.5f);
-	OVERRIDE_SLIDER overrideAR = addOverrideSlider("AR Override", "AR:", convar->getConVarByName("osu_ar_override"), 0.0f, 12.5f, convar->getConVarByName("osu_ar_override_lock"));
-	OVERRIDE_SLIDER overrideOD = addOverrideSlider("OD Override", "OD:", convar->getConVarByName("osu_od_override"), 0.0f, 12.5f, convar->getConVarByName("osu_od_override_lock"));
-	OVERRIDE_SLIDER overrideHP = addOverrideSlider("HP Override", "HP:", convar->getConVarByName("osu_hp_override"), 0.0f, 12.5f);
+	OVERRIDE_SLIDER overrideCS = addOverrideSlider("CS Override", "CS:", convar->getConVarByName("osu_cs_override"), 0.0f, 12.5f, "Circle Size (higher number = smaller circles).");
+	OVERRIDE_SLIDER overrideAR = addOverrideSlider("AR Override", "AR:", convar->getConVarByName("osu_ar_override"), 0.0f, 12.5f, "Approach Rate (higher number = faster circles).", convar->getConVarByName("osu_ar_override_lock"));
+	OVERRIDE_SLIDER overrideOD = addOverrideSlider("OD Override", "OD:", convar->getConVarByName("osu_od_override"), 0.0f, 12.5f, "Overall Difficulty (higher number = harder accuracy).", convar->getConVarByName("osu_od_override_lock"));
+	OVERRIDE_SLIDER overrideHP = addOverrideSlider("HP Override", "HP:", convar->getConVarByName("osu_hp_override"), 0.0f, 12.5f, "Hit/Health Points (higher number = harder survival).");
 
 	overrideCS.slider->setAnimated(false); // quick fix for otherwise possible inconsistencies due to slider vertex buffers and animated CS changes
 	overrideCS.slider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
@@ -204,7 +227,8 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen(osu)
 	}
 
 	// build experimental buttons
-	addExperimentalLabel(" Experimental Mods");
+	addExperimentalLabel(" Experimental Mods (!)");
+	addExperimentalCheckbox("FPoSu: Strafing", "Playfield moves in 3D space (see fposu_mod_strafing_...).\nOnly works in FPoSu mode!", convar->getConVarByName("fposu_mod_strafing"));
 	addExperimentalCheckbox("Wobble", "Playfield rotates and moves.", convar->getConVarByName("osu_mod_wobble"));
 	addExperimentalCheckbox("AR Wobble", "Approach rate oscillates between -1 and +1.", convar->getConVarByName("osu_mod_arwobble"));
 
@@ -331,6 +355,8 @@ void OsuModSelector::draw(Graphics *g)
 	const int margin = 10;
 	const Color backgroundColor = 0x88000000;
 
+	const float experimentalModsAnimationTranslation = -(m_experimentalContainer->getSize().x + 2.0f)*(1.0f - m_fExperimentalAnimation);
+
 	// if we are in compact mode, draw some backgrounds under the override sliders & mod grid buttons
 	if (isInCompactMode())
 	{
@@ -393,27 +419,38 @@ void OsuModSelector::draw(Graphics *g)
 	}
 	else // normal mode, just draw everything
 	{
-		// disabled because it looks like shit
-		/*
-		// HACKHACK: disable GL_TEXTURE_2D (needs proper definition for flat/textured rendering vaos)
-		g->drawPixel(-1, -1);
+		// draw hint text on left edge of screen
+		{
+			const float dpiScale = Osu::getUIScale();
 
-		// subtle background to guide users to move the cursor to the experimental mods
-		g->setColor(0xffffffff);
-		Color leftColor = 0x33ffffff;
-		Color rightColor = 0x00000000;
-		VertexArrayObject vao;
-		vao.setType(VertexArrayObject::TYPE_QUADS);
-		vao.addColor(leftColor);
-		vao.addVertex(Vector2(0,0));
-		vao.addColor(leftColor);
-		vao.addVertex(Vector2(0, m_osu->getScreenHeight()));
-		vao.addColor(rightColor);
-		vao.addVertex(Vector2(m_osu->getScreenWidth()*0.05f, m_osu->getScreenHeight()));
-		vao.addColor(rightColor);
-		vao.addVertex(Vector2(m_osu->getScreenWidth()*0.05f, 0));
-		g->drawVAO(&vao);
-		*/
+			UString experimentalText = "Experimental Mods";
+			McFont *experimentalFont = m_osu->getSubTitleFont();
+
+			const float experimentalTextWidth = experimentalFont->getStringWidth(experimentalText);
+			const float experimentalTextHeight = experimentalFont->getHeight();
+
+			const float rectMargin = 5 * dpiScale;
+			const float rectWidth = experimentalTextWidth + 2*rectMargin;
+			const float rectHeight = experimentalTextHeight + 2*rectMargin;
+
+			g->pushTransform();
+			{
+				g->rotate(90);
+				g->translate((int)(experimentalTextHeight/3.0f + std::max(0.0f, experimentalModsAnimationTranslation + m_experimentalContainer->getSize().x)), (int)(m_osu->getScreenHeight()/2 - experimentalTextWidth/2));
+				g->setColor(0xff777777);
+				g->setAlpha(1.0f - m_fExperimentalAnimation*m_fExperimentalAnimation);
+				g->drawString(experimentalFont, experimentalText);
+			}
+			g->popTransform();
+
+			g->pushTransform();
+			{
+				g->rotate(90);
+				g->translate((int)(rectHeight + std::max(0.0f, experimentalModsAnimationTranslation + m_experimentalContainer->getSize().x)), (int)(m_osu->getScreenHeight()/2 - rectWidth/2));
+				g->drawRect(0, 0, rectWidth, rectHeight);
+			}
+			g->popTransform();
+		}
 
 		m_container->draw(g);
 		m_overrideSliderContainer->draw(g);
@@ -422,7 +459,7 @@ void OsuModSelector::draw(Graphics *g)
 	// draw experimental mods
 	g->pushTransform();
 	{
-		g->translate(-(m_experimentalContainer->getSize().x + 2.0f)*(1.0f - m_fExperimentalAnimation), 0);
+		g->translate(experimentalModsAnimationTranslation, 0);
 		g->setColor(backgroundColor);
 		g->fillRect(m_experimentalContainer->getPos().x - margin, m_experimentalContainer->getPos().y - margin, m_experimentalContainer->getSize().x + 2*margin*m_fExperimentalAnimation, m_experimentalContainer->getSize().y + 2*margin);
 		m_experimentalContainer->draw(g);
@@ -477,8 +514,6 @@ void OsuModSelector::update()
 	m_overrideSliderContainer->update();
 
 	// override slider tooltips (ALT)
-	// seems too annoying, commented for now
-	/*
 	if (m_bShowOverrideSliderALTHint)
 	{
 		for (int i=0; i<m_overrideSliders.size(); i++)
@@ -496,7 +531,6 @@ void OsuModSelector::update()
 			}
 		}
 	}
-	*/
 
 	// handle experimental mods visibility
 	bool experimentalModEnabled = false;
@@ -980,7 +1014,7 @@ OsuUIModSelectorModButton *OsuModSelector::getModButtonOnGrid(int x, int y)
 		return NULL;
 }
 
-OsuModSelector::OVERRIDE_SLIDER OsuModSelector::addOverrideSlider(UString text, UString labelText, ConVar *cvar, float min, float max, ConVar *lockCvar)
+OsuModSelector::OVERRIDE_SLIDER OsuModSelector::addOverrideSlider(UString text, UString labelText, ConVar *cvar, float min, float max, UString tooltipText, ConVar *lockCvar)
 {
 	int height = 25;
 
@@ -990,7 +1024,8 @@ OsuModSelector::OVERRIDE_SLIDER OsuModSelector::addOverrideSlider(UString text, 
 		os.lock = new OsuModSelectorOverrideSliderLockButton(m_osu, 0, 0, height, height, "", "");
 		os.lock->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onOverrideSliderLockChange) );
 	}
-	os.desc = new OsuModSelectorOverrideSliderDescButton(0, 0, 100, height, "", text);
+	os.desc = new OsuModSelectorOverrideSliderDescButton(m_osu, 0, 0, 100, height, "", text);
+	os.desc->setTooltipText(tooltipText);
 	os.slider = new OsuUISlider(m_osu, 0, 0, 100, height, "");
 	os.label = new CBaseUILabel(0, 0, 100, height, labelText, labelText);
 	os.cvar = cvar;

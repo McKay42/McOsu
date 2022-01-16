@@ -94,6 +94,18 @@ public:
 	inline Image *getScorePercent() {return m_scorePercent;}
 	inline Image *getScoreDot() {return m_scoreDot;}
 
+	inline Image *getCombo0() {return m_combo0;}
+	inline Image *getCombo1() {return m_combo1;}
+	inline Image *getCombo2() {return m_combo2;}
+	inline Image *getCombo3() {return m_combo3;}
+	inline Image *getCombo4() {return m_combo4;}
+	inline Image *getCombo5() {return m_combo5;}
+	inline Image *getCombo6() {return m_combo6;}
+	inline Image *getCombo7() {return m_combo7;}
+	inline Image *getCombo8() {return m_combo8;}
+	inline Image *getCombo9() {return m_combo9;}
+	inline Image *getComboX() {return m_comboX;}
+
 	inline OsuSkinImage *getPlaySkip() {return m_playSkip;}
 	inline Image *getPlayWarningArrow() {return m_playWarningArrow;}
 	inline OsuSkinImage *getPlayWarningArrow2() {return m_playWarningArrow2;}
@@ -187,14 +199,14 @@ public:
 	inline Image *getDefaultButtonMiddle() {return m_defaultButtonMiddle;}
 	inline Image *getDefaultButtonRight() {return m_defaultButtonRight;}
 	inline OsuSkinImage *getMenuBack2() {return m_menuBack;}
-	inline Image *getSelectionMode() {return m_selectionMode;}
-	inline Image *getSelectionModeOver() {return m_selectionModeOver;}
-	inline Image *getSelectionMods() {return m_selectionMods;}
-	inline Image *getSelectionModsOver() {return m_selectionModsOver;}
-	inline Image *getSelectionRandom() {return m_selectionRandom;}
-	inline Image *getSelectionRandomOver() {return m_selectionRandomOver;}
-	inline Image *getSelectionOptions() {return m_selectionOptions;}
-	inline Image *getSelectionOptionsOver() {return m_selectionOptionsOver;}
+	inline OsuSkinImage *getSelectionMode() {return m_selectionMode;}
+	inline OsuSkinImage *getSelectionModeOver() {return m_selectionModeOver;}
+	inline OsuSkinImage *getSelectionMods() {return m_selectionMods;}
+	inline OsuSkinImage *getSelectionModsOver() {return m_selectionModsOver;}
+	inline OsuSkinImage *getSelectionRandom() {return m_selectionRandom;}
+	inline OsuSkinImage *getSelectionRandomOver() {return m_selectionRandomOver;}
+	inline OsuSkinImage *getSelectionOptions() {return m_selectionOptions;}
+	inline OsuSkinImage *getSelectionOptionsOver() {return m_selectionOptionsOver;}
 
 	inline Image *getSongSelectTop() {return m_songSelectTop;}
 	inline Image *getSongSelectBottom() {return m_songSelectBottom;}
@@ -255,6 +267,8 @@ public:
 	inline bool isHitCircle2x() {return m_bHitCircle2x;}
 	inline bool isDefault02x() {return m_bIsDefault02x;}
 	inline bool isDefault12x() {return m_bIsDefault12x;}
+	inline bool isScore02x() {return m_bIsScore02x;}
+	inline bool isCombo02x() {return m_bIsCombo02x;}
 	inline bool isSpinnerApproachCircle2x() {return m_bSpinnerApproachCircle2x;}
 	inline bool isSpinnerBottom2x() {return m_bSpinnerBottom2x;}
 	inline bool isSpinnerCircle2x() {return m_bSpinnerCircle2x;}
@@ -324,6 +338,7 @@ public:
 
 private:
 	static ConVar *m_osu_skin_ref;
+	static ConVar *m_osu_mod_fposu_ref;
 
 	static Image *m_missingTexture;
 
@@ -388,7 +403,18 @@ private:
 	Image *m_scoreX;
 	Image *m_scorePercent;
 	Image *m_scoreDot;
-	Image *m_scoreComma;
+
+	Image *m_combo0;
+	Image *m_combo1;
+	Image *m_combo2;
+	Image *m_combo3;
+	Image *m_combo4;
+	Image *m_combo5;
+	Image *m_combo6;
+	Image *m_combo7;
+	Image *m_combo8;
+	Image *m_combo9;
+	Image *m_comboX;
 
 	OsuSkinImage *m_playSkip;
 	Image *m_playWarningArrow;
@@ -485,14 +511,14 @@ private:
 	Image *m_defaultButtonMiddle;
 	Image *m_defaultButtonRight;
 	OsuSkinImage *m_menuBack;
-	Image *m_selectionMode;
-	Image *m_selectionModeOver;
-	Image *m_selectionMods;
-	Image *m_selectionModsOver;
-	Image *m_selectionRandom;
-	Image *m_selectionRandomOver;
-	Image *m_selectionOptions;
-	Image *m_selectionOptionsOver;
+	OsuSkinImage *m_selectionMode;
+	OsuSkinImage *m_selectionModeOver;
+	OsuSkinImage *m_selectionMods;
+	OsuSkinImage *m_selectionModsOver;
+	OsuSkinImage *m_selectionRandom;
+	OsuSkinImage *m_selectionRandomOver;
+	OsuSkinImage *m_selectionOptions;
+	OsuSkinImage *m_selectionOptionsOver;
 
 	Image *m_songSelectTop;
 	Image *m_songSelectBottom;
@@ -596,6 +622,8 @@ private:
 	bool m_bHitCircle2x;
 	bool m_bIsDefault02x;
 	bool m_bIsDefault12x;
+	bool m_bIsScore02x;
+	bool m_bIsCombo02x;
 	bool m_bSpinnerApproachCircle2x;
 	bool m_bSpinnerBottom2x;
 	bool m_bSpinnerCircle2x;

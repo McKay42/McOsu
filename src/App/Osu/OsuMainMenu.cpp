@@ -171,6 +171,7 @@ ConVar osu_toggle_preview_music("osu_toggle_preview_music");
 
 ConVar osu_draw_menu_background("osu_draw_menu_background", true);
 ConVar osu_draw_main_menu_workshop_button("osu_draw_main_menu_workshop_button", true);
+ConVar osu_main_menu_startup_anim_duration("osu_main_menu_startup_anim_duration", 0.25f);
 
 ConVar *OsuMainMenu::m_osu_universal_offset_ref = NULL;
 ConVar *OsuMainMenu::m_osu_universal_offset_hardcoded_ref = NULL;
@@ -260,6 +261,9 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen(osu)
 	m_fUpdateButtonAnimTime = 0.0f;
 	m_bHasClickedUpdate = false;
 
+	m_bStartupAnim = true;
+	m_fStartupAnim = 0.0f;
+
 	// check if the user has never clicked the changelog for this update
 	m_bDrawVersionNotificationArrow = false;
 	if (env->fileExists(MCOSU_NEWVERSION_NOTIFICATION_TRIGGER_FILE))
@@ -318,7 +322,7 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen(osu)
 	m_versionButton = new CBaseUIButton(0, 0, 0, 0, "", "");
 	UString versionString = MCOSU_VERSION_TEXT;
 	versionString.append(" ");
-	versionString.append(UString::format("%.2f", Osu::version->getFloat()));
+	versionString.append(UString::format("%g", Osu::version->getFloat()));
 	m_versionButton->setText(versionString);
 	m_versionButton->setDrawBackground(false);
 	m_versionButton->setDrawFrame(false);
@@ -328,6 +332,19 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen(osu)
 
 OsuMainMenu::~OsuMainMenu()
 {
+	anim->deleteExistingAnimation(&m_fUpdateButtonAnim);
+
+	anim->deleteExistingAnimation(&m_fMainMenuAnimFriendEyeFollowX);
+	anim->deleteExistingAnimation(&m_fMainMenuAnimFriendEyeFollowY);
+
+	anim->deleteExistingAnimation(&m_fMainMenuAnim);
+	anim->deleteExistingAnimation(&m_fMainMenuAnim1);
+	anim->deleteExistingAnimation(&m_fMainMenuAnim2);
+	anim->deleteExistingAnimation(&m_fMainMenuAnim3);
+
+	anim->deleteExistingAnimation(&m_fCenterOffsetAnim);
+	anim->deleteExistingAnimation(&m_fStartupAnim);
+
 	SAFE_DELETE(m_container);
 	SAFE_DELETE(m_updateAvailableButton);
 
@@ -352,6 +369,7 @@ void OsuMainMenu::draw(Graphics *g)
 			const float scale = Osu::getImageScaleToFillResolution(backgroundImage, m_osu->getScreenSize());
 
 			g->setColor(0xffffffff);
+			g->setAlpha(m_fStartupAnim);
 			g->pushTransform();
 			{
 				g->scale(scale, scale);
@@ -397,6 +415,7 @@ void OsuMainMenu::draw(Graphics *g)
 	const float pulseSub = 0.05f*pulse;
 	size -= size*pulseSub;
 	size += size*m_fSizeAddAnim;
+	size *= m_fStartupAnim;
 	McRect mainButtonRect = McRect(m_vCenter.x - size.x/2.0f - m_fCenterOffsetAnim, m_vCenter.y - size.y/2.0f, size.x, size.y);
 
 	bool drawBanner = false; // false
@@ -797,7 +816,7 @@ void OsuMainMenu::draw(Graphics *g)
 	}
 
 	// main text
-	const float fontScale = (1.0f - pulseSub + m_fSizeAddAnim);
+	const float fontScale = (1.0f - pulseSub + m_fSizeAddAnim)*m_fStartupAnim;
 	{
 		g->setColor(0xffffffff);
 		g->setAlpha((1.0f - m_fMainMenuAnimFriendPercent)*(1.0f - m_fMainMenuAnimFriendPercent)*(1.0f - m_fMainMenuAnimFriendPercent));
@@ -1119,7 +1138,7 @@ void OsuMainMenu::onKeyDown(KeyboardEvent &e)
 			onPlayButtonPressed();
 		if (e == KEY_O)
 			onOptionsButtonPressed();
-		if (e == KEY_E)
+		if (e == KEY_E || e == KEY_X)
 			onExitButtonPressed();
 
 		if (e == KEY_ESCAPE)
@@ -1169,6 +1188,12 @@ void OsuMainMenu::setVisible(bool visible)
 
 		m_fMainMenuAnimDuration = 15.0f;
 		m_fMainMenuAnimTime = engine->getTime() + m_fMainMenuAnimDuration;
+	}
+
+	if (visible && m_bStartupAnim)
+	{
+		m_bStartupAnim = false;
+		anim->moveQuadOut(&m_fStartupAnim, 1.0f, osu_main_menu_startup_anim_duration.getFloat(), (float)engine->getTimeReal());
 	}
 }
 

@@ -65,7 +65,7 @@
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 32.04f);
+ConVar osu_version("osu_version", 33.00f);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr");
 #else
@@ -510,57 +510,22 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 
 	m_updateHandler->checkForUpdates();
 
-
-
 	/*
 	// DEBUG: immediately start diff of a beatmap
-	UString debugFolder = "H:/Program Files (x86)/osu!/Songs/41823 The Quick Brown Fox - The Big Black/";
-	UString debugDiffFileName = "The Quick Brown Fox - The Big Black (Blue Dragon) [WHO'S AFRAID OF THE BIG BLACK].osu";
-	OsuBeatmap *debugBeatmap = new OsuBeatmapStandard(this);
-	UString beatmapPath = debugFolder;
-	beatmapPath.append(debugDiffFileName);
-	OsuDatabaseBeatmap *debugDiff = new OsuDatabaseBeatmap(this, beatmapPath, debugFolder);
-	if (!debugDiff->loadMetadataRaw())
-		engine->showMessageError("OsuDatabaseBeatmap", "Couldn't debugDiff->loadMetadataRaw()!");
-	else
 	{
-		std::vector<OsuDatabaseBeatmap*> diffs;
-		diffs.push_back(debugDiff);
-		debugBeatmap->setDifficulties(diffs);
+		UString debugFolder = "S:/GAMES/osu!/Songs/41823 The Quick Brown Fox - The Big Black/";
+		UString debugDiffFileName = "The Quick Brown Fox - The Big Black (Blue Dragon) [WHO'S AFRAID OF THE BIG BLACK].osu";
 
-		debugBeatmap->selectDifficulty2(debugDiff);
-		m_songBrowser2->onDifficultySelected(debugBeatmap, debugDiff, true);
+		UString beatmapPath = debugFolder;
+		beatmapPath.append(debugDiffFileName);
+
+		OsuDatabaseBeatmap *debugDiff = new OsuDatabaseBeatmap(this, beatmapPath, debugFolder);
+
+		m_songBrowser2->onDifficultySelected(debugDiff, true);
 		//convar->getConVarByName("osu_volume_master")->setValue(1.0f);
-
-		// this will leak memory (one OsuBeatmap object and one OsuDatabaseBeatmap object), but who cares (since debug only)
+		// WARNING: this will leak memory (one OsuDatabaseBeatmap object), but who cares (since debug only)
 	}
 	*/
-
-	// DEBUG: immediately start diff of a beatmap
-	/*
-	UString debugFolder = "c:/Program Files (x86)/osu!/Songs/407186 S3RL feat Krystal - R4V3 B0Y/";
-	UString debugDiffFileName = "S3RL feat Krystal - R4V3 B0Y (Draftnell) [BANGKE's 4K Normal].osu";
-	OsuBeatmap *debugBeatmap = new OsuBeatmapMania(this);
-	UString beatmapPath = debugFolder;
-	beatmapPath.append(debugDiffFileName);
-	OsuDatabaseBeatmap *debugDiff = new OsuDatabaseBeatmap(this, beatmapPath, debugFolder);
-	if (!debugDiff->loadMetadataRaw())
-		engine->showMessageError("OsuDatabaseBeatmap", "Couldn't debugDiff->loadMetadataRaw()!");
-	else
-	{
-		std::vector<OsuDatabaseBeatmap*> diffs;
-		diffs.push_back(debugDiff);
-		debugBeatmap->setDifficulties(diffs);
-
-		debugBeatmap->selectDifficulty2(debugDiff);
-		m_songBrowser2->onDifficultySelected(debugBeatmap, debugDiff, true);
-		//convar->getConVarByName("osu_volume_master")->setValue(1.0f);
-
-		// this will leak memory (one OsuBeatmap object and one OsuDatabaseBeatmap object), but who cares (since debug only)
-	}
-	*/
-
-
 
 	// memory/performance optimization; if osu_mod_mafham is not enabled, reduce the two rendertarget sizes to 64x64, same for fposu
 	m_osu_mod_mafham_ref->setCallback( fastdelegate::MakeDelegate(this, &Osu::onModMafhamChange) );

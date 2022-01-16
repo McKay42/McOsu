@@ -22,6 +22,8 @@ OsuUISearchOverlay::OsuUISearchOverlay(Osu *osu, float xPos, float yPos, float x
 	m_bDrawNumResults = true;
 
 	m_iNumFoundResults = -1;
+
+	m_bSearching = false;
 }
 
 void OsuUISearchOverlay::draw(Graphics *g)
@@ -39,6 +41,7 @@ void OsuUISearchOverlay::draw(Graphics *g)
 	const UString searchText2 = "Type to search!";
 	const UString noMatchesFoundText1 = "No matches found. Hit ESC to reset.";
 	const UString noMatchesFoundText2 = "Hit ESC to reset.";
+	const UString searchingText2 = "Searching, please wait ...";
 
 	UString combinedSearchText = searchText1;
 	combinedSearchText.append(searchText2);
@@ -107,11 +110,23 @@ void OsuUISearchOverlay::draw(Graphics *g)
 		{
 			g->translate(0, (int)((searchTextFont->getHeight()*searchTextScale)*1.5f));
 			g->translate(1, 1);
-			g->setColor(0xff000000);
-			g->drawString(searchTextFont, m_iNumFoundResults > -1 ? (m_iNumFoundResults > 0 ? UString::format(m_iNumFoundResults == 1 ? "%i match found!" : "%i matches found!", m_iNumFoundResults) : noMatchesFoundText1) : noMatchesFoundText2);
-			g->translate(-1, -1);
-			g->setColor(0xffffffff);
-			g->drawString(searchTextFont, m_iNumFoundResults > -1 ? (m_iNumFoundResults > 0 ? UString::format(m_iNumFoundResults == 1 ? "%i match found!" : "%i matches found!", m_iNumFoundResults) : noMatchesFoundText1) : noMatchesFoundText2);
+
+			if (m_bSearching)
+			{
+				g->setColor(0xff000000);
+				g->drawString(searchTextFont, searchingText2);
+				g->translate(-1, -1);
+				g->setColor(0xffffffff);
+				g->drawString(searchTextFont, searchingText2);
+			}
+			else
+			{
+				g->setColor(0xff000000);
+				g->drawString(searchTextFont, m_iNumFoundResults > -1 ? (m_iNumFoundResults > 0 ? UString::format(m_iNumFoundResults == 1 ? "%i match found!" : "%i matches found!", m_iNumFoundResults) : noMatchesFoundText1) : noMatchesFoundText2);
+				g->translate(-1, -1);
+				g->setColor(0xffffffff);
+				g->drawString(searchTextFont, m_iNumFoundResults > -1 ? (m_iNumFoundResults > 0 ? UString::format(m_iNumFoundResults == 1 ? "%i match found!" : "%i matches found!", m_iNumFoundResults) : noMatchesFoundText1) : noMatchesFoundText2);
+			}
 		}
 	}
 	g->popTransform();

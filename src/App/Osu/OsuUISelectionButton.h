@@ -10,10 +10,12 @@
 
 #include "CBaseUIButton.h"
 
+class OsuSkinImage;
+
 class OsuUISelectionButton : public CBaseUIButton
 {
 public:
-	OsuUISelectionButton(std::function<Image*()> getImageFunc, std::function<Image*()> getImageOverFunc, float xPos, float yPos, float xSize, float ySize, UString name);
+	OsuUISelectionButton(std::function<OsuSkinImage*()> getImageFunc, std::function<OsuSkinImage*()> getImageOverFunc, float xPos, float yPos, float xSize, float ySize, UString name);
 
 	void draw(Graphics *g);
 
@@ -27,12 +29,8 @@ public:
 private:
 	float m_fAnimation;
 
-	Vector2 m_vScale;
-	bool m_bScaleToFit;
-	bool m_bKeepAspectRatio;
-
-	std::function<Image*()> getImageFunc;
-	std::function<Image*()> getImageOverFunc;
+	std::function<OsuSkinImage*()> getImageFunc;
+	std::function<OsuSkinImage*()> getImageOverFunc;
 };
 
 #endif

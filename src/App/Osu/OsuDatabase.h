@@ -22,15 +22,26 @@ class OsuDatabaseLoader;
 class OsuDatabase
 {
 public:
+	struct CollectionEntry
+	{
+		bool isLegacyEntry;			// used for identifying loaded osu! collection entries
+
+		std::string hash;
+	};
+
 	struct Collection
 	{
+		bool isLegacyCollection;	// used for identifying loaded osu! collections
+
 		UString name;
+		std::vector<CollectionEntry> hashes;
+
 		std::vector<std::pair<OsuDatabaseBeatmap*, std::vector<OsuDatabaseBeatmap*>>> beatmaps;
 	};
 
 	struct Score
 	{
-		bool isLegacyScore;
+		bool isLegacyScore;			// used for identifying loaded osu! scores (which don't have any custom data available)
 		bool isImportedLegacyScore; // used for identifying imported osu! scores (which were previously legacy scores, so they don't have any numSliderBreaks/unstableRate/hitErrorAvgMin/hitErrorAvgMax)
 		int version;
 		uint64_t unixTimestamp;
@@ -171,8 +182,6 @@ public:
 	OsuDatabase(Osu *osu);
 	~OsuDatabase();
 
-	void reset();
-
 	void update();
 
 	void load();
@@ -187,8 +196,15 @@ public:
 	void forceScoreUpdateOnNextCalculatePlayerStats() {m_bDidScoresChangeForStats = true;}
 	void forceScoresSaveOnNextShutdown() {m_bDidScoresChangeForSave = true;}
 
+	bool addCollection(UString collectionName);
+	bool renameCollection(UString oldCollectionName, UString newCollectionName);
+	void deleteCollection(UString collectionName);
+	void addBeatmapToCollection(UString collectionName, std::string beatmapMD5Hash, bool doSaveImmediatelyIfEnabled = true);
+	void removeBeatmapFromCollection(UString collectionName, std::string beatmapMD5Hash, bool doSaveImmediatelyIfEnabled = true);
+	void triggerSaveCollections() {saveCollections();}
+
 	std::vector<UString> getPlayerNamesWithPPScores();
-	std::vector<UString> getPlayerNamesWithScores();
+	std::vector<UString> getPlayerNamesWithScoresForUserSwitcher();
 	PlayerPPScores getPlayerPPScores(UString playerName);
 	PlayerStats calculatePlayerStats(UString playerName);
 	static float getWeightForIndex(int i);
@@ -203,8 +219,8 @@ public:
 	inline const std::vector<OsuDatabaseBeatmap*> getDatabaseBeatmaps() const {return m_databaseBeatmaps;}
 	OsuDatabaseBeatmap *getBeatmap(const std::string &md5hash);
 	OsuDatabaseBeatmap *getBeatmapDifficulty(const std::string &md5hash);
-	inline int getNumCollections() const {return m_collections.size();}
-	inline const std::vector<Collection> getCollections() const {return m_collections;}
+
+	inline const std::vector<Collection> &getCollections() const {return m_collections;}
 
 	inline std::unordered_map<std::string, std::vector<Score>> *getScores() {return &m_scores;}
 	inline const std::vector<SCORE_SORTING_METHOD> &getScoreSortingMethods() const {return m_scoreSortingMethods;}
@@ -226,12 +242,13 @@ private:
 	void loadScores();
 	void saveScores();
 
-	void loadCollections(const std::unordered_map<std::string, OsuDatabaseBeatmap*> &hashToDiff2, const std::unordered_map<std::string, OsuDatabaseBeatmap*> &hashToBeatmap);
+	void loadCollections(UString collectionFilePath, bool isLegacy, const std::unordered_map<std::string, OsuDatabaseBeatmap*> &hashToDiff2, const std::unordered_map<std::string, OsuDatabaseBeatmap*> &hashToBeatmap);
 	void saveCollections();
 
 	OsuDatabaseBeatmap *loadRawBeatmap(UString beatmapPath); // only used for raw loading without db
 
 	void onScoresRename(UString args);
+	void onScoresExport();
 
 	Osu *m_osu;
 	Timer *m_importTimer;
@@ -247,10 +264,10 @@ private:
 	// osu!.db
 	int m_iVersion;
 	int m_iFolderCount;
-	UString m_sPlayerName;
 
-	// collection.db
+	// collection.db (legacy and custom)
 	std::vector<Collection> m_collections;
+	bool m_bDidCollectionsChangeForSave;
 
 	// scores.db (legacy and custom)
 	bool m_bScoresLoaded;
@@ -267,6 +284,8 @@ private:
 	UString m_sRawBeatmapLoadOsuSongFolder;
 	std::vector<UString> m_rawBeatmapFolders;
 	std::vector<UString> m_rawLoadBeatmapFolders;
+	std::unordered_map<std::string, OsuDatabaseBeatmap*> m_rawHashToDiff2;
+	std::unordered_map<std::string, OsuDatabaseBeatmap*> m_rawHashToBeatmap;
 };
 
 #endif

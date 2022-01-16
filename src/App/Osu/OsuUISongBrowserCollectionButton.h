@@ -17,8 +17,17 @@ public:
 
 	virtual void draw(Graphics *g);
 
+	void triggerContextMenu(Vector2 pos);
+
+	const UString &getCollectionName() const {return m_sCollectionName;}
+
 private:
 	virtual void onSelected(bool wasSelected);
+	virtual void onRightMouseUpInside();
+
+	void onContextMenu(UString text, int id = -1);
+	void onRenameCollectionConfirmed(UString text, int id = -1);
+	void onDeleteCollectionConfirmed(UString text, int id = -1);
 
 	UString buildTitleString();
 

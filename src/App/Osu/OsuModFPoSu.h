@@ -40,6 +40,8 @@ public:
 	void onKeyDown(KeyboardEvent &key);
 	void onKeyUp(KeyboardEvent &key);
 
+	inline bool isCrosshairIntersectingScreen() const {return m_bCrosshairIntersectsScreen;}
+
 private:
 	static int SUBDIVISIONS;
 
@@ -82,6 +84,8 @@ private:
 	float m_fZoomFOVAnimPercent;
 
 	Matrix4 m_modelMatrix;
+
+	bool m_bCrosshairIntersectsScreen;
 
 #ifdef FPOSU_FEATURE_MAP3D
 

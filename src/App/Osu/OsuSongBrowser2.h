@@ -15,8 +15,8 @@ class Osu;
 class OsuBeatmap;
 class OsuDatabase;
 class OsuDatabaseBeatmap;
-
 class OsuDatabaseBeatmapStarCalculator;
+class OsuSkinImage;
 
 class OsuUIContextMenu;
 class OsuUISearchOverlay;
@@ -37,6 +37,8 @@ class CBaseUILabel;
 
 class McFont;
 class ConVar;
+
+class OsuSongBrowserBackgroundSearchMatcher;
 
 class OsuSongBrowser2 : public OsuScreenBackable
 {
@@ -91,7 +93,22 @@ public:
 		bool operator () (OsuUISongBrowserButton const *a, OsuUISongBrowserButton const *b) const;
 	};
 
+	enum class GROUP
+	{
+		GROUP_NO_GROUPING,
+		GROUP_ARTIST,
+		GROUP_BPM,
+		GROUP_CREATOR,
+		GROUP_DATEADDED,
+		GROUP_DIFFICULTY,
+		GROUP_LENGTH,
+		GROUP_TITLE,
+		GROUP_COLLECTIONS
+	};
+
 public:
+	friend class OsuSongBrowserBackgroundSearchMatcher;
+
 	OsuSongBrowser2(Osu *osu);
 	virtual ~OsuSongBrowser2();
 
@@ -114,6 +131,8 @@ public:
 	void selectBeatmapMP(OsuDatabaseBeatmap *diff2);
 
 	void onScoreContextMenu(OsuUISongBrowserScoreButton *scoreButton, int id);
+	void onSongButtonContextMenu(OsuUISongBrowserSongButton *songButton, UString text, int id);
+	void onCollectionButtonContextMenu(OsuUISongBrowserCollectionButton *collectionButton, UString text, int id);
 
 	void highlightScore(uint64_t unixTimestamp);
 	void playNextRandomBeatmap() {selectRandomBeatmap();playSelectedDifficulty();}
@@ -126,11 +145,13 @@ public:
 	void scrollToSongButton(OsuUISongBrowserButton *songButton, bool alignOnTop = false);
 	void scrollToSelectedSongButton();
 	void rebuildSongButtons();
+	void recreateCollectionsButtons();
 	void rebuildScoreButtons();
 	void updateSongButtonLayout();
 	void updateSongButtonSorting();
 
 	OsuUISongBrowserButton *findCurrentlySelectedSongButton() const;
+	inline const std::vector<OsuUISongBrowserCollectionButton*> &getCollectionButtons() const {return m_collectionButtons;}
 
 	inline bool hasSelectedAndIsPlaying() const {return m_bHasSelectedAndIsPlaying;}
 	inline bool isInSearch() const {return m_bInSearch;}
@@ -141,23 +162,9 @@ public:
 
 	inline OsuUISongBrowserInfoLabel *getInfoLabel() {return m_songInfo;}
 
+	inline GROUP getGroupingMode() const {return m_group;}
+
 private:
-	static bool searchMatcher(const OsuDatabaseBeatmap *databaseBeatmap, const UString &searchString);
-	static bool findSubstringInDifficulty(const OsuDatabaseBeatmap *diff, const UString &searchString);
-
-	enum class GROUP
-	{
-		GROUP_NO_GROUPING,
-		GROUP_ARTIST,
-		GROUP_BPM,
-		GROUP_CREATOR,
-		GROUP_DATEADDED,
-		GROUP_DIFFICULTY,
-		GROUP_LENGTH,
-		GROUP_TITLE,
-		GROUP_COLLECTIONS
-	};
-
 	enum class SORT
 	{
 		SORT_ARTIST,
@@ -184,6 +191,10 @@ private:
 		int id;
 	};
 
+private:
+	static bool searchMatcher(const OsuDatabaseBeatmap *databaseBeatmap, const UString &searchString);
+	static bool findSubstringInDifficulty(const OsuDatabaseBeatmap *diff, const UString &searchString);
+
 	virtual void updateLayout();
 	virtual void onBack();
 
@@ -191,9 +202,11 @@ private:
 
 	void scheduleSearchUpdate(bool immediately = false);
 
+	void checkHandleKillBackgroundStarCalculator();
 	bool checkHandleKillDynamicStarCalculator(bool timeout);
+	void checkHandleKillBackgroundSearchMatcher();
 
-	OsuUISelectionButton *addBottombarNavButton(std::function<Image*()> getImageFunc, std::function<Image*()> getImageOverFunc);
+	OsuUISelectionButton *addBottombarNavButton(std::function<OsuSkinImage*()> getImageFunc, std::function<OsuSkinImage*()> getImageOverFunc);
 	CBaseUIButton *addTopBarRightTabButton(UString text);
 	CBaseUIButton *addTopBarRightGroupButton(UString text);
 	CBaseUIButton *addTopBarRightSortButton(UString text);
@@ -203,6 +216,7 @@ private:
 	void onDatabaseLoadingFinished();
 
 	void onSearchUpdate();
+	void rebuildSongButtonsAndVisibleSongButtonsWithSearchMatchSupport(bool scrollToTop, bool doRebuildSongButtons = true);
 
 	void onSortScoresClicked(CBaseUIButton *button);
 	void onSortScoresChange(UString text, int id = -1);
@@ -213,10 +227,11 @@ private:
 
 	void onSortClicked(CBaseUIButton *button);
 	void onSortChange(UString text, int id = -1);
+	void onSortChangeInt(UString text, bool autoScroll);
 
 	void onGroupTabButtonClicked(CBaseUIButton *groupTabButton);
 	void onGroupNoGrouping();
-	void onGroupCollections();
+	void onGroupCollections(bool autoScroll = true);
 	void onGroupArtist();
 	void onGroupDifficulty();
 	void onGroupBPM();
@@ -225,7 +240,8 @@ private:
 	void onGroupLength();
 	void onGroupTitle();
 
-	void onAfterSortingOrGroupChange();
+	void onAfterSortingOrGroupChange(bool autoScroll = true);
+	void onAfterSortingOrGroupChangeUpdateInt(bool autoScroll);
 
 	void onSelectionMode();
 	void onSelectionMods();
@@ -261,6 +277,8 @@ private:
 
 	ConVar *m_osu_draw_statistics_perfectpp_ref;
 	ConVar *m_osu_draw_statistics_totalstars_ref;
+
+	ConVar *m_osu_mod_fposu_ref;
 
 	Osu *m_osu;
 	std::mt19937 m_rngalg;
@@ -334,6 +352,7 @@ private:
 	// keys
 	bool m_bF1Pressed;
 	bool m_bF2Pressed;
+	bool m_bF3Pressed;
 	bool m_bShiftPressed;
 	bool m_bLeft;
 	bool m_bRight;
@@ -354,6 +373,9 @@ private:
 	float m_fSearchWaitTime;
 	bool m_bInSearch;
 	GROUP m_searchPrevGroup;
+	OsuSongBrowserBackgroundSearchMatcher *m_backgroundSearchMatcher;
+	bool m_bOnAfterSortingOrGroupChangeUpdateScheduled;
+	bool m_bOnAfterSortingOrGroupChangeUpdateScheduledAutoScroll;
 
 	// background star calculation (entire database)
 	float m_fBackgroundStarCalculationWorkNotificationTime;
