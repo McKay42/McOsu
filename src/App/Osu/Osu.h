@@ -227,6 +227,9 @@ private:
 
 	void onUIScaleChange(UString oldValue, UString newValue);
 	void onUIScaleToDPIChange(UString oldValue, UString newValue);
+	void onUISliderDeltaChange(UString oldValue, UString newValue);
+	void onUISliderSnapChange(UString oldValue, UString newValue);
+	void onUISliderSnapAltChange(UString oldValue, UString newValue);
 	void onLetterboxingChange(UString oldValue, UString newValue);
 
 	void onConfineCursorWindowedChange(UString oldValue, UString newValue);

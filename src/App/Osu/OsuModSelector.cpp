@@ -42,7 +42,7 @@
 #include "OsuUICheckbox.h"
 #include "OsuUIModSelectorModButton.h"
 
-
+#define NAMEOF(name) #name
 
 class OsuModSelectorOverrideSliderDescButton : public CBaseUIButton
 {
@@ -151,6 +151,8 @@ private:
 
 OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen(osu)
 {
+	//m_sliderSnapAmount = 100.0f;
+	//m_sliderSnapAmountAlt = 10.0f;
 	m_fAnimation = 0.0f;
 	m_fExperimentalAnimation = 0.0f;
 	m_bScheduledHide = false;
@@ -991,6 +993,28 @@ void OsuModSelector::updateModConVar()
 	updateOverrideSliderLabels();
 }
 
+void OsuModSelector::updateKeyDelta(float delta)
+{
+	if (m_modButtons.size() < 1 || m_overrideSliders.size() < 1) return;
+
+	for (int i = 0; i < m_overrideSliders.size(); i++)
+	{
+		m_overrideSliders[i].slider->setKeyDelta(delta);
+	}
+}
+
+void OsuModSelector::updateSliderSnap(float amount, bool forAlt)
+{
+	debugLog("OsuModSelector::updateSliderSnap(float, bool)");
+
+	if (forAlt)
+		m_sliderSnapAmountAlt = amount;
+	else
+		m_sliderSnapAmount = amount;
+
+	debugLog("Updated " + (forAlt ? NAMEOF(m_sliderSnapAmount) : NAMEOF(m_sliderSnapAmountAlt)) + " to " + std::to_string(amount));
+}
+
 OsuUIModSelectorModButton *OsuModSelector::setModButtonOnGrid(int x, int y, int state, bool initialState, UString modName, UString tooltipText, std::function<OsuSkinImage*()> getImageFunc)
 {
 	OsuUIModSelectorModButton *modButton = getModButtonOnGrid(x, y);
@@ -1157,9 +1181,9 @@ void OsuModSelector::onOverrideSliderChange(CBaseUISlider *slider)
 
 			// alt key allows rounding to only 1 decimal digit
 			if (!engine->getKeyboard()->isAltDown())
-				sliderValue = std::round(sliderValue * 10.0f) / 10.0f;
+				sliderValue = std::round(sliderValue * m_sliderSnapAmountAlt) / m_sliderSnapAmountAlt;
 			else
-				sliderValue = std::round(sliderValue * 100.0f) / 100.0f;
+				sliderValue = std::round(sliderValue * m_sliderSnapAmount) / m_sliderSnapAmount;
 
 			if (sliderValue < 0.0f)
 			{

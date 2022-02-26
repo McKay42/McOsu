@@ -114,6 +114,9 @@ ConVar osu_notification_color_b("osu_notification_color_b", 255);
 
 ConVar osu_ui_scale("osu_ui_scale", 1.0f);
 ConVar osu_ui_scale_to_dpi("osu_ui_scale_to_dpi", true);
+ConVar osu_ui_modselect_slider_delta("osu_ui_modselect_slider_delta", 0.1f);
+ConVar osu_ui_modselect_slider_snap_alt("osu_ui_modselect_slider_snap_alt", 10.0f);
+ConVar osu_ui_modselect_slider_snap("osu_ui_modselect_slider_snap", 100.0f);
 ConVar osu_letterboxing("osu_letterboxing", true);
 ConVar osu_letterboxing_offset_x("osu_letterboxing_offset_x", 0.0f);
 ConVar osu_letterboxing_offset_y("osu_letterboxing_offset_y", 0.0f);
@@ -296,6 +299,9 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	osu_resolution.setCallback( fastdelegate::MakeDelegate(this, &Osu::onInternalResolutionChanged) );
 	osu_ui_scale.setCallback( fastdelegate::MakeDelegate(this, &Osu::onUIScaleChange) );
 	osu_ui_scale_to_dpi.setCallback( fastdelegate::MakeDelegate(this, &Osu::onUIScaleToDPIChange) );
+	osu_ui_modselect_slider_delta.setCallback( fastdelegate::MakeDelegate(this, &Osu::onUISliderDeltaChange) );
+	osu_ui_modselect_slider_snap.setCallback( fastdelegate::MakeDelegate(this, &Osu::onUISliderSnapChange) );
+	osu_ui_modselect_slider_snap_alt.setCallback( fastdelegate::MakeDelegate(this, &Osu::onUISliderSnapAltChange) );
 	osu_letterboxing.setCallback( fastdelegate::MakeDelegate(this, &Osu::onLetterboxingChange) );
 	osu_letterboxing_offset_x.setCallback( fastdelegate::MakeDelegate(this, &Osu::onLetterboxingOffsetChange) );
 	osu_letterboxing_offset_y.setCallback( fastdelegate::MakeDelegate(this, &Osu::onLetterboxingOffsetChange) );
@@ -2330,6 +2336,21 @@ void Osu::onUIScaleToDPIChange(UString oldValue, UString newValue)
 		m_bFontReloadScheduled = true;
 		m_bFireResolutionChangedScheduled = true;
 	}
+}
+
+void Osu::onUISliderDeltaChange(UString oldValue, UString newValue)
+{
+	m_modSelector->updateKeyDelta(newValue.toFloat());
+}
+
+void Osu::onUISliderSnapChange(UString oldValue, UString newValue)
+{
+	m_modSelector->updateSliderSnap(newValue.toFloat(), true);
+}
+
+void Osu::onUISliderSnapAltChange(UString oldValue, UString newValue)
+{
+	m_modSelector->updateSliderSnap(newValue.toFloat(), true);
 }
 
 void Osu::onLetterboxingChange(UString oldValue, UString newValue)
