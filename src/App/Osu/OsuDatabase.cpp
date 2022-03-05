@@ -633,6 +633,7 @@ bool OsuDatabase::addCollection(UString collectionName)
 
 bool OsuDatabase::renameCollection(UString oldCollectionName, UString newCollectionName)
 {
+	if (newCollectionName.length() < 1) return false;
 	if (oldCollectionName == newCollectionName) return false;
 
 	// don't want duplicates
