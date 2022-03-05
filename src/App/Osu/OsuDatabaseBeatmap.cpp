@@ -27,6 +27,9 @@
 #include "OsuSpinner.h"
 #include "OsuManiaNote.h"
 
+#include <sstream>
+#include <iostream>
+
 ConVar osu_mod_random("osu_mod_random", false);
 ConVar osu_mod_random_circle_offset_x_percent("osu_mod_random_circle_offset_x_percent", 1.0f, "how much the randomness affects things");
 ConVar osu_mod_random_circle_offset_y_percent("osu_mod_random_circle_offset_y_percent", 1.0f, "how much the randomness affects things");
@@ -52,11 +55,12 @@ ConVar *OsuDatabaseBeatmap::m_osu_stars_stacking_ref = NULL;
 ConVar *OsuDatabaseBeatmap::m_osu_debug_pp_ref = NULL;
 ConVar *OsuDatabaseBeatmap::m_osu_slider_end_inside_check_offset_ref = NULL;
 
-OsuDatabaseBeatmap::OsuDatabaseBeatmap(Osu *osu, UString filePath, UString folder)
+OsuDatabaseBeatmap::OsuDatabaseBeatmap(Osu *osu, UString filePath, UString folder, bool filePathIsInMemoryBeatmap)
 {
 	m_osu = osu;
 
 	m_sFilePath = filePath;
+	m_bFilePathIsInMemoryBeatmap = filePathIsInMemoryBeatmap;
 
 	m_sFolder = folder;
 
@@ -134,7 +138,7 @@ OsuDatabaseBeatmap::~OsuDatabaseBeatmap()
 	}
 }
 
-OsuDatabaseBeatmap::PRIMITIVE_CONTAINER OsuDatabaseBeatmap::loadPrimitiveObjects(const UString &osuFilePath, Osu::GAMEMODE gameMode)
+OsuDatabaseBeatmap::PRIMITIVE_CONTAINER OsuDatabaseBeatmap::loadPrimitiveObjects(const UString &osuFilePath, Osu::GAMEMODE gameMode, bool filePathIsInMemoryBeatmap)
 {
 	PRIMITIVE_CONTAINER c;
 	{
@@ -151,14 +155,18 @@ OsuDatabaseBeatmap::PRIMITIVE_CONTAINER OsuDatabaseBeatmap::loadPrimitiveObjects
 	const float sliderSanityRange = m_osu_slider_curve_max_length_ref->getFloat(); // infinity sanity check, same as before
 	const int sliderMaxRepeatRange = osu_slider_max_repeat.getInt(); // NOTE: osu! will refuse to play any beatmap which has sliders with more than 9000 repeats, here we just clamp it instead
 
+
+
 	// open osu file for parsing
 	{
-		File file(osuFilePath);
-		if (!file.canRead())
+		File file(!filePathIsInMemoryBeatmap ? osuFilePath : "");
+		if (!file.canRead() && !filePathIsInMemoryBeatmap)
 		{
 			c.errorCode = 2;
 			return c;
 		}
+
+		std::istringstream ss(filePathIsInMemoryBeatmap ? osuFilePath.toUtf8() : ""); // eh
 
 		// load the actual beatmap
 		unsigned long long timingPointSortHack = 0;
@@ -167,11 +175,21 @@ OsuDatabaseBeatmap::PRIMITIVE_CONTAINER OsuDatabaseBeatmap::loadPrimitiveObjects
 		int colorOffset = 0;
 		int comboNumber = 1;
 		int curBlock = -1;
-		while (file.canRead())
+		std::string curLine;
+		while (!filePathIsInMemoryBeatmap ? file.canRead() : static_cast<bool>(std::getline(ss, curLine)))
 		{
-			UString uCurLine = file.readLine();
-			const char *curLineChar = uCurLine.toUtf8();
-			std::string curLine(curLineChar);
+			UString uCurLine;
+			char *curLineChar = NULL;
+			{
+				if (!filePathIsInMemoryBeatmap)
+				{
+					uCurLine = file.readLine();
+					curLineChar = (char*)uCurLine.toUtf8();
+					curLine = std::string(curLineChar);
+				}
+				else
+					curLineChar = (char*)curLine.c_str();
+			}
 
 			const int commentIndex = curLine.find("//");
 			if (commentIndex == std::string::npos || commentIndex != 0) // ignore comments, but only if at the beginning of a line (e.g. allow Artist:DJ'TEKINA//SOMETHING)
@@ -893,32 +911,47 @@ bool OsuDatabaseBeatmap::loadMetadata(OsuDatabaseBeatmap *databaseBeatmap)
 	// generate MD5 hash (loads entire file, very slow)
 	databaseBeatmap->m_sMD5Hash.clear();
 	{
-		File file(databaseBeatmap->m_sFilePath);
-		if (file.canRead())
+		File file(!databaseBeatmap->m_bFilePathIsInMemoryBeatmap ? databaseBeatmap->m_sFilePath : "");
+
+		const char *beatmapFile = NULL;
+		size_t beatmapFileSize = 0;
 		{
-			const char *beatmapFile = file.readFile();
-			if (beatmapFile != NULL)
+			if (!databaseBeatmap->m_bFilePathIsInMemoryBeatmap)
 			{
-				const char *hexDigits = "0123456789abcdef";
-				const unsigned char *input = (unsigned char*)beatmapFile;
-
-				MD5 hasher;
-				hasher.update(input, file.getFileSize());
-				hasher.finalize();
-
-				const unsigned char *rawMD5Hash = hasher.getDigest();
-
-				for (int i=0; i<16; i++)
+				if (file.canRead())
 				{
-					const size_t index1 = (rawMD5Hash[i] >> 4) & 0xf;	// md5hash[i] / 16
-					const size_t index2 = (rawMD5Hash[i] & 0xf);		// md5hash[i] % 16
-
-					if (index1 > 15 || index2 > 15)
-						continue;
-
-					databaseBeatmap->m_sMD5Hash += hexDigits[index1];
-					databaseBeatmap->m_sMD5Hash += hexDigits[index2];
+					beatmapFile = file.readFile();
+					beatmapFileSize = file.getFileSize();
 				}
+			}
+			else
+			{
+				beatmapFile = databaseBeatmap->m_sFilePath.toUtf8();
+				beatmapFileSize = databaseBeatmap->m_sFilePath.lengthUtf8();
+			}
+		}
+
+		if (beatmapFile != NULL && beatmapFileSize > 0)
+		{
+			const char *hexDigits = "0123456789abcdef";
+			const unsigned char *input = (unsigned char*)beatmapFile;
+
+			MD5 hasher;
+			hasher.update(input, beatmapFileSize);
+			hasher.finalize();
+
+			const unsigned char *rawMD5Hash = hasher.getDigest();
+
+			for (int i=0; i<16; i++)
+			{
+				const size_t index1 = (rawMD5Hash[i] >> 4) & 0xf;	// md5hash[i] / 16
+				const size_t index2 = (rawMD5Hash[i] & 0xf);		// md5hash[i] % 16
+
+				if (index1 > 15 || index2 > 15)
+					continue;
+
+				databaseBeatmap->m_sMD5Hash += hexDigits[index1];
+				databaseBeatmap->m_sMD5Hash += hexDigits[index2];
 			}
 		}
 	}
@@ -926,22 +959,34 @@ bool OsuDatabaseBeatmap::loadMetadata(OsuDatabaseBeatmap *databaseBeatmap)
 	// open osu file again, but this time for parsing
 	bool foundAR = false;
 	{
-		File file(databaseBeatmap->m_sFilePath);
-		if (!file.canRead())
+		File file(!databaseBeatmap->m_bFilePathIsInMemoryBeatmap ? databaseBeatmap->m_sFilePath : "");
+		if (!file.canRead() && !databaseBeatmap->m_bFilePathIsInMemoryBeatmap)
 		{
 			debugLog("Osu Error: Couldn't read file %s\n", databaseBeatmap->m_sFilePath.toUtf8());
 			return false;
 		}
 
+		std::istringstream ss(databaseBeatmap->m_bFilePathIsInMemoryBeatmap ? databaseBeatmap->m_sFilePath.toUtf8() : ""); // eh
+
 		// load metadata only
 		int curBlock = -1;
 		unsigned long long timingPointSortHack = 0;
 		char stringBuffer[1024];
-		while (file.canRead())
+		std::string curLine;
+		while (!databaseBeatmap->m_bFilePathIsInMemoryBeatmap ? file.canRead() : static_cast<bool>(std::getline(ss, curLine)))
 		{
-			UString uCurLine = file.readLine();
-			const char *curLineChar = uCurLine.toUtf8();
-			std::string curLine(curLineChar);
+			UString uCurLine;
+			char *curLineChar = NULL;
+			{
+				if (!databaseBeatmap->m_bFilePathIsInMemoryBeatmap)
+				{
+					uCurLine = file.readLine();
+					curLineChar = (char*)uCurLine.toUtf8();
+					curLine = std::string(curLineChar);
+				}
+				else
+					curLineChar = (char*)curLine.c_str();
+			}
 
 			const int commentIndex = curLine.find("//");
 			if (commentIndex == std::string::npos || commentIndex != 0) // ignore comments, but only if at the beginning of a line (e.g. allow Artist:DJ'TEKINA//SOMETHING)
@@ -1180,7 +1225,7 @@ OsuDatabaseBeatmap::LOAD_GAMEPLAY_RESULT OsuDatabaseBeatmap::loadGameplay(OsuDat
 	}
 
 	// load primitives, put in temporary container
-	PRIMITIVE_CONTAINER c = loadPrimitiveObjects(databaseBeatmap->m_sFilePath, databaseBeatmap->m_osu->getGamemode());
+	PRIMITIVE_CONTAINER c = loadPrimitiveObjects(databaseBeatmap->m_sFilePath, databaseBeatmap->m_osu->getGamemode(), databaseBeatmap->m_bFilePathIsInMemoryBeatmap);
 	if (c.errorCode != 0)
 	{
 		result.errorCode = c.errorCode;

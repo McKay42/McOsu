@@ -49,13 +49,17 @@ public:
 	virtual void onClickEvent(std::vector<OsuBeatmap::CLICK> &clicks);
 	virtual void onReset(long curPos);
 
-	void rebuildVertexBuffer();
+	void rebuildVertexBuffer(bool useRawCoords = false);
 
 	inline bool isStartCircleFinished() const {return m_bStartFinished;}
 	inline int getRepeat() const {return m_iRepeat;}
 	inline std::vector<Vector2> getRawPoints() const {return m_points;}
 	inline float getPixelLength() const {return m_fPixelLength;}
 	inline const std::vector<SLIDERCLICK> &getClicks() const {return m_clicks;}
+
+	// ILLEGAL:
+	inline VertexArrayObject *getVAO() const {return m_vao;}
+	inline OsuSliderCurve *getCurve() const {return m_curve;}
 
 private:
 	static ConVar *m_osu_playfield_mirror_horizontal_ref;

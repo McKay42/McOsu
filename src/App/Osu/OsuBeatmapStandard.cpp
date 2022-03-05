@@ -104,7 +104,7 @@ OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 	m_fXMultiplier = 1.0f;
 	m_fNumberScale = 1.0f;
 	m_fHitcircleOverlapScale = 1.0f;
-	m_fRawHitcircleDiameter = 0.0f;
+	m_fRawHitcircleDiameter = 27.35f * 2.0f;
 	m_fHitcircleDiameter = 0.0f;
 	m_fSliderFollowCircleDiameter = 0.0f;
 	m_fRawSliderFollowCircleDiameter = 0.0f;

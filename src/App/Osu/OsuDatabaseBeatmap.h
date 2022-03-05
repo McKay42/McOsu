@@ -106,7 +106,7 @@ public:
 
 
 public:
-	OsuDatabaseBeatmap(Osu *osu, UString filePath, UString folder);
+	OsuDatabaseBeatmap(Osu *osu, UString filePath, UString folder, bool filePathIsInMemoryBeatmap = false);
 	OsuDatabaseBeatmap(Osu *osu, std::vector<OsuDatabaseBeatmap*> &difficulties);
 	~OsuDatabaseBeatmap();
 
@@ -362,7 +362,7 @@ private:
 
 
 
-	static PRIMITIVE_CONTAINER loadPrimitiveObjects(const UString &osuFilePath, Osu::GAMEMODE gameMode);
+	static PRIMITIVE_CONTAINER loadPrimitiveObjects(const UString &osuFilePath, Osu::GAMEMODE gameMode, bool filePathIsInMemoryBeatmap = false);
 	static void calculateSliderTimesClicksTicks(std::vector<SLIDER> &sliders, std::vector<TIMINGPOINT> &timingpoints, float sliderMultiplier, float sliderTickRate);
 
 
@@ -371,6 +371,7 @@ private:
 
 	UString m_sFolder;		// path to folder containing .osu file (e.g. "/path/to/beatmapfolder/")
 	UString m_sFilePath;	// path to .osu file (e.g. "/path/to/beatmapfolder/beatmap.osu")
+	bool m_bFilePathIsInMemoryBeatmap;
 
 	unsigned long long m_iSortHack;
 

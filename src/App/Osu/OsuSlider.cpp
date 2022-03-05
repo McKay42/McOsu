@@ -1756,14 +1756,17 @@ void OsuSlider::onReset(long curPos)
 	m_epilepsy_ref->setValue(0.0f);
 }
 
-void OsuSlider::rebuildVertexBuffer()
+void OsuSlider::rebuildVertexBuffer(bool useRawCoords)
 {
 	// base mesh (background) (raw unscaled, size in raw osu coordinates centered at (0, 0, 0))
 	// this mesh can be shared by both the VR draw() and the desktop draw(), although in desktop mode it needs to be scaled and translated appropriately since we are not 1:1 with the playfield
 	std::vector<Vector2> osuCoordPoints = m_curve->getPoints();
-	for (int p=0; p<osuCoordPoints.size(); p++)
+	if (!useRawCoords)
 	{
-		osuCoordPoints[p] = m_beatmap->osuCoords2LegacyPixels(osuCoordPoints[p]);
+		for (int p=0; p<osuCoordPoints.size(); p++)
+		{
+			osuCoordPoints[p] = m_beatmap->osuCoords2LegacyPixels(osuCoordPoints[p]);
+		}
 	}
 	SAFE_DELETE(m_vao);
 	m_vao = OsuSliderRenderer::generateVAO(m_beatmap->getOsu(), osuCoordPoints, m_beatmap->getRawHitcircleDiameter());
