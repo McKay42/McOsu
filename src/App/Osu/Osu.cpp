@@ -65,7 +65,7 @@
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 33.00f);
+ConVar osu_version("osu_version", 33.01f);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr");
 #else
@@ -238,19 +238,20 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	{
 		convar->getConVarByName("fps_max")->setValue(60.0f);
 		convar->getConVarByName("ui_scrollview_resistance")->setValue(25.0f);
-		convar->getConVarByName("osu_scores_legacy_enabled")->setValue(0.0f); // would collide
+		convar->getConVarByName("osu_scores_legacy_enabled")->setValue(0.0f);		// would collide
+		convar->getConVarByName("osu_collections_legacy_enabled")->setValue(0.0f);	// unnecessary
 		convar->getConVarByName("osu_mod_mafham_render_livesize")->setValue(7.0f);
 		convar->getConVarByName("osu_mod_mafham_render_chunksize")->setValue(12.0f);
 		convar->getConVarByName("osu_mod_touchdevice")->setDefaultFloat(1.0f);
 		convar->getConVarByName("osu_mod_touchdevice")->setValue(1.0f);
 		convar->getConVarByName("osu_volume_music")->setValue(0.3f);
 		convar->getConVarByName("osu_universal_offset_hardcoded")->setValue(-45.0f);
-		convar->getConVarByName("osu_key_quick_retry")->setValue(15.0f);	// L, SDL_SCANCODE_L
-		convar->getConVarByName("osu_key_seek_time")->setValue(21.0f);		// R, SDL_SCANCODE_R
-		convar->getConVarByName("osu_key_decrease_local_offset")->setValue(29.0f); // ZL, SDL_SCANCODE_Z
-		convar->getConVarByName("osu_key_increase_local_offset")->setValue(25.0f); // ZR, SDL_SCANCODE_V
-		convar->getConVarByName("osu_key_left_click")->setValue(0.0f);		// (disabled)
-		convar->getConVarByName("osu_key_right_click")->setValue(0.0f);	// (disabled)
+		convar->getConVarByName("osu_key_quick_retry")->setValue(15.0f);			// L, SDL_SCANCODE_L
+		convar->getConVarByName("osu_key_seek_time")->setValue(21.0f);				// R, SDL_SCANCODE_R
+		convar->getConVarByName("osu_key_decrease_local_offset")->setValue(29.0f);	// ZL, SDL_SCANCODE_Z
+		convar->getConVarByName("osu_key_increase_local_offset")->setValue(25.0f);	// ZR, SDL_SCANCODE_V
+		convar->getConVarByName("osu_key_left_click")->setValue(0.0f);				// (disabled)
+		convar->getConVarByName("osu_key_right_click")->setValue(0.0f);				// (disabled)
 		convar->getConVarByName("name")->setValue(env->getUsername());
 	}
 

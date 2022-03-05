@@ -353,7 +353,13 @@ void OsuUIContextMenu::onClick(CBaseUIButton *button)
 	setVisible2(false);
 
 	if (m_clickCallback != NULL)
-		m_clickCallback(button->getName(), ((OsuUIContextMenuButton*)button)->getID());
+	{
+		// special case: if text input exists, then override with its text
+		if (m_containedTextbox != NULL)
+			m_clickCallback(m_containedTextbox->getText(), ((OsuUIContextMenuButton*)button)->getID());
+		else
+			m_clickCallback(button->getName(), ((OsuUIContextMenuButton*)button)->getID());
+	}
 }
 
 void OsuUIContextMenu::onHitEnter(OsuUIContextMenuTextbox *textbox)
