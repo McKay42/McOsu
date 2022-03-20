@@ -961,7 +961,7 @@ void OsuMainMenu::draw(Graphics *g)
 		else
 			g->setColor(0xff444444);
 
-		g->setAlpha((1.0f - m_fMainMenuAnimFriendPercent)*(1.0f - m_fMainMenuAnimFriendPercent)*(1.0f - m_fMainMenuAnimFriendPercent));
+		g->setAlpha((1.0f - m_fMainMenuAnimFriendPercent)*(1.0f - m_fMainMenuAnimFriendPercent)*(1.0f - m_fMainMenuAnimFriendPercent)*(1.0f - (1.0f - m_fStartupAnim2)*(1.0f - m_fStartupAnim2)));
 
 		g->pushTransform();
 		{
