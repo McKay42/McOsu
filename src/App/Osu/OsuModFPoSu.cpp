@@ -135,6 +135,17 @@ void OsuModFPoSu::draw(Graphics *g)
 				g->setWorldMatrix(viewMatrix);
 				g->setProjectionMatrix(projectionMatrix);
 
+#ifdef MCENGINE_FEATURE_DIRECTX
+
+				 // NOTE: convert from OpenGL coordinate system
+				{
+					Matrix4 zflip;
+					zflip.scale(1, 1, -1);
+					g->setWorldMatrixMul(zflip);
+				}
+
+#endif
+
 				g->setBlending(false);
 				{
 					// draw cube/skybox
@@ -165,7 +176,20 @@ void OsuModFPoSu::draw(Graphics *g)
 						if (fposu_transparent_playfield.getBool())
 							g->setBlending(true);
 
-						g->setWorldMatrixMul(m_modelMatrix);
+						Matrix4 worldMatrix = viewMatrix * m_modelMatrix;
+
+#ifdef MCENGINE_FEATURE_DIRECTX
+
+						 // NOTE: convert from OpenGL coordinate system
+						{
+							Matrix4 zflip;
+							zflip.scale(1, 1, -1);
+							worldMatrix = worldMatrix * zflip;
+						}
+
+#endif
+
+						g->setWorldMatrix(worldMatrix);
 						{
 							m_osu->getPlayfieldBuffer()->bind();
 							{
@@ -490,8 +514,18 @@ void OsuModFPoSu::makePlayfield()
 
 		const float leftTC = (*begin).textureCoordinate;
 		const float rightTC = (*next).textureCoordinate;
+
+#ifdef MCENGINE_FEATURE_DIRECTX
+
+		const float topTC = 0.0f;
+		const float bottomTC = 1.0f;
+
+#else
+
 		const float topTC = 1.0f;
 		const float bottomTC = 0.0f;
+
+#endif
 
 		m_vao->addVertex(topLeft);
 		m_vao->addTexcoord(leftTC, topTC);
