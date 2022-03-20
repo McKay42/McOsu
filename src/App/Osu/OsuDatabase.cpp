@@ -2686,15 +2686,38 @@ void OsuDatabase::onScoresExport()
 		return;
 	}
 
-	out << "#beatmapMD5hash,isImportedLegacyScore,version,unixTimestamp,playerName,num300s,num100s,num50s,numGekis,numKatus,numMisses,score,comboMax,perfect,modsLegacy,numSliderBreaks,pp,unstableRate,hitErrorAvgMin,hitErrorAvgMax,starsTomTotal,starsTomAim,starsTomSpeed,speedMultiplier,CS,AR,OD,HP,maxPossibleCombo,numHitObjects,numCircles,experimentalModsConVars\n";
+	out << "#beatmapMD5hash,beatmapID,beatmapSetID,isImportedLegacyScore,version,unixTimestamp,playerName,num300s,num100s,num50s,numGekis,numKatus,numMisses,score,comboMax,perfect,modsLegacy,numSliderBreaks,pp,unstableRate,hitErrorAvgMin,hitErrorAvgMax,starsTomTotal,starsTomAim,starsTomSpeed,speedMultiplier,CS,AR,OD,HP,maxPossibleCombo,numHitObjects,numCircles,experimentalModsConVars\n";
 
 	for (auto beatmapScores : m_scores)
 	{
+		bool triedGettingDatabaseBeatmapOnceForThisBeatmap = false;
+		OsuDatabaseBeatmap *beatmap = NULL;
+
 		for (const Score &score : beatmapScores.second)
 		{
 			if (!score.isLegacyScore)
 			{
-				out << beatmapScores.first;
+				long id = -1;
+				long setId = -1;
+				{
+					if (beatmap == NULL && !triedGettingDatabaseBeatmapOnceForThisBeatmap)
+					{
+						triedGettingDatabaseBeatmapOnceForThisBeatmap = true;
+						beatmap = getBeatmapDifficulty(beatmapScores.first);
+					}
+
+					if (beatmap != NULL)
+					{
+						id = beatmap->getID();
+						setId = beatmap->getSetID();
+					}
+				}
+
+				out << beatmapScores.first; // md5 hash
+				out << ",";
+				out << id;
+				out << ",";
+				out << setId;
 				out << ",";
 
 				out << score.isImportedLegacyScore;
@@ -2766,6 +2789,9 @@ void OsuDatabase::onScoresExport()
 				out << "\n";
 			}
 		}
+
+		triedGettingDatabaseBeatmapOnceForThisBeatmap = false;
+		beatmap = NULL;
 	}
 
 	out.close();
