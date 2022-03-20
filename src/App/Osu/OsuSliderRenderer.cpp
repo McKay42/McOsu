@@ -44,7 +44,6 @@ float OsuSliderRenderer::m_fBoundingBoxMaxY = 0.0f;
 ConVar osu_slider_debug_draw("osu_slider_debug_draw", false, "draw hitcircle at every curve point and nothing else (no vao, no rt, no shader, nothing) (requires enabling legacy slider renderer)");
 ConVar osu_slider_debug_draw_square_vao("osu_slider_debug_draw_square_vao", false, "generate square vaos and nothing else (no rt, no shader) (requires disabling legacy slider renderer)");
 ConVar osu_slider_debug_wireframe("osu_slider_debug_wireframe", false, "unused");
-ConVar osu_slider_debug_draw_caps("osu_slider_debug_draw_caps", true, "unused");
 
 ConVar osu_slider_alpha_multiplier("osu_slider_alpha_multiplier", 1.0f);
 ConVar osu_slider_body_alpha_multiplier("osu_slider_body_alpha_multiplier", 1.0f);
@@ -57,6 +56,7 @@ ConVar osu_slider_rainbow("osu_slider_rainbow", false);
 ConVar osu_slider_use_gradient_image("osu_slider_use_gradient_image", false);
 
 ConVar osu_slider_body_unit_circle_subdivisions("osu_slider_body_unit_circle_subdivisions", 42);
+ConVar osu_slider_legacy_use_baked_vao("osu_slider_legacy_use_baked_vao", false, "use baked cone mesh instead of raw mesh for legacy slider renderer (disabled by default because usually slower on very old gpus even though it should not be)");
 
 VertexArrayObject *OsuSliderRenderer::generateVAO(Osu *osu, const std::vector<Vector2> &points, float hitcircleDiameter, Vector3 translation)
 {
@@ -226,7 +226,7 @@ void OsuSliderRenderer::draw(Graphics *g, Osu *osu, const std::vector<Vector2> &
 			{
 				// draw curve mesh
 				{
-					drawFillSliderBodyPeppy(g, osu, points, UNIT_CIRCLE_VAO, hitcircleDiameter/2.0f, drawFromIndex, drawUpToIndex, BLEND_SHADER);
+					drawFillSliderBodyPeppy(g, osu, points, (osu_slider_legacy_use_baked_vao.getBool() ? UNIT_CIRCLE_VAO_BAKED : UNIT_CIRCLE_VAO), hitcircleDiameter/2.0f, drawFromIndex, drawUpToIndex, BLEND_SHADER);
 
 					if (alwaysPoints.size() > 0)
 						drawFillSliderBodyPeppy(g, osu, alwaysPoints, UNIT_CIRCLE_VAO_BAKED, hitcircleDiameter/2.0f, 0, alwaysPoints.size(), BLEND_SHADER);
@@ -482,13 +482,13 @@ void OsuSliderRenderer::drawVR(Graphics *g, Osu *osu, OsuVR *vr, Matrix4 &mvp, f
 			// draw curve mesh
 			{
 				BLEND_SHADER_VR->setUniform1i("part", 1);
-				drawFillSliderBodyPeppyVR2(g, vr, mvp, points, UNIT_CIRCLE_VAO, hitcircleDiameter/2.0f, drawFromIndex, drawUpToIndex);
+				drawFillSliderBodyPeppyVR2(g, vr, mvp, points, (osu_slider_legacy_use_baked_vao.getBool() ? UNIT_CIRCLE_VAO_BAKED : UNIT_CIRCLE_VAO), hitcircleDiameter/2.0f, drawFromIndex, drawUpToIndex);
 
 				if (alwaysPoints.size() > 0)
 					drawFillSliderBodyPeppyVR2(g, vr, mvp, alwaysPoints, UNIT_CIRCLE_VAO_BAKED, hitcircleDiameter/2.0f, 0, alwaysPoints.size());
 
 				BLEND_SHADER_VR->setUniform1i("part", 0);
-				drawFillSliderBodyPeppyVR(g, osu, vr, mvp, points, UNIT_CIRCLE_VAO, hitcircleDiameter/2.0f, drawFromIndex, drawUpToIndex);
+				drawFillSliderBodyPeppyVR(g, osu, vr, mvp, points, (osu_slider_legacy_use_baked_vao.getBool() ? UNIT_CIRCLE_VAO_BAKED : UNIT_CIRCLE_VAO), hitcircleDiameter/2.0f, drawFromIndex, drawUpToIndex);
 
 				if (alwaysPoints.size() > 0)
 					drawFillSliderBodyPeppyVR(g, osu, vr, mvp, alwaysPoints, UNIT_CIRCLE_VAO_BAKED, hitcircleDiameter/2.0f, 0, alwaysPoints.size());
@@ -969,7 +969,7 @@ void OsuSliderRenderer::checkUpdateVars(Osu *osu, float hitcircleDiameter)
 	{
 		// build shaders
 		BLEND_SHADER = engine->getResourceManager()->loadShader("slider.vsh", "slider.fsh", "slider");
-		if (osu->isInVRMode())
+		if (osu != NULL && osu->isInVRMode())
 			BLEND_SHADER_VR = engine->getResourceManager()->loadShader("sliderVR.vsh", "sliderVR.fsh", "sliderVR");
 	}
 
