@@ -39,8 +39,8 @@ ConVar OsuGameRules::osu_mod_mafham_render_livesize("osu_mod_mafham_render_lives
 ConVar OsuGameRules::osu_stacking_ar_override("osu_stacking_ar_override", -1, "allows overriding the approach time used for the stacking calculations. behaves as if disabled if the value is less than 0.");
 
 // all values here are in milliseconds
-ConVar OsuGameRules::osu_approachtime_min("osu_approachtime_min", 1800);
-ConVar OsuGameRules::osu_approachtime_mid("osu_approachtime_mid", 1200);
+ConVar OsuGameRules::osu_approachtime_min("osu_approachtime_min", 3600);
+ConVar OsuGameRules::osu_approachtime_mid("osu_approachtime_mid", 1800);
 ConVar OsuGameRules::osu_approachtime_max("osu_approachtime_max", 450);
 
 ConVar OsuGameRules::osu_hitwindow_300_min("osu_hitwindow_300_min", 80);
