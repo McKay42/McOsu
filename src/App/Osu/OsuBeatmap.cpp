@@ -193,6 +193,7 @@ OsuBeatmap::OsuBeatmap(Osu *osu)
 	m_iResourceLoadUpdateDelayHack = 0;
 	m_bForceStreamPlayback = true; // if this is set to true here, then the music will always be loaded as a stream (meaning slow disk access could cause audio stalling/stuttering)
 	m_fAfterMusicIsFinishedVirtualAudioTimeStart = -1.0f;
+	m_bIsFirstMissSound = true;
 
 	m_bFailed = false;
 	m_fFailAnim = 1.0f;
@@ -2235,12 +2236,17 @@ void OsuBeatmap::resetScore()
 	anim->deleteExistingAnimation(&m_fFailAnim);
 
 	m_osu->getScore()->reset();
+
+	m_bIsFirstMissSound = true;
 }
 
 void OsuBeatmap::playMissSound()
 {
-	if (m_osu->getScore()->getCombo() > osu_combobreak_sound_combo.getInt())
+	if ((m_bIsFirstMissSound && m_osu->getScore()->getCombo() > 0) || m_osu->getScore()->getCombo() > osu_combobreak_sound_combo.getInt())
+	{
+		m_bIsFirstMissSound = false;
 		engine->getSound()->play(getSkin()->getCombobreak());
+	}
 }
 
 unsigned long OsuBeatmap::getMusicPositionMSInterpolated()
