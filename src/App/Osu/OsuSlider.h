@@ -66,6 +66,7 @@ private:
 	static ConVar *m_osu_playfield_mirror_vertical_ref;
 	static ConVar *m_osu_playfield_rotation_ref;
 	static ConVar *m_osu_mod_fps_ref;
+	static ConVar *m_osu_mod_strict_tracking_ref;
 	static ConVar *m_osu_slider_border_size_multiplier_ref;
 	static ConVar *m_epilepsy_ref;
 	static ConVar *m_osu_auto_cursordance_ref;
@@ -78,7 +79,7 @@ private:
 
 	void updateAnimations(long curPos);
 
-	void onHit(OsuScore::HIT result, long delta, bool startOrEnd, float targetDelta = 0.0f, float targetAngle = 0.0f);
+	void onHit(OsuScore::HIT result, long delta, bool startOrEnd, float targetDelta = 0.0f, float targetAngle = 0.0f, bool isEndResultFromStrictTrackingMod = false);
 	void onRepeatHit(bool successful, bool sliderend);
 	void onTickHit(bool successful, int tickIndex);
 	void onSliderBreak();
@@ -125,7 +126,7 @@ private:
 	bool m_bEndFinished;
 	float m_fEndHitAnimation;
 	float m_fEndSliderBodyFadeAnimation;
-	long m_iLastClickHeld;
+	long m_iStrictTrackingModLastClickHeldTime;
 	int m_iDownKey;
 	int m_iPrevSliderSlideSoundSampleSet;
 	bool m_bCursorLeft;

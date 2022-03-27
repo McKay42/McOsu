@@ -165,6 +165,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_osu_vr_draw_desktop_playfield_ref = convar->getConVarByName("osu_vr_draw_desktop_playfield");
 
 	// experimental mods list
+	m_experimentalMods.push_back(convar->getConVarByName("fposu_mod_strafing"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_wobble"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_arwobble"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_timewarp"));
@@ -182,6 +183,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_ming3012"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_millhioref"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_mafham"));
+	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_strict_tracking"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_playfield_mirror_horizontal"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_playfield_mirror_vertical"));
 

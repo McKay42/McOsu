@@ -55,6 +55,7 @@ ConVar *OsuSlider::m_osu_playfield_mirror_horizontal_ref = NULL;
 ConVar *OsuSlider::m_osu_playfield_mirror_vertical_ref = NULL;
 ConVar *OsuSlider::m_osu_playfield_rotation_ref = NULL;
 ConVar *OsuSlider::m_osu_mod_fps_ref = NULL;
+ConVar *OsuSlider::m_osu_mod_strict_tracking_ref = NULL;
 ConVar *OsuSlider::m_osu_slider_border_size_multiplier_ref = NULL;
 ConVar *OsuSlider::m_epilepsy_ref = NULL;
 ConVar *OsuSlider::m_osu_auto_cursordance_ref = NULL;
@@ -70,6 +71,8 @@ OsuSlider::OsuSlider(char type, int repeat, float pixelLength, std::vector<Vecto
 		m_osu_playfield_rotation_ref = convar->getConVarByName("osu_playfield_rotation");
 	if (m_osu_mod_fps_ref == NULL)
 		m_osu_mod_fps_ref = convar->getConVarByName("osu_mod_fps");
+	if (m_osu_mod_strict_tracking_ref == NULL)
+		m_osu_mod_strict_tracking_ref = convar->getConVarByName("osu_mod_strict_tracking");
 	if (m_osu_slider_border_size_multiplier_ref == NULL)
 		m_osu_slider_border_size_multiplier_ref = convar->getConVarByName("osu_slider_border_size_multiplier");
 	if (m_epilepsy_ref == NULL)
@@ -160,7 +163,7 @@ OsuSlider::OsuSlider(char type, int repeat, float pixelLength, std::vector<Vecto
 	m_bEndFinished = false;
 	m_fEndHitAnimation = 0.0f;
 	m_fEndSliderBodyFadeAnimation = 0.0f;
-	m_iLastClickHeld = 0;
+	m_iStrictTrackingModLastClickHeldTime = 0;
 	m_iDownKey = 0;
 	m_iPrevSliderSlideSoundSampleSet = -1;
 	m_bCursorLeft = true;
@@ -245,25 +248,31 @@ void OsuSlider::draw(Graphics *g)
 		if (m_points.size() > 1)
 		{
 			// HACKHACK: very dirty code
-			bool sliderRepeatStartCircleFinished = m_iRepeat < 2;
+			bool sliderRepeatStartCircleFinished = (m_iRepeat < 2);
 			bool sliderRepeatEndCircleFinished = false;
+			bool endCircleIsAtActualSliderEnd = true;
 			for (int i=0; i<m_clicks.size(); i++)
 			{
+				// repeats
 				if (m_clicks[i].type == 0)
 				{
-					if (m_clicks[i].sliderend)
+					endCircleIsAtActualSliderEnd = m_clicks[i].sliderend;
+
+					if (endCircleIsAtActualSliderEnd)
 						sliderRepeatEndCircleFinished = m_clicks[i].finished;
 					else
 						sliderRepeatStartCircleFinished = m_clicks[i].finished;
 				}
 			}
 
+			const bool ifStrictTrackingModShouldDrawEndCircle = (!m_osu_mod_strict_tracking_ref->getBool() || m_endResult != OsuScore::HIT::HIT_MISS);
+
 			// end circle
-			if (((!m_bEndFinished && m_iRepeat % 2 != 0) || !sliderRepeatEndCircleFinished))
+			if ((!m_bEndFinished && m_iRepeat % 2 != 0 && ifStrictTrackingModShouldDrawEndCircle) || (!sliderRepeatEndCircleFinished && (ifStrictTrackingModShouldDrawEndCircle || (m_iRepeat > 1 && endCircleIsAtActualSliderEnd) || (m_iRepeat > 1 && std::abs(m_iRepeat - m_iCurRepeat) > 2))))
 				drawEndCircle(g, alpha, sliderSnake);
 
 			// start circle
-			if (!m_bStartFinished || !sliderRepeatStartCircleFinished || (!m_bEndFinished && m_iRepeat % 2 == 0))
+			if (!m_bStartFinished || (!sliderRepeatStartCircleFinished && (ifStrictTrackingModShouldDrawEndCircle || (m_iRepeat > 1 && !endCircleIsAtActualSliderEnd) || (m_iRepeat > 1 && std::abs(m_iRepeat - m_iCurRepeat) > 2))) || (!m_bEndFinished && m_iRepeat % 2 == 0 && ifStrictTrackingModShouldDrawEndCircle))
 				drawStartCircle(g, alpha);
 
 			// debug
@@ -616,25 +625,31 @@ void OsuSlider::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 		if (m_points.size() > 1)
 		{
 			// HACKHACK: very dirty code
-			bool sliderRepeatStartCircleFinished = m_iRepeat < 2;
+			bool sliderRepeatStartCircleFinished = (m_iRepeat < 2);
 			bool sliderRepeatEndCircleFinished = false;
+			bool endCircleIsAtActualSliderEnd = true;
 			for (int i=0; i<m_clicks.size(); i++)
 			{
+				// repeats
 				if (m_clicks[i].type == 0)
 				{
-					if (m_clicks[i].sliderend)
+					endCircleIsAtActualSliderEnd = m_clicks[i].sliderend;
+
+					if (endCircleIsAtActualSliderEnd)
 						sliderRepeatEndCircleFinished = m_clicks[i].finished;
 					else
 						sliderRepeatStartCircleFinished = m_clicks[i].finished;
 				}
 			}
 
+			const bool ifStrictTrackingModShouldDrawEndCircle = (!m_osu_mod_strict_tracking_ref->getBool() || m_endResult != OsuScore::HIT::HIT_MISS);
+
 			// end circle
-			if (((!m_bEndFinished && m_iRepeat % 2 != 0) || !sliderRepeatEndCircleFinished))
+			if ((!m_bEndFinished && m_iRepeat % 2 != 0 && ifStrictTrackingModShouldDrawEndCircle) || (!sliderRepeatEndCircleFinished && (ifStrictTrackingModShouldDrawEndCircle || (m_iRepeat > 1 && endCircleIsAtActualSliderEnd) || (m_iRepeat > 1 && std::abs(m_iRepeat - m_iCurRepeat) > 2))))
 				drawEndCircle(g, alpha, sliderSnake);
 
 			// start circle
-			if (!m_bStartFinished || !sliderRepeatStartCircleFinished || (!m_bEndFinished && m_iRepeat % 2 == 0))
+			if (!m_bStartFinished || (!sliderRepeatStartCircleFinished && (ifStrictTrackingModShouldDrawEndCircle || (m_iRepeat > 1 && !endCircleIsAtActualSliderEnd) || (m_iRepeat > 1 && std::abs(m_iRepeat - m_iCurRepeat) > 2))) || (!m_bEndFinished && m_iRepeat % 2 == 0 && ifStrictTrackingModShouldDrawEndCircle))
 				drawStartCircle(g, alpha);
 
 			// reverse arrows
@@ -1137,11 +1152,24 @@ void OsuSlider::update(long curPos)
 	// handle slider end, repeats, ticks, and constant VR controller vibration while sliding
 	if (!m_bEndFinished)
 	{
+		// NOTE: we have 2 timing conditions after which we start checking for strict tracking: 1) startcircle was clicked, 2) slider has started timing wise
+		// it is easily possible to hit the startcircle way before the sliderball would become active, which is why the first check exists.
+		// even if the sliderball has not yet started sliding, you will be punished for leaving the (still invisible) followcircle area after having clicked the startcircle, always.
+		const bool isTrackingStrictTrackingMod = ((m_bStartFinished || curPos >= m_iTime) && m_osu_mod_strict_tracking_ref->getBool());
+
 		// slider tail lenience bullshit: see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Objects/Slider.cs#L123
 		// being "inside the slider" (for the end of the slider) is NOT checked at the exact end of the slider, but somewhere random before, because fuck you
 		const long lenienceHackEndTime = std::max(m_iTime + m_iObjectDuration / 2, (m_iTime + m_iObjectDuration) - (long)osu_slider_end_inside_check_offset.getInt());
-		if ((isClickHeldSlider() || m_beatmap->getOsu()->getModRelax()) && m_bCursorInside)
+		const bool isTrackingCorrectly = (isClickHeldSlider() || m_beatmap->getOsu()->getModRelax()) && m_bCursorInside;
+		if (isTrackingCorrectly)
 		{
+			if (isTrackingStrictTrackingMod)
+			{
+				m_iStrictTrackingModLastClickHeldTime = curPos;
+				if (m_iStrictTrackingModLastClickHeldTime == 0) // (prevent frame perfect inputs from not triggering the strict tracking miss because we use != 0 comparison to detect if tracking correctly at least once)
+					m_iStrictTrackingModLastClickHeldTime = 1;
+			}
+
 			// only check it at the exact point in time ...
 			if (curPos >= lenienceHackEndTime)
 			{
@@ -1159,6 +1187,32 @@ void OsuSlider::update(long curPos)
 		// can't be "inside the slider" after lenienceHackEndTime (even though the slider is still going, which is madness)
 		if (curPos >= lenienceHackEndTime)
 			m_bHeldTillEndForLenienceHackCheck = true;
+
+		// handle strict tracking mod
+		if (isTrackingStrictTrackingMod)
+		{
+			const bool wasTrackingCorrectlyAtLeastOnce = (m_iStrictTrackingModLastClickHeldTime != 0);
+			if (wasTrackingCorrectlyAtLeastOnce && !isTrackingCorrectly)
+			{
+				if (!m_bHeldTillEndForLenienceHack) // if past lenience end time then don't trigger a strict tracking miss, since the slider is then already considered fully finished gameplay wise
+				{
+					if (m_endResult == OsuScore::HIT::HIT_NULL) // force miss the end once, if it has not already been force missed by notelock
+					{
+						// force miss endcircle
+						{
+							onSliderBreak();
+
+							m_bHeldTillEnd = false;
+							m_bHeldTillEndForLenienceHack = false;
+							m_bHeldTillEndForLenienceHackCheck = true;
+							m_endResult = OsuScore::HIT::HIT_MISS;
+
+							addHitResult(m_endResult, 0, m_bIsEndOfCombo, getRawPosAt(m_iTime + m_iObjectDuration), -1.0f, 0.0f, true, true, false); // end of combo, ignore in hiterrorbar, ignore combo, subtract health
+						}
+					}
+				}
+			}
+		}
 	
 		// handle repeats and ticks
 		for (int i=0; i<m_clicks.size(); i++)
@@ -1204,47 +1258,52 @@ void OsuSlider::update(long curPos)
 				}
 
 				// handle endcircle
-
-				m_bHeldTillEnd = m_bHeldTillEndForLenienceHack;
-				m_endResult = m_bHeldTillEnd ? OsuScore::HIT::HIT_300 : OsuScore::HIT::HIT_MISS;
-
-				// handle total slider result (currently startcircle + repeats + ticks + endcircle)
-				// clicks = (repeats + ticks)
-				const float numMaxPossibleHits = 1 + m_clicks.size() + 1;
-				float numActualHits = 0;
-
-				if (m_startResult != OsuScore::HIT::HIT_MISS)
-					numActualHits++;
-				if (m_endResult != OsuScore::HIT::HIT_MISS)
-					numActualHits++;
-
-				for (int i=0; i<m_clicks.size(); i++)
+				bool isEndResultComingFromStrictTrackingMod = false;
+				if (m_endResult == OsuScore::HIT::HIT_NULL)
 				{
-					if (m_clicks[i].successful)
+					m_bHeldTillEnd = m_bHeldTillEndForLenienceHack;
+					m_endResult = m_bHeldTillEnd ? OsuScore::HIT::HIT_300 : OsuScore::HIT::HIT_MISS;
+
+					// handle total slider result (currently startcircle + repeats + ticks + endcircle)
+					// clicks = (repeats + ticks)
+					const float numMaxPossibleHits = 1 + m_clicks.size() + 1;
+					float numActualHits = 0;
+
+					if (m_startResult != OsuScore::HIT::HIT_MISS)
 						numActualHits++;
+					if (m_endResult != OsuScore::HIT::HIT_MISS)
+						numActualHits++;
+
+					for (int i=0; i<m_clicks.size(); i++)
+					{
+						if (m_clicks[i].successful)
+							numActualHits++;
+					}
+
+					const float percent = numActualHits / numMaxPossibleHits;
+
+					const bool allow300 = (osu_slider_scorev2.getBool() || m_beatmap->getOsu()->getModScorev2()) ? (m_startResult == OsuScore::HIT::HIT_300) : true;
+					const bool allow100 = (osu_slider_scorev2.getBool() || m_beatmap->getOsu()->getModScorev2()) ? (m_startResult == OsuScore::HIT::HIT_300 || m_startResult == OsuScore::HIT::HIT_100) : true;
+
+					// rewrite m_endResult as the whole slider result, then use it for the final onHit()
+					if (percent >= 0.999f && allow300)
+						m_endResult = OsuScore::HIT::HIT_300;
+					else if (percent >= 0.5f && allow100 && !OsuGameRules::osu_mod_ming3012.getBool() && !OsuGameRules::osu_mod_no100s.getBool())
+						m_endResult = OsuScore::HIT::HIT_100;
+					else if (percent > 0.0f && !OsuGameRules::osu_mod_no100s.getBool() && !OsuGameRules::osu_mod_no50s.getBool())
+						m_endResult = OsuScore::HIT::HIT_50;
+					else
+						m_endResult = OsuScore::HIT::HIT_MISS;
+
+					//debugLog("percent = %f\n", percent);
+
+					if (!m_bHeldTillEnd && osu_slider_end_miss_breaks_combo.getBool())
+						onSliderBreak();
 				}
-
-				const float percent = numActualHits / numMaxPossibleHits;
-
-				const bool allow300 = (osu_slider_scorev2.getBool() || m_beatmap->getOsu()->getModScorev2()) ? (m_startResult == OsuScore::HIT::HIT_300) : true;
-				const bool allow100 = (osu_slider_scorev2.getBool() || m_beatmap->getOsu()->getModScorev2()) ? (m_startResult == OsuScore::HIT::HIT_300 || m_startResult == OsuScore::HIT::HIT_100) : true;
-
-				// rewrite m_endResult as the whole slider result, then use it for the final onHit()
-				if (percent >= 0.999f && allow300)
-					m_endResult = OsuScore::HIT::HIT_300;
-				else if (percent >= 0.5f && allow100 && !OsuGameRules::osu_mod_ming3012.getBool() && !OsuGameRules::osu_mod_no100s.getBool())
-					m_endResult = OsuScore::HIT::HIT_100;
-				else if (percent > 0.0f && !OsuGameRules::osu_mod_no100s.getBool() && !OsuGameRules::osu_mod_no50s.getBool())
-					m_endResult = OsuScore::HIT::HIT_50;
 				else
-					m_endResult = OsuScore::HIT::HIT_MISS;
+					isEndResultComingFromStrictTrackingMod = true;
 
-				//debugLog("percent = %f\n", percent);
-
-				if (!m_bHeldTillEnd && osu_slider_end_miss_breaks_combo.getBool())
-					onSliderBreak();
-
-				onHit(m_endResult, 0, true);
+				onHit(m_endResult, 0, true, 0.0f, 0.0f, isEndResultComingFromStrictTrackingMod);
 			}
 		}
 
@@ -1431,7 +1490,7 @@ void OsuSlider::onClickEvent(std::vector<OsuBeatmap::CLICK> &clicks)
 	}
 }
 
-void OsuSlider::onHit(OsuScore::HIT result, long delta, bool startOrEnd, float targetDelta, float targetAngle)
+void OsuSlider::onHit(OsuScore::HIT result, long delta, bool startOrEnd, float targetDelta, float targetAngle, bool isEndResultFromStrictTrackingMod)
 {
 	if (m_points.size() == 0) return;
 
@@ -1439,10 +1498,13 @@ void OsuSlider::onHit(OsuScore::HIT result, long delta, bool startOrEnd, float t
 
 	//debugLog("startOrEnd = %i,    m_iCurRepeat = %i\n", (int)startOrEnd, m_iCurRepeat);
 
-	// sound and hit animation
+	// sound and hit animation and also sliderbreak combo drop
 	{
 		if (result == OsuScore::HIT::HIT_MISS)
-			onSliderBreak();
+		{
+			if (!isEndResultFromStrictTrackingMod)
+				onSliderBreak();
+		}
 		else
 		{
 			if (m_osu_timingpoints_force->getBool())
@@ -1535,22 +1597,25 @@ void OsuSlider::onHit(OsuScore::HIT result, long delta, bool startOrEnd, float t
 		m_bEndFinished = true;
 		m_bFinished = true;
 
-		// special case: osu!lazer 2020 only returns 1 judgement for the whole slider, but via the startcircle. i.e. we are not allowed to drain again here in mcosu logic (because startcircle judgement is handled at the end here)
-		const bool isLazer2020Drain = (m_osu_drain_type_ref->getInt() == 3); // osu!lazer 2020
-
-		addHitResult(result, delta, m_bIsEndOfCombo, getRawPosAt(m_iTime + m_iObjectDuration), -1.0f, 0.0f, true, !m_bHeldTillEnd, isLazer2020Drain); // end of combo, ignore in hiterrorbar, depending on heldTillEnd increase combo or not, increase score, increase health depending on drain type
-
-		// add bonus score + extra health manually
-		if (m_bHeldTillEnd)
+		if (!isEndResultFromStrictTrackingMod)
 		{
-			m_beatmap->addHitResult(this, OsuScore::HIT::HIT_SLIDER30, 0, false, true, true, true, true, false); // only increase health
-			m_beatmap->addScorePoints(30);
-		}
-		else
-		{
-			// special case: missing the endcircle drains HIT_MISS_SLIDERBREAK health (and not HIT_MISS health)
-			// NOTE: yes, this will drain twice for the end of a slider (once for the judgement of the whole slider above, and once for the endcircle here)
-			m_beatmap->addHitResult(this, OsuScore::HIT::HIT_MISS_SLIDERBREAK, 0, false, true, true, true, true, false); // only decrease health
+			// special case: osu!lazer 2020 only returns 1 judgement for the whole slider, but via the startcircle. i.e. we are not allowed to drain again here in mcosu logic (because startcircle judgement is handled at the end here)
+			const bool isLazer2020Drain = (m_osu_drain_type_ref->getInt() == 3); // osu!lazer 2020
+
+			addHitResult(result, delta, m_bIsEndOfCombo, getRawPosAt(m_iTime + m_iObjectDuration), -1.0f, 0.0f, true, !m_bHeldTillEnd, isLazer2020Drain); // end of combo, ignore in hiterrorbar, depending on heldTillEnd increase combo or not, increase score, increase health depending on drain type
+
+			// add bonus score + extra health manually
+			if (m_bHeldTillEnd)
+			{
+				m_beatmap->addHitResult(this, OsuScore::HIT::HIT_SLIDER30, 0, false, true, true, true, true, false); // only increase health
+				m_beatmap->addScorePoints(30);
+			}
+			else
+			{
+				// special case: missing the endcircle drains HIT_MISS_SLIDERBREAK health (and not HIT_MISS health)
+				// NOTE: yes, this will drain twice for the end of a slider (once for the judgement of the whole slider above, and once for the endcircle here)
+				m_beatmap->addHitResult(this, OsuScore::HIT::HIT_MISS_SLIDERBREAK, 0, false, true, true, true, true, false); // only decrease health
+			}
 		}
 	}
 
@@ -1681,7 +1746,7 @@ void OsuSlider::onReset(long curPos)
 
 	m_beatmap->getSkin()->stopSliderSlideSound();
 
-	m_iLastClickHeld = 0;
+	m_iStrictTrackingModLastClickHeldTime = 0;
 	m_iDownKey = 0;
 	m_iPrevSliderSlideSoundSampleSet = -1;
 	m_bCursorLeft = true;

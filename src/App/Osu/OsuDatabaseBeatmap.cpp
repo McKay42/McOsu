@@ -38,6 +38,8 @@ ConVar osu_mod_random_slider_offset_y_percent("osu_mod_random_slider_offset_y_pe
 ConVar osu_mod_random_spinner_offset_x_percent("osu_mod_random_spinner_offset_x_percent", 1.0f, "how much the randomness affects things");
 ConVar osu_mod_random_spinner_offset_y_percent("osu_mod_random_spinner_offset_y_percent", 1.0f, "how much the randomness affects things");
 ConVar osu_mod_reverse_sliders("osu_mod_reverse_sliders", false);
+ConVar osu_mod_strict_tracking("osu_mod_strict_tracking", false);
+
 ConVar osu_show_approach_circle_on_first_hidden_object("osu_show_approach_circle_on_first_hidden_object", true);
 
 ConVar osu_stars_stacking("osu_stars_stacking", true, "respect hitobject stacking before calculating stars/pp");
@@ -1331,6 +1333,9 @@ OsuDatabaseBeatmap::LOAD_GAMEPLAY_RESULT OsuDatabaseBeatmap::loadGameplay(OsuDat
 			for (size_t i=0; i<c.sliders.size(); i++)
 			{
 				SLIDER &s = c.sliders[i];
+
+				if (osu_mod_strict_tracking.getBool())
+					s.ticks.clear();
 
 				if (osu_mod_random.getBool())
 				{
