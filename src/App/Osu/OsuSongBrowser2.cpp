@@ -514,7 +514,7 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	addBottombarNavButton([this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionOptions();}, [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionOptionsOver();})->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onSelectionOptions) );
 
 	m_userButton = new OsuUISongBrowserUserButton(m_osu);
-	m_userButton->addTooltipLine("Click to change [User] or view [Top Ranks]");
+	m_userButton->addTooltipLine("Click to change [User] or view/edit [Top Ranks]");
 	m_userButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onUserButtonClicked) );
 	m_userButton->setText(m_name_ref->getString());
 	m_bottombar->addBaseUIElement(m_userButton);
@@ -1663,6 +1663,8 @@ void OsuSongBrowser2::onPlayEnd(bool quit)
 void OsuSongBrowser2::onSelectionChange(OsuUISongBrowserButton *button, bool rebuild)
 {
 	if (button == NULL) return;
+
+	m_contextMenu->setVisible2(false);
 
 	// keep track and update all selection states
 	// I'm still not happy with this, but at least all state update logic is localized in this function instead of spread across all buttons
@@ -4277,7 +4279,10 @@ void OsuSongBrowser2::recalculateStarsForSelectedBeatmap(bool force)
 void OsuSongBrowser2::selectSongButton(OsuUISongBrowserButton *songButton)
 {
 	if (songButton != NULL && !songButton->isSelected())
+	{
+		m_contextMenu->setVisible2(false);
 		songButton->select();
+	}
 }
 
 void OsuSongBrowser2::selectRandomBeatmap()
