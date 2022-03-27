@@ -14,6 +14,7 @@
 #include "Environment.h"
 #include "ResourceManager.h"
 #include "AnimationHandler.h"
+#include "DirectX11Interface.h"
 
 #include "Osu.h"
 #include "OsuSkin.h"
@@ -135,17 +136,6 @@ void OsuModFPoSu::draw(Graphics *g)
 				g->setWorldMatrix(viewMatrix);
 				g->setProjectionMatrix(projectionMatrix);
 
-#ifdef MCENGINE_FEATURE_DIRECTX
-
-				 // NOTE: convert from OpenGL coordinate system
-				{
-					Matrix4 zflip;
-					zflip.scale(1, 1, -1);
-					g->setWorldMatrixMul(zflip);
-				}
-
-#endif
-
 				g->setBlending(false);
 				{
 					// draw cube/skybox
@@ -176,20 +166,21 @@ void OsuModFPoSu::draw(Graphics *g)
 						if (fposu_transparent_playfield.getBool())
 							g->setBlending(true);
 
-						Matrix4 worldMatrix = viewMatrix * m_modelMatrix;
+						Matrix4 worldMatrix = m_modelMatrix;
 
 #ifdef MCENGINE_FEATURE_DIRECTX
-
-						 // NOTE: convert from OpenGL coordinate system
 						{
-							Matrix4 zflip;
-							zflip.scale(1, 1, -1);
-							worldMatrix = worldMatrix * zflip;
+							DirectX11Interface *dx11 = dynamic_cast<DirectX11Interface*>(engine->getGraphics());
+							if (dx11 != NULL)
+							{
+								// NOTE: convert from OpenGL coordinate system
+								static Matrix4 zflip = Matrix4().scale(1, 1, -1);
+								worldMatrix = worldMatrix * zflip;
+							}
 						}
-
 #endif
 
-						g->setWorldMatrix(worldMatrix);
+						g->setWorldMatrixMul(worldMatrix);
 						{
 							m_osu->getPlayfieldBuffer()->bind();
 							{
@@ -488,6 +479,26 @@ void OsuModFPoSu::makePlayfield()
 	m_vao->clear();
 	m_meshList.clear();
 
+#ifdef MCENGINE_FEATURE_DIRECTX
+
+	float topTC = 1.0f;
+	float bottomTC = 0.0f;
+	{
+		DirectX11Interface *dx11 = dynamic_cast<DirectX11Interface*>(engine->getGraphics());
+		if (dx11 != NULL)
+		{
+			topTC = 0.0f;
+			bottomTC = 1.0f;
+		}
+	}
+
+#else
+
+	const float topTC = 1.0f;
+	const float bottomTC = 0.0f;
+
+#endif
+
 	const float dist = -fposu_distance.getFloat();
 
 	VertexPair vp1 = VertexPair(Vector3(-0.5, 0.5, dist),Vector3(-0.5, -0.5, dist), 0);
@@ -514,18 +525,6 @@ void OsuModFPoSu::makePlayfield()
 
 		const float leftTC = (*begin).textureCoordinate;
 		const float rightTC = (*next).textureCoordinate;
-
-#ifdef MCENGINE_FEATURE_DIRECTX
-
-		const float topTC = 0.0f;
-		const float bottomTC = 1.0f;
-
-#else
-
-		const float topTC = 1.0f;
-		const float bottomTC = 0.0f;
-
-#endif
 
 		m_vao->addVertex(topLeft);
 		m_vao->addTexcoord(leftTC, topTC);

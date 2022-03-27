@@ -879,15 +879,15 @@ void OsuHUD::drawCursorInt(Graphics *g, Shader *trailShader, std::vector<CURSORT
 				trailShader->setUniform1f("time", engine->getTime());
 
 #ifdef MCENGINE_FEATURE_OPENGLES
-
-				OpenGLES2Interface *gles2 = dynamic_cast<OpenGLES2Interface*>(g);
-				if (gles2 != NULL)
 				{
-					gles2->forceUpdateTransform();
-					Matrix4 mvp = gles2->getMVP();
-					trailShader->setUniformMatrix4fv("mvp", mvp);
+					OpenGLES2Interface *gles2 = dynamic_cast<OpenGLES2Interface*>(g);
+					if (gles2 != NULL)
+					{
+						gles2->forceUpdateTransform();
+						Matrix4 mvp = gles2->getMVP();
+						trailShader->setUniformMatrix4fv("mvp", mvp);
+					}
 				}
-
 #endif
 
 				trailImage->bind();
@@ -1619,6 +1619,11 @@ void OsuHUD::drawHPBar(Graphics *g, double health, float alpha, float breakAnim)
 		{
 			g->translate(0.0f, 0.0f, 0.15f);
 		}
+
+		// DEBUG:
+		/*
+		g->fillRect(0, 25, m_osu->getScreenWidth()*health, 10);
+		*/
 
 		m_osu->getSkin()->getScorebarColour()->setDrawClipWidthPercent(health);
 		m_osu->getSkin()->getScorebarColour()->draw(g, (m_osu->getSkin()->getScorebarColour()->getSize() / 2.0f * scale) + (colourOffset * scale) + (breakAnimOffset * scale), scale);
