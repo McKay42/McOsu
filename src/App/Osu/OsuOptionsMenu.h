@@ -137,7 +137,6 @@ private:
 	void onAudioCompatibilityModeChange(CBaseUICheckbox *checkbox);
 	void onDownloadOsuClicked();
 	void onManuallyManageBeatmapsClicked();
-	void onLIVReloadCalibrationClicked();
 	void onCM360CalculatorLinkClicked();
 	void onNotelockSelect();
 	void onNotelockSelect2(UString notelockType, int id = -1);

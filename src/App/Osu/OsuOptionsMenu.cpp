@@ -598,27 +598,6 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 		aaSlider->setKeyDelta(2.0f);
 		aaSlider->setAnimated(false);
 
-		/*
-		addSpacer();
-#ifdef MCENGINE_FEATURE_DIRECTX
-
-		addSubSection("LIV SDK");
-		addCheckbox("LIV SDK Support", "Copy your externalcamera.cfg file into /<Steam>/steamapps/common/McOsu/\nUse the button below or \"vr_liv_reload_calibration\" to reload it during runtime.", convar->getConVarByName("vr_liv"));
-		addLabel("");
-		addButton("Reload externalcamera.cfg or liv-camera.cfg")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onLIVReloadCalibrationClicked) );
-
-#else
-
-		addSubSection("LIV SDK (N/A)");
-		addLabel("To enable LIV SDK support, follow these steps:");
-		addLabel("");
-		addLabel("1) In your Steam library, right click on McOsu")->setTextColor(0xff777777);
-		addLabel("2) Click on Properties")->setTextColor(0xff777777);
-		addLabel("3) BETAS > Select the \"cutting-edge\" beta")->setTextColor(0xff777777);
-
-#endif
-		*/
-
 		addSpacer();
 		addSubSection("Play Area / Playfield");
 		addSpacer();
@@ -2754,11 +2733,6 @@ void OsuOptionsMenu::onManuallyManageBeatmapsClicked()
 
 	m_osu->getNotificationOverlay()->addNotification("Opening browser, please wait ...", 0xffffffff, false, 0.75f);
 	env->openURLInDefaultBrowser("https://steamcommunity.com/sharedfiles/filedetails/?id=880768265");
-}
-
-void OsuOptionsMenu::onLIVReloadCalibrationClicked()
-{
-	convar->getConVarByName("vr_liv_reload_calibration")->exec();
 }
 
 void OsuOptionsMenu::onCM360CalculatorLinkClicked()
