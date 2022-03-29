@@ -34,10 +34,10 @@ public:
 	OsuHitObject(long time, int sampleType, int comboNumber, bool isEndOfCombo, int colorCounter, int colorOffset, OsuBeatmap *beatmap);
 	virtual ~OsuHitObject() {;}
 
-	virtual void draw(Graphics *g);
-	virtual void draw2(Graphics *g){;}
-	virtual void drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr){;}
-	virtual void drawVR2(Graphics *g, Matrix4 &mvp, OsuVR *vr){;}
+	virtual void draw(Graphics *g) {;}
+	virtual void draw2(Graphics *g);
+	virtual void drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr) {;}
+	virtual void drawVR2(Graphics *g, Matrix4 &mvp, OsuVR *vr) {;}
 	virtual void update(long curPos);
 
 	virtual void updateStackPosition(float stackOffset) = 0;
@@ -46,7 +46,7 @@ public:
 	virtual int getCombo() {return 1;} // how much combo this hitobject is "worth"
 	virtual bool isCircle() {return false;}
 	virtual bool isSpinner() {return false;}
-	void addHitResult(OsuScore::HIT result, long delta, bool isEndOfCombo, Vector2 posRaw, float targetDelta = 0.0f, float targetAngle = 0.0f, bool ignoreOnHitErrorBar = false, bool ignoreCombo = false, bool ignoreHealth = false);
+	void addHitResult(OsuScore::HIT result, long delta, bool isEndOfCombo, Vector2 posRaw, float targetDelta = 0.0f, float targetAngle = 0.0f, bool ignoreOnHitErrorBar = false, bool ignoreCombo = false, bool ignoreHealth = false, bool addObjectDurationToSkinAnimationTimeStartOffset = true);
 	void misAimed() {m_bMisAim = true;}
 
 	void setIsEndOfCombo(bool isEndOfCombo) {m_bIsEndOfCombo = isEndOfCombo;}
@@ -54,6 +54,7 @@ public:
 	void setForceDrawApproachCircle(bool firstNote) {m_bOverrideHDApproachCircle = firstNote;}
 	void setAutopilotDelta(long delta) {m_iAutopilotDelta = delta;}
 	void setBlocked(bool blocked) {m_bBlocked = blocked;}
+	void setComboNumber(int comboNumber) {m_iComboNumber = comboNumber;}
 
 	virtual Vector2 getRawPosAt(long pos) = 0; // with stack calculation modifications
 	virtual Vector2 getOriginalRawPosAt(long pos) = 0; // without stack calculations
@@ -64,6 +65,8 @@ public:
 	inline int getStack() const {return m_iStack;}
 	inline int getComboNumber() const {return m_iComboNumber;}
 	inline bool isEndOfCombo() const {return m_bIsEndOfCombo;}
+	inline int getColorCounter() const {return m_iColorCounter;}
+	inline int getColorOffset() const {return m_iColorOffset;}
 	inline long getAutopilotDelta() const {return m_iAutopilotDelta;}
 	inline unsigned long long getSortHack() const {return m_iSortHack;}
 
@@ -116,9 +119,13 @@ private:
 		Vector2 rawPos;
 		OsuScore::HIT result;
 		long delta;
+		bool addObjectDurationToSkinAnimationTimeStartOffset;
 	};
 
+	void drawHitResultAnim(Graphics *g, const HITRESULTANIM &hitresultanim);
+
 	HITRESULTANIM m_hitresultanim1;
+	HITRESULTANIM m_hitresultanim2;
 
 	unsigned long long m_iSortHack;
 };

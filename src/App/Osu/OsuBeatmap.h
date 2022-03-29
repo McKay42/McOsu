@@ -246,6 +246,7 @@ protected:
 	int m_iResourceLoadUpdateDelayHack;
 	bool m_bForceStreamPlayback;
 	float m_fAfterMusicIsFinishedVirtualAudioTimeStart;
+	bool m_bIsFirstMissSound;
 
 	// health
 	bool m_bFailed;

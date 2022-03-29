@@ -453,8 +453,8 @@ void OsuCircle::draw(Graphics *g)
 
 void OsuCircle::draw2(Graphics *g)
 {
-	if (m_bFinished || (!m_bVisible && !m_bWaiting)) // special case needed for when we are past this objects time, but still within not-miss range, because we still need to draw the object
-		return;
+	OsuHitObject::draw2(g);
+	if (m_bFinished || (!m_bVisible && !m_bWaiting)) return; // special case needed for when we are past this objects time, but still within not-miss range, because we still need to draw the object
 
 	// draw approach circle
 	const bool hd = m_beatmap->getOsu()->getModHD();

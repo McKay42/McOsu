@@ -22,6 +22,8 @@ public:
 
 	virtual void draw(Graphics *g);
 
+	void triggerContextMenu(Vector2 pos);
+
 	void sortChildren();
 
 	virtual void updateLayoutEx();
@@ -34,6 +36,8 @@ protected:
 	virtual void onRightMouseUpInside();
 
 	void onContextMenu(UString text, int id = -1);
+	void onAddToCollectionConfirmed(UString text, int id = -1);
+	void onCreateNewCollectionConfirmed(UString text, int id = -1);
 
 	void drawBeatmapBackgroundThumbnail(Graphics *g, Image *image);
 	void drawGrade(Graphics *g);

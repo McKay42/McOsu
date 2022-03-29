@@ -18,6 +18,7 @@
 #include "Osu.h"
 #include "OsuSkinImage.h"
 #include "OsuBeatmap.h"
+#include "OsuGameRules.h"
 #include "OsuNotificationOverlay.h"
 #include "OsuSteamWorkshop.h"
 
@@ -31,7 +32,7 @@ ConVar osu_pitch_hitsounds_when_not_300("osu_pitch_hitsounds_when_not_300", true
 ConVar osu2_sound_source_id("osu2_sound_source_id", 1, "which instance/player/client should play hitsounds (e.g. master top left is always 1)");
 
 ConVar osu_volume_effects("osu_volume_effects", 1.0f);
-ConVar osu_skin_async("osu_skin_async", false, "load in background without blocking");
+ConVar osu_skin_async("osu_skin_async", true, "load in background without blocking");
 ConVar osu_skin_hd("osu_skin_hd", true, "load and use @2x versions of skin images, if available");
 ConVar osu_skin_mipmaps("osu_skin_mipmaps", false, "generate mipmaps for every skin image (only useful on lower game resolutions, requires more vram)");
 ConVar osu_skin_color_index_add("osu_skin_color_index_add", 0);
@@ -39,6 +40,8 @@ ConVar osu_skin_animation_force("osu_skin_animation_force", false);
 ConVar osu_skin_use_skin_hitsounds("osu_skin_use_skin_hitsounds", true, "If enabled: Use skin's sound samples. If disabled: Use default skin's sound samples. For hitsounds only.");
 ConVar osu_skin_random("osu_skin_random", false, "select random skin from list");
 ConVar osu_skin_random_elements("osu_skin_random_elements", false, "sElECt RanDOM sKIn eLemENTs FRoM ranDom SkINs");
+ConVar osu_mod_fposu_sound_panning("osu_mod_fposu_sound_panning", false, "see osu_sound_panning");
+ConVar osu_mod_fps_sound_panning("osu_mod_fps_sound_panning", false, "see osu_sound_panning");
 ConVar osu_sound_panning("osu_sound_panning", true, "positional hitsound audio depending on the playfield position");
 ConVar osu_sound_panning_multiplier("osu_sound_panning_multiplier", 1.0f, "the final panning value is multiplied with this, e.g. if you want to reduce or increase the effect strength by a percentage");
 
@@ -55,6 +58,7 @@ ConVar *OsuSkin::m_osu_skin_async = &osu_skin_async;
 ConVar *OsuSkin::m_osu_skin_hd = &osu_skin_hd;
 
 ConVar *OsuSkin::m_osu_skin_ref = NULL;
+ConVar *OsuSkin::m_osu_mod_fposu_ref = NULL;
 
 OsuSkin::OsuSkin(Osu *osu, UString name, UString filepath, bool isDefaultSkin, bool isWorkshopSkin)
 {
@@ -69,6 +73,8 @@ OsuSkin::OsuSkin(Osu *osu, UString name, UString filepath, bool isDefaultSkin, b
 	// convar refs
 	if (m_osu_skin_ref == NULL)
 		m_osu_skin_ref = convar->getConVarByName("osu_skin");
+	if (m_osu_mod_fposu_ref == NULL)
+		m_osu_mod_fposu_ref = convar->getConVarByName("osu_mod_fposu");
 
 	if (m_missingTexture == NULL)
 		m_missingTexture = engine->getResourceManager()->getImage("MISSING_TEXTURE");
@@ -107,7 +113,18 @@ OsuSkin::OsuSkin(Osu *osu, UString name, UString filepath, bool isDefaultSkin, b
 	m_scoreX = m_missingTexture;
 	m_scorePercent = m_missingTexture;
 	m_scoreDot = m_missingTexture;
-	m_scoreComma = m_missingTexture;
+
+	m_combo0 = m_missingTexture;
+	m_combo1 = m_missingTexture;
+	m_combo2 = m_missingTexture;
+	m_combo3 = m_missingTexture;
+	m_combo4 = m_missingTexture;
+	m_combo5 = m_missingTexture;
+	m_combo6 = m_missingTexture;
+	m_combo7 = m_missingTexture;
+	m_combo8 = m_missingTexture;
+	m_combo9 = m_missingTexture;
+	m_comboX = m_missingTexture;
 
 	m_playWarningArrow = m_missingTexture;
 	m_circularmetre = m_missingTexture;
@@ -153,14 +170,6 @@ OsuSkin::OsuSkin(Osu *osu, UString name, UString filepath, bool isDefaultSkin, b
 	m_defaultButtonLeft = m_missingTexture;
 	m_defaultButtonMiddle = m_missingTexture;
 	m_defaultButtonRight = m_missingTexture;
-	m_selectionMode = m_missingTexture;
-	m_selectionModeOver = m_missingTexture;
-	m_selectionMods = m_missingTexture;
-	m_selectionModsOver = m_missingTexture;
-	m_selectionRandom = m_missingTexture;
-	m_selectionRandomOver = m_missingTexture;
-	m_selectionOptions = m_missingTexture;
-	m_selectionOptionsOver = m_missingTexture;
 
 	m_songSelectTop = m_missingTexture;
 	m_songSelectBottom = m_missingTexture;
@@ -249,6 +258,8 @@ OsuSkin::OsuSkin(Osu *osu, UString name, UString filepath, bool isDefaultSkin, b
 	m_bHitCircle2x = false;
 	m_bIsDefault02x = false;
 	m_bIsDefault12x = false;
+	m_bIsScore02x = false;
+	m_bIsCombo02x = false;
 	m_bSpinnerApproachCircle2x = false;
 	m_bSpinnerBottom2x= false;
 	m_bSpinnerCircle2x= false;
@@ -496,54 +507,127 @@ void OsuSkin::load()
 	m_followPoint2 = createOsuSkinImage("followpoint", Vector2(16, 22), 64);
 
 	randomizeFilePath();
-	UString hitCirclePrefix = m_sHitCirclePrefix.length() > 0 ? m_sHitCirclePrefix : "default";
-	UString hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-0");
-	checkLoadImage(&m_default0, hitCircleStringFinal, "OSU_SKIN_DEFAULT0");
-	if (m_default0 == m_missingTexture) checkLoadImage(&m_default0, "default-0", "OSU_SKIN_DEFAULT0"); // special cases: fallback to default skin hitcircle numbers if the defined prefix doesn't point to any valid files
-	hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-1");
-	checkLoadImage(&m_default1, hitCircleStringFinal, "OSU_SKIN_DEFAULT1");
-	if (m_default1 == m_missingTexture) checkLoadImage(&m_default1, "default-1", "OSU_SKIN_DEFAULT1");
-	hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-2");
-	checkLoadImage(&m_default2, hitCircleStringFinal, "OSU_SKIN_DEFAULT2");
-	if (m_default2 == m_missingTexture) checkLoadImage(&m_default2, "default-2", "OSU_SKIN_DEFAULT2");
-	hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-3");
-	checkLoadImage(&m_default3, hitCircleStringFinal, "OSU_SKIN_DEFAULT3");
-	if (m_default3 == m_missingTexture) checkLoadImage(&m_default3, "default-3", "OSU_SKIN_DEFAULT3");
-	hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-4");
-	checkLoadImage(&m_default4, hitCircleStringFinal, "OSU_SKIN_DEFAULT4");
-	if (m_default4 == m_missingTexture) checkLoadImage(&m_default4, "default-4", "OSU_SKIN_DEFAULT4");
-	hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-5");
-	checkLoadImage(&m_default5, hitCircleStringFinal, "OSU_SKIN_DEFAULT5");
-	if (m_default5 == m_missingTexture) checkLoadImage(&m_default5, "default-5", "OSU_SKIN_DEFAULT5");
-	hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-6");
-	checkLoadImage(&m_default6, hitCircleStringFinal, "OSU_SKIN_DEFAULT6");
-	if (m_default6 == m_missingTexture) checkLoadImage(&m_default6, "default-6", "OSU_SKIN_DEFAULT6");
-	hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-7");
-	checkLoadImage(&m_default7, hitCircleStringFinal, "OSU_SKIN_DEFAULT7");
-	if (m_default7 == m_missingTexture) checkLoadImage(&m_default7, "default-7", "OSU_SKIN_DEFAULT7");
-	hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-8");
-	checkLoadImage(&m_default8, hitCircleStringFinal, "OSU_SKIN_DEFAULT8");
-	if (m_default8 == m_missingTexture) checkLoadImage(&m_default8, "default-8", "OSU_SKIN_DEFAULT8");
-	hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-9");
-	checkLoadImage(&m_default9, hitCircleStringFinal, "OSU_SKIN_DEFAULT9");
-	if (m_default9 == m_missingTexture) checkLoadImage(&m_default9, "default-9", "OSU_SKIN_DEFAULT9");
+	{
+		UString hitCirclePrefix = m_sHitCirclePrefix.length() > 0 ? m_sHitCirclePrefix : "default";
+		UString hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-0");
+		checkLoadImage(&m_default0, hitCircleStringFinal, "OSU_SKIN_DEFAULT0");
+		if (m_default0 == m_missingTexture) checkLoadImage(&m_default0, "default-0", "OSU_SKIN_DEFAULT0"); // special cases: fallback to default skin hitcircle numbers if the defined prefix doesn't point to any valid files
+		hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-1");
+		checkLoadImage(&m_default1, hitCircleStringFinal, "OSU_SKIN_DEFAULT1");
+		if (m_default1 == m_missingTexture) checkLoadImage(&m_default1, "default-1", "OSU_SKIN_DEFAULT1");
+		hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-2");
+		checkLoadImage(&m_default2, hitCircleStringFinal, "OSU_SKIN_DEFAULT2");
+		if (m_default2 == m_missingTexture) checkLoadImage(&m_default2, "default-2", "OSU_SKIN_DEFAULT2");
+		hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-3");
+		checkLoadImage(&m_default3, hitCircleStringFinal, "OSU_SKIN_DEFAULT3");
+		if (m_default3 == m_missingTexture) checkLoadImage(&m_default3, "default-3", "OSU_SKIN_DEFAULT3");
+		hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-4");
+		checkLoadImage(&m_default4, hitCircleStringFinal, "OSU_SKIN_DEFAULT4");
+		if (m_default4 == m_missingTexture) checkLoadImage(&m_default4, "default-4", "OSU_SKIN_DEFAULT4");
+		hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-5");
+		checkLoadImage(&m_default5, hitCircleStringFinal, "OSU_SKIN_DEFAULT5");
+		if (m_default5 == m_missingTexture) checkLoadImage(&m_default5, "default-5", "OSU_SKIN_DEFAULT5");
+		hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-6");
+		checkLoadImage(&m_default6, hitCircleStringFinal, "OSU_SKIN_DEFAULT6");
+		if (m_default6 == m_missingTexture) checkLoadImage(&m_default6, "default-6", "OSU_SKIN_DEFAULT6");
+		hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-7");
+		checkLoadImage(&m_default7, hitCircleStringFinal, "OSU_SKIN_DEFAULT7");
+		if (m_default7 == m_missingTexture) checkLoadImage(&m_default7, "default-7", "OSU_SKIN_DEFAULT7");
+		hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-8");
+		checkLoadImage(&m_default8, hitCircleStringFinal, "OSU_SKIN_DEFAULT8");
+		if (m_default8 == m_missingTexture) checkLoadImage(&m_default8, "default-8", "OSU_SKIN_DEFAULT8");
+		hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-9");
+		checkLoadImage(&m_default9, hitCircleStringFinal, "OSU_SKIN_DEFAULT9");
+		if (m_default9 == m_missingTexture) checkLoadImage(&m_default9, "default-9", "OSU_SKIN_DEFAULT9");
+	}
 
 	randomizeFilePath();
-	checkLoadImage(&m_score0, "score-0", "OSU_SKIN_SCORE0");
-	checkLoadImage(&m_score1, "score-1", "OSU_SKIN_SCORE1");
-	checkLoadImage(&m_score2, "score-2", "OSU_SKIN_SCORE2");
-	checkLoadImage(&m_score3, "score-3", "OSU_SKIN_SCORE3");
-	checkLoadImage(&m_score4, "score-4", "OSU_SKIN_SCORE4");
-	checkLoadImage(&m_score5, "score-5", "OSU_SKIN_SCORE5");
-	checkLoadImage(&m_score6, "score-6", "OSU_SKIN_SCORE6");
-	checkLoadImage(&m_score7, "score-7", "OSU_SKIN_SCORE7");
-	checkLoadImage(&m_score8, "score-8", "OSU_SKIN_SCORE8");
-	checkLoadImage(&m_score9, "score-9", "OSU_SKIN_SCORE9");
+	{
+		UString scorePrefix = m_sScorePrefix.length() > 0 ? m_sScorePrefix : "score";
+		UString scoreStringFinal = scorePrefix; scoreStringFinal.append("-0");
+		checkLoadImage(&m_score0, scoreStringFinal, "OSU_SKIN_SCORE0");
+		if (m_score0 == m_missingTexture) checkLoadImage(&m_score0, "score-0", "OSU_SKIN_SCORE0"); // special cases: fallback to default skin score numbers if the defined prefix doesn't point to any valid files
+		scoreStringFinal = scorePrefix; scoreStringFinal.append("-1");
+		checkLoadImage(&m_score1, scoreStringFinal, "OSU_SKIN_SCORE1");
+		if (m_score1 == m_missingTexture) checkLoadImage(&m_score1, "score-1", "OSU_SKIN_SCORE1");
+		scoreStringFinal = scorePrefix; scoreStringFinal.append("-2");
+		checkLoadImage(&m_score2, scoreStringFinal, "OSU_SKIN_SCORE2");
+		if (m_score2 == m_missingTexture) checkLoadImage(&m_score2, "score-2", "OSU_SKIN_SCORE2");
+		scoreStringFinal = scorePrefix; scoreStringFinal.append("-3");
+		checkLoadImage(&m_score3, scoreStringFinal, "OSU_SKIN_SCORE3");
+		if (m_score3 == m_missingTexture) checkLoadImage(&m_score3, "score-3", "OSU_SKIN_SCORE3");
+		scoreStringFinal = scorePrefix; scoreStringFinal.append("-4");
+		checkLoadImage(&m_score4, scoreStringFinal, "OSU_SKIN_SCORE4");
+		if (m_score4 == m_missingTexture) checkLoadImage(&m_score4, "score-4", "OSU_SKIN_SCORE4");
+		scoreStringFinal = scorePrefix; scoreStringFinal.append("-5");
+		checkLoadImage(&m_score5, scoreStringFinal, "OSU_SKIN_SCORE5");
+		if (m_score5 == m_missingTexture) checkLoadImage(&m_score5, "score-5", "OSU_SKIN_SCORE5");
+		scoreStringFinal = scorePrefix; scoreStringFinal.append("-6");
+		checkLoadImage(&m_score6, scoreStringFinal, "OSU_SKIN_SCORE6");
+		if (m_score6 == m_missingTexture) checkLoadImage(&m_score6, "score-6", "OSU_SKIN_SCORE6");
+		scoreStringFinal = scorePrefix; scoreStringFinal.append("-7");
+		checkLoadImage(&m_score7, scoreStringFinal, "OSU_SKIN_SCORE7");
+		if (m_score7 == m_missingTexture) checkLoadImage(&m_score7, "score-7", "OSU_SKIN_SCORE7");
+		scoreStringFinal = scorePrefix; scoreStringFinal.append("-8");
+		checkLoadImage(&m_score8, scoreStringFinal, "OSU_SKIN_SCORE8");
+		if (m_score8 == m_missingTexture) checkLoadImage(&m_score8, "score-8", "OSU_SKIN_SCORE8");
+		scoreStringFinal = scorePrefix; scoreStringFinal.append("-9");
+		checkLoadImage(&m_score9, scoreStringFinal, "OSU_SKIN_SCORE9");
+		if (m_score9 == m_missingTexture) checkLoadImage(&m_score9, "score-9", "OSU_SKIN_SCORE9");
 
-	checkLoadImage(&m_scoreX, "score-x", "OSU_SKIN_SCOREX");
-	checkLoadImage(&m_scorePercent, "score-percent", "OSU_SKIN_SCOREPERCENT");
-	checkLoadImage(&m_scoreDot, "score-dot", "OSU_SKIN_SCOREDOT");
-	checkLoadImage(&m_scoreComma, "score-comma", "OSU_SKIN_SCORECOMMA");
+
+
+		scoreStringFinal = scorePrefix; scoreStringFinal.append("-x");
+		checkLoadImage(&m_scoreX, scoreStringFinal, "OSU_SKIN_SCOREX");
+		//if (m_scoreX == m_missingTexture) checkLoadImage(&m_scoreX, "score-x", "OSU_SKIN_SCOREX"); // special case: ScorePrefix'd skins don't get default fallbacks, instead missing extraneous things like the X are simply not drawn
+		scoreStringFinal = scorePrefix; scoreStringFinal.append("-percent");
+		checkLoadImage(&m_scorePercent, scoreStringFinal, "OSU_SKIN_SCOREPERCENT");
+		//if (m_scorePercent == m_missingTexture) checkLoadImage(&m_scorePercent, "score-percent", "OSU_SKIN_SCOREPERCENT"); // special case: ScorePrefix'd skins don't get default fallbacks, instead missing extraneous things like the X are simply not drawn
+		scoreStringFinal = scorePrefix; scoreStringFinal.append("-dot");
+		checkLoadImage(&m_scoreDot, scoreStringFinal, "OSU_SKIN_SCOREDOT");
+		//if (m_scoreDot == m_missingTexture) checkLoadImage(&m_scoreDot, "score-dot", "OSU_SKIN_SCOREDOT"); // special case: ScorePrefix'd skins don't get default fallbacks, instead missing extraneous things like the X are simply not drawn
+	}
+
+	randomizeFilePath();
+	{
+		UString comboPrefix = m_sComboPrefix.length() > 0 ? m_sComboPrefix : "score"; // yes, "score" is the default value for the combo prefix
+		UString comboStringFinal = comboPrefix; comboStringFinal.append("-0");
+		checkLoadImage(&m_combo0, comboStringFinal, "OSU_SKIN_COMBO0");
+		if (m_combo0 == m_missingTexture) checkLoadImage(&m_combo0, "score-0", "OSU_SKIN_COMBO0"); // special cases: fallback to default skin combo numbers if the defined prefix doesn't point to any valid files
+		comboStringFinal = comboPrefix; comboStringFinal.append("-1");
+		checkLoadImage(&m_combo1, comboStringFinal, "OSU_SKIN_COMBO1");
+		if (m_combo1 == m_missingTexture) checkLoadImage(&m_combo1, "score-1", "OSU_SKIN_COMBO1");
+		comboStringFinal = comboPrefix; comboStringFinal.append("-2");
+		checkLoadImage(&m_combo2, comboStringFinal, "OSU_SKIN_COMBO2");
+		if (m_combo2 == m_missingTexture) checkLoadImage(&m_combo2, "score-2", "OSU_SKIN_COMBO2");
+		comboStringFinal = comboPrefix; comboStringFinal.append("-3");
+		checkLoadImage(&m_combo3, comboStringFinal, "OSU_SKIN_COMBO3");
+		if (m_combo3 == m_missingTexture) checkLoadImage(&m_combo3, "score-3", "OSU_SKIN_COMBO3");
+		comboStringFinal = comboPrefix; comboStringFinal.append("-4");
+		checkLoadImage(&m_combo4, comboStringFinal, "OSU_SKIN_COMBO4");
+		if (m_combo4 == m_missingTexture) checkLoadImage(&m_combo4, "score-4", "OSU_SKIN_COMBO4");
+		comboStringFinal = comboPrefix; comboStringFinal.append("-5");
+		checkLoadImage(&m_combo5, comboStringFinal, "OSU_SKIN_COMBO5");
+		if (m_combo5 == m_missingTexture) checkLoadImage(&m_combo5, "score-5", "OSU_SKIN_COMBO5");
+		comboStringFinal = comboPrefix; comboStringFinal.append("-6");
+		checkLoadImage(&m_combo6, comboStringFinal, "OSU_SKIN_COMBO6");
+		if (m_combo6 == m_missingTexture) checkLoadImage(&m_combo6, "score-6", "OSU_SKIN_COMBO6");
+		comboStringFinal = comboPrefix; comboStringFinal.append("-7");
+		checkLoadImage(&m_combo7, comboStringFinal, "OSU_SKIN_COMBO7");
+		if (m_combo7 == m_missingTexture) checkLoadImage(&m_combo7, "score-7", "OSU_SKIN_COMBO7");
+		comboStringFinal = comboPrefix; comboStringFinal.append("-8");
+		checkLoadImage(&m_combo8, comboStringFinal, "OSU_SKIN_COMBO8");
+		if (m_combo8 == m_missingTexture) checkLoadImage(&m_combo8, "score-8", "OSU_SKIN_COMBO8");
+		comboStringFinal = comboPrefix; comboStringFinal.append("-9");
+		checkLoadImage(&m_combo9, comboStringFinal, "OSU_SKIN_COMBO9");
+		if (m_combo9 == m_missingTexture) checkLoadImage(&m_combo9, "score-9", "OSU_SKIN_COMBO9");
+
+
+
+		comboStringFinal = comboPrefix; comboStringFinal.append("-x");
+		checkLoadImage(&m_comboX, comboStringFinal, "OSU_SKIN_COMBOX");
+		//if (m_comboX == m_missingTexture) m_comboX = m_scoreX; // special case: ComboPrefix'd skins don't get default fallbacks, instead missing extraneous things like the X are simply not drawn
+	}
 
 	randomizeFilePath();
 	m_playSkip = createOsuSkinImage("play-skip", Vector2(193, 147), 94);
@@ -669,14 +753,14 @@ void OsuSkin::load()
 	randomizeFilePath();
 	m_menuBack = createOsuSkinImage("menu-back", Vector2(225, 87), 54);
 	randomizeFilePath();
-	checkLoadImage(&m_selectionMode, "selection-mode", "OSU_SKIN_SELECTION_MODE");
-	checkLoadImage(&m_selectionModeOver, "selection-mode-over", "OSU_SKIN_SELECTION_MODE_OVER");
-	checkLoadImage(&m_selectionMods, "selection-mods", "OSU_SKIN_SELECTION_MODS");
-	checkLoadImage(&m_selectionModsOver, "selection-mods-over", "OSU_SKIN_SELECTION_MODS_OVER");
-	checkLoadImage(&m_selectionRandom, "selection-random", "OSU_SKIN_SELECTION_RANDOM");
-	checkLoadImage(&m_selectionRandomOver, "selection-random-over", "OSU_SKIN_SELECTION_RANDOM_OVER");
-	checkLoadImage(&m_selectionOptions, "selection-options", "OSU_SKIN_SELECTION_OPTIONS");
-	checkLoadImage(&m_selectionOptionsOver, "selection-options-over", "OSU_SKIN_SELECTION_OPTIONS_OVER");
+	m_selectionMode = createOsuSkinImage("selection-mode", Vector2(90, 90), 38); // NOTE: should actually be Vector2(88, 90), but slightly overscale to make most skins fit better on the bottombar blue line
+	m_selectionModeOver = createOsuSkinImage("selection-mode-over", Vector2(88, 90), 38);
+	m_selectionMods = createOsuSkinImage("selection-mods", Vector2(74, 90), 38);
+	m_selectionModsOver = createOsuSkinImage("selection-mods-over", Vector2(74, 90), 38);
+	m_selectionRandom = createOsuSkinImage("selection-random", Vector2(74, 90), 38);
+	m_selectionRandomOver = createOsuSkinImage("selection-random-over", Vector2(74, 90), 38);
+	m_selectionOptions = createOsuSkinImage("selection-options", Vector2(74, 90), 38);
+	m_selectionOptionsOver = createOsuSkinImage("selection-options-over", Vector2(74, 90), 38);
 
 	randomizeFilePath();
 	checkLoadImage(&m_songSelectTop, "songselect-top", "OSU_SKIN_SONGSELECT_TOP");
@@ -795,6 +879,10 @@ void OsuSkin::load()
 		m_bIsDefault02x = true;
 	if (m_default1 != NULL && m_default1->getFilePath().find("@2x") != -1)
 		m_bIsDefault12x = true;
+	if (m_score0 != NULL && m_score0->getFilePath().find("@2x") != -1)
+		m_bIsScore02x = true;
+	if (m_combo0 != NULL && m_combo0->getFilePath().find("@2x") != -1)
+		m_bIsCombo02x = true;
 	if (m_spinnerApproachCircle != NULL && m_spinnerApproachCircle->getFilePath().find("@2x") != -1)
 		m_bSpinnerApproachCircle2x = true;
 	if (m_spinnerBottom != NULL && m_spinnerBottom->getFilePath().find("@2x") != -1)
@@ -887,6 +975,16 @@ void OsuSkin::load()
 		m_osu->getNotificationOverlay()->addNotification("Error: Couldn't load skin.ini!", 0xffff0000);
 	else if (!parseSkinIni2Status)
 		m_osu->getNotificationOverlay()->addNotification("Error: Couldn't load DEFAULT skin.ini!!!", 0xffff0000);
+
+	// HACKHACK: speed up initial game startup time by async loading the skin (if osu_skin_async 1 in underride)
+	if (m_osu->getSkin() == NULL && osu_skin_async.getBool())
+	{
+		while (engine->getResourceManager()->isLoading())
+		{
+			engine->getResourceManager()->update();
+			env->sleep(0);
+		}
+	}
 }
 
 void OsuSkin::loadBeatmapOverride(UString filepath)
@@ -1003,17 +1101,50 @@ bool OsuSkin::parseSkinINI(UString filepath)
 
 					memset(stringBuffer, '\0', 1024);
 					if (sscanf(curLineChar, " ComboPrefix : %1023[^\n]", stringBuffer) == 1)
+					{
 						m_sComboPrefix = UString(stringBuffer);
+
+						for (int i=0; i<m_sComboPrefix.length(); i++)
+						{
+							if (m_sComboPrefix[i] == L'\\')
+							{
+								m_sComboPrefix.erase(i, 1);
+								m_sComboPrefix.insert(i, L'/');
+							}
+						}
+					}
 					if (sscanf(curLineChar, " ComboOverlap : %i \n", &val) == 1)
 						m_iComboOverlap = val;
 
 					if (sscanf(curLineChar, " ScorePrefix : %1023[^\n]", stringBuffer) == 1)
+					{
 						m_sScorePrefix = UString(stringBuffer);
+
+						for (int i=0; i<m_sScorePrefix.length(); i++)
+						{
+							if (m_sScorePrefix[i] == L'\\')
+							{
+								m_sScorePrefix.erase(i, 1);
+								m_sScorePrefix.insert(i, L'/');
+							}
+						}
+					}
 					if (sscanf(curLineChar, " ScoreOverlap : %i \n", &val) == 1)
 						m_iScoreOverlap = val;
 
 					if (sscanf(curLineChar, " HitCirclePrefix : %1023[^\n]", stringBuffer) == 1)
+					{
 						m_sHitCirclePrefix = UString(stringBuffer);
+
+						for (int i=0; i<m_sHitCirclePrefix.length(); i++)
+						{
+							if (m_sHitCirclePrefix[i] == L'\\')
+							{
+								m_sHitCirclePrefix.erase(i, 1);
+								m_sHitCirclePrefix.insert(i, L'/');
+							}
+						}
+					}
 					if (sscanf(curLineChar, " HitCircleOverlap : %i \n", &val) == 1)
 						m_iHitCircleOverlap = val;
 				}
@@ -1166,7 +1297,7 @@ void OsuSkin::playHitCircleSound(int sampleType, float pan, long delta)
 {
 	if (m_iSampleVolume <= 0 || (m_osu->getInstanceID() > 0 && m_osu->getInstanceID() != osu2_sound_source_id.getInt())) return;
 
-	if (!osu_sound_panning.getBool())
+	if (!osu_sound_panning.getBool() || (m_osu_mod_fposu_ref->getBool() && !osu_mod_fposu_sound_panning.getBool()) || (OsuGameRules::osu_mod_fps.getBool() && !osu_mod_fps_sound_panning.getBool()))
 		pan = 0.0f;
 	else
 		pan *= osu_sound_panning_multiplier.getFloat();
@@ -1220,7 +1351,7 @@ void OsuSkin::playSliderTickSound(float pan)
 {
 	if (m_iSampleVolume <= 0 || (m_osu->getInstanceID() > 0 && m_osu->getInstanceID() != osu2_sound_source_id.getInt())) return;
 
-	if (!osu_sound_panning.getBool())
+	if (!osu_sound_panning.getBool() || (m_osu_mod_fposu_ref->getBool() && !osu_mod_fposu_sound_panning.getBool()) || (OsuGameRules::osu_mod_fps.getBool() && !osu_mod_fps_sound_panning.getBool()))
 		pan = 0.0f;
 	else
 		pan *= osu_sound_panning_multiplier.getFloat();
@@ -1243,7 +1374,7 @@ void OsuSkin::playSliderSlideSound(float pan)
 {
 	if ((m_osu->getInstanceID() > 0 && m_osu->getInstanceID() != osu2_sound_source_id.getInt())) return;
 
-	if (!osu_sound_panning.getBool())
+	if (!osu_sound_panning.getBool() || (m_osu_mod_fposu_ref->getBool() && !osu_mod_fposu_sound_panning.getBool()) || (OsuGameRules::osu_mod_fps.getBool() && !osu_mod_fps_sound_panning.getBool()))
 		pan = 0.0f;
 	else
 		pan *= osu_sound_panning_multiplier.getFloat();

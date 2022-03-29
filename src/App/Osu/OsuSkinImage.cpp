@@ -422,6 +422,11 @@ Vector2 OsuSkinImage::getSizeBaseRaw()
 	return m_vBaseSizeForScaling2x * getImageForCurrentFrame().scale;
 }
 
+Vector2 OsuSkinImage::getImageSizeForCurrentFrame()
+{
+	return getImageForCurrentFrame().img->getSize();
+}
+
 float OsuSkinImage::getScale()
 {
 	return getImageScale() * getResolutionScale();

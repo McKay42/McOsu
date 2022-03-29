@@ -46,6 +46,7 @@ ConVar osu_draw_reverse_order("osu_draw_reverse_order", false);
 ConVar osu_draw_playfield_border("osu_draw_playfield_border", true);
 
 ConVar osu_stacking("osu_stacking", true, "Whether to use stacking calculations or not");
+ConVar osu_stacking_leniency_override("osu_stacking_leniency_override", -1.0f);
 
 ConVar osu_auto_snapping_strength("osu_auto_snapping_strength", 1.0f, "How many iterations of quadratic interpolation to use, more = snappier, 0 = linear");
 ConVar osu_auto_cursordance("osu_auto_cursordance", false);
@@ -55,9 +56,10 @@ ConVar osu_autopilot_lenience("osu_autopilot_lenience", 0.75f);
 ConVar osu_followpoints_clamp("osu_followpoints_clamp", false, "clamp followpoint approach time to current circle approach time (instead of using the hardcoded default 800 ms raw)");
 ConVar osu_followpoints_anim("osu_followpoints_anim", false, "scale + move animation while fading in followpoints (osu only does this when its internal default skin is being used)");
 ConVar osu_followpoints_connect_combos("osu_followpoints_connect_combos", false, "connect followpoints even if a new combo has started");
+ConVar osu_followpoints_connect_spinners("osu_followpoints_connect_spinners", false, "connect followpoints even through spinners");
 ConVar osu_followpoints_approachtime("osu_followpoints_approachtime", 800.0f);
 ConVar osu_followpoints_scale_multiplier("osu_followpoints_scale_multiplier", 1.0f);
-ConVar osu_followpoints_separation_multiplier("osu_followpoints_separation_multiplier", 1.0f, "todo");
+ConVar osu_followpoints_separation_multiplier("osu_followpoints_separation_multiplier", 1.0f);
 
 ConVar osu_number_scale_multiplier("osu_number_scale_multiplier", 1.0f);
 
@@ -103,7 +105,7 @@ OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 	m_fXMultiplier = 1.0f;
 	m_fNumberScale = 1.0f;
 	m_fHitcircleOverlapScale = 1.0f;
-	m_fRawHitcircleDiameter = 0.0f;
+	m_fRawHitcircleDiameter = 27.35f * 2.0f;
 	m_fHitcircleDiameter = 0.0f;
 	m_fSliderFollowCircleDiameter = 0.0f;
 	m_fRawSliderFollowCircleDiameter = 0.0f;
@@ -569,6 +571,7 @@ void OsuBeatmapStandard::drawFollowPoints(Graphics *g)
 	const long followPointApproachTime = osu_followpoints_clamp.getBool() ? std::min((long)OsuGameRules::getApproachTime(this), (long)osu_followpoints_approachtime.getFloat()) : (long)osu_followpoints_approachtime.getFloat();
 
 	const bool followPointsConnectCombos = osu_followpoints_connect_combos.getBool();
+	const bool followPointsConnectSpinners = osu_followpoints_connect_spinners.getBool();
 	const float followPointSeparationMultiplier = std::max(osu_followpoints_separation_multiplier.getFloat(), 0.1f);
 	const float followPointPrevFadeTime = m_osu_followpoints_prevfadetime_ref->getFloat();
 	const float followPointScaleMultiplier = osu_followpoints_scale_multiplier.getFloat();
@@ -582,18 +585,21 @@ void OsuBeatmapStandard::drawFollowPoints(Graphics *g)
 
 		// ignore future spinners
 		OsuSpinner *spinnerPointer = dynamic_cast<OsuSpinner*>(m_hitobjects[index]);
-		if (spinnerPointer != NULL) // if this is a spinner
+		if (spinnerPointer != NULL && !followPointsConnectSpinners) // if this is a spinner
 		{
 			lastObjectIndex = -1;
 			continue;
 		}
 
 		// NOTE: "m_hitobjects[index]->getComboNumber() != 1" breaks (not literally) on new combos
-		if (lastObjectIndex >= 0 && (m_hitobjects[index]->getComboNumber() != 1 || followPointsConnectCombos))
+		// NOTE: the "getComboNumber()" call has been replaced with isEndOfCombo() because of osu_ignore_beatmap_combo_numbers and osu_number_max
+		const bool isCurrentHitObjectNewCombo = (lastObjectIndex >= 0 ? m_hitobjects[lastObjectIndex]->isEndOfCombo() : false);
+		const bool isCurrentHitObjectSpinner = (lastObjectIndex >= 0 && followPointsConnectSpinners ? dynamic_cast<OsuSpinner*>(m_hitobjects[lastObjectIndex]) != NULL : false);
+		if (lastObjectIndex >= 0 && (!isCurrentHitObjectNewCombo || followPointsConnectCombos || (isCurrentHitObjectSpinner && followPointsConnectSpinners)))
 		{
 			// ignore previous spinners
 			spinnerPointer = dynamic_cast<OsuSpinner*>(m_hitobjects[lastObjectIndex]);
-			if (spinnerPointer != NULL) // if this is a spinner
+			if (spinnerPointer != NULL && !followPointsConnectSpinners) // if this is a spinner
 			{
 				lastObjectIndex = -1;
 				continue;
@@ -1704,6 +1710,8 @@ void OsuBeatmapStandard::calculateStacks()
 
 	const float approachTime = OsuGameRules::getApproachTimeForStacking(this);
 
+	const float stackLeniency = (osu_stacking_leniency_override.getFloat() >= 0.0f ? osu_stacking_leniency_override.getFloat() : m_selectedDifficulty2->getStackLeniency());
+
 	if (getSelectedDifficulty2()->getVersion() > 5)
 	{
 		// peppy's algorithm
@@ -1734,7 +1742,7 @@ void OsuBeatmapStandard::calculateStacks()
 					if (isSpinnerN)
 						continue;
 
-					if (objectI->getTime() - (approachTime * m_selectedDifficulty2->getStackLeniency()) > (objectN->getTime() + objectN->getDuration()))
+					if (objectI->getTime() - (approachTime * stackLeniency) > (objectN->getTime() + objectN->getDuration()))
 						break;
 
 					Vector2 objectNEndPosition = objectN->getOriginalRawPosAt(objectN->getTime() + objectN->getDuration());
@@ -1768,7 +1776,7 @@ void OsuBeatmapStandard::calculateStacks()
 					if (isSpinner)
 						continue;
 
-					if (objectI->getTime() - (approachTime * m_selectedDifficulty2->getStackLeniency()) > objectN->getTime())
+					if (objectI->getTime() - (approachTime * stackLeniency) > objectN->getTime())
 						break;
 
 					if (((objectN->getDuration() != 0 ? objectN->getOriginalRawPosAt(objectN->getTime() + objectN->getDuration()) : objectN->getOriginalRawPosAt(objectN->getTime())) - objectI->getOriginalRawPosAt(objectI->getTime())).length() < STACK_LENIENCE)
@@ -1802,7 +1810,7 @@ void OsuBeatmapStandard::calculateStacks()
 			{
 				OsuHitObject *objectJ = m_hitobjects[j];
 
-				if (objectJ->getTime() - (approachTime * m_selectedDifficulty2->getStackLeniency()) > startTime)
+				if (objectJ->getTime() - (approachTime * stackLeniency) > startTime)
 					break;
 
 				// "The start position of the hitobject, or the position at the end of the path if the hitobject is a slider"

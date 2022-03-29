@@ -13,6 +13,11 @@
 
 class Osu;
 
+class OsuBeatmapStandard;
+class OsuDatabaseBeatmap;
+
+class OsuHitObject;
+
 class OsuMainMenuPauseButton;
 class OsuMainMenuMainButton;
 class OsuMainMenuButton;
@@ -55,6 +60,8 @@ public:
 
 	virtual void setVisible(bool visible);
 
+	void setStartupAnim(bool startupAnim) {m_bStartupAnim = startupAnim; m_fStartupAnim = m_fStartupAnim2 = (m_bStartupAnim ? 0.0f : 1.0f);}
+
 	inline Osu* getOsu() const {return m_osu;}
 
 private:
@@ -63,6 +70,7 @@ private:
 	static ConVar *m_osu_old_beatmap_offset_ref;
 	static ConVar *m_win_snd_fallback_dsound_ref;
 	static ConVar *m_osu_universal_offset_hardcoded_fallback_dsound_ref;
+	static ConVar *m_osu_slider_border_feather_ref;
 
 	void drawVersionInfo(Graphics *g);
 	void updateLayout();
@@ -137,6 +145,15 @@ private:
 
 	float m_fShutdownScheduledTime;
 	bool m_bWasCleanShutdown;
+
+	bool m_bStartupAnim;
+	float m_fStartupAnim;
+	float m_fStartupAnim2;
+
+	OsuDatabaseBeatmap *m_mainMenuSliderTextDatabaseBeatmap;
+	OsuBeatmapStandard *m_mainMenuSliderTextBeatmapStandard;
+	std::vector<OsuHitObject*> m_mainMenuSliderTextBeatmapHitObjects;
+	float m_fMainMenuSliderTextRawHitCircleDiameter;
 };
 
 #endif

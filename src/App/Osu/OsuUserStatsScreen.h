@@ -19,6 +19,7 @@ class OsuUIContextMenu;
 class OsuUISongBrowserUserButton;
 class OsuUISongBrowserScoreButton;
 
+class OsuUserStatsScreenLabel;
 class OsuUserStatsScreenBackgroundPPRecalculator;
 
 class OsuUserStatsScreen : public OsuScreenBackable
@@ -60,6 +61,8 @@ private:
 	CBaseUIContainer *m_container;
 
 	OsuUIContextMenu *m_contextMenu;
+
+	OsuUserStatsScreenLabel *m_ppVersionInfoLabel;
 
 	OsuUISongBrowserUserButton *m_userButton;
 

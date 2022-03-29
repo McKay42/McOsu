@@ -65,7 +65,7 @@
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 32.04f);
+ConVar osu_version("osu_version", 33.01f);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr");
 #else
@@ -165,6 +165,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_osu_vr_draw_desktop_playfield_ref = convar->getConVarByName("osu_vr_draw_desktop_playfield");
 
 	// experimental mods list
+	m_experimentalMods.push_back(convar->getConVarByName("fposu_mod_strafing"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_wobble"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_arwobble"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_timewarp"));
@@ -182,6 +183,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_ming3012"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_millhioref"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_mafham"));
+	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_strict_tracking"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_playfield_mirror_horizontal"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_playfield_mirror_vertical"));
 
@@ -238,19 +240,20 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	{
 		convar->getConVarByName("fps_max")->setValue(60.0f);
 		convar->getConVarByName("ui_scrollview_resistance")->setValue(25.0f);
-		convar->getConVarByName("osu_scores_legacy_enabled")->setValue(0.0f); // would collide
+		convar->getConVarByName("osu_scores_legacy_enabled")->setValue(0.0f);		// would collide
+		convar->getConVarByName("osu_collections_legacy_enabled")->setValue(0.0f);	// unnecessary
 		convar->getConVarByName("osu_mod_mafham_render_livesize")->setValue(7.0f);
 		convar->getConVarByName("osu_mod_mafham_render_chunksize")->setValue(12.0f);
 		convar->getConVarByName("osu_mod_touchdevice")->setDefaultFloat(1.0f);
 		convar->getConVarByName("osu_mod_touchdevice")->setValue(1.0f);
 		convar->getConVarByName("osu_volume_music")->setValue(0.3f);
 		convar->getConVarByName("osu_universal_offset_hardcoded")->setValue(-45.0f);
-		convar->getConVarByName("osu_key_quick_retry")->setValue(15.0f);	// L, SDL_SCANCODE_L
-		convar->getConVarByName("osu_key_seek_time")->setValue(21.0f);		// R, SDL_SCANCODE_R
-		convar->getConVarByName("osu_key_decrease_local_offset")->setValue(29.0f); // ZL, SDL_SCANCODE_Z
-		convar->getConVarByName("osu_key_increase_local_offset")->setValue(25.0f); // ZR, SDL_SCANCODE_V
-		convar->getConVarByName("osu_key_left_click")->setValue(0.0f);		// (disabled)
-		convar->getConVarByName("osu_key_right_click")->setValue(0.0f);	// (disabled)
+		convar->getConVarByName("osu_key_quick_retry")->setValue(15.0f);			// L, SDL_SCANCODE_L
+		convar->getConVarByName("osu_key_seek_time")->setValue(21.0f);				// R, SDL_SCANCODE_R
+		convar->getConVarByName("osu_key_decrease_local_offset")->setValue(29.0f);	// ZL, SDL_SCANCODE_Z
+		convar->getConVarByName("osu_key_increase_local_offset")->setValue(25.0f);	// ZR, SDL_SCANCODE_V
+		convar->getConVarByName("osu_key_left_click")->setValue(0.0f);				// (disabled)
+		convar->getConVarByName("osu_key_right_click")->setValue(0.0f);				// (disabled)
 		convar->getConVarByName("name")->setValue(env->getUsername());
 	}
 
@@ -504,63 +507,31 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	//m_userStatsScreen->setVisible(true);
 
 	if (isInVRMode() && osu_vr_tutorial.getBool())
+	{
+		m_mainMenu->setStartupAnim(false);
 		m_vrTutorial->setVisible(true);
+	}
 	else
 		m_mainMenu->setVisible(true);
 
 	m_updateHandler->checkForUpdates();
 
-
-
 	/*
 	// DEBUG: immediately start diff of a beatmap
-	UString debugFolder = "H:/Program Files (x86)/osu!/Songs/41823 The Quick Brown Fox - The Big Black/";
-	UString debugDiffFileName = "The Quick Brown Fox - The Big Black (Blue Dragon) [WHO'S AFRAID OF THE BIG BLACK].osu";
-	OsuBeatmap *debugBeatmap = new OsuBeatmapStandard(this);
-	UString beatmapPath = debugFolder;
-	beatmapPath.append(debugDiffFileName);
-	OsuDatabaseBeatmap *debugDiff = new OsuDatabaseBeatmap(this, beatmapPath, debugFolder);
-	if (!debugDiff->loadMetadataRaw())
-		engine->showMessageError("OsuDatabaseBeatmap", "Couldn't debugDiff->loadMetadataRaw()!");
-	else
 	{
-		std::vector<OsuDatabaseBeatmap*> diffs;
-		diffs.push_back(debugDiff);
-		debugBeatmap->setDifficulties(diffs);
+		UString debugFolder = "S:/GAMES/osu!/Songs/41823 The Quick Brown Fox - The Big Black/";
+		UString debugDiffFileName = "The Quick Brown Fox - The Big Black (Blue Dragon) [WHO'S AFRAID OF THE BIG BLACK].osu";
 
-		debugBeatmap->selectDifficulty2(debugDiff);
-		m_songBrowser2->onDifficultySelected(debugBeatmap, debugDiff, true);
+		UString beatmapPath = debugFolder;
+		beatmapPath.append(debugDiffFileName);
+
+		OsuDatabaseBeatmap *debugDiff = new OsuDatabaseBeatmap(this, beatmapPath, debugFolder);
+
+		m_songBrowser2->onDifficultySelected(debugDiff, true);
 		//convar->getConVarByName("osu_volume_master")->setValue(1.0f);
-
-		// this will leak memory (one OsuBeatmap object and one OsuDatabaseBeatmap object), but who cares (since debug only)
+		// WARNING: this will leak memory (one OsuDatabaseBeatmap object), but who cares (since debug only)
 	}
 	*/
-
-	// DEBUG: immediately start diff of a beatmap
-	/*
-	UString debugFolder = "c:/Program Files (x86)/osu!/Songs/407186 S3RL feat Krystal - R4V3 B0Y/";
-	UString debugDiffFileName = "S3RL feat Krystal - R4V3 B0Y (Draftnell) [BANGKE's 4K Normal].osu";
-	OsuBeatmap *debugBeatmap = new OsuBeatmapMania(this);
-	UString beatmapPath = debugFolder;
-	beatmapPath.append(debugDiffFileName);
-	OsuDatabaseBeatmap *debugDiff = new OsuDatabaseBeatmap(this, beatmapPath, debugFolder);
-	if (!debugDiff->loadMetadataRaw())
-		engine->showMessageError("OsuDatabaseBeatmap", "Couldn't debugDiff->loadMetadataRaw()!");
-	else
-	{
-		std::vector<OsuDatabaseBeatmap*> diffs;
-		diffs.push_back(debugDiff);
-		debugBeatmap->setDifficulties(diffs);
-
-		debugBeatmap->selectDifficulty2(debugDiff);
-		m_songBrowser2->onDifficultySelected(debugBeatmap, debugDiff, true);
-		//convar->getConVarByName("osu_volume_master")->setValue(1.0f);
-
-		// this will leak memory (one OsuBeatmap object and one OsuDatabaseBeatmap object), but who cares (since debug only)
-	}
-	*/
-
-
 
 	// memory/performance optimization; if osu_mod_mafham is not enabled, reduce the two rendertarget sizes to 64x64, same for fposu
 	m_osu_mod_mafham_ref->setCallback( fastdelegate::MakeDelegate(this, &Osu::onModMafhamChange) );

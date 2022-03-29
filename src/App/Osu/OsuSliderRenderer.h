@@ -22,11 +22,13 @@ public:
 	static Shader *BLEND_SHADER;
 	static Shader *BLEND_SHADER_VR;
 
+	static float UNIT_CIRCLE_VAO_DIAMETER;
+
 public:
 	static VertexArrayObject *generateVAO(Osu *osu, const std::vector<Vector2> &points, float hitcircleDiameter, Vector3 translation = Vector3(0, 0, 0));
 
 	static void draw(Graphics *g, Osu *osu, const std::vector<Vector2> &points, const std::vector<Vector2> &alwaysPoints, float hitcircleDiameter, float from = 0.0f, float to = 1.0f, Color color = 0xffffffff, float alpha = 1.0f, long sliderTimeForRainbow = 0);
-	static void draw(Graphics *g, Osu *osu, VertexArrayObject *vao, const std::vector<Vector2> &alwaysPoints, Vector2 translation, float scale, float hitcircleDiameter, float from = 0.0f, float to = 1.0f, Color color = 0xffffffff, float alpha = 1.0f, long sliderTimeForRainbow = 0);
+	static void draw(Graphics *g, Osu *osu, VertexArrayObject *vao, const std::vector<Vector2> &alwaysPoints, Vector2 translation, float scale, float hitcircleDiameter, float from = 0.0f, float to = 1.0f, Color color = 0xffffffff, float alpha = 1.0f, long sliderTimeForRainbow = 0, bool doEnableRenderTarget = true, bool doDisableRenderTarget = true, bool doDrawSliderFrameBufferToScreen = true);
 	static void drawVR(Graphics *g, Osu *osu, OsuVR *vr, Matrix4 &mvp, float approachScale, const std::vector<Vector2> &points, const std::vector<Vector2> &alwaysPoints, float hitcircleDiameter, float from = 0.0f, float to = 1.0f, Color color = 0xffffffff, float alpha = 1.0f, long sliderTimeForRainbow = 0);
 	static void drawVR(Graphics *g, Osu *osu, OsuVR *vr, Matrix4 &mvp, float approachScale, VertexArrayObject *vao1, VertexArrayObject *vao2, const std::vector<Vector2> &alwaysPoints, float hitcircleDiameter, float from = 0.0f, float to = 1.0f, Color color = 0xffffffff, float alpha = 1.0f, long sliderTimeForRainbow = 0);
 	static void drawMM(Graphics *g, Osu *osu, const std::vector<Vector2> &points, float hitcircleDiameter, float from = 0.0f, float to = 1.0f, Color color = 0xffffffff, float alpha = 1.0f, long sliderTimeForRainbow = 0);
@@ -48,7 +50,6 @@ private:
 	static VertexArrayObject *UNIT_CIRCLE_VAO;
 	static VertexArrayObject *UNIT_CIRCLE_VAO_BAKED;
 	static VertexArrayObject *UNIT_CIRCLE_VAO_TRIANGLES;
-	static float UNIT_CIRCLE_VAO_RADIUS;
 
 	// tiny rendering optimization for RenderTarget
 	static float m_fBoundingBoxMinX;
