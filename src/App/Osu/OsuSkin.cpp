@@ -220,6 +220,8 @@ OsuSkin::OsuSkin(Osu *osu, UString name, UString filepath, bool isDefaultSkin, b
 	m_spinnerSpinSound = NULL;
 
 	m_combobreak = NULL;
+	m_tooslow = NULL;
+	m_toofast = NULL;
 	m_failsound = NULL;
 	m_applause = NULL;
 	m_menuHit = NULL;
