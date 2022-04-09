@@ -50,6 +50,7 @@ ConVar osu_cursor_alpha("osu_cursor_alpha", 1.0f);
 ConVar osu_cursor_scale("osu_cursor_scale", 1.5f);
 ConVar osu_cursor_expand_scale_multiplier("osu_cursor_expand_scale_multiplier", 1.3f);
 ConVar osu_cursor_expand_duration("osu_cursor_expand_duration", 0.1f);
+ConVar osu_cursor_trail_scale("osu_cursor_trail_scale", 1.0f);
 ConVar osu_cursor_trail_length("osu_cursor_trail_length", 0.17f, "how long unsmooth cursortrails should be, in seconds");
 ConVar osu_cursor_trail_spacing("osu_cursor_trail_spacing", 0.015f, "how big the gap between consecutive unsmooth cursortrail images should be, in seconds");
 ConVar osu_cursor_trail_alpha("osu_cursor_trail_alpha", 1.0f);
@@ -331,7 +332,7 @@ void OsuHUD::draw(Graphics *g)
 					beatmap->getMaxPossibleCombo(),
 					OsuDifficultyCalculator::calculateTotalStarsFromSkills(beatmap->getAimStarsForUpToHitObjectIndex(hitObjectIndexForCurrentTime), beatmap->getSpeedStarsForUpToHitObjectIndex(hitObjectIndexForCurrentTime)),
 					m_osu->getSongBrowser()->getDynamicStarCalculator()->getTotalStars(),
-					beatmap->getBPM(),
+					beatmap->getMostCommonBPM(),
 					OsuGameRules::getApproachRateForSpeedMultiplier(beatmap, beatmap->getSpeedMultiplier()),
 					beatmap->getCS(),
 					OsuGameRules::getOverallDifficultyForSpeedMultiplier(beatmap, beatmap->getSpeedMultiplier()),
@@ -681,7 +682,7 @@ void OsuHUD::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 					beatmap->getMaxPossibleCombo(),
 					OsuDifficultyCalculator::calculateTotalStarsFromSkills(beatmap->getAimStarsForUpToHitObjectIndex(hitObjectIndexForCurrentTime), beatmap->getSpeedStarsForUpToHitObjectIndex(hitObjectIndexForCurrentTime)),
 					m_osu->getSongBrowser()->getDynamicStarCalculator()->getTotalStars(),
-					beatmap->getBPM(),
+					beatmap->getMostCommonBPM(),
 					OsuGameRules::getApproachRateForSpeedMultiplier(beatmap, beatmap->getSpeedMultiplier()),
 					beatmap->getCS(),
 					OsuGameRules::getOverallDifficultyForSpeedMultiplier(beatmap, beatmap->getSpeedMultiplier()),
@@ -966,7 +967,7 @@ void OsuHUD::drawCursorTrailRaw(Graphics *g, float alpha, Vector2 pos)
 {
 	Image *trailImage = m_osu->getSkin()->getCursorTrail();
 	const float scale = getCursorTrailScaleFactor();
-	const float animatedScale = scale * (m_osu->getSkin()->getCursorExpand() && osu_cursor_trail_expand.getBool() ? m_fCursorExpandAnim : 1.0f);
+	const float animatedScale = scale * (m_osu->getSkin()->getCursorExpand() && osu_cursor_trail_expand.getBool() ? m_fCursorExpandAnim : 1.0f) * osu_cursor_trail_scale.getFloat();
 
 	g->setColor(0xffffffff);
 	g->setAlpha(alpha);
@@ -3224,7 +3225,7 @@ void OsuHUD::addCursorTrailPosition(std::vector<CURSORTRAIL> &trail, Vector2 pos
 
 	const bool smoothCursorTrail = m_osu->getSkin()->useSmoothCursorTrail() || osu_cursor_trail_smooth_force.getBool();
 
-	const float scaleAnim = (m_osu->getSkin()->getCursorExpand() && osu_cursor_trail_expand.getBool() ? m_fCursorExpandAnim : 1.0f);
+	const float scaleAnim = (m_osu->getSkin()->getCursorExpand() && osu_cursor_trail_expand.getBool() ? m_fCursorExpandAnim : 1.0f) * osu_cursor_trail_scale.getFloat();
 	const float trailWidth = trailImage->getWidth() * getCursorTrailScaleFactor() * scaleAnim * osu_cursor_scale.getFloat();
 
 	CURSORTRAIL ct;
