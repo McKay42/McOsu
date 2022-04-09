@@ -199,6 +199,7 @@ public:
 
 	inline int getMinBPM() const {return m_iMinBPM;}
 	inline int getMaxBPM() const {return m_iMaxBPM;}
+	inline int getMostCommonBPM() const {return m_iMostCommonBPM;}
 
 	inline int getNumObjects() const {return m_iNumObjects;}
 	inline int getNumCircles() const {return m_iNumCircles;}
@@ -262,6 +263,7 @@ private:
 
 	int m_iMinBPM;
 	int m_iMaxBPM;
+	int m_iMostCommonBPM;
 
 	int m_iNumObjects;
 	int m_iNumCircles;

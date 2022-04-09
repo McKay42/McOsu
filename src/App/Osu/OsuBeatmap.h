@@ -94,7 +94,7 @@ public:
 	float getPercentFinishedPlayable() const;
 
 	// live statistics
-	int getBPM() const;
+	int getMostCommonBPM() const;
 	float getSpeedMultiplier() const;
 	inline int getNPS() const {return m_iNPS;}
 	inline int getND() const {return m_iND;}

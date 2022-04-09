@@ -111,6 +111,7 @@ OsuDatabaseBeatmap::OsuDatabaseBeatmap(Osu *osu, UString filePath, UString folde
 
 	m_iMinBPM = 0;
 	m_iMaxBPM = 0;
+	m_iMostCommonBPM = 0;
 
 	m_iNumObjects = 0;
 	m_iNumCircles = 0;
@@ -1182,14 +1183,17 @@ bool OsuDatabaseBeatmap::loadMetadata(OsuDatabaseBeatmap *databaseBeatmap)
 		std::sort(databaseBeatmap->m_timingpoints.begin(), databaseBeatmap->m_timingpoints.end(), TimingPointSortComparator());
 
 		// calculate bpm range
-		float tempMinBPM = 0;
+		float tempMinBPM = 0.0f;
 		float tempMaxBPM = std::numeric_limits<float>::max();
+		std::vector<TIMINGPOINT> uninheritedTimingpoints;
 		for (int i=0; i<databaseBeatmap->m_timingpoints.size(); i++)
 		{
 			const TIMINGPOINT &t = databaseBeatmap->m_timingpoints[i];
 
-			if (t.msPerBeat >= 0) // NOT inherited
+			if (t.msPerBeat >= 0.0f) // NOT inherited
 			{
+				uninheritedTimingpoints.push_back(t);
+
 				if (t.msPerBeat > tempMinBPM)
 					tempMinBPM = t.msPerBeat;
 				if (t.msPerBeat < tempMaxBPM)
@@ -1198,14 +1202,114 @@ bool OsuDatabaseBeatmap::loadMetadata(OsuDatabaseBeatmap *databaseBeatmap)
 		}
 
 		// convert from msPerBeat to BPM
-		const float msPerMinute = 1 * 60 * 1000;
-		if (tempMinBPM != 0)
+		const float msPerMinute = 1.0f * 60.0f * 1000.0f;
+		if (tempMinBPM != 0.0f)
 			tempMinBPM = msPerMinute / tempMinBPM;
-		if (tempMaxBPM != 0)
+		if (tempMaxBPM != 0.0f)
 			tempMaxBPM = msPerMinute / tempMaxBPM;
 
 		databaseBeatmap->m_iMinBPM = (int)std::round(tempMinBPM);
 		databaseBeatmap->m_iMaxBPM = (int)std::round(tempMaxBPM);
+
+		struct MostCommonBPMHelper
+		{
+			static int calculateMostCommonBPM(const std::vector<OsuDatabaseBeatmap::TIMINGPOINT> &uninheritedTimingpoints, long lastTime)
+			{
+				if (uninheritedTimingpoints.size() < 1) return 0;
+
+				struct Tuple
+				{
+					float beatLength;
+					long duration;
+
+					size_t sortHack;
+				};
+
+				// "Construct a set of (beatLength, duration) tuples for each individual timing point."
+				std::vector<Tuple> tuples;
+				tuples.reserve(uninheritedTimingpoints.size());
+				for (size_t i=0; i<uninheritedTimingpoints.size(); i++)
+				{
+					const OsuDatabaseBeatmap::TIMINGPOINT &t = uninheritedTimingpoints[i];
+
+					Tuple tuple;
+					{
+						if (t.offset > lastTime)
+						{
+							tuple.beatLength = std::round(t.msPerBeat * 1000.0f) / 1000.0f;
+							tuple.duration = 0;
+						}
+						else
+						{
+							// "osu-stable forced the first control point to start at 0."
+							// "This is reproduced here to maintain compatibility around osu!mania scroll speed and song select display."
+							const long currentTime = (i == 0 ? 0 : t.offset);
+							const long nextTime = (i >= uninheritedTimingpoints.size() - 1 ? lastTime : uninheritedTimingpoints[i + 1].offset);
+
+							tuple.beatLength = std::round(t.msPerBeat * 1000.0f) / 1000.0f;
+							tuple.duration = std::max(nextTime - currentTime, (long)0);
+						}
+
+						tuple.sortHack = i;
+					}
+					tuples.push_back(tuple);
+				}
+
+				// "Aggregate durations into a set of (beatLength, duration) tuples for each beat length"
+				std::vector<Tuple> aggregations;
+				aggregations.reserve(tuples.size());
+				for (size_t i=0; i<tuples.size(); i++)
+				{
+					const Tuple &t = tuples[i];
+
+					bool foundExistingAggregation = false;
+					size_t aggregationIndex = 0;
+					for (size_t j=0; j<aggregations.size(); j++)
+					{
+						if (aggregations[j].beatLength == t.beatLength)
+						{
+							foundExistingAggregation = true;
+							aggregationIndex = j;
+							break;
+						}
+					}
+
+					if (!foundExistingAggregation)
+						aggregations.push_back(t);
+					else
+						aggregations[aggregationIndex].duration += t.duration;
+				}
+
+				// "Get the most common one, or 0 as a suitable default"
+				struct SortByDuration
+				{
+				    bool operator() (Tuple const &a, Tuple const &b) const
+				    {
+				    	// first condition: duration
+				    	// second condition: if duration is the same, higher BPM goes before lower BPM
+
+				    	// strict weak ordering!
+				    	if (a.duration == b.duration && a.beatLength == b.beatLength)
+				    		return a.sortHack > b.sortHack;
+				    	else if (a.duration == b.duration)
+				    		return (a.beatLength < b.beatLength);
+				    	else
+				    		return (a.duration > b.duration);
+				    }
+				};
+				std::sort(aggregations.begin(), aggregations.end(), SortByDuration());
+
+				float mostCommonBPM = aggregations[0].beatLength;
+				{
+					// convert from msPerBeat to BPM
+					const float msPerMinute = 1.0f * 60.0f * 1000.0f;
+					if (mostCommonBPM != 0.0f)
+						mostCommonBPM = msPerMinute / mostCommonBPM;
+				}
+				return (int)std::round(mostCommonBPM);
+			}
+		};
+		databaseBeatmap->m_iMostCommonBPM = MostCommonBPMHelper::calculateMostCommonBPM(uninheritedTimingpoints, databaseBeatmap->m_timingpoints[databaseBeatmap->m_timingpoints.size() - 1].offset);
 	}
 
 	// special case: old beatmaps have AR = OD, there is no ApproachRate stored
@@ -1548,7 +1652,9 @@ void OsuDatabaseBeatmap::setDifficulties(std::vector<OsuDatabaseBeatmap*> &diffi
 		m_fOD = 0.0f;
 		m_fHP = 0.0f;
 		m_fStarsNomod = 0.0f;
+		m_iMinBPM = std::numeric_limits<int>::max();
 		m_iMaxBPM = 0;
+		m_iMostCommonBPM = 0;
 		m_iLastModificationTime = 0;
 		for (size_t i=0; i<m_difficulties.size(); i++)
 		{
@@ -1564,8 +1670,12 @@ void OsuDatabaseBeatmap::setDifficulties(std::vector<OsuDatabaseBeatmap*> &diffi
 				m_fOD = m_difficulties[i]->getOD();
 			if (m_difficulties[i]->getStarsNomod() > m_fStarsNomod)
 				m_fStarsNomod = m_difficulties[i]->getStarsNomod();
+			if (m_difficulties[i]->getMinBPM() < m_iMinBPM)
+				m_iMinBPM = m_difficulties[i]->getMinBPM();
 			if (m_difficulties[i]->getMaxBPM() > m_iMaxBPM)
 				m_iMaxBPM = m_difficulties[i]->getMaxBPM();
+			if (m_difficulties[i]->getMostCommonBPM() > m_iMostCommonBPM)
+				m_iMostCommonBPM = m_difficulties[i]->getMostCommonBPM();
 			if (m_difficulties[i]->getLastModificationTime() > m_iLastModificationTime)
 				m_iLastModificationTime = m_difficulties[i]->getLastModificationTime();
 		}

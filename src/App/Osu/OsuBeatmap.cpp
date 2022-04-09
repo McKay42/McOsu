@@ -1732,14 +1732,14 @@ float OsuBeatmap::getPercentFinishedPlayable() const
 		return (float)m_iCurMusicPos / (float)m_music->getLengthMS();
 }
 
-int OsuBeatmap::getBPM() const
+int OsuBeatmap::getMostCommonBPM() const
 {
 	if (m_selectedDifficulty2 != NULL)
 	{
 		if (m_music != NULL)
-			return (int)(m_selectedDifficulty2->getMaxBPM() * m_music->getSpeed());
+			return (int)(m_selectedDifficulty2->getMostCommonBPM() * m_music->getSpeed());
 		else
-			return (int)(m_selectedDifficulty2->getMaxBPM() * m_osu->getSpeedMultiplier());
+			return (int)(m_selectedDifficulty2->getMostCommonBPM() * m_osu->getSpeedMultiplier());
 	}
 	else
 		return 0;
