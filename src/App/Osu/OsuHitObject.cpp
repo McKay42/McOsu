@@ -49,6 +49,10 @@ ConVar osu_mod_target_300_percent("osu_mod_target_300_percent", 0.5f);
 ConVar osu_mod_target_100_percent("osu_mod_target_100_percent", 0.7f);
 ConVar osu_mod_target_50_percent("osu_mod_target_50_percent", 0.95f);
 
+ConVar osu_mod_approach_different("osu_mod_approach_different", false, "replicates osu!lazer's \"Approach Different\" mod");
+ConVar osu_mod_approach_different_initial_size("osu_mod_approach_different_initial_size", 4.0f, "initial size of the approach circles, relative to hit circles (as a multiplier)");
+ConVar osu_mod_approach_different_style("osu_mod_approach_different_style", 1, "0 = linear, 1 = gravity, 2 = InOut1, 3 = InOut2, 4 = Accelerate1, 5 = Accelerate2, 6 = Accelerate3, 7 = Decelerate1, 8 = Decelerate2, 9 = Decelerate3");
+
 ConVar osu_relax_offset("osu_relax_offset", 0, "osu!relax always hits -12 ms too early, so set this to -12 (note the negative) if you want it to be the same");
 
 ConVar *OsuHitObject::m_osu_approach_scale_multiplier_ref = &osu_approach_scale_multiplier;
@@ -310,7 +314,63 @@ void OsuHitObject::update(long curPos)
 	{
 		// approach circle scale
 		const float scale = clamp<float>((float)m_iDelta / (float)m_iApproachTime, 0.0f, 1.0f);
-		m_fApproachScale = 1 + scale * osu_approach_scale_multiplier.getFloat();
+		m_fApproachScale = 1 + (scale * osu_approach_scale_multiplier.getFloat());
+		if (osu_mod_approach_different.getBool())
+		{
+			const float back_const = 1.70158;
+
+			float time = 1.0f - scale;
+			{
+				switch (osu_mod_approach_different_style.getInt())
+				{
+				default: // "Linear"
+					break;
+				case 1: // "Gravity" / InBack
+					time = time * time * ((back_const + 1.0f) * time - back_const);
+					break;
+				case 2: // "InOut1" / InOutCubic
+					if (time < 0.5f)
+						time = time * time * time * 4.0f;
+					else
+					{
+						--time;
+						time = time * time * time * 4.0f + 1.0f;
+					}
+					break;
+				case 3: // "InOut2" / InOutQuint
+					if (time < 0.5f)
+						time = time * time * time * time * time * 16.0f;
+					else
+					{
+						--time;
+						time = time * time * time * time * time * 16.0f + 1.0f;
+					}
+					break;
+				case 4: // "Accelerate1" / In
+					time = time * time;
+					break;
+				case 5: // "Accelerate2" / InCubic
+					time = time * time * time;
+					break;
+				case 6: // "Accelerate3" / InQuint
+					time = time * time * time * time * time;
+					break;
+				case 7: // "Decelerate1" / Out
+					time = time * (2.0f - time);
+					break;
+				case 8: // "Decelerate2" / OutCubic
+					--time;
+					time = time * time * time + 1.0f;
+					break;
+				case 9: // "Decelerate3" / OutQuint
+					--time;
+					time = time * time * time * time * time + 1.0f;
+					break;
+				}
+				// NOTE: some of the easing functions will overflow/underflow, don't clamp and instead allow it on purpose
+			}
+			m_fApproachScale = 1 + lerp<float>(osu_mod_approach_different_initial_size.getFloat() - 1.0f, 0.0f, time);
+		}
 
 		// hitobject body fadein
 		const long fadeInStart = m_iTime - m_iApproachTime;

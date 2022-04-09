@@ -236,6 +236,7 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen(osu)
 		addExperimentalCheckbox("Timewarp", "Speed increases from 100% to 150% over the course of the beatmap.", convar->getConVarByName("osu_mod_timewarp"));
 
 	addExperimentalCheckbox("AR Timewarp", "Approach rate decreases from 100% to 50% over the course of the beatmap.", convar->getConVarByName("osu_mod_artimewarp"));
+	addExperimentalCheckbox("Approach Different", "Customize the approach circle animation.\nSee osu_mod_approach_different_style.\nSee osu_mod_approach_different_initial_size.", convar->getConVarByName("osu_mod_approach_different"));
 	addExperimentalCheckbox("Minimize", "Circle size decreases from 100% to 50% over the course of the beatmap.", convar->getConVarByName("osu_mod_minimize"));
 	addExperimentalCheckbox("Fading Cursor", "The cursor fades the higher the combo, becoming invisible at 50.", convar->getConVarByName("osu_mod_fadingcursor"));
 	addExperimentalCheckbox("First Person", "Centered cursor.", convar->getConVarByName("osu_mod_fps"));
@@ -1385,26 +1386,23 @@ UString OsuModSelector::getOverrideSliderLabelText(OsuModSelector::OVERRIDE_SLID
 
 				int minBPM = m_osu->getSelectedBeatmap()->getSelectedDifficulty2()->getMinBPM();
 				int maxBPM = m_osu->getSelectedBeatmap()->getSelectedDifficulty2()->getMaxBPM();
+				int mostCommonBPM = m_osu->getSelectedBeatmap()->getSelectedDifficulty2()->getMostCommonBPM();
 				int newMinBPM = minBPM * m_osu->getSpeedMultiplier();
 				int newMaxBPM = maxBPM * m_osu->getSpeedMultiplier();
-				if (!active)
+				int newMostCommonBPM = mostCommonBPM * m_osu->getSpeedMultiplier();
+				if (!active || m_osu->getSpeedMultiplier() == 1.0f)
 				{
 					if (minBPM == maxBPM)
 						newLabelText.append(UString::format("%i", newMaxBPM));
 					else
-						newLabelText.append(UString::format("%i-%i", newMinBPM, newMaxBPM));
+						newLabelText.append(UString::format("%i-%i (%i)", newMinBPM, newMaxBPM, newMostCommonBPM));
 				}
 				else
 				{
-					if (m_osu->getSpeedMultiplier() == 1.0f)
-						newLabelText.append(UString::format("%i", newMaxBPM));
+					if (minBPM == maxBPM)
+						newLabelText.append(UString::format("%i -> %i", maxBPM, newMaxBPM));
 					else
-					{
-						if (minBPM == maxBPM)
-							newLabelText.append(UString::format("%i -> %i", maxBPM, newMaxBPM));
-						else
-							newLabelText.append(UString::format("%i-%i -> %i-%i", minBPM, maxBPM,  newMinBPM, newMaxBPM));
-					}
+						newLabelText.append(UString::format("%i-%i (%i) -> %i-%i (%i)", minBPM, maxBPM, mostCommonBPM, newMinBPM, newMaxBPM, newMostCommonBPM));
 				}
 
 				newLabelText.append(")");

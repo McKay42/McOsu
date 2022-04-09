@@ -189,6 +189,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_wobble2"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_shirone"));
+	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_approach_different"));
 
 	// engine settings/overrides
 	engine->getSound()->setOnOutputDeviceChange([this] {onAudioOutputDeviceChange();});
