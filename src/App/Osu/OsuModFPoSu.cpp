@@ -632,7 +632,7 @@ void OsuModFPoSu::onMap(UString args)
 #endif
 }
 
-float OsuModFPoSu::subdivide(std::list<VertexPair> meshList, const std::list<VertexPair>::iterator begin, const std::list<VertexPair>::iterator end, int n, float edgeDistance)
+float OsuModFPoSu::subdivide(std::list<VertexPair> &meshList, const std::list<VertexPair>::iterator &begin, const std::list<VertexPair>::iterator &end, int n, float edgeDistance)
 {
 	const Vector3 a = Vector3((*begin).a.x, 0.0f, (*begin).a.z);
 	const Vector3 b = Vector3((*end).a.x, 0, (*end).a.z);
@@ -652,7 +652,7 @@ float OsuModFPoSu::subdivide(std::list<VertexPair> meshList, const std::list<Ver
 	const float tc = lerp<float>((*begin).textureCoordinate, (*end).textureCoordinate, 0.5f);
 
 	VertexPair newVP = VertexPair(top, bottom, tc);
-	std::list<VertexPair>::iterator newPos = meshList.insert(end, newVP);
+	const std::list<VertexPair>::iterator newPos = meshList.insert(end, newVP);
 
 	float circumLength = 0.0f;
 
