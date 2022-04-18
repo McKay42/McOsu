@@ -214,8 +214,8 @@ void OsuUIContextMenu::begin(int minWidth, bool bigStyle)
 
 OsuUIContextMenuButton *OsuUIContextMenu::addButton(UString text, int id)
 {
-	const int buttonHeight = 30 * Osu::getUIScale() * (m_bBigStyle ? 1.27f : 1.0f);
-	const int margin = 9 * Osu::getUIScale();
+	const int buttonHeight = 30 * Osu::getUIScale(m_osu) * (m_bBigStyle ? 1.27f : 1.0f);
+	const int margin = 9 * Osu::getUIScale(m_osu);
 
 	OsuUIContextMenuButton *button = new OsuUIContextMenuButton(m_osu, margin, m_iYCounter + margin, 0, buttonHeight, text, text, id);
 	{
@@ -223,7 +223,7 @@ OsuUIContextMenuButton *OsuUIContextMenu::addButton(UString text, int id)
 			button->setFont(m_osu->getSubTitleFont());
 
 		button->setClickCallback( fastdelegate::MakeDelegate(this, &OsuUIContextMenu::onClick) );
-		button->setWidthToContent(3 * Osu::getUIScale());
+		button->setWidthToContent(3 * Osu::getUIScale(m_osu));
 		button->setTextLeft(true);
 		button->setDrawFrame(false);
 		button->setDrawBackground(false);
@@ -244,8 +244,8 @@ OsuUIContextMenuButton *OsuUIContextMenu::addButton(UString text, int id)
 
 OsuUIContextMenuTextbox *OsuUIContextMenu::addTextbox(UString text, int id)
 {
-	const int buttonHeight = 30 * Osu::getUIScale() * (m_bBigStyle ? 1.27f : 1.0f);
-	const int margin = 9 * Osu::getUIScale();
+	const int buttonHeight = 30 * Osu::getUIScale(m_osu) * (m_bBigStyle ? 1.27f : 1.0f);
+	const int margin = 9 * Osu::getUIScale(m_osu);
 
 	OsuUIContextMenuTextbox *textbox = new OsuUIContextMenuTextbox(margin, m_iYCounter + margin, 0, buttonHeight, text, id);
 	{
@@ -272,7 +272,7 @@ void OsuUIContextMenu::end(bool invertAnimation, bool clampUnderflowAndOverflowA
 	m_bInvertAnimation = invertAnimation;
 	m_bClampUnderflowAndOverflowAndEnableScrollingIfNecessary = clampUnderflowAndOverflowAndEnableScrollingIfNecessary;
 
-	const int margin = 9 * Osu::getUIScale();
+	const int margin = 9 * Osu::getUIScale(m_osu);
 
 	const std::vector<CBaseUIElement*> &elements = m_container->getContainer()->getElements();
 	for (size_t i=0; i<elements.size(); i++)

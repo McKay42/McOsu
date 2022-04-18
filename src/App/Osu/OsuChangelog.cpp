@@ -35,7 +35,22 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	std::vector<CHANGELOG> changelogs;
 
 	CHANGELOG alpha317;
-	alpha317.title = UString::format("33 (Build Date: %s, %s)", __DATE__, __TIME__); // (09.01.2022 - ?)
+	alpha317.title = UString::format("33.01 (Build Date: %s, %s)", __DATE__, __TIME__); // (09.01.2022 - ?)
+	alpha317.changes.push_back("- Added new experimental mod \"Approach Different\"");
+	alpha317.changes.push_back("- Added new experimental mod \"Strict Tracking\"");
+	alpha317.changes.push_back("- Added new main menu button logo text");
+	alpha317.changes.push_back("- Added \"most common BPM\" in parentheses to top left songbrowser info label (e.g. \"BPM: 120-240 (190)\")");
+	alpha317.changes.push_back("- Added beatmapID and beatmapSetID columns to osu_scores_export csv");
+	alpha317.changes.push_back("- Added ConVars (1): osu_followpoints_connect_spinners, fposu_transparent_playfield");
+	alpha317.changes.push_back("- Added ConVars (2): fposu_playfield_position_x/y, fposu_playfield_rotation_x/y/z");
+	alpha317.changes.push_back("- Added ConVars (3): osu_mod_approach_different_initial_size, osu_mod_approach_different_style");
+	alpha317.changes.push_back("- Added ConVars (4): osu_cursor_trail_scale");
+	alpha317.changes.push_back("- Updated songbrowser search to use \"most common BPM\" instead of \"max BPM\"");
+	alpha317.changes.push_back("- Updated \"Draw Stats: BPM\" to use \"most common BPM\" instead of \"max BPM\"");
+	alpha317.changes.push_back("- Updated \"Sort by BPM\" to use \"most common BPM\" instead of \"max BPM\"");
+	alpha317.changes.push_back("- Updated UI DPI scaling to automatically enable/disable itself based on in-game resolution (instead of OS DPI)");
+	alpha317.changes.push_back("- Minor performance improvements (shader uniform caching)");
+	alpha317.changes.push_back("");
 	alpha317.changes.push_back("- Added collection management support (Add/Delete/Set/Unset collections, right-click context menu on beatmap buttons)");
 	alpha317.changes.push_back("- FPoSu: Added new experimental mod \"Strafing\"");
 	alpha317.changes.push_back("- Added gamemode selection button to songbrowser (no, skins abusing this as a decoration overlay are not supported)");
@@ -844,7 +859,7 @@ void OsuChangelog::updateLayout()
 {
 	OsuScreenBackable::updateLayout();
 
-	const float dpiScale = Osu::getUIScale();
+	const float dpiScale = Osu::getUIScale(m_osu);
 
 	m_container->setSize(m_osu->getScreenSize() + Vector2(2, 2));
 	m_scrollView->setSize(m_osu->getScreenSize() + Vector2(2, 2));

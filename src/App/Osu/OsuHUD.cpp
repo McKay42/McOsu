@@ -578,7 +578,7 @@ void OsuHUD::updateLayout()
 {
 	// volume overlay
 	{
-		const float dpiScale = Osu::getUIScale();
+		const float dpiScale = Osu::getUIScale(m_osu);
 		const float sizeMultiplier = osu_hud_volume_size_multiplier.getFloat() * dpiScale;
 
 		m_volumeMaster->setSize(300*sizeMultiplier, 50*sizeMultiplier);
@@ -1027,7 +1027,7 @@ void OsuHUD::drawFps(Graphics *g, McFont *font, float fps)
 	const UString fpsString = UString::format("%i fps", (int)(fps));
 	const UString msString = UString::format("%.1f ms", (1.0f/fps)*1000.0f);
 
-	const float dpiScale = Osu::getUIScale();
+	const float dpiScale = Osu::getUIScale(m_osu);
 
 	const int margin = std::round(3.0f * dpiScale);
 	const int shadowOffset = std::round(1.0f * dpiScale);
@@ -1229,7 +1229,7 @@ void OsuHUD::drawVolumeChange(Graphics *g)
 {
 	if (engine->getTime() > m_fVolumeChangeTime) return;
 
-	const float dpiScale = Osu::getUIScale();
+	const float dpiScale = Osu::getUIScale(m_osu);
 	const float sizeMultiplier = osu_hud_volume_size_multiplier.getFloat() * dpiScale;
 
 	// legacy
@@ -2700,7 +2700,7 @@ void OsuHUD::drawTargetHeatmap(Graphics *g, float hitcircleDiameter)
 
 void OsuHUD::drawScrubbingTimeline(Graphics *g, unsigned long beatmapTime, unsigned long beatmapLength, unsigned long beatmapLengthPlayable, unsigned long beatmapStartTimePlayable, float beatmapPercentFinishedPlayable, const std::vector<BREAK> &breaks)
 {
-	const float dpiScale = Osu::getUIScale();
+	const float dpiScale = Osu::getUIScale(m_osu);
 
 	const Vector2 cursorPos = engine->getMouse()->getPos();
 

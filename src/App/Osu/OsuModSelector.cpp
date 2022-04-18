@@ -423,7 +423,7 @@ void OsuModSelector::draw(Graphics *g)
 	{
 		// draw hint text on left edge of screen
 		{
-			const float dpiScale = Osu::getUIScale();
+			const float dpiScale = Osu::getUIScale(m_osu);
 
 			UString experimentalText = "Experimental Mods";
 			McFont *experimentalFont = m_osu->getSubTitleFont();
@@ -770,7 +770,7 @@ void OsuModSelector::updateLayout()
 {
 	if (m_modButtons.size() < 1 || m_overrideSliders.size() < 1) return;
 
-	const float dpiScale = Osu::getUIScale();
+	const float dpiScale = Osu::getUIScale(m_osu);
 	const float uiScale = Osu::ui_scale->getFloat();
 
 	if (!isInCompactMode()) // normal layout
@@ -911,7 +911,7 @@ void OsuModSelector::updateLayout()
 
 void OsuModSelector::updateExperimentalLayout()
 {
-	const float dpiScale = Osu::getUIScale();
+	const float dpiScale = Osu::getUIScale(m_osu);
 
 	// experimental mods
 	int yCounter = 5 * dpiScale;

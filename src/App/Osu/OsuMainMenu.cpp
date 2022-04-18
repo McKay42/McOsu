@@ -1322,7 +1322,7 @@ void OsuMainMenu::setVisible(bool visible)
 
 void OsuMainMenu::updateLayout()
 {
-	const float dpiScale = Osu::getUIScale();
+	const float dpiScale = Osu::getUIScale(m_osu);
 
 	m_vCenter = m_osu->getScreenSize()/2.0f;
 	const float size = Osu::getUIScale(m_osu, 324.0f);

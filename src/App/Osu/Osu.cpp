@@ -112,8 +112,10 @@ ConVar osu_notification_color_r("osu_notification_color_r", 255);
 ConVar osu_notification_color_g("osu_notification_color_g", 255);
 ConVar osu_notification_color_b("osu_notification_color_b", 255);
 
-ConVar osu_ui_scale("osu_ui_scale", 1.0f);
-ConVar osu_ui_scale_to_dpi("osu_ui_scale_to_dpi", true);
+ConVar osu_ui_scale("osu_ui_scale", 1.0f, "multiplier");
+ConVar osu_ui_scale_to_dpi("osu_ui_scale_to_dpi", true, "whether the game should scale its UI based on the DPI reported by your operating system");
+ConVar osu_ui_scale_to_dpi_minimum_width("osu_ui_scale_to_dpi_minimum_width", 2200, "any in-game resolutions below this will have osu_ui_scale_to_dpi force disabled");
+ConVar osu_ui_scale_to_dpi_minimum_height("osu_ui_scale_to_dpi_minimum_height", 1300, "any in-game resolutions below this will have osu_ui_scale_to_dpi force disabled");
 ConVar osu_letterboxing("osu_letterboxing", true);
 ConVar osu_letterboxing_offset_x("osu_letterboxing_offset_x", 0.0f);
 ConVar osu_letterboxing_offset_y("osu_letterboxing_offset_y", 0.0f);
@@ -382,6 +384,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_bFireResolutionChangedScheduled = false;
 	m_bVolumeInactiveToActiveScheduled = false;
 	m_fVolumeInactiveToActiveAnim = 0.0f;
+	m_bFireDelayedFontReloadAndResolutionChangeToFixDesyncedUIScaleScheduled = false;
 
 	// debug
 	m_windowManager = new CWindowManager();
@@ -418,7 +421,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 
 	// load global resources
 	const int baseDPI = 96;
-	const int newDPI = Osu::getUIScale() * baseDPI;
+	const int newDPI = Osu::getUIScale(this) * baseDPI;
 
 	McFont *defaultFont = engine->getResourceManager()->loadFont("weblysleekuisb.ttf", "FONT_DEFAULT", 15, true, newDPI);
 	m_titleFont = engine->getResourceManager()->loadFont("SourceSansPro-Semibold.otf", "FONT_OSU_TITLE", 60, true, newDPI);
@@ -1128,6 +1131,15 @@ void Osu::update()
 		// check if we're done
 		if (m_fVolumeInactiveToActiveAnim == 1.0f)
 			m_bVolumeInactiveToActiveScheduled = false;
+	}
+
+	// (must be before m_bFontReloadScheduled and m_bFireResolutionChangedScheduled are handled!)
+	if (m_bFireDelayedFontReloadAndResolutionChangeToFixDesyncedUIScaleScheduled)
+	{
+		m_bFireDelayedFontReloadAndResolutionChangeToFixDesyncedUIScaleScheduled = false;
+
+		m_bFontReloadScheduled = true;
+		m_bFireResolutionChangedScheduled = true;
 	}
 
 	// delayed font reloads (must be before layout updates!)
@@ -1971,6 +1983,8 @@ void Osu::onResolutionChanged(Vector2 newResolution)
 
 	if (engine->isMinimized()) return; // ignore if minimized
 
+	const float prevUIScale = getUIScale(this);
+
 	if (m_iInstanceID < 1)
 	{
 		if (!osu_resolution_enabled.getBool())
@@ -2001,7 +2015,7 @@ void Osu::onResolutionChanged(Vector2 newResolution)
 	}
 
 	// update dpi specific engine globals
-	m_ui_scrollview_scrollbarwidth_ref->setValue(15.0f * Osu::getUIScale()); // not happy with this as a convar
+	m_ui_scrollview_scrollbarwidth_ref->setValue(15.0f * Osu::getUIScale(this)); // not happy with this as a convar
 
 	// interfaces
 	for (int i=0; i<m_screens.size(); i++)
@@ -2017,6 +2031,10 @@ void Osu::onResolutionChanged(Vector2 newResolution)
 
 	// cursor clipping
 	updateConfineCursor();
+
+	// a bit hacky, but detect resolution-specific-dpi-scaling changes and force a font and layout reload after a 1 frame delay (1/2)
+	if (getUIScale(this) != prevUIScale)
+		m_bFireDelayedFontReloadAndResolutionChangeToFixDesyncedUIScaleScheduled = true;
 }
 
 void Osu::rebuildRenderTargets()
@@ -2046,7 +2064,7 @@ void Osu::rebuildRenderTargets()
 void Osu::reloadFonts()
 {
 	const int baseDPI = 96;
-	const int newDPI = Osu::getUIScale() * baseDPI;
+	const int newDPI = Osu::getUIScale(this) * baseDPI;
 
 	for (McFont *font : m_fonts)
 	{
@@ -2105,6 +2123,8 @@ void Osu::onInternalResolutionChanged(UString oldValue, UString args)
 {
 	if (args.length() < 7) return;
 
+	const float prevUIScale = getUIScale(this);
+
 	std::vector<UString> resolution = args.split("x");
 	if (resolution.size() != 2)
 		debugLog("Error: Invalid parameter count for command 'osu_resolution'! (Usage: e.g. \"osu_resolution 1280x720\")");
@@ -2137,6 +2157,10 @@ void Osu::onInternalResolutionChanged(UString oldValue, UString args)
 			fireResolutionChanged();
 		}
 	}
+
+	// a bit hacky, but detect resolution-specific-dpi-scaling changes and force a font and layout reload after a 1 frame delay (2/2)
+	if (getUIScale(this) != prevUIScale)
+		m_bFireDelayedFontReloadAndResolutionChangeToFixDesyncedUIScaleScheduled = true;
 }
 
 void Osu::onFocusGained()
@@ -2541,9 +2565,20 @@ float Osu::getUIScale(Osu *osu, float osuResolutionRatio)
 	return xDiameter > yDiameter ? xDiameter : yDiameter;
 }
 
-float Osu::getUIScale()
+float Osu::getUIScale(Osu *osu)
 {
-	return (isInVRMode() ? 1.0f : ((osu_ui_scale_to_dpi.getBool() ? env->getDPIScale() : 1.0f) * osu_ui_scale.getFloat()));
+	if (isInVRMode())
+		return 1.0f;
+
+	if (osu != NULL)
+	{
+		if (osu->getScreenWidth() < osu_ui_scale_to_dpi_minimum_width.getInt() || osu->getScreenHeight() < osu_ui_scale_to_dpi_minimum_height.getInt())
+			return osu_ui_scale.getFloat();
+	}
+	else if (engine->getScreenWidth() < osu_ui_scale_to_dpi_minimum_width.getInt() || engine->getScreenHeight() < osu_ui_scale_to_dpi_minimum_height.getInt())
+		return osu_ui_scale.getFloat();
+
+	return ((osu_ui_scale_to_dpi.getBool() ? env->getDPIScale() : 1.0f) * osu_ui_scale.getFloat());
 }
 
 bool Osu::findIgnoreCase(const std::string &haystack, const std::string &needle)

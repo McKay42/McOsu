@@ -60,7 +60,7 @@ public:
 	static float getImageScale(Osu *osu, Vector2 size, float osuSize);
 	static float getImageScale(Osu *osu, Image *img, float osuSize);
 	static float getUIScale(Osu *osu, float osuResolutionRatio);
-	static float getUIScale(); // NOTE: includes premultiplied dpi scale!
+	static float getUIScale(Osu *osu); // NOTE: includes premultiplied dpi scale!
 
 	static bool findIgnoreCase(const std::string &haystack, const std::string &needle);
 
@@ -381,6 +381,7 @@ private:
 	bool m_bFireResolutionChangedScheduled;
 	bool m_bVolumeInactiveToActiveScheduled;
 	float m_fVolumeInactiveToActiveAnim;
+	bool m_bFireDelayedFontReloadAndResolutionChangeToFixDesyncedUIScaleScheduled;
 };
 
 #endif

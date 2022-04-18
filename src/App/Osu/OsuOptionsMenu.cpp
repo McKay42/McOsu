@@ -309,7 +309,7 @@ public:
 	{
 		if (!m_bVisible || m_fAnim <= 0.0f) return;
 
-		const int fullColorBlockSize = 4 * Osu::getUIScale();
+		const int fullColorBlockSize = 4 * Osu::getUIScale(m_osu);
 
 		Color left = COLOR((int)(255*m_fAnim), 255, 233, 50);
 		Color middle = COLOR((int)(255*m_fAnim), 255, 211, 50);
@@ -1311,7 +1311,7 @@ void OsuOptionsMenu::update()
 	if (m_bDPIScalingScrollToSliderScheduled)
 	{
 		m_bDPIScalingScrollToSliderScheduled = false;
-		m_options->scrollToElement(m_uiScaleSlider, 0, 200 * Osu::getUIScale());
+		m_options->scrollToElement(m_uiScaleSlider, 0, 200 * Osu::getUIScale(m_osu));
 	}
 
 	if (m_osu->getHUD()->isVolumeOverlayBusy() || m_backButton->isActive())
@@ -1401,7 +1401,7 @@ void OsuOptionsMenu::update()
 	if (m_bUIScaleScrollToSliderScheduled)
 	{
 		m_bUIScaleScrollToSliderScheduled = false;
-		m_options->scrollToElement(m_uiScaleSlider, 0, 200 * Osu::getUIScale());
+		m_options->scrollToElement(m_uiScaleSlider, 0, 200 * Osu::getUIScale(m_osu));
 	}
 
 	// delayed UI scale change
@@ -1411,11 +1411,11 @@ void OsuOptionsMenu::update()
 		{
 			m_bUIScaleChangeScheduled = false;
 
-			const float oldUIScale = Osu::getUIScale();
+			const float oldUIScale = Osu::getUIScale(m_osu);
 
 			m_osu_ui_scale_ref->setValue(m_uiScaleSlider->getFloat());
 
-			const float newUIScale = Osu::getUIScale();
+			const float newUIScale = Osu::getUIScale(m_osu);
 
 			// and update reset buttons as usual
 			onResetUpdate(m_uiScaleResetButton);
@@ -1775,7 +1775,7 @@ void OsuOptionsMenu::updateLayout()
 
 	OsuScreenBackable::updateLayout();
 
-	const float dpiScale = Osu::getUIScale();
+	const float dpiScale = Osu::getUIScale(m_osu);
 
 	m_container->setSize(m_osu->getScreenSize());
 
@@ -2164,7 +2164,8 @@ void OsuOptionsMenu::updateLayout()
 	const int categoryHeight = (m_categories->getSize().y - categoryPaddingTopBottom*2) / m_categoryButtons.size();
 	for (int i=0; i<m_categoryButtons.size(); i++)
 	{
-		CBaseUIElement *category = m_categoryButtons[i];
+		OsuOptionsMenuCategoryButton *category = m_categoryButtons[i];
+		category->onResized(); // HACKHACK: framework, setSize*() does not update string metrics
 		category->setRelPosY(categoryPaddingTopBottom + categoryHeight*i);
 		category->setSize(m_categories->getSize().x-1, categoryHeight);
 	}
@@ -2341,14 +2342,14 @@ void OsuOptionsMenu::onDPIScalingChange(CBaseUICheckbox *checkbox)
 		{
 			if (m_elements[i].elements[e] == checkbox)
 			{
-				const float prevUIScale = Osu::getUIScale();
+				const float prevUIScale = Osu::getUIScale(m_osu);
 
 				if (m_elements[i].cvar != NULL)
 					m_elements[i].cvar->setValue(checkbox->isChecked());
 
 				onResetUpdate(m_elements[i].resetButton);
 
-				if (Osu::getUIScale() != prevUIScale)
+				if (Osu::getUIScale(m_osu) != prevUIScale)
 					m_bDPIScalingScrollToSliderScheduled = true;
 
 				break;
@@ -3398,7 +3399,7 @@ void OsuOptionsMenu::onCategoryClicked(CBaseUIButton *button)
 	// scroll to category
 	OsuOptionsMenuCategoryButton *categoryButton = dynamic_cast<OsuOptionsMenuCategoryButton*>(button);
 	if (categoryButton != NULL)
-		m_options->scrollToElement(categoryButton->getSection(), 0, 100 * Osu::getUIScale());
+		m_options->scrollToElement(categoryButton->getSection(), 0, 100 * Osu::getUIScale(m_osu));
 }
 
 void OsuOptionsMenu::onResetUpdate(CBaseUIButton *button)
@@ -4001,5 +4002,5 @@ void OsuOptionsMenu::openAndScrollToSkinSection()
 		m_osu->toggleOptionsMenu();
 
 	if (!m_skinSelectLocalButton->isVisible() || !wasVisible)
-		m_options->scrollToElement(m_skinSection, 0, 100 * Osu::getUIScale());
+		m_options->scrollToElement(m_skinSection, 0, 100 * Osu::getUIScale(m_osu));
 }
