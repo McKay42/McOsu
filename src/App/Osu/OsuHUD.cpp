@@ -74,6 +74,7 @@ ConVar osu_hud_scale("osu_hud_scale", 1.0f);
 ConVar osu_hud_hiterrorbar_alpha("osu_hud_hiterrorbar_alpha", 1.0f, "opacity multiplier for entire hiterrorbar");
 ConVar osu_hud_hiterrorbar_bar_alpha("osu_hud_hiterrorbar_bar_alpha", 1.0f, "opacity multiplier for background color bar");
 ConVar osu_hud_hiterrorbar_centerline_alpha("osu_hud_hiterrorbar_centerline_alpha", 1.0f, "opacity multiplier for center line");
+ConVar osu_hud_hiterrorbar_entry_additive("osu_hud_hiterrorbar_entry_additive", true, "whether to use additive blending for all hit error entries/lines");
 ConVar osu_hud_hiterrorbar_entry_alpha("osu_hud_hiterrorbar_entry_alpha", 0.75f, "opacity multiplier for all hit error entries/lines");
 ConVar osu_hud_hiterrorbar_entry_300_r("osu_hud_hiterrorbar_entry_300_r", 50);
 ConVar osu_hud_hiterrorbar_entry_300_g("osu_hud_hiterrorbar_entry_300_g", 188);
@@ -2303,39 +2304,47 @@ void OsuHUD::drawHitErrorBarInt(Graphics *g, float hitWindow300, float hitWindow
 	}
 
 	// draw hit errors
-	const bool modMing3012 = OsuGameRules::osu_mod_ming3012.getBool();
-	const float hitFadeDuration = osu_hud_hiterrorbar_entry_hit_fade_time.getFloat();
-	const float missFadeDuration = osu_hud_hiterrorbar_entry_miss_fade_time.getFloat();
-	for (int i=m_hiterrors.size()-1; i>=0; i--)
 	{
-		const float percent = clamp<float>((float)m_hiterrors[i].delta / (float)totalHitWindowLength, -5.0f, 5.0f);
-		float fade = clamp<float>((m_hiterrors[i].time - engine->getTime()) / (m_hiterrors[i].miss || m_hiterrors[i].misaim ? missFadeDuration : hitFadeDuration), 0.0f, 1.0f);
-		fade *= fade; // quad out
+		if (osu_hud_hiterrorbar_entry_additive.getBool())
+			g->setBlendMode(Graphics::BLEND_MODE::BLEND_MODE_ADDITIVE);
 
-		Color barColor;
+		const bool modMing3012 = OsuGameRules::osu_mod_ming3012.getBool();
+		const float hitFadeDuration = osu_hud_hiterrorbar_entry_hit_fade_time.getFloat();
+		const float missFadeDuration = osu_hud_hiterrorbar_entry_miss_fade_time.getFloat();
+		for (int i=m_hiterrors.size()-1; i>=0; i--)
 		{
-			if (m_hiterrors[i].miss || m_hiterrors[i].misaim)
-				barColor = colorMiss;
-			else
-				barColor = (std::abs(percent) <= percent300 ? color300 : (std::abs(percent) <= percent100 && !modMing3012 ? color100 : color50));
+			const float percent = clamp<float>((float)m_hiterrors[i].delta / (float)totalHitWindowLength, -5.0f, 5.0f);
+			float fade = clamp<float>((m_hiterrors[i].time - engine->getTime()) / (m_hiterrors[i].miss || m_hiterrors[i].misaim ? missFadeDuration : hitFadeDuration), 0.0f, 1.0f);
+			fade *= fade; // quad out
+
+			Color barColor;
+			{
+				if (m_hiterrors[i].miss || m_hiterrors[i].misaim)
+					barColor = colorMiss;
+				else
+					barColor = (std::abs(percent) <= percent300 ? color300 : (std::abs(percent) <= percent100 && !modMing3012 ? color100 : color50));
+			}
+
+			g->setColor(barColor);
+			g->setAlpha(alphaEntry * fade);
+
+			float missHeightMultiplier = 1.0f;
+			if (m_hiterrors[i].miss)
+				missHeightMultiplier = 1.5f;
+			if (m_hiterrors[i].misaim)
+				missHeightMultiplier = 4.0f;
+
+			//Color leftColor = COLOR((int)((255/2) * alphaEntry * fade), COLOR_GET_Ri(barColor), COLOR_GET_Gi(barColor), COLOR_GET_Bi(barColor));
+			//Color centerColor = COLOR((int)(COLOR_GET_Ai(barColor) * alphaEntry * fade), COLOR_GET_Ri(barColor), COLOR_GET_Gi(barColor), COLOR_GET_Bi(barColor));
+			//Color rightColor = leftColor;
+
+			g->fillRect(center.x - (entryWidth/2.0f) + percent*(size.x/2.0f), center.y - (entryHeight*missHeightMultiplier)/2.0f, entryWidth, (entryHeight*missHeightMultiplier));
+			//g->fillGradient((int)(center.x - (entryWidth/2.0f) + percent*(size.x/2.0f)), center.y - (entryHeight*missHeightMultiplier)/2.0f, (int)(entryWidth/2.0f), (entryHeight*missHeightMultiplier), leftColor, centerColor, leftColor, centerColor);
+			//g->fillGradient((int)(center.x - (entryWidth/2.0f/2.0f) + percent*(size.x/2.0f)), center.y - (entryHeight*missHeightMultiplier)/2.0f, (int)(entryWidth/2.0f), (entryHeight*missHeightMultiplier), centerColor, rightColor, centerColor, rightColor);
 		}
 
-		g->setColor(barColor);
-		g->setAlpha(alphaEntry * fade);
-
-		float missHeightMultiplier = 1.0f;
-		if (m_hiterrors[i].miss)
-			missHeightMultiplier = 1.5f;
-		if (m_hiterrors[i].misaim)
-			missHeightMultiplier = 4.0f;
-
-		//Color leftColor = COLOR((int)((255/2) * alphaEntry * fade), COLOR_GET_Ri(barColor), COLOR_GET_Gi(barColor), COLOR_GET_Bi(barColor));
-		//Color centerColor = COLOR((int)(COLOR_GET_Ai(barColor) * alphaEntry * fade), COLOR_GET_Ri(barColor), COLOR_GET_Gi(barColor), COLOR_GET_Bi(barColor));
-		//Color rightColor = leftColor;
-
-		g->fillRect(center.x - (entryWidth/2.0f) + percent*(size.x/2.0f), center.y - (entryHeight*missHeightMultiplier)/2.0f, entryWidth, (entryHeight*missHeightMultiplier));
-		//g->fillGradient((int)(center.x - (entryWidth/2.0f) + percent*(size.x/2.0f)), center.y - (entryHeight*missHeightMultiplier)/2.0f, (int)(entryWidth/2.0f), (entryHeight*missHeightMultiplier), leftColor, centerColor, leftColor, centerColor);
-		//g->fillGradient((int)(center.x - (entryWidth/2.0f/2.0f) + percent*(size.x/2.0f)), center.y - (entryHeight*missHeightMultiplier)/2.0f, (int)(entryWidth/2.0f), (entryHeight*missHeightMultiplier), centerColor, rightColor, centerColor, rightColor);
+		if (osu_hud_hiterrorbar_entry_additive.getBool())
+			g->setBlendMode(Graphics::BLEND_MODE::BLEND_MODE_ALPHA);
 	}
 
 	// white center line
