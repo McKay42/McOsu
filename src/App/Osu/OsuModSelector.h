@@ -57,6 +57,9 @@ public:
 
 	void updateModConVar();
 
+	void updateKeyDelta(float delta);
+	void updateSliderSnap(float amount, bool forAlt);
+
 private:
 	struct OVERRIDE_SLIDER
 	{
@@ -109,6 +112,8 @@ private:
 
 	void close();
 
+	float m_sliderSnapAmount;
+	float m_sliderSnapAmountAlt;
 	float m_fAnimation;
 	float m_fExperimentalAnimation;
 	bool m_bScheduledHide;
