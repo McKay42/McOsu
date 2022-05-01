@@ -22,6 +22,7 @@
 #include "Osu.h"
 #include "OsuVR.h"
 #include "OsuMultiplayer.h"
+#include "OsuModFPoSu.h"
 #include "OsuSkin.h"
 #include "OsuSkinImage.h"
 
@@ -775,7 +776,7 @@ void OsuHUD::drawVRDummy(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 	vr->getShaderTexturedLegacyGeneric()->disable();
 }
 
-void OsuHUD::drawCursor(Graphics *g, Vector2 pos, float alphaMultiplier, bool secondTrail)
+void OsuHUD::drawCursor(Graphics *g, Vector2 pos, float alphaMultiplier, bool secondTrail, bool updateAndDrawTrail)
 {
 	if (osu_draw_cursor_ripples.getBool() && (!m_osu_mod_fposu_ref->getBool() || !m_osu->isInPlayMode()))
 		drawCursorRipples(g);
@@ -783,7 +784,18 @@ void OsuHUD::drawCursor(Graphics *g, Vector2 pos, float alphaMultiplier, bool se
 	const bool vrTrailJumpFix = (m_osu->isInVRMode() && !m_osu->getVR()->isVirtualCursorOnScreen());
 
 	Matrix4 mvp;
-	drawCursorInt(g, m_cursorTrailShader, secondTrail ? m_cursorTrail2 : m_cursorTrail, mvp, pos, alphaMultiplier, vrTrailJumpFix);
+	drawCursorInt(g, m_cursorTrailShader, secondTrail ? m_cursorTrail2 : m_cursorTrail, mvp, pos, alphaMultiplier, vrTrailJumpFix, updateAndDrawTrail);
+}
+
+void OsuHUD::drawCursorTrail(Graphics *g, Vector2 pos, float alphaMultiplier, bool secondTrail)
+{
+	const bool vrTrailJumpFix = (m_osu->isInVRMode() && !m_osu->getVR()->isVirtualCursorOnScreen());
+	const bool fposuTrailJumpFix = (m_osu_mod_fposu_ref->getBool() && m_osu->isInPlayMode() && !m_osu->getFPoSu()->isCrosshairIntersectingScreen());
+
+	const bool trailJumpFix = (vrTrailJumpFix || fposuTrailJumpFix);
+
+	Matrix4 mvp;
+	drawCursorTrailInt(g, m_cursorTrailShader, secondTrail ? m_cursorTrail2 : m_cursorTrail, mvp, pos, alphaMultiplier, trailJumpFix);
 }
 
 void OsuHUD::drawCursorSpectator1(Graphics *g, Vector2 pos, float alphaMultiplier)
@@ -808,7 +820,15 @@ void OsuHUD::drawCursorVR2(Graphics *g, Matrix4 &mvp, Vector2 pos, float alphaMu
 	drawCursorInt(g, m_cursorTrailShaderVR, m_cursorTrailVR2, mvp, pos, alphaMultiplier);
 }
 
-void OsuHUD::drawCursorInt(Graphics *g, Shader *trailShader, std::vector<CURSORTRAIL> &trail, Matrix4 &mvp, Vector2 pos, float alphaMultiplier, bool emptyTrailFrame)
+void OsuHUD::drawCursorInt(Graphics *g, Shader *trailShader, std::vector<CURSORTRAIL> &trail, Matrix4 &mvp, Vector2 pos, float alphaMultiplier, bool emptyTrailFrame, bool updateAndDrawTrail)
+{
+	if (updateAndDrawTrail)
+		drawCursorTrailInt(g, trailShader, trail, mvp, pos, alphaMultiplier, emptyTrailFrame);
+
+	drawCursorRaw(g, pos, alphaMultiplier);
+}
+
+void OsuHUD::drawCursorTrailInt(Graphics *g, Shader *trailShader, std::vector<CURSORTRAIL> &trail, Matrix4 &mvp, Vector2 pos, float alphaMultiplier, bool emptyTrailFrame)
 {
 	Image *trailImage = m_osu->getSkin()->getCursorTrail();
 
@@ -911,8 +931,6 @@ void OsuHUD::drawCursorInt(Graphics *g, Shader *trailShader, std::vector<CURSORT
 			g->setDepthBuffer(true);
 		}
 	}
-
-	drawCursorRaw(g, pos, alphaMultiplier);
 
 	// trail cleanup
 	while ((trail.size() > 1 && engine->getTime() > trail[0].time) || trail.size() > osu_cursor_trail_max_size.getInt()) // always leave at least 1 previous entry in there

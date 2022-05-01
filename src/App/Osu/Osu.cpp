@@ -156,7 +156,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_osu_playfield_rotation = convar->getConVarByName("osu_playfield_rotation");
 	m_osu_playfield_stretch_x = convar->getConVarByName("osu_playfield_stretch_x");
 	m_osu_playfield_stretch_y = convar->getConVarByName("osu_playfield_stretch_y");
-	m_osu_draw_cursor_trail_ref = convar->getConVarByName("osu_draw_cursor_trail");
+	m_fposu_draw_cursor_trail_ref = convar->getConVarByName("fposu_draw_cursor_trail");
 	m_osu_volume_effects_ref = convar->getConVarByName("osu_volume_effects");
 	m_osu_mod_mafham_ref = convar->getConVarByName("osu_mod_mafham");
 	m_osu_mod_fposu_ref = convar->getConVarByName("osu_mod_fposu");
@@ -635,6 +635,10 @@ void Osu::draw(Graphics *g)
 		if (isFPoSu && m_osu_draw_cursor_ripples_ref->getBool())
 			m_hud->drawCursorRipples(g);
 
+		// draw FPoSu cursor trail
+		if (isFPoSu && m_fposu_draw_cursor_trail_ref->getBool())
+			m_hud->drawCursorTrail(g, beatmapStd->getCursorPos(), osu_mod_fadingcursor.getBool() ? fadingCursorAlpha : 1.0f);
+
 		if (isBufferedPlayfieldDraw)
 			m_playfieldBuffer->disable();
 
@@ -655,7 +659,9 @@ void Osu::draw(Graphics *g)
 			if (isFPoSu)
 				cursorPos = getScreenSize() / 2.0f;
 
-			m_hud->drawCursor(g, cursorPos, (osu_mod_fadingcursor.getBool() && !isAuto) ? fadingCursorAlpha : 1.0f, isAuto);
+			const bool updateAndDrawTrail = !isFPoSu;
+
+			m_hud->drawCursor(g, cursorPos, (osu_mod_fadingcursor.getBool() && !isAuto) ? fadingCursorAlpha : 1.0f, isAuto, updateAndDrawTrail);
 		}
 
 		// draw projected VR cursors for spectators
@@ -761,7 +767,16 @@ void Osu::draw(Graphics *g)
 		}
 
 		g->setBlending(false);
+		///g->push3DScene(McRect(0, 0, getScreenWidth(), getScreenHeight()));
 		{
+			///const float screenRotationDegrees = 90.0f;
+			///const float screenRotationPercent = (engine->getMouse()->getPos().x/20.0f) / screenRotationDegrees;
+			///g->offset3DScene(0, 0, getScreenWidth()/2);
+			///float depthAnimPercent = (screenRotationPercent < 0.5f ? screenRotationPercent / 0.5f : (1.0f - screenRotationPercent) / 0.5f);
+			///depthAnimPercent = -depthAnimPercent*(depthAnimPercent-2.0f);
+			///g->translate3DScene(0, 0, -getScreenWidth()*0.3f*depthAnimPercent);
+			///g->rotate3DScene(0, screenRotationPercent * screenRotationDegrees, 0);
+
 			if (env->getOS() == Environment::OS::OS_HORIZON)
 			{
 				// NOTE: the nintendo switch always draws in 1080p, even undocked
@@ -794,6 +809,7 @@ void Osu::draw(Graphics *g)
 				}
 			}
 		}
+		///g->pop3DScene();
 		g->setBlending(true);
 	}
 

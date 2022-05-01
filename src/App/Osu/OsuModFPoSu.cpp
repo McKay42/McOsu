@@ -36,6 +36,7 @@ ConVar fposu_absolute_mode("fposu_absolute_mode", false);
 ConVar fposu_distance("fposu_distance", 0.5f);
 ConVar fposu_playfield_position_x("fposu_playfield_position_x", 0.0f);
 ConVar fposu_playfield_position_y("fposu_playfield_position_y", 0.0f);
+ConVar fposu_playfield_position_z("fposu_playfield_position_z", 0.0f);
 ConVar fposu_playfield_rotation_x("fposu_playfield_rotation_x", 0.0f);
 ConVar fposu_playfield_rotation_y("fposu_playfield_rotation_y", 0.0f);
 ConVar fposu_playfield_rotation_z("fposu_playfield_rotation_z", 0.0f);
@@ -53,6 +54,7 @@ ConVar fposu_cube_tint_b("fposu_cube_tint_b", 255, "from 0 to 255");
 ConVar fposu_invert_vertical("fposu_invert_vertical", false);
 ConVar fposu_invert_horizontal("fposu_invert_horizontal", false);
 
+ConVar fposu_draw_cursor_trail("fposu_draw_cursor_trail", true);
 ConVar fposu_draw_scorebarbg_on_top("fposu_draw_scorebarbg_on_top", false);
 ConVar fposu_transparent_playfield("fposu_transparent_playfield", false, "only works if background dim is 100% and background brightness is 0%");
 
@@ -235,7 +237,7 @@ void OsuModFPoSu::update()
 			m_modelMatrix.translate(0, 0, -fposu_distance.getFloat()); // (restore)
 		}
 
-		m_modelMatrix.translate(fposu_playfield_position_x.getFloat(), fposu_playfield_position_y.getFloat(), -0.0015f); // NOTE: slightly move back by default to avoid aliasing with background cube
+		m_modelMatrix.translate(fposu_playfield_position_x.getFloat(), fposu_playfield_position_y.getFloat(), -0.0015f + fposu_playfield_position_z.getFloat()); // NOTE: slightly move back by default to avoid aliasing with background cube
 
 		if (fposu_mod_strafing.getBool())
 		{
@@ -501,8 +503,8 @@ void OsuModFPoSu::makePlayfield()
 
 	const float dist = -fposu_distance.getFloat();
 
-	VertexPair vp1 = VertexPair(Vector3(-0.5, 0.5, dist),Vector3(-0.5, -0.5, dist), 0);
-	VertexPair vp2 = VertexPair(Vector3(0.5, 0.5, dist),Vector3(0.5, -0.5, dist), 1);
+	VertexPair vp1 = VertexPair(Vector3(-0.5, 0.5, dist), Vector3(-0.5, -0.5, dist), 0);
+	VertexPair vp2 = VertexPair(Vector3(0.5, 0.5, dist), Vector3(0.5, -0.5, dist), 1);
 
 	const float edgeDistance = Vector3(0, 0, 0).distance(Vector3(-0.5, 0.0, dist));
 
@@ -635,7 +637,7 @@ void OsuModFPoSu::onMap(UString args)
 float OsuModFPoSu::subdivide(std::list<VertexPair> &meshList, const std::list<VertexPair>::iterator &begin, const std::list<VertexPair>::iterator &end, int n, float edgeDistance)
 {
 	const Vector3 a = Vector3((*begin).a.x, 0.0f, (*begin).a.z);
-	const Vector3 b = Vector3((*end).a.x, 0, (*end).a.z);
+	const Vector3 b = Vector3((*end).a.x, 0.0f, (*end).a.z);
 	Vector3 middlePoint = Vector3(lerp<float>(a.x, b.x, 0.5f),
 								  lerp<float>(a.y, b.y, 0.5f),
 								  lerp<float>(a.z, b.z, 0.5f));
