@@ -775,45 +775,12 @@ double OsuDifficultyCalculator::calculatePPv2(int modsLegacy, double timescale, 
 {
 	// NOTE: depends on active mods + OD + AR
 
-	// not sure what's going on here, but osu is using some strange incorrect rounding (e.g. 13.5 ms for OD 11.08333 (for OD 10 with DT), which is incorrect because the 13.5 should get rounded down to 13 ms)
-	/*
-	// these would be the raw unrounded values (would need an extra function in OsuGameRules to calculate this with rounding for the pp calculation)
-	double od = OsuGameRules::getOverallDifficultyForSpeedMultiplier(beatmap);
-	double ar = OsuGameRules::getApproachRateForSpeedMultiplier(beatmap);
-	*/
-	// so to get the correct pp values that players expect, with certain mods we use the incorrect method of calculating ar/od so that the final pp value will be """correct"""
-	// thankfully this was already included in the oppai code. note that these incorrect values are only used while map-changing mods are active!
-	if (timescale != 1.0f
-			|| (modsLegacy & OsuReplay::Mods::Easy)
-			|| (modsLegacy & OsuReplay::Mods::HardRock)
-			|| (modsLegacy & OsuReplay::Mods::DoubleTime)
-			|| (modsLegacy & OsuReplay::Mods::Nightcore)
-			|| (modsLegacy & OsuReplay::Mods::HalfTime)) // if map-changing mods are active, use incorrect calculations
-	{
-		const float	od0_ms = OsuGameRules::getMinHitWindow300(),
-					od10_ms = OsuGameRules::getMaxHitWindow300(),
-					ar0_ms = OsuGameRules::getMinApproachTime(),
-					ar5_ms = OsuGameRules::getMidApproachTime(),
-					ar10_ms = OsuGameRules::getMaxApproachTime();
-
-		const float	od_ms_step = (od0_ms - od10_ms) / 10.0f,
-					ar_ms_step1 = (ar0_ms - ar5_ms) / 5.0f,
-					ar_ms_step2 = (ar5_ms - ar10_ms) / 5.0f;
-
-		// stats must be capped to 0-10 before HT/DT which bring them to a range of -4.42 to 11.08 for OD and -5 to 11 for AR
-		float odms = od0_ms - std::ceil(od_ms_step * od);
-		float arms = (ar <= 5.0 ? (ar0_ms - ar_ms_step1 *  ar) : (ar5_ms - ar_ms_step2 * (ar - 5)));
-		odms = std::min(od0_ms, std::max(od10_ms, odms));
-		arms = std::min(ar0_ms, std::max(ar10_ms, arms));
-
-		// apply speed-changing mods
-		odms /= timescale;
-		arms /= timescale;
-
-		// convert OD and AR back into their stat form
-		od = (od0_ms - odms) / od_ms_step;
-		ar = (arms > ar5_ms ? ((-(arms - ar0_ms)) / ar_ms_step1) : (5.0f + (-(arms - ar5_ms)) / ar_ms_step2));
-	}
+	// apply "timescale" aka speed multiplier to ar/od
+	// (the original incoming ar/od values are guaranteed to not yet have any speed multiplier applied to them, but they do have non-time-related mods already applied, like HR or any custom overrides)
+	// (yes, this does work correctly when the override slider "locking" feature is used. in this case, the stored ar/od is already compensated such that it will have the locked value AFTER applying the speed multiplier here)
+	// (all UI elements which display ar/od from stored scores, like the ranking screen or score buttons, also do this calculation before displaying the values to the user. of course the mod selection screen does too.)
+	od = OsuGameRules::getRawOverallDifficultyForSpeedMultiplier(OsuGameRules::getRawHitWindow300(od), timescale);
+	ar = OsuGameRules::getRawApproachRateForSpeedMultiplier(OsuGameRules::getRawApproachTime(ar), timescale);
 
 	if (c300 < 0)
 		c300 = numHitObjects - c100 - c50 - misses;

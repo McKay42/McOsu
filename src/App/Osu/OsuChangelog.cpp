@@ -52,6 +52,7 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha317.changes.push_back("- Updated UI DPI scaling to automatically enable/disable itself based on in-game resolution (instead of OS DPI)");
 	alpha317.changes.push_back("- Updated hiterrorbar to use additive blending for entries/lines");
 	alpha317.changes.push_back("- Minor performance improvements (shader uniform caching)");
+	alpha317.changes.push_back("- Fixed pp algorithm to allow AR/OD above 10 for non-1.0x speed multipliers and/or EZ/HT/HR/DT (please recalculate your scores)");
 	alpha317.changes.push_back("");
 	alpha317.changes.push_back("- Added collection management support (Add/Delete/Set/Unset collections, right-click context menu on beatmap buttons)");
 	alpha317.changes.push_back("- FPoSu: Added new experimental mod \"Strafing\"");
