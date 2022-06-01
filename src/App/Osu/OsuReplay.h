@@ -10,6 +10,13 @@
 
 #include "cbase.h"
 
+// HACKHACK: linux unity build fix (X.h defines "None" globally ffs, and because this isn't an enum class)
+#ifdef None
+#pragma push_macro("None")
+#undef None
+#define MCOSU_OSUREPLAY_NONE_POP_MACRO_PENDING
+#endif
+
 class OsuReplay
 {
 public:
@@ -86,5 +93,9 @@ private:
 	unsigned int readULEB128();
 	UString readString(unsigned int length);
 };
+
+#ifdef MCOSU_OSUREPLAY_NONE_POP_MACRO_PENDING
+#pragma pop_macro("None")
+#endif
 
 #endif
