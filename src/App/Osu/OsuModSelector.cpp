@@ -1128,15 +1128,22 @@ void OsuModSelector::resetMods()
 	for (int i=0; i<m_overrideSliders.size(); i++)
 	{
 		// HACKHACK: force small delta to force an update (otherwise values could get stuck, e.g. for "Use Mods" context menu)
-		m_overrideSliders[i].slider->setValue(m_overrideSliders[i].slider->getMin() + 0.0001f);
-		m_overrideSliders[i].slider->setValue(m_overrideSliders[i].slider->getMin());
+		// HACKHACK: only animate while visible to workaround "Use mods" bug (if custom speed multiplier already set and then "Use mods" with different custom speed multiplier would reset to 1.0x because of anim)
+		m_overrideSliders[i].slider->setValue(m_overrideSliders[i].slider->getMin() + 0.0001f, m_bVisible);
+		m_overrideSliders[i].slider->setValue(m_overrideSliders[i].slider->getMin(), m_bVisible);
 	}
 
 	for (int i=0; i<m_experimentalMods.size(); i++)
 	{
+		ConVar *cvar = m_experimentalMods[i].cvar;
 		CBaseUICheckbox *checkboxPointer = dynamic_cast<CBaseUICheckbox*>(m_experimentalMods[i].element);
 		if (checkboxPointer != NULL)
+		{
+			// HACKHACK: we update both just in case because if the mod selector was not yet visible after a convar change (e.g. because of "Use mods") then the checkbox has not yet updated its internal state
 			checkboxPointer->setChecked(false);
+			if (cvar != NULL)
+				cvar->setValue(0.0f);
+		}
 	}
 
 	m_resetModsButton->animateClickColor();
