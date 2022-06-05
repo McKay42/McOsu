@@ -43,6 +43,7 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha317.changes.push_back("- Added \"most common BPM\" in parentheses to top left songbrowser info label (e.g. \"BPM: 120-240 (190)\")");
 	alpha317.changes.push_back("- Added beatmapID and beatmapSetID columns to osu_scores_export csv");
 	alpha317.changes.push_back("- Added \"Reset all settings\" button to bottom of options menu");
+	alpha317.changes.push_back("- Added PAGEUP/PAGEDOWN key support to songbrowser");
 	alpha317.changes.push_back("- Added ConVars (1): osu_followpoints_connect_spinners, fposu_transparent_playfield");
 	alpha317.changes.push_back("- Added ConVars (2): fposu_playfield_position_x/y/z, fposu_playfield_rotation_x/y/z");
 	alpha317.changes.push_back("- Added ConVars (3): osu_mod_approach_different_initial_size, osu_mod_approach_different_style");
