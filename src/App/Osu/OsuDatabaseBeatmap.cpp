@@ -49,6 +49,8 @@ ConVar osu_slider_max_repeat("osu_slider_max_repeat", 9000, "maximum number of r
 ConVar osu_number_max("osu_number_max", 0, "0 = disabled, 1/2/3/4/etc. limits visual circle numbers to this number");
 ConVar osu_ignore_beatmap_combo_numbers("osu_ignore_beatmap_combo_numbers", false, "may be used in conjunction with osu_number_max");
 
+ConVar osu_beatmap_version("osu_beatmap_version", 14, "maximum supported .osu file version, above this will simply not load");
+
 unsigned long long OsuDatabaseBeatmap::sortHackCounter = 0;
 
 ConVar *OsuDatabaseBeatmap::m_osu_slider_curve_max_length_ref = NULL;
@@ -86,7 +88,7 @@ OsuDatabaseBeatmap::OsuDatabaseBeatmap(Osu *osu, UString filePath, UString folde
 
 	// raw metadata (note the special default values)
 
-	m_iVersion = 14;
+	m_iVersion = osu_beatmap_version.getInt();
 	m_iGameMode = 0;
 	m_iID = 0;
 	m_iSetID = -1;
@@ -1011,7 +1013,14 @@ bool OsuDatabaseBeatmap::loadMetadata(OsuDatabaseBeatmap *databaseBeatmap)
 				{
 				case -1: // header (e.g. "osu file format v12")
 					{
-						sscanf(curLineChar, " osu file format v %i \n", &databaseBeatmap->m_iVersion);
+						if (sscanf(curLineChar, " osu file format v %i \n", &databaseBeatmap->m_iVersion) == 1)
+						{
+							if (databaseBeatmap->m_iVersion > osu_beatmap_version.getInt())
+							{
+								debugLog("Ignoring unknown/invalid beatmap version %i\n", databaseBeatmap->m_iVersion);
+								return false;
+							}
+						}
 					}
 					break;
 
