@@ -106,7 +106,7 @@ public:
 
 
 public:
-	OsuDatabaseBeatmap(Osu *osu, UString filePath, UString folder);
+	OsuDatabaseBeatmap(Osu *osu, UString filePath, UString folder, bool filePathIsInMemoryBeatmap = false);
 	OsuDatabaseBeatmap(Osu *osu, std::vector<OsuDatabaseBeatmap*> &difficulties);
 	~OsuDatabaseBeatmap();
 
@@ -171,7 +171,7 @@ public:
 	inline const UString &getAudioFileName() const {return m_sAudioFileName;}
 
 	inline unsigned long getLengthMS() const {return m_iLengthMS;}
-	inline unsigned long getPreviewTime() const {return m_iPreviewTime;}
+	inline int getPreviewTime() const {return m_iPreviewTime;}
 
 	inline float getAR() const {return m_fAR;}
 	inline float getCS() const {return m_fCS;}
@@ -199,6 +199,7 @@ public:
 
 	inline int getMinBPM() const {return m_iMinBPM;}
 	inline int getMaxBPM() const {return m_iMaxBPM;}
+	inline int getMostCommonBPM() const {return m_iMostCommonBPM;}
 
 	inline int getNumObjects() const {return m_iNumObjects;}
 	inline int getNumCircles() const {return m_iNumCircles;}
@@ -234,7 +235,7 @@ private:
 	UString m_sAudioFileName;
 
 	unsigned long m_iLengthMS;
-	unsigned long m_iPreviewTime;
+	int m_iPreviewTime;
 
 	float m_fAR;
 	float m_fCS;
@@ -262,6 +263,7 @@ private:
 
 	int m_iMinBPM;
 	int m_iMaxBPM;
+	int m_iMostCommonBPM;
 
 	int m_iNumObjects;
 	int m_iNumCircles;
@@ -362,7 +364,7 @@ private:
 
 
 
-	static PRIMITIVE_CONTAINER loadPrimitiveObjects(const UString &osuFilePath, Osu::GAMEMODE gameMode);
+	static PRIMITIVE_CONTAINER loadPrimitiveObjects(const UString &osuFilePath, Osu::GAMEMODE gameMode, bool filePathIsInMemoryBeatmap = false);
 	static void calculateSliderTimesClicksTicks(std::vector<SLIDER> &sliders, std::vector<TIMINGPOINT> &timingpoints, float sliderMultiplier, float sliderTickRate);
 
 
@@ -371,6 +373,7 @@ private:
 
 	UString m_sFolder;		// path to folder containing .osu file (e.g. "/path/to/beatmapfolder/")
 	UString m_sFilePath;	// path to .osu file (e.g. "/path/to/beatmapfolder/beatmap.osu")
+	bool m_bFilePathIsInMemoryBeatmap;
 
 	unsigned long long m_iSortHack;
 

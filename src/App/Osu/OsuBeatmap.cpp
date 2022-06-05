@@ -193,6 +193,7 @@ OsuBeatmap::OsuBeatmap(Osu *osu)
 	m_iResourceLoadUpdateDelayHack = 0;
 	m_bForceStreamPlayback = true; // if this is set to true here, then the music will always be loaded as a stream (meaning slow disk access could cause audio stalling/stuttering)
 	m_fAfterMusicIsFinishedVirtualAudioTimeStart = -1.0f;
+	m_bIsFirstMissSound = true;
 
 	m_bFailed = false;
 	m_fFailAnim = 1.0f;
@@ -1731,14 +1732,14 @@ float OsuBeatmap::getPercentFinishedPlayable() const
 		return (float)m_iCurMusicPos / (float)m_music->getLengthMS();
 }
 
-int OsuBeatmap::getBPM() const
+int OsuBeatmap::getMostCommonBPM() const
 {
 	if (m_selectedDifficulty2 != NULL)
 	{
 		if (m_music != NULL)
-			return (int)(m_selectedDifficulty2->getMaxBPM() * m_music->getSpeed());
+			return (int)(m_selectedDifficulty2->getMostCommonBPM() * m_music->getSpeed());
 		else
-			return (int)(m_selectedDifficulty2->getMaxBPM() * m_osu->getSpeedMultiplier());
+			return (int)(m_selectedDifficulty2->getMostCommonBPM() * m_osu->getSpeedMultiplier());
 	}
 	else
 		return 0;
@@ -2151,7 +2152,7 @@ void OsuBeatmap::handlePreviewPlay()
 			if (m_iContinueMusicPos != 0)
 				m_music->setPositionMS(m_iContinueMusicPos);
 			else
-				m_music->setPositionMS(m_selectedDifficulty2->getPreviewTime());
+				m_music->setPositionMS(m_selectedDifficulty2->getPreviewTime() < 0 ? (unsigned long)(m_music->getLengthMS() * 0.40f) : m_selectedDifficulty2->getPreviewTime());
 
 			m_music->setVolume(m_osu_volume_music_ref->getFloat());
 		}
@@ -2235,12 +2236,17 @@ void OsuBeatmap::resetScore()
 	anim->deleteExistingAnimation(&m_fFailAnim);
 
 	m_osu->getScore()->reset();
+
+	m_bIsFirstMissSound = true;
 }
 
 void OsuBeatmap::playMissSound()
 {
-	if (m_osu->getScore()->getCombo() > osu_combobreak_sound_combo.getInt())
+	if ((m_bIsFirstMissSound && m_osu->getScore()->getCombo() > 0) || m_osu->getScore()->getCombo() > osu_combobreak_sound_combo.getInt())
+	{
+		m_bIsFirstMissSound = false;
 		engine->getSound()->play(getSkin()->getCombobreak());
+	}
 }
 
 unsigned long OsuBeatmap::getMusicPositionMSInterpolated()

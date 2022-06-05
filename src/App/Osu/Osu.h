@@ -60,7 +60,7 @@ public:
 	static float getImageScale(Osu *osu, Vector2 size, float osuSize);
 	static float getImageScale(Osu *osu, Image *img, float osuSize);
 	static float getUIScale(Osu *osu, float osuResolutionRatio);
-	static float getUIScale(); // NOTE: includes premultiplied dpi scale!
+	static float getUIScale(Osu *osu); // NOTE: includes premultiplied dpi scale!
 
 	static bool findIgnoreCase(const std::string &haystack, const std::string &needle);
 
@@ -137,6 +137,7 @@ public:
 	inline OsuNotificationOverlay *getNotificationOverlay() const {return m_notificationOverlay;}
 	inline OsuTooltipOverlay *getTooltipOverlay() const {return m_tooltipOverlay;}
 	inline OsuModSelector *getModSelector() const {return m_modSelector;}
+	inline OsuModFPoSu *getFPoSu() const {return m_fposu;}
 	inline OsuPauseMenu *getPauseMenu() const {return m_pauseMenu;}
 	inline OsuMainMenu *getMainMenu() const {return m_mainMenu;}
 	inline OsuRankingScreen *getRankingScreen() const {return m_rankingScreen;}
@@ -255,7 +256,7 @@ private:
 	ConVar *m_osu_playfield_rotation;
 	ConVar *m_osu_playfield_stretch_x;
 	ConVar *m_osu_playfield_stretch_y;
-	ConVar *m_osu_draw_cursor_trail_ref;
+	ConVar *m_fposu_draw_cursor_trail_ref;
 	ConVar *m_osu_volume_effects_ref;
 	ConVar *m_osu_mod_mafham_ref;
 	ConVar *m_osu_mod_fposu_ref;
@@ -381,6 +382,7 @@ private:
 	bool m_bFireResolutionChangedScheduled;
 	bool m_bVolumeInactiveToActiveScheduled;
 	float m_fVolumeInactiveToActiveAnim;
+	bool m_bFireDelayedFontReloadAndResolutionChangeToFixDesyncedUIScaleScheduled;
 };
 
 #endif

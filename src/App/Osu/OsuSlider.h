@@ -49,7 +49,7 @@ public:
 	virtual void onClickEvent(std::vector<OsuBeatmap::CLICK> &clicks);
 	virtual void onReset(long curPos);
 
-	void rebuildVertexBuffer();
+	void rebuildVertexBuffer(bool useRawCoords = false);
 
 	inline bool isStartCircleFinished() const {return m_bStartFinished;}
 	inline int getRepeat() const {return m_iRepeat;}
@@ -57,11 +57,16 @@ public:
 	inline float getPixelLength() const {return m_fPixelLength;}
 	inline const std::vector<SLIDERCLICK> &getClicks() const {return m_clicks;}
 
+	// ILLEGAL:
+	inline VertexArrayObject *getVAO() const {return m_vao;}
+	inline OsuSliderCurve *getCurve() const {return m_curve;}
+
 private:
 	static ConVar *m_osu_playfield_mirror_horizontal_ref;
 	static ConVar *m_osu_playfield_mirror_vertical_ref;
 	static ConVar *m_osu_playfield_rotation_ref;
 	static ConVar *m_osu_mod_fps_ref;
+	static ConVar *m_osu_mod_strict_tracking_ref;
 	static ConVar *m_osu_slider_border_size_multiplier_ref;
 	static ConVar *m_epilepsy_ref;
 	static ConVar *m_osu_auto_cursordance_ref;
@@ -74,7 +79,7 @@ private:
 
 	void updateAnimations(long curPos);
 
-	void onHit(OsuScore::HIT result, long delta, bool startOrEnd, float targetDelta = 0.0f, float targetAngle = 0.0f);
+	void onHit(OsuScore::HIT result, long delta, bool startOrEnd, float targetDelta = 0.0f, float targetAngle = 0.0f, bool isEndResultFromStrictTrackingMod = false);
 	void onRepeatHit(bool successful, bool sliderend);
 	void onTickHit(bool successful, int tickIndex);
 	void onSliderBreak();
@@ -121,7 +126,7 @@ private:
 	bool m_bEndFinished;
 	float m_fEndHitAnimation;
 	float m_fEndSliderBodyFadeAnimation;
-	long m_iLastClickHeld;
+	long m_iStrictTrackingModLastClickHeldTime;
 	int m_iDownKey;
 	int m_iPrevSliderSlideSoundSampleSet;
 	bool m_bCursorLeft;

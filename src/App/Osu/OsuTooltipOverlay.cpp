@@ -31,7 +31,7 @@ void OsuTooltipOverlay::draw(Graphics *g)
 {
 	if (m_fAnim > 0.0f)
 	{
-		const float dpiScale = Osu::getUIScale();
+		const float dpiScale = Osu::getUIScale(m_osu);
 
 		McFont *font = engine->getResourceManager()->getFont("FONT_DEFAULT");
 

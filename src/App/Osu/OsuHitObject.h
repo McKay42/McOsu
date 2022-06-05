@@ -65,6 +65,8 @@ public:
 	inline int getStack() const {return m_iStack;}
 	inline int getComboNumber() const {return m_iComboNumber;}
 	inline bool isEndOfCombo() const {return m_bIsEndOfCombo;}
+	inline int getColorCounter() const {return m_iColorCounter;}
+	inline int getColorOffset() const {return m_iColorOffset;}
 	inline long getAutopilotDelta() const {return m_iAutopilotDelta;}
 	inline unsigned long long getSortHack() const {return m_iSortHack;}
 

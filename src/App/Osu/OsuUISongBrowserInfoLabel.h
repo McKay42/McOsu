@@ -33,7 +33,7 @@ public:
 	void setMapper(UString mapper) {m_sMapper = mapper;}
 
 	void setLengthMS(unsigned long lengthMS) {m_iLengthMS = lengthMS;}
-	void setBPM(int minBPM, int maxBPM) {m_iMinBPM = minBPM;m_iMaxBPM = maxBPM;}
+	void setBPM(int minBPM, int maxBPM, int mostCommonBPM) {m_iMinBPM = minBPM; m_iMaxBPM = maxBPM; m_iMostCommonBPM = mostCommonBPM;}
 	void setNumObjects(int numObjects) {m_iNumObjects = numObjects;}
 
 	void setCS(float CS) {m_fCS = CS;}
@@ -80,6 +80,7 @@ private:
 	unsigned long m_iLengthMS;
 	int m_iMinBPM;
 	int m_iMaxBPM;
+	int m_iMostCommonBPM;
 	int m_iNumObjects;
 
 	float m_fCS;

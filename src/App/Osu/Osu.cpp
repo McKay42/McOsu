@@ -65,7 +65,7 @@
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 33.00f);
+ConVar osu_version("osu_version", 33.01f);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr");
 #else
@@ -112,8 +112,10 @@ ConVar osu_notification_color_r("osu_notification_color_r", 255);
 ConVar osu_notification_color_g("osu_notification_color_g", 255);
 ConVar osu_notification_color_b("osu_notification_color_b", 255);
 
-ConVar osu_ui_scale("osu_ui_scale", 1.0f);
-ConVar osu_ui_scale_to_dpi("osu_ui_scale_to_dpi", true);
+ConVar osu_ui_scale("osu_ui_scale", 1.0f, "multiplier");
+ConVar osu_ui_scale_to_dpi("osu_ui_scale_to_dpi", true, "whether the game should scale its UI based on the DPI reported by your operating system");
+ConVar osu_ui_scale_to_dpi_minimum_width("osu_ui_scale_to_dpi_minimum_width", 2200, "any in-game resolutions below this will have osu_ui_scale_to_dpi force disabled");
+ConVar osu_ui_scale_to_dpi_minimum_height("osu_ui_scale_to_dpi_minimum_height", 1300, "any in-game resolutions below this will have osu_ui_scale_to_dpi force disabled");
 ConVar osu_letterboxing("osu_letterboxing", true);
 ConVar osu_letterboxing_offset_x("osu_letterboxing_offset_x", 0.0f);
 ConVar osu_letterboxing_offset_y("osu_letterboxing_offset_y", 0.0f);
@@ -154,7 +156,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_osu_playfield_rotation = convar->getConVarByName("osu_playfield_rotation");
 	m_osu_playfield_stretch_x = convar->getConVarByName("osu_playfield_stretch_x");
 	m_osu_playfield_stretch_y = convar->getConVarByName("osu_playfield_stretch_y");
-	m_osu_draw_cursor_trail_ref = convar->getConVarByName("osu_draw_cursor_trail");
+	m_fposu_draw_cursor_trail_ref = convar->getConVarByName("fposu_draw_cursor_trail");
 	m_osu_volume_effects_ref = convar->getConVarByName("osu_volume_effects");
 	m_osu_mod_mafham_ref = convar->getConVarByName("osu_mod_mafham");
 	m_osu_mod_fposu_ref = convar->getConVarByName("osu_mod_fposu");
@@ -165,6 +167,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_osu_vr_draw_desktop_playfield_ref = convar->getConVarByName("osu_vr_draw_desktop_playfield");
 
 	// experimental mods list
+	m_experimentalMods.push_back(convar->getConVarByName("fposu_mod_strafing"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_wobble"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_arwobble"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_timewarp"));
@@ -182,11 +185,13 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_ming3012"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_millhioref"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_mafham"));
+	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_strict_tracking"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_playfield_mirror_horizontal"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_playfield_mirror_vertical"));
 
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_wobble2"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_shirone"));
+	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_approach_different"));
 
 	// engine settings/overrides
 	engine->getSound()->setOnOutputDeviceChange([this] {onAudioOutputDeviceChange();});
@@ -238,19 +243,20 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	{
 		convar->getConVarByName("fps_max")->setValue(60.0f);
 		convar->getConVarByName("ui_scrollview_resistance")->setValue(25.0f);
-		convar->getConVarByName("osu_scores_legacy_enabled")->setValue(0.0f); // would collide
+		convar->getConVarByName("osu_scores_legacy_enabled")->setValue(0.0f);		// would collide
+		convar->getConVarByName("osu_collections_legacy_enabled")->setValue(0.0f);	// unnecessary
 		convar->getConVarByName("osu_mod_mafham_render_livesize")->setValue(7.0f);
 		convar->getConVarByName("osu_mod_mafham_render_chunksize")->setValue(12.0f);
 		convar->getConVarByName("osu_mod_touchdevice")->setDefaultFloat(1.0f);
 		convar->getConVarByName("osu_mod_touchdevice")->setValue(1.0f);
 		convar->getConVarByName("osu_volume_music")->setValue(0.3f);
 		convar->getConVarByName("osu_universal_offset_hardcoded")->setValue(-45.0f);
-		convar->getConVarByName("osu_key_quick_retry")->setValue(15.0f);	// L, SDL_SCANCODE_L
-		convar->getConVarByName("osu_key_seek_time")->setValue(21.0f);		// R, SDL_SCANCODE_R
-		convar->getConVarByName("osu_key_decrease_local_offset")->setValue(29.0f); // ZL, SDL_SCANCODE_Z
-		convar->getConVarByName("osu_key_increase_local_offset")->setValue(25.0f); // ZR, SDL_SCANCODE_V
-		convar->getConVarByName("osu_key_left_click")->setValue(0.0f);		// (disabled)
-		convar->getConVarByName("osu_key_right_click")->setValue(0.0f);	// (disabled)
+		convar->getConVarByName("osu_key_quick_retry")->setValue(15.0f);			// L, SDL_SCANCODE_L
+		convar->getConVarByName("osu_key_seek_time")->setValue(21.0f);				// R, SDL_SCANCODE_R
+		convar->getConVarByName("osu_key_decrease_local_offset")->setValue(29.0f);	// ZL, SDL_SCANCODE_Z
+		convar->getConVarByName("osu_key_increase_local_offset")->setValue(25.0f);	// ZR, SDL_SCANCODE_V
+		convar->getConVarByName("osu_key_left_click")->setValue(0.0f);				// (disabled)
+		convar->getConVarByName("osu_key_right_click")->setValue(0.0f);				// (disabled)
 		convar->getConVarByName("name")->setValue(env->getUsername());
 	}
 
@@ -378,6 +384,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_bFireResolutionChangedScheduled = false;
 	m_bVolumeInactiveToActiveScheduled = false;
 	m_fVolumeInactiveToActiveAnim = 0.0f;
+	m_bFireDelayedFontReloadAndResolutionChangeToFixDesyncedUIScaleScheduled = false;
 
 	// debug
 	m_windowManager = new CWindowManager();
@@ -414,7 +421,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 
 	// load global resources
 	const int baseDPI = 96;
-	const int newDPI = Osu::getUIScale() * baseDPI;
+	const int newDPI = Osu::getUIScale(this) * baseDPI;
 
 	McFont *defaultFont = engine->getResourceManager()->loadFont("weblysleekuisb.ttf", "FONT_DEFAULT", 15, true, newDPI);
 	m_titleFont = engine->getResourceManager()->loadFont("SourceSansPro-Semibold.otf", "FONT_OSU_TITLE", 60, true, newDPI);
@@ -504,7 +511,10 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	//m_userStatsScreen->setVisible(true);
 
 	if (isInVRMode() && osu_vr_tutorial.getBool())
+	{
+		m_mainMenu->setStartupAnim(false);
 		m_vrTutorial->setVisible(true);
+	}
 	else
 		m_mainMenu->setVisible(true);
 
@@ -625,6 +635,10 @@ void Osu::draw(Graphics *g)
 		if (isFPoSu && m_osu_draw_cursor_ripples_ref->getBool())
 			m_hud->drawCursorRipples(g);
 
+		// draw FPoSu cursor trail
+		if (isFPoSu && m_fposu_draw_cursor_trail_ref->getBool())
+			m_hud->drawCursorTrail(g, beatmapStd->getCursorPos(), osu_mod_fadingcursor.getBool() ? fadingCursorAlpha : 1.0f);
+
 		if (isBufferedPlayfieldDraw)
 			m_playfieldBuffer->disable();
 
@@ -645,7 +659,9 @@ void Osu::draw(Graphics *g)
 			if (isFPoSu)
 				cursorPos = getScreenSize() / 2.0f;
 
-			m_hud->drawCursor(g, cursorPos, (osu_mod_fadingcursor.getBool() && !isAuto) ? fadingCursorAlpha : 1.0f, isAuto);
+			const bool updateAndDrawTrail = !isFPoSu;
+
+			m_hud->drawCursor(g, cursorPos, (osu_mod_fadingcursor.getBool() && !isAuto) ? fadingCursorAlpha : 1.0f, isAuto, updateAndDrawTrail);
 		}
 
 		// draw projected VR cursors for spectators
@@ -751,7 +767,16 @@ void Osu::draw(Graphics *g)
 		}
 
 		g->setBlending(false);
+		///g->push3DScene(McRect(0, 0, getScreenWidth(), getScreenHeight()));
 		{
+			///const float screenRotationDegrees = 90.0f;
+			///const float screenRotationPercent = (engine->getMouse()->getPos().x/20.0f) / screenRotationDegrees;
+			///g->offset3DScene(0, 0, getScreenWidth()/2);
+			///float depthAnimPercent = (screenRotationPercent < 0.5f ? screenRotationPercent / 0.5f : (1.0f - screenRotationPercent) / 0.5f);
+			///depthAnimPercent = -depthAnimPercent*(depthAnimPercent-2.0f);
+			///g->translate3DScene(0, 0, -getScreenWidth()*0.3f*depthAnimPercent);
+			///g->rotate3DScene(0, screenRotationPercent * screenRotationDegrees, 0);
+
 			if (env->getOS() == Environment::OS::OS_HORIZON)
 			{
 				// NOTE: the nintendo switch always draws in 1080p, even undocked
@@ -784,6 +809,7 @@ void Osu::draw(Graphics *g)
 				}
 			}
 		}
+		///g->pop3DScene();
 		g->setBlending(true);
 	}
 
@@ -1121,6 +1147,15 @@ void Osu::update()
 		// check if we're done
 		if (m_fVolumeInactiveToActiveAnim == 1.0f)
 			m_bVolumeInactiveToActiveScheduled = false;
+	}
+
+	// (must be before m_bFontReloadScheduled and m_bFireResolutionChangedScheduled are handled!)
+	if (m_bFireDelayedFontReloadAndResolutionChangeToFixDesyncedUIScaleScheduled)
+	{
+		m_bFireDelayedFontReloadAndResolutionChangeToFixDesyncedUIScaleScheduled = false;
+
+		m_bFontReloadScheduled = true;
+		m_bFireResolutionChangedScheduled = true;
 	}
 
 	// delayed font reloads (must be before layout updates!)
@@ -1964,6 +1999,8 @@ void Osu::onResolutionChanged(Vector2 newResolution)
 
 	if (engine->isMinimized()) return; // ignore if minimized
 
+	const float prevUIScale = getUIScale(this);
+
 	if (m_iInstanceID < 1)
 	{
 		if (!osu_resolution_enabled.getBool())
@@ -1994,7 +2031,7 @@ void Osu::onResolutionChanged(Vector2 newResolution)
 	}
 
 	// update dpi specific engine globals
-	m_ui_scrollview_scrollbarwidth_ref->setValue(15.0f * Osu::getUIScale()); // not happy with this as a convar
+	m_ui_scrollview_scrollbarwidth_ref->setValue(15.0f * Osu::getUIScale(this)); // not happy with this as a convar
 
 	// interfaces
 	for (int i=0; i<m_screens.size(); i++)
@@ -2010,6 +2047,10 @@ void Osu::onResolutionChanged(Vector2 newResolution)
 
 	// cursor clipping
 	updateConfineCursor();
+
+	// a bit hacky, but detect resolution-specific-dpi-scaling changes and force a font and layout reload after a 1 frame delay (1/2)
+	if (getUIScale(this) != prevUIScale)
+		m_bFireDelayedFontReloadAndResolutionChangeToFixDesyncedUIScaleScheduled = true;
 }
 
 void Osu::rebuildRenderTargets()
@@ -2039,7 +2080,7 @@ void Osu::rebuildRenderTargets()
 void Osu::reloadFonts()
 {
 	const int baseDPI = 96;
-	const int newDPI = Osu::getUIScale() * baseDPI;
+	const int newDPI = Osu::getUIScale(this) * baseDPI;
 
 	for (McFont *font : m_fonts)
 	{
@@ -2098,6 +2139,8 @@ void Osu::onInternalResolutionChanged(UString oldValue, UString args)
 {
 	if (args.length() < 7) return;
 
+	const float prevUIScale = getUIScale(this);
+
 	std::vector<UString> resolution = args.split("x");
 	if (resolution.size() != 2)
 		debugLog("Error: Invalid parameter count for command 'osu_resolution'! (Usage: e.g. \"osu_resolution 1280x720\")");
@@ -2130,6 +2173,10 @@ void Osu::onInternalResolutionChanged(UString oldValue, UString args)
 			fireResolutionChanged();
 		}
 	}
+
+	// a bit hacky, but detect resolution-specific-dpi-scaling changes and force a font and layout reload after a 1 frame delay (2/2)
+	if (getUIScale(this) != prevUIScale)
+		m_bFireDelayedFontReloadAndResolutionChangeToFixDesyncedUIScaleScheduled = true;
 }
 
 void Osu::onFocusGained()
@@ -2534,9 +2581,20 @@ float Osu::getUIScale(Osu *osu, float osuResolutionRatio)
 	return xDiameter > yDiameter ? xDiameter : yDiameter;
 }
 
-float Osu::getUIScale()
+float Osu::getUIScale(Osu *osu)
 {
-	return (isInVRMode() ? 1.0f : ((osu_ui_scale_to_dpi.getBool() ? env->getDPIScale() : 1.0f) * osu_ui_scale.getFloat()));
+	if (isInVRMode())
+		return 1.0f;
+
+	if (osu != NULL)
+	{
+		if (osu->getScreenWidth() < osu_ui_scale_to_dpi_minimum_width.getInt() || osu->getScreenHeight() < osu_ui_scale_to_dpi_minimum_height.getInt())
+			return osu_ui_scale.getFloat();
+	}
+	else if (engine->getScreenWidth() < osu_ui_scale_to_dpi_minimum_width.getInt() || engine->getScreenHeight() < osu_ui_scale_to_dpi_minimum_height.getInt())
+		return osu_ui_scale.getFloat();
+
+	return ((osu_ui_scale_to_dpi.getBool() ? env->getDPIScale() : 1.0f) * osu_ui_scale.getFloat());
 }
 
 bool Osu::findIgnoreCase(const std::string &haystack, const std::string &needle)

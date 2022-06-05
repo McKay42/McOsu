@@ -5,6 +5,7 @@ uniform int style;
 uniform float bodyColorSaturation;
 uniform float bodyAlphaMultiplier;
 uniform float borderSizeMultiplier;
+uniform float borderFeather;
 uniform vec3 colBorder;
 uniform vec3 colBody;
 
@@ -34,8 +35,8 @@ vec4 getOuterBodyColor(in vec4 bodyColor)
 
 void main()
 {
-	float borderSize = defaultBorderSize*borderSizeMultiplier;
-	const float transitionSize = defaultTransitionSize;
+	float borderSize = (defaultBorderSize + borderFeather) * borderSizeMultiplier;
+	float transitionSize = defaultTransitionSize + borderFeather;
 
 	// output var
 	vec4 out_color = vec4(0.0);

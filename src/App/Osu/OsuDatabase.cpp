@@ -633,6 +633,7 @@ bool OsuDatabase::addCollection(UString collectionName)
 
 bool OsuDatabase::renameCollection(UString oldCollectionName, UString newCollectionName)
 {
+	if (newCollectionName.length() < 1) return false;
 	if (oldCollectionName == newCollectionName) return false;
 
 	// don't want duplicates
@@ -1441,7 +1442,6 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 		int duration = db->readInt(); // milliseconds
 		duration = duration >= 0 ? duration : 0; // sanity clamp
 		int previewTime = db->readInt();
-		previewTime = previewTime >= 0 ? previewTime : 0; // sanity clamp
 
 		//debugLog("drainTime = %i sec, duration = %i ms, previewTime = %i ms\n", drainTime, duration, previewTime);
 
@@ -1559,14 +1559,19 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 				// calculate bpm range
 				float minBeatLength = 0;
 				float maxBeatLength = std::numeric_limits<float>::max();
-				for (int t=0; t<timingPoints.size(); t++)
+				std::vector<OsuFile::TIMINGPOINT> uninheritedTimingpoints;
+				for (int j=0; j<timingPoints.size(); j++)
 				{
-					if (timingPoints[t].msPerBeat >= 0)
+					const OsuFile::TIMINGPOINT &t = timingPoints[j];
+
+					if (t.msPerBeat >= 0) // NOT inherited
 					{
-						if (timingPoints[t].msPerBeat > minBeatLength)
-							minBeatLength = timingPoints[t].msPerBeat;
-						if (timingPoints[t].msPerBeat < maxBeatLength)
-							maxBeatLength = timingPoints[t].msPerBeat;
+						uninheritedTimingpoints.push_back(t);
+
+						if (t.msPerBeat > minBeatLength)
+							minBeatLength = t.msPerBeat;
+						if (t.msPerBeat < maxBeatLength)
+							maxBeatLength = t.msPerBeat;
 					}
 				}
 
@@ -1579,6 +1584,106 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 
 				diff2->m_iMinBPM = (int)std::round(minBeatLength);
 				diff2->m_iMaxBPM = (int)std::round(maxBeatLength);
+
+				struct MostCommonBPMHelper
+				{
+					static int calculateMostCommonBPM(const std::vector<OsuFile::TIMINGPOINT> &uninheritedTimingpoints, long lastTime)
+					{
+						if (uninheritedTimingpoints.size() < 1) return 0;
+
+						struct Tuple
+						{
+							float beatLength;
+							long duration;
+
+							size_t sortHack;
+						};
+
+						// "Construct a set of (beatLength, duration) tuples for each individual timing point."
+						std::vector<Tuple> tuples;
+						tuples.reserve(uninheritedTimingpoints.size());
+						for (size_t i=0; i<uninheritedTimingpoints.size(); i++)
+						{
+							const OsuFile::TIMINGPOINT &t = uninheritedTimingpoints[i];
+
+							Tuple tuple;
+							{
+								if (t.offset > lastTime)
+								{
+									tuple.beatLength = std::round(t.msPerBeat * 1000.0f) / 1000.0f;
+									tuple.duration = 0;
+								}
+								else
+								{
+									// "osu-stable forced the first control point to start at 0."
+									// "This is reproduced here to maintain compatibility around osu!mania scroll speed and song select display."
+									const long currentTime = (i == 0 ? 0 : t.offset);
+									const long nextTime = (i >= uninheritedTimingpoints.size() - 1 ? lastTime : uninheritedTimingpoints[i + 1].offset);
+
+									tuple.beatLength = std::round(t.msPerBeat * 1000.0f) / 1000.0f;
+									tuple.duration = std::max(nextTime - currentTime, (long)0);
+								}
+
+								tuple.sortHack = i;
+							}
+							tuples.push_back(tuple);
+						}
+
+						// "Aggregate durations into a set of (beatLength, duration) tuples for each beat length"
+						std::vector<Tuple> aggregations;
+						aggregations.reserve(tuples.size());
+						for (size_t i=0; i<tuples.size(); i++)
+						{
+							const Tuple &t = tuples[i];
+
+							bool foundExistingAggregation = false;
+							size_t aggregationIndex = 0;
+							for (size_t j=0; j<aggregations.size(); j++)
+							{
+								if (aggregations[j].beatLength == t.beatLength)
+								{
+									foundExistingAggregation = true;
+									aggregationIndex = j;
+									break;
+								}
+							}
+
+							if (!foundExistingAggregation)
+								aggregations.push_back(t);
+							else
+								aggregations[aggregationIndex].duration += t.duration;
+						}
+
+						// "Get the most common one, or 0 as a suitable default"
+						struct SortByDuration
+						{
+						    bool operator() (Tuple const &a, Tuple const &b) const
+						    {
+						    	// first condition: duration
+						    	// second condition: if duration is the same, higher BPM goes before lower BPM
+
+						    	// strict weak ordering!
+						    	if (a.duration == b.duration && a.beatLength == b.beatLength)
+						    		return a.sortHack > b.sortHack;
+						    	else if (a.duration == b.duration)
+						    		return (a.beatLength < b.beatLength);
+						    	else
+						    		return (a.duration > b.duration);
+						    }
+						};
+						std::sort(aggregations.begin(), aggregations.end(), SortByDuration());
+
+						float mostCommonBPM = aggregations[0].beatLength;
+						{
+							// convert from msPerBeat to BPM
+							const float msPerMinute = 1.0f * 60.0f * 1000.0f;
+							if (mostCommonBPM != 0.0f)
+								mostCommonBPM = msPerMinute / mostCommonBPM;
+						}
+						return (int)std::round(mostCommonBPM);
+					}
+				};
+				diff2->m_iMostCommonBPM = MostCommonBPMHelper::calculateMostCommonBPM(uninheritedTimingpoints, (timingPoints.size() > 0 ? timingPoints[timingPoints.size() - 1].offset : 0));
 
 				// build temp partial timingpoints, only used for menu animations
 				for (int t=0; t<timingPoints.size(); t++)
@@ -2685,15 +2790,38 @@ void OsuDatabase::onScoresExport()
 		return;
 	}
 
-	out << "#beatmapMD5hash,isImportedLegacyScore,version,unixTimestamp,playerName,num300s,num100s,num50s,numGekis,numKatus,numMisses,score,comboMax,perfect,modsLegacy,numSliderBreaks,pp,unstableRate,hitErrorAvgMin,hitErrorAvgMax,starsTomTotal,starsTomAim,starsTomSpeed,speedMultiplier,CS,AR,OD,HP,maxPossibleCombo,numHitObjects,numCircles,experimentalModsConVars\n";
+	out << "#beatmapMD5hash,beatmapID,beatmapSetID,isImportedLegacyScore,version,unixTimestamp,playerName,num300s,num100s,num50s,numGekis,numKatus,numMisses,score,comboMax,perfect,modsLegacy,numSliderBreaks,pp,unstableRate,hitErrorAvgMin,hitErrorAvgMax,starsTomTotal,starsTomAim,starsTomSpeed,speedMultiplier,CS,AR,OD,HP,maxPossibleCombo,numHitObjects,numCircles,experimentalModsConVars\n";
 
 	for (auto beatmapScores : m_scores)
 	{
+		bool triedGettingDatabaseBeatmapOnceForThisBeatmap = false;
+		OsuDatabaseBeatmap *beatmap = NULL;
+
 		for (const Score &score : beatmapScores.second)
 		{
 			if (!score.isLegacyScore)
 			{
-				out << beatmapScores.first;
+				long id = -1;
+				long setId = -1;
+				{
+					if (beatmap == NULL && !triedGettingDatabaseBeatmapOnceForThisBeatmap)
+					{
+						triedGettingDatabaseBeatmapOnceForThisBeatmap = true;
+						beatmap = getBeatmapDifficulty(beatmapScores.first);
+					}
+
+					if (beatmap != NULL)
+					{
+						id = beatmap->getID();
+						setId = beatmap->getSetID();
+					}
+				}
+
+				out << beatmapScores.first; // md5 hash
+				out << ",";
+				out << id;
+				out << ",";
+				out << setId;
 				out << ",";
 
 				out << score.isImportedLegacyScore;
@@ -2765,6 +2893,9 @@ void OsuDatabase::onScoresExport()
 				out << "\n";
 			}
 		}
+
+		triedGettingDatabaseBeatmapOnceForThisBeatmap = false;
+		beatmap = NULL;
 	}
 
 	out.close();

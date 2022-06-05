@@ -27,6 +27,9 @@
 #include "OsuSpinner.h"
 #include "OsuManiaNote.h"
 
+#include <sstream>
+#include <iostream>
+
 ConVar osu_mod_random("osu_mod_random", false);
 ConVar osu_mod_random_circle_offset_x_percent("osu_mod_random_circle_offset_x_percent", 1.0f, "how much the randomness affects things");
 ConVar osu_mod_random_circle_offset_y_percent("osu_mod_random_circle_offset_y_percent", 1.0f, "how much the randomness affects things");
@@ -35,6 +38,9 @@ ConVar osu_mod_random_slider_offset_y_percent("osu_mod_random_slider_offset_y_pe
 ConVar osu_mod_random_spinner_offset_x_percent("osu_mod_random_spinner_offset_x_percent", 1.0f, "how much the randomness affects things");
 ConVar osu_mod_random_spinner_offset_y_percent("osu_mod_random_spinner_offset_y_percent", 1.0f, "how much the randomness affects things");
 ConVar osu_mod_reverse_sliders("osu_mod_reverse_sliders", false);
+ConVar osu_mod_strict_tracking("osu_mod_strict_tracking", false);
+ConVar osu_mod_strict_tracking_remove_slider_ticks("osu_mod_strict_tracking_remove_slider_ticks", false, "whether the strict tracking mod should remove slider ticks or not, this changed after its initial implementation in lazer");
+
 ConVar osu_show_approach_circle_on_first_hidden_object("osu_show_approach_circle_on_first_hidden_object", true);
 
 ConVar osu_stars_stacking("osu_stars_stacking", true, "respect hitobject stacking before calculating stars/pp");
@@ -44,6 +50,8 @@ ConVar osu_slider_max_repeat("osu_slider_max_repeat", 9000, "maximum number of r
 ConVar osu_number_max("osu_number_max", 0, "0 = disabled, 1/2/3/4/etc. limits visual circle numbers to this number");
 ConVar osu_ignore_beatmap_combo_numbers("osu_ignore_beatmap_combo_numbers", false, "may be used in conjunction with osu_number_max");
 
+ConVar osu_beatmap_version("osu_beatmap_version", 14, "maximum supported .osu file version, above this will simply not load");
+
 unsigned long long OsuDatabaseBeatmap::sortHackCounter = 0;
 
 ConVar *OsuDatabaseBeatmap::m_osu_slider_curve_max_length_ref = NULL;
@@ -52,11 +60,12 @@ ConVar *OsuDatabaseBeatmap::m_osu_stars_stacking_ref = NULL;
 ConVar *OsuDatabaseBeatmap::m_osu_debug_pp_ref = NULL;
 ConVar *OsuDatabaseBeatmap::m_osu_slider_end_inside_check_offset_ref = NULL;
 
-OsuDatabaseBeatmap::OsuDatabaseBeatmap(Osu *osu, UString filePath, UString folder)
+OsuDatabaseBeatmap::OsuDatabaseBeatmap(Osu *osu, UString filePath, UString folder, bool filePathIsInMemoryBeatmap)
 {
 	m_osu = osu;
 
 	m_sFilePath = filePath;
+	m_bFilePathIsInMemoryBeatmap = filePathIsInMemoryBeatmap;
 
 	m_sFolder = folder;
 
@@ -80,13 +89,13 @@ OsuDatabaseBeatmap::OsuDatabaseBeatmap(Osu *osu, UString filePath, UString folde
 
 	// raw metadata (note the special default values)
 
-	m_iVersion = 14;
+	m_iVersion = osu_beatmap_version.getInt();
 	m_iGameMode = 0;
 	m_iID = 0;
 	m_iSetID = -1;
 
 	m_iLengthMS = 0;
-	m_iPreviewTime = 0;
+	m_iPreviewTime = -1;
 
 	m_fAR = 5.0f;
 	m_fCS = 5.0f;
@@ -105,6 +114,7 @@ OsuDatabaseBeatmap::OsuDatabaseBeatmap(Osu *osu, UString filePath, UString folde
 
 	m_iMinBPM = 0;
 	m_iMaxBPM = 0;
+	m_iMostCommonBPM = 0;
 
 	m_iNumObjects = 0;
 	m_iNumCircles = 0;
@@ -134,7 +144,7 @@ OsuDatabaseBeatmap::~OsuDatabaseBeatmap()
 	}
 }
 
-OsuDatabaseBeatmap::PRIMITIVE_CONTAINER OsuDatabaseBeatmap::loadPrimitiveObjects(const UString &osuFilePath, Osu::GAMEMODE gameMode)
+OsuDatabaseBeatmap::PRIMITIVE_CONTAINER OsuDatabaseBeatmap::loadPrimitiveObjects(const UString &osuFilePath, Osu::GAMEMODE gameMode, bool filePathIsInMemoryBeatmap)
 {
 	PRIMITIVE_CONTAINER c;
 	{
@@ -151,14 +161,18 @@ OsuDatabaseBeatmap::PRIMITIVE_CONTAINER OsuDatabaseBeatmap::loadPrimitiveObjects
 	const float sliderSanityRange = m_osu_slider_curve_max_length_ref->getFloat(); // infinity sanity check, same as before
 	const int sliderMaxRepeatRange = osu_slider_max_repeat.getInt(); // NOTE: osu! will refuse to play any beatmap which has sliders with more than 9000 repeats, here we just clamp it instead
 
+
+
 	// open osu file for parsing
 	{
-		File file(osuFilePath);
-		if (!file.canRead())
+		File file(!filePathIsInMemoryBeatmap ? osuFilePath : "");
+		if (!file.canRead() && !filePathIsInMemoryBeatmap)
 		{
 			c.errorCode = 2;
 			return c;
 		}
+
+		std::istringstream ss(filePathIsInMemoryBeatmap ? osuFilePath.toUtf8() : ""); // eh
 
 		// load the actual beatmap
 		unsigned long long timingPointSortHack = 0;
@@ -167,11 +181,21 @@ OsuDatabaseBeatmap::PRIMITIVE_CONTAINER OsuDatabaseBeatmap::loadPrimitiveObjects
 		int colorOffset = 0;
 		int comboNumber = 1;
 		int curBlock = -1;
-		while (file.canRead())
+		std::string curLine;
+		while (!filePathIsInMemoryBeatmap ? file.canRead() : static_cast<bool>(std::getline(ss, curLine)))
 		{
-			UString uCurLine = file.readLine();
-			const char *curLineChar = uCurLine.toUtf8();
-			std::string curLine(curLineChar);
+			UString uCurLine;
+			char *curLineChar = NULL;
+			{
+				if (!filePathIsInMemoryBeatmap)
+				{
+					uCurLine = file.readLine();
+					curLineChar = (char*)uCurLine.toUtf8();
+					curLine = std::string(curLineChar);
+				}
+				else
+					curLineChar = (char*)curLine.c_str();
+			}
 
 			const int commentIndex = curLine.find("//");
 			if (commentIndex == std::string::npos || commentIndex != 0) // ignore comments, but only if at the beginning of a line (e.g. allow Artist:DJ'TEKINA//SOMETHING)
@@ -893,32 +917,47 @@ bool OsuDatabaseBeatmap::loadMetadata(OsuDatabaseBeatmap *databaseBeatmap)
 	// generate MD5 hash (loads entire file, very slow)
 	databaseBeatmap->m_sMD5Hash.clear();
 	{
-		File file(databaseBeatmap->m_sFilePath);
-		if (file.canRead())
+		File file(!databaseBeatmap->m_bFilePathIsInMemoryBeatmap ? databaseBeatmap->m_sFilePath : "");
+
+		const char *beatmapFile = NULL;
+		size_t beatmapFileSize = 0;
 		{
-			const char *beatmapFile = file.readFile();
-			if (beatmapFile != NULL)
+			if (!databaseBeatmap->m_bFilePathIsInMemoryBeatmap)
 			{
-				const char *hexDigits = "0123456789abcdef";
-				const unsigned char *input = (unsigned char*)beatmapFile;
-
-				MD5 hasher;
-				hasher.update(input, file.getFileSize());
-				hasher.finalize();
-
-				const unsigned char *rawMD5Hash = hasher.getDigest();
-
-				for (int i=0; i<16; i++)
+				if (file.canRead())
 				{
-					const size_t index1 = (rawMD5Hash[i] >> 4) & 0xf;	// md5hash[i] / 16
-					const size_t index2 = (rawMD5Hash[i] & 0xf);		// md5hash[i] % 16
-
-					if (index1 > 15 || index2 > 15)
-						continue;
-
-					databaseBeatmap->m_sMD5Hash += hexDigits[index1];
-					databaseBeatmap->m_sMD5Hash += hexDigits[index2];
+					beatmapFile = file.readFile();
+					beatmapFileSize = file.getFileSize();
 				}
+			}
+			else
+			{
+				beatmapFile = databaseBeatmap->m_sFilePath.toUtf8();
+				beatmapFileSize = databaseBeatmap->m_sFilePath.lengthUtf8();
+			}
+		}
+
+		if (beatmapFile != NULL && beatmapFileSize > 0)
+		{
+			const char *hexDigits = "0123456789abcdef";
+			const unsigned char *input = (unsigned char*)beatmapFile;
+
+			MD5 hasher;
+			hasher.update(input, beatmapFileSize);
+			hasher.finalize();
+
+			const unsigned char *rawMD5Hash = hasher.getDigest();
+
+			for (int i=0; i<16; i++)
+			{
+				const size_t index1 = (rawMD5Hash[i] >> 4) & 0xf;	// md5hash[i] / 16
+				const size_t index2 = (rawMD5Hash[i] & 0xf);		// md5hash[i] % 16
+
+				if (index1 > 15 || index2 > 15)
+					continue;
+
+				databaseBeatmap->m_sMD5Hash += hexDigits[index1];
+				databaseBeatmap->m_sMD5Hash += hexDigits[index2];
 			}
 		}
 	}
@@ -926,22 +965,34 @@ bool OsuDatabaseBeatmap::loadMetadata(OsuDatabaseBeatmap *databaseBeatmap)
 	// open osu file again, but this time for parsing
 	bool foundAR = false;
 	{
-		File file(databaseBeatmap->m_sFilePath);
-		if (!file.canRead())
+		File file(!databaseBeatmap->m_bFilePathIsInMemoryBeatmap ? databaseBeatmap->m_sFilePath : "");
+		if (!file.canRead() && !databaseBeatmap->m_bFilePathIsInMemoryBeatmap)
 		{
 			debugLog("Osu Error: Couldn't read file %s\n", databaseBeatmap->m_sFilePath.toUtf8());
 			return false;
 		}
 
+		std::istringstream ss(databaseBeatmap->m_bFilePathIsInMemoryBeatmap ? databaseBeatmap->m_sFilePath.toUtf8() : ""); // eh
+
 		// load metadata only
 		int curBlock = -1;
 		unsigned long long timingPointSortHack = 0;
 		char stringBuffer[1024];
-		while (file.canRead())
+		std::string curLine;
+		while (!databaseBeatmap->m_bFilePathIsInMemoryBeatmap ? file.canRead() : static_cast<bool>(std::getline(ss, curLine)))
 		{
-			UString uCurLine = file.readLine();
-			const char *curLineChar = uCurLine.toUtf8();
-			std::string curLine(curLineChar);
+			UString uCurLine;
+			char *curLineChar = NULL;
+			{
+				if (!databaseBeatmap->m_bFilePathIsInMemoryBeatmap)
+				{
+					uCurLine = file.readLine();
+					curLineChar = (char*)uCurLine.toUtf8();
+					curLine = std::string(curLineChar);
+				}
+				else
+					curLineChar = (char*)curLine.c_str();
+			}
 
 			const int commentIndex = curLine.find("//");
 			if (commentIndex == std::string::npos || commentIndex != 0) // ignore comments, but only if at the beginning of a line (e.g. allow Artist:DJ'TEKINA//SOMETHING)
@@ -963,7 +1014,14 @@ bool OsuDatabaseBeatmap::loadMetadata(OsuDatabaseBeatmap *databaseBeatmap)
 				{
 				case -1: // header (e.g. "osu file format v12")
 					{
-						sscanf(curLineChar, " osu file format v %i \n", &databaseBeatmap->m_iVersion);
+						if (sscanf(curLineChar, " osu file format v %i \n", &databaseBeatmap->m_iVersion) == 1)
+						{
+							if (databaseBeatmap->m_iVersion > osu_beatmap_version.getInt())
+							{
+								debugLog("Ignoring unknown/invalid beatmap version %i\n", databaseBeatmap->m_iVersion);
+								return false;
+							}
+						}
 					}
 					break;
 
@@ -977,7 +1035,7 @@ bool OsuDatabaseBeatmap::loadMetadata(OsuDatabaseBeatmap *databaseBeatmap)
 						}
 
 						sscanf(curLineChar, " StackLeniency : %f \n", &databaseBeatmap->m_fStackLeniency);
-						sscanf(curLineChar, " PreviewTime : %lu \n", &databaseBeatmap->m_iPreviewTime);
+						sscanf(curLineChar, " PreviewTime : %i \n", &databaseBeatmap->m_iPreviewTime);
 						sscanf(curLineChar, " Mode : %i \n", &databaseBeatmap->m_iGameMode);
 					}
 					break;
@@ -1135,14 +1193,17 @@ bool OsuDatabaseBeatmap::loadMetadata(OsuDatabaseBeatmap *databaseBeatmap)
 		std::sort(databaseBeatmap->m_timingpoints.begin(), databaseBeatmap->m_timingpoints.end(), TimingPointSortComparator());
 
 		// calculate bpm range
-		float tempMinBPM = 0;
+		float tempMinBPM = 0.0f;
 		float tempMaxBPM = std::numeric_limits<float>::max();
+		std::vector<TIMINGPOINT> uninheritedTimingpoints;
 		for (int i=0; i<databaseBeatmap->m_timingpoints.size(); i++)
 		{
 			const TIMINGPOINT &t = databaseBeatmap->m_timingpoints[i];
 
-			if (t.msPerBeat >= 0) // NOT inherited
+			if (t.msPerBeat >= 0.0f) // NOT inherited
 			{
+				uninheritedTimingpoints.push_back(t);
+
 				if (t.msPerBeat > tempMinBPM)
 					tempMinBPM = t.msPerBeat;
 				if (t.msPerBeat < tempMaxBPM)
@@ -1151,14 +1212,114 @@ bool OsuDatabaseBeatmap::loadMetadata(OsuDatabaseBeatmap *databaseBeatmap)
 		}
 
 		// convert from msPerBeat to BPM
-		const float msPerMinute = 1 * 60 * 1000;
-		if (tempMinBPM != 0)
+		const float msPerMinute = 1.0f * 60.0f * 1000.0f;
+		if (tempMinBPM != 0.0f)
 			tempMinBPM = msPerMinute / tempMinBPM;
-		if (tempMaxBPM != 0)
+		if (tempMaxBPM != 0.0f)
 			tempMaxBPM = msPerMinute / tempMaxBPM;
 
 		databaseBeatmap->m_iMinBPM = (int)std::round(tempMinBPM);
 		databaseBeatmap->m_iMaxBPM = (int)std::round(tempMaxBPM);
+
+		struct MostCommonBPMHelper
+		{
+			static int calculateMostCommonBPM(const std::vector<OsuDatabaseBeatmap::TIMINGPOINT> &uninheritedTimingpoints, long lastTime)
+			{
+				if (uninheritedTimingpoints.size() < 1) return 0;
+
+				struct Tuple
+				{
+					float beatLength;
+					long duration;
+
+					size_t sortHack;
+				};
+
+				// "Construct a set of (beatLength, duration) tuples for each individual timing point."
+				std::vector<Tuple> tuples;
+				tuples.reserve(uninheritedTimingpoints.size());
+				for (size_t i=0; i<uninheritedTimingpoints.size(); i++)
+				{
+					const OsuDatabaseBeatmap::TIMINGPOINT &t = uninheritedTimingpoints[i];
+
+					Tuple tuple;
+					{
+						if (t.offset > lastTime)
+						{
+							tuple.beatLength = std::round(t.msPerBeat * 1000.0f) / 1000.0f;
+							tuple.duration = 0;
+						}
+						else
+						{
+							// "osu-stable forced the first control point to start at 0."
+							// "This is reproduced here to maintain compatibility around osu!mania scroll speed and song select display."
+							const long currentTime = (i == 0 ? 0 : t.offset);
+							const long nextTime = (i >= uninheritedTimingpoints.size() - 1 ? lastTime : uninheritedTimingpoints[i + 1].offset);
+
+							tuple.beatLength = std::round(t.msPerBeat * 1000.0f) / 1000.0f;
+							tuple.duration = std::max(nextTime - currentTime, (long)0);
+						}
+
+						tuple.sortHack = i;
+					}
+					tuples.push_back(tuple);
+				}
+
+				// "Aggregate durations into a set of (beatLength, duration) tuples for each beat length"
+				std::vector<Tuple> aggregations;
+				aggregations.reserve(tuples.size());
+				for (size_t i=0; i<tuples.size(); i++)
+				{
+					const Tuple &t = tuples[i];
+
+					bool foundExistingAggregation = false;
+					size_t aggregationIndex = 0;
+					for (size_t j=0; j<aggregations.size(); j++)
+					{
+						if (aggregations[j].beatLength == t.beatLength)
+						{
+							foundExistingAggregation = true;
+							aggregationIndex = j;
+							break;
+						}
+					}
+
+					if (!foundExistingAggregation)
+						aggregations.push_back(t);
+					else
+						aggregations[aggregationIndex].duration += t.duration;
+				}
+
+				// "Get the most common one, or 0 as a suitable default"
+				struct SortByDuration
+				{
+				    bool operator() (Tuple const &a, Tuple const &b) const
+				    {
+				    	// first condition: duration
+				    	// second condition: if duration is the same, higher BPM goes before lower BPM
+
+				    	// strict weak ordering!
+				    	if (a.duration == b.duration && a.beatLength == b.beatLength)
+				    		return a.sortHack > b.sortHack;
+				    	else if (a.duration == b.duration)
+				    		return (a.beatLength < b.beatLength);
+				    	else
+				    		return (a.duration > b.duration);
+				    }
+				};
+				std::sort(aggregations.begin(), aggregations.end(), SortByDuration());
+
+				float mostCommonBPM = aggregations[0].beatLength;
+				{
+					// convert from msPerBeat to BPM
+					const float msPerMinute = 1.0f * 60.0f * 1000.0f;
+					if (mostCommonBPM != 0.0f)
+						mostCommonBPM = msPerMinute / mostCommonBPM;
+				}
+				return (int)std::round(mostCommonBPM);
+			}
+		};
+		databaseBeatmap->m_iMostCommonBPM = MostCommonBPMHelper::calculateMostCommonBPM(uninheritedTimingpoints, databaseBeatmap->m_timingpoints[databaseBeatmap->m_timingpoints.size() - 1].offset);
 	}
 
 	// special case: old beatmaps have AR = OD, there is no ApproachRate stored
@@ -1180,7 +1341,7 @@ OsuDatabaseBeatmap::LOAD_GAMEPLAY_RESULT OsuDatabaseBeatmap::loadGameplay(OsuDat
 	}
 
 	// load primitives, put in temporary container
-	PRIMITIVE_CONTAINER c = loadPrimitiveObjects(databaseBeatmap->m_sFilePath, databaseBeatmap->m_osu->getGamemode());
+	PRIMITIVE_CONTAINER c = loadPrimitiveObjects(databaseBeatmap->m_sFilePath, databaseBeatmap->m_osu->getGamemode(), databaseBeatmap->m_bFilePathIsInMemoryBeatmap);
 	if (c.errorCode != 0)
 	{
 		result.errorCode = c.errorCode;
@@ -1286,6 +1447,9 @@ OsuDatabaseBeatmap::LOAD_GAMEPLAY_RESULT OsuDatabaseBeatmap::loadGameplay(OsuDat
 			for (size_t i=0; i<c.sliders.size(); i++)
 			{
 				SLIDER &s = c.sliders[i];
+
+				if (osu_mod_strict_tracking.getBool() && osu_mod_strict_tracking_remove_slider_ticks.getBool())
+					s.ticks.clear();
 
 				if (osu_mod_random.getBool())
 				{
@@ -1498,7 +1662,9 @@ void OsuDatabaseBeatmap::setDifficulties(std::vector<OsuDatabaseBeatmap*> &diffi
 		m_fOD = 0.0f;
 		m_fHP = 0.0f;
 		m_fStarsNomod = 0.0f;
+		m_iMinBPM = std::numeric_limits<int>::max();
 		m_iMaxBPM = 0;
+		m_iMostCommonBPM = 0;
 		m_iLastModificationTime = 0;
 		for (size_t i=0; i<m_difficulties.size(); i++)
 		{
@@ -1514,8 +1680,12 @@ void OsuDatabaseBeatmap::setDifficulties(std::vector<OsuDatabaseBeatmap*> &diffi
 				m_fOD = m_difficulties[i]->getOD();
 			if (m_difficulties[i]->getStarsNomod() > m_fStarsNomod)
 				m_fStarsNomod = m_difficulties[i]->getStarsNomod();
+			if (m_difficulties[i]->getMinBPM() < m_iMinBPM)
+				m_iMinBPM = m_difficulties[i]->getMinBPM();
 			if (m_difficulties[i]->getMaxBPM() > m_iMaxBPM)
 				m_iMaxBPM = m_difficulties[i]->getMaxBPM();
+			if (m_difficulties[i]->getMostCommonBPM() > m_iMostCommonBPM)
+				m_iMostCommonBPM = m_difficulties[i]->getMostCommonBPM();
 			if (m_difficulties[i]->getLastModificationTime() > m_iLastModificationTime)
 				m_iLastModificationTime = m_difficulties[i]->getLastModificationTime();
 		}

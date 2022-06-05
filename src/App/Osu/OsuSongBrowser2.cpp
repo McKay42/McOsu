@@ -214,20 +214,20 @@ bool OsuSongBrowser2::SortByBPM::operator () (OsuUISongBrowserButton const *a, O
 	if (a->getDatabaseBeatmap() == NULL || b->getDatabaseBeatmap() == NULL)
 		return a->getSortHack() < b->getSortHack();
 
-	int bpm1 = a->getDatabaseBeatmap()->getMaxBPM();
+	int bpm1 = a->getDatabaseBeatmap()->getMostCommonBPM();
 	const std::vector<OsuDatabaseBeatmap*> &aDiffs = a->getDatabaseBeatmap()->getDifficulties();
 	for (size_t i=0; i<aDiffs.size(); i++)
 	{
-		if (aDiffs[i]->getMaxBPM() > bpm1)
-			bpm1 = aDiffs[i]->getMaxBPM();
+		if (aDiffs[i]->getMostCommonBPM() > bpm1)
+			bpm1 = aDiffs[i]->getMostCommonBPM();
 	}
 
-	int bpm2 = b->getDatabaseBeatmap()->getMaxBPM();
+	int bpm2 = b->getDatabaseBeatmap()->getMostCommonBPM();
 	const std::vector<OsuDatabaseBeatmap*> &bDiffs = b->getDatabaseBeatmap()->getDifficulties();
 	for (size_t i=0; i<bDiffs.size(); i++)
 	{
-		if (bDiffs[i]->getMaxBPM() > bpm2)
-			bpm2 = bDiffs[i]->getMaxBPM();
+		if (bDiffs[i]->getMostCommonBPM() > bpm2)
+			bpm2 = bDiffs[i]->getMostCommonBPM();
 	}
 
 	// strict weak ordering!
@@ -282,7 +282,7 @@ bool OsuSongBrowser2::SortByDifficulty::operator () (OsuUISongBrowserButton cons
 	if (a->getDatabaseBeatmap() == NULL || b->getDatabaseBeatmap() == NULL)
 		return a->getSortHack() < b->getSortHack();
 
-	float diff1 = (a->getDatabaseBeatmap()->getAR()+1)*(a->getDatabaseBeatmap()->getCS()+1)*(a->getDatabaseBeatmap()->getHP()+1)*(a->getDatabaseBeatmap()->getOD()+1)*(std::max(a->getDatabaseBeatmap()->getMaxBPM(), 1));
+	float diff1 = (a->getDatabaseBeatmap()->getAR()+1)*(a->getDatabaseBeatmap()->getCS()+1)*(a->getDatabaseBeatmap()->getHP()+1)*(a->getDatabaseBeatmap()->getOD()+1)*(std::max(a->getDatabaseBeatmap()->getMostCommonBPM(), 1));
 	float stars1 = a->getDatabaseBeatmap()->getStarsNomod();
 	const std::vector<OsuDatabaseBeatmap*> &aDiffs = a->getDatabaseBeatmap()->getDifficulties();
 	for (size_t i=0; i<aDiffs.size(); i++)
@@ -291,12 +291,12 @@ bool OsuSongBrowser2::SortByDifficulty::operator () (OsuUISongBrowserButton cons
 		if (d->getStarsNomod() > stars1)
 			stars1 = d->getStarsNomod();
 
-		const float tempDiff1 = (d->getAR()+1)*(d->getCS()+1)*(d->getHP()+1)*(d->getOD()+1)*(std::max(d->getMaxBPM(), 1));
+		const float tempDiff1 = (d->getAR()+1)*(d->getCS()+1)*(d->getHP()+1)*(d->getOD()+1)*(std::max(d->getMostCommonBPM(), 1));
 		if (tempDiff1 > diff1)
 			diff1 = tempDiff1;
 	}
 
-	float diff2 = (b->getDatabaseBeatmap()->getAR()+1)*(b->getDatabaseBeatmap()->getCS()+1)*(b->getDatabaseBeatmap()->getHP()+1)*(b->getDatabaseBeatmap()->getOD()+1)*(std::max(b->getDatabaseBeatmap()->getMaxBPM(), 1));
+	float diff2 = (b->getDatabaseBeatmap()->getAR()+1)*(b->getDatabaseBeatmap()->getCS()+1)*(b->getDatabaseBeatmap()->getHP()+1)*(b->getDatabaseBeatmap()->getOD()+1)*(std::max(b->getDatabaseBeatmap()->getMostCommonBPM(), 1));
 	float stars2 = b->getDatabaseBeatmap()->getStarsNomod();
 	const std::vector<OsuDatabaseBeatmap*> &bDiffs = b->getDatabaseBeatmap()->getDifficulties();
 	for (size_t i=0; i<bDiffs.size(); i++)
@@ -305,7 +305,7 @@ bool OsuSongBrowser2::SortByDifficulty::operator () (OsuUISongBrowserButton cons
 		if (d->getStarsNomod() > stars2)
 			stars2 = d->getStarsNomod();
 
-		const float tempDiff2 = (d->getAR()+1)*(d->getCS()+1)*(d->getHP()+1)*(d->getOD()+1)*(std::max(d->getMaxBPM(), 1));
+		const float tempDiff2 = (d->getAR()+1)*(d->getCS()+1)*(d->getHP()+1)*(d->getOD()+1)*(std::max(d->getMostCommonBPM(), 1));
 		if (tempDiff2 > diff1)
 			diff2 = tempDiff2;
 	}
@@ -514,7 +514,7 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	addBottombarNavButton([this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionOptions();}, [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionOptionsOver();})->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onSelectionOptions) );
 
 	m_userButton = new OsuUISongBrowserUserButton(m_osu);
-	m_userButton->addTooltipLine("Click to change [User] or view [Top Ranks]");
+	m_userButton->addTooltipLine("Click to change [User] or view/edit [Top Ranks]");
 	m_userButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onUserButtonClicked) );
 	m_userButton->setText(m_name_ref->getString());
 	m_bottombar->addBaseUIElement(m_userButton);
@@ -769,7 +769,7 @@ void OsuSongBrowser2::draw(Graphics *g)
 			// draw strain bar graph
 			if (highestAimStrain > 0.0 && highestSpeedStrain > 0.0 && highestStrain > 0.0)
 			{
-				const float dpiScale = Osu::getUIScale();
+				const float dpiScale = Osu::getUIScale(m_osu);
 
 				const float graphWidth = m_scoreBrowser->getSize().x;
 
@@ -1535,6 +1535,11 @@ void OsuSongBrowser2::onKeyDown(KeyboardEvent &key)
 		}
 	}
 
+	if (key == KEY_PAGEUP)
+		m_songBrowser->scrollY(m_songBrowser->getSize().y);
+	if (key == KEY_PAGEDOWN)
+		m_songBrowser->scrollY(-m_songBrowser->getSize().y);
+
 	// group open/close
 	// NOTE: only closing works atm (no "focus" state on buttons yet)
 	if (key == KEY_ENTER && engine->getKeyboard()->isShiftDown())
@@ -1663,6 +1668,8 @@ void OsuSongBrowser2::onPlayEnd(bool quit)
 void OsuSongBrowser2::onSelectionChange(OsuUISongBrowserButton *button, bool rebuild)
 {
 	if (button == NULL) return;
+
+	m_contextMenu->setVisible2(false);
 
 	// keep track and update all selection states
 	// I'm still not happy with this, but at least all state update logic is localized in this function instead of spread across all buttons
@@ -2464,7 +2471,7 @@ bool OsuSongBrowser2::searchMatcher(const OsuDatabaseBeatmap *databaseBeatmap, c
 									compareValue = diff->getHP();
 									break;
 								case BPM:
-									compareValue = diff->getMaxBPM();
+									compareValue = diff->getMostCommonBPM();
 									break;
 								case OPM:
 									compareValue = (diff->getLengthMS() > 0 ? ((float)diff->getNumObjects() / (float)(diff->getLengthMS() / 1000.0f / 60.0f)) : 0.0f) * databaseBeatmap->getOsu()->getSpeedMultiplier();
@@ -2666,7 +2673,7 @@ void OsuSongBrowser2::updateLayout()
 	OsuScreenBackable::updateLayout();
 
 	const float uiScale = Osu::ui_scale->getFloat();
-	const float dpiScale = Osu::getUIScale();
+	const float dpiScale = Osu::getUIScale(m_osu);
 
 	const int margin = 5 * dpiScale;
 
@@ -2807,7 +2814,7 @@ void OsuSongBrowser2::onBack()
 
 void OsuSongBrowser2::updateScoreBrowserLayout()
 {
-	const float dpiScale = Osu::getUIScale();
+	const float dpiScale = Osu::getUIScale(m_osu);
 
 	if (m_osu_scores_enabled->getBool() != m_scoreBrowser->isVisible())
 		m_scoreBrowser->setVisible(m_osu_scores_enabled->getBool());
@@ -4277,7 +4284,10 @@ void OsuSongBrowser2::recalculateStarsForSelectedBeatmap(bool force)
 void OsuSongBrowser2::selectSongButton(OsuUISongBrowserButton *songButton)
 {
 	if (songButton != NULL && !songButton->isSelected())
+	{
+		m_contextMenu->setVisible2(false);
 		songButton->select();
+	}
 }
 
 void OsuSongBrowser2::selectRandomBeatmap()

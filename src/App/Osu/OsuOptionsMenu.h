@@ -137,7 +137,6 @@ private:
 	void onAudioCompatibilityModeChange(CBaseUICheckbox *checkbox);
 	void onDownloadOsuClicked();
 	void onManuallyManageBeatmapsClicked();
-	void onLIVReloadCalibrationClicked();
 	void onCM360CalculatorLinkClicked();
 	void onNotelockSelect();
 	void onNotelockSelect2(UString notelockType, int id = -1);
@@ -181,6 +180,7 @@ private:
 	// reset
 	void onResetUpdate(CBaseUIButton *button);
 	void onResetClicked(CBaseUIButton *button);
+	void onResetEverythingClicked(CBaseUIButton *button);
 
 	// options
 	void addSpacer();
@@ -301,8 +301,8 @@ private:
 	bool m_bWASAPIBufferChangeScheduled;
 	bool m_bWASAPIPeriodChangeScheduled;
 
-	// key bindings
 	int m_iNumResetAllKeyBindingsPressed;
+	int m_iNumResetEverythingPressed;
 
 	// mania layout
 	int m_iManiaK;

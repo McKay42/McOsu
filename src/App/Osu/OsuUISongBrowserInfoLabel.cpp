@@ -50,6 +50,7 @@ OsuUISongBrowserInfoLabel::OsuUISongBrowserInfoLabel(Osu *osu, float xPos, float
 	m_iLengthMS = 0;
 	m_iMinBPM = 0;
 	m_iMaxBPM = 0;
+	m_iMostCommonBPM = 0;
 	m_iNumObjects = 0;
 
 	m_fCS = 5.0f;
@@ -240,7 +241,8 @@ void OsuUISongBrowserInfoLabel::update()
 
 					m_osu->getTooltipOverlay()->addLine(UString::format("Circles: %i, Sliders: %i, Spinners: %i", numCircles, numSliders, std::max(0, numObjects - numCircles - numSliders)));
 					m_osu->getTooltipOverlay()->addLine(UString::format("OPM: %i, CPM: %i, SPM: %i", (int)opm, (int)cpm, (int)spm));
-					m_osu->getTooltipOverlay()->addLine(UString::format("ID: %i", beatmap->getSelectedDifficulty2()->getID()));
+					m_osu->getTooltipOverlay()->addLine(UString::format("ID: %i, SetID: %i", beatmap->getSelectedDifficulty2()->getID(), beatmap->getSelectedDifficulty2()->getSetID()));
+					m_osu->getTooltipOverlay()->addLine(UString::format("MD5: %s", beatmap->getSelectedDifficulty2()->getMD5Hash().c_str()));
 				}
 			}
 			m_osu->getTooltipOverlay()->end();
@@ -258,7 +260,7 @@ void OsuUISongBrowserInfoLabel::setFromBeatmap(OsuBeatmap *beatmap, OsuDatabaseB
 	setMapper(diff2->getCreator());
 
 	setLengthMS(diff2->getLengthMS());
-	setBPM(diff2->getMinBPM(), diff2->getMaxBPM());
+	setBPM(diff2->getMinBPM(), diff2->getMaxBPM(), diff2->getMostCommonBPM());
 	setNumObjects(diff2->getNumObjects());
 
 	setCS(diff2->getCS());
@@ -281,7 +283,7 @@ void OsuUISongBrowserInfoLabel::setFromMissingBeatmap(long beatmapId)
 	setMapper("MISSING BEATMAP!");
 
 	setLengthMS(0);
-	setBPM(0, 0);
+	setBPM(0, 0, 0);
 	setNumObjects(0);
 
 	setCS(0);
@@ -349,6 +351,7 @@ UString OsuUISongBrowserInfoLabel::buildSongInfoString()
 
 	const int minBPM = m_iMinBPM * m_osu->getSpeedMultiplier();
 	const int maxBPM = m_iMaxBPM * m_osu->getSpeedMultiplier();
+	const int mostCommonBPM = m_iMostCommonBPM * m_osu->getSpeedMultiplier();
 
 	int numObjects = m_iNumObjects;
 
@@ -358,7 +361,7 @@ UString OsuUISongBrowserInfoLabel::buildSongInfoString()
 	if (m_iMinBPM == m_iMaxBPM)
 		return UString::format("Length: %02i:%02i BPM: %i Objects: %i", minutes, seconds, maxBPM, numObjects);
 	else
-		return UString::format("Length: %02i:%02i BPM: %i-%i Objects: %i", minutes, seconds, minBPM, maxBPM, numObjects);
+		return UString::format("Length: %02i:%02i BPM: %i-%i (%i) Objects: %i", minutes, seconds, minBPM, maxBPM, mostCommonBPM, numObjects);
 }
 
 UString OsuUISongBrowserInfoLabel::buildDiffInfoString()
