@@ -862,6 +862,9 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSpacer();
 	const UString keyboardSectionTags = "keyboard keys key bindings binds keybinds keybindings";
 	CBaseUIElement *subSectionKeyboard = addSubSection("Keyboard", keyboardSectionTags);
+	OsuUIButton *resetAllKeyBindingsButton = addButton("Reset all key bindings");
+	resetAllKeyBindingsButton->setColor(0xffff0000);
+	resetAllKeyBindingsButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingsResetAllPressed) );
 	addSubSection("Keys - osu! Standard Mode", keyboardSectionTags);
 	addKeyBindButton("Left Click", &OsuKeyBindings::LEFT_CLICK);
 	addKeyBindButton("Right Click", &OsuKeyBindings::RIGHT_CLICK);
@@ -903,10 +906,6 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addKeyBindButton("Spunout", &OsuKeyBindings::MOD_SPUNOUT);
 	addKeyBindButton("Auto", &OsuKeyBindings::MOD_AUTO);
 	addKeyBindButton("Score V2", &OsuKeyBindings::MOD_SCOREV2);
-	addSpacer();
-	OsuUIButton *resetAllKeyBindingsButton = addButton("Reset all key bindings");
-	resetAllKeyBindingsButton->setColor(0xffff0000);
-	resetAllKeyBindingsButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingsResetAllPressed) );
 	///addButton("osu!mania layout")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingManiaPressed) );
 
 	//**************************************************************************************************************************//
