@@ -2152,7 +2152,7 @@ void OsuBeatmap::handlePreviewPlay()
 			if (m_iContinueMusicPos != 0)
 				m_music->setPositionMS(m_iContinueMusicPos);
 			else
-				m_music->setPositionMS(m_selectedDifficulty2->getPreviewTime());
+				m_music->setPositionMS(m_selectedDifficulty2->getPreviewTime() < 0 ? (unsigned long)(m_music->getLengthMS() * 0.40f) : m_selectedDifficulty2->getPreviewTime());
 
 			m_music->setVolume(m_osu_volume_music_ref->getFloat());
 		}

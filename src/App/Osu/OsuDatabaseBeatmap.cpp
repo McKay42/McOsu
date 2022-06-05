@@ -95,7 +95,7 @@ OsuDatabaseBeatmap::OsuDatabaseBeatmap(Osu *osu, UString filePath, UString folde
 	m_iSetID = -1;
 
 	m_iLengthMS = 0;
-	m_iPreviewTime = 0;
+	m_iPreviewTime = -1;
 
 	m_fAR = 5.0f;
 	m_fCS = 5.0f;
@@ -1035,7 +1035,7 @@ bool OsuDatabaseBeatmap::loadMetadata(OsuDatabaseBeatmap *databaseBeatmap)
 						}
 
 						sscanf(curLineChar, " StackLeniency : %f \n", &databaseBeatmap->m_fStackLeniency);
-						sscanf(curLineChar, " PreviewTime : %lu \n", &databaseBeatmap->m_iPreviewTime);
+						sscanf(curLineChar, " PreviewTime : %i \n", &databaseBeatmap->m_iPreviewTime);
 						sscanf(curLineChar, " Mode : %i \n", &databaseBeatmap->m_iGameMode);
 					}
 					break;

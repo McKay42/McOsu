@@ -1442,7 +1442,6 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 		int duration = db->readInt(); // milliseconds
 		duration = duration >= 0 ? duration : 0; // sanity clamp
 		int previewTime = db->readInt();
-		previewTime = previewTime >= 0 ? previewTime : 0; // sanity clamp
 
 		//debugLog("drainTime = %i sec, duration = %i ms, previewTime = %i ms\n", drainTime, duration, previewTime);
 
