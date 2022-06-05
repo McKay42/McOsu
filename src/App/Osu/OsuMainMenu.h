@@ -121,6 +121,7 @@ private:
 	CBaseUIButton *m_versionButton;
 
 	bool m_bDrawVersionNotificationArrow;
+	bool m_bDidUserUpdateFromOlderVersion;
 
 	// custom
 	float m_fMainMenuAnimTime;

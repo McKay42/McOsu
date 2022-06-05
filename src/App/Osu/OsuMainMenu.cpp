@@ -44,7 +44,7 @@
 #include "CBaseUIButton.h"
 
 #define MCOSU_VERSION_TEXT "Version"
-#define MCOSU_BANNER_TEXT "-- dev --"
+#define MCOSU_BANNER_TEXT ""
 UString OsuMainMenu::MCOSU_MAIN_BUTTON_TEXT = UString("McOsu");
 UString OsuMainMenu::MCOSU_MAIN_BUTTON_SUBTEXT = UString("Practice Client");
 #define MCOSU_MAIN_BUTTON_BACK_TEXT "by McKay"
@@ -216,6 +216,9 @@ ConVar osu_main_menu_slider_text_scale("osu_main_menu_slider_text_scale", 1.0f);
 ConVar osu_main_menu_slider_text_offset_x("osu_main_menu_slider_text_offset_x", 15.0f);
 ConVar osu_main_menu_slider_text_offset_y("osu_main_menu_slider_text_offset_y", 0.0f);
 
+ConVar osu_main_menu_banner_always_text("osu_main_menu_banner_always_text", "");
+ConVar osu_main_menu_banner_ifupdatedfromoldversion_text("osu_main_menu_banner_ifupdatedfromoldversion_text", "");
+
 ConVar *OsuMainMenu::m_osu_universal_offset_ref = NULL;
 ConVar *OsuMainMenu::m_osu_universal_offset_hardcoded_ref = NULL;
 ConVar *OsuMainMenu::m_osu_old_beatmap_offset_ref = NULL;
@@ -312,21 +315,25 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen(osu)
 	m_fStartupAnim2 = 0.0f;
 
 	// check if the user has never clicked the changelog for this update
-	m_bDrawVersionNotificationArrow = false;
-	if (env->fileExists(MCOSU_NEWVERSION_NOTIFICATION_TRIGGER_FILE))
+	m_bDidUserUpdateFromOlderVersion = false;
 	{
-		File versionFile(MCOSU_NEWVERSION_NOTIFICATION_TRIGGER_FILE);
-		if (versionFile.canRead())
+		m_bDrawVersionNotificationArrow = false;
+		if (env->fileExists(MCOSU_NEWVERSION_NOTIFICATION_TRIGGER_FILE))
 		{
-			float version = versionFile.readLine().toFloat();
-			if (version < Osu::version->getFloat() - 0.0001f)
+			File versionFile(MCOSU_NEWVERSION_NOTIFICATION_TRIGGER_FILE);
+			if (versionFile.canRead())
+			{
+				float version = versionFile.readLine().toFloat();
+				if (version < Osu::version->getFloat() - 0.0001f)
+					m_bDrawVersionNotificationArrow = true;
+			}
+			else
 				m_bDrawVersionNotificationArrow = true;
 		}
 		else
-			m_bDrawVersionNotificationArrow = true;
+			m_bDrawVersionNotificationArrow = false;
 	}
-	else
-		m_bDrawVersionNotificationArrow = true;
+	m_bDidUserUpdateFromOlderVersion = m_bDrawVersionNotificationArrow; // (same logic atm)
 
 	m_container = new CBaseUIContainer(-1, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight(), "");
 	m_mainButton = new OsuMainMenuMainButton(this, 0, 0, 1, 1, "", "");
@@ -491,21 +498,14 @@ void OsuMainMenu::draw(Graphics *g)
 	size *= m_fStartupAnim;
 	McRect mainButtonRect = McRect(m_vCenter.x - size.x/2.0f - m_fCenterOffsetAnim, m_vCenter.y - size.y/2.0f, size.x, size.y);
 
-	bool drawBanner = false; // false
+	bool drawBanner = true;
 
 #ifdef __SWITCH__
 
-	drawBanner = drawBanner || ((HorizonSDLEnvironment*)env)->getMemAvailableMB() < 1024;
+	drawBanner = ((HorizonSDLEnvironment*)env)->getMemAvailableMB() < 1024;
 
 #endif
 
-#ifdef MCENGINE_FEATURE_BASS_WASAPI
-
-	drawBanner = true;
-
-#endif
-
-	// draw banner
 	if (drawBanner)
 	{
 		UString bannerText = MCOSU_BANNER_TEXT;
@@ -519,30 +519,38 @@ void OsuMainMenu::draw(Graphics *g)
 
 #endif
 
-		McFont *bannerFont = m_osu->getSubTitleFont();
-		float bannerStringWidth = bannerFont->getStringWidth(bannerText);
-		int bannerDiff = 20;
-		int bannerMargin = 5;
-		int numBanners = (int)std::round(m_osu->getScreenWidth() / (bannerStringWidth + bannerDiff)) + 2;
+		if (osu_main_menu_banner_always_text.getString().length() > 0)
+			bannerText = osu_main_menu_banner_always_text.getString();
+		else if (m_bDidUserUpdateFromOlderVersion && osu_main_menu_banner_ifupdatedfromoldversion_text.getString().length() > 0)
+			bannerText = osu_main_menu_banner_ifupdatedfromoldversion_text.getString();
 
-		g->setColor(0xffee7777);
-		g->pushTransform();
-		g->translate(1, 1);
-		for (int i=-1; i<numBanners; i++)
+		if (bannerText.length() > 0)
 		{
+			McFont *bannerFont = m_osu->getSubTitleFont();
+			float bannerStringWidth = bannerFont->getStringWidth(bannerText);
+			int bannerDiff = 20;
+			int bannerMargin = 5;
+			int numBanners = (int)std::round(m_osu->getScreenWidth() / (bannerStringWidth + bannerDiff)) + 2;
+
+			g->setColor(0xffee7777);
 			g->pushTransform();
-			g->translate(i*bannerStringWidth + i*bannerDiff + fmod(engine->getTime()*30, bannerStringWidth + bannerDiff), bannerFont->getHeight() + bannerMargin);
-			g->drawString(bannerFont, bannerText);
+			g->translate(1, 1);
+			for (int i=-1; i<numBanners; i++)
+			{
+				g->pushTransform();
+				g->translate(i*bannerStringWidth + i*bannerDiff + fmod(engine->getTime()*30, bannerStringWidth + bannerDiff), bannerFont->getHeight() + bannerMargin);
+				g->drawString(bannerFont, bannerText);
+				g->popTransform();
+			}
 			g->popTransform();
-		}
-		g->popTransform();
-		g->setColor(0xff555555);
-		for (int i=-1; i<numBanners; i++)
-		{
-			g->pushTransform();
-			g->translate(i*bannerStringWidth + i*bannerDiff + fmod(engine->getTime()*30, bannerStringWidth + bannerDiff), bannerFont->getHeight() + bannerMargin);
-			g->drawString(bannerFont, bannerText);
-			g->popTransform();
+			g->setColor(0xff555555);
+			for (int i=-1; i<numBanners; i++)
+			{
+				g->pushTransform();
+				g->translate(i*bannerStringWidth + i*bannerDiff + fmod(engine->getTime()*30, bannerStringWidth + bannerDiff), bannerFont->getHeight() + bannerMargin);
+				g->drawString(bannerFont, bannerText);
+				g->popTransform();
+			}
 		}
 	}
 
@@ -1477,12 +1485,9 @@ void OsuMainMenu::setMenuElementsVisible(bool visible, bool animate)
 void OsuMainMenu::writeVersionFile()
 {
 	// remember, don't show the notification arrow until the version changes again
-	std::ofstream versionFile(MCOSU_NEWVERSION_NOTIFICATION_TRIGGER_FILE);
+	std::ofstream versionFile(MCOSU_NEWVERSION_NOTIFICATION_TRIGGER_FILE, std::ios::out | std::ios::trunc);
 	if (versionFile.good())
-	{
 		versionFile << Osu::version->getFloat();
-		versionFile.close();
-	}
 }
 
 OsuMainMenuButton *OsuMainMenu::addMainMenuButton(UString text)
