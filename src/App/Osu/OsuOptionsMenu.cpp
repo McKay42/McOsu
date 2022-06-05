@@ -773,15 +773,15 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	hitResultScaleSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
 	hitResultScaleSlider->setKeyDelta(0.01f);
 	addCheckbox("Draw Numbers", convar->getConVarByName("osu_draw_numbers"));
-	addCheckbox("Draw ApproachCircles", convar->getConVarByName("osu_draw_approach_circles"));
+	addCheckbox("Draw Approach Circles", convar->getConVarByName("osu_draw_approach_circles"));
 	addSpacer();
 	addCheckbox("Ignore Beatmap Sample Volume", "Ignore beatmap timingpoint effect volumes.\nQuiet hitsounds can destroy accuracy and concentration, enabling this will fix that.", convar->getConVarByName("osu_ignore_beatmap_sample_volume"));
 	addCheckbox("Ignore Beatmap Combo Colors", convar->getConVarByName("osu_ignore_beatmap_combo_colors"));
 	addCheckbox("Use skin's sound samples", "If this is not selected, then the default skin hitsounds will be used.", convar->getConVarByName("osu_skin_use_skin_hitsounds"));
 	addCheckbox("Load HD @2x", "On very low resolutions (below 1600x900) you can disable this to get smoother visuals.", convar->getConVarByName("osu_skin_hd"));
 	addSpacer();
-	addCheckbox("Draw CursorTrail", convar->getConVarByName("osu_draw_cursor_trail"));
-	addCheckbox("Force Smooth CursorTrail", "Usually, the presence of the cursormiddle.png skin image enables smooth cursortrails.\nThis option allows you to force enable smooth cursortrails for all skins.", convar->getConVarByName("osu_cursor_trail_smooth_force"));
+	addCheckbox("Draw Cursor Trail", convar->getConVarByName("osu_draw_cursor_trail"));
+	addCheckbox("Force Smooth Cursor Trail", "Usually, the presence of the cursormiddle.png skin image enables smooth cursortrails.\nThis option allows you to force enable smooth cursortrails for all skins.", convar->getConVarByName("osu_cursor_trail_smooth_force"));
 	m_cursorSizeSlider = addSlider("Cursor Size:", 0.01f, 5.0f, convar->getConVarByName("osu_cursor_scale"), -1.0f, true);
 	m_cursorSizeSlider->setAnimated(false);
 	m_cursorSizeSlider->setKeyDelta(0.01f);
@@ -796,7 +796,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Use osu!lazer Slider Style", "Only really looks good if your skin doesn't \"SliderTrackOverride\" too dark.", convar->getConVarByName("osu_slider_osu_next_style"));
 	addCheckbox("Use combo color as tint for slider ball", convar->getConVarByName("osu_slider_ball_tint_combo_color"));
 	addCheckbox("Use combo color as tint for slider border", convar->getConVarByName("osu_slider_border_tint_combo_color"));
-	addCheckbox("Draw SliderEndCircle", convar->getConVarByName("osu_slider_draw_endcircle"));
+	addCheckbox("Draw Slider End Circle", convar->getConVarByName("osu_slider_draw_endcircle"));
 
 	//**************************************************************************************************************************//
 
