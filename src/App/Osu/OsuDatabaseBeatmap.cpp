@@ -39,6 +39,7 @@ ConVar osu_mod_random_spinner_offset_x_percent("osu_mod_random_spinner_offset_x_
 ConVar osu_mod_random_spinner_offset_y_percent("osu_mod_random_spinner_offset_y_percent", 1.0f, "how much the randomness affects things");
 ConVar osu_mod_reverse_sliders("osu_mod_reverse_sliders", false);
 ConVar osu_mod_strict_tracking("osu_mod_strict_tracking", false);
+ConVar osu_mod_strict_tracking_remove_slider_ticks("osu_mod_strict_tracking_remove_slider_ticks", false, "whether the strict tracking mod should remove slider ticks or not, this changed after its initial implementation in lazer");
 
 ConVar osu_show_approach_circle_on_first_hidden_object("osu_show_approach_circle_on_first_hidden_object", true);
 
@@ -1447,7 +1448,7 @@ OsuDatabaseBeatmap::LOAD_GAMEPLAY_RESULT OsuDatabaseBeatmap::loadGameplay(OsuDat
 			{
 				SLIDER &s = c.sliders[i];
 
-				if (osu_mod_strict_tracking.getBool())
+				if (osu_mod_strict_tracking.getBool() && osu_mod_strict_tracking_remove_slider_ticks.getBool())
 					s.ticks.clear();
 
 				if (osu_mod_random.getBool())
