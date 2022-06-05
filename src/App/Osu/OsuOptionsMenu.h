@@ -180,6 +180,7 @@ private:
 	// reset
 	void onResetUpdate(CBaseUIButton *button);
 	void onResetClicked(CBaseUIButton *button);
+	void onResetEverythingClicked(CBaseUIButton *button);
 
 	// options
 	void addSpacer();
@@ -300,8 +301,8 @@ private:
 	bool m_bWASAPIBufferChangeScheduled;
 	bool m_bWASAPIPeriodChangeScheduled;
 
-	// key bindings
 	int m_iNumResetAllKeyBindingsPressed;
+	int m_iNumResetEverythingPressed;
 
 	// mania layout
 	int m_iManiaK;

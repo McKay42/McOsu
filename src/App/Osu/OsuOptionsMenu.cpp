@@ -429,6 +429,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_bWASAPIPeriodChangeScheduled = false;
 
 	m_iNumResetAllKeyBindingsPressed = 0;
+	m_iNumResetEverythingPressed = 0;
 
 	m_iManiaK = 0;
 	m_iManiaKey = 0;
@@ -1116,6 +1117,12 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("SliderBreak Epilepsy", convar->getConVarByName("osu_slider_break_epilepsy"));
 	addCheckbox("Invisible Cursor", convar->getConVarByName("osu_hide_cursor_during_gameplay"));
 	addCheckbox("Draw 300s", convar->getConVarByName("osu_hitresult_draw_300s"));
+
+	addSection("Maintenance");
+	addSubSection("Restore");
+	OsuUIButton *resetAllSettingsButton = addButton("Reset all settings");
+	resetAllSettingsButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onResetEverythingClicked) );
+	resetAllSettingsButton->setColor(0xffff0000);
 	addSpacer();
 	addSpacer();
 	addSpacer();
@@ -1672,9 +1679,12 @@ void OsuOptionsMenu::setVisibleInt(bool visible, bool fromOnBack)
 	if (visible && m_osu->isInPlayMode() && m_osu_mod_fposu_ref->getBool() && !m_fposuCategoryButton->isActiveCategory())
 		onCategoryClicked(m_fposuCategoryButton);
 
-	// reset key bind reset counter
+	// reset reset counters
 	if (visible)
+	{
 		m_iNumResetAllKeyBindingsPressed = 0;
+		m_iNumResetEverythingPressed = 0;
+	}
 }
 
 void OsuOptionsMenu::setUsername(UString username)
@@ -3461,6 +3471,42 @@ void OsuOptionsMenu::onResetClicked(CBaseUIButton *button)
 	}
 
 	onResetUpdate(button);
+}
+
+void OsuOptionsMenu::onResetEverythingClicked(CBaseUIButton *button)
+{
+	m_iNumResetEverythingPressed++;
+
+	const int numRequiredPressesUntilReset = 4;
+	const int remainingUntilReset = numRequiredPressesUntilReset - m_iNumResetEverythingPressed;
+
+	if (m_iNumResetEverythingPressed > (numRequiredPressesUntilReset-1))
+	{
+		m_iNumResetEverythingPressed = 0;
+
+		// first reset all settings
+		for (size_t i=0; i<m_elements.size(); i++)
+		{
+			OsuOptionsMenuResetButton *resetButton = m_elements[i].resetButton;
+			if (resetButton != NULL && resetButton->isEnabled())
+				resetButton->click();
+		}
+
+		// and then all key bindings (since these don't use the yellow reset button system)
+		for (ConVar *bind : OsuKeyBindings::ALL)
+		{
+			bind->setValue(bind->getDefaultFloat());
+		}
+
+		m_osu->getNotificationOverlay()->addNotification("All settings have been reset.", 0xff00ff00);
+	}
+	else
+	{
+		if (remainingUntilReset > 1)
+			m_osu->getNotificationOverlay()->addNotification(UString::format("Press %i more times to confirm.", remainingUntilReset));
+		else
+			m_osu->getNotificationOverlay()->addNotification(UString::format("Press %i more time to confirm!", remainingUntilReset), 0xffffff00);
+	}
 }
 
 void OsuOptionsMenu::addSpacer()
