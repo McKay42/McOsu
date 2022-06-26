@@ -71,6 +71,7 @@ private:
 	static ConVar *m_win_snd_fallback_dsound_ref;
 	static ConVar *m_osu_universal_offset_hardcoded_fallback_dsound_ref;
 	static ConVar *m_osu_slider_border_feather_ref;
+	static ConVar *m_osu_mod_random_ref;
 
 	void drawVersionInfo(Graphics *g);
 	void updateLayout();

@@ -225,6 +225,7 @@ ConVar *OsuMainMenu::m_osu_old_beatmap_offset_ref = NULL;
 ConVar *OsuMainMenu::m_win_snd_fallback_dsound_ref = NULL;
 ConVar *OsuMainMenu::m_osu_universal_offset_hardcoded_fallback_dsound_ref = NULL;
 ConVar *OsuMainMenu::m_osu_slider_border_feather_ref = NULL;
+ConVar *OsuMainMenu::m_osu_mod_random_ref = NULL;
 
 void OsuMainMenu::openSteamWorkshopInGameOverlay(Osu *osu, bool launchInSteamIfOverlayDisabled)
 {
@@ -271,6 +272,8 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen(osu)
 		m_osu_universal_offset_hardcoded_fallback_dsound_ref = convar->getConVarByName("osu_universal_offset_hardcoded_fallback_dsound");
 	if (m_osu_slider_border_feather_ref == NULL)
 		m_osu_slider_border_feather_ref = convar->getConVarByName("osu_slider_border_feather");
+	if (m_osu_mod_random_ref == NULL)
+		m_osu_mod_random_ref = convar->getConVarByName("osu_mod_random");
 
 	osu_toggle_preview_music.setCallback( fastdelegate::MakeDelegate(this, &OsuMainMenu::onPausePressed) );
 
@@ -390,6 +393,12 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen(osu)
 	{
 		m_mainMenuSliderTextDatabaseBeatmap = new OsuDatabaseBeatmap(m_osu, UString(s_sliderTextBeatmap), "", true);
 		m_mainMenuSliderTextBeatmapStandard = new OsuBeatmapStandard(m_osu);
+
+		// HACKHACK: temporary workaround to avoid this breaking the main menu logo text sliders (1/2)
+		const bool wasModRandomEnabled = m_osu_mod_random_ref->getBool();
+		if (wasModRandomEnabled)
+			m_osu_mod_random_ref->setValue(0.0f);
+
 		OsuDatabaseBeatmap::LOAD_GAMEPLAY_RESULT result = OsuDatabaseBeatmap::loadGameplay(m_mainMenuSliderTextDatabaseBeatmap, m_mainMenuSliderTextBeatmapStandard);
 		if (result.errorCode == 0)
 		{
@@ -403,6 +412,10 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen(osu)
 					sliderPointer->rebuildVertexBuffer(true); // we are working in osu coordinate space for this (no mods, just raw curve coords)
 			}
 		}
+
+		// HACKHACK: temporary workaround to avoid this breaking the main menu logo text sliders (2/2)
+		if (wasModRandomEnabled)
+			m_osu_mod_random_ref->setValue(1.0f);
 	}
 }
 
