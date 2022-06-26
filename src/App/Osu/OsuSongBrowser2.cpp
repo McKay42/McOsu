@@ -898,8 +898,8 @@ void OsuSongBrowser2::draw(Graphics *g)
 	}
 	g->popTransform();
 
-	m_bottombar->draw(g);
 	OsuScreenBackable::draw(g);
+	m_bottombar->draw(g);
 	if (Osu::debug->getBool())
 		m_bottombar->draw_debug(g);
 
@@ -1041,6 +1041,11 @@ void OsuSongBrowser2::update()
 		recalculateStarsForSelectedBeatmap(force);
 	}
 
+	// HACKHACK: workaround for very wide back button skin images overlapping bottombar button hitboxes
+	const bool isMouseInsideValidBackButtonHitbox = (engine->getMouse()->getPos().x < m_osu->getSkin()->getMenuBack2()->getSizeBase().x);
+	if (m_bottombar->isMouseInside() && !isMouseInsideValidBackButtonHitbox)
+		OsuScreenBackable::stealFocus();
+
 	OsuScreenBackable::update();
 	if (!m_bVisible) return;
 
@@ -1071,7 +1076,7 @@ void OsuSongBrowser2::update()
 	m_topbarLeft->update();
 	m_topbarRight->update();
 
-	if (m_contextMenu->isMouseInside() || m_osu->getHUD()->isVolumeOverlayBusy() || m_backButton->isMouseInside())
+	if (m_contextMenu->isMouseInside() || m_osu->getHUD()->isVolumeOverlayBusy() || (m_backButton->isMouseInside() && isMouseInsideValidBackButtonHitbox))
 	{
 		m_topbarLeft->stealFocus();
 		m_topbarRight->stealFocus();
@@ -1641,6 +1646,10 @@ void OsuSongBrowser2::setVisible(bool visible)
 
 		// update user name/stats
 		onUserButtonChange(m_name_ref->getString(), -1);
+
+		// HACKHACK: workaround for BaseUI framework deficiency (missing mouse events. if a mouse button is being held, and then suddenly a BaseUIElement gets put under it and set visible, and then the mouse button is released, that "incorrectly" fires onMouseUpInside/onClicked/etc.)
+		engine->getMouse()->onLeftChange(false);
+		engine->getMouse()->onRightChange(false);
 	}
 	else
 		m_contextMenu->setVisible2(false);
