@@ -90,6 +90,8 @@ public:
 	void onWheelHorizontal(int delta){;}
 
 	virtual void onResolutionChanged(Vector2 newResolution);
+	virtual void onDPIChanged();
+
 	virtual void onFocusGained();
 	virtual void onFocusLost();
 	virtual void onMinimized();

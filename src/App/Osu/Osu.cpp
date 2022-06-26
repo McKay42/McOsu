@@ -65,7 +65,7 @@
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 33.01f);
+ConVar osu_version("osu_version", 33.02f);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr");
 #else
@@ -2051,6 +2051,13 @@ void Osu::onResolutionChanged(Vector2 newResolution)
 	// a bit hacky, but detect resolution-specific-dpi-scaling changes and force a font and layout reload after a 1 frame delay (1/2)
 	if (getUIScale(this) != prevUIScale)
 		m_bFireDelayedFontReloadAndResolutionChangeToFixDesyncedUIScaleScheduled = true;
+}
+
+void Osu::onDPIChanged()
+{
+	// delay
+	m_bFontReloadScheduled = true;
+	m_bFireResolutionChangedScheduled = true;
 }
 
 void Osu::rebuildRenderTargets()
