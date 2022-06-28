@@ -218,6 +218,7 @@ ConVar osu_main_menu_slider_text_offset_y("osu_main_menu_slider_text_offset_y", 
 
 ConVar osu_main_menu_banner_always_text("osu_main_menu_banner_always_text", "");
 ConVar osu_main_menu_banner_ifupdatedfromoldversion_text("osu_main_menu_banner_ifupdatedfromoldversion_text", "");
+ConVar osu_main_menu_banner_ifupdatedfromoldversion_le3300_text("osu_main_menu_banner_ifupdatedfromoldversion_le3300_text", "");
 
 ConVar *OsuMainMenu::m_osu_universal_offset_ref = NULL;
 ConVar *OsuMainMenu::m_osu_universal_offset_hardcoded_ref = NULL;
@@ -319,6 +320,7 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen(osu)
 
 	// check if the user has never clicked the changelog for this update
 	m_bDidUserUpdateFromOlderVersion = false;
+	m_bDidUserUpdateFromOlderVersionLe3300 = false;
 	{
 		m_bDrawVersionNotificationArrow = false;
 		if (env->fileExists(MCOSU_NEWVERSION_NOTIFICATION_TRIGGER_FILE))
@@ -329,6 +331,9 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen(osu)
 				float version = versionFile.readLine().toFloat();
 				if (version < Osu::version->getFloat() - 0.0001f)
 					m_bDrawVersionNotificationArrow = true;
+
+				if (version < 33.01f - 0.0001f)
+					m_bDidUserUpdateFromOlderVersionLe3300 = true;
 			}
 			else
 				m_bDrawVersionNotificationArrow = true;
@@ -536,6 +541,8 @@ void OsuMainMenu::draw(Graphics *g)
 			bannerText = osu_main_menu_banner_always_text.getString();
 		else if (m_bDidUserUpdateFromOlderVersion && osu_main_menu_banner_ifupdatedfromoldversion_text.getString().length() > 0)
 			bannerText = osu_main_menu_banner_ifupdatedfromoldversion_text.getString();
+		else if (m_bDidUserUpdateFromOlderVersionLe3300 && osu_main_menu_banner_ifupdatedfromoldversion_le3300_text.getString().length() > 0)
+			bannerText = osu_main_menu_banner_ifupdatedfromoldversion_le3300_text.getString();
 
 		if (bannerText.length() > 0)
 		{

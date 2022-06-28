@@ -123,6 +123,7 @@ private:
 
 	bool m_bDrawVersionNotificationArrow;
 	bool m_bDidUserUpdateFromOlderVersion;
+	bool m_bDidUserUpdateFromOlderVersionLe3300;
 
 	// custom
 	float m_fMainMenuAnimTime;
