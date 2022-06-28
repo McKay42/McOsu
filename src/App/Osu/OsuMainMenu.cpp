@@ -218,6 +218,7 @@ ConVar osu_main_menu_slider_text_offset_y("osu_main_menu_slider_text_offset_y", 
 
 ConVar osu_main_menu_banner_always_text("osu_main_menu_banner_always_text", "");
 ConVar osu_main_menu_banner_ifupdatedfromoldversion_text("osu_main_menu_banner_ifupdatedfromoldversion_text", "");
+ConVar osu_main_menu_banner_ifupdatedfromoldversion_le3300_text("osu_main_menu_banner_ifupdatedfromoldversion_le3300_text", "");
 
 ConVar *OsuMainMenu::m_osu_universal_offset_ref = NULL;
 ConVar *OsuMainMenu::m_osu_universal_offset_hardcoded_ref = NULL;
@@ -225,6 +226,7 @@ ConVar *OsuMainMenu::m_osu_old_beatmap_offset_ref = NULL;
 ConVar *OsuMainMenu::m_win_snd_fallback_dsound_ref = NULL;
 ConVar *OsuMainMenu::m_osu_universal_offset_hardcoded_fallback_dsound_ref = NULL;
 ConVar *OsuMainMenu::m_osu_slider_border_feather_ref = NULL;
+ConVar *OsuMainMenu::m_osu_mod_random_ref = NULL;
 
 void OsuMainMenu::openSteamWorkshopInGameOverlay(Osu *osu, bool launchInSteamIfOverlayDisabled)
 {
@@ -271,6 +273,8 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen(osu)
 		m_osu_universal_offset_hardcoded_fallback_dsound_ref = convar->getConVarByName("osu_universal_offset_hardcoded_fallback_dsound");
 	if (m_osu_slider_border_feather_ref == NULL)
 		m_osu_slider_border_feather_ref = convar->getConVarByName("osu_slider_border_feather");
+	if (m_osu_mod_random_ref == NULL)
+		m_osu_mod_random_ref = convar->getConVarByName("osu_mod_random");
 
 	osu_toggle_preview_music.setCallback( fastdelegate::MakeDelegate(this, &OsuMainMenu::onPausePressed) );
 
@@ -316,6 +320,7 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen(osu)
 
 	// check if the user has never clicked the changelog for this update
 	m_bDidUserUpdateFromOlderVersion = false;
+	m_bDidUserUpdateFromOlderVersionLe3300 = false;
 	{
 		m_bDrawVersionNotificationArrow = false;
 		if (env->fileExists(MCOSU_NEWVERSION_NOTIFICATION_TRIGGER_FILE))
@@ -326,6 +331,9 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen(osu)
 				float version = versionFile.readLine().toFloat();
 				if (version < Osu::version->getFloat() - 0.0001f)
 					m_bDrawVersionNotificationArrow = true;
+
+				if (version < 33.01f - 0.0001f)
+					m_bDidUserUpdateFromOlderVersionLe3300 = true;
 			}
 			else
 				m_bDrawVersionNotificationArrow = true;
@@ -390,6 +398,12 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen(osu)
 	{
 		m_mainMenuSliderTextDatabaseBeatmap = new OsuDatabaseBeatmap(m_osu, UString(s_sliderTextBeatmap), "", true);
 		m_mainMenuSliderTextBeatmapStandard = new OsuBeatmapStandard(m_osu);
+
+		// HACKHACK: temporary workaround to avoid this breaking the main menu logo text sliders (1/2)
+		const bool wasModRandomEnabled = m_osu_mod_random_ref->getBool();
+		if (wasModRandomEnabled)
+			m_osu_mod_random_ref->setValue(0.0f);
+
 		OsuDatabaseBeatmap::LOAD_GAMEPLAY_RESULT result = OsuDatabaseBeatmap::loadGameplay(m_mainMenuSliderTextDatabaseBeatmap, m_mainMenuSliderTextBeatmapStandard);
 		if (result.errorCode == 0)
 		{
@@ -403,6 +417,10 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen(osu)
 					sliderPointer->rebuildVertexBuffer(true); // we are working in osu coordinate space for this (no mods, just raw curve coords)
 			}
 		}
+
+		// HACKHACK: temporary workaround to avoid this breaking the main menu logo text sliders (2/2)
+		if (wasModRandomEnabled)
+			m_osu_mod_random_ref->setValue(1.0f);
 	}
 }
 
@@ -523,6 +541,8 @@ void OsuMainMenu::draw(Graphics *g)
 			bannerText = osu_main_menu_banner_always_text.getString();
 		else if (m_bDidUserUpdateFromOlderVersion && osu_main_menu_banner_ifupdatedfromoldversion_text.getString().length() > 0)
 			bannerText = osu_main_menu_banner_ifupdatedfromoldversion_text.getString();
+		else if (m_bDidUserUpdateFromOlderVersionLe3300 && osu_main_menu_banner_ifupdatedfromoldversion_le3300_text.getString().length() > 0)
+			bannerText = osu_main_menu_banner_ifupdatedfromoldversion_le3300_text.getString();
 
 		if (bannerText.length() > 0)
 		{

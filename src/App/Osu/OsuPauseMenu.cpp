@@ -427,8 +427,12 @@ void OsuPauseMenu::setVisible(bool visible)
 	else
 		setContinueEnabled(true);
 
-	// HACKHACK:
+	// HACKHACK: force disable mod selection screen in case it was open and the beatmap ended/failed
 	m_osu->getModSelector()->setVisible(false);
+
+	// HACKHACK: workaround for BaseUI framework deficiency (missing mouse events. if a mouse button is being held, and then suddenly a BaseUIElement gets put under it and set visible, and then the mouse button is released, that "incorrectly" fires onMouseUpInside/onClicked/etc.)
+	if (visible)
+		m_container->stealFocus();
 
 	// reset
 	m_selectedButton = NULL;

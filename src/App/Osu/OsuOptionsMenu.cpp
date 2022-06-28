@@ -2163,6 +2163,8 @@ void OsuOptionsMenu::updateLayout()
 	m_options->getContainer()->addBaseUIElement(m_spacer);
 
 	m_options->setScrollSizeToContent();
+	if (!enableHorizontalScrolling)
+		m_options->scrollToLeft();
 	m_options->setHorizontalScrolling(enableHorizontalScrolling);
 
 	m_options->getContainer()->addBaseUIElement(m_contextMenu);

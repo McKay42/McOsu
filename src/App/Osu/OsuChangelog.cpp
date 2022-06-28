@@ -35,7 +35,15 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	std::vector<CHANGELOG> changelogs;
 
 	CHANGELOG alpha317;
-	alpha317.title = UString::format("33.01 (Build Date: %s, %s)", __DATE__, __TIME__); // (09.01.2022 - ?)
+	alpha317.title = UString::format("33.02 (Build Date: %s, %s)", __DATE__, __TIME__); // (09.01.2022 - ?)
+	alpha317.changes.push_back("- Windows: Added support for mixed-DPI-scaling-multi-monitor setups (automatic detection based on which monitor the game is on)");
+	alpha317.changes.push_back("- Windows: Added support for key binding all remaining mouse buttons (all mouse buttons can now be bound to key binding actions)");
+	alpha317.changes.push_back("- Fixed osu_mod_random in cfg affecting main menu button logo text sliders");
+	alpha317.changes.push_back("- Fixed very wide back button skin images overlapping other songbrowser buttons and making them impossible/invisible to click");
+	alpha317.changes.push_back("- Fixed pen dragging playstyles potentially causing unintentional UI clicks when in-game screens/panels are switched and the pen is released");
+	alpha317.changes.push_back("");
+	alpha317.changes.push_back("");
+	alpha317.changes.push_back("- Linux: Switched to SDL backend (mostly for Steam Deck multitouch support, also because both X11 and Wayland suck hard)");
 	alpha317.changes.push_back("- FPoSu: Added cursor trail support (can be disabled in Options > Skin > \"Draw Cursor Trail\", or fposu_draw_cursor_trail)");
 	alpha317.changes.push_back("- Added new experimental mod \"Approach Different\"");
 	alpha317.changes.push_back("- Added new experimental mod \"Strict Tracking\"");
