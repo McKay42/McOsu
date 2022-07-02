@@ -857,7 +857,7 @@ void OsuBeatmap::update()
 		if (m_clicks.size() > 0)
 		{
 			if (osu_play_hitsound_on_click_while_playing.getBool())
-				m_osu->getSkin()->playHitCircleSound(0);
+				m_osu->getSkin()->playHitCircleSound(0, 0.f, 0);
 
 			// nightmare mod: extra clicks = sliderbreak
 			if ((m_osu->getModNM() || osu_mod_jigsaw1.getBool()) && !m_bIsInSkippableSection && !m_bInBreak && m_iCurrentHitObjectIndex > 0)
