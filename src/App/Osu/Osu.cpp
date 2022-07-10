@@ -2048,8 +2048,17 @@ void Osu::onResolutionChanged(Vector2 newResolution)
 	// cursor clipping
 	updateConfineCursor();
 
+	// see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=323
+	struct LossyComparisonToFixExcessFPUPrecisionBugBecauseFuckYou
+	{
+		static bool equalEpsilon(float f1, float f2)
+		{
+			return std::abs(f1 - f2) < 0.00001f;
+		}
+	};
+
 	// a bit hacky, but detect resolution-specific-dpi-scaling changes and force a font and layout reload after a 1 frame delay (1/2)
-	if (getUIScale(this) != prevUIScale)
+	if (!LossyComparisonToFixExcessFPUPrecisionBugBecauseFuckYou::equalEpsilon(getUIScale(this), prevUIScale))
 		m_bFireDelayedFontReloadAndResolutionChangeToFixDesyncedUIScaleScheduled = true;
 }
 

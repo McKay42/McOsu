@@ -36,6 +36,9 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 
 	CHANGELOG alpha317;
 	alpha317.title = UString::format("33.02 (Build Date: %s, %s)", __DATE__, __TIME__); // (09.01.2022 - ?)
+	alpha317.changes.push_back("- Fixed extremely rare infinite font/layout/resolution reloading bug killing performance caused by custom display scaling percentages (e.g. 124%, yes 124% scaling in Windows)");
+	alpha317.changes.push_back("");
+	alpha317.changes.push_back("");
 	alpha317.changes.push_back("- Windows: Added support for mixed-DPI-scaling-multi-monitor setups (automatic detection based on which monitor the game is on)");
 	alpha317.changes.push_back("- Windows: Added support for key binding all remaining mouse buttons (all mouse buttons can now be bound to key binding actions)");
 	alpha317.changes.push_back("- Fixed osu_mod_random in cfg affecting main menu button logo text sliders");
