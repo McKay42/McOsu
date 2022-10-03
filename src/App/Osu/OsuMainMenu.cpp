@@ -1678,6 +1678,8 @@ void OsuMainMenu::onPausePressed()
 {
 	if (m_osu->getInstanceID() > 1) return;
 
+	osu_main_menu_shuffle.setValue(0.0f);
+
 	if (m_osu->getSelectedBeatmap() != NULL)
 		m_osu->getSelectedBeatmap()->pausePreviewMusic();
 }
