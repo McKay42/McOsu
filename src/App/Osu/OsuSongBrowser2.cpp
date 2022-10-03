@@ -4299,7 +4299,7 @@ void OsuSongBrowser2::selectSongButton(OsuUISongBrowserButton *songButton)
 	}
 }
 
-void OsuSongBrowser2::selectRandomBeatmap()
+void OsuSongBrowser2::selectRandomBeatmap(bool playMusicFromPreviewPoint)
 {
 	// filter songbuttons or independent diffs
 	const std::vector<CBaseUIElement*> &elements = m_songBrowser->getContainer()->getElements();

@@ -135,6 +135,7 @@ public:
 	void onCollectionButtonContextMenu(OsuUISongBrowserCollectionButton *collectionButton, UString text, int id);
 
 	void highlightScore(uint64_t unixTimestamp);
+	void selectRandomBeatmap(bool playMusicFromPreviewPoint = true);
 	void playNextRandomBeatmap() {selectRandomBeatmap();playSelectedDifficulty();}
 	void recalculateStarsForSelectedBeatmap(bool force = false);
 
@@ -257,7 +258,6 @@ private:
 	void onScoreClicked(CBaseUIButton *button);
 
 	void selectSongButton(OsuUISongBrowserButton *songButton);
-	void selectRandomBeatmap();
 	void selectPreviousRandomBeatmap();
 	void playSelectedDifficulty();
 

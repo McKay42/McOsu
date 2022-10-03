@@ -186,6 +186,8 @@ protected:
 	static ConVar *m_osu_mod_fposu_ref;
 	static ConVar *m_fposu_draw_scorebarbg_on_top_ref;
 
+	static ConVar *m_osu_main_menu_shuffle_ref;
+
 	// overridable child events
 	virtual void onBeforeLoad() {;}			 // called before hitobjects are loaded
 	virtual void onLoad() {;}				 // called after hitobjects have been loaded
