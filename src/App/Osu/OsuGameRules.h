@@ -68,6 +68,8 @@ public:
 	static ConVar osu_mod_mafham;
 	static ConVar osu_mod_mafham_render_livesize;
 	static ConVar osu_stacking_ar_override;
+	static ConVar osu_mod_halfwindow;
+	static ConVar osu_mod_halfwindow_allow_300s;
 
 
 
@@ -284,6 +286,14 @@ public:
 
 	static OsuScore::HIT getHitResult(long delta, OsuBeatmap *beatmap)
 	{
+		if (osu_mod_halfwindow.getBool() && delta > 0 && delta <= (long)getHitWindowMiss(beatmap))
+		{
+			if (!osu_mod_halfwindow_allow_300s.getBool())
+				return OsuScore::HIT::HIT_MISS;
+			else if (delta > (long)getHitWindow300(beatmap))
+				return OsuScore::HIT::HIT_MISS;
+		}
+
 		delta = std::abs(delta);
 
 		OsuScore::HIT result = OsuScore::HIT::HIT_NULL;

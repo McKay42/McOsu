@@ -248,9 +248,10 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen(osu)
 	addExperimentalCheckbox("No 50s", "Only 300s or 100s. Try harder.", convar->getConVarByName("osu_mod_no50s"));
 	addExperimentalCheckbox("No 100s no 50s", "300 or miss. PF \"lite\"", convar->getConVarByName("osu_mod_no100s"));
 	addExperimentalCheckbox("MinG3012", "No 100s. Only 300s or 50s. Git gud.", convar->getConVarByName("osu_mod_ming3012"));
+	addExperimentalCheckbox("Half Window", "The hit timing window is cut in half. Hit early or perfect (300).", convar->getConVarByName("osu_mod_halfwindow"));
 	addExperimentalCheckbox("MillhioreF", "Go below AR 0. Doubled approach time.", convar->getConVarByName("osu_mod_millhioref"));
 	addExperimentalCheckbox("Mafham", "Approach rate is set to negative infinity. See the entire beatmap at once.\nUses very aggressive optimizations to keep the framerate high, you have been warned!", convar->getConVarByName("osu_mod_mafham"));
-	addExperimentalCheckbox("Strict Tracking", "Leaving sliders in any way counts as a miss and combo break.\nSlider ticks are removed. (Reload beatmap to apply!)", convar->getConVarByName("osu_mod_strict_tracking"));
+	addExperimentalCheckbox("Strict Tracking", "Leaving sliders in any way counts as a miss and combo break. (Reload beatmap to apply!)", convar->getConVarByName("osu_mod_strict_tracking"));
 	addExperimentalCheckbox("Flip Up/Down", "Playfield is flipped upside down (mirrored at horizontal axis).", convar->getConVarByName("osu_playfield_mirror_horizontal"));
 	addExperimentalCheckbox("Flip Left/Right", "Playfield is flipped left/right (mirrored at vertical axis).", convar->getConVarByName("osu_playfield_mirror_vertical"));
 

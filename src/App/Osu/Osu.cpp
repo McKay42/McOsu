@@ -184,6 +184,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_no50s"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_no100s"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_ming3012"));
+	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_halfwindow"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_millhioref"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_mafham"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_strict_tracking"));
@@ -1422,24 +1423,29 @@ void Osu::onKeyDown(KeyboardEvent &key)
 
 				if (backward || forward)
 				{
-					const unsigned long lengthMS = getSelectedBeatmap()->getLength();
-					const float percentFinished = getSelectedBeatmap()->getPercentFinished();
+					const bool isVolumeOverlayVisibleOrBusy = (m_hud->isVolumeOverlayVisible() || m_hud->isVolumeOverlayBusy());
 
-					if (lengthMS > 0)
+					if (!isVolumeOverlayVisibleOrBusy)
 					{
-						double seekedPercent = 0.0;
-						if (backward)
-							seekedPercent -= (double)osu_seek_delta.getInt() * (1.0 / (double)lengthMS) * 1000.0;
-						else if (forward)
-							seekedPercent += (double)osu_seek_delta.getInt() * (1.0 / (double)lengthMS) * 1000.0;
+						const unsigned long lengthMS = getSelectedBeatmap()->getLength();
+						const float percentFinished = getSelectedBeatmap()->getPercentFinished();
 
-						if (seekedPercent != 0.0f)
+						if (lengthMS > 0)
 						{
-							// special case: allow cancelling the failing animation here
-							if (getSelectedBeatmap()->hasFailed())
-								getSelectedBeatmap()->cancelFailing();
+							double seekedPercent = 0.0;
+							if (backward)
+								seekedPercent -= (double)osu_seek_delta.getInt() * (1.0 / (double)lengthMS) * 1000.0;
+							else if (forward)
+								seekedPercent += (double)osu_seek_delta.getInt() * (1.0 / (double)lengthMS) * 1000.0;
 
-							getSelectedBeatmap()->seekPercent(percentFinished + seekedPercent);
+							if (seekedPercent != 0.0f)
+							{
+								// special case: allow cancelling the failing animation here
+								if (getSelectedBeatmap()->hasFailed())
+									getSelectedBeatmap()->cancelFailing();
+
+								getSelectedBeatmap()->seekPercent(percentFinished + seekedPercent);
+							}
 						}
 					}
 				}

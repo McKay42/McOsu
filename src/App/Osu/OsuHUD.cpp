@@ -2299,6 +2299,9 @@ void OsuHUD::drawHitErrorBarInt(Graphics *g, float hitWindow300, float hitWindow
 	// draw background bar with color indicators for 300s, 100s and 50s (and the miss window)
 	if (alphaBarInt > 0)
 	{
+		const bool half = OsuGameRules::osu_mod_halfwindow.getBool();
+		const bool halfAllow300s = OsuGameRules::osu_mod_halfwindow_allow_300s.getBool();
+
 		if (osu_hud_hiterrorbar_showmisswindow.getBool())
 		{
 			g->setColor(colorMiss);
@@ -2308,17 +2311,17 @@ void OsuHUD::drawHitErrorBarInt(Graphics *g, float hitWindow300, float hitWindow
 		if (!OsuGameRules::osu_mod_no100s.getBool() && !OsuGameRules::osu_mod_no50s.getBool())
 		{
 			g->setColor(color50);
-			g->fillRect(center.x - size.x*percent50/2.0f, center.y - size.y/2.0f, size.x*percent50, size.y);
+			g->fillRect(center.x - size.x*percent50/2.0f, center.y - size.y/2.0f, size.x*percent50 * (half ? 0.5f : 1.0f), size.y);
 		}
 
 		if (!OsuGameRules::osu_mod_ming3012.getBool() && !OsuGameRules::osu_mod_no100s.getBool())
 		{
 			g->setColor(color100);
-			g->fillRect(center.x - size.x*percent100/2.0f, center.y - size.y/2.0f, size.x*percent100, size.y);
+			g->fillRect(center.x - size.x*percent100/2.0f, center.y - size.y/2.0f, size.x*percent100 * (half ? 0.5f : 1.0f), size.y);
 		}
 
 		g->setColor(color300);
-		g->fillRect(center.x - size.x*percent300/2.0f, center.y - size.y/2.0f, size.x*percent300, size.y);
+		g->fillRect(center.x - size.x*percent300/2.0f, center.y - size.y/2.0f, size.x*percent300 * (half && !halfAllow300s ? 0.5f : 1.0f), size.y);
 	}
 
 	// draw hit errors

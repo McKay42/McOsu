@@ -37,6 +37,8 @@ ConVar OsuGameRules::osu_mod_millhioref_multiplier("osu_mod_millhioref_multiplie
 ConVar OsuGameRules::osu_mod_mafham("osu_mod_mafham", false);
 ConVar OsuGameRules::osu_mod_mafham_render_livesize("osu_mod_mafham_render_livesize", 25, "render this many hitobjects without any scene buffering, higher = more lag but more up-to-date scene");
 ConVar OsuGameRules::osu_stacking_ar_override("osu_stacking_ar_override", -1, "allows overriding the approach time used for the stacking calculations. behaves as if disabled if the value is less than 0.");
+ConVar OsuGameRules::osu_mod_halfwindow("osu_mod_halfwindow", false);
+ConVar OsuGameRules::osu_mod_halfwindow_allow_300s("osu_mod_halfwindow_allow_300s", true, "should positive hit deltas be allowed within 300 range");
 
 // all values here are in milliseconds
 ConVar OsuGameRules::osu_approachtime_min("osu_approachtime_min", 1800);
