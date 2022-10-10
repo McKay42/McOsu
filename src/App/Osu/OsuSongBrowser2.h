@@ -193,7 +193,7 @@ private:
 	};
 
 private:
-	static bool searchMatcher(const OsuDatabaseBeatmap *databaseBeatmap, const UString &searchString);
+	static bool searchMatcher(const OsuDatabaseBeatmap *databaseBeatmap, const std::vector<UString> &searchStringTokens);
 	static bool findSubstringInDifficulty(const OsuDatabaseBeatmap *diff, const UString &searchString);
 
 	virtual void updateLayout();
@@ -370,6 +370,7 @@ private:
 	OsuUISearchOverlay *m_search;
 	UString m_sSearchString;
 	UString m_sPrevSearchString;
+	UString m_sPrevHardcodedSearchString;
 	float m_fSearchWaitTime;
 	bool m_bInSearch;
 	GROUP m_searchPrevGroup;
