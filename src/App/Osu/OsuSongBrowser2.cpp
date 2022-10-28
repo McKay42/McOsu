@@ -74,9 +74,16 @@ ConVar osu_draw_songbrowser_strain_graph("osu_draw_songbrowser_strain_graph", fa
 ConVar osu_songbrowser_background_fade_in_duration("osu_songbrowser_background_fade_in_duration", 0.1f);
 
 ConVar osu_songbrowser_search_delay("osu_songbrowser_search_delay", 0.5f, "delay until search update when entering text");
-ConVar osu_songbrowser_search_hardcoded_filter("osu_songbrowser_search_hardcoded_filter", "", "allows forcing the specified search filter to be active all the time");
+void _osu_songbrowser_search_hardcoded_filter(UString oldValue, UString newValue);
+ConVar osu_songbrowser_search_hardcoded_filter("osu_songbrowser_search_hardcoded_filter", "", "allows forcing the specified search filter to be active all the time", _osu_songbrowser_search_hardcoded_filter);
 ConVar osu_songbrowser_background_star_calculation("osu_songbrowser_background_star_calculation", true, "precalculate stars for all loaded beatmaps while in songbrowser");
 ConVar osu_songbrowser_dynamic_star_recalc("osu_songbrowser_dynamic_star_recalc", true, "dynamically recalculate displayed star value of currently selected beatmap in songbrowser");
+
+void _osu_songbrowser_search_hardcoded_filter(UString oldValue, UString newValue)
+{
+	if (newValue.length() == 1 && newValue.isWhitespaceOnly())
+		osu_songbrowser_search_hardcoded_filter.setValue("");
+}
 
 
 
