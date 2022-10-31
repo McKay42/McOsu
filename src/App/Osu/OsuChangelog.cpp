@@ -36,6 +36,12 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 
 	CHANGELOG alpha317;
 	alpha317.title = UString::format("33.03 (Build Date: %s, %s)", __DATE__, __TIME__); // (09.01.2022 - ?)
+	alpha317.changes.push_back("- Added new experimental mod \"Half Window\"");
+	alpha317.changes.push_back("- Added \"Quick Seek\" key bindings (jump +-5 seconds)");
+	alpha317.changes.push_back("- Added hitobject type percentage support to search matcher (e.g. \"sliders>80%\")");
+	alpha317.changes.push_back("- Added ConVars (1): osu_seek_delta, osu_end_skip, osu_mod_halfwindow_allow_300s");
+	alpha317.changes.push_back("- Added ConVars (2): osu_songbrowser_search_hardcoded_filter");
+	alpha317.changes.push_back("- Fixed very old legacy beatmaps (< v8) sometimes generating mismatched slider ticks (compared to stable) because of different tickDistance algorithm");
 	alpha317.changes.push_back("- Fixed extremely rare infinite font/layout/resolution reloading bug killing performance caused by custom display scaling percentages (e.g. 124%, yes 124% scaling in Windows)");
 	alpha317.changes.push_back("- Fixed extremely rare freeze bug caused by potential infinite stars in osu!.db");
 	alpha317.changes.push_back("");
