@@ -1554,6 +1554,7 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 				diff2->m_iNumObjects = numCircles + numSliders + numSpinners;
 				diff2->m_iNumCircles = numCircles;
 				diff2->m_iNumSliders = numSliders;
+				diff2->m_iNumSpinners = numSpinners;
 				diff2->m_fStarsNomod = numOsuStandardStars;
 
 				// calculate bpm range

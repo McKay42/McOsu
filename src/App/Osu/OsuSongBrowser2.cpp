@@ -2419,6 +2419,7 @@ bool OsuSongBrowser2::searchMatcher(const OsuDatabaseBeatmap *databaseBeatmap, c
 		OBJECTS,
 		CIRCLES,
 		SLIDERS,
+		SPINNERS,
 		LENGTH,
 		STARS,
 	};
@@ -2438,6 +2439,8 @@ bool OsuSongBrowser2::searchMatcher(const OsuDatabaseBeatmap *databaseBeatmap, c
 		std::pair<UString, keywordId>("circles",CIRCLES),
 		std::pair<UString, keywordId>("slider",SLIDERS),
 		std::pair<UString, keywordId>("sliders",SLIDERS),
+		std::pair<UString, keywordId>("spinner",SPINNERS),
+		std::pair<UString, keywordId>("spinners",SPINNERS),
 		std::pair<UString, keywordId>("length", LENGTH),
 		std::pair<UString, keywordId>("len", LENGTH),
 		std::pair<UString, keywordId>("stars", STARS),
@@ -2468,9 +2471,10 @@ bool OsuSongBrowser2::searchMatcher(const OsuDatabaseBeatmap *databaseBeatmap, c
 					std::vector<UString> values = searchStringTokens[i].split(operators[o].first);
 					if (values.size() == 2 && values[0].length() > 0 && values[1].length() > 0)
 					{
-						//debugLog("lvalue = %s, rvalue = %s\n", values[0].toUtf8(), values[1].toUtf8());
 						const UString lvalue = values[0];
-						const float rvalue = values[1].toFloat(); // this must always be a number (at least, assume it is)
+						const int rvaluePercentIndex = values[1].find("%");
+						const bool rvalueIsPercent = (rvaluePercentIndex != -1);
+						const float rvalue = (rvaluePercentIndex == -1 ? values[1].toFloat() : values[1].substr(0, rvaluePercentIndex).toFloat()); // this must always be a number (at least, assume it is)
 
 						// find lvalue keyword in array (only continue if keyword exists)
 						for (size_t k=0; k<keywords.size(); k++)
@@ -2513,10 +2517,13 @@ bool OsuSongBrowser2::searchMatcher(const OsuDatabaseBeatmap *databaseBeatmap, c
 									compareValue = diff->getNumObjects();
 									break;
 								case CIRCLES:
-									compareValue = diff->getNumCircles();
+									compareValue = (rvalueIsPercent ? ((float)diff->getNumCircles() / (float)diff->getNumObjects())*100.0f : diff->getNumCircles());
 									break;
 								case SLIDERS:
-									compareValue = diff->getNumSliders();
+									compareValue = (rvalueIsPercent ? ((float)diff->getNumSliders() / (float)diff->getNumObjects())*100.0f : diff->getNumSliders());
+									break;
+								case SPINNERS:
+									compareValue = (rvalueIsPercent ? ((float)diff->getNumSpinners() / (float)diff->getNumObjects())*100.0f : diff->getNumSpinners());
 									break;
 								case LENGTH:
 									compareValue = diff->getLengthMS() / 1000;
