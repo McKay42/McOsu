@@ -59,8 +59,11 @@ ConVar osu_combobreak_sound_combo("osu_combobreak_sound_combo", 20, "Only play t
 ConVar osu_beatmap_preview_mods_live("osu_beatmap_preview_mods_live", false, "whether to immediately apply all currently selected mods while browsing beatmaps (e.g. speed/pitch)");
 ConVar osu_beatmap_preview_music_loop("osu_beatmap_preview_music_loop", true);
 
-ConVar osu_ar_override("osu_ar_override", -1.0f);
-ConVar osu_cs_override("osu_cs_override", -1.0f);
+ConVar osu_ar_override("osu_ar_override", -1.0f, "use this to override between AR 0 and AR 12.5+. active if value is more than or equal to 0.");
+ConVar osu_ar_overridenegative("osu_ar_overridenegative", 0.0f, "use this to override below AR 0. active if value is less than 0, disabled otherwise. this override always overrides the other override.");
+ConVar osu_cs_override("osu_cs_override", -1.0f, "use this to override between CS 0 and CS 12.1429. active if value is more than or equal to 0.");
+ConVar osu_cs_overridenegative("osu_cs_overridenegative", 0.0f, "use this to override below CS 0. active if value is less than 0, disabled otherwise. this override always overrides the other override.");
+ConVar osu_cs_cap_sanity("osu_cs_cap_sanity", true);
 ConVar osu_hp_override("osu_hp_override", -1.0f);
 ConVar osu_od_override("osu_od_override", -1.0f);
 ConVar osu_ar_override_lock("osu_ar_override_lock", false, "always force constant AR even through speed changes");
@@ -1786,21 +1789,25 @@ float OsuBeatmap::getAR() const
 	if (m_selectedDifficulty2 == NULL) return 5.0f;
 
 	float AR = getRawAR();
-	if (osu_ar_override.getFloat() >= 0.0f)
-		AR = osu_ar_override.getFloat();
-
-	if (osu_ar_override_lock.getBool())
-		AR = OsuGameRules::getRawConstantApproachRateForSpeedMultiplier(OsuGameRules::getRawApproachTime(AR), (m_music != NULL && m_bIsPlaying ? getSpeedMultiplier() : m_osu->getSpeedMultiplier()));
-
-	if (osu_mod_artimewarp.getBool() && m_hitobjects.size() > 0)
 	{
-		const float percent = 1.0f - ((double)(m_iCurMusicPos - m_hitobjects[0]->getTime()) / (double)(m_hitobjects[m_hitobjects.size()-1]->getTime() + m_hitobjects[m_hitobjects.size()-1]->getDuration() - m_hitobjects[0]->getTime()))*(1.0f - osu_mod_artimewarp_multiplier.getFloat());
-		AR *= percent;
+		if (osu_ar_override.getFloat() >= 0.0f)
+			AR = osu_ar_override.getFloat();
+
+		if (osu_ar_overridenegative.getFloat() < 0.0f)
+			AR = osu_ar_overridenegative.getFloat();
+
+		if (osu_ar_override_lock.getBool())
+			AR = OsuGameRules::getRawConstantApproachRateForSpeedMultiplier(OsuGameRules::getRawApproachTime(AR), (m_music != NULL && m_bIsPlaying ? getSpeedMultiplier() : m_osu->getSpeedMultiplier()));
+
+		if (osu_mod_artimewarp.getBool() && m_hitobjects.size() > 0)
+		{
+			const float percent = 1.0f - ((double)(m_iCurMusicPos - m_hitobjects[0]->getTime()) / (double)(m_hitobjects[m_hitobjects.size()-1]->getTime() + m_hitobjects[m_hitobjects.size()-1]->getDuration() - m_hitobjects[0]->getTime()))*(1.0f - osu_mod_artimewarp_multiplier.getFloat());
+			AR *= percent;
+		}
+
+		if (osu_mod_arwobble.getBool())
+			AR += std::sin((m_iCurMusicPos/1000.0f)*osu_mod_arwobble_interval.getFloat())*osu_mod_arwobble_strength.getFloat();
 	}
-
-	if (osu_mod_arwobble.getBool())
-		AR += std::sin((m_iCurMusicPos/1000.0f)*osu_mod_arwobble_interval.getFloat())*osu_mod_arwobble_strength.getFloat();
-
 	return AR;
 }
 
@@ -1809,19 +1816,25 @@ float OsuBeatmap::getCS() const
 	if (m_selectedDifficulty2 == NULL) return 5.0f;
 
 	float CS = clamp<float>(m_selectedDifficulty2->getCS() * m_osu->getCSDifficultyMultiplier(), 0.0f, 10.0f);
-
-	if (osu_cs_override.getFloat() >= 0.0f)
-		CS = osu_cs_override.getFloat();
-
-	if (osu_mod_minimize.getBool() && m_hitobjects.size() > 0)
 	{
-		if (m_hitobjects.size() > 0)
-		{
-			const float percent = 1.0f + ((double)(m_iCurMusicPos - m_hitobjects[0]->getTime()) / (double)(m_hitobjects[m_hitobjects.size()-1]->getTime() + m_hitobjects[m_hitobjects.size()-1]->getDuration() - m_hitobjects[0]->getTime()))*osu_mod_minimize_multiplier.getFloat();
-			CS *= percent;
-		}
-	}
+		if (osu_cs_override.getFloat() >= 0.0f)
+			CS = osu_cs_override.getFloat();
 
+		if (osu_cs_overridenegative.getFloat() < 0.0f)
+			CS = osu_cs_overridenegative.getFloat();
+
+		if (osu_mod_minimize.getBool() && m_hitobjects.size() > 0)
+		{
+			if (m_hitobjects.size() > 0)
+			{
+				const float percent = 1.0f + ((double)(m_iCurMusicPos - m_hitobjects[0]->getTime()) / (double)(m_hitobjects[m_hitobjects.size()-1]->getTime() + m_hitobjects[m_hitobjects.size()-1]->getDuration() - m_hitobjects[0]->getTime()))*osu_mod_minimize_multiplier.getFloat();
+				CS *= percent;
+			}
+		}
+
+		if (osu_cs_cap_sanity.getBool())
+			CS = std::min(CS, 12.1429f);
+	}
 	return CS;
 }
 

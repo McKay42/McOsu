@@ -353,7 +353,7 @@ public:
 
 	static float getRawHitCircleDiameter(float CS)
 	{
-		return ((1.0f - 0.7f*(CS - 5.0f) / 5.0f) / 2.0f) * 128.0f * broken_gamefield_rounding_allowance; // gives the circle diameter in osu!pixels, goes negative above CS 12.1429
+		return std::max(0.0f, ((1.0f - 0.7f*(CS - 5.0f) / 5.0f) / 2.0f) * 128.0f * broken_gamefield_rounding_allowance); // gives the circle diameter in osu!pixels, goes negative above CS 12.1429
 	}
 
 	static float getHitCircleXMultiplier(Osu *osu)
