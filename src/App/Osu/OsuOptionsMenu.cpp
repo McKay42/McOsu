@@ -716,10 +716,18 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 #endif
 
 	addSubSection("Volume");
-	addSlider("Master:", 0.0f, 1.0f, convar->getConVarByName("osu_volume_master"), 70.0f)->setKeyDelta(0.01f);
-	addSlider("Inactive:", 0.0f, 1.0f, convar->getConVarByName("osu_volume_master_inactive"), 70.0f)->setKeyDelta(0.01f);
-	addSlider("Music:", 0.0f, 1.0f, convar->getConVarByName("osu_volume_music"), 70.0f)->setKeyDelta(0.01f);
-	addSlider("Effects:", 0.0f, 1.0f, convar->getConVarByName("osu_volume_effects"), 70.0f)->setKeyDelta(0.01f);
+	CBaseUISlider *masterVolumeSlider = addSlider("Master:", 0.0f, 1.0f, convar->getConVarByName("osu_volume_master"), 70.0f);
+	masterVolumeSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
+	masterVolumeSlider->setKeyDelta(0.01f);
+	CBaseUISlider *inactiveVolumeSlider = addSlider("Inactive:", 0.0f, 1.0f, convar->getConVarByName("osu_volume_master_inactive"), 70.0f);
+	inactiveVolumeSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
+	inactiveVolumeSlider->setKeyDelta(0.01f);
+	CBaseUISlider *musicVolumeSlider = addSlider("Music:", 0.0f, 1.0f, convar->getConVarByName("osu_volume_music"), 70.0f);
+	musicVolumeSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
+	musicVolumeSlider->setKeyDelta(0.01f);
+	CBaseUISlider *effectsVolumeSlider = addSlider("Effects:", 0.0f, 1.0f, convar->getConVarByName("osu_volume_effects"), 70.0f);
+	effectsVolumeSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
+	effectsVolumeSlider->setKeyDelta(0.01f);
 
 	addSubSection("Offset Adjustment");
 	CBaseUISlider *offsetSlider = addSlider("Universal Offset:", -300.0f, 300.0f, convar->getConVarByName("osu_universal_offset"));
