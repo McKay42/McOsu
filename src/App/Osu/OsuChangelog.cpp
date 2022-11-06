@@ -40,7 +40,11 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha317.changes.push_back("- Added \"Quick Seek\" key bindings (jump +-5 seconds)");
 	alpha317.changes.push_back("- Added hitobject type percentage support to search matcher (e.g. \"sliders>80%\")");
 	alpha317.changes.push_back("- Added ConVars (1): osu_seek_delta, osu_end_skip, osu_mod_halfwindow_allow_300s");
-	alpha317.changes.push_back("- Added ConVars (2): osu_songbrowser_search_hardcoded_filter");
+	alpha317.changes.push_back("- Added ConVars (2): osu_songbrowser_search_hardcoded_filter, osu_hud_scrubbing_timeline_hover_tooltip_offset_multiplier");
+	alpha317.changes.push_back("- Added ConVars (3): osu_skin_force_hitsound_sample_set");
+	alpha317.changes.push_back("- Added ConVars (4): osu_ar_overridenegative, osu_cs_overridenegative");
+	alpha317.changes.push_back("- Updated CS override to hard cap at CS +12.1429 (more than that never made sense anyway, the circle radius just goes negative)");
+	alpha317.changes.push_back("- Updated audio output device change logic to restore music state (only in menu, changing output devices while playing will still kick you out)");
 	alpha317.changes.push_back("- Fixed very old legacy beatmaps (< v8) sometimes generating mismatched slider ticks (compared to stable) because of different tickDistance algorithm");
 	alpha317.changes.push_back("- Fixed extremely rare infinite font/layout/resolution reloading bug killing performance caused by custom display scaling percentages (e.g. 124%, yes 124% scaling in Windows)");
 	alpha317.changes.push_back("- Fixed extremely rare freeze bug caused by potential infinite stars in osu!.db");
