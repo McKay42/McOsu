@@ -2704,12 +2704,24 @@ void OsuOptionsMenu::onOutputDeviceSelect()
 
 void OsuOptionsMenu::onOutputDeviceSelect2(UString outputDeviceName, int id)
 {
+	unsigned long prevMusicPositionMS = 0;
+	if (!m_osu->isInPlayMode() && m_osu->getSelectedBeatmap() != NULL && m_osu->getSelectedBeatmap()->getMusic() != NULL)
+		prevMusicPositionMS = m_osu->getSelectedBeatmap()->getMusic()->getPositionMS();
+
 	engine->getSound()->setOutputDevice(outputDeviceName);
 	m_outputDeviceLabel->setText(engine->getSound()->getOutputDevice());
 	m_osu->getSkin()->reloadSounds();
 
 	// and update reset button as usual
 	onOutputDeviceResetUpdate();
+
+	// start playing music again after audio device changed
+	if (!m_osu->isInPlayMode() && m_osu->getSelectedBeatmap() != NULL && m_osu->getSelectedBeatmap()->getMusic() != NULL)
+	{
+		m_osu->getSelectedBeatmap()->unloadMusic();
+		m_osu->getSelectedBeatmap()->select(); // (triggers preview music play)
+		m_osu->getSelectedBeatmap()->getMusic()->setPositionMS(prevMusicPositionMS);
+	}
 }
 
 void OsuOptionsMenu::onOutputDeviceResetClicked()

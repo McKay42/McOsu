@@ -78,6 +78,7 @@ public:
 	void setScoreV2ComboPortionMaximum(unsigned long long scoreV2ComboPortionMaximum) {m_iScoreV2ComboPortionMaximum = scoreV2ComboPortionMaximum;}
 
 	// music/sound
+	void unloadMusic() {unloadMusicInt();}
 	void setVolume(float volume);
 	void setSpeed(float speed);
 	void setPitch(float pitch);
@@ -206,7 +207,7 @@ protected:
 
 	void handlePreviewPlay();
 	void loadMusic(bool stream = true, bool prescan = false);
-	void unloadMusic();
+	void unloadMusicInt();
 	void unloadObjects();
 
 	void resetHitObjects(long curPos = 0);

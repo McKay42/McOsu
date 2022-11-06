@@ -495,7 +495,7 @@ void OsuBeatmap::update()
 		if (m_iResourceLoadUpdateDelayHack > 1 && !m_bForceStreamPlayback) // first: try loading a stream version of the music file
 		{
 			m_bForceStreamPlayback = true;
-			unloadMusic();
+			unloadMusicInt();
 			loadMusic(true, m_bForceStreamPlayback);
 
 			// we are waiting for an asynchronous start of the beatmap in the next update()
@@ -1368,7 +1368,7 @@ bool OsuBeatmap::play()
 	onLoad();
 
 	// load music
-	unloadMusic(); // need to reload in case of speed/pitch changes (just to be sure)
+	unloadMusicInt(); // need to reload in case of speed/pitch changes (just to be sure)
 	loadMusic(false, m_bForceStreamPlayback);
 
 	m_music->setLoop(false);
@@ -2208,7 +2208,7 @@ void OsuBeatmap::loadMusic(bool stream, bool prescan)
 	// load the song (again)
 	if (m_selectedDifficulty2 != NULL && (m_music == NULL || m_selectedDifficulty2->getFullSoundFilePath() != m_music->getFilePath() || !m_music->isReady()))
 	{
-		unloadMusic();
+		unloadMusicInt();
 
 		// if it's not a stream then we are loading the entire song into memory for playing
 		if (!stream)
@@ -2220,7 +2220,7 @@ void OsuBeatmap::loadMusic(bool stream, bool prescan)
 	}
 }
 
-void OsuBeatmap::unloadMusic()
+void OsuBeatmap::unloadMusicInt()
 {
 	if (m_osu->getInstanceID() < 2)
 	{
