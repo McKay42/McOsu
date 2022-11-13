@@ -32,6 +32,8 @@ public:
 	//	Hitobject Animations  //
 	//************************//
 
+	static ConVar osu_hitobject_fade_in_time;
+
 	static ConVar osu_hitobject_fade_out_time;
 	static ConVar osu_hitobject_fade_out_time_speed_multiplier_min;
 
@@ -52,6 +54,8 @@ public:
 	{
 		return osu_hitobject_fade_out_time.getFloat() * (1.0f / std::max(beatmap->getSpeedMultiplier(), osu_hitobject_fade_out_time_speed_multiplier_min.getFloat()));
 	}
+
+	static inline long getFadeInTime() {return (long)osu_hitobject_fade_in_time.getInt();}
 
 
 
@@ -239,8 +243,6 @@ public:
 	{
 		return mapDifficultyRange(osu_stacking_ar_override.getFloat() < 0.0f ? beatmap->getAR() : osu_stacking_ar_override.getFloat(), getMinApproachTime(), getMidApproachTime(), getMaxApproachTime());
 	}
-
-	static inline long getFadeInTime() {return 400;}
 
 	static float getRawHitWindow300(float OD) // ignore all mods and overrides
 	{
