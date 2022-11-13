@@ -10,9 +10,9 @@
 #include "Engine.h"
 #include "ConVar.h"
 #include "File.h"
-#include "MD5.h"
 
 #include "Osu.h"
+#include "OsuFile.h"
 #include "OsuSkin.h"
 #include "OsuBeatmap.h"
 #include "OsuBeatmapStandard.h"
@@ -936,29 +936,8 @@ bool OsuDatabaseBeatmap::loadMetadata(OsuDatabaseBeatmap *databaseBeatmap)
 			}
 		}
 
-		if (beatmapFile != NULL && beatmapFileSize > 0)
-		{
-			const char *hexDigits = "0123456789abcdef";
-			const unsigned char *input = (unsigned char*)beatmapFile;
-
-			MD5 hasher;
-			hasher.update(input, beatmapFileSize);
-			hasher.finalize();
-
-			const unsigned char *rawMD5Hash = hasher.getDigest();
-
-			for (int i=0; i<16; i++)
-			{
-				const size_t index1 = (rawMD5Hash[i] >> 4) & 0xf;	// md5hash[i] / 16
-				const size_t index2 = (rawMD5Hash[i] & 0xf);		// md5hash[i] % 16
-
-				if (index1 > 15 || index2 > 15)
-					continue;
-
-				databaseBeatmap->m_sMD5Hash += hexDigits[index1];
-				databaseBeatmap->m_sMD5Hash += hexDigits[index2];
-			}
-		}
+		if (beatmapFile != NULL)
+			databaseBeatmap->m_sMD5Hash = OsuFile::md5((unsigned char*)beatmapFile, beatmapFileSize);
 	}
 
 	// open osu file again, but this time for parsing

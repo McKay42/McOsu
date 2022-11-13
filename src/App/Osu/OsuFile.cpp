@@ -6,32 +6,37 @@
 //===============================================================================//
 
 #include "OsuFile.h"
+
 #include "Engine.h"
 #include "File.h"
+#include "MD5.h"
 
 constexpr const uint64_t OsuFile::MAX_STRING_LENGTH;
 
-OsuFile::OsuFile(UString filepath, bool write)
+OsuFile::OsuFile(UString filepath, bool write, bool writeBufferOnly)
 {
 	m_bWrite = write;
 	m_bReady = false;
+	m_file = NULL;
 	m_iFileSize = 0;
 	m_buffer = NULL;
 	m_readPointer = NULL;
 
-	// open and read everything
-	m_file = new File(filepath, (write ? File::TYPE::WRITE : File::TYPE::READ));
-	if (m_file->canRead() && !write)
+	if (!writeBufferOnly)
 	{
-		m_iFileSize = m_file->getFileSize();
-		m_buffer = m_file->readFile();
-		m_readPointer = m_buffer;
-		m_bReady = true;
-	}
-	else if (m_file->canWrite() && write)
-	{
-		m_writeBuffer.reserve(1024*1024);
-		m_bReady = true;
+		m_file = new File(filepath, (write ? File::TYPE::WRITE : File::TYPE::READ));
+		if (m_file->canRead() && !write)
+		{
+			m_iFileSize = m_file->getFileSize();
+			m_buffer = m_file->readFile();
+			m_readPointer = m_buffer;
+			m_bReady = (m_buffer != NULL);
+		}
+		else if (m_file->canWrite() && write)
+		{
+			m_writeBuffer.reserve(1024*1024);
+			m_bReady = true;
+		}
 	}
 }
 
@@ -332,4 +337,36 @@ uint64_t OsuFile::decodeULEB128(const uint8_t *p, unsigned int *n)
 		*n = (unsigned int)(p - backup);
 
 	return value;
+}
+
+
+
+std::string OsuFile::md5(const unsigned char *data, size_t numBytes)
+{
+	if (data == NULL || numBytes < 1) return "";
+
+	const char *hexDigits = "0123456789abcdef";
+
+	std::string md5Hash;
+	{
+		MD5 hasher;
+		{
+			hasher.update(data, numBytes);
+			hasher.finalize();
+		}
+		const unsigned char *rawMD5Hash = hasher.getDigest();
+
+		for (int i=0; i<16; i++)
+		{
+			const size_t index1 = (rawMD5Hash[i] >> 4) & 0xf;	// md5hash[i] / 16
+			const size_t index2 = (rawMD5Hash[i] & 0xf);		// md5hash[i] % 16
+
+			if (index1 > 15 || index2 > 15)
+				continue;
+
+			md5Hash += hexDigits[index1];
+			md5Hash += hexDigits[index2];
+		}
+	}
+	return md5Hash;
 }

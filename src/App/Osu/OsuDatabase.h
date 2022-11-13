@@ -239,6 +239,9 @@ private:
 	void scheduleLoadRaw();
 	void loadDB(OsuFile *db, bool &fallbackToRawLoad);
 
+	void loadStars();
+	void saveStars();
+
 	void loadScores();
 	void saveScores();
 
@@ -286,6 +289,13 @@ private:
 	std::vector<UString> m_rawLoadBeatmapFolders;
 	std::unordered_map<std::string, OsuDatabaseBeatmap*> m_rawHashToDiff2;
 	std::unordered_map<std::string, OsuDatabaseBeatmap*> m_rawHashToBeatmap;
+
+	// stars.cache
+	struct STARS_CACHE_ENTRY
+	{
+		float starsNomod;
+	};
+	std::unordered_map<std::string, STARS_CACHE_ENTRY> m_starsCache;
 };
 
 #endif
