@@ -53,6 +53,7 @@
 #include "OsuUISongBrowserSongDifficultyButton.h"
 #include "OsuUISongBrowserCollectionButton.h"
 #include "OsuUISongBrowserScoreButton.h"
+#include "OsuUIUserStatsScreenLabel.h"
 
 
 
@@ -536,6 +537,18 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	m_userButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onUserButtonClicked) );
 	m_userButton->setText(m_name_ref->getString());
 	m_bottombar->addBaseUIElement(m_userButton);
+
+	// looks like shit there, don't like it
+	m_ppVersionInfoLabel = NULL;
+	/*
+	m_ppVersionInfoLabel = new OsuUIUserStatsScreenLabel(m_osu);
+	m_ppVersionInfoLabel->setText(UString::format("pp Version: %i", OsuDifficultyCalculator::PP_ALGORITHM_VERSION));
+	m_ppVersionInfoLabel->setTooltipText("WARNING: McOsu's star/pp algorithm is currently lagging behind the \"official\" version.\n \nReason being that keeping up-to-date requires a LOT of changes now.\nThe next goal is rewriting the algorithm architecture to be more similar to osu!lazer,\nas that will make porting star/pp changes infinitely easier for the foreseeable future.\n \nNo promises as to when all of that will be finished.");
+	m_ppVersionInfoLabel->setTextColor(0xbbbb0000);
+	m_ppVersionInfoLabel->setDrawBackground(false);
+	m_ppVersionInfoLabel->setDrawFrame(false);
+	m_bottombar->addBaseUIElement(m_ppVersionInfoLabel);
+	*/
 
 	// build scorebrowser
 	m_scoreBrowser = new CBaseUIScrollView(0, 0, 0, 0, "");
@@ -2824,6 +2837,13 @@ void OsuSongBrowser2::updateLayout()
 	const int userButtonHeight = m_bottombar->getSize().y*0.9f;
 	m_userButton->setSize(userButtonHeight*3.5f, userButtonHeight);
 	m_userButton->setRelPos(std::max(m_bottombar->getSize().x/2 - m_userButton->getSize().x/2, m_bottombarNavButtons[m_bottombarNavButtons.size()-1]->getRelPos().x + m_bottombarNavButtons[m_bottombarNavButtons.size()-1]->getSize().x + 10), m_bottombar->getSize().y - m_userButton->getSize().y - 1);
+
+	if (m_ppVersionInfoLabel != NULL)
+	{
+		m_ppVersionInfoLabel->onResized(); // HACKHACK: framework bug (should update string metrics on setSizeToContent())
+		m_ppVersionInfoLabel->setSizeToContent(1, 10);
+		m_ppVersionInfoLabel->setRelPos(m_userButton->getRelPos() + Vector2(m_userButton->getSize().x + 20*dpiScale, m_userButton->getSize().y/2 - m_ppVersionInfoLabel->getSize().y/2));
+	}
 
 	m_bottombar->update_pos();
 

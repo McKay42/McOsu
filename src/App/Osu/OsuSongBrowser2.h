@@ -28,6 +28,7 @@ class OsuUISongBrowserButton;
 class OsuUISongBrowserSongButton;
 class OsuUISongBrowserSongDifficultyButton;
 class OsuUISongBrowserCollectionButton;
+class OsuUIUserStatsScreenLabel;
 
 class CBaseUIContainer;
 class CBaseUIImageButton;
@@ -317,6 +318,7 @@ private:
 	CBaseUIContainer *m_bottombar;
 	std::vector<OsuUISelectionButton*> m_bottombarNavButtons;
 	OsuUISongBrowserUserButton *m_userButton;
+	OsuUIUserStatsScreenLabel *m_ppVersionInfoLabel;
 
 	// score browser
 	std::vector<OsuUISongBrowserScoreButton*> m_scoreButtonCache;
