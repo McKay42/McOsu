@@ -36,15 +36,17 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 
 	CHANGELOG alpha317;
 	alpha317.title = UString::format("33.03 (Build Date: %s, %s)", __DATE__, __TIME__); // (09.01.2022 - ?)
-	alpha317.changes.push_back("- Added new experimental mod \"Half Window\"");
+	alpha317.changes.push_back("- Added new experimental mod \"Half Timing Window\"");
 	alpha317.changes.push_back("- Added \"Quick Seek\" key bindings (jump +-5 seconds)");
 	alpha317.changes.push_back("- Added hitobject type percentage support to search matcher (e.g. \"sliders>80%\")");
+	alpha317.changes.push_back("- Added stars cache");
 	alpha317.changes.push_back("- Added ConVars (1): osu_seek_delta, osu_end_skip, osu_mod_halfwindow_allow_300s");
 	alpha317.changes.push_back("- Added ConVars (2): osu_songbrowser_search_hardcoded_filter, osu_hud_scrubbing_timeline_hover_tooltip_offset_multiplier");
-	alpha317.changes.push_back("- Added ConVars (3): osu_skin_force_hitsound_sample_set");
-	alpha317.changes.push_back("- Added ConVars (4): osu_ar_overridenegative, osu_cs_overridenegative");
+	alpha317.changes.push_back("- Added ConVars (3): osu_skin_force_hitsound_sample_set, osu_hitobject_fade_in_time");
+	alpha317.changes.push_back("- Added ConVars (4): osu_ar_overridenegative, osu_cs_overridenegative, osu_database_stars_cache_enabled");
 	alpha317.changes.push_back("- Updated CS override to hard cap at CS +12.1429 (more than that never made sense anyway, the circle radius just goes negative)");
 	alpha317.changes.push_back("- Updated audio output device change logic to restore music state (only in menu, changing output devices while playing will still kick you out)");
+	alpha317.changes.push_back("- Increased osu_ui_top_ranks_max from 100 to 200 by default");
 	alpha317.changes.push_back("- Fixed very old legacy beatmaps (< v8) sometimes generating mismatched slider ticks (compared to stable) because of different tickDistance algorithm");
 	alpha317.changes.push_back("- Fixed extremely rare infinite font/layout/resolution reloading bug killing performance caused by custom display scaling percentages (e.g. 124%, yes 124% scaling in Windows)");
 	alpha317.changes.push_back("- Fixed extremely rare freeze bug caused by potential infinite stars in osu!.db");
