@@ -1942,26 +1942,26 @@ void OsuDatabase::saveStars()
 
 	//const double startTime = engine->getTimeReal();
 	{
+		// count
+		int64_t numStarsCacheEntries = 0;
+		for (OsuDatabaseBeatmap *beatmap : m_databaseBeatmaps)
+		{
+			for (OsuDatabaseBeatmap *diff2 : beatmap->getDifficulties())
+			{
+				if (diff2->getMD5Hash().size() == 32 && diff2->getStarsNomod() > 0.0f && diff2->getStarsNomod() != 0.0001f)
+					numStarsCacheEntries++;
+			}
+		}
+
+		if (numStarsCacheEntries < 1)
+		{
+			debugLog("No stars cached, nothing to write.\n");
+			return;
+		}
+
 		OsuFile cache(starsFilePath, true);
 		if (cache.isReady())
 		{
-			// count
-			int64_t numStarsCacheEntries = 0;
-			for (OsuDatabaseBeatmap *beatmap : m_databaseBeatmaps)
-			{
-				for (OsuDatabaseBeatmap *diff2 : beatmap->getDifficulties())
-				{
-					if (diff2->getMD5Hash().size() == 32 && diff2->getStarsNomod() > 0.0f && diff2->getStarsNomod() != 0.0001f)
-						numStarsCacheEntries++;
-				}
-			}
-
-			if (numStarsCacheEntries < 1)
-			{
-				debugLog("No stars cached, nothing to write.\n");
-				return;
-			}
-
 			// HACKHACK: code duplication is absolutely stupid, just so we can calculate the MD5 hash. but I'm too lazy to make it cleaner right now ffs
 			OsuFile tempForHash("", false, true);
 			{
