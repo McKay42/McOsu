@@ -810,7 +810,8 @@ void OsuBeatmapStandard::update()
 
 void OsuBeatmapStandard::onModUpdate(bool rebuildSliderVertexBuffers, bool recomputeDrainRate)
 {
-	debugLog("OsuBeatmapStandard::onModUpdate() @ %f\n", engine->getTime());
+	if (Osu::debug->getBool())
+		debugLog("OsuBeatmapStandard::onModUpdate() @ %f\n", engine->getTime());
 
 	m_osu->getMultiplayer()->onServerModUpdate();
 
