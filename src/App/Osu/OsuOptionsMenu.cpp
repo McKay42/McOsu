@@ -811,7 +811,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 
 	CBaseUIElement *sectionInput = addSection("Input");
 
-	addSubSection("Mouse");
+	addSubSection("Mouse", "scroll");
 	if (env->getOS() == Environment::OS::OS_WINDOWS || env->getOS() == Environment::OS::OS_MACOS || env->getOS() == Environment::OS::OS_HORIZON)
 	{
 		addSlider("Sensitivity:", (env->getOS() == Environment::OS::OS_HORIZON ? 1.0f : 0.1f), 6.0f, convar->getConVarByName("mouse_sensitivity"))->setKeyDelta(0.01f);
@@ -1132,6 +1132,11 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	OsuUIButton *resetAllSettingsButton = addButton("Reset all settings");
 	resetAllSettingsButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onResetEverythingClicked) );
 	resetAllSettingsButton->setColor(0xffff0000);
+	addSpacer();
+	addSpacer();
+	addSpacer();
+	addSpacer();
+	addSpacer();
 	addSpacer();
 	addSpacer();
 	addSpacer();
