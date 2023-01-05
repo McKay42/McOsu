@@ -72,6 +72,7 @@ public:
 	void stop(bool quit = true);
 	void fail();
 	void cancelFailing();
+	void resetScore() {resetScoreInt();}
 
 	// loader
 	void setMaxPossibleCombo(int maxPossibleCombo) {m_iMaxPossibleCombo = maxPossibleCombo;}
@@ -211,7 +212,7 @@ protected:
 	void unloadObjects();
 
 	void resetHitObjects(long curPos = 0);
-	void resetScore();
+	void resetScoreInt();
 
 	void playMissSound();
 

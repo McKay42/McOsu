@@ -1283,7 +1283,7 @@ bool OsuBeatmap::play()
 
 	// reset everything, including deleting any previously loaded hitobjects from another diff which we might just have played
 	unloadObjects();
-	resetScore();
+	resetScoreInt();
 
 	onBeforeLoad();
 
@@ -1412,7 +1412,7 @@ void OsuBeatmap::restart(bool quick)
 void OsuBeatmap::actualRestart()
 {
 	// reset everything
-	resetScore();
+	resetScoreInt();
 	resetHitObjects(-1000);
 
 	// we are waiting for an asynchronous start of the beatmap in the next update()
@@ -1644,7 +1644,7 @@ void OsuBeatmap::seekPercent(double percent)
 	m_music->setVolume(m_osu_volume_music_ref->getFloat());
 
 	resetHitObjects(m_music->getPositionMS());
-	resetScore();
+	resetScoreInt();
 
 	m_iPreviousSectionPassFailTime = -1;
 
@@ -1687,7 +1687,7 @@ void OsuBeatmap::seekMS(unsigned long ms)
 	m_music->setVolume(m_osu_volume_music_ref->getFloat());
 
 	resetHitObjects(m_music->getPositionMS());
-	resetScore();
+	resetScoreInt();
 
 	m_iPreviousSectionPassFailTime = -1;
 
@@ -2258,7 +2258,7 @@ void OsuBeatmap::resetHitObjects(long curPos)
 	m_osu->getHUD()->resetHitErrorBar();
 }
 
-void OsuBeatmap::resetScore()
+void OsuBeatmap::resetScoreInt()
 {
 	m_fHealth = 1.0;
 	m_fHealth2 = 1.0f;

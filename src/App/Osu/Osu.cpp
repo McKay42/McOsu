@@ -900,6 +900,11 @@ void Osu::update()
 
 						getSelectedBeatmap()->seekPercentPlayable(percent);
 					}
+					else
+					{
+						// special case: keep player invulnerable even if scrubbing position does not change
+						getSelectedBeatmap()->resetScore();
+					}
 				}
 				else
 					m_fPrevSeekMousePosX = -1.0f;
