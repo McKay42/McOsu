@@ -17,7 +17,8 @@ ConVar osu_load_beatmap_background_images("osu_load_beatmap_background_images", 
 
 ConVar osu_background_image_cache_size("osu_background_image_cache_size", 32, "how many images can stay loaded in parallel");
 ConVar osu_background_image_loading_delay("osu_background_image_loading_delay", 0.1f, "how many seconds to wait until loading background images for visible beatmaps starts");
-ConVar osu_background_image_eviction_delay("osu_background_image_eviction_delay", 0.05f, "how many seconds to keep stale background images in the cache before deleting them");
+ConVar osu_background_image_eviction_delay_seconds("osu_background_image_eviction_delay_seconds", 0.05f, "how many seconds to keep stale background images in the cache before deleting them (if seconds && frames)");
+ConVar osu_background_image_eviction_delay_frames("osu_background_image_eviction_delay_frames", 0, "how many frames to keep stale background images in the cache before deleting them (if seconds && frames)");
 
 OsuBackgroundImageHandler::OsuBackgroundImageHandler()
 {
@@ -45,7 +46,7 @@ void OsuBackgroundImageHandler::update(bool allowEviction)
 		entry.wasUsedLastFrame = false;
 
 		// check and handle evictions
-		if (!wasUsedLastFrame && engine->getTime() >= entry.evictionTime)
+		if (!wasUsedLastFrame && (engine->getTime() >= entry.evictionTime && engine->getFrameCount() >= entry.evictionTimeFrameCount))
 		{
 			if (allowEviction)
 			{
@@ -65,7 +66,10 @@ void OsuBackgroundImageHandler::update(bool allowEviction)
 				}
 			}
 			else
-				entry.evictionTime = engine->getTime() + osu_background_image_eviction_delay.getFloat();
+			{
+				entry.evictionTime = engine->getTime() + osu_background_image_eviction_delay_seconds.getFloat();
+				entry.evictionTimeFrameCount = engine->getFrameCount() + (unsigned long)std::max(0, osu_background_image_eviction_delay_frames.getInt());
+			}
 		}
 		else if (wasUsedLastFrame)
 		{
@@ -142,7 +146,8 @@ Image *OsuBackgroundImageHandler::getLoadBackgroundImage(const OsuDatabaseBeatma
 	// NOTE: no references to beatmap are kept anywhere (database can safely be deleted/reloaded without having to notify the OsuBackgroundImageHandler)
 
 	const float newLoadingTime = engine->getTime() + osu_background_image_loading_delay.getFloat();
-	const float newEvictionTime = engine->getTime() + osu_background_image_eviction_delay.getFloat();
+	const float newEvictionTime = engine->getTime() + osu_background_image_eviction_delay_seconds.getFloat();
+	const unsigned long newEvictionTimeFrameCount = engine->getFrameCount() + (unsigned long)std::max(0, osu_background_image_eviction_delay_frames.getInt());
 
 	// 1) if the path or image is already loaded, return image ref immediately (which may still be NULL) and keep track of when it was last requested
 	for (size_t i=0; i<m_cache.size(); i++)
@@ -153,6 +158,7 @@ Image *OsuBackgroundImageHandler::getLoadBackgroundImage(const OsuDatabaseBeatma
 		{
 			entry.wasUsedLastFrame = true;
 			entry.evictionTime = newEvictionTime;
+			entry.evictionTimeFrameCount = newEvictionTimeFrameCount;
 
 			// HACKHACK: to improve future loading speed, if we have already loaded the backgroundImageFileName, force update the database backgroundImageFileName and fullBackgroundImageFilePath
 			// this is similar to how it worked before the rework, but 100% safe(r) since we are not async
@@ -193,6 +199,7 @@ Image *OsuBackgroundImageHandler::getLoadBackgroundImage(const OsuDatabaseBeatma
 			entry.wasUsedLastFrame = true;
 			entry.loadingTime = newLoadingTime;
 			entry.evictionTime = newEvictionTime;
+			entry.evictionTimeFrameCount = newEvictionTimeFrameCount;
 
 			entry.osuFilePath = beatmap->getFilePath();
 			entry.folder = beatmap->getFolder();
