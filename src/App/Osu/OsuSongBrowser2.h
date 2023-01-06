@@ -144,6 +144,7 @@ public:
 	void addBeatmap(OsuDatabaseBeatmap *beatmap);
 	void readdBeatmap(OsuDatabaseBeatmap *diff2);
 
+	void requestNextScrollToSongButtonJumpFix();
 	void scrollToSongButton(OsuUISongBrowserButton *songButton, bool alignOnTop = false);
 	void scrollToSelectedSongButton();
 	void rebuildSongButtons();
@@ -157,6 +158,7 @@ public:
 
 	inline bool hasSelectedAndIsPlaying() const {return m_bHasSelectedAndIsPlaying;}
 	inline bool isInSearch() const {return m_bInSearch;}
+	inline bool isRightClickScrolling() const {return m_bSongBrowserRightClickScrolling;}
 
 	inline OsuDatabase *getDatabase() const {return m_db;}
 	inline OsuBeatmap *getSelectedBeatmap() const {return m_selectedBeatmap;}
@@ -329,6 +331,9 @@ private:
 	CBaseUIScrollView *m_songBrowser;
 	bool m_bSongBrowserRightClickScrollCheck;
 	bool m_bSongBrowserRightClickScrolling;
+	bool m_bNextScrollToSongButtonJumpFixScheduled;
+	float m_fNextScrollToSongButtonJumpFixOldScrollSizeY;
+	bool m_bNextScrollToSongButtonJumpFixBelowHalf;
 
 	// song browser selection state logic
 	OsuUISongBrowserSongButton *m_selectionPreviousSongButton;

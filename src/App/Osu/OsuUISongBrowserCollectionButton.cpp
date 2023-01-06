@@ -58,9 +58,9 @@ void OsuUISongBrowserCollectionButton::draw(Graphics *g)
 	g->popTransform();
 }
 
-void OsuUISongBrowserCollectionButton::onSelected(bool wasSelected)
+void OsuUISongBrowserCollectionButton::onSelected(bool wasSelected, bool wasClicked)
 {
-	OsuUISongBrowserButton::onSelected(wasSelected);
+	OsuUISongBrowserButton::onSelected(wasSelected, wasClicked);
 
 	m_songBrowser->onSelectionChange(this, true);
 	m_songBrowser->scrollToSongButton(this, true);

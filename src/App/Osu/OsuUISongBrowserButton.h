@@ -31,7 +31,7 @@ public:
 
 	OsuUISongBrowserButton *setVisible(bool visible);
 
-	void select(bool fireCallbacks = true);
+	void select(bool fireCallbacks = true, bool wasClicked = false);
 	void deselect();
 
 	void resetAnimations();
@@ -59,7 +59,7 @@ public:
 protected:
 	void drawMenuButtonBackground(Graphics *g);
 
-	virtual void onSelected(bool wasSelected) {;}
+	virtual void onSelected(bool wasSelected, bool wasClicked) {;}
 	virtual void onRightMouseUpInside() {;}
 
 	Osu *m_osu;

@@ -22,7 +22,7 @@ public:
 	const UString &getCollectionName() const {return m_sCollectionName;}
 
 private:
-	virtual void onSelected(bool wasSelected);
+	virtual void onSelected(bool wasSelected, bool wasClicked);
 	virtual void onRightMouseUpInside();
 
 	void onContextMenu(UString text, int id = -1);

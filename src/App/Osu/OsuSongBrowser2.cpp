@@ -448,6 +448,9 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	// vars
 	m_bSongBrowserRightClickScrollCheck = false;
 	m_bSongBrowserRightClickScrolling = false;
+	m_bNextScrollToSongButtonJumpFixScheduled = false;
+	m_fNextScrollToSongButtonJumpFixOldScrollSizeY = 0.0f;
+	m_bNextScrollToSongButtonJumpFixBelowHalf = false;
 
 	m_selectionPreviousSongButton = NULL;
 	m_selectionPreviousSongDiffButton = NULL;
@@ -2226,10 +2229,53 @@ void OsuSongBrowser2::readdBeatmap(OsuDatabaseBeatmap *diff2)
 	}
 }
 
+void OsuSongBrowser2::requestNextScrollToSongButtonJumpFix()
+{
+	m_bNextScrollToSongButtonJumpFixScheduled = true;
+	m_fNextScrollToSongButtonJumpFixOldScrollSizeY = m_songBrowser->getScrollSize().y;
+
+	m_bNextScrollToSongButtonJumpFixBelowHalf = false;
+	if (m_selectionPreviousSongDiffButton != NULL)
+	{
+		if (m_selectionPreviousSongDiffButton->getPos().y + m_selectionPreviousSongDiffButton->getSize().y/2 > m_songBrowser->getPos().y + m_songBrowser->getSize().y/2)
+			m_bNextScrollToSongButtonJumpFixBelowHalf = true;
+	}
+}
+
 void OsuSongBrowser2::scrollToSongButton(OsuUISongBrowserButton *songButton, bool alignOnTop)
 {
-	if (songButton != NULL)
-		m_songBrowser->scrollToY(-songButton->getRelPos().y + (alignOnTop ? (0) : (m_songBrowser->getSize().y/2 - songButton->getSize().y/2)));
+	if (songButton == NULL) return;
+
+	const float oldScrollPosY = m_songBrowser->getScrollPosY();
+	const int newScrollPosY = -songButton->getRelPos().y + (alignOnTop ? (0) : (m_songBrowser->getSize().y/2 - songButton->getSize().y/2));
+	const float scrollSizeYDelta = m_songBrowser->getScrollSize().y - m_fNextScrollToSongButtonJumpFixOldScrollSizeY;
+
+	// NOTE: compensate potential scroll jump due to added/removed elements (feels a lot better this way, also easier on the eyes)
+	if (m_bNextScrollToSongButtonJumpFixScheduled)
+	{
+		m_bNextScrollToSongButtonJumpFixScheduled = false;
+
+		if (!m_bNextScrollToSongButtonJumpFixBelowHalf)
+			m_songBrowser->scrollToY(oldScrollPosY - scrollSizeYDelta, false);
+		else
+		{
+			const OsuUISongBrowserSongDifficultyButton *diffButton = dynamic_cast<OsuUISongBrowserSongDifficultyButton*>(songButton);
+			if (diffButton != NULL)
+			{
+				const OsuUISongBrowserButton *parentSongButton = (diffButton->getParentSongButton() != NULL ? diffButton->getParentSongButton() : diffButton);
+				if (parentSongButton != NULL)
+				{
+					// TODO: if selecting diff above in same set then fucked jump
+					// TODO: i hate this so much
+					float offset = oldScrollPosY + (parentSongButton->getRelPos().y + parentSongButton->getSize().y - (m_songBrowser->getPos().y + m_songBrowser->getSize().y/2));
+					debugLog("offset = %f\n", offset);
+					m_songBrowser->scrollToY(newScrollPosY + offset, false);
+				}
+			}
+		}
+	}
+
+	m_songBrowser->scrollToY(newScrollPosY);
 }
 
 OsuUISongBrowserButton *OsuSongBrowser2::findCurrentlySelectedSongButton() const

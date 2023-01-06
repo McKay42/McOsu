@@ -180,11 +180,14 @@ void OsuUISongBrowserSongDifficultyButton::update()
 	}
 }
 
-void OsuUISongBrowserSongDifficultyButton::onSelected(bool wasSelected)
+void OsuUISongBrowserSongDifficultyButton::onSelected(bool wasSelected, bool wasClicked)
 {
-	OsuUISongBrowserButton::onSelected(wasSelected);
+	OsuUISongBrowserButton::onSelected(wasSelected, wasClicked);
 
 	updateGrade();
+
+	if (wasClicked)
+		m_songBrowser->requestNextScrollToSongButtonJumpFix();
 
 	m_songBrowser->onSelectionChange(this, true);
 	m_songBrowser->onDifficultySelected(m_databaseBeatmap, wasSelected);

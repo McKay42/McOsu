@@ -180,6 +180,10 @@ void OsuUISongBrowserButton::updateLayoutEx()
 		anim->moveQuadOut(&m_fCenterOffsetAnimation, centerOffsetAnimationTarget, 0.5f, true);
 
 		float centerOffsetVelocityAnimationTarget = clamp<float>((std::abs(m_view->getVelocity().y))/3500.0f, 0.0f, 1.0f);
+
+		if (m_songBrowser->isRightClickScrolling())
+			centerOffsetVelocityAnimationTarget = 0.0f;
+
 		if (m_view->isScrolling())
 			anim->moveQuadOut(&m_fCenterOffsetVelocityAnimation, 0.0f, 1.0f, true);
 		else
@@ -219,7 +223,12 @@ OsuUISongBrowserButton *OsuUISongBrowserButton::setVisible(bool visible)
 		// scrolling pinch effect
 		m_fCenterOffsetAnimation = 1.0f;
 		m_fHoverOffsetAnimation = 0.0f;
-		const float centerOffsetVelocityAnimationTarget = clamp<float>((std::abs(m_view->getVelocity().y)) / 3500.0f, 0.0f, 1.0f);
+
+		float centerOffsetVelocityAnimationTarget = clamp<float>((std::abs(m_view->getVelocity().y)) / 3500.0f, 0.0f, 1.0f);
+
+		if (m_songBrowser->isRightClickScrolling())
+			centerOffsetVelocityAnimationTarget = 0.0f;
+
 		m_fCenterOffsetVelocityAnimation = centerOffsetVelocityAnimationTarget;
 
 		// force early layout update
@@ -230,14 +239,14 @@ OsuUISongBrowserButton *OsuUISongBrowserButton::setVisible(bool visible)
 	return this;
 }
 
-void OsuUISongBrowserButton::select(bool fireCallbacks)
+void OsuUISongBrowserButton::select(bool fireCallbacks, bool wasClicked)
 {
 	const bool wasSelected = m_bSelected;
 	m_bSelected = true;
 
 	// callback
 	if (fireCallbacks)
-		onSelected(wasSelected);
+		onSelected(wasSelected, wasClicked);
 }
 
 void OsuUISongBrowserButton::deselect()
@@ -256,7 +265,7 @@ void OsuUISongBrowserButton::onClicked()
 
 	CBaseUIButton::onClicked();
 
-	select();
+	select(true, true);
 }
 
 void OsuUISongBrowserButton::onMouseInside()
