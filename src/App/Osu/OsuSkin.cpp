@@ -972,6 +972,7 @@ void OsuSkin::load()
 	else if (!parseSkinIni2Status)
 		m_osu->getNotificationOverlay()->addNotification("Error: Couldn't load DEFAULT skin.ini!!!", 0xffff0000);
 
+	// TODO: is this crashing some users?
 	// HACKHACK: speed up initial game startup time by async loading the skin (if osu_skin_async 1 in underride)
 	if (m_osu->getSkin() == NULL && osu_skin_async.getBool())
 	{
