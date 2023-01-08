@@ -449,8 +449,8 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	m_bSongBrowserRightClickScrollCheck = false;
 	m_bSongBrowserRightClickScrolling = false;
 	m_bNextScrollToSongButtonJumpFixScheduled = false;
-	m_fNextScrollToSongButtonJumpFixOldScrollSizeY = 0.0f;
-	m_bNextScrollToSongButtonJumpFixBelowHalf = false;
+	m_bNextScrollToSongButtonJumpFixUseScrollSizeDelta = false;
+	m_fNextScrollToSongButtonJumpFixOldRelPosY = 0.0f;
 
 	m_selectionPreviousSongButton = NULL;
 	m_selectionPreviousSongDiffButton = NULL;
@@ -1442,14 +1442,14 @@ void OsuSongBrowser2::onKeyDown(KeyboardEvent &key)
 			OsuUISongBrowserSongButton *songButton = dynamic_cast<OsuUISongBrowserSongButton*>(elements[nextSelectionIndex]);
 			if (nextButton != NULL)
 			{
-				nextButton->select();
+				nextButton->select(true, false);
 
 				// if this is a song button, select top child
 				if (songButton != NULL)
 				{
-					std::vector<OsuUISongBrowserButton*> children = songButton->getChildren();
+					const std::vector<OsuUISongBrowserButton*> &children = songButton->getChildren();
 					if (children.size() > 0 && !children[0]->isSelected())
-						children[0]->select();
+						children[0]->select(true, false, false);
 				}
 			}
 		}
@@ -1516,19 +1516,23 @@ void OsuSongBrowser2::onKeyDown(KeyboardEvent &key)
 
 			if (foundSelected && button != NULL && !button->isSelected() && !isSongDifficultyButtonAndNotIndependent && (!jumpToNextGroup || collectionButtonPointer != NULL))
 			{
-				button->select();
-
-				if (!jumpToNextGroup || collectionButtonPointer == NULL)
+				m_bNextScrollToSongButtonJumpFixUseScrollSizeDelta = true;
 				{
-					// automatically open collection below and go to bottom child
-					OsuUISongBrowserCollectionButton *collectionButton = dynamic_cast<OsuUISongBrowserCollectionButton*>(elements[i]);
-					if (collectionButton != NULL)
+					button->select();
+
+					if (!jumpToNextGroup || collectionButtonPointer == NULL)
 					{
-						std::vector<OsuUISongBrowserButton*> children = collectionButton->getChildren();
-						if (children.size() > 0 && !children[children.size()-1]->isSelected())
-							children[children.size()-1]->select();
+						// automatically open collection below and go to bottom child
+						OsuUISongBrowserCollectionButton *collectionButton = dynamic_cast<OsuUISongBrowserCollectionButton*>(elements[i]);
+						if (collectionButton != NULL)
+						{
+							std::vector<OsuUISongBrowserButton*> children = collectionButton->getChildren();
+							if (children.size() > 0 && !children[children.size()-1]->isSelected())
+								children[children.size()-1]->select();
+						}
 					}
 				}
+				m_bNextScrollToSongButtonJumpFixUseScrollSizeDelta = false;
 
 				break;
 			}
@@ -2229,53 +2233,35 @@ void OsuSongBrowser2::readdBeatmap(OsuDatabaseBeatmap *diff2)
 	}
 }
 
-void OsuSongBrowser2::requestNextScrollToSongButtonJumpFix()
+void OsuSongBrowser2::requestNextScrollToSongButtonJumpFix(OsuUISongBrowserSongDifficultyButton *diffButton)
 {
-	m_bNextScrollToSongButtonJumpFixScheduled = true;
-	m_fNextScrollToSongButtonJumpFixOldScrollSizeY = m_songBrowser->getScrollSize().y;
+	if (diffButton == NULL) return;
 
-	m_bNextScrollToSongButtonJumpFixBelowHalf = false;
-	if (m_selectionPreviousSongDiffButton != NULL)
-	{
-		if (m_selectionPreviousSongDiffButton->getPos().y + m_selectionPreviousSongDiffButton->getSize().y/2 > m_songBrowser->getPos().y + m_songBrowser->getSize().y/2)
-			m_bNextScrollToSongButtonJumpFixBelowHalf = true;
-	}
+	m_bNextScrollToSongButtonJumpFixScheduled = true;
+	m_fNextScrollToSongButtonJumpFixOldRelPosY = (diffButton->getParentSongButton() != NULL ? diffButton->getParentSongButton()->getRelPos().y : diffButton->getRelPos().y);
+	m_fNextScrollToSongButtonJumpFixOldScrollSizeY = m_songBrowser->getScrollSize().y;
 }
 
 void OsuSongBrowser2::scrollToSongButton(OsuUISongBrowserButton *songButton, bool alignOnTop)
 {
 	if (songButton == NULL) return;
 
-	const float oldScrollPosY = m_songBrowser->getScrollPosY();
-	const int newScrollPosY = -songButton->getRelPos().y + (alignOnTop ? (0) : (m_songBrowser->getSize().y/2 - songButton->getSize().y/2));
-	const float scrollSizeYDelta = m_songBrowser->getScrollSize().y - m_fNextScrollToSongButtonJumpFixOldScrollSizeY;
-
 	// NOTE: compensate potential scroll jump due to added/removed elements (feels a lot better this way, also easier on the eyes)
 	if (m_bNextScrollToSongButtonJumpFixScheduled)
 	{
 		m_bNextScrollToSongButtonJumpFixScheduled = false;
 
-		if (!m_bNextScrollToSongButtonJumpFixBelowHalf)
-			m_songBrowser->scrollToY(oldScrollPosY - scrollSizeYDelta, false);
-		else
+		float delta = 0.0f;
 		{
-			const OsuUISongBrowserSongDifficultyButton *diffButton = dynamic_cast<OsuUISongBrowserSongDifficultyButton*>(songButton);
-			if (diffButton != NULL)
-			{
-				const OsuUISongBrowserButton *parentSongButton = (diffButton->getParentSongButton() != NULL ? diffButton->getParentSongButton() : diffButton);
-				if (parentSongButton != NULL)
-				{
-					// TODO: if selecting diff above in same set then fucked jump
-					// TODO: i hate this so much
-					float offset = oldScrollPosY + (parentSongButton->getRelPos().y + parentSongButton->getSize().y - (m_songBrowser->getPos().y + m_songBrowser->getSize().y/2));
-					debugLog("offset = %f\n", offset);
-					m_songBrowser->scrollToY(newScrollPosY + offset, false);
-				}
-			}
+			if (!m_bNextScrollToSongButtonJumpFixUseScrollSizeDelta)
+				delta = (songButton->getRelPos().y - m_fNextScrollToSongButtonJumpFixOldRelPosY); // (default case)
+			else
+				delta = m_songBrowser->getScrollSize().y - m_fNextScrollToSongButtonJumpFixOldScrollSizeY; // technically not correct but feels a lot better for KEY_LEFT navigation
 		}
+		m_songBrowser->scrollToY(m_songBrowser->getScrollPosY() - delta, false);
 	}
 
-	m_songBrowser->scrollToY(newScrollPosY);
+	m_songBrowser->scrollToY(-songButton->getRelPos().y + (alignOnTop ? (0) : (m_songBrowser->getSize().y/2 - songButton->getSize().y/2)));
 }
 
 OsuUISongBrowserButton *OsuSongBrowser2::findCurrentlySelectedSongButton() const

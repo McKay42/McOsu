@@ -239,14 +239,14 @@ OsuUISongBrowserButton *OsuUISongBrowserButton::setVisible(bool visible)
 	return this;
 }
 
-void OsuUISongBrowserButton::select(bool fireCallbacks, bool wasClicked)
+void OsuUISongBrowserButton::select(bool fireCallbacks, bool autoSelectBottomMostChild, bool wasParentSelected)
 {
 	const bool wasSelected = m_bSelected;
 	m_bSelected = true;
 
 	// callback
 	if (fireCallbacks)
-		onSelected(wasSelected, wasClicked);
+		onSelected(wasSelected, autoSelectBottomMostChild, wasParentSelected);
 }
 
 void OsuUISongBrowserButton::deselect()

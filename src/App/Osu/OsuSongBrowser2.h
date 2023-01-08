@@ -144,7 +144,7 @@ public:
 	void addBeatmap(OsuDatabaseBeatmap *beatmap);
 	void readdBeatmap(OsuDatabaseBeatmap *diff2);
 
-	void requestNextScrollToSongButtonJumpFix();
+	void requestNextScrollToSongButtonJumpFix(OsuUISongBrowserSongDifficultyButton *diffButton);
 	void scrollToSongButton(OsuUISongBrowserButton *songButton, bool alignOnTop = false);
 	void scrollToSelectedSongButton();
 	void rebuildSongButtons();
@@ -332,8 +332,9 @@ private:
 	bool m_bSongBrowserRightClickScrollCheck;
 	bool m_bSongBrowserRightClickScrolling;
 	bool m_bNextScrollToSongButtonJumpFixScheduled;
+	bool m_bNextScrollToSongButtonJumpFixUseScrollSizeDelta;
+	float m_fNextScrollToSongButtonJumpFixOldRelPosY;
 	float m_fNextScrollToSongButtonJumpFixOldScrollSizeY;
-	bool m_bNextScrollToSongButtonJumpFixBelowHalf;
 
 	// song browser selection state logic
 	OsuUISongBrowserSongButton *m_selectionPreviousSongButton;

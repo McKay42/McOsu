@@ -33,7 +33,7 @@ public:
 	virtual OsuDatabaseBeatmap *getDatabaseBeatmap() const {return m_databaseBeatmap;}
 
 protected:
-	virtual void onSelected(bool wasSelected, bool wasClicked);
+	virtual void onSelected(bool wasSelected, bool autoSelectBottomMostChild, bool wasParentSelected);
 	virtual void onRightMouseUpInside();
 
 	void onContextMenu(UString text, int id = -1);

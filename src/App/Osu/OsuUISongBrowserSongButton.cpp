@@ -266,9 +266,9 @@ void OsuUISongBrowserSongButton::updateLayoutEx()
 	}
 }
 
-void OsuUISongBrowserSongButton::onSelected(bool wasSelected, bool wasClicked)
+void OsuUISongBrowserSongButton::onSelected(bool wasSelected, bool autoSelectBottomMostChild, bool wasParentSelected)
 {
-	OsuUISongBrowserButton::onSelected(wasSelected, wasClicked);
+	OsuUISongBrowserButton::onSelected(wasSelected, autoSelectBottomMostChild, wasParentSelected);
 
 	// resort children (since they might have been updated in the meantime)
 	sortChildren();
@@ -283,12 +283,15 @@ void OsuUISongBrowserSongButton::onSelected(bool wasSelected, bool wasClicked)
 	m_songBrowser->onSelectionChange(this, false);
 
 	// now, automatically select the bottom child (hardest diff, assuming default sorting, and respecting the current search matches)
-	for (int i=m_children.size()-1; i>=0; i--)
+	if (autoSelectBottomMostChild)
 	{
-		if (m_children[i]->isSearchMatch()) // NOTE: if no search is active, then all search matches return true by default
+		for (int i=m_children.size()-1; i>=0; i--)
 		{
-			m_children[i]->select(true, wasClicked);
-			break;
+			if (m_children[i]->isSearchMatch()) // NOTE: if no search is active, then all search matches return true by default
+			{
+				m_children[i]->select(true, false, wasSelected);
+				break;
+			}
 		}
 	}
 }

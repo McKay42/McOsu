@@ -180,14 +180,16 @@ void OsuUISongBrowserSongDifficultyButton::update()
 	}
 }
 
-void OsuUISongBrowserSongDifficultyButton::onSelected(bool wasSelected, bool wasClicked)
+void OsuUISongBrowserSongDifficultyButton::onSelected(bool wasSelected, bool autoSelectBottomMostChild, bool wasParentSelected)
 {
-	OsuUISongBrowserButton::onSelected(wasSelected, wasClicked);
+	OsuUISongBrowserButton::onSelected(wasSelected, autoSelectBottomMostChild, wasParentSelected);
+
+	const bool wasParentActuallySelected = (m_parentSongButton != NULL && wasParentSelected);
 
 	updateGrade();
 
-	if (wasClicked)
-		m_songBrowser->requestNextScrollToSongButtonJumpFix();
+	if (!wasParentActuallySelected)
+		m_songBrowser->requestNextScrollToSongButtonJumpFix(this);
 
 	m_songBrowser->onSelectionChange(this, true);
 	m_songBrowser->onDifficultySelected(m_databaseBeatmap, wasSelected);
