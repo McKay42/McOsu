@@ -29,12 +29,12 @@ public:
 	static ConVar osu_mania_hitwindow_50;
 	static ConVar osu_mania_hitwindow_miss;
 
-	static inline float getHitWindow300r(OsuBeatmap *beatmap)	{return osu_mania_hitwindow_300r.getFloat() + osu_mania_hitwindow_od_add_multiplier.getFloat()*(std::min(10.0f, std::max(0.0f, 10.0f - beatmap->getOD())));}
-	static inline float getHitWindow300(OsuBeatmap *beatmap)	{return osu_mania_hitwindow_300.getFloat() + osu_mania_hitwindow_od_add_multiplier.getFloat()*(std::min(10.0f, std::max(0.0f, 10.0f - beatmap->getOD())));}
-	static inline float getHitWindow200(OsuBeatmap *beatmap)	{return osu_mania_hitwindow_200.getFloat() + osu_mania_hitwindow_od_add_multiplier.getFloat()*(std::min(10.0f, std::max(0.0f, 10.0f - beatmap->getOD())));}
-	static inline float getHitWindow100(OsuBeatmap *beatmap)	{return osu_mania_hitwindow_100.getFloat() + osu_mania_hitwindow_od_add_multiplier.getFloat()*(std::min(10.0f, std::max(0.0f, 10.0f - beatmap->getOD())));}
-	static inline float getHitWindow50(OsuBeatmap *beatmap)		{return osu_mania_hitwindow_50.getFloat() + osu_mania_hitwindow_od_add_multiplier.getFloat()*(std::min(10.0f, std::max(0.0f, 10.0f - beatmap->getOD())));}
-	static inline float getHitWindowMiss(OsuBeatmap *beatmap)	{return osu_mania_hitwindow_miss.getFloat() + osu_mania_hitwindow_od_add_multiplier.getFloat()*(std::min(10.0f, std::max(0.0f, 10.0f - beatmap->getOD())));}
+	static inline float getHitWindow300r(const OsuBeatmap *beatmap)	{return osu_mania_hitwindow_300r.getFloat() + osu_mania_hitwindow_od_add_multiplier.getFloat()*(std::min(10.0f, std::max(0.0f, 10.0f - beatmap->getOD())));}
+	static inline float getHitWindow300(const OsuBeatmap *beatmap)	{return osu_mania_hitwindow_300.getFloat() + osu_mania_hitwindow_od_add_multiplier.getFloat()*(std::min(10.0f, std::max(0.0f, 10.0f - beatmap->getOD())));}
+	static inline float getHitWindow200(const OsuBeatmap *beatmap)	{return osu_mania_hitwindow_200.getFloat() + osu_mania_hitwindow_od_add_multiplier.getFloat()*(std::min(10.0f, std::max(0.0f, 10.0f - beatmap->getOD())));}
+	static inline float getHitWindow100(const OsuBeatmap *beatmap)	{return osu_mania_hitwindow_100.getFloat() + osu_mania_hitwindow_od_add_multiplier.getFloat()*(std::min(10.0f, std::max(0.0f, 10.0f - beatmap->getOD())));}
+	static inline float getHitWindow50(const OsuBeatmap *beatmap)		{return osu_mania_hitwindow_50.getFloat() + osu_mania_hitwindow_od_add_multiplier.getFloat()*(std::min(10.0f, std::max(0.0f, 10.0f - beatmap->getOD())));}
+	static inline float getHitWindowMiss(const OsuBeatmap *beatmap)	{return osu_mania_hitwindow_miss.getFloat() + osu_mania_hitwindow_od_add_multiplier.getFloat()*(std::min(10.0f, std::max(0.0f, 10.0f - beatmap->getOD())));}
 
 	static OsuScore::HIT getHitResult(long delta, OsuBeatmap *beatmap)
 	{

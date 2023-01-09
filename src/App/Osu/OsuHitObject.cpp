@@ -16,6 +16,7 @@
 #include "OsuSkin.h"
 #include "OsuSkinImage.h"
 #include "OsuGameRules.h"
+#include "OsuGameRulesMania.h"
 #include "OsuBeatmapStandard.h"
 #include "OsuBeatmapMania.h"
 #include "OsuHUD.h"
@@ -29,8 +30,16 @@ ConVar osu_hitresult_animated("osu_hitresult_animated", true, "whether to animat
 ConVar osu_hitresult_fadein_duration("osu_hitresult_fadein_duration", 0.120f);
 ConVar osu_hitresult_fadeout_start_time("osu_hitresult_fadeout_start_time", 0.500f);
 ConVar osu_hitresult_fadeout_duration("osu_hitresult_fadeout_duration", 0.600f);
-
 ConVar osu_hitresult_miss_fadein_scale("osu_hitresult_miss_fadein_scale", 2.0f);
+ConVar osu_hitresult_delta_colorize("osu_hitresult_delta_colorize", false, "whether to colorize hitresults depending on how early/late the hit (delta) was");
+ConVar osu_hitresult_delta_colorize_interpolate("osu_hitresult_delta_colorize_interpolate", true, "whether colorized hitresults should smoothly interpolate between early/late colors depending on the hit delta amount");
+ConVar osu_hitresult_delta_colorize_multiplier("osu_hitresult_delta_colorize_multiplier", 2.0f, "early/late colors are multiplied by this (assuming interpolation is enabled, increasing this will make early/late colors appear fully earlier)");
+ConVar osu_hitresult_delta_colorize_early_r("osu_hitresult_delta_colorize_early_r", 255, "from 0 to 255");
+ConVar osu_hitresult_delta_colorize_early_g("osu_hitresult_delta_colorize_early_g", 0, "from 0 to 255");
+ConVar osu_hitresult_delta_colorize_early_b("osu_hitresult_delta_colorize_early_b", 0, "from 0 to 255");
+ConVar osu_hitresult_delta_colorize_late_r("osu_hitresult_delta_colorize_late_r", 0, "from 0 to 255");
+ConVar osu_hitresult_delta_colorize_late_g("osu_hitresult_delta_colorize_late_g", 0, "from 0 to 255");
+ConVar osu_hitresult_delta_colorize_late_b("osu_hitresult_delta_colorize_late_b", 255, "from 0 to 255");
 
 ConVar osu_approach_scale_multiplier("osu_approach_scale_multiplier", 3.0f);
 ConVar osu_vr_approach_type("osu_vr_approach_type", 0, "0 = linear (default), 1 = quadratic");
@@ -67,12 +76,12 @@ ConVar *OsuHitObject::m_osu_vr_draw_desktop_playfield = NULL;
 
 unsigned long long OsuHitObject::sortHackCounter = 0;
 
-void OsuHitObject::drawHitResult(Graphics *g, OsuBeatmapStandard *beatmap, Vector2 rawPos, OsuScore::HIT result, float animPercentInv)
+void OsuHitObject::drawHitResult(Graphics *g, OsuBeatmapStandard *beatmap, Vector2 rawPos, OsuScore::HIT result, float animPercentInv, float hitDeltaRangePercent)
 {
-	drawHitResult(g, beatmap->getSkin(), beatmap->getHitcircleDiameter(), beatmap->getRawHitcircleDiameter(), rawPos, result, animPercentInv);
+	drawHitResult(g, beatmap->getSkin(), beatmap->getHitcircleDiameter(), beatmap->getRawHitcircleDiameter(), rawPos, result, animPercentInv, hitDeltaRangePercent);
 }
 
-void OsuHitObject::drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiameter, float rawHitcircleDiameter, Vector2 rawPos, OsuScore::HIT result, float animPercentInv)
+void OsuHitObject::drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiameter, float rawHitcircleDiameter, Vector2 rawPos, OsuScore::HIT result, float animPercentInv, float hitDeltaRangePercent)
 {
 	if (animPercentInv <= 0.0f) return;
 
@@ -80,13 +89,36 @@ void OsuHitObject::drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiam
 
 	const float fadeInEndPercent = osu_hitresult_fadein_duration.getFloat() / osu_hitresult_duration.getFloat();
 
-	g->setColor(0xffffffff);
+	// determine color/transparency
 	{
+		if (!osu_hitresult_delta_colorize.getBool() || result == OsuScore::HIT::HIT_MISS)
+			g->setColor(0xffffffff);
+		else
+		{
+			// NOTE: hitDeltaRangePercent is within -1.0f to 1.0f
+			// -1.0f means early miss
+			// 1.0f means late miss
+			// -0.999999999f means early 50
+			// 0.999999999f means late 50
+			// percentage scale is linear with respect to the entire hittable 50s range in both directions (contrary to OD brackets which are nonlinear of course)
+			if (hitDeltaRangePercent != 0.0f)
+			{
+				hitDeltaRangePercent = clamp<float>(hitDeltaRangePercent * osu_hitresult_delta_colorize_multiplier.getFloat(), -1.0f, 1.0f);
+
+				const float rf = lerp3f(osu_hitresult_delta_colorize_early_r.getFloat() / 255.0f, 1.0f, osu_hitresult_delta_colorize_late_r.getFloat() / 255.0f, osu_hitresult_delta_colorize_interpolate.getBool() ? hitDeltaRangePercent / 2.0f + 0.5f : (hitDeltaRangePercent < 0.0f ? -1.0f : 1.0f));
+				const float gf = lerp3f(osu_hitresult_delta_colorize_early_g.getFloat() / 255.0f, 1.0f, osu_hitresult_delta_colorize_late_g.getFloat() / 255.0f, osu_hitresult_delta_colorize_interpolate.getBool() ? hitDeltaRangePercent / 2.0f + 0.5f : (hitDeltaRangePercent < 0.0f ? -1.0f : 1.0f));
+				const float bf = lerp3f(osu_hitresult_delta_colorize_early_b.getFloat() / 255.0f, 1.0f, osu_hitresult_delta_colorize_late_b.getFloat() / 255.0f, osu_hitresult_delta_colorize_interpolate.getBool() ? hitDeltaRangePercent / 2.0f + 0.5f : (hitDeltaRangePercent < 0.0f ? -1.0f : 1.0f));
+
+				g->setColor(COLORf(1.0f, rf, gf, bf));
+			}
+		}
+
 		const float fadeOutStartPercent = osu_hitresult_fadeout_start_time.getFloat() / osu_hitresult_duration.getFloat();
 		const float fadeOutDurationPercent = osu_hitresult_fadeout_duration.getFloat() / osu_hitresult_duration.getFloat();
 
 		g->setAlpha(clamp<float>(animPercent < fadeInEndPercent ? animPercent / fadeInEndPercent : 1.0f - ((animPercent - fadeOutStartPercent) / fadeOutDurationPercent), 0.0f, 1.0f));
 	}
+
 	g->pushTransform();
 	{
 		const float osuCoordScaleMultiplier = hitcircleDiameter / rawHitcircleDiameter;
@@ -294,9 +326,9 @@ void OsuHitObject::drawHitResultAnim(Graphics *g, const HITRESULTANIM &hitresult
 			const float animPercentInv = 1.0f - (((engine->getTime() - hitresultanim.time) * m_beatmap->getOsu()->getSpeedMultiplier()) / osu_hitresult_duration.getFloat());
 
 			if (beatmapStd != NULL)
-				drawHitResult(g, beatmapStd, beatmapStd->osuCoords2Pixels(hitresultanim.rawPos), hitresultanim.result, animPercentInv);
+				drawHitResult(g, beatmapStd, beatmapStd->osuCoords2Pixels(hitresultanim.rawPos), hitresultanim.result, animPercentInv, clamp<float>((float)hitresultanim.delta / OsuGameRules::getHitWindow50(beatmapStd), -1.0f, 1.0f));
 			else if (beatmapMania != NULL)
-				drawHitResult(g, skin, 200.0f, 150.0f, hitresultanim.rawPos, hitresultanim.result, animPercentInv);
+				drawHitResult(g, skin, 200.0f, 150.0f, hitresultanim.rawPos, hitresultanim.result, animPercentInv, clamp<float>((float)hitresultanim.delta / OsuGameRulesMania::getHitWindow50(beatmapMania), -1.0f, 1.0f));
 		}
 	}
 }
@@ -446,4 +478,12 @@ void OsuHitObject::onReset(long curPos)
 
 	m_hitresultanim1.time = -9999.0f;
 	m_hitresultanim2.time = -9999.0f;
+}
+
+float OsuHitObject::lerp3f(float a, float b, float c, float percent)
+{
+	if (percent <= 0.5f)
+		return lerp<float>(a, b, percent * 2.0f);
+	else
+		return lerp<float>(b, c, (percent - 0.5f) * 2.0f);
 }
