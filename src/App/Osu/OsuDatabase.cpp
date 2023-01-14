@@ -52,7 +52,7 @@ ConVar osu_database_enabled("osu_database_enabled", true);
 ConVar osu_database_version("osu_database_version", 20191114, "maximum supported osu!.db version, above this will use fallback loader");
 ConVar osu_database_ignore_version_warnings("osu_database_ignore_version_warnings", false);
 ConVar osu_database_ignore_version("osu_database_ignore_version", false, "ignore upper version limit and force load the db file (may crash)");
-ConVar osu_database_stars_cache_enabled("osu_database_stars_cache_enabled", true);
+ConVar osu_database_stars_cache_enabled("osu_database_stars_cache_enabled", false);
 ConVar osu_scores_enabled("osu_scores_enabled", true);
 ConVar osu_scores_legacy_enabled("osu_scores_legacy_enabled", true, "load osu!'s scores.db");
 ConVar osu_scores_custom_enabled("osu_scores_custom_enabled", true, "load custom scores.db");
