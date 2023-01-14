@@ -22,6 +22,11 @@
 
 #include "OsuUISongBrowserScoreButton.h"
 
+ConVar osu_songbrowser_button_difficulty_inactive_color_a("osu_songbrowser_button_difficulty_inactive_color_a", 255);
+ConVar osu_songbrowser_button_difficulty_inactive_color_r("osu_songbrowser_button_difficulty_inactive_color_r", 0);
+ConVar osu_songbrowser_button_difficulty_inactive_color_g("osu_songbrowser_button_difficulty_inactive_color_g", 150);
+ConVar osu_songbrowser_button_difficulty_inactive_color_b("osu_songbrowser_button_difficulty_inactive_color_b", 236);
+
 ConVar *OsuUISongBrowserSongDifficultyButton::m_osu_scores_enabled = NULL;
 ConVar *OsuUISongBrowserSongDifficultyButton::m_osu_songbrowser_dynamic_star_recalc_ref = NULL;
 
@@ -163,15 +168,13 @@ void OsuUISongBrowserSongDifficultyButton::update()
 	if (!m_bVisible) return;
 
 	// dynamic settings (moved from constructor to here)
-	const bool isIndependentDiff = isIndependentDiffButton();
-	const bool newOffsetPercentSelectionState = (m_bSelected || !isIndependentDiff);
+	const bool newOffsetPercentSelectionState = (m_bSelected || !isIndependentDiffButton());
 	if (newOffsetPercentSelectionState != m_bPrevOffsetPercentSelectionState)
 	{
 		m_bPrevOffsetPercentSelectionState = newOffsetPercentSelectionState;
 		anim->moveQuadOut(&m_fOffsetPercentAnim, newOffsetPercentSelectionState ? 1.0f : 0.0f, 0.25f * (1.0f - m_fOffsetPercentAnim), true);
 	}
 	setOffsetPercent(lerp<float>(0.0f, 0.075f, m_fOffsetPercentAnim));
-	setInactiveBackgroundColor(!isIndependentDiff ? COLOR(255, 0, 150, 236) : COLOR(240, 235, 73, 153));
 
 	if (m_bUpdateGradeScheduled)
 	{
@@ -223,4 +226,12 @@ void OsuUISongBrowserSongDifficultyButton::updateGrade()
 bool OsuUISongBrowserSongDifficultyButton::isIndependentDiffButton() const
 {
 	return (m_parentSongButton == NULL || !m_parentSongButton->isSelected());
+}
+
+Color OsuUISongBrowserSongDifficultyButton::getInactiveBackgroundColor() const
+{
+	if (isIndependentDiffButton())
+		return OsuUISongBrowserSongButton::getInactiveBackgroundColor();
+	else
+		return COLOR(clamp<int>(osu_songbrowser_button_difficulty_inactive_color_a.getInt(), 0, 255), clamp<int>(osu_songbrowser_button_difficulty_inactive_color_r.getInt(), 0, 255), clamp<int>(osu_songbrowser_button_difficulty_inactive_color_g.getInt(), 0, 255), clamp<int>(osu_songbrowser_button_difficulty_inactive_color_b.getInt(), 0, 255));
 }

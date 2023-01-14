@@ -19,6 +19,9 @@ public:
 
 	void triggerContextMenu(Vector2 pos);
 
+	virtual Color getActiveBackgroundColor() const;
+	virtual Color getInactiveBackgroundColor() const;
+
 	const UString &getCollectionName() const {return m_sCollectionName;}
 
 private:

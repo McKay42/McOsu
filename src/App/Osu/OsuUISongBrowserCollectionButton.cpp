@@ -10,6 +10,7 @@
 #include "Engine.h"
 #include "Mouse.h"
 #include "Keyboard.h"
+#include "ConVar.h"
 #include "ResourceManager.h"
 
 #include "Osu.h"
@@ -20,6 +21,16 @@
 
 #include "OsuUIContextMenu.h"
 
+ConVar osu_songbrowser_button_collection_active_color_a("osu_songbrowser_button_collection_active_color_a", 255);
+ConVar osu_songbrowser_button_collection_active_color_r("osu_songbrowser_button_collection_active_color_r", 163);
+ConVar osu_songbrowser_button_collection_active_color_g("osu_songbrowser_button_collection_active_color_g", 240);
+ConVar osu_songbrowser_button_collection_active_color_b("osu_songbrowser_button_collection_active_color_b", 44);
+
+ConVar osu_songbrowser_button_collection_inactive_color_a("osu_songbrowser_button_collection_inactive_color_a", 255);
+ConVar osu_songbrowser_button_collection_inactive_color_r("osu_songbrowser_button_collection_inactive_color_r", 35);
+ConVar osu_songbrowser_button_collection_inactive_color_g("osu_songbrowser_button_collection_inactive_color_g", 50);
+ConVar osu_songbrowser_button_collection_inactive_color_b("osu_songbrowser_button_collection_inactive_color_b", 143);
+
 OsuUISongBrowserCollectionButton::OsuUISongBrowserCollectionButton(Osu *osu, OsuSongBrowser2 *songBrowser, CBaseUIScrollView *view, OsuUIContextMenu *contextMenu, float xPos, float yPos, float xSize, float ySize, UString name, UString collectionName, std::vector<OsuUISongBrowserButton*> children) : OsuUISongBrowserButton(osu, songBrowser, view, contextMenu, xPos, yPos, xSize, ySize, name)
 {
 	m_sCollectionName = collectionName;
@@ -29,8 +40,6 @@ OsuUISongBrowserCollectionButton::OsuUISongBrowserCollectionButton(Osu *osu, Osu
 
 	// settings
 	setOffsetPercent(0.075f*0.5f);
-	setInactiveBackgroundColor(COLOR(255, 35, 50, 143));
-	setActiveBackgroundColor(COLOR(255, 163, 240, 44));
 }
 
 void OsuUISongBrowserCollectionButton::draw(Graphics *g)
@@ -252,4 +261,14 @@ UString OsuUISongBrowserCollectionButton::buildTitleString()
 	titleString.append(UString::format((numChildren == 1 ? " (%i map)" : " (%i maps)"), numChildren));
 
 	return titleString;
+}
+
+Color OsuUISongBrowserCollectionButton::getActiveBackgroundColor() const
+{
+	return COLOR(clamp<int>(osu_songbrowser_button_collection_active_color_a.getInt(), 0, 255), clamp<int>(osu_songbrowser_button_collection_active_color_r.getInt(), 0, 255), clamp<int>(osu_songbrowser_button_collection_active_color_g.getInt(), 0, 255), clamp<int>(osu_songbrowser_button_collection_active_color_b.getInt(), 0, 255));
+}
+
+Color OsuUISongBrowserCollectionButton::getInactiveBackgroundColor() const
+{
+	return COLOR(clamp<int>(osu_songbrowser_button_collection_inactive_color_a.getInt(), 0, 255), clamp<int>(osu_songbrowser_button_collection_inactive_color_r.getInt(), 0, 255), clamp<int>(osu_songbrowser_button_collection_inactive_color_g.getInt(), 0, 255), clamp<int>(osu_songbrowser_button_collection_inactive_color_b.getInt(), 0, 255));
 }

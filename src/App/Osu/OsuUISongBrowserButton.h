@@ -38,8 +38,6 @@ public:
 
 	void setTargetRelPosY(float targetRelPosY);
 	void setChildren(std::vector<OsuUISongBrowserButton*> children) {m_children = children;}
-	void setActiveBackgroundColor(Color activeBackgroundColor) {m_activeBackgroundColor = activeBackgroundColor;}
-	void setInactiveBackgroundColor(Color inactiveBackgroundColor) {m_inactiveBackgroundColor = inactiveBackgroundColor;}
 	void setOffsetPercent(float offsetPercent) {m_fOffsetPercent = offsetPercent;}
 	void setHideIfSelected(bool hideIfSelected) {m_bHideIfSelected = hideIfSelected;}
 	void setIsSearchMatch(bool isSearchMatch) {m_bIsSearchMatch = isSearchMatch;}
@@ -51,6 +49,8 @@ public:
 	inline int getSortHack() const {return m_iSortHack;}
 
 	virtual OsuDatabaseBeatmap *getDatabaseBeatmap() const {return NULL;}
+	virtual Color getActiveBackgroundColor() const;
+	virtual Color getInactiveBackgroundColor() const;
 
 	inline bool isSelected() const {return m_bSelected;}
 	inline bool isHiddenIfSelected() const {return m_bHideIfSelected;}
@@ -108,9 +108,6 @@ private:
 	std::atomic<bool> m_bIsSearchMatch;
 
 	bool m_bHideIfSelected;
-
-	Color m_activeBackgroundColor;
-	Color m_inactiveBackgroundColor;
 
 	MOVE_AWAY_STATE m_moveAwayState;
 };

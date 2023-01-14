@@ -23,6 +23,8 @@ public:
 
 	virtual void updateGrade();
 
+	virtual Color getInactiveBackgroundColor() const;
+
 	inline OsuUISongBrowserSongButton *getParentSongButton() const {return m_parentSongButton;}
 
 	bool isIndependentDiffButton() const;

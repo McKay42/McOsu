@@ -21,6 +21,16 @@
 #include "CBaseUIContainer.h"
 #include "CBaseUIScrollView.h"
 
+ConVar osu_songbrowser_button_active_color_a("osu_songbrowser_button_active_color_a", 220 + 10);
+ConVar osu_songbrowser_button_active_color_r("osu_songbrowser_button_active_color_r", 255);
+ConVar osu_songbrowser_button_active_color_g("osu_songbrowser_button_active_color_g", 255);
+ConVar osu_songbrowser_button_active_color_b("osu_songbrowser_button_active_color_b", 255);
+
+ConVar osu_songbrowser_button_inactive_color_a("osu_songbrowser_button_inactive_color_a", 240);
+ConVar osu_songbrowser_button_inactive_color_r("osu_songbrowser_button_inactive_color_r", 235);
+ConVar osu_songbrowser_button_inactive_color_g("osu_songbrowser_button_inactive_color_g", 73);
+ConVar osu_songbrowser_button_inactive_color_b("osu_songbrowser_button_inactive_color_b", 153);
+
 int OsuUISongBrowserButton::marginPixelsX = 9;
 int OsuUISongBrowserButton::marginPixelsY = 9;
 float OsuUISongBrowserButton::lastHoverSoundTime = 0;
@@ -54,9 +64,6 @@ OsuUISongBrowserButton::OsuUISongBrowserButton(Osu *osu, OsuSongBrowser2 *songBr
 
 	m_iSortHack = sortHackCounter++;
 	m_bIsSearchMatch = true;
-
-	m_inactiveBackgroundColor = COLOR(240, 235, 73, 153); // pink
-	m_activeBackgroundColor = COLOR(220 + 10, 255, 255, 255); // white
 
 	m_fHoverMoveAwayAnimation = 0.0f;
 	m_moveAwayState = MOVE_AWAY_STATE::MOVE_CENTER;
@@ -108,7 +115,7 @@ void OsuUISongBrowserButton::draw(Graphics *g)
 
 void OsuUISongBrowserButton::drawMenuButtonBackground(Graphics *g)
 {
-	g->setColor(m_bSelected ? m_activeBackgroundColor : m_inactiveBackgroundColor);
+	g->setColor(m_bSelected ? getActiveBackgroundColor() : getInactiveBackgroundColor());
 	g->pushTransform();
 	{
 		g->scale(m_fScale, m_fScale);
@@ -376,4 +383,14 @@ void OsuUISongBrowserButton::setMoveAwayState(OsuUISongBrowserButton::MOVE_AWAY_
 		}
 		break;
 	}
+}
+
+Color OsuUISongBrowserButton::getActiveBackgroundColor() const
+{
+	return COLOR(clamp<int>(osu_songbrowser_button_active_color_a.getInt(), 0, 255), clamp<int>(osu_songbrowser_button_active_color_r.getInt(), 0, 255), clamp<int>(osu_songbrowser_button_active_color_g.getInt(), 0, 255), clamp<int>(osu_songbrowser_button_active_color_b.getInt(), 0, 255));
+}
+
+Color OsuUISongBrowserButton::getInactiveBackgroundColor() const
+{
+	return COLOR(clamp<int>(osu_songbrowser_button_inactive_color_a.getInt(), 0, 255), clamp<int>(osu_songbrowser_button_inactive_color_r.getInt(), 0, 255), clamp<int>(osu_songbrowser_button_inactive_color_g.getInt(), 0, 255), clamp<int>(osu_songbrowser_button_inactive_color_b.getInt(), 0, 255));
 }
