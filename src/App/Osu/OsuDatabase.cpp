@@ -56,7 +56,7 @@ ConVar osu_database_stars_cache_enabled("osu_database_stars_cache_enabled", fals
 ConVar osu_scores_enabled("osu_scores_enabled", true);
 ConVar osu_scores_legacy_enabled("osu_scores_legacy_enabled", true, "load osu!'s scores.db");
 ConVar osu_scores_custom_enabled("osu_scores_custom_enabled", true, "load custom scores.db");
-ConVar osu_scores_custom_version("osu_scores_custom_version", 20210108, "maximum supported custom scores.db/scoresvr.db version");
+ConVar osu_scores_custom_version("osu_scores_custom_version", 20210110, "maximum supported custom scores.db/scoresvr.db version");
 ConVar osu_scores_save_immediately("osu_scores_save_immediately", true, "write scores.db as soon as a new score is added");
 ConVar osu_scores_sort_by_pp("osu_scores_sort_by_pp", true, "display pp in score browser instead of score");
 ConVar osu_scores_bonus_pp("osu_scores_bonus_pp", true, "whether to add bonus pp to total (real) pp or not");
@@ -64,7 +64,7 @@ ConVar osu_scores_rename("osu_scores_rename");
 ConVar osu_scores_export("osu_scores_export");
 ConVar osu_collections_legacy_enabled("osu_collections_legacy_enabled", true, "load osu!'s collection.db");
 ConVar osu_collections_custom_enabled("osu_collections_custom_enabled", true, "load custom collections.db");
-ConVar osu_collections_custom_version("osu_collections_custom_version", 20220108, "maximum supported custom collections.db version");
+ConVar osu_collections_custom_version("osu_collections_custom_version", 20220110, "maximum supported custom collections.db version");
 ConVar osu_collections_save_immediately("osu_collections_save_immediately", true, "write collections.db as soon as anything is changed");
 ConVar osu_user_include_relax_and_autopilot_for_stats("osu_user_include_relax_and_autopilot_for_stats", false);
 ConVar osu_user_switcher_include_legacy_scores_for_names("osu_user_switcher_include_legacy_scores_for_names", true);
@@ -2192,12 +2192,15 @@ void OsuDatabase::loadScores()
 				UString backupScoresFilePath = scoresFilePath;
 				backupScoresFilePath.append(UString::format(".%i.backup", (makeBackupType < 2 ? backupLessThanVersion : maxSupportedCustomDbVersion)));
 
-				File backupScoresFile(backupScoresFilePath, File::TYPE::WRITE);
-				if (backupScoresFile.canWrite())
+				if (!env->fileExists(backupScoresFilePath)) // NOTE: avoid overwriting when people switch betas
 				{
-					const char *originalScoresFileBytes = originalScoresFile.readFile();
-					if (originalScoresFileBytes != NULL)
-						backupScoresFile.write(originalScoresFileBytes, originalScoresFile.getFileSize());
+					File backupScoresFile(backupScoresFilePath, File::TYPE::WRITE);
+					if (backupScoresFile.canWrite())
+					{
+						const char *originalScoresFileBytes = originalScoresFile.readFile();
+						if (originalScoresFileBytes != NULL)
+							backupScoresFile.write(originalScoresFileBytes, originalScoresFile.getFileSize());
+					}
 				}
 			}
 		}
@@ -2715,12 +2718,15 @@ void OsuDatabase::loadCollections(UString collectionFilePath, bool isLegacy, con
 			UString backupCollectionsFilePath = collectionFilePath;
 			backupCollectionsFilePath.append(UString::format(".%i.backup", osu_collections_custom_version.getInt()));
 
-			File backupCollectionsFile(backupCollectionsFilePath, File::TYPE::WRITE);
-			if (backupCollectionsFile.canWrite())
+			if (!env->fileExists(backupCollectionsFilePath)) // NOTE: avoid overwriting when people switch betas
 			{
-				const char *originalCollectionsFileBytes = originalCollectionsFile.readFile();
-				if (originalCollectionsFileBytes != NULL)
-					backupCollectionsFile.write(originalCollectionsFileBytes, originalCollectionsFile.getFileSize());
+				File backupCollectionsFile(backupCollectionsFilePath, File::TYPE::WRITE);
+				if (backupCollectionsFile.canWrite())
+				{
+					const char *originalCollectionsFileBytes = originalCollectionsFile.readFile();
+					if (originalCollectionsFileBytes != NULL)
+						backupCollectionsFile.write(originalCollectionsFileBytes, originalCollectionsFile.getFileSize());
+				}
 			}
 		}
 	}
