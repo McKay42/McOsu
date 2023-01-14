@@ -1514,7 +1514,6 @@ void OsuOptionsMenu::onKeyDown(KeyboardEvent &e)
 				if (engine->getKeyboard()->isControlDown())
 				{
 					// delete everything from the current caret position to the left, until after the first non-space character (but including it)
-					// TODO: use a CBaseUITextbox instead for the search box
 					bool foundNonSpaceChar = false;
 					while (m_sSearchString.length() > 0)
 					{
@@ -1689,7 +1688,7 @@ void OsuOptionsMenu::setVisibleInt(bool visible, bool fromOnBack)
 		//m_fAnimation = 0.0f;
 	}
 
-	// auto scroll to fposu settings if opening options while in fposu gamemode
+	// usability: auto scroll to fposu settings if opening options while in fposu gamemode
 	if (visible && m_osu->isInPlayMode() && m_osu_mod_fposu_ref->getBool() && !m_fposuCategoryButton->isActiveCategory())
 		onCategoryClicked(m_fposuCategoryButton);
 
@@ -1768,6 +1767,12 @@ void OsuOptionsMenu::updateLayout()
 				if (m_elements[i].elements.size() == 1)
 				{
 					CBaseUITextbox *textboxPointer = dynamic_cast<CBaseUITextbox*>(m_elements[i].elements[0]);
+					if (textboxPointer != NULL)
+						textboxPointer->setText(m_elements[i].cvar->getString());
+				}
+				else if (m_elements[i].elements.size() == 2)
+				{
+					CBaseUITextbox *textboxPointer = dynamic_cast<CBaseUITextbox*>(m_elements[i].elements[1]);
 					if (textboxPointer != NULL)
 						textboxPointer->setText(m_elements[i].cvar->getString());
 				}
@@ -2749,7 +2754,7 @@ void OsuOptionsMenu::onOutputDeviceRestart()
 
 #else
 
-	engine->getSound()->setOutputDevice("Default"); // TODO: horizon fallback?
+	engine->getSound()->setOutputDevice("Default"); // NOTE: only relevant for horizon builds atm
 
 #endif
 }
