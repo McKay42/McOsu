@@ -32,6 +32,8 @@ public:
 	//	Hitobject Animations  //
 	//************************//
 
+	static ConVar osu_hitobject_fade_in_time;
+
 	static ConVar osu_hitobject_fade_out_time;
 	static ConVar osu_hitobject_fade_out_time_speed_multiplier_min;
 
@@ -53,6 +55,8 @@ public:
 		return osu_hitobject_fade_out_time.getFloat() * (1.0f / std::max(beatmap->getSpeedMultiplier(), osu_hitobject_fade_out_time_speed_multiplier_min.getFloat()));
 	}
 
+	static inline long getFadeInTime() {return (long)osu_hitobject_fade_in_time.getInt();}
+
 
 
 	//*********************//
@@ -68,6 +72,8 @@ public:
 	static ConVar osu_mod_mafham;
 	static ConVar osu_mod_mafham_render_livesize;
 	static ConVar osu_stacking_ar_override;
+	static ConVar osu_mod_halfwindow;
+	static ConVar osu_mod_halfwindow_allow_300s;
 
 
 
@@ -238,8 +244,6 @@ public:
 		return mapDifficultyRange(osu_stacking_ar_override.getFloat() < 0.0f ? beatmap->getAR() : osu_stacking_ar_override.getFloat(), getMinApproachTime(), getMidApproachTime(), getMaxApproachTime());
 	}
 
-	static inline long getFadeInTime() {return 400;}
-
 	static float getRawHitWindow300(float OD) // ignore all mods and overrides
 	{
 		return mapDifficultyRange(OD, getMinHitWindow300(), getMidHitWindow300(), getMaxHitWindow300());
@@ -284,6 +288,14 @@ public:
 
 	static OsuScore::HIT getHitResult(long delta, OsuBeatmap *beatmap)
 	{
+		if (osu_mod_halfwindow.getBool() && delta > 0 && delta <= (long)getHitWindowMiss(beatmap))
+		{
+			if (!osu_mod_halfwindow_allow_300s.getBool())
+				return OsuScore::HIT::HIT_MISS;
+			else if (delta > (long)getHitWindow300(beatmap))
+				return OsuScore::HIT::HIT_MISS;
+		}
+
 		delta = std::abs(delta);
 
 		OsuScore::HIT result = OsuScore::HIT::HIT_NULL;
@@ -343,7 +355,7 @@ public:
 
 	static float getRawHitCircleDiameter(float CS)
 	{
-		return ((1.0f - 0.7f*(CS - 5.0f) / 5.0f) / 2.0f) * 128.0f * broken_gamefield_rounding_allowance; // gives the circle diameter in osu!pixels, goes negative above CS 12.1429
+		return std::max(0.0f, ((1.0f - 0.7f*(CS - 5.0f) / 5.0f) / 2.0f) * 128.0f * broken_gamefield_rounding_allowance); // gives the circle diameter in osu!pixels, goes negative above CS 12.1429
 	}
 
 	static float getHitCircleXMultiplier(Osu *osu)

@@ -19,10 +19,13 @@ public:
 
 	void triggerContextMenu(Vector2 pos);
 
+	virtual Color getActiveBackgroundColor() const;
+	virtual Color getInactiveBackgroundColor() const;
+
 	const UString &getCollectionName() const {return m_sCollectionName;}
 
 private:
-	virtual void onSelected(bool wasSelected);
+	virtual void onSelected(bool wasSelected, bool autoSelectBottomMostChild, bool wasParentSelected);
 	virtual void onRightMouseUpInside();
 
 	void onContextMenu(UString text, int id = -1);

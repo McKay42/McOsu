@@ -82,6 +82,7 @@ private:
 	virtual void onRestart(bool quick);
 
 	void drawFollowPoints(Graphics *g);
+	void drawHitObjects(Graphics *g);
 
 	void updateAutoCursorPos();
 	void updatePlayfieldMetrics();
@@ -152,6 +153,8 @@ private:
 	int m_iMafhamActiveRenderHitObjectIndex;
 	int m_iMafhamFinishedRenderHitObjectIndex;
 	bool m_bInMafhamRenderChunk; // used by OsuSlider to not animate the reverse arrow, and by OsuCircle to not animate note blocking shaking, while being rendered into the scene buffer
+
+	int m_iMandalaIndex;
 };
 
 #endif

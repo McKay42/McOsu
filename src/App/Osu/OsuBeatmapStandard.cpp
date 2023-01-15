@@ -85,6 +85,9 @@ ConVar osu_mod_shirone("osu_mod_shirone", false);
 ConVar osu_mod_shirone_combo("osu_mod_shirone_combo", 20.0f);
 ConVar osu_mod_mafham_render_chunksize("osu_mod_mafham_render_chunksize", 15, "render this many hitobjects per frame chunk into the scene buffer (spreads rendering across many frames to minimize lag)");
 
+ConVar osu_mandala("osu_mandala", false);
+ConVar osu_mandala_num("osu_mandala_num", 7);
+
 ConVar osu_debug_hiterrorbar_misaims("osu_debug_hiterrorbar_misaims", false);
 
 ConVar osu_pp_live_timeout("osu_pp_live_timeout", 1.0f, "show message that we're still calculating stars after this many seconds, on the first start of the beatmap");
@@ -142,6 +145,8 @@ OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 	m_iMafhamActiveRenderHitObjectIndex = 0;
 	m_iMafhamFinishedRenderHitObjectIndex = 0;
 	m_bInMafhamRenderChunk = false;
+
+	m_iMandalaIndex = 0;
 
 	// convar refs
 	if (m_osu_draw_statistics_pp_ref == NULL)
@@ -238,182 +243,14 @@ void OsuBeatmapStandard::draw(Graphics *g)
 
 	// draw all hitobjects in reverse
 	if (m_osu_draw_hitobjects_ref->getBool())
+		drawHitObjects(g);
+
+	if (osu_mandala.getBool())
 	{
-		const long curPos = m_iCurMusicPosWithOffsets;
-		const long pvs = getPVS();
-		const bool usePVS = m_osu_pvs->getBool();
-
-		if (!OsuGameRules::osu_mod_mafham.getBool())
+		for (int i=0; i<osu_mandala_num.getInt(); i++)
 		{
-			if (!osu_draw_reverse_order.getBool())
-			{
-				for (int i=m_hitobjectsSortedByEndTime.size()-1; i>=0; i--)
-				{
-					// PVS optimization (reversed)
-					if (usePVS)
-					{
-						if (m_hitobjectsSortedByEndTime[i]->isFinished() && (curPos - pvs > m_hitobjectsSortedByEndTime[i]->getTime() + m_hitobjectsSortedByEndTime[i]->getDuration())) // past objects
-							break;
-						if (m_hitobjectsSortedByEndTime[i]->getTime() > curPos + pvs) // future objects
-							continue;
-					}
-
-					m_hitobjectsSortedByEndTime[i]->draw(g);
-				}
-			}
-			else
-			{
-				for (int i=0; i<m_hitobjectsSortedByEndTime.size(); i++)
-				{
-					// PVS optimization
-					if (usePVS)
-					{
-						if (m_hitobjectsSortedByEndTime[i]->isFinished() && (curPos - pvs > m_hitobjectsSortedByEndTime[i]->getTime() + m_hitobjectsSortedByEndTime[i]->getDuration())) // past objects
-							continue;
-						if (m_hitobjectsSortedByEndTime[i]->getTime() > curPos + pvs) // future objects
-							break;
-					}
-
-					m_hitobjectsSortedByEndTime[i]->draw(g);
-				}
-			}
-			for (int i=0; i<m_hitobjectsSortedByEndTime.size(); i++)
-			{
-				// NOTE: to fix mayday simultaneous sliders with increasing endtime getting culled here, would have to switch from m_hitobjectsSortedByEndTime to m_hitobjects
-				// PVS optimization
-				if (usePVS)
-				{
-					if (m_hitobjectsSortedByEndTime[i]->isFinished() && (curPos - pvs > m_hitobjectsSortedByEndTime[i]->getTime() + m_hitobjectsSortedByEndTime[i]->getDuration())) // past objects
-						continue;
-					if (m_hitobjectsSortedByEndTime[i]->getTime() > curPos + pvs) // future objects
-						break;
-				}
-
-				m_hitobjectsSortedByEndTime[i]->draw2(g);
-			}
-		}
-		else
-		{
-			if (m_mafhamActiveRenderTarget == NULL)
-				m_mafhamActiveRenderTarget = m_osu->getFrameBuffer();
-
-			if (m_mafhamFinishedRenderTarget == NULL)
-				m_mafhamFinishedRenderTarget = m_osu->getFrameBuffer2();
-
-			// if we have a chunk to render into the scene buffer
-			const bool shouldDrawBuffer = (m_hitobjectsSortedByEndTime.size() - m_iCurrentHitObjectIndex) > OsuGameRules::osu_mod_mafham_render_livesize.getInt();
-			bool shouldRenderChunk = m_iMafhamHitObjectRenderIndex < m_hitobjectsSortedByEndTime.size() && shouldDrawBuffer;
-			if (shouldRenderChunk)
-			{
-				m_bInMafhamRenderChunk = true;
-
-				m_mafhamActiveRenderTarget->setClearColorOnDraw(m_iMafhamHitObjectRenderIndex == 0);
-				m_mafhamActiveRenderTarget->setClearDepthOnDraw(m_iMafhamHitObjectRenderIndex == 0);
-
-				m_mafhamActiveRenderTarget->enable();
-				{
-					g->setBlendMode(Graphics::BLEND_MODE::BLEND_MODE_PREMUL_ALPHA);
-					{
-						int chunkCounter = 0;
-						for (int i=m_hitobjectsSortedByEndTime.size()-1 - m_iMafhamHitObjectRenderIndex; i>=0; i--, m_iMafhamHitObjectRenderIndex++)
-						{
-							chunkCounter++;
-							if (chunkCounter > osu_mod_mafham_render_chunksize.getInt())
-								break; // continue chunk render in next frame
-
-							if (i <= m_iCurrentHitObjectIndex + OsuGameRules::osu_mod_mafham_render_livesize.getInt()) // skip live objects
-							{
-								m_iMafhamHitObjectRenderIndex = m_hitobjectsSortedByEndTime.size(); // stop chunk render
-								break;
-							}
-
-							// PVS optimization (reversed)
-							if (usePVS)
-							{
-								if (m_hitobjectsSortedByEndTime[i]->isFinished() && (curPos - pvs > m_hitobjectsSortedByEndTime[i]->getTime() + m_hitobjectsSortedByEndTime[i]->getDuration())) // past objects
-								{
-									m_iMafhamHitObjectRenderIndex = m_hitobjectsSortedByEndTime.size(); // stop chunk render
-									break;
-								}
-								if (m_hitobjectsSortedByEndTime[i]->getTime() > curPos + pvs) // future objects
-									continue;
-							}
-
-							m_hitobjectsSortedByEndTime[i]->draw(g);
-
-							m_iMafhamActiveRenderHitObjectIndex = i;
-						}
-					}
-					g->setBlendMode(Graphics::BLEND_MODE::BLEND_MODE_ALPHA);
-				}
-				m_mafhamActiveRenderTarget->disable();
-
-				m_bInMafhamRenderChunk = false;
-			}
-			shouldRenderChunk = m_iMafhamHitObjectRenderIndex < m_hitobjectsSortedByEndTime.size() && shouldDrawBuffer;
-			if (!shouldRenderChunk && m_bMafhamRenderScheduled)
-			{
-				// finished, we can now swap the active framebuffer with the one we just finished
-				m_bMafhamRenderScheduled = false;
-
-				RenderTarget *temp = m_mafhamFinishedRenderTarget;
-				m_mafhamFinishedRenderTarget = m_mafhamActiveRenderTarget;
-				m_mafhamActiveRenderTarget = temp;
-
-				m_iMafhamFinishedRenderHitObjectIndex = m_iMafhamActiveRenderHitObjectIndex;
-				m_iMafhamActiveRenderHitObjectIndex = m_hitobjectsSortedByEndTime.size(); // reset
-			}
-
-			// draw scene buffer
-			if (shouldDrawBuffer)
-			{
-				g->setBlendMode(Graphics::BLEND_MODE::BLEND_MODE_PREMUL_COLOR);
-				{
-					m_mafhamFinishedRenderTarget->draw(g, 0, 0);
-				}
-				g->setBlendMode(Graphics::BLEND_MODE::BLEND_MODE_ALPHA);
-			}
-
-			// draw followpoints
-			if (osu_draw_followpoints.getBool())
-				drawFollowPoints(g);
-
-			// draw live hitobjects (also, code duplication yay)
-			{
-				for (int i=m_hitobjectsSortedByEndTime.size()-1; i>=0; i--)
-				{
-					// PVS optimization (reversed)
-					if (usePVS)
-					{
-						if (m_hitobjectsSortedByEndTime[i]->isFinished() && (curPos - pvs > m_hitobjectsSortedByEndTime[i]->getTime() + m_hitobjectsSortedByEndTime[i]->getDuration())) // past objects
-							break;
-						if (m_hitobjectsSortedByEndTime[i]->getTime() > curPos + pvs) // future objects
-							continue;
-					}
-
-					if (i > m_iCurrentHitObjectIndex + OsuGameRules::osu_mod_mafham_render_livesize.getInt() || (i > m_iMafhamFinishedRenderHitObjectIndex-1 && shouldDrawBuffer)) // skip non-live objects
-						continue;
-
-					m_hitobjectsSortedByEndTime[i]->draw(g);
-				}
-
-				for (int i=0; i<m_hitobjectsSortedByEndTime.size(); i++)
-				{
-					// PVS optimization
-					if (usePVS)
-					{
-						if (m_hitobjectsSortedByEndTime[i]->isFinished() && (curPos - pvs > m_hitobjectsSortedByEndTime[i]->getTime() + m_hitobjectsSortedByEndTime[i]->getDuration())) // past objects
-							continue;
-						if (m_hitobjectsSortedByEndTime[i]->getTime() > curPos + pvs) // future objects
-							break;
-					}
-
-					if (i >= m_iCurrentHitObjectIndex + OsuGameRules::osu_mod_mafham_render_livesize.getInt() || (i >= m_iMafhamFinishedRenderHitObjectIndex-1 && shouldDrawBuffer)) // skip non-live objects
-						break;
-
-					m_hitobjectsSortedByEndTime[i]->draw2(g);
-				}
-			}
+			m_iMandalaIndex = i;
+			drawHitObjects(g);
 		}
 	}
 
@@ -688,6 +525,188 @@ void OsuBeatmapStandard::drawFollowPoints(Graphics *g)
 	}
 }
 
+void OsuBeatmapStandard::drawHitObjects(Graphics *g)
+{
+	const long curPos = m_iCurMusicPosWithOffsets;
+	const long pvs = getPVS();
+	const bool usePVS = m_osu_pvs->getBool();
+
+	if (!OsuGameRules::osu_mod_mafham.getBool())
+	{
+		if (!osu_draw_reverse_order.getBool())
+		{
+			for (int i=m_hitobjectsSortedByEndTime.size()-1; i>=0; i--)
+			{
+				// PVS optimization (reversed)
+				if (usePVS)
+				{
+					if (m_hitobjectsSortedByEndTime[i]->isFinished() && (curPos - pvs > m_hitobjectsSortedByEndTime[i]->getTime() + m_hitobjectsSortedByEndTime[i]->getDuration())) // past objects
+						break;
+					if (m_hitobjectsSortedByEndTime[i]->getTime() > curPos + pvs) // future objects
+						continue;
+				}
+
+				m_hitobjectsSortedByEndTime[i]->draw(g);
+			}
+		}
+		else
+		{
+			for (int i=0; i<m_hitobjectsSortedByEndTime.size(); i++)
+			{
+				// PVS optimization
+				if (usePVS)
+				{
+					if (m_hitobjectsSortedByEndTime[i]->isFinished() && (curPos - pvs > m_hitobjectsSortedByEndTime[i]->getTime() + m_hitobjectsSortedByEndTime[i]->getDuration())) // past objects
+						continue;
+					if (m_hitobjectsSortedByEndTime[i]->getTime() > curPos + pvs) // future objects
+						break;
+				}
+
+				m_hitobjectsSortedByEndTime[i]->draw(g);
+			}
+		}
+		for (int i=0; i<m_hitobjectsSortedByEndTime.size(); i++)
+		{
+			// NOTE: to fix mayday simultaneous sliders with increasing endtime getting culled here, would have to switch from m_hitobjectsSortedByEndTime to m_hitobjects
+			// PVS optimization
+			if (usePVS)
+			{
+				if (m_hitobjectsSortedByEndTime[i]->isFinished() && (curPos - pvs > m_hitobjectsSortedByEndTime[i]->getTime() + m_hitobjectsSortedByEndTime[i]->getDuration())) // past objects
+					continue;
+				if (m_hitobjectsSortedByEndTime[i]->getTime() > curPos + pvs) // future objects
+					break;
+			}
+
+			m_hitobjectsSortedByEndTime[i]->draw2(g);
+		}
+	}
+	else
+	{
+		const int mafhamRenderLiveSize = OsuGameRules::osu_mod_mafham_render_livesize.getInt();
+
+		if (m_mafhamActiveRenderTarget == NULL)
+			m_mafhamActiveRenderTarget = m_osu->getFrameBuffer();
+
+		if (m_mafhamFinishedRenderTarget == NULL)
+			m_mafhamFinishedRenderTarget = m_osu->getFrameBuffer2();
+
+		// if we have a chunk to render into the scene buffer
+		const bool shouldDrawBuffer = (m_hitobjectsSortedByEndTime.size() - m_iCurrentHitObjectIndex) > mafhamRenderLiveSize;
+		bool shouldRenderChunk = m_iMafhamHitObjectRenderIndex < m_hitobjectsSortedByEndTime.size() && shouldDrawBuffer;
+		if (shouldRenderChunk)
+		{
+			m_bInMafhamRenderChunk = true;
+
+			m_mafhamActiveRenderTarget->setClearColorOnDraw(m_iMafhamHitObjectRenderIndex == 0);
+			m_mafhamActiveRenderTarget->setClearDepthOnDraw(m_iMafhamHitObjectRenderIndex == 0);
+
+			m_mafhamActiveRenderTarget->enable();
+			{
+				g->setBlendMode(Graphics::BLEND_MODE::BLEND_MODE_PREMUL_ALPHA);
+				{
+					int chunkCounter = 0;
+					for (int i=m_hitobjectsSortedByEndTime.size()-1 - m_iMafhamHitObjectRenderIndex; i>=0; i--, m_iMafhamHitObjectRenderIndex++)
+					{
+						chunkCounter++;
+						if (chunkCounter > osu_mod_mafham_render_chunksize.getInt())
+							break; // continue chunk render in next frame
+
+						if (i <= m_iCurrentHitObjectIndex + mafhamRenderLiveSize) // skip live objects
+						{
+							m_iMafhamHitObjectRenderIndex = m_hitobjectsSortedByEndTime.size(); // stop chunk render
+							break;
+						}
+
+						// PVS optimization (reversed)
+						if (usePVS)
+						{
+							if (m_hitobjectsSortedByEndTime[i]->isFinished() && (curPos - pvs > m_hitobjectsSortedByEndTime[i]->getTime() + m_hitobjectsSortedByEndTime[i]->getDuration())) // past objects
+							{
+								m_iMafhamHitObjectRenderIndex = m_hitobjectsSortedByEndTime.size(); // stop chunk render
+								break;
+							}
+							if (m_hitobjectsSortedByEndTime[i]->getTime() > curPos + pvs) // future objects
+								continue;
+						}
+
+						m_hitobjectsSortedByEndTime[i]->draw(g);
+
+						m_iMafhamActiveRenderHitObjectIndex = i;
+					}
+				}
+				g->setBlendMode(Graphics::BLEND_MODE::BLEND_MODE_ALPHA);
+			}
+			m_mafhamActiveRenderTarget->disable();
+
+			m_bInMafhamRenderChunk = false;
+		}
+		shouldRenderChunk = m_iMafhamHitObjectRenderIndex < m_hitobjectsSortedByEndTime.size() && shouldDrawBuffer;
+		if (!shouldRenderChunk && m_bMafhamRenderScheduled)
+		{
+			// finished, we can now swap the active framebuffer with the one we just finished
+			m_bMafhamRenderScheduled = false;
+
+			RenderTarget *temp = m_mafhamFinishedRenderTarget;
+			m_mafhamFinishedRenderTarget = m_mafhamActiveRenderTarget;
+			m_mafhamActiveRenderTarget = temp;
+
+			m_iMafhamFinishedRenderHitObjectIndex = m_iMafhamActiveRenderHitObjectIndex;
+			m_iMafhamActiveRenderHitObjectIndex = m_hitobjectsSortedByEndTime.size(); // reset
+		}
+
+		// draw scene buffer
+		if (shouldDrawBuffer)
+		{
+			g->setBlendMode(Graphics::BLEND_MODE::BLEND_MODE_PREMUL_COLOR);
+			{
+				m_mafhamFinishedRenderTarget->draw(g, 0, 0);
+			}
+			g->setBlendMode(Graphics::BLEND_MODE::BLEND_MODE_ALPHA);
+		}
+
+		// draw followpoints
+		if (osu_draw_followpoints.getBool())
+			drawFollowPoints(g);
+
+		// draw live hitobjects (also, code duplication yay)
+		{
+			for (int i=m_hitobjectsSortedByEndTime.size()-1; i>=0; i--)
+			{
+				// PVS optimization (reversed)
+				if (usePVS)
+				{
+					if (m_hitobjectsSortedByEndTime[i]->isFinished() && (curPos - pvs > m_hitobjectsSortedByEndTime[i]->getTime() + m_hitobjectsSortedByEndTime[i]->getDuration())) // past objects
+						break;
+					if (m_hitobjectsSortedByEndTime[i]->getTime() > curPos + pvs) // future objects
+						continue;
+				}
+
+				if (i > m_iCurrentHitObjectIndex + mafhamRenderLiveSize || (i > m_iMafhamFinishedRenderHitObjectIndex-1 && shouldDrawBuffer)) // skip non-live objects
+					continue;
+
+				m_hitobjectsSortedByEndTime[i]->draw(g);
+			}
+
+			for (int i=0; i<m_hitobjectsSortedByEndTime.size(); i++)
+			{
+				// PVS optimization
+				if (usePVS)
+				{
+					if (m_hitobjectsSortedByEndTime[i]->isFinished() && (curPos - pvs > m_hitobjectsSortedByEndTime[i]->getTime() + m_hitobjectsSortedByEndTime[i]->getDuration())) // past objects
+						continue;
+					if (m_hitobjectsSortedByEndTime[i]->getTime() > curPos + pvs) // future objects
+						break;
+				}
+
+				if (i >= m_iCurrentHitObjectIndex + mafhamRenderLiveSize || (i >= m_iMafhamFinishedRenderHitObjectIndex-1 && shouldDrawBuffer)) // skip non-live objects
+					break;
+
+				m_hitobjectsSortedByEndTime[i]->draw2(g);
+			}
+		}
+	}
+}
+
 void OsuBeatmapStandard::update()
 {
 	if (!canUpdate())
@@ -791,7 +810,8 @@ void OsuBeatmapStandard::update()
 
 void OsuBeatmapStandard::onModUpdate(bool rebuildSliderVertexBuffers, bool recomputeDrainRate)
 {
-	debugLog("OsuBeatmapStandard::onModUpdate() @ %f\n", engine->getTime());
+	if (Osu::debug->getBool())
+		debugLog("OsuBeatmapStandard::onModUpdate() @ %f\n", engine->getTime());
 
 	m_osu->getMultiplayer()->onServerModUpdate();
 
@@ -952,6 +972,23 @@ Vector2 OsuBeatmapStandard::osuCoords2Pixels(Vector2 coords) const
 		Vector3 coords3 = Vector3(coords.x, coords.y, 0);
 		Matrix4 rot;
 		rot.rotateZ(m_fPlayfieldRotation + osu_playfield_rotation.getFloat()); // (m_iCurMusicPos/1000.0f)*30
+
+		coords3 = coords3 * rot;
+		coords3.x += OsuGameRules::OSU_COORD_WIDTH/2;
+		coords3.y += OsuGameRules::OSU_COORD_HEIGHT/2;
+
+		coords.x = coords3.x;
+		coords.y = coords3.y;
+	}
+
+	if (osu_mandala.getBool())
+	{
+		coords.x -= OsuGameRules::OSU_COORD_WIDTH/2;
+		coords.y -= OsuGameRules::OSU_COORD_HEIGHT/2;
+
+		Vector3 coords3 = Vector3(coords.x, coords.y, 0);
+		Matrix4 rot;
+		rot.rotateZ((360.0f / osu_mandala_num.getInt()) * (m_iMandalaIndex + 1)); // (m_iCurMusicPos/1000.0f)*30
 
 		coords3 = coords3 * rot;
 		coords3.x += OsuGameRules::OSU_COORD_WIDTH/2;

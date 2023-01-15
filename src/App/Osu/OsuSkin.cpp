@@ -37,7 +37,8 @@ ConVar osu_skin_mipmaps("osu_skin_mipmaps", false, "generate mipmaps for every s
 ConVar osu_skin_color_index_add("osu_skin_color_index_add", 0);
 ConVar osu_skin_animation_force("osu_skin_animation_force", false);
 ConVar osu_skin_use_skin_hitsounds("osu_skin_use_skin_hitsounds", true, "If enabled: Use skin's sound samples. If disabled: Use default skin's sound samples. For hitsounds only.");
-ConVar osu_skin_random("osu_skin_random", false, "select random skin from list");
+ConVar osu_skin_force_hitsound_sample_set("osu_skin_force_hitsound_sample_set", 0, "force a specific hitsound sample set to always be used regardless of what the beatmap says. 0 = disabled, 1 = normal, 2 = soft, 3 = drum.");
+ConVar osu_skin_random("osu_skin_random", false, "select random skin from list on every skin load/reload");
 ConVar osu_skin_random_elements("osu_skin_random_elements", false, "sElECt RanDOM sKIn eLemENTs FRoM ranDom SkINs");
 ConVar osu_mod_fposu_sound_panning("osu_mod_fposu_sound_panning", false, "see osu_sound_panning");
 ConVar osu_mod_fps_sound_panning("osu_mod_fps_sound_panning", false, "see osu_sound_panning");
@@ -971,6 +972,7 @@ void OsuSkin::load()
 	else if (!parseSkinIni2Status)
 		m_osu->getNotificationOverlay()->addNotification("Error: Couldn't load DEFAULT skin.ini!!!", 0xffff0000);
 
+	// TODO: is this crashing some users?
 	// HACKHACK: speed up initial game startup time by async loading the skin (if osu_skin_async 1 in underride)
 	if (m_osu->getSkin() == NULL && osu_skin_async.getBool())
 	{
@@ -1297,7 +1299,11 @@ void OsuSkin::playHitCircleSound(int sampleType, float pan)
 	else
 		pan *= osu_sound_panning_multiplier.getFloat();
 
-	switch (m_iSampleSet)
+	int actualSampleSet = m_iSampleSet;
+	if (osu_skin_force_hitsound_sample_set.getInt() > 0)
+		actualSampleSet = osu_skin_force_hitsound_sample_set.getInt();
+
+	switch (actualSampleSet)
 	{
 	case 3:
 		engine->getSound()->play(m_drumHitNormal, pan);

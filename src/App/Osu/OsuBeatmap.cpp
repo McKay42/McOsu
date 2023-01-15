@@ -28,6 +28,7 @@
 #include "OsuGameRules.h"
 #include "OsuNotificationOverlay.h"
 #include "OsuModSelector.h"
+#include "OsuMainMenu.h"
 
 #include "OsuDatabaseBeatmap.h"
 
@@ -58,8 +59,11 @@ ConVar osu_combobreak_sound_combo("osu_combobreak_sound_combo", 20, "Only play t
 ConVar osu_beatmap_preview_mods_live("osu_beatmap_preview_mods_live", false, "whether to immediately apply all currently selected mods while browsing beatmaps (e.g. speed/pitch)");
 ConVar osu_beatmap_preview_music_loop("osu_beatmap_preview_music_loop", true);
 
-ConVar osu_ar_override("osu_ar_override", -1.0f);
-ConVar osu_cs_override("osu_cs_override", -1.0f);
+ConVar osu_ar_override("osu_ar_override", -1.0f, "use this to override between AR 0 and AR 12.5+. active if value is more than or equal to 0.");
+ConVar osu_ar_overridenegative("osu_ar_overridenegative", 0.0f, "use this to override below AR 0. active if value is less than 0, disabled otherwise. this override always overrides the other override.");
+ConVar osu_cs_override("osu_cs_override", -1.0f, "use this to override between CS 0 and CS 12.1429. active if value is more than or equal to 0.");
+ConVar osu_cs_overridenegative("osu_cs_overridenegative", 0.0f, "use this to override below CS 0. active if value is less than 0, disabled otherwise. this override always overrides the other override.");
+ConVar osu_cs_cap_sanity("osu_cs_cap_sanity", true);
 ConVar osu_hp_override("osu_hp_override", -1.0f);
 ConVar osu_od_override("osu_od_override", -1.0f);
 ConVar osu_ar_override_lock("osu_ar_override_lock", false, "always force constant AR even through speed changes");
@@ -93,6 +97,7 @@ ConVar osu_mod_fullalternate("osu_mod_fullalternate", false);
 ConVar osu_early_note_time("osu_early_note_time", 1000.0f, "Timeframe in ms at the beginning of a beatmap which triggers a starting delay for easier reading");
 ConVar osu_quick_retry_time("osu_quick_retry_time", 2000.0f, "Timeframe in ms subtracted from the first hitobject when quick retrying (not regular retry)");
 ConVar osu_end_delay_time("osu_end_delay_time", 750.0f, "Duration in ms which is added at the end of a beatmap after the last hitobject is finished but before the ranking screen is automatically shown");
+ConVar osu_end_skip("osu_end_skip", true, "whether the beatmap jumps to the ranking screen as soon as the last hitobject plus lenience has passed");
 ConVar osu_end_skip_time("osu_end_skip_time", 400.0f, "Duration in ms which is added to the endTime of the last hitobject, after which pausing the game will immediately jump to the ranking screen");
 ConVar osu_skip_time("osu_skip_time", 5000.0f, "Timeframe in ms within a beatmap which allows skipping if it doesn't contain any hitobjects");
 ConVar osu_fail_time("osu_fail_time", 2.25f, "Timeframe in s for the slowdown effect after failing, before the pause menu is shown");
@@ -139,6 +144,8 @@ ConVar *OsuBeatmap::m_osu_volume_music_ref = NULL;
 ConVar *OsuBeatmap::m_osu_mod_fposu_ref = NULL;
 ConVar *OsuBeatmap::m_fposu_draw_scorebarbg_on_top_ref = NULL;
 
+ConVar *OsuBeatmap::m_osu_main_menu_shuffle_ref = NULL;
+
 OsuBeatmap::OsuBeatmap(Osu *osu)
 {
 	// convar refs
@@ -161,6 +168,9 @@ OsuBeatmap::OsuBeatmap(Osu *osu)
 		m_osu_mod_fposu_ref = convar->getConVarByName("osu_mod_fposu");
 	if (m_fposu_draw_scorebarbg_on_top_ref == NULL)
 		m_fposu_draw_scorebarbg_on_top_ref = convar->getConVarByName("fposu_draw_scorebarbg_on_top");
+
+	if (m_osu_main_menu_shuffle_ref == NULL)
+		m_osu_main_menu_shuffle_ref = convar->getConVarByName("osu_main_menu_shuffle");
 
 	// vars
 	m_osu = osu;
@@ -485,7 +495,7 @@ void OsuBeatmap::update()
 		if (m_iResourceLoadUpdateDelayHack > 1 && !m_bForceStreamPlayback) // first: try loading a stream version of the music file
 		{
 			m_bForceStreamPlayback = true;
-			unloadMusic();
+			unloadMusicInt();
 			loadMusic(true, m_bForceStreamPlayback);
 
 			// we are waiting for an asynchronous start of the beatmap in the next update()
@@ -518,7 +528,9 @@ void OsuBeatmap::update()
 			m_iCurMusicPos = (long)m_music->getLengthMS() + (long)((engine->getTimeReal() - m_fAfterMusicIsFinishedVirtualAudioTimeStart)*1000.0f);
 		}
 
-		if (m_hitobjects.size() < 1 || m_iCurMusicPos > (m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size()-1]->getTime() + m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size()-1]->getDuration() + (long)osu_end_delay_time.getInt()))
+		const bool hasAnyHitObjects = (m_hitobjects.size() > 0);
+		const bool isTimePastLastHitObjectPlusLenience = (m_iCurMusicPos > (m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size()-1]->getTime() + m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size()-1]->getDuration() + (long)osu_end_delay_time.getInt()));
+		if (!hasAnyHitObjects || (osu_end_skip.getBool() && isTimePastLastHitObjectPlusLenience) || (!osu_end_skip.getBool() && isMusicFinished))
 		{
 			if (!m_bFailed)
 			{
@@ -878,6 +890,8 @@ void OsuBeatmap::update()
 		const long nextHitObjectDelta = m_iNextHitObjectTime - (long)m_iCurMusicPosWithOffsets;
 		if (nextHitObjectDelta > 0 && nextHitObjectDelta > (long)osu_skip_time.getInt() && m_iCurMusicPosWithOffsets > (m_iPreviousHitObjectTime + legacyOffset))
 			m_bIsInSkippableSection = true;
+		else if (!osu_end_skip.getBool() && nextHitObjectDelta < 0)
+			m_bIsInSkippableSection = true;
 		else
 			m_bIsInSkippableSection = false;
 	}
@@ -1109,6 +1123,7 @@ void OsuBeatmap::onKeyUp(KeyboardEvent &e)
 void OsuBeatmap::skipEmptySection()
 {
 	if (!m_bIsInSkippableSection) return;
+	m_bIsInSkippableSection = false;
 
 	const float offset = 2500.0f;
 	float offsetMultiplier = m_osu->getSpeedMultiplier();
@@ -1126,8 +1141,12 @@ void OsuBeatmap::skipEmptySection()
 			offsetMultiplier = 0.2f;
 	}
 
-	m_music->setPositionMS(std::max(m_iNextHitObjectTime - (long)(offset * offsetMultiplier), (long)0));
-	m_bIsInSkippableSection = false;
+	const long nextHitObjectDelta = m_iNextHitObjectTime - (long)m_iCurMusicPosWithOffsets;
+
+	if (!osu_end_skip.getBool() && nextHitObjectDelta < 0)
+		m_music->setPositionMS(std::max(m_music->getLengthMS(), (unsigned long)1) - 1);
+	else
+		m_music->setPositionMS(std::max(m_iNextHitObjectTime - (long)(offset * offsetMultiplier), (long)0));
 
 	engine->getSound()->play(m_osu->getSkin()->getMenuHit());
 }
@@ -1264,7 +1283,7 @@ bool OsuBeatmap::play()
 
 	// reset everything, including deleting any previously loaded hitobjects from another diff which we might just have played
 	unloadObjects();
-	resetScore();
+	resetScoreInt();
 
 	onBeforeLoad();
 
@@ -1349,7 +1368,7 @@ bool OsuBeatmap::play()
 	onLoad();
 
 	// load music
-	unloadMusic(); // need to reload in case of speed/pitch changes (just to be sure)
+	unloadMusicInt(); // need to reload in case of speed/pitch changes (just to be sure)
 	loadMusic(false, m_bForceStreamPlayback);
 
 	m_music->setLoop(false);
@@ -1393,7 +1412,7 @@ void OsuBeatmap::restart(bool quick)
 void OsuBeatmap::actualRestart()
 {
 	// reset everything
-	resetScore();
+	resetScoreInt();
 	resetHitObjects(-1000);
 
 	// we are waiting for an asynchronous start of the beatmap in the next update()
@@ -1464,7 +1483,7 @@ void OsuBeatmap::pause(bool quitIfWaiting)
 			// case 1: the beatmap is already "finished", jump to the ranking screen if some small amount of time past the last objects endTime
 			// case 2: in the middle somewhere, pause as usual
 			OsuHitObject *lastHitObject = m_hitobjectsSortedByEndTime.size() > 0 ? m_hitobjectsSortedByEndTime[m_hitobjectsSortedByEndTime.size()-1] : NULL;
-			if (lastHitObject != NULL && lastHitObject->isFinished() && (m_iCurMusicPos > lastHitObject->getTime() + lastHitObject->getDuration() + (long)osu_end_skip_time.getInt()))
+			if (lastHitObject != NULL && lastHitObject->isFinished() && (m_iCurMusicPos > lastHitObject->getTime() + lastHitObject->getDuration() + (long)osu_end_skip_time.getInt()) && osu_end_skip.getBool())
 				stop(false);
 			else
 			{
@@ -1625,7 +1644,7 @@ void OsuBeatmap::seekPercent(double percent)
 	m_music->setVolume(m_osu_volume_music_ref->getFloat());
 
 	resetHitObjects(m_music->getPositionMS());
-	resetScore();
+	resetScoreInt();
 
 	m_iPreviousSectionPassFailTime = -1;
 
@@ -1668,7 +1687,7 @@ void OsuBeatmap::seekMS(unsigned long ms)
 	m_music->setVolume(m_osu_volume_music_ref->getFloat());
 
 	resetHitObjects(m_music->getPositionMS());
-	resetScore();
+	resetScoreInt();
 
 	m_iPreviousSectionPassFailTime = -1;
 
@@ -1770,21 +1789,25 @@ float OsuBeatmap::getAR() const
 	if (m_selectedDifficulty2 == NULL) return 5.0f;
 
 	float AR = getRawAR();
-	if (osu_ar_override.getFloat() >= 0.0f)
-		AR = osu_ar_override.getFloat();
-
-	if (osu_ar_override_lock.getBool())
-		AR = OsuGameRules::getRawConstantApproachRateForSpeedMultiplier(OsuGameRules::getRawApproachTime(AR), (m_music != NULL && m_bIsPlaying ? getSpeedMultiplier() : m_osu->getSpeedMultiplier()));
-
-	if (osu_mod_artimewarp.getBool() && m_hitobjects.size() > 0)
 	{
-		const float percent = 1.0f - ((double)(m_iCurMusicPos - m_hitobjects[0]->getTime()) / (double)(m_hitobjects[m_hitobjects.size()-1]->getTime() + m_hitobjects[m_hitobjects.size()-1]->getDuration() - m_hitobjects[0]->getTime()))*(1.0f - osu_mod_artimewarp_multiplier.getFloat());
-		AR *= percent;
+		if (osu_ar_override.getFloat() >= 0.0f)
+			AR = osu_ar_override.getFloat();
+
+		if (osu_ar_overridenegative.getFloat() < 0.0f)
+			AR = osu_ar_overridenegative.getFloat();
+
+		if (osu_ar_override_lock.getBool())
+			AR = OsuGameRules::getRawConstantApproachRateForSpeedMultiplier(OsuGameRules::getRawApproachTime(AR), (m_music != NULL && m_bIsPlaying ? getSpeedMultiplier() : m_osu->getSpeedMultiplier()));
+
+		if (osu_mod_artimewarp.getBool() && m_hitobjects.size() > 0)
+		{
+			const float percent = 1.0f - ((double)(m_iCurMusicPos - m_hitobjects[0]->getTime()) / (double)(m_hitobjects[m_hitobjects.size()-1]->getTime() + m_hitobjects[m_hitobjects.size()-1]->getDuration() - m_hitobjects[0]->getTime()))*(1.0f - osu_mod_artimewarp_multiplier.getFloat());
+			AR *= percent;
+		}
+
+		if (osu_mod_arwobble.getBool())
+			AR += std::sin((m_iCurMusicPos/1000.0f)*osu_mod_arwobble_interval.getFloat())*osu_mod_arwobble_strength.getFloat();
 	}
-
-	if (osu_mod_arwobble.getBool())
-		AR += std::sin((m_iCurMusicPos/1000.0f)*osu_mod_arwobble_interval.getFloat())*osu_mod_arwobble_strength.getFloat();
-
 	return AR;
 }
 
@@ -1793,19 +1816,25 @@ float OsuBeatmap::getCS() const
 	if (m_selectedDifficulty2 == NULL) return 5.0f;
 
 	float CS = clamp<float>(m_selectedDifficulty2->getCS() * m_osu->getCSDifficultyMultiplier(), 0.0f, 10.0f);
-
-	if (osu_cs_override.getFloat() >= 0.0f)
-		CS = osu_cs_override.getFloat();
-
-	if (osu_mod_minimize.getBool() && m_hitobjects.size() > 0)
 	{
-		if (m_hitobjects.size() > 0)
-		{
-			const float percent = 1.0f + ((double)(m_iCurMusicPos - m_hitobjects[0]->getTime()) / (double)(m_hitobjects[m_hitobjects.size()-1]->getTime() + m_hitobjects[m_hitobjects.size()-1]->getDuration() - m_hitobjects[0]->getTime()))*osu_mod_minimize_multiplier.getFloat();
-			CS *= percent;
-		}
-	}
+		if (osu_cs_override.getFloat() >= 0.0f)
+			CS = osu_cs_override.getFloat();
 
+		if (osu_cs_overridenegative.getFloat() < 0.0f)
+			CS = osu_cs_overridenegative.getFloat();
+
+		if (osu_mod_minimize.getBool() && m_hitobjects.size() > 0)
+		{
+			if (m_hitobjects.size() > 0)
+			{
+				const float percent = 1.0f + ((double)(m_iCurMusicPos - m_hitobjects[0]->getTime()) / (double)(m_hitobjects[m_hitobjects.size()-1]->getTime() + m_hitobjects[m_hitobjects.size()-1]->getDuration() - m_hitobjects[0]->getTime()))*osu_mod_minimize_multiplier.getFloat();
+				CS *= percent;
+			}
+		}
+
+		if (osu_cs_cap_sanity.getBool())
+			CS = std::min(CS, 12.1429f);
+	}
 	return CS;
 }
 
@@ -2149,7 +2178,9 @@ void OsuBeatmap::handlePreviewPlay()
 			if (m_music->getFrequency() < m_fMusicFrequencyBackup) // player has died, reset frequency
 				m_music->setFrequency(m_fMusicFrequencyBackup);
 
-			if (m_iContinueMusicPos != 0)
+			if (m_osu_main_menu_shuffle_ref->getBool() && m_osu->getMainMenu()->isVisible())
+				m_music->setPositionMS(0);
+			else if (m_iContinueMusicPos != 0)
 				m_music->setPositionMS(m_iContinueMusicPos);
 			else
 				m_music->setPositionMS(m_selectedDifficulty2->getPreviewTime() < 0 ? (unsigned long)(m_music->getLengthMS() * 0.40f) : m_selectedDifficulty2->getPreviewTime());
@@ -2177,7 +2208,7 @@ void OsuBeatmap::loadMusic(bool stream, bool prescan)
 	// load the song (again)
 	if (m_selectedDifficulty2 != NULL && (m_music == NULL || m_selectedDifficulty2->getFullSoundFilePath() != m_music->getFilePath() || !m_music->isReady()))
 	{
-		unloadMusic();
+		unloadMusicInt();
 
 		// if it's not a stream then we are loading the entire song into memory for playing
 		if (!stream)
@@ -2189,7 +2220,7 @@ void OsuBeatmap::loadMusic(bool stream, bool prescan)
 	}
 }
 
-void OsuBeatmap::unloadMusic()
+void OsuBeatmap::unloadMusicInt()
 {
 	if (m_osu->getInstanceID() < 2)
 	{
@@ -2227,7 +2258,7 @@ void OsuBeatmap::resetHitObjects(long curPos)
 	m_osu->getHUD()->resetHitErrorBar();
 }
 
-void OsuBeatmap::resetScore()
+void OsuBeatmap::resetScoreInt()
 {
 	m_fHealth = 1.0;
 	m_fHealth2 = 1.0f;

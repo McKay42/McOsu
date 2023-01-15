@@ -10,9 +10,9 @@
 #include "Engine.h"
 #include "ConVar.h"
 #include "File.h"
-#include "MD5.h"
 
 #include "Osu.h"
+#include "OsuFile.h"
 #include "OsuSkin.h"
 #include "OsuBeatmap.h"
 #include "OsuBeatmapStandard.h"
@@ -525,7 +525,7 @@ OsuDatabaseBeatmap::PRIMITIVE_CONTAINER OsuDatabaseBeatmap::loadPrimitiveObjects
 	return c;
 }
 
-void OsuDatabaseBeatmap::calculateSliderTimesClicksTicks(std::vector<SLIDER> &sliders, std::vector<TIMINGPOINT> &timingpoints, float sliderMultiplier, float sliderTickRate)
+void OsuDatabaseBeatmap::calculateSliderTimesClicksTicks(int beatmapVersion, std::vector<SLIDER> &sliders, std::vector<TIMINGPOINT> &timingpoints, float sliderMultiplier, float sliderTickRate)
 {
 	if (timingpoints.size() > 0)
 	{
@@ -575,10 +575,9 @@ void OsuDatabaseBeatmap::calculateSliderTimesClicksTicks(std::vector<SLIDER> &sl
 			s.sliderTime = s.sliderTimeWithoutRepeats * s.repeat;
 
 			// calculate ticks
-			// TODO: validate https://github.com/ppy/osu/pull/3595/files
 			{
 				const float minTickPixelDistanceFromEnd = 0.01f * SliderHelper::getSliderVelocity(s, timingInfo, sliderMultiplier, sliderTickRate);
-				const float tickPixelLength = SliderHelper::getSliderTickDistance(sliderMultiplier, sliderTickRate) / SliderHelper::getTimingPointMultiplierForSlider(s, timingInfo);
+				const float tickPixelLength = (beatmapVersion < 8 ? SliderHelper::getSliderTickDistance(sliderMultiplier, sliderTickRate) : SliderHelper::getSliderTickDistance(sliderMultiplier, sliderTickRate) / SliderHelper::getTimingPointMultiplierForSlider(s, timingInfo));
 				const float tickDurationPercentOfSliderLength = tickPixelLength / (s.pixelLength == 0.0f ? 1.0f : s.pixelLength);
 				const int tickCount = std::min((int)std::ceil(s.pixelLength / tickPixelLength) - 1, 65536/2); // NOTE: hard sanity limit number of ticks per slider
 
@@ -653,7 +652,7 @@ OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT OsuDatabaseBeatmap::loadDifficultyHitObj
 	}
 
 	// calculate sliderTimes, and build slider clicks and ticks
-	calculateSliderTimesClicksTicks(c.sliders, c.timingpoints, c.sliderMultiplier, c.sliderTickRate);
+	calculateSliderTimesClicksTicks(c.version, c.sliders, c.timingpoints, c.sliderMultiplier, c.sliderTickRate);
 
 	// now we can calculate the max possible combo (because that needs ticks/clicks to be filled, mostly convenience)
 	{
@@ -937,29 +936,8 @@ bool OsuDatabaseBeatmap::loadMetadata(OsuDatabaseBeatmap *databaseBeatmap)
 			}
 		}
 
-		if (beatmapFile != NULL && beatmapFileSize > 0)
-		{
-			const char *hexDigits = "0123456789abcdef";
-			const unsigned char *input = (unsigned char*)beatmapFile;
-
-			MD5 hasher;
-			hasher.update(input, beatmapFileSize);
-			hasher.finalize();
-
-			const unsigned char *rawMD5Hash = hasher.getDigest();
-
-			for (int i=0; i<16; i++)
-			{
-				const size_t index1 = (rawMD5Hash[i] >> 4) & 0xf;	// md5hash[i] / 16
-				const size_t index2 = (rawMD5Hash[i] & 0xf);		// md5hash[i] % 16
-
-				if (index1 > 15 || index2 > 15)
-					continue;
-
-				databaseBeatmap->m_sMD5Hash += hexDigits[index1];
-				databaseBeatmap->m_sMD5Hash += hexDigits[index2];
-			}
-		}
+		if (beatmapFile != NULL)
+			databaseBeatmap->m_sMD5Hash = OsuFile::md5((unsigned char*)beatmapFile, beatmapFileSize);
 	}
 
 	// open osu file again, but this time for parsing
@@ -1378,7 +1356,7 @@ OsuDatabaseBeatmap::LOAD_GAMEPLAY_RESULT OsuDatabaseBeatmap::loadGameplay(OsuDat
 	}
 
 	// calculate sliderTimes, and build slider clicks and ticks
-	calculateSliderTimesClicksTicks(c.sliders, databaseBeatmap->m_timingpoints, databaseBeatmap->m_fSliderMultiplier, databaseBeatmap->m_fSliderTickRate);
+	calculateSliderTimesClicksTicks(c.version, c.sliders, databaseBeatmap->m_timingpoints, databaseBeatmap->m_fSliderMultiplier, databaseBeatmap->m_fSliderTickRate);
 
 	// build hitobjects from the primitive data we loaded from the osu file
 	OsuBeatmapStandard *beatmapStandard = dynamic_cast<OsuBeatmapStandard*>(beatmap);

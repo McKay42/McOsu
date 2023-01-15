@@ -21,6 +21,7 @@ public:
 	virtual ~OsuUISongBrowserSongButton();
 
 	virtual void draw(Graphics *g);
+	virtual void update();
 
 	void triggerContextMenu(Vector2 pos);
 
@@ -32,7 +33,7 @@ public:
 	virtual OsuDatabaseBeatmap *getDatabaseBeatmap() const {return m_databaseBeatmap;}
 
 protected:
-	virtual void onSelected(bool wasSelected);
+	virtual void onSelected(bool wasSelected, bool autoSelectBottomMostChild, bool wasParentSelected);
 	virtual void onRightMouseUpInside();
 
 	void onContextMenu(UString text, int id = -1);
@@ -81,6 +82,8 @@ private:
 	static float thumbnailYRatio;
 
 	float m_fThumbnailFadeInTime;
+
+	void updateRepresentativeDatabaseBeatmap();
 
 	OsuDatabaseBeatmap *m_representativeDatabaseBeatmap;
 };

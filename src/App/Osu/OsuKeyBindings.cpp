@@ -29,6 +29,8 @@ ConVar OsuKeyBindings::GAME_PAUSE("osu_key_game_pause", (int)KEY_ESCAPE);
 ConVar OsuKeyBindings::SKIP_CUTSCENE("osu_key_skip_cutscene", (int)KEY_SPACE);
 ConVar OsuKeyBindings::TOGGLE_SCOREBOARD("osu_key_toggle_scoreboard", (int)KEY_TAB);
 ConVar OsuKeyBindings::SEEK_TIME("osu_key_seek_time", (int)KEY_SHIFT);
+ConVar OsuKeyBindings::SEEK_TIME_BACKWARD("osu_key_seek_time_backward", (int)KEY_LEFT);
+ConVar OsuKeyBindings::SEEK_TIME_FORWARD("osu_key_seek_time_forward", (int)KEY_RIGHT);
 ConVar OsuKeyBindings::QUICK_RETRY("osu_key_quick_retry", (int)KEY_BACKSPACE);
 ConVar OsuKeyBindings::QUICK_SAVE("osu_key_quick_save", (int)KEY_F6);
 ConVar OsuKeyBindings::QUICK_LOAD("osu_key_quick_load", (int)KEY_F7);
@@ -74,6 +76,8 @@ std::vector<ConVar*> OsuKeyBindings::ALL = {
 	&OsuKeyBindings::SKIP_CUTSCENE,
 	&OsuKeyBindings::TOGGLE_SCOREBOARD,
 	&OsuKeyBindings::SEEK_TIME,
+	&OsuKeyBindings::SEEK_TIME_BACKWARD,
+	&OsuKeyBindings::SEEK_TIME_FORWARD,
 	&OsuKeyBindings::QUICK_RETRY,
 	&OsuKeyBindings::QUICK_SAVE,
 	&OsuKeyBindings::QUICK_LOAD,

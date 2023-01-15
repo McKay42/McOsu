@@ -52,10 +52,11 @@ ConVar osu_database_enabled("osu_database_enabled", true);
 ConVar osu_database_version("osu_database_version", 20191114, "maximum supported osu!.db version, above this will use fallback loader");
 ConVar osu_database_ignore_version_warnings("osu_database_ignore_version_warnings", false);
 ConVar osu_database_ignore_version("osu_database_ignore_version", false, "ignore upper version limit and force load the db file (may crash)");
+ConVar osu_database_stars_cache_enabled("osu_database_stars_cache_enabled", false);
 ConVar osu_scores_enabled("osu_scores_enabled", true);
 ConVar osu_scores_legacy_enabled("osu_scores_legacy_enabled", true, "load osu!'s scores.db");
 ConVar osu_scores_custom_enabled("osu_scores_custom_enabled", true, "load custom scores.db");
-ConVar osu_scores_custom_version("osu_scores_custom_version", 20210108, "maximum supported custom scores.db/scoresvr.db version");
+ConVar osu_scores_custom_version("osu_scores_custom_version", 20210110, "maximum supported custom scores.db/scoresvr.db version");
 ConVar osu_scores_save_immediately("osu_scores_save_immediately", true, "write scores.db as soon as a new score is added");
 ConVar osu_scores_sort_by_pp("osu_scores_sort_by_pp", true, "display pp in score browser instead of score");
 ConVar osu_scores_bonus_pp("osu_scores_bonus_pp", true, "whether to add bonus pp to total (real) pp or not");
@@ -63,7 +64,7 @@ ConVar osu_scores_rename("osu_scores_rename");
 ConVar osu_scores_export("osu_scores_export");
 ConVar osu_collections_legacy_enabled("osu_collections_legacy_enabled", true, "load osu!'s collection.db");
 ConVar osu_collections_custom_enabled("osu_collections_custom_enabled", true, "load custom collections.db");
-ConVar osu_collections_custom_version("osu_collections_custom_version", 20220108, "maximum supported custom collections.db version");
+ConVar osu_collections_custom_version("osu_collections_custom_version", 20220110, "maximum supported custom collections.db version");
 ConVar osu_collections_save_immediately("osu_collections_save_immediately", true, "write collections.db as soon as anything is changed");
 ConVar osu_user_include_relax_and_autopilot_for_stats("osu_user_include_relax_and_autopilot_for_stats", false);
 ConVar osu_user_switcher_include_legacy_scores_for_names("osu_user_switcher_include_legacy_scores_for_names", true);
@@ -296,6 +297,9 @@ protected:
 		// load scores
 		m_db->loadScores();
 
+		// load stars.cache
+		m_db->loadStars();
+
 		// check if osu database exists, load file completely
 		UString osuDbFilePath = osu_folder.getString();
 		osuDbFilePath.append("osu!.db");
@@ -475,6 +479,7 @@ void OsuDatabase::save()
 {
 	saveScores();
 	saveCollections();
+	saveStars();
 }
 
 OsuDatabaseBeatmap *OsuDatabase::addBeatmap(UString beatmapFolderPath)
@@ -1407,6 +1412,16 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 			if (mods == 0)
 				numOsuStandardStars = starRating;
 		}
+		// NOTE: if we have our own stars cached then prefer that
+		{
+			if (osu_database_stars_cache_enabled.getBool())
+				numOsuStandardStars = 0.0f; // NOTE: force don't use stable stars
+
+			const auto result = m_starsCache.find(md5hash);
+			if (result != m_starsCache.end())
+				numOsuStandardStars = result->second.starsNomod;
+		}
+
 
 		unsigned int numTaikoStarRatings = db->readInt();
 		//debugLog("%i star ratings for taiko\n", numTaikoStarRatings);
@@ -1554,6 +1569,7 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 				diff2->m_iNumObjects = numCircles + numSliders + numSpinners;
 				diff2->m_iNumCircles = numCircles;
 				diff2->m_iNumSliders = numSliders;
+				diff2->m_iNumSpinners = numSpinners;
 				diff2->m_fStarsNomod = numOsuStandardStars;
 
 				// calculate bpm range
@@ -1864,6 +1880,132 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 	m_fLoadingProgress = 1.0f;
 }
 
+void OsuDatabase::loadStars()
+{
+	if (!osu_database_stars_cache_enabled.getBool()) return;
+
+	debugLog("OsuDatabase::loadStars()\n");
+
+	const UString starsFilePath = "stars.cache";
+	const int starsCacheVersion = 20221108;
+
+	OsuFile cache(starsFilePath, false);
+	if (cache.isReady())
+	{
+		m_starsCache.clear();
+
+		const int cacheVersion = cache.readInt();
+
+		if (cacheVersion <= starsCacheVersion)
+		{
+			const std::string md5Hash = cache.readStdString();
+
+			if (OsuFile::md5(cache.getReadPointer(), cache.getFileSize() - (size_t)(cache.getReadPointer() - cache.getBuffer())) == md5Hash)
+			{
+				const int64_t numStarsCacheEntries = cache.readLongLong();
+
+				debugLog("Stars cache: version = %i, numStarsCacheEntries = %i\n", cacheVersion, numStarsCacheEntries);
+
+				for (int64_t i=0; i<numStarsCacheEntries; i++)
+				{
+					const std::string beatmapMD5Hash = cache.readStdString();
+					const float starsNomod = cache.readFloat();
+
+					if (beatmapMD5Hash.length() == 32) // sanity
+					{
+						STARS_CACHE_ENTRY entry;
+						{
+							entry.starsNomod = starsNomod;
+						}
+						m_starsCache[beatmapMD5Hash] = entry;
+					}
+				}
+			}
+			else
+				debugLog("Stars cache is corrupt, ignoring.\n");
+		}
+		else
+			debugLog("Invalid stars cache version, ignoring.\n");
+	}
+	else
+		debugLog("No stars cache found.\n");
+}
+
+void OsuDatabase::saveStars()
+{
+	if (!osu_database_stars_cache_enabled.getBool()) return;
+
+	debugLog("Osu: Saving stars ...\n");
+
+	const UString starsFilePath = "stars.cache";
+	const int starsCacheVersion = 20221108;
+
+	//const double startTime = engine->getTimeReal();
+	{
+		// count
+		int64_t numStarsCacheEntries = 0;
+		for (OsuDatabaseBeatmap *beatmap : m_databaseBeatmaps)
+		{
+			for (OsuDatabaseBeatmap *diff2 : beatmap->getDifficulties())
+			{
+				if (diff2->getMD5Hash().size() == 32 && diff2->getStarsNomod() > 0.0f && diff2->getStarsNomod() != 0.0001f)
+					numStarsCacheEntries++;
+			}
+		}
+
+		if (numStarsCacheEntries < 1)
+		{
+			debugLog("No stars cached, nothing to write.\n");
+			return;
+		}
+
+		OsuFile cache(starsFilePath, true);
+		if (cache.isReady())
+		{
+			// HACKHACK: code duplication is absolutely stupid, just so we can calculate the MD5 hash. but I'm too lazy to make it cleaner right now ffs
+			OsuFile tempForHash("", false, true);
+			{
+				tempForHash.writeLongLong(numStarsCacheEntries);
+
+				for (OsuDatabaseBeatmap *beatmap : m_databaseBeatmaps)
+				{
+					for (OsuDatabaseBeatmap *diff2 : beatmap->getDifficulties())
+					{
+						if (diff2->getMD5Hash().size() == 32 && diff2->getStarsNomod() > 0.0f && diff2->getStarsNomod() != 0.0001f)
+						{
+							tempForHash.writeStdString(diff2->getMD5Hash());
+							tempForHash.writeFloat(diff2->getStarsNomod());
+						}
+					}
+				}
+			}
+			const std::string md5Hash = (tempForHash.getWriteBuffer().size() > 0 ? OsuFile::md5((const unsigned char*)&tempForHash.getWriteBuffer()[0], tempForHash.getWriteBuffer().size()) : "");
+
+			// write
+			{
+				cache.writeInt(starsCacheVersion);
+				cache.writeStdString(md5Hash);
+				cache.writeLongLong(numStarsCacheEntries);
+
+				for (OsuDatabaseBeatmap *beatmap : m_databaseBeatmaps)
+				{
+					for (OsuDatabaseBeatmap *diff2 : beatmap->getDifficulties())
+					{
+						if (diff2->getMD5Hash().size() == 32 && diff2->getStarsNomod() > 0.0f && diff2->getStarsNomod() != 0.0001f)
+						{
+							cache.writeStdString(diff2->getMD5Hash());
+							cache.writeFloat(diff2->getStarsNomod());
+						}
+					}
+				}
+			}
+		}
+		else
+			debugLog("Couldn't write stars.cache!\n");
+	}
+	//debugLog("Took %f seconds.\n", (engine->getTimeReal() - startTime));
+}
+
 void OsuDatabase::loadScores()
 {
 	if (m_bScoresLoaded) return;
@@ -2050,12 +2192,15 @@ void OsuDatabase::loadScores()
 				UString backupScoresFilePath = scoresFilePath;
 				backupScoresFilePath.append(UString::format(".%i.backup", (makeBackupType < 2 ? backupLessThanVersion : maxSupportedCustomDbVersion)));
 
-				File backupScoresFile(backupScoresFilePath, File::TYPE::WRITE);
-				if (backupScoresFile.canWrite())
+				if (!env->fileExists(backupScoresFilePath)) // NOTE: avoid overwriting when people switch betas
 				{
-					const char *originalScoresFileBytes = originalScoresFile.readFile();
-					if (originalScoresFileBytes != NULL)
-						backupScoresFile.write(originalScoresFileBytes, originalScoresFile.getFileSize());
+					File backupScoresFile(backupScoresFilePath, File::TYPE::WRITE);
+					if (backupScoresFile.canWrite())
+					{
+						const char *originalScoresFileBytes = originalScoresFile.readFile();
+						if (originalScoresFileBytes != NULL)
+							backupScoresFile.write(originalScoresFileBytes, originalScoresFile.getFileSize());
+					}
 				}
 			}
 		}
@@ -2573,12 +2718,15 @@ void OsuDatabase::loadCollections(UString collectionFilePath, bool isLegacy, con
 			UString backupCollectionsFilePath = collectionFilePath;
 			backupCollectionsFilePath.append(UString::format(".%i.backup", osu_collections_custom_version.getInt()));
 
-			File backupCollectionsFile(backupCollectionsFilePath, File::TYPE::WRITE);
-			if (backupCollectionsFile.canWrite())
+			if (!env->fileExists(backupCollectionsFilePath)) // NOTE: avoid overwriting when people switch betas
 			{
-				const char *originalCollectionsFileBytes = originalCollectionsFile.readFile();
-				if (originalCollectionsFileBytes != NULL)
-					backupCollectionsFile.write(originalCollectionsFileBytes, originalCollectionsFile.getFileSize());
+				File backupCollectionsFile(backupCollectionsFilePath, File::TYPE::WRITE);
+				if (backupCollectionsFile.canWrite())
+				{
+					const char *originalCollectionsFileBytes = originalCollectionsFile.readFile();
+					if (originalCollectionsFileBytes != NULL)
+						backupCollectionsFile.write(originalCollectionsFileBytes, originalCollectionsFile.getFileSize());
+				}
 			}
 		}
 	}
@@ -2709,6 +2857,15 @@ OsuDatabaseBeatmap *OsuDatabase::loadRawBeatmap(UString beatmapPath)
 					}
 					SAFE_DELETE(diff2);
 					continue;
+				}
+
+				// (metadata loaded successfully)
+
+				// NOTE: if we have our own stars cached then use that
+				{
+					const auto result = m_starsCache.find(diff2->getMD5Hash());
+					if (result != m_starsCache.end())
+						diff2->m_fStarsNomod = result->second.starsNomod;
 				}
 
 				diffs2.push_back(diff2);

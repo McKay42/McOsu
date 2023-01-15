@@ -23,6 +23,8 @@ public:
 
 	virtual void updateGrade();
 
+	virtual Color getInactiveBackgroundColor() const;
+
 	inline OsuUISongBrowserSongButton *getParentSongButton() const {return m_parentSongButton;}
 
 	bool isIndependentDiffButton() const;
@@ -31,7 +33,7 @@ private:
 	static ConVar *m_osu_scores_enabled;
 	static ConVar *m_osu_songbrowser_dynamic_star_recalc_ref;
 
-	virtual void onSelected(bool wasSelected);
+	virtual void onSelected(bool wasSelected, bool autoSelectBottomMostChild, bool wasParentSelected);
 
 	UString buildDiffString() {return m_sDiff;}
 

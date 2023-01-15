@@ -53,6 +53,7 @@
 #include "OsuUISongBrowserSongDifficultyButton.h"
 #include "OsuUISongBrowserCollectionButton.h"
 #include "OsuUISongBrowserScoreButton.h"
+#include "OsuUIUserStatsScreenLabel.h"
 
 
 
@@ -74,8 +75,16 @@ ConVar osu_draw_songbrowser_strain_graph("osu_draw_songbrowser_strain_graph", fa
 ConVar osu_songbrowser_background_fade_in_duration("osu_songbrowser_background_fade_in_duration", 0.1f);
 
 ConVar osu_songbrowser_search_delay("osu_songbrowser_search_delay", 0.5f, "delay until search update when entering text");
+void _osu_songbrowser_search_hardcoded_filter(UString oldValue, UString newValue);
+ConVar osu_songbrowser_search_hardcoded_filter("osu_songbrowser_search_hardcoded_filter", "", "allows forcing the specified search filter to be active all the time", _osu_songbrowser_search_hardcoded_filter);
 ConVar osu_songbrowser_background_star_calculation("osu_songbrowser_background_star_calculation", true, "precalculate stars for all loaded beatmaps while in songbrowser");
 ConVar osu_songbrowser_dynamic_star_recalc("osu_songbrowser_dynamic_star_recalc", true, "dynamically recalculate displayed star value of currently selected beatmap in songbrowser");
+
+void _osu_songbrowser_search_hardcoded_filter(UString oldValue, UString newValue)
+{
+	if (newValue.length() == 1 && newValue.isWhitespaceOnly())
+		osu_songbrowser_search_hardcoded_filter.setValue("");
+}
 
 
 
@@ -91,10 +100,18 @@ public:
 	void kill() {m_bDead = true;}
 	void revive() {m_bDead = false;}
 
-	void setSongButtonsAndSearchString(const std::vector<OsuUISongBrowserSongButton*> &songButtons, const UString &searchString)
+	void setSongButtonsAndSearchString(const std::vector<OsuUISongBrowserSongButton*> &songButtons, const UString &searchString, const UString &hardcodedSearchString)
 	{
 		m_songButtons = songButtons;
-		m_sSearchString = searchString;
+
+		m_sSearchString.clear();
+		if (hardcodedSearchString.length() > 0)
+		{
+			m_sSearchString.append(hardcodedSearchString);
+			m_sSearchString.append(" ");
+		}
+		m_sSearchString.append(searchString);
+		m_sHardcodedSearchString = hardcodedSearchString;
 	}
 
 protected:
@@ -112,6 +129,7 @@ protected:
 		}
 
 		// flag matches across entire database
+		const std::vector<UString> searchStringTokens = m_sSearchString.split(" ");
 		for (size_t i=0; i<m_songButtons.size(); i++)
 		{
 			const std::vector<OsuUISongBrowserButton*> &children = m_songButtons[i]->getChildren();
@@ -119,11 +137,11 @@ protected:
 			{
 				for (size_t c=0; c<children.size(); c++)
 				{
-					children[c]->setIsSearchMatch(OsuSongBrowser2::searchMatcher(children[c]->getDatabaseBeatmap(), m_sSearchString));
+					children[c]->setIsSearchMatch(OsuSongBrowser2::searchMatcher(children[c]->getDatabaseBeatmap(), searchStringTokens));
 				}
 			}
 			else
-				m_songButtons[i]->setIsSearchMatch(OsuSongBrowser2::searchMatcher(m_songButtons[i]->getDatabaseBeatmap(), m_sSearchString));
+				m_songButtons[i]->setIsSearchMatch(OsuSongBrowser2::searchMatcher(m_songButtons[i]->getDatabaseBeatmap(), searchStringTokens));
 
 			// cancellation point
 			if (m_bDead.load())
@@ -139,6 +157,7 @@ private:
 	std::atomic<bool> m_bDead;
 
 	UString m_sSearchString;
+	UString m_sHardcodedSearchString;
 	std::vector<OsuUISongBrowserSongButton*> m_songButtons;
 };
 
@@ -429,6 +448,9 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	// vars
 	m_bSongBrowserRightClickScrollCheck = false;
 	m_bSongBrowserRightClickScrolling = false;
+	m_bNextScrollToSongButtonJumpFixScheduled = false;
+	m_bNextScrollToSongButtonJumpFixUseScrollSizeDelta = false;
+	m_fNextScrollToSongButtonJumpFixOldRelPosY = 0.0f;
 
 	m_selectionPreviousSongButton = NULL;
 	m_selectionPreviousSongDiffButton = NULL;
@@ -519,6 +541,18 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	m_userButton->setText(m_name_ref->getString());
 	m_bottombar->addBaseUIElement(m_userButton);
 
+	// looks like shit there, don't like it
+	m_ppVersionInfoLabel = NULL;
+	/*
+	m_ppVersionInfoLabel = new OsuUIUserStatsScreenLabel(m_osu);
+	m_ppVersionInfoLabel->setText(UString::format("pp Version: %i", OsuDifficultyCalculator::PP_ALGORITHM_VERSION));
+	m_ppVersionInfoLabel->setTooltipText("WARNING: McOsu's star/pp algorithm is currently lagging behind the \"official\" version.\n \nReason being that keeping up-to-date requires a LOT of changes now.\nThe next goal is rewriting the algorithm architecture to be more similar to osu!lazer,\nas that will make porting star/pp changes infinitely easier for the foreseeable future.\n \nNo promises as to when all of that will be finished.");
+	m_ppVersionInfoLabel->setTextColor(0xbbbb0000);
+	m_ppVersionInfoLabel->setDrawBackground(false);
+	m_ppVersionInfoLabel->setDrawFrame(false);
+	m_bottombar->addBaseUIElement(m_ppVersionInfoLabel);
+	*/
+
 	// build scorebrowser
 	m_scoreBrowser = new CBaseUIScrollView(0, 0, 0, 0, "");
 	m_scoreBrowser->setDrawBackground(false);
@@ -551,7 +585,7 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	m_search = new OsuUISearchOverlay(m_osu, 0, 0, 0, 0, "");
 	m_search->setOffsetRight(10);
 	m_fSearchWaitTime = 0.0f;
-	m_bInSearch = false;
+	m_bInSearch = (osu_songbrowser_search_hardcoded_filter.getString().length() > 0);
 	m_searchPrevGroup = GROUP::GROUP_NO_GROUPING;
 	m_backgroundSearchMatcher = new OsuSongBrowserBackgroundSearchMatcher();
 	m_bOnAfterSortingOrGroupChangeUpdateScheduled = false;
@@ -855,7 +889,7 @@ void OsuSongBrowser2::draw(Graphics *g)
 	m_songBrowser->draw(g);
 
 	// draw search
-	m_search->setSearchString(m_sSearchString);
+	m_search->setSearchString(m_sSearchString, osu_songbrowser_search_hardcoded_filter.getString());
 	m_search->setDrawNumResults(m_bInSearch);
 	m_search->setNumFoundResults(m_visibleSongButtons.size());
 	m_search->setSearching(!m_backgroundSearchMatcher->isDead());
@@ -1408,14 +1442,14 @@ void OsuSongBrowser2::onKeyDown(KeyboardEvent &key)
 			OsuUISongBrowserSongButton *songButton = dynamic_cast<OsuUISongBrowserSongButton*>(elements[nextSelectionIndex]);
 			if (nextButton != NULL)
 			{
-				nextButton->select();
+				nextButton->select(true, false);
 
 				// if this is a song button, select top child
 				if (songButton != NULL)
 				{
-					std::vector<OsuUISongBrowserButton*> children = songButton->getChildren();
+					const std::vector<OsuUISongBrowserButton*> &children = songButton->getChildren();
 					if (children.size() > 0 && !children[0]->isSelected())
-						children[0]->select();
+						children[0]->select(true, false, false);
 				}
 			}
 		}
@@ -1482,19 +1516,23 @@ void OsuSongBrowser2::onKeyDown(KeyboardEvent &key)
 
 			if (foundSelected && button != NULL && !button->isSelected() && !isSongDifficultyButtonAndNotIndependent && (!jumpToNextGroup || collectionButtonPointer != NULL))
 			{
-				button->select();
-
-				if (!jumpToNextGroup || collectionButtonPointer == NULL)
+				m_bNextScrollToSongButtonJumpFixUseScrollSizeDelta = true;
 				{
-					// automatically open collection below and go to bottom child
-					OsuUISongBrowserCollectionButton *collectionButton = dynamic_cast<OsuUISongBrowserCollectionButton*>(elements[i]);
-					if (collectionButton != NULL)
+					button->select();
+
+					if (!jumpToNextGroup || collectionButtonPointer == NULL)
 					{
-						std::vector<OsuUISongBrowserButton*> children = collectionButton->getChildren();
-						if (children.size() > 0 && !children[children.size()-1]->isSelected())
-							children[children.size()-1]->select();
+						// automatically open collection below and go to bottom child
+						OsuUISongBrowserCollectionButton *collectionButton = dynamic_cast<OsuUISongBrowserCollectionButton*>(elements[i]);
+						if (collectionButton != NULL)
+						{
+							std::vector<OsuUISongBrowserButton*> children = collectionButton->getChildren();
+							if (children.size() > 0 && !children[children.size()-1]->isSelected())
+								children[children.size()-1]->select();
+						}
 					}
 				}
+				m_bNextScrollToSongButtonJumpFixUseScrollSizeDelta = false;
 
 				break;
 			}
@@ -1832,6 +1870,7 @@ void OsuSongBrowser2::selectBeatmapMP(OsuDatabaseBeatmap *diff2)
 	if (m_sSearchString.length() > 0)
 	{
 		m_sSearchString = "";
+		osu_songbrowser_search_hardcoded_filter.setValue(m_sSearchString); // safety
 		onSearchUpdate();
 	}
 
@@ -2194,10 +2233,35 @@ void OsuSongBrowser2::readdBeatmap(OsuDatabaseBeatmap *diff2)
 	}
 }
 
+void OsuSongBrowser2::requestNextScrollToSongButtonJumpFix(OsuUISongBrowserSongDifficultyButton *diffButton)
+{
+	if (diffButton == NULL) return;
+
+	m_bNextScrollToSongButtonJumpFixScheduled = true;
+	m_fNextScrollToSongButtonJumpFixOldRelPosY = (diffButton->getParentSongButton() != NULL ? diffButton->getParentSongButton()->getRelPos().y : diffButton->getRelPos().y);
+	m_fNextScrollToSongButtonJumpFixOldScrollSizeY = m_songBrowser->getScrollSize().y;
+}
+
 void OsuSongBrowser2::scrollToSongButton(OsuUISongBrowserButton *songButton, bool alignOnTop)
 {
-	if (songButton != NULL)
-		m_songBrowser->scrollToY(-songButton->getRelPos().y + (alignOnTop ? (0) : (m_songBrowser->getSize().y/2 - songButton->getSize().y/2)));
+	if (songButton == NULL) return;
+
+	// NOTE: compensate potential scroll jump due to added/removed elements (feels a lot better this way, also easier on the eyes)
+	if (m_bNextScrollToSongButtonJumpFixScheduled)
+	{
+		m_bNextScrollToSongButtonJumpFixScheduled = false;
+
+		float delta = 0.0f;
+		{
+			if (!m_bNextScrollToSongButtonJumpFixUseScrollSizeDelta)
+				delta = (songButton->getRelPos().y - m_fNextScrollToSongButtonJumpFixOldRelPosY); // (default case)
+			else
+				delta = m_songBrowser->getScrollSize().y - m_fNextScrollToSongButtonJumpFixOldScrollSizeY; // technically not correct but feels a lot better for KEY_LEFT navigation
+		}
+		m_songBrowser->scrollToY(m_songBrowser->getScrollPosY() - delta, false);
+	}
+
+	m_songBrowser->scrollToY(-songButton->getRelPos().y + (alignOnTop ? (0) : (m_songBrowser->getSize().y/2 - songButton->getSize().y/2)));
 }
 
 OsuUISongBrowserButton *OsuSongBrowser2::findCurrentlySelectedSongButton() const
@@ -2353,7 +2417,7 @@ void OsuSongBrowser2::updateSongButtonSorting()
 	onSortChange(osu_songbrowser_scores_sortingtype.getString());
 }
 
-bool OsuSongBrowser2::searchMatcher(const OsuDatabaseBeatmap *databaseBeatmap, const UString &searchString)
+bool OsuSongBrowser2::searchMatcher(const OsuDatabaseBeatmap *databaseBeatmap, const std::vector<UString> &searchStringTokens)
 {
 	if (databaseBeatmap == NULL) return false;
 
@@ -2400,6 +2464,7 @@ bool OsuSongBrowser2::searchMatcher(const OsuDatabaseBeatmap *databaseBeatmap, c
 		OBJECTS,
 		CIRCLES,
 		SLIDERS,
+		SPINNERS,
 		LENGTH,
 		STARS,
 	};
@@ -2419,6 +2484,8 @@ bool OsuSongBrowser2::searchMatcher(const OsuDatabaseBeatmap *databaseBeatmap, c
 		std::pair<UString, keywordId>("circles",CIRCLES),
 		std::pair<UString, keywordId>("slider",SLIDERS),
 		std::pair<UString, keywordId>("sliders",SLIDERS),
+		std::pair<UString, keywordId>("spinner",SPINNERS),
+		std::pair<UString, keywordId>("spinners",SPINNERS),
 		std::pair<UString, keywordId>("length", LENGTH),
 		std::pair<UString, keywordId>("len", LENGTH),
 		std::pair<UString, keywordId>("stars", STARS),
@@ -2428,7 +2495,6 @@ bool OsuSongBrowser2::searchMatcher(const OsuDatabaseBeatmap *databaseBeatmap, c
 	// split search string into tokens
 	// parse over all difficulties
 	bool expressionMatches = false; // if any diff matched all expressions
-	std::vector<UString> tokens = searchString.split(" ");
 	std::vector<UString> literalSearchStrings;
 	for (size_t d=0; d<numDiffs; d++)
 	{
@@ -2436,23 +2502,24 @@ bool OsuSongBrowser2::searchMatcher(const OsuDatabaseBeatmap *databaseBeatmap, c
 
 		bool expressionsMatch = true; // if the current search string (meaning only the expressions in this case) matches the current difficulty
 
-		for (size_t i=0; i<tokens.size(); i++)
+		for (size_t i=0; i<searchStringTokens.size(); i++)
 		{
 			//debugLog("token[%i] = %s\n", i, tokens[i].toUtf8());
 			// determine token type, interpret expression
 			bool expression = false;
 			for (size_t o=0; o<operators.size(); o++)
 			{
-				if (tokens[i].find(operators[o].first) != -1)
+				if (searchStringTokens[i].find(operators[o].first) != -1)
 				{
 					// split expression into left and right parts (only accept singular expressions, things like "0<bpm<1" will not work with this)
 					//debugLog("splitting by string %s\n", operators[o].first.toUtf8());
-					std::vector<UString> values = tokens[i].split(operators[o].first);
+					std::vector<UString> values = searchStringTokens[i].split(operators[o].first);
 					if (values.size() == 2 && values[0].length() > 0 && values[1].length() > 0)
 					{
-						//debugLog("lvalue = %s, rvalue = %s\n", values[0].toUtf8(), values[1].toUtf8());
 						const UString lvalue = values[0];
-						const float rvalue = values[1].toFloat(); // this must always be a number (at least, assume it is)
+						const int rvaluePercentIndex = values[1].find("%");
+						const bool rvalueIsPercent = (rvaluePercentIndex != -1);
+						const float rvalue = (rvaluePercentIndex == -1 ? values[1].toFloat() : values[1].substr(0, rvaluePercentIndex).toFloat()); // this must always be a number (at least, assume it is)
 
 						// find lvalue keyword in array (only continue if keyword exists)
 						for (size_t k=0; k<keywords.size(); k++)
@@ -2495,10 +2562,13 @@ bool OsuSongBrowser2::searchMatcher(const OsuDatabaseBeatmap *databaseBeatmap, c
 									compareValue = diff->getNumObjects();
 									break;
 								case CIRCLES:
-									compareValue = diff->getNumCircles();
+									compareValue = (rvalueIsPercent ? ((float)diff->getNumCircles() / (float)diff->getNumObjects())*100.0f : diff->getNumCircles());
 									break;
 								case SLIDERS:
-									compareValue = diff->getNumSliders();
+									compareValue = (rvalueIsPercent ? ((float)diff->getNumSliders() / (float)diff->getNumObjects())*100.0f : diff->getNumSliders());
+									break;
+								case SPINNERS:
+									compareValue = (rvalueIsPercent ? ((float)diff->getNumSpinners() / (float)diff->getNumObjects())*100.0f : diff->getNumSpinners());
 									break;
 								case LENGTH:
 									compareValue = diff->getLengthMS() / 1000;
@@ -2560,7 +2630,7 @@ bool OsuSongBrowser2::searchMatcher(const OsuDatabaseBeatmap *databaseBeatmap, c
 				bool exists = false;
 				for (size_t l=0; l<literalSearchStrings.size(); l++)
 				{
-					if (literalSearchStrings[l] == tokens[i])
+					if (literalSearchStrings[l] == searchStringTokens[i])
 					{
 						exists = true;
 						break;
@@ -2569,7 +2639,7 @@ bool OsuSongBrowser2::searchMatcher(const OsuDatabaseBeatmap *databaseBeatmap, c
 
 				if (!exists)
 				{
-					const UString litAdd = tokens[i].trim();
+					const UString litAdd = searchStringTokens[i].trim();
 					if (litAdd.length() > 0 && !litAdd.isWhitespaceOnly())
 						literalSearchStrings.push_back(litAdd);
 				}
@@ -2799,6 +2869,13 @@ void OsuSongBrowser2::updateLayout()
 	const int userButtonHeight = m_bottombar->getSize().y*0.9f;
 	m_userButton->setSize(userButtonHeight*3.5f, userButtonHeight);
 	m_userButton->setRelPos(std::max(m_bottombar->getSize().x/2 - m_userButton->getSize().x/2, m_bottombarNavButtons[m_bottombarNavButtons.size()-1]->getRelPos().x + m_bottombarNavButtons[m_bottombarNavButtons.size()-1]->getSize().x + 10), m_bottombar->getSize().y - m_userButton->getSize().y - 1);
+
+	if (m_ppVersionInfoLabel != NULL)
+	{
+		m_ppVersionInfoLabel->onResized(); // HACKHACK: framework bug (should update string metrics on setSizeToContent())
+		m_ppVersionInfoLabel->setSizeToContent(1, 10);
+		m_ppVersionInfoLabel->setRelPos(m_userButton->getRelPos() + Vector2(m_userButton->getSize().x + 20*dpiScale, m_userButton->getSize().y/2 - m_ppVersionInfoLabel->getSize().y/2));
+	}
 
 	m_bottombar->update_pos();
 
@@ -3215,15 +3292,18 @@ void OsuSongBrowser2::onDatabaseLoadingFinished()
 
 	// update user name/stats
 	onUserButtonChange(m_name_ref->getString(), -1);
+
+	if (osu_songbrowser_search_hardcoded_filter.getString().length() > 0)
+		onSearchUpdate();
 }
 
 void OsuSongBrowser2::onSearchUpdate()
 {
+	const bool hasHardcodedSearchStringChanged = (m_sPrevHardcodedSearchString != osu_songbrowser_search_hardcoded_filter.getString());
 	const bool hasSearchStringChanged = (m_sPrevSearchString != m_sSearchString);
 
 	const bool prevInSearch = m_bInSearch;
-	m_bInSearch = (m_sSearchString.length() > 0);
-
+	m_bInSearch = (m_sSearchString.length() > 0 || osu_songbrowser_search_hardcoded_filter.getString().length() > 0);
 	const bool hasInSearchChanged = (prevInSearch != m_bInSearch);
 
 	if (m_bInSearch)
@@ -3231,14 +3311,14 @@ void OsuSongBrowser2::onSearchUpdate()
 		m_searchPrevGroup = m_group;
 
 		// flag all search matches across entire database
-		if (hasSearchStringChanged || hasInSearchChanged)
+		if (hasSearchStringChanged || hasHardcodedSearchStringChanged || hasInSearchChanged)
 		{
 			// stop potentially running async search
 			checkHandleKillBackgroundSearchMatcher();
 
 			m_backgroundSearchMatcher->revive();
 			m_backgroundSearchMatcher->release();
-			m_backgroundSearchMatcher->setSongButtonsAndSearchString(m_songButtons, m_sSearchString);
+			m_backgroundSearchMatcher->setSongButtonsAndSearchString(m_songButtons, m_sSearchString, osu_songbrowser_search_hardcoded_filter.getString());
 
 			engine->getResourceManager()->requestNextLoadAsync();
 			engine->getResourceManager()->loadResource(m_backgroundSearchMatcher);
@@ -3284,6 +3364,7 @@ void OsuSongBrowser2::onSearchUpdate()
 	}
 
 	m_sPrevSearchString = m_sSearchString;
+	m_sPrevHardcodedSearchString = osu_songbrowser_search_hardcoded_filter.getString();
 }
 
 void OsuSongBrowser2::rebuildSongButtonsAndVisibleSongButtonsWithSearchMatchSupport(bool scrollToTop, bool doRebuildSongButtons)
@@ -4299,7 +4380,7 @@ void OsuSongBrowser2::selectSongButton(OsuUISongBrowserButton *songButton)
 	}
 }
 
-void OsuSongBrowser2::selectRandomBeatmap()
+void OsuSongBrowser2::selectRandomBeatmap(bool playMusicFromPreviewPoint)
 {
 	// filter songbuttons or independent diffs
 	const std::vector<CBaseUIElement*> &elements = m_songBrowser->getContainer()->getElements();

@@ -133,6 +133,7 @@ ConVar osu_hud_inputoverlay_anim_scale_duration("osu_hud_inputoverlay_anim_scale
 ConVar osu_hud_inputoverlay_anim_scale_multiplier("osu_hud_inputoverlay_anim_scale_multiplier", 0.8f);
 ConVar osu_hud_inputoverlay_anim_color_duration("osu_hud_inputoverlay_anim_color_duration", 0.1f);
 ConVar osu_hud_fps_smoothing("osu_hud_fps_smoothing", true);
+ConVar osu_hud_scrubbing_timeline_hover_tooltip_offset_multiplier("osu_hud_scrubbing_timeline_hover_tooltip_offset_multiplier", 1.0f);
 ConVar osu_hud_scrubbing_timeline_strains_height("osu_hud_scrubbing_timeline_strains_height", 200.0f);
 ConVar osu_hud_scrubbing_timeline_strains_alpha("osu_hud_scrubbing_timeline_strains_alpha", 0.4f);
 ConVar osu_hud_scrubbing_timeline_strains_aim_color_r("osu_hud_scrubbing_timeline_strains_aim_color_r", 0);
@@ -2299,6 +2300,9 @@ void OsuHUD::drawHitErrorBarInt(Graphics *g, float hitWindow300, float hitWindow
 	// draw background bar with color indicators for 300s, 100s and 50s (and the miss window)
 	if (alphaBarInt > 0)
 	{
+		const bool half = OsuGameRules::osu_mod_halfwindow.getBool();
+		const bool halfAllow300s = OsuGameRules::osu_mod_halfwindow_allow_300s.getBool();
+
 		if (osu_hud_hiterrorbar_showmisswindow.getBool())
 		{
 			g->setColor(colorMiss);
@@ -2308,17 +2312,17 @@ void OsuHUD::drawHitErrorBarInt(Graphics *g, float hitWindow300, float hitWindow
 		if (!OsuGameRules::osu_mod_no100s.getBool() && !OsuGameRules::osu_mod_no50s.getBool())
 		{
 			g->setColor(color50);
-			g->fillRect(center.x - size.x*percent50/2.0f, center.y - size.y/2.0f, size.x*percent50, size.y);
+			g->fillRect(center.x - size.x*percent50/2.0f, center.y - size.y/2.0f, size.x*percent50 * (half ? 0.5f : 1.0f), size.y);
 		}
 
 		if (!OsuGameRules::osu_mod_ming3012.getBool() && !OsuGameRules::osu_mod_no100s.getBool())
 		{
 			g->setColor(color100);
-			g->fillRect(center.x - size.x*percent100/2.0f, center.y - size.y/2.0f, size.x*percent100, size.y);
+			g->fillRect(center.x - size.x*percent100/2.0f, center.y - size.y/2.0f, size.x*percent100 * (half ? 0.5f : 1.0f), size.y);
 		}
 
 		g->setColor(color300);
-		g->fillRect(center.x - size.x*percent300/2.0f, center.y - size.y/2.0f, size.x*percent300, size.y);
+		g->fillRect(center.x - size.x*percent300/2.0f, center.y - size.y/2.0f, size.x*percent300 * (half && !halfAllow300s ? 0.5f : 1.0f), size.y);
 	}
 
 	// draw hit errors
@@ -2930,7 +2934,7 @@ void OsuHUD::drawScrubbingTimeline(Graphics *g, unsigned long beatmapTime, unsig
 		UString endTimeText = UString::format("%i:%02i", (quickSaveTimeMS/1000) / 60, (quickSaveTimeMS/1000) % 60);
 		g->pushTransform();
 		{
-			g->translate((int)(clamp<float>(triangleTip.x - timeFont->getStringWidth(currentTimeText)/2.0f, currentTimeLeftRightTextOffset, m_osu->getScreenWidth() - timeFont->getStringWidth(currentTimeText) - currentTimeLeftRightTextOffset) + 1), (int)(triangleTip.y + startAndEndTimeTextOffset + timeFont->getHeight()*2.2f + 1));
+			g->translate((int)(clamp<float>(triangleTip.x - timeFont->getStringWidth(currentTimeText)/2.0f, currentTimeLeftRightTextOffset, m_osu->getScreenWidth() - timeFont->getStringWidth(currentTimeText) - currentTimeLeftRightTextOffset) + 1), (int)(triangleTip.y + startAndEndTimeTextOffset + timeFont->getHeight()*2.2f + 1 + currentTimeTopTextOffset*std::max(1.0f, getCursorScaleFactor()*osu_cursor_scale.getFloat())*osu_hud_scrubbing_timeline_hover_tooltip_offset_multiplier.getFloat()));
 			g->setColor(0xff000000);
 			g->drawString(timeFont, endTimeText);
 			g->translate(-1, -1);
@@ -2946,7 +2950,7 @@ void OsuHUD::drawScrubbingTimeline(Graphics *g, unsigned long beatmapTime, unsig
 	triangleTip = Vector2(cursorPos.x, cursorPos.y);
 	g->pushTransform();
 	{
-		g->translate((int)clamp<float>(triangleTip.x - timeFont->getStringWidth(currentTimeText)/2.0f, currentTimeLeftRightTextOffset, m_osu->getScreenWidth() - timeFont->getStringWidth(currentTimeText) - currentTimeLeftRightTextOffset) + 1, (int)(triangleTip.y - m_osu->getSkin()->getSeekTriangle()->getHeight() - timeFont->getHeight()*1.2f - currentTimeTopTextOffset - 1));
+		g->translate((int)clamp<float>(triangleTip.x - timeFont->getStringWidth(currentTimeText)/2.0f, currentTimeLeftRightTextOffset, m_osu->getScreenWidth() - timeFont->getStringWidth(currentTimeText) - currentTimeLeftRightTextOffset) + 1, (int)(triangleTip.y - m_osu->getSkin()->getSeekTriangle()->getHeight() - timeFont->getHeight()*1.2f - currentTimeTopTextOffset*std::max(1.0f, getCursorScaleFactor()*osu_cursor_scale.getFloat())*osu_hud_scrubbing_timeline_hover_tooltip_offset_multiplier.getFloat()*2.0f - 1));
 		g->setColor(0xff000000);
 		g->drawString(timeFont, hoverTimeText);
 		g->translate(-1, -1);

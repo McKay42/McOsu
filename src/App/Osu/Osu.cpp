@@ -65,7 +65,7 @@
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 33.02f);
+ConVar osu_version("osu_version", 33.03f);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr");
 #else
@@ -100,6 +100,7 @@ ConVar osu_quick_retry_delay("osu_quick_retry_delay", 0.27f);
 ConVar osu_scrubbing_smooth("osu_scrubbing_smooth", true);
 ConVar osu_skip_intro_enabled("osu_skip_intro_enabled", true, "enables/disables skip button for intro until first hitobject");
 ConVar osu_skip_breaks_enabled("osu_skip_breaks_enabled", true, "enables/disables skip button for breaks in the middle of beatmaps");
+ConVar osu_seek_delta("osu_seek_delta", 5, "how many seconds to skip backward/forward when quick seeking");
 
 ConVar osu_mods("osu_mods", "");
 ConVar osu_mod_touchdevice("osu_mod_touchdevice", false, "used for force applying touch pp nerf always");
@@ -183,6 +184,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_no50s"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_no100s"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_ming3012"));
+	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_halfwindow"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_millhioref"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_mafham"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_strict_tracking"));
@@ -898,6 +900,11 @@ void Osu::update()
 
 						getSelectedBeatmap()->seekPercentPlayable(percent);
 					}
+					else
+					{
+						// special case: keep player invulnerable even if scrubbing position does not change
+						getSelectedBeatmap()->resetScore();
+					}
 				}
 				else
 					m_fPrevSeekMousePosX = -1.0f;
@@ -1410,6 +1417,42 @@ void Osu::onKeyDown(KeyboardEvent &key)
 						getSelectedBeatmap()->cancelFailing();
 
 					getSelectedBeatmap()->seekPercent(m_fQuickSaveTime);
+				}
+			}
+
+			// quick seek
+			if (!isInMultiplayer() || m_multiplayer->isServer())
+			{
+				const bool backward = (key == (KEYCODE)OsuKeyBindings::SEEK_TIME_BACKWARD.getInt());
+				const bool forward = (key == (KEYCODE)OsuKeyBindings::SEEK_TIME_FORWARD.getInt());
+
+				if (backward || forward)
+				{
+					const bool isVolumeOverlayVisibleOrBusy = (m_hud->isVolumeOverlayVisible() || m_hud->isVolumeOverlayBusy());
+
+					if (!isVolumeOverlayVisibleOrBusy)
+					{
+						const unsigned long lengthMS = getSelectedBeatmap()->getLength();
+						const float percentFinished = getSelectedBeatmap()->getPercentFinished();
+
+						if (lengthMS > 0)
+						{
+							double seekedPercent = 0.0;
+							if (backward)
+								seekedPercent -= (double)osu_seek_delta.getInt() * (1.0 / (double)lengthMS) * 1000.0;
+							else if (forward)
+								seekedPercent += (double)osu_seek_delta.getInt() * (1.0 / (double)lengthMS) * 1000.0;
+
+							if (seekedPercent != 0.0f)
+							{
+								// special case: allow cancelling the failing animation here
+								if (getSelectedBeatmap()->hasFailed())
+									getSelectedBeatmap()->cancelFailing();
+
+								getSelectedBeatmap()->seekPercent(percentFinished + seekedPercent);
+							}
+						}
+					}
 				}
 			}
 		}
@@ -2048,8 +2091,17 @@ void Osu::onResolutionChanged(Vector2 newResolution)
 	// cursor clipping
 	updateConfineCursor();
 
+	// see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=323
+	struct LossyComparisonToFixExcessFPUPrecisionBugBecauseFuckYou
+	{
+		static bool equalEpsilon(float f1, float f2)
+		{
+			return std::abs(f1 - f2) < 0.00001f;
+		}
+	};
+
 	// a bit hacky, but detect resolution-specific-dpi-scaling changes and force a font and layout reload after a 1 frame delay (1/2)
-	if (getUIScale(this) != prevUIScale)
+	if (!LossyComparisonToFixExcessFPUPrecisionBugBecauseFuckYou::equalEpsilon(getUIScale(this), prevUIScale))
 		m_bFireDelayedFontReloadAndResolutionChangeToFixDesyncedUIScaleScheduled = true;
 }
 

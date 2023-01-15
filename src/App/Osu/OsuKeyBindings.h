@@ -33,6 +33,8 @@ public:
 	static ConVar SKIP_CUTSCENE;
 	static ConVar TOGGLE_SCOREBOARD;
 	static ConVar SEEK_TIME;
+	static ConVar SEEK_TIME_BACKWARD;
+	static ConVar SEEK_TIME_FORWARD;
 	static ConVar QUICK_RETRY;
 	static ConVar QUICK_SAVE;
 	static ConVar QUICK_LOAD;

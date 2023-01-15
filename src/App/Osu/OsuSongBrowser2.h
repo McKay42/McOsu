@@ -28,6 +28,7 @@ class OsuUISongBrowserButton;
 class OsuUISongBrowserSongButton;
 class OsuUISongBrowserSongDifficultyButton;
 class OsuUISongBrowserCollectionButton;
+class OsuUIUserStatsScreenLabel;
 
 class CBaseUIContainer;
 class CBaseUIImageButton;
@@ -135,6 +136,7 @@ public:
 	void onCollectionButtonContextMenu(OsuUISongBrowserCollectionButton *collectionButton, UString text, int id);
 
 	void highlightScore(uint64_t unixTimestamp);
+	void selectRandomBeatmap(bool playMusicFromPreviewPoint = true);
 	void playNextRandomBeatmap() {selectRandomBeatmap();playSelectedDifficulty();}
 	void recalculateStarsForSelectedBeatmap(bool force = false);
 
@@ -142,6 +144,7 @@ public:
 	void addBeatmap(OsuDatabaseBeatmap *beatmap);
 	void readdBeatmap(OsuDatabaseBeatmap *diff2);
 
+	void requestNextScrollToSongButtonJumpFix(OsuUISongBrowserSongDifficultyButton *diffButton);
 	void scrollToSongButton(OsuUISongBrowserButton *songButton, bool alignOnTop = false);
 	void scrollToSelectedSongButton();
 	void rebuildSongButtons();
@@ -155,6 +158,7 @@ public:
 
 	inline bool hasSelectedAndIsPlaying() const {return m_bHasSelectedAndIsPlaying;}
 	inline bool isInSearch() const {return m_bInSearch;}
+	inline bool isRightClickScrolling() const {return m_bSongBrowserRightClickScrolling;}
 
 	inline OsuDatabase *getDatabase() const {return m_db;}
 	inline OsuBeatmap *getSelectedBeatmap() const {return m_selectedBeatmap;}
@@ -192,7 +196,7 @@ private:
 	};
 
 private:
-	static bool searchMatcher(const OsuDatabaseBeatmap *databaseBeatmap, const UString &searchString);
+	static bool searchMatcher(const OsuDatabaseBeatmap *databaseBeatmap, const std::vector<UString> &searchStringTokens);
 	static bool findSubstringInDifficulty(const OsuDatabaseBeatmap *diff, const UString &searchString);
 
 	virtual void updateLayout();
@@ -257,7 +261,6 @@ private:
 	void onScoreClicked(CBaseUIButton *button);
 
 	void selectSongButton(OsuUISongBrowserButton *songButton);
-	void selectRandomBeatmap();
 	void selectPreviousRandomBeatmap();
 	void playSelectedDifficulty();
 
@@ -317,6 +320,7 @@ private:
 	CBaseUIContainer *m_bottombar;
 	std::vector<OsuUISelectionButton*> m_bottombarNavButtons;
 	OsuUISongBrowserUserButton *m_userButton;
+	OsuUIUserStatsScreenLabel *m_ppVersionInfoLabel;
 
 	// score browser
 	std::vector<OsuUISongBrowserScoreButton*> m_scoreButtonCache;
@@ -327,6 +331,10 @@ private:
 	CBaseUIScrollView *m_songBrowser;
 	bool m_bSongBrowserRightClickScrollCheck;
 	bool m_bSongBrowserRightClickScrolling;
+	bool m_bNextScrollToSongButtonJumpFixScheduled;
+	bool m_bNextScrollToSongButtonJumpFixUseScrollSizeDelta;
+	float m_fNextScrollToSongButtonJumpFixOldRelPosY;
+	float m_fNextScrollToSongButtonJumpFixOldScrollSizeY;
 
 	// song browser selection state logic
 	OsuUISongBrowserSongButton *m_selectionPreviousSongButton;
@@ -370,6 +378,7 @@ private:
 	OsuUISearchOverlay *m_search;
 	UString m_sSearchString;
 	UString m_sPrevSearchString;
+	UString m_sPrevHardcodedSearchString;
 	float m_fSearchWaitTime;
 	bool m_bInSearch;
 	GROUP m_searchPrevGroup;

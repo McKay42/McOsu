@@ -34,6 +34,7 @@ private:
 		bool wasUsedLastFrame;
 		float loadingTime;
 		float evictionTime;
+		unsigned long evictionTimeFrameCount;
 
 		UString osuFilePath;
 		UString folder;

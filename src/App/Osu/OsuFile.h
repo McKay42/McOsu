@@ -25,10 +25,18 @@ public:
 	};
 
 public:
-	OsuFile(UString filepath, bool write = false);
+	static std::string md5(const unsigned char *data, size_t numBytes);
+
+public:
+	OsuFile(UString filepath, bool write = false, bool writeBufferOnly = false);
 	virtual ~OsuFile();
 
 	inline size_t getFileSize() const {return m_iFileSize;}
+
+	// ILLEGAL:
+	inline unsigned char *getBuffer() const {return (unsigned char*)m_buffer;}
+	inline unsigned char *getReadPointer() const {return (unsigned char*)m_readPointer;}
+	inline const std::vector<char> &getWriteBuffer() const {return m_writeBuffer;}
 
 	inline bool isReady() const {return m_bReady;}
 

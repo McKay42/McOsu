@@ -72,12 +72,14 @@ public:
 	void stop(bool quit = true);
 	void fail();
 	void cancelFailing();
+	void resetScore() {resetScoreInt();}
 
 	// loader
 	void setMaxPossibleCombo(int maxPossibleCombo) {m_iMaxPossibleCombo = maxPossibleCombo;}
 	void setScoreV2ComboPortionMaximum(unsigned long long scoreV2ComboPortionMaximum) {m_iScoreV2ComboPortionMaximum = scoreV2ComboPortionMaximum;}
 
 	// music/sound
+	void unloadMusic() {unloadMusicInt();}
 	void setVolume(float volume);
 	void setSpeed(float speed);
 	void setPitch(float pitch);
@@ -186,6 +188,8 @@ protected:
 	static ConVar *m_osu_mod_fposu_ref;
 	static ConVar *m_fposu_draw_scorebarbg_on_top_ref;
 
+	static ConVar *m_osu_main_menu_shuffle_ref;
+
 	// overridable child events
 	virtual void onBeforeLoad() {;}			 // called before hitobjects are loaded
 	virtual void onLoad() {;}				 // called after hitobjects have been loaded
@@ -204,11 +208,11 @@ protected:
 
 	void handlePreviewPlay();
 	void loadMusic(bool stream = true, bool prescan = false);
-	void unloadMusic();
+	void unloadMusicInt();
 	void unloadObjects();
 
 	void resetHitObjects(long curPos = 0);
-	void resetScore();
+	void resetScoreInt();
 
 	void playMissSound();
 
