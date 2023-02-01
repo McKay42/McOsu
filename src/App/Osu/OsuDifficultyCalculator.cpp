@@ -570,7 +570,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 						double doubletapness = 1.0;
 						if (next) {
 							double cur_delta = std::max(1.0, delta_time);
-							double next_delta = std::max(1.0, next->delta_time);
+							double next_delta = std::max(1l, next->ho->time - ho->time); // next delta time isn't initialized yet
 							double delta_diff = std::abs(next_delta - cur_delta);
 							double speedRatio = cur_delta / std::max(cur_delta, delta_diff);
 							double windowRatio = pow(std::min(1.0, cur_delta / hitWindow300), 2);
