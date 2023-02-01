@@ -404,9 +404,6 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 			double interval_end = std::ceil((double)dobjects[0].ho->time / strain_step) * strain_step;
 			double max_strain = 0.0;
 
-			// DEBUG
-			std::vector<double> objectStrains;
-
 			std::vector<double> highestStrains;
 			for (size_t i=0; i<dobjects.size(); i++)
 			{
@@ -429,9 +426,6 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 
 				// calculate max strain for this interval
 				max_strain = std::max(max_strain, cur.strains[Skills::skillToIndex(type)] * (type == Skills::Skill::SPEED ? cur.rhythm : 1.0));
-
-				// DEBUG
-				objectStrains.push_back(cur.strains[Skills::skillToIndex(type)]);
 			}
 
 			// the peak strain will not be saved for the last section in the above loop
