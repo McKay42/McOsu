@@ -180,7 +180,7 @@ private:
 					// 3) calculate stars
 					double aimStars = 0.0;
 					double speedStars = 0.0;
-					const double totalStars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, CS, &aimStars, &speedStars);
+					const double totalStars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, CS, OD, &aimStars, &speedStars);
 
 					// 4) calculate pp
 					double pp = 0.0;

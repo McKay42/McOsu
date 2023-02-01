@@ -611,7 +611,7 @@ void OsuDatabaseBeatmap::calculateSliderTimesClicksTicks(int beatmapVersion, std
 				for (int i=0; i<(s.repeat - 1); i++)
 				{
 					const long time = s.time + (long)(s.sliderTimeWithoutRepeats * (i+1)); // see OsuSlider.cpp
-					s.scoringTimesForStarCalc.push_back(time);
+					s.scoringTimesForStarCalc.push_back(std::make_pair(time, true));
 				}
 
 				// 3) add tick times (somewhere within slider, repeated for every repeat)
@@ -621,16 +621,16 @@ void OsuDatabaseBeatmap::calculateSliderTimesClicksTicks(int beatmapVersion, std
 					{
 						const float tickPercentRelativeToRepeatFromStartAbs = (((i+1) % 2) != 0 ? s.ticks[t] : 1.0f - s.ticks[t]); // see OsuSlider.cpp
 						const long time = s.time + (long)(s.sliderTimeWithoutRepeats * i) + (long)(tickPercentRelativeToRepeatFromStartAbs * s.sliderTimeWithoutRepeats); // see OsuSlider.cpp
-						s.scoringTimesForStarCalc.push_back(time);
+						s.scoringTimesForStarCalc.push_back(std::make_pair(time, false));
 					}
 				}
 
 				// 4) add slider end (potentially before last tick for bullshit sliders, but sorting takes care of that)
 				// see https://github.com/ppy/osu/pull/4193#issuecomment-460127543
-				s.scoringTimesForStarCalc.push_back(std::max(s.time + (long)s.sliderTime / 2, (s.time + (long)s.sliderTime) - osuSliderEndInsideCheckOffset)); // see OsuSlider.cpp
+				s.scoringTimesForStarCalc.push_back(std::make_pair(std::max(s.time + (long)s.sliderTime / 2, (s.time + (long)s.sliderTime) - osuSliderEndInsideCheckOffset), false)); // see OsuSlider.cpp
 
 				// 5) sort scoringTimes from earliest to latest
-				std::sort(s.scoringTimesForStarCalc.begin(), s.scoringTimesForStarCalc.end(), std::less<long>());
+				std::sort(s.scoringTimesForStarCalc.begin(), s.scoringTimesForStarCalc.end(), std::less<std::pair<long, bool>>());
 			}
 		}
 	}
@@ -693,6 +693,7 @@ OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT OsuDatabaseBeatmap::loadDifficultyHitObj
 					c.sliders[i].points,
 					c.sliders[i].pixelLength,
 					c.sliders[i].scoringTimesForStarCalc,
+					c.sliders[i].repeat,
 					calculateSliderCurveInConstructor));
 		}
 		else
@@ -706,7 +707,8 @@ OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT OsuDatabaseBeatmap::loadDifficultyHitObj
 					c.sliders[i].type,
 					std::vector<Vector2>(),	// NOTE: ignore curve when calculating inaccurately
 					c.sliders[i].pixelLength,
-					std::vector<long>(),	// NOTE: ignore curve when calculating inaccurately
+					std::vector<std::pair<long, bool>>(),	// NOTE: ignore curve when calculating inaccurately
+					c.sliders[i].repeat,
 					false));				// NOTE: ignore curve when calculating inaccurately
 		}
 	}
@@ -893,7 +895,7 @@ OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT OsuDatabaseBeatmap::loadDifficultyHitObj
 				result.diffobjects[i].spanDuration = (double)result.diffobjects[i].spanDuration * invSpeedMultiplier;
 				for (int s=0; s<result.diffobjects[i].scoringTimes.size(); s++)
 				{
-					result.diffobjects[i].scoringTimes[s] = (long)((double)result.diffobjects[i].scoringTimes[s] * invSpeedMultiplier);
+					result.diffobjects[i].scoringTimes[s] = std::make_pair((long)((double)result.diffobjects[i].scoringTimes[s].first * invSpeedMultiplier), result.diffobjects[i].scoringTimes[s].second);
 				}
 			}
 		}
@@ -1470,13 +1472,14 @@ OsuDatabaseBeatmap::LOAD_GAMEPLAY_RESULT OsuDatabaseBeatmap::loadGameplay(OsuDat
 				const Osu::GAMEMODE gameMode = Osu::GAMEMODE::STD;
 				const float AR = beatmap->getAR();
 				const float CS = beatmap->getCS();
+				const float OD = beatmap->getOD();
 				const float speedMultiplier = databaseBeatmap->m_osu->getSpeedMultiplier(); // NOTE: not this->getSpeedMultiplier()!
 
 				LOAD_DIFFOBJ_RESULT diffres = OsuDatabaseBeatmap::loadDifficultyHitObjects(osuFilePath, gameMode, AR, CS, speedMultiplier);
 
 				double aim = 0.0;
 				double speed = 0.0;
-				double stars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, CS, &aim, &speed);
+				double stars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, CS, OD, &aim, &speed);
 				double pp = OsuDifficultyCalculator::calculatePPv2(beatmap->getOsu(), beatmap, aim, speed, databaseBeatmap->m_iNumObjects, databaseBeatmap->m_iNumCircles, databaseBeatmap->m_iNumSpinners, maxPossibleCombo);
 
 				engine->showMessageInfo("PP", UString::format("pp = %f, stars = %f, aimstars = %f, speedstars = %f, %i circles, %i sliders, %i spinners, %i hitobjects, maxcombo = %i", pp, stars, aim, speed, databaseBeatmap->m_iNumCircles, databaseBeatmap->m_iNumSliders, databaseBeatmap->m_iNumSpinners, databaseBeatmap->m_iNumObjects, maxPossibleCombo));
@@ -1859,6 +1862,7 @@ OsuDatabaseBeatmapStarCalculator::OsuDatabaseBeatmapStarCalculator() : Resource(
 
 	m_fAR = 5.0f;
 	m_fCS = 5.0f;
+	m_fOD = 5.0f;
 	m_fSpeedMultiplier = 1.0f;
 
 	m_totalStars = 0.0;
@@ -1917,7 +1921,7 @@ void OsuDatabaseBeatmapStarCalculator::initAsync()
 
 		double aimStars = 0.0;
 		double speedStars = 0.0;
-		m_totalStars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, m_fCS, &aimStars, &speedStars, -1, &m_aimStrains, &m_speedStrains);
+		m_totalStars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, m_fCS, m_fOD, &aimStars, &speedStars, -1, &m_aimStrains, &m_speedStrains);
 		m_aimStars = aimStars;
 		m_speedStars = speedStars;
 
@@ -1929,7 +1933,7 @@ void OsuDatabaseBeatmapStarCalculator::initAsync()
 	m_bAsyncReady = true;
 }
 
-void OsuDatabaseBeatmapStarCalculator::setBeatmapDifficulty(OsuDatabaseBeatmap *diff2, float AR, float CS, float speedMultiplier)
+void OsuDatabaseBeatmapStarCalculator::setBeatmapDifficulty(OsuDatabaseBeatmap *diff2, float AR, float CS, float OD, float speedMultiplier)
 {
 	m_diff2 = diff2;
 
@@ -1937,5 +1941,6 @@ void OsuDatabaseBeatmapStarCalculator::setBeatmapDifficulty(OsuDatabaseBeatmap *
 
 	m_fAR = AR;
 	m_fCS = CS;
+	m_fOD = OD;
 	m_fSpeedMultiplier = speedMultiplier;
 }

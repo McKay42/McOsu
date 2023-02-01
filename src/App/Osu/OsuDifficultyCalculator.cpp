@@ -28,11 +28,11 @@ OsuDifficultyHitObject::OsuDifficultyHitObject(TYPE type, Vector2 pos, long time
 {
 }
 
-OsuDifficultyHitObject::OsuDifficultyHitObject(TYPE type, Vector2 pos, long time, long endTime) : OsuDifficultyHitObject(type, pos, time, endTime, 0.0f, '\0', std::vector<Vector2>(), 0.0f, std::vector<long>(), true)
+OsuDifficultyHitObject::OsuDifficultyHitObject(TYPE type, Vector2 pos, long time, long endTime) : OsuDifficultyHitObject(type, pos, time, endTime, 0.0f, '\0', std::vector<Vector2>(), 0.0f, std::vector<std::pair<long, bool>>(), 0, true)
 {
 }
 
-OsuDifficultyHitObject::OsuDifficultyHitObject(TYPE type, Vector2 pos, long time, long endTime, float spanDuration, char osuSliderCurveType, std::vector<Vector2> controlPoints, float pixelLength, std::vector<long> scoringTimes, bool calculateSliderCurveInConstructor)
+OsuDifficultyHitObject::OsuDifficultyHitObject(TYPE type, Vector2 pos, long time, long endTime, float spanDuration, char osuSliderCurveType, std::vector<Vector2> controlPoints, float pixelLength, std::vector<std::pair<long, bool>> scoringTimes, int repeats, bool calculateSliderCurveInConstructor)
 {
 	this->type = type;
 	this->pos = pos;
@@ -46,6 +46,7 @@ OsuDifficultyHitObject::OsuDifficultyHitObject(TYPE type, Vector2 pos, long time
 	this->curve = NULL;
 	this->scheduledCurveAlloc = false;
 	this->scheduledCurveAllocStackOffset = 0.0f;
+	this->repeats = repeats;
 
 	this->stack = 0;
 	this->originalPos = this->pos;
@@ -199,7 +200,7 @@ Vector2 OsuDifficultyHitObject::getOriginalRawPosAt(long pos)
 
 ConVar *OsuDifficultyCalculator::m_osu_slider_scorev2_ref = NULL;
 
-double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, double *aim, double *speed, int upToObjectIndex, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains)
+double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, float OD, double *aim, double *speed, int upToObjectIndex, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains)
 {
 	// NOTE: depends on speed multiplier + CS
 
@@ -214,6 +215,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 
 	// global independent variables/constants
 	const float circleRadiusInOsuPixels = OsuGameRules::getRawHitCircleDiameter(clamp<float>(CS, 0.0f, 12.142f)) / 2.0f; // NOTE: clamped CS because McOsu allows CS > ~12.1429 (at which point the diameter becomes negative)
+	const float hitWindow300 = 2.0f * OsuGameRules::getRawHitWindow300(OD); // TODO: needs to be scaled to speed
 
 	// ****************************************************************************************************************************************** //
 
@@ -221,7 +223,9 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 
 	// see setDistances() @ https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Preprocessing/OsuDifficultyHitObject.cs
 
-	static const float normalized_radius = 52.0f;		// normalization factor
+	static const float normalized_radius = 50.0f;		// normalization factor
+	static const float maximum_slider_radius = normalized_radius * 2.4f;
+	static const float assumed_slider_radius = normalized_radius * 1.8f;
 	static const float circlesize_buff_treshold = 30;	// non-normalized diameter where the circlesize buff starts
 
 	// multiplier to normalize positions so that we can calc as if everything was the same circlesize.
@@ -267,7 +271,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 	// see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/Aim.cs
 
 	static const double decay_base[NUM_SKILLS] = {0.3, 0.15};			// how much strains decay per interval (if the previous interval's peak strains after applying decay are still higher than the current one's, they will be used as the peak strains).
-	static const double weight_scaling[NUM_SKILLS] = {1400.0, 26.25};	// used to keep speed and aim balanced between eachother
+	static const double weight_scaling[NUM_SKILLS] = {1375.0, 23.55};	// used to keep speed and aim balanced between eachother
 
 
 
@@ -278,50 +282,74 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 
 		double strains[NUM_SKILLS];
 
+		// https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/Speed.cs
+		// needed because raw speed strain and rhythm strain are combined in different ways
+		double raw_speed_strain;
+		double rhythm;
+
 		Vector2 norm_start;		// start position normalized on radius
 
 		double angle;			// precalc
 
 		double jumpDistance;	// precalc
+		double minJumpDistance;	// precalc
+		double minJumpTime;		// precalc
 		double travelDistance;	// precalc
 
 		double delta_time;		// strain temp
+		double strain_time;
 
 		bool lazyCalcFinished;	// precalc temp
 		Vector2 lazyEndPos;		// precalc temp
 		double lazyTravelDist;	// precalc temp
+		double lazyTravelTime;	// precalc temp
 
-		DiffObject(OsuDifficultyHitObject *base_object, float radius_scaling_factor)
+		// NOTE: McOsu stores the first object in this array while lazer doesn't
+		std::vector<DiffObject>& objects;
+		int index;
+
+		DiffObject(OsuDifficultyHitObject *base_object, float radius_scaling_factor, std::vector<DiffObject>& diff_objects, int idx) : objects(diff_objects)
 		{
 			ho = base_object;
 
-			// strains start at 1
 			for (int i=0; i<NUM_SKILLS; i++)
 			{
-				strains[i] = 1.0;
+				strains[i] = 0.0;
 			}
+			raw_speed_strain = 0.0;
+			rhythm = 0.0;
 
 			norm_start = ho->pos * radius_scaling_factor;
 
 			angle = std::numeric_limits<float>::quiet_NaN();
 
 			jumpDistance = 0.0;
+			minJumpDistance = 0.0;
+			minJumpTime = 0.0;
 			travelDistance = 0.0;
 
 			delta_time = 0.0;
+			strain_time = 0.0;
 
 			lazyCalcFinished = false;
 			lazyEndPos = ho->pos;
 			lazyTravelDist = 0.0;
+			lazyTravelTime = 0.0;
+
+			index = idx;
 		}
 
-		void calculate_strains(const DiffObject &prev)
+		DiffObject* get_previous(int backwardsIdx) {
+			return &objects[index - backwardsIdx];
+		}
+
+		void calculate_strains(const DiffObject &prev, const DiffObject* next, double hitWindow300)
 		{
-			calculate_strain(prev, Skills::Skill::SPEED);
-			calculate_strain(prev, Skills::Skill::AIM);
+			calculate_strain(prev, next, hitWindow300, Skills::Skill::SPEED);
+			calculate_strain(prev, next, hitWindow300, Skills::Skill::AIM);
 		}
 
-		void calculate_strain(const DiffObject &prev, const Skills::Skill dtype)
+		void calculate_strain(const DiffObject &prev, const DiffObject* next, double hitWindow300, const Skills::Skill dtype)
 		{
 			double currentStrainOfDiffObject = 0;
 
@@ -329,6 +357,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 
 			// update our delta time
 			delta_time = (double)time_elapsed;
+			strain_time = (double)std::max(time_elapsed, 25l);
 
 			switch (ho->type)
 			{
@@ -338,7 +367,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 					if (!osu_stars_xexxar_angles_sliders.getBool())
 						currentStrainOfDiffObject = spacing_weight1((norm_start - prev.norm_start).length(), dtype);
 					else
-						currentStrainOfDiffObject = spacing_weight2(dtype, jumpDistance, travelDistance, delta_time, prev.jumpDistance, prev.travelDistance, prev.delta_time, angle);
+						currentStrainOfDiffObject = spacing_weight2(dtype, prev, next, hitWindow300);
 
 					break;
 
@@ -375,6 +404,9 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 			double interval_end = std::ceil((double)dobjects[0].ho->time / strain_step) * strain_step;
 			double max_strain = 0.0;
 
+			// DEBUG
+			std::vector<double> objectStrains;
+
 			std::vector<double> highestStrains;
 			for (size_t i=0; i<dobjects.size(); i++)
 			{
@@ -386,16 +418,20 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 				{
 					highestStrains.push_back(max_strain);
 
-					if (i < 1) // !prev
+					if (i < 1) { // !prev
 						max_strain = 0.0;
-					else
-						max_strain = prev.strains[Skills::skillToIndex(type)] * strainDecay(type, (interval_end - (double)prev.ho->time));
+					} else {
+						max_strain = prev.strains[Skills::skillToIndex(type)] * (type == Skills::Skill::SPEED ? prev.rhythm : 1.0) * strainDecay(type, (interval_end - (double)prev.ho->time));
+					}
 
 					interval_end += strain_step;
 				}
 
 				// calculate max strain for this interval
-				max_strain = std::max(max_strain, cur.strains[Skills::skillToIndex(type)]);
+				max_strain = std::max(max_strain, cur.strains[Skills::skillToIndex(type)] * (type == Skills::Skill::SPEED ? cur.rhythm : 1.0));
+
+				// DEBUG
+				objectStrains.push_back(cur.strains[Skills::skillToIndex(type)]);
 			}
 
 			// the peak strain will not be saved for the last section in the above loop
@@ -509,25 +545,19 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 		}
 
 		// new implementation, Xexxar, (ppv2.1), see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/
-		static double spacing_weight2(const Skills::Skill diff_type, double jump_distance, double travel_distance, double delta_time, double prev_jump_distance, double prev_travel_distance, double prev_delta_time, double angle)
+		double spacing_weight2(const Skills::Skill diff_type, const DiffObject& prev, const DiffObject* next, double hitWindow300)
 		{
 			static const double single_spacing_threshold = 125.0;
 
-			static const double pi_over_4 = PI / 4.0;
-			static const double pi_over_2 = PI / 2.0;
-
-			static const double max_speed_bonus = 45.0; /* ~330BPM 1/4 streams */
 			static const double min_speed_bonus = 75.0; /* ~200BPM 1/4 streams */
 			static const double speed_balancing_factor = 40.0;
 
+			static const int history_time_max = 5000;
+			static const double rhythm_multiplier = 0.75;
+
 			static const double angle_bonus_scale = 90.0;
 			static const double aim_timing_threshold = 107.0;
-			static const double speed_angle_bonus_begin = (5.0 * PI / 6.0);
 			static const double aim_angle_bonus_begin = (PI / 3.0);
-
-			// "Every strain interval is hard capped at the equivalent of 375 BPM streaming speed as a safety measure"
-			const double strain_time = std::max(delta_time, 50.0);
-			const double prev_strain_time = std::max(prev_delta_time, 50.0);
 
 			double angle_bonus = 1.0;
 
@@ -537,28 +567,113 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 					{
 						// see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/Speed.cs
 
-						const double distance = std::min(single_spacing_threshold, travel_distance + jump_distance);
-						delta_time = std::max(delta_time, max_speed_bonus);
+						// https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Evaluators/SpeedEvaluator.cs
+						const double distance = std::min(single_spacing_threshold, prev.travelDistance + minJumpDistance);
+
+						double strain_time = this->strain_time;
+						strain_time /= clamp<double>((strain_time / hitWindow300) / 0.93, 0.92, 1);
+
+						double doubletapness = 1.0;
+						if (next) {
+							double cur_delta = std::max(1.0, delta_time);
+							double next_delta = std::max(1.0, next->delta_time);
+							double delta_diff = std::abs(next_delta - cur_delta);
+							double speedRatio = cur_delta / std::max(cur_delta, delta_diff);
+							double windowRatio = pow(std::min(1.0, cur_delta / hitWindow300), 2);
+							doubletapness = pow(speedRatio, 1 - windowRatio);
+						}
 
 						double speed_bonus = 1.0;
-						if (delta_time < min_speed_bonus)
-							speed_bonus = 1.0 + std::pow((min_speed_bonus - delta_time) / speed_balancing_factor, 2.0);
+						if (strain_time < min_speed_bonus)
+							speed_bonus = 1.0 + 0.75 * pow((min_speed_bonus - strain_time) / speed_balancing_factor, 2.0);
 
-						if (!std::isnan(angle) && angle < speed_angle_bonus_begin)
+						raw_speed_strain = (speed_bonus + speed_bonus * pow(distance / single_spacing_threshold, 3.5)) * doubletapness / strain_time;
+
+						// https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Evaluators/RhythmEvaluator.cs
+						int previousIslandSize = 0;
+
+						double rhythmComplexitySum = 0;
+						int islandSize = 1;
+						double startRatio = 0; // store the ratio of the current start of an island to buff for tighter rhythms
+
+						bool firstDeltaSwitch = false;
+
+						int historicalNoteCount = std::min(index, 32);
+
+						int rhythmStart = 0;
+
+						while (rhythmStart < historicalNoteCount - 2 && ho->time - get_previous(rhythmStart)->ho->time < history_time_max)
+							rhythmStart++;
+
+						for (int i = rhythmStart; i > 0; i--)
 						{
-							angle_bonus = 1.0 + std::pow(std::sin(1.5 * (speed_angle_bonus_begin - angle)), 2.0) / 3.57;
+							DiffObject* currObj = get_previous(i - 1);
+							DiffObject* prevObj = get_previous(i);
+							DiffObject* lastObj = get_previous(i + 1);
 
-							if (angle < pi_over_2)
+							double currHistoricalDecay = (double)(history_time_max - (ho->time - currObj->ho->time)) / history_time_max; // scales note 0 to 1 from history to now
+
+							currHistoricalDecay = std::min((double)(historicalNoteCount - i) / historicalNoteCount, currHistoricalDecay); // either we're limited by time or limited by object count.
+
+							double currDelta = currObj->strain_time;
+							double prevDelta = prevObj->strain_time;
+							double lastDelta = lastObj->strain_time;
+							double currRatio = 1.0 + 6.0 * std::min(0.5, pow(sin(PI / (std::min(prevDelta, currDelta) / std::max(prevDelta, currDelta))), 2)); // fancy function to calculate rhythmbonuses.
+
+							double windowPenalty = std::min(1.0, std::max(0.0, std::abs(prevDelta - currDelta) - hitWindow300 * 0.3) / (hitWindow300 * 0.3));
+
+							windowPenalty = std::min(1.0, windowPenalty);
+
+							double effectiveRatio = windowPenalty * currRatio;
+
+							if (firstDeltaSwitch)
 							{
-								angle_bonus = 1.28;
-								if (distance < angle_bonus_scale && angle < pi_over_4)
-									angle_bonus += (1.0 - angle_bonus) * std::min((angle_bonus_scale - distance) / 10.0, 1.0);
-								else if (distance < angle_bonus_scale)
-									angle_bonus += (1.0 - angle_bonus) * std::min((angle_bonus_scale - distance) / 10.0, 1.0) * std::sin((pi_over_2 - angle) / pi_over_4);
+								if (!(prevDelta > 1.25 * currDelta || prevDelta * 1.25 < currDelta))
+								{
+									if (islandSize < 7)
+										islandSize++; // island is still progressing, count size.
+								}
+								else
+								{
+									if (get_previous(i - 1)->ho->type == OsuDifficultyHitObject::TYPE::SLIDER) // bpm change is into slider, this is easy acc window
+										effectiveRatio *= 0.125;
+
+									if (get_previous(i)->ho->type == OsuDifficultyHitObject::TYPE::SLIDER) // bpm change was from a slider, this is easier typically than circle -> circle
+										effectiveRatio *= 0.25;
+
+									if (previousIslandSize == islandSize) // repeated island size (ex: triplet -> triplet)
+										effectiveRatio *= 0.25;
+
+									if (previousIslandSize % 2 == islandSize % 2) // repeated island polartiy (2 -> 4, 3 -> 5)
+										effectiveRatio *= 0.50;
+
+									if (lastDelta > prevDelta + 10 && prevDelta > currDelta + 10) // previous increase happened a note ago, 1/1->1/2-1/4, dont want to buff this.
+										effectiveRatio *= 0.125;
+
+									rhythmComplexitySum += sqrt(effectiveRatio * startRatio) * currHistoricalDecay * sqrt(4 + islandSize) / 2 * sqrt(4 + previousIslandSize) / 2;
+
+									startRatio = effectiveRatio;
+
+									previousIslandSize = islandSize; // log the last island size.
+
+									if (prevDelta * 1.25 < currDelta) // we're slowing down, stop counting
+										firstDeltaSwitch = false; // if we're speeding up, this stays true and  we keep counting island size.
+
+									islandSize = 1;
+								}
+							}
+							else if (prevDelta > 1.25 * currDelta) // we want to be speeding up.
+							{
+								// Begin counting island until we change speed again.
+								firstDeltaSwitch = true;
+								startRatio = effectiveRatio;
+								islandSize = 1;
 							}
 						}
 
-						return (1.0 + (speed_bonus - 1.0) * 0.75) * angle_bonus * (0.95 + speed_bonus * std::pow(distance / single_spacing_threshold, 3.5)) / strain_time;
+						rhythm = sqrt(4.0 + rhythmComplexitySum * rhythm_multiplier) / 2.0;
+
+						return raw_speed_strain;
 					}
 					break;
 
@@ -571,16 +686,16 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 						if (!std::isnan(angle) && angle > aim_angle_bonus_begin)
 						{
 							angle_bonus = std::sqrt(
-									std::max(prev_jump_distance - angle_bonus_scale, 0.0)
+									std::max(prev.jumpDistance - angle_bonus_scale, 0.0)
 									* std::pow(std::sin(angle - aim_angle_bonus_begin), 2.0)
-									* std::max(jump_distance - angle_bonus_scale, 0.0)
+									* std::max(jumpDistance - angle_bonus_scale, 0.0)
 							);
 
-							result = 1.4 * applyDiminishingExp(std::max(0.0, angle_bonus)) / std::max(aim_timing_threshold, prev_strain_time); // reduced from 1.5 to 1.4 in https://github.com/ppy/osu/pull/13483/
+							result = 1.4 * applyDiminishingExp(std::max(0.0, angle_bonus)) / std::max(aim_timing_threshold, prev.strain_time); // reduced from 1.5 to 1.4 in https://github.com/ppy/osu/pull/13483/
 						}
 
-						const double jumpDistanceExp = applyDiminishingExp(jump_distance);
-						const double travelDistanceExp = applyDiminishingExp(travel_distance);
+						const double jumpDistanceExp = applyDiminishingExp(jumpDistance);
+						const double travelDistanceExp = applyDiminishingExp(travelDistance);
 
 						const double sqrtTravelMulJump = std::sqrt(travelDistanceExp * jumpDistanceExp);
 
@@ -617,29 +732,50 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 		{
 			if (slider.lazyCalcFinished || slider.ho->curve == NULL) return;
 
-			// (slider.lazyEndPos is already initialized to ho->pos in DiffObject constructor)
-			const float approxFollowCircleRadius = (float)(circleRadius * 3.0f); // NOTE: this should actually be * 2.4, i.e. osu_slider_followcircle_size_multiplier
+			slider.lazyTravelTime = slider.ho->scoringTimes.back().first - slider.ho->time;
 
-			const size_t numScoringTimes = slider.ho->scoringTimes.size();
-			for (size_t i=0; i<numScoringTimes; i++)
-			{
-                float progress = (float)(clamp<long>(slider.ho->scoringTimes[i] - slider.ho->time, 0, slider.ho->getDuration())) / slider.ho->spanDuration;
-                if (std::fmod(progress, 2.0f) >= 1.0f)
-                    progress = 1.0f - std::fmod(progress, 1.0f);
-                else
-                    progress = std::fmod(progress, 1.0f);
+			double endTimeMin = slider.lazyTravelTime / slider.ho->spanDuration;
+			if (std::fmod(endTimeMin, 2.0) >= 1)
+				endTimeMin = 1.0 - std::fmod(endTimeMin, 1.0);
+			else
+				endTimeMin = std::fmod(endTimeMin, 1.0);
 
-                Vector2 diff = slider.ho->curve->pointAt(progress) - slider.lazyEndPos;
-                float dist = diff.length();
+			slider.lazyEndPos += slider.ho->curve->pointAt(endTimeMin);
 
-                if (dist > approxFollowCircleRadius)
-                {
-                    // the cursor would be outside the follow circle, we need to move it
-                    diff.normalize(); // obtain direction of diff
-                    dist -= approxFollowCircleRadius;
-                    slider.lazyEndPos += diff * dist;
-                    slider.lazyTravelDist += dist;
-                }
+			Vector2 cursor_pos = slider.ho->pos;
+			double scaling_factor = 50.0 / circleRadius;
+
+			for (int i = 0; i < slider.ho->scoringTimes.size(); i++) {
+				double progress = (clamp<long>(slider.ho->scoringTimes[i].first - slider.ho->time, 0, slider.ho->getDuration())) / slider.ho->spanDuration;
+				if (std::fmod(progress, 2.0) >= 1.0)
+					progress = 1.0 - std::fmod(progress, 1.0);
+				else
+					progress = std::fmod(progress, 1.0);
+
+				Vector2 diff = slider.ho->curve->pointAt(progress) - cursor_pos;
+				double diff_len = scaling_factor * diff.length();
+
+				double req_diff = 90.0;
+
+				if (i == slider.ho->scoringTimes.size() - 1) {
+					// Slider end
+					Vector2 lazy_diff = slider.lazyEndPos - cursor_pos;
+					if (lazy_diff.length() < diff.length())
+						diff = lazy_diff;
+					diff_len = scaling_factor * diff.length();
+				} else if (slider.ho->scoringTimes[i].second) {
+					// Slider repeat
+					req_diff = 50.0;
+				}
+
+				if (diff_len > req_diff) {
+					cursor_pos += (diff * (float)((diff_len - req_diff) / diff_len));
+					diff_len *= (diff_len - req_diff) / diff_len;
+					slider.lazyTravelDist += diff_len;
+				}
+
+				if (i == slider.ho->scoringTimes.size() - 1)
+					slider.lazyEndPos = cursor_pos;
 			}
 
 			slider.lazyCalcFinished = true;
@@ -664,7 +800,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 	diffObjects.reserve((upToObjectIndex < 0) ? sortedHitObjects.size() : upToObjectIndex+1);
 	for (size_t i=0; i<sortedHitObjects.size() && (upToObjectIndex < 0 || i < upToObjectIndex+1); i++) // respect upToObjectIndex!
 	{
-		diffObjects.push_back(DiffObject(&sortedHitObjects[i], radius_scaling_factor)); // this already initializes the angle to NaN
+		diffObjects.push_back(DiffObject(&sortedHitObjects[i], radius_scaling_factor, diffObjects, (int)i - 1)); // this already initializes the angle to NaN
 	}
 
 	const int numDiffObjects = diffObjects.size();
@@ -699,16 +835,30 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 					cur.travelDistance = prev1.lazyTravelDist * radius_scaling_factor;
 				}
 
+				// don't need to jump to reach spinners
+				if (cur.ho->type == OsuDifficultyHitObject::TYPE::SPINNER || prev1.ho->type == OsuDifficultyHitObject::TYPE::SPINNER)
+					continue;
+
 				const Vector2 lastCursorPosition = DistanceCalc::getEndCursorPosition(prev1, circleRadiusInOsuPixels);
 
-				// don't need to jump to reach spinners
-				if (cur.ho->type != OsuDifficultyHitObject::TYPE::SPINNER)
-					cur.jumpDistance = (cur.norm_start - lastCursorPosition*radius_scaling_factor).length();
+				cur.jumpDistance = (cur.norm_start - lastCursorPosition*radius_scaling_factor).length();
+				cur.minJumpDistance = cur.jumpDistance;
+				cur.minJumpTime = cur.strain_time;
+
+				if (prev1.ho->type == OsuDifficultyHitObject::TYPE::SLIDER) {
+					double last_travel = std::max(prev1.lazyTravelTime, 25.0);
+					cur.minJumpTime = std::max(cur.strain_time - last_travel, 25.0);
+
+					float tail_jump_dist = (prev1.ho->pos + (prev1.ho->repeats % 2 ? prev1.ho->curve->pointAt(1.0) : Vector2())).length();
+					cur.minJumpDistance = std::max(0.0f, std::min((float)cur.minJumpDistance - (maximum_slider_radius - assumed_slider_radius), tail_jump_dist - maximum_slider_radius));
+				}
 
 				// calculate angles
 				if (i > 1)
 				{
 					DiffObject &prev2 = diffObjects[i - 2];
+					if (prev2.ho->type == OsuDifficultyHitObject::TYPE::SPINNER)
+						continue;
 
 					const Vector2 lastLastCursorPosition = DistanceCalc::getEndCursorPosition(prev2, circleRadiusInOsuPixels);
 
@@ -739,7 +889,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 	// calculate strains/skills
 	for (size_t i=1; i<numDiffObjects; i++) // NOTE: start at 1
 	{
-		diffObjects[i].calculate_strains(diffObjects[i - 1]);
+		diffObjects[i].calculate_strains(diffObjects[i - 1], (i == numDiffObjects - 1) ? nullptr : &diffObjects[i + 1], hitWindow300);
 	}
 
 	// calculate final difficulty (weigh strains)

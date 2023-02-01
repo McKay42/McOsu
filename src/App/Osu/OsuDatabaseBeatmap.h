@@ -314,7 +314,7 @@ private:
 		float sliderTimeWithoutRepeats;
 		std::vector<float> ticks;
 
-		std::vector<long> scoringTimesForStarCalc;
+		std::vector<std::pair<long, bool>> scoringTimesForStarCalc;
 	};
 
 	struct SPINNER
@@ -431,7 +431,7 @@ public:
 	void kill() {m_bDead = true;}
 	void revive() {m_bDead = false;}
 
-	void setBeatmapDifficulty(OsuDatabaseBeatmap *diff2, float AR, float CS, float speedMultiplier);
+	void setBeatmapDifficulty(OsuDatabaseBeatmap *diff2, float AR, float CS, float OD, float speedMultiplier);
 
 	inline OsuDatabaseBeatmap *getBeatmapDifficulty() const {return m_diff2;}
 
@@ -460,6 +460,7 @@ private:
 
 	float m_fAR;
 	float m_fCS;
+	float m_fOD;
 	float m_fSpeedMultiplier;
 
 	std::atomic<double> m_totalStars;

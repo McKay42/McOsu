@@ -46,6 +46,7 @@ void OsuBackgroundStarCacheLoader::initAsync()
 		const Osu::GAMEMODE gameMode = m_beatmap->getOsu()->getGamemode();
 		const float AR = m_beatmap->getAR();
 		const float CS = m_beatmap->getCS();
+		const float OD = m_beatmap->getOD();
 		const float speedMultiplier = m_beatmap->getOsu()->getSpeedMultiplier(); // NOTE: not beatmap->getSpeedMultiplier()!
 
 		OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT diffres = OsuDatabaseBeatmap::loadDifficultyHitObjects(osuFilePath, gameMode, AR, CS, speedMultiplier);
@@ -55,7 +56,7 @@ void OsuBackgroundStarCacheLoader::initAsync()
 			double aimStars = 0.0;
 			double speedStars = 0.0;
 
-			OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, CS, &aimStars, &speedStars, i);
+			OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, CS, OD, &aimStars, &speedStars, i);
 
 			m_beatmap->m_aimStarsForNumHitObjects.push_back(aimStars);
 			m_beatmap->m_speedStarsForNumHitObjects.push_back(speedStars);
