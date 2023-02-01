@@ -102,6 +102,7 @@ OsuDifficultyHitObject::OsuDifficultyHitObject(OsuDifficultyHitObject &&dobj)
 	this->scheduledCurveAlloc = dobj.scheduledCurveAlloc;
 	this->scheduledCurveAllocControlPoints = std::move(dobj.scheduledCurveAllocControlPoints);
 	this->scheduledCurveAllocStackOffset = dobj.scheduledCurveAllocStackOffset;
+	this->repeats = dobj.repeats;
 
 	this->stack = dobj.stack;
 	this->originalPos = dobj.originalPos;
@@ -128,6 +129,7 @@ OsuDifficultyHitObject& OsuDifficultyHitObject::operator = (OsuDifficultyHitObje
 	this->scheduledCurveAlloc = dobj.scheduledCurveAlloc;
 	this->scheduledCurveAllocControlPoints = std::move(dobj.scheduledCurveAllocControlPoints);
 	this->scheduledCurveAllocStackOffset = dobj.scheduledCurveAllocStackOffset;
+	this->repeats = dobj.repeats;
 
 	this->stack = dobj.stack;
 	this->originalPos = dobj.originalPos;
@@ -214,7 +216,8 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 	}
 
 	// global independent variables/constants
-	const float circleRadiusInOsuPixels = OsuGameRules::getRawHitCircleDiameter(clamp<float>(CS, 0.0f, 12.142f)) / 2.0f; // NOTE: clamped CS because McOsu allows CS > ~12.1429 (at which point the diameter becomes negative)
+	float circleRadiusInOsuPixels = OsuGameRules::getRawHitCircleDiameter(clamp<float>(CS, 0.0f, 12.142f)) / 2.0f; // NOTE: clamped CS because McOsu allows CS > ~12.1429 (at which point the diameter becomes negative)
+	circleRadiusInOsuPixels /= OsuGameRules::broken_gamefield_rounding_allowance; // lazer doesn't use this
 	const float hitWindow300 = 2.0f * OsuGameRules::getRawHitWindow300(OD); // TODO: needs to be scaled to speed
 
 	// ****************************************************************************************************************************************** //
@@ -303,6 +306,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 		Vector2 lazyEndPos;		// precalc temp
 		double lazyTravelDist;	// precalc temp
 		double lazyTravelTime;	// precalc temp
+		double travelTime;
 
 		// NOTE: McOsu stores the first object in this array while lazer doesn't
 		std::vector<DiffObject>& objects;
@@ -335,6 +339,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 			lazyEndPos = ho->pos;
 			lazyTravelDist = 0.0;
 			lazyTravelTime = 0.0;
+			travelTime = 0.0;
 
 			index = idx;
 		}
@@ -404,6 +409,9 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 			double interval_end = std::ceil((double)dobjects[0].ho->time / strain_step) * strain_step;
 			double max_strain = 0.0;
 
+			// TODO: this will be used for speed pp later
+			std::vector<double> objectStrains;
+
 			std::vector<double> highestStrains;
 			for (size_t i=0; i<dobjects.size(); i++)
 			{
@@ -425,7 +433,9 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 				}
 
 				// calculate max strain for this interval
-				max_strain = std::max(max_strain, cur.strains[Skills::skillToIndex(type)] * (type == Skills::Skill::SPEED ? cur.rhythm : 1.0));
+				double cur_strain = cur.strains[Skills::skillToIndex(type)] * (type == Skills::Skill::SPEED ? cur.rhythm : 1.0);
+				max_strain = std::max(max_strain, cur_strain);
+				objectStrains.push_back(cur_strain);
 			}
 
 			// the peak strain will not be saved for the last section in the above loop
@@ -734,7 +744,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 			else
 				endTimeMin = std::fmod(endTimeMin, 1.0);
 
-			slider.lazyEndPos += slider.ho->curve->pointAt(endTimeMin);
+			slider.lazyEndPos = slider.ho->curve->pointAt(endTimeMin);
 
 			Vector2 cursor_pos = slider.ho->pos;
 			double scaling_factor = 50.0 / circleRadius;
@@ -823,10 +833,11 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 					}
 				}
 
-				if (prev1.ho->type == OsuDifficultyHitObject::TYPE::SLIDER)
+				if (cur.ho->type == OsuDifficultyHitObject::TYPE::SLIDER)
 				{
-					DistanceCalc::computeSliderCursorPosition(prev1, circleRadiusInOsuPixels);
-					cur.travelDistance = prev1.lazyTravelDist * radius_scaling_factor;
+					DistanceCalc::computeSliderCursorPosition(cur, circleRadiusInOsuPixels);
+					cur.travelDistance = cur.lazyTravelDist * std::pow(1.0 + (cur.ho->repeats - 1) / 2.5, 1.0 / 2.5);
+					cur.travelTime = std::max(cur.lazyTravelTime, 25.0);
 				}
 
 				// don't need to jump to reach spinners
@@ -843,7 +854,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 					double last_travel = std::max(prev1.lazyTravelTime, 25.0);
 					cur.minJumpTime = std::max(cur.strain_time - last_travel, 25.0);
 
-					float tail_jump_dist = (prev1.ho->pos + (prev1.ho->repeats % 2 ? prev1.ho->curve->pointAt(1.0) : Vector2())).length();
+					float tail_jump_dist = (prev1.ho->repeats % 2 ? prev1.ho->curve->pointAt(1.0) : prev1.ho->pos).length();
 					cur.minJumpDistance = std::max(0.0f, std::min((float)cur.minJumpDistance - (maximum_slider_radius - assumed_slider_radius), tail_jump_dist - maximum_slider_radius));
 				}
 

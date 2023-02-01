@@ -747,7 +747,6 @@ OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT OsuDatabaseBeatmap::loadDifficultyHitObj
 		const float rawHitCircleDiameter = OsuGameRules::getRawHitCircleDiameter(finalCS);
 
 		const float STACK_LENIENCE = 3.0f;
-		const float STACK_OFFSET = 0.05f;
 
 		const float approachTime = OsuGameRules::getApproachTimeForStacking(finalAR);
 
@@ -873,7 +872,7 @@ OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT OsuDatabaseBeatmap::loadDifficultyHitObj
 		}
 
 		// update hitobject positions
-		float stackOffset = rawHitCircleDiameter * STACK_OFFSET;
+		float stackOffset = rawHitCircleDiameter / 128.0f / OsuGameRules::broken_gamefield_rounding_allowance * 6.4f;
 		for (int i=0; i<result.diffobjects.size(); i++)
 		{
 			if (result.diffobjects[i].stack != 0)
