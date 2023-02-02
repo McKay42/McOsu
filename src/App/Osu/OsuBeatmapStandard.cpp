@@ -1333,6 +1333,7 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 
 		const int numHitObjects = m_hitobjects.size();
 		const int numCircles = m_selectedDifficulty2->getNumCircles();
+		const int numSliders = m_selectedDifficulty2->getNumSliders();
 		const int numSpinners = m_selectedDifficulty2->getNumSpinners();
 		const int maxPossibleCombo = m_iMaxPossibleCombo;
 		const int highestCombo = m_osu->getScore()->getComboMax();
@@ -1340,7 +1341,7 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 		const int num300s = m_osu->getScore()->getNum300s();
 		const int num100s = m_osu->getScore()->getNum100s();
 		const int num50s = m_osu->getScore()->getNum50s();
-		const float pp = OsuDifficultyCalculator::calculatePPv2(m_osu, this, aim, aimSliderFactor, speed, speedNotes, numHitObjects, numCircles, numSpinners, maxPossibleCombo, highestCombo, numMisses, num300s, num100s, num50s);
+		const float pp = OsuDifficultyCalculator::calculatePPv2(m_osu, this, aim, aimSliderFactor, speed, speedNotes, numHitObjects, numCircles, numSliders, numSpinners, maxPossibleCombo, highestCombo, numMisses, num300s, num100s, num50s);
 		m_osu->getScore()->setStarsTomTotal(totalStars);
 		m_osu->getScore()->setStarsTomAim(m_fAimStars);
 		m_osu->getScore()->setStarsTomSpeed(m_fSpeedStars);
