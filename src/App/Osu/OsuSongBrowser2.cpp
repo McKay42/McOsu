@@ -1294,7 +1294,7 @@ void OsuSongBrowser2::update()
 							const float CS = diffToCalc->getCS();
 							const float OD = diffToCalc->getOD();
 							const float speedMultiplier = 1.0f;
-							m_backgroundStarCalculator->setBeatmapDifficulty(diffToCalc, AR, CS, OD, speedMultiplier);
+							m_backgroundStarCalculator->setBeatmapDifficulty(diffToCalc, AR, CS, OD, speedMultiplier, false, false);
 							m_backgroundStarCalcTempParent = (diffs.size() > 0 ? beatmap : NULL);
 
 							engine->getResourceManager()->requestNextLoadAsync();
@@ -4360,8 +4360,10 @@ void OsuSongBrowser2::recalculateStarsForSelectedBeatmap(bool force)
 		const float CS = m_selectedBeatmap->getCS();
 		const float OD = m_selectedBeatmap->getOD();
 		const float speedMultiplier = m_osu->getSpeedMultiplier(); // NOTE: not m_selectedBeatmap->getSpeedMultiplier()!
+		const bool relax = m_osu->getModRelax();
+		const bool touchdevice = m_osu->getModTD();
 
-		m_dynamicStarCalculator->setBeatmapDifficulty(m_selectedBeatmap->getSelectedDifficulty2(), AR, CS, OD, speedMultiplier);
+		m_dynamicStarCalculator->setBeatmapDifficulty(m_selectedBeatmap->getSelectedDifficulty2(), AR, CS, OD, speedMultiplier, relax, touchdevice);
 
 		engine->getResourceManager()->requestNextLoadAsync();
 		engine->getResourceManager()->loadResource(m_dynamicStarCalculator);

@@ -1473,12 +1473,14 @@ OsuDatabaseBeatmap::LOAD_GAMEPLAY_RESULT OsuDatabaseBeatmap::loadGameplay(OsuDat
 				const float CS = beatmap->getCS();
 				const float OD = beatmap->getOD();
 				const float speedMultiplier = databaseBeatmap->m_osu->getSpeedMultiplier(); // NOTE: not this->getSpeedMultiplier()!
+				const bool relax = databaseBeatmap->m_osu->getModRelax();
+				const bool touchDevice = databaseBeatmap->m_osu->getModTD();
 
 				LOAD_DIFFOBJ_RESULT diffres = OsuDatabaseBeatmap::loadDifficultyHitObjects(osuFilePath, gameMode, AR, CS, speedMultiplier);
 
 				double aim = 0.0;
 				double speed = 0.0;
-				double stars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, CS, OD, speedMultiplier, &aim, &speed);
+				double stars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, CS, OD, speedMultiplier, relax, touchDevice, &aim, &speed);
 				double pp = OsuDifficultyCalculator::calculatePPv2(beatmap->getOsu(), beatmap, aim, speed, databaseBeatmap->m_iNumObjects, databaseBeatmap->m_iNumCircles, databaseBeatmap->m_iNumSpinners, maxPossibleCombo);
 
 				engine->showMessageInfo("PP", UString::format("pp = %f, stars = %f, aimstars = %f, speedstars = %f, %i circles, %i sliders, %i spinners, %i hitobjects, maxcombo = %i", pp, stars, aim, speed, databaseBeatmap->m_iNumCircles, databaseBeatmap->m_iNumSliders, databaseBeatmap->m_iNumSpinners, databaseBeatmap->m_iNumObjects, maxPossibleCombo));
@@ -1920,7 +1922,7 @@ void OsuDatabaseBeatmapStarCalculator::initAsync()
 
 		double aimStars = 0.0;
 		double speedStars = 0.0;
-		m_totalStars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, m_fCS, m_fOD, m_fSpeedMultiplier, &aimStars, &speedStars, -1, &m_aimStrains, &m_speedStrains);
+		m_totalStars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, m_fCS, m_fOD, m_fSpeedMultiplier, m_bRelax, m_bTouchDevice, &aimStars, &speedStars, -1, &m_aimStrains, &m_speedStrains);
 		m_aimStars = aimStars;
 		m_speedStars = speedStars;
 
@@ -1932,7 +1934,7 @@ void OsuDatabaseBeatmapStarCalculator::initAsync()
 	m_bAsyncReady = true;
 }
 
-void OsuDatabaseBeatmapStarCalculator::setBeatmapDifficulty(OsuDatabaseBeatmap *diff2, float AR, float CS, float OD, float speedMultiplier)
+void OsuDatabaseBeatmapStarCalculator::setBeatmapDifficulty(OsuDatabaseBeatmap *diff2, float AR, float CS, float OD, float speedMultiplier, bool relax, bool touchDevice)
 {
 	m_diff2 = diff2;
 
@@ -1942,4 +1944,6 @@ void OsuDatabaseBeatmapStarCalculator::setBeatmapDifficulty(OsuDatabaseBeatmap *
 	m_fCS = CS;
 	m_fOD = OD;
 	m_fSpeedMultiplier = speedMultiplier;
+	m_bRelax = relax;
+	m_bTouchDevice = touchDevice;
 }

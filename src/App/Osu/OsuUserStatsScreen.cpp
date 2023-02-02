@@ -166,6 +166,8 @@ private:
 					const float OD = (score.isLegacyScore ? legacyValues.OD : score.OD);
 					const float HP = (score.isLegacyScore ? legacyValues.HP : score.HP);
 					const float speedMultiplier = (score.isLegacyScore ? legacyValues.speedMultiplier : score.speedMultiplier);
+					const float relax = score.modsLegacy & OsuReplay::Mods::Relax;
+					const float touchDevice = score.modsLegacy & OsuReplay::Mods::TouchDevice;
 
 					// 2) load hitobjects for diffcalc
 					OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT diffres = OsuDatabaseBeatmap::loadDifficultyHitObjects(osuFilePath, gameMode, AR, CS, speedMultiplier);
@@ -180,7 +182,7 @@ private:
 					// 3) calculate stars
 					double aimStars = 0.0;
 					double speedStars = 0.0;
-					const double totalStars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, CS, OD, speedMultiplier, &aimStars, &speedStars);
+					const double totalStars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, CS, OD, speedMultiplier, relax, touchDevice, &aimStars, &speedStars);
 
 					// 4) calculate pp
 					double pp = 0.0;
