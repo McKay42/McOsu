@@ -394,7 +394,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 			// see Process() @ https://github.com/ppy/osu/blob/master/osu.Game/Rulesets/Difficulty/Skills/Skill.cs
 			double currentStrain = prev.strains[Skills::skillToIndex(dtype)];
 			{
-				currentStrain *= strainDecay(dtype, delta_time);
+				currentStrain *= strainDecay(dtype, dtype == Skills::Skill::SPEED ? strain_time : delta_time);
 				currentStrain += currentStrainOfDiffObject * weight_scaling[Skills::skillToIndex(dtype)];
 			}
 			strains[Skills::skillToIndex(dtype)] = currentStrain;
@@ -578,6 +578,11 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 				case Skills::Skill::SPEED:
 					{
 						// see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/Speed.cs
+						if (ho->type == OsuDifficultyHitObject::TYPE::SPINNER) {
+							raw_speed_strain = 0.0;
+							rhythm = 0.0;
+							return 0.0;
+						}
 
 						// https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Evaluators/SpeedEvaluator.cs
 						const double distance = std::min(single_spacing_threshold, prev.travelDistance + minJumpDistance);
