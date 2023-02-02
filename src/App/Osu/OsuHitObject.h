@@ -45,6 +45,7 @@ public:
 
 	virtual int getCombo() {return 1;} // how much combo this hitobject is "worth"
 	virtual bool isCircle() {return false;}
+	virtual bool isSlider() {return false;}
 	virtual bool isSpinner() {return false;}
 	void addHitResult(OsuScore::HIT result, long delta, bool isEndOfCombo, Vector2 posRaw, float targetDelta = 0.0f, float targetAngle = 0.0f, bool ignoreOnHitErrorBar = false, bool ignoreCombo = false, bool ignoreHealth = false, bool addObjectDurationToSkinAnimationTimeStartOffset = true);
 	void misAimed() {m_bMisAim = true;}

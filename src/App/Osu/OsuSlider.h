@@ -38,6 +38,8 @@ public:
 	virtual void drawVR2(Graphics *g, Matrix4 &mvp, OsuVR *vr);
 	virtual void update(long curPos);
 
+	virtual bool isSlider() { return true; }
+
 	virtual void updateStackPosition(float stackOffset);
 	virtual void miss(long curPos);
 	virtual int getCombo() {return 2 + std::max((m_iRepeat - 1), 0) + (std::max((m_iRepeat - 1), 0)+1)*m_ticks.size();}
