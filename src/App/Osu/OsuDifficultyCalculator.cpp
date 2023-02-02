@@ -571,10 +571,6 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 			static const int history_time_max = 5000;
 			static const double rhythm_multiplier = 0.75;
 
-			static const double angle_bonus_scale = 90.0;
-			static const double aim_timing_threshold = 107.0;
-			static const double aim_angle_bonus_begin = (PI / 3.0);
-
 			double angle_bonus = 1.0;
 
 			switch (diff_type)
@@ -721,6 +717,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 							double movementVelocity = minJumpDistance / minJumpTime;
 							currVelocity = std::max(currVelocity, movementVelocity + travelVelocity);
 						}
+						double aimStrain = currVelocity;
 
 						double prevVelocity = prev.jumpDistance / prev.strain_time;
 						if (prevPrev->ho->type == OsuDifficultyHitObject::TYPE::SLIDER && withSliders) {
@@ -764,7 +761,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 						if (prev.ho->type == OsuDifficultyHitObject::TYPE::SLIDER)
 							sliderBonus = prev.travelDistance / prev.travelTime;
 
-						double aimStrain = currVelocity + std::max(acuteAngleBonus * acute_angle_multiplier, wideAngleBonus * wide_angle_multiplier + velocityChangeBonus * velocity_change_multiplier);
+						aimStrain += std::max(acuteAngleBonus * acute_angle_multiplier, wideAngleBonus * wide_angle_multiplier + velocityChangeBonus * velocity_change_multiplier);
 						if (withSliders)
 							aimStrain += sliderBonus * slider_multiplier;
 						return aimStrain;
