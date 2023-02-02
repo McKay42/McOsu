@@ -202,7 +202,7 @@ Vector2 OsuDifficultyHitObject::getOriginalRawPosAt(long pos)
 
 ConVar *OsuDifficultyCalculator::m_osu_slider_scorev2_ref = NULL;
 
-double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, float OD, double *aim, double *speed, int upToObjectIndex, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains)
+double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, float OD, float speedMultiplier, double *aim, double *speed, int upToObjectIndex, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains)
 {
 	// NOTE: depends on speed multiplier + CS
 
@@ -218,7 +218,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 	// global independent variables/constants
 	float circleRadiusInOsuPixels = OsuGameRules::getRawHitCircleDiameter(clamp<float>(CS, 0.0f, 12.142f)) / 2.0f; // NOTE: clamped CS because McOsu allows CS > ~12.1429 (at which point the diameter becomes negative)
 	circleRadiusInOsuPixels /= OsuGameRules::broken_gamefield_rounding_allowance; // lazer doesn't use this
-	const float hitWindow300 = 2.0f * OsuGameRules::getRawHitWindow300(OD); // TODO: needs to be scaled to speed
+	const float hitWindow300 = 2.0f * OsuGameRules::getRawHitWindow300(OD) / speedMultiplier;
 
 	// ****************************************************************************************************************************************** //
 

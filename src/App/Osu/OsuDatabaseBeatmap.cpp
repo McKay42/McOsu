@@ -1478,7 +1478,7 @@ OsuDatabaseBeatmap::LOAD_GAMEPLAY_RESULT OsuDatabaseBeatmap::loadGameplay(OsuDat
 
 				double aim = 0.0;
 				double speed = 0.0;
-				double stars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, CS, OD, &aim, &speed);
+				double stars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, CS, OD, speedMultiplier, &aim, &speed);
 				double pp = OsuDifficultyCalculator::calculatePPv2(beatmap->getOsu(), beatmap, aim, speed, databaseBeatmap->m_iNumObjects, databaseBeatmap->m_iNumCircles, databaseBeatmap->m_iNumSpinners, maxPossibleCombo);
 
 				engine->showMessageInfo("PP", UString::format("pp = %f, stars = %f, aimstars = %f, speedstars = %f, %i circles, %i sliders, %i spinners, %i hitobjects, maxcombo = %i", pp, stars, aim, speed, databaseBeatmap->m_iNumCircles, databaseBeatmap->m_iNumSliders, databaseBeatmap->m_iNumSpinners, databaseBeatmap->m_iNumObjects, maxPossibleCombo));
@@ -1920,7 +1920,7 @@ void OsuDatabaseBeatmapStarCalculator::initAsync()
 
 		double aimStars = 0.0;
 		double speedStars = 0.0;
-		m_totalStars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, m_fCS, m_fOD, &aimStars, &speedStars, -1, &m_aimStrains, &m_speedStrains);
+		m_totalStars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, m_fCS, m_fOD, m_fSpeedMultiplier, &aimStars, &speedStars, -1, &m_aimStrains, &m_speedStrains);
 		m_aimStars = aimStars;
 		m_speedStars = speedStars;
 

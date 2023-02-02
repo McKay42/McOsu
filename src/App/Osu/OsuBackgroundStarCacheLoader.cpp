@@ -56,7 +56,7 @@ void OsuBackgroundStarCacheLoader::initAsync()
 			double aimStars = 0.0;
 			double speedStars = 0.0;
 
-			OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, CS, OD, &aimStars, &speedStars, i);
+			OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, CS, OD, speedMultiplier, &aimStars, &speedStars, i);
 
 			m_beatmap->m_aimStarsForNumHitObjects.push_back(aimStars);
 			m_beatmap->m_speedStarsForNumHitObjects.push_back(speedStars);
