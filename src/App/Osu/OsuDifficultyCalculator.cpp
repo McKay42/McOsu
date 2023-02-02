@@ -243,7 +243,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 
 
 
-	static const int NUM_SKILLS = 2;
+	static const int NUM_SKILLS = 3;
 
 	class Skills
 	{
@@ -251,7 +251,8 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 		enum class Skill
 		{
 			SPEED,
-			AIM
+			AIM_SLIDERS,
+			AIM_NO_SLIDERS,
 		};
 
 		static int skillToIndex(const Skill skill)
@@ -260,8 +261,10 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 			{
 			case Skill::SPEED:
 				return 0;
-			case Skill::AIM:
+			case Skill::AIM_SLIDERS:
 				return 1;
+			case Skill::AIM_NO_SLIDERS:
+				return 2;
 			}
 
 			return 0;
@@ -273,8 +276,8 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 	// see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/Speed.cs
 	// see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/Aim.cs
 
-	static const double decay_base[NUM_SKILLS] = {0.3, 0.15};			// how much strains decay per interval (if the previous interval's peak strains after applying decay are still higher than the current one's, they will be used as the peak strains).
-	static const double weight_scaling[NUM_SKILLS] = {1375.0, 23.55};	// used to keep speed and aim balanced between eachother
+	static const double decay_base[NUM_SKILLS] = {0.3, 0.15, 0.15};			// how much strains decay per interval (if the previous interval's peak strains after applying decay are still higher than the current one's, they will be used as the peak strains).
+	static const double weight_scaling[NUM_SKILLS] = {1375.0, 23.55, 23.55};	// used to keep speed and aim balanced between eachother
 
 
 
@@ -351,7 +354,8 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 		void calculate_strains(const DiffObject &prev, const DiffObject* next, double hitWindow300)
 		{
 			calculate_strain(prev, next, hitWindow300, Skills::Skill::SPEED);
-			calculate_strain(prev, next, hitWindow300, Skills::Skill::AIM);
+			calculate_strain(prev, next, hitWindow300, Skills::Skill::AIM_SLIDERS);
+			calculate_strain(prev, next, hitWindow300, Skills::Skill::AIM_NO_SLIDERS);
 		}
 
 		void calculate_strain(const DiffObject &prev, const DiffObject* next, double hitWindow300, const Skills::Skill dtype)
@@ -483,6 +487,9 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 					case Skills::Skill::SPEED:
 						skillSpecificReducedSectionCount = 5;
 						break;
+					case Skills::Skill::AIM_SLIDERS:
+					case Skills::Skill::AIM_NO_SLIDERS:
+						break;
 					}
 				}
 
@@ -510,6 +517,9 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 				{
 				case Skills::Skill::SPEED:
 					skillSpecificDifficultyMultiplier = 1.04;
+					break;
+				case Skills::Skill::AIM_SLIDERS:
+				case Skills::Skill::AIM_NO_SLIDERS:
 					break;
 				}
 			}
@@ -541,7 +551,9 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 					else
 						return 0.95;
 
-				case Skills::Skill::AIM:
+				// TODO: properly adapt this
+				case Skills::Skill::AIM_SLIDERS:
+				case Skills::Skill::AIM_NO_SLIDERS:
 					return std::pow(distance, 0.99);
 			}
 
@@ -681,32 +693,81 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 					}
 					break;
 
-				case Skills::Skill::AIM:
+				case Skills::Skill::AIM_SLIDERS:
+				case Skills::Skill::AIM_NO_SLIDERS:
 					{
-						// see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/Aim.cs
+						// https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Evaluators/AimEvaluator.cs
+						static const double wide_angle_multiplier = 1.5;
+						static const double acute_angle_multiplier = 1.95;
+						static const double slider_multiplier = 1.35;
+						static const double velocity_change_multiplier = 0.75;
+						bool withSliders = diff_type == Skills::Skill::AIM_SLIDERS;
 
-						double result = 0.0;
+						if (ho->type == OsuDifficultyHitObject::TYPE::SPINNER || index <= 1 || prev.ho->type == OsuDifficultyHitObject::TYPE::SPINNER)
+							return 0.0;
 
-						if (!std::isnan(angle) && angle > aim_angle_bonus_begin)
-						{
-							angle_bonus = std::sqrt(
-									std::max(prev.jumpDistance - angle_bonus_scale, 0.0)
-									* std::pow(std::sin(angle - aim_angle_bonus_begin), 2.0)
-									* std::max(jumpDistance - angle_bonus_scale, 0.0)
-							);
+						auto calcWideAngleBonus = [](double angle) {
+							return std::pow(std::sin(3.0 / 4 * (std::min(5.0 / 6.0 * PI, std::max(PI / 6.0, angle)) - PI / 6.0)), 2.0);
+						};
+						auto calcAcuteAngleBonus = [=](double angle) {
+							return 1 - calcWideAngleBonus(angle);
+						};
 
-							result = 1.4 * applyDiminishingExp(std::max(0.0, angle_bonus)) / std::max(aim_timing_threshold, prev.strain_time); // reduced from 1.5 to 1.4 in https://github.com/ppy/osu/pull/13483/
+						DiffObject* prevPrev = get_previous(1);
+						double currVelocity = jumpDistance / strain_time;
+
+						if (prev.ho->type == OsuDifficultyHitObject::TYPE::SLIDER && withSliders) {
+							double travelVelocity = prev.travelDistance / prev.travelTime;
+							double movementVelocity = minJumpDistance / minJumpTime;
+							currVelocity = std::max(currVelocity, movementVelocity + travelVelocity);
 						}
 
-						const double jumpDistanceExp = applyDiminishingExp(jumpDistance);
-						const double travelDistanceExp = applyDiminishingExp(travelDistance);
+						double prevVelocity = prev.jumpDistance / prev.strain_time;
+						if (prevPrev->ho->type == OsuDifficultyHitObject::TYPE::SLIDER && withSliders) {
+							double travelVelocity = prevPrev->travelDistance / prevPrev->travelTime;
+							double movementVelocity = prev.minJumpDistance / prev.minJumpTime;
+							prevVelocity = std::max(prevVelocity, movementVelocity + travelVelocity);
+						}
 
-						const double sqrtTravelMulJump = std::sqrt(travelDistanceExp * jumpDistanceExp);
+						double wideAngleBonus = 0;
+						double acuteAngleBonus = 0;
+						double sliderBonus = 0;
+						double velocityChangeBonus = 0;
 
-						return std::max(
-								result + (jumpDistanceExp + travelDistanceExp + sqrtTravelMulJump) / std::max(strain_time, aim_timing_threshold),
-										 (jumpDistanceExp + travelDistanceExp + sqrtTravelMulJump) / strain_time
-						);
+						if (std::max(strain_time, prev.strain_time) < 1.25 * std::min(strain_time, prev.strain_time)) {
+							if (!std::isnan(angle) && !std::isnan(prev.angle) && !std::isnan(prevPrev->angle)) {
+								double angleBonus = std::min(currVelocity, prevVelocity);
+
+								wideAngleBonus = calcWideAngleBonus(angle);
+								acuteAngleBonus = strain_time > 100 ? 0.0 : (
+									calcAcuteAngleBonus(angle)
+									* calcAcuteAngleBonus(prev.angle)
+									* std::min(angleBonus, 125.0 / strain_time)
+									* std::pow(std::sin(PI / 2.0 * std::min(1.0, (100.0 - strain_time) / 25.0)), 2.0)
+									* std::pow(std::sin(PI / 2.0 * (clamp<double>(jumpDistance, 50.0, 100.0) - 50.0) / 50.0), 2.0)
+								);
+
+								wideAngleBonus *= angleBonus * (1.0 - std::min(wideAngleBonus, std::pow(calcWideAngleBonus(prev.angle), 3.0)));
+								acuteAngleBonus *= 0.5 + 0.5 * (1.0 - std::min(acuteAngleBonus, std::pow(calcAcuteAngleBonus(prevPrev->angle), 3.0)));
+							}
+						}
+
+						if (std::max(prevVelocity, currVelocity) != 0.0) {
+							prevVelocity = (prev.jumpDistance + prevPrev->travelDistance) / prev.strain_time;
+							currVelocity = (jumpDistance + prev.travelDistance) / strain_time;
+
+							double distRatio = std::pow(std::sin(PI / 2.0 * std::abs(prevVelocity - currVelocity) / std::max(prevVelocity, currVelocity)), 2.0);
+							double overlapVelocityBuff = std::min(125.0 / std::min(strain_time, prev.strain_time), std::abs(prevVelocity - currVelocity));
+							velocityChangeBonus = overlapVelocityBuff * distRatio * std::pow(std::min(strain_time, prev.strain_time) / std::max(strain_time, prev.strain_time), 2.0);
+						}
+
+						if (prev.ho->type == OsuDifficultyHitObject::TYPE::SLIDER)
+							sliderBonus = prev.travelDistance / prev.travelTime;
+
+						double aimStrain = currVelocity + std::max(acuteAngleBonus * acute_angle_multiplier, wideAngleBonus * wide_angle_multiplier + velocityChangeBonus * velocity_change_multiplier);
+						if (withSliders)
+							aimStrain += sliderBonus * slider_multiplier;
+						return aimStrain;
 					}
 					break;
 			}
@@ -846,15 +907,16 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 
 				const Vector2 lastCursorPosition = DistanceCalc::getEndCursorPosition(prev1, circleRadiusInOsuPixels);
 
+				double cur_strain_time = (double)std::max(cur.ho->time - prev1.ho->time, 25l); // strain_time isn't initialized here
 				cur.jumpDistance = (cur.norm_start - lastCursorPosition*radius_scaling_factor).length();
 				cur.minJumpDistance = cur.jumpDistance;
-				cur.minJumpTime = cur.strain_time;
+				cur.minJumpTime = cur_strain_time;
 
 				if (prev1.ho->type == OsuDifficultyHitObject::TYPE::SLIDER) {
 					double last_travel = std::max(prev1.lazyTravelTime, 25.0);
-					cur.minJumpTime = std::max(cur.strain_time - last_travel, 25.0);
+					cur.minJumpTime = std::max(cur_strain_time - last_travel, 25.0);
 
-					float tail_jump_dist = (prev1.ho->repeats % 2 ? prev1.ho->curve->pointAt(1.0) : prev1.ho->pos).length();
+					float tail_jump_dist = prev1.ho->curve->pointAt(prev1.ho->repeats % 2 ? 1.0 : 0.0).distance(cur.ho->pos) * radius_scaling_factor;
 					cur.minJumpDistance = std::max(0.0f, std::min((float)cur.minJumpDistance - (maximum_slider_radius - assumed_slider_radius), tail_jump_dist - maximum_slider_radius));
 				}
 
@@ -898,13 +960,16 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 	}
 
 	// calculate final difficulty (weigh strains)
-	*aim = DiffObject::calculate_difficulty(Skills::Skill::AIM, diffObjects, outAimStrains);
+	// TODO: AIM_NO_SLIDERS will be used in pp calc for slider nerf
+	*aim = DiffObject::calculate_difficulty(Skills::Skill::AIM_SLIDERS, diffObjects, outAimStrains);
 	*speed = DiffObject::calculate_difficulty(Skills::Skill::SPEED, diffObjects, outSpeedStrains);
 
 	static const double star_scaling_factor = 0.0675;
 
 	*aim = std::sqrt(*aim) * star_scaling_factor;
 	*speed = std::sqrt(*speed) * star_scaling_factor;
+
+	// TODO: TD and Relax nerfs
 
 	return calculateTotalStarsFromSkills(*aim, *speed);
 }
@@ -995,7 +1060,10 @@ double OsuDifficultyCalculator::calculatePPv2(int modsLegacy, double timescale, 
 
 double OsuDifficultyCalculator::calculateTotalStarsFromSkills(double aim, double speed)
 {
-	return (aim + speed + std::fabs(aim - speed) * 0.5);
+	double baseAimPerformance = std::pow(5.0 * std::max(1.0, aim / 0.0675) - 4.0, 3.0) / 100000.0;
+	double baseSpeedPerformance = std::pow(5.0 * std::max(1.0, speed / 0.0675) - 4.0, 3.0) / 100000.0;
+	double basePerformance = std::pow(std::pow(baseAimPerformance, 1.1) + std::pow(baseSpeedPerformance, 1.1), 1.0 / 1.1);
+	return basePerformance > 0.00001 ? 1.04464392682 * 0.027 * (std::cbrt(100000.0 / std::pow(2.0, 1 / 1.1) * basePerformance) + 4.0) : 0.0;
 }
 
 
