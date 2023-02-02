@@ -1054,23 +1054,42 @@ double OsuDifficultyCalculator::calculatePPv2(int modsLegacy, double timescale, 
 	Attributes attributes;
 	{
 		attributes.AimStrain = aim;
+		attributes.SliderFactor = aimSliderFactor;
 		attributes.SpeedStrain = speed;
+		attributes.SpeedNoteCount = speedNotes;
 		attributes.ApproachRate = ar;
 		attributes.OverallDifficulty = od;
+		attributes.SliderCount = numSliders;
 	}
 
+	// calculateEffectiveMissCount @ https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/OsuPerformanceCalculator.cs
+	// required because slider breaks aren't exposed to pp calculation
+	double comboBasedMissCount = 0.0;
+	if (numSliders > 0) {
+		double fullComboThreshold = maxPossibleCombo - 0.1 * numSliders;
+		if (maxPossibleCombo < fullComboThreshold)
+			comboBasedMissCount = fullComboThreshold / std::max(1.0, (double)maxPossibleCombo);
+	}
+	double effectiveMissCount = clamp<double>(comboBasedMissCount, misses, c50 + c100 + misses);
+
 	// custom multipliers for nofail and spunout
-	double multiplier = 1.12; // keep final pp normalized across changes
+	double multiplier = 1.14; // keep final pp normalized across changes
 	{
 		if (modsLegacy & OsuReplay::Mods::NoFail)
-			multiplier *= std::max(0.9, 1.0 - 0.02 * score.countMiss); // see https://github.com/ppy/osu-performance/pull/127/files
+			multiplier *= std::max(0.9, 1.0 - 0.02 * effectiveMissCount); // see https://github.com/ppy/osu-performance/pull/127/files
 
 		if ((modsLegacy & OsuReplay::Mods::SpunOut) && score.totalHits > 0)
 			multiplier *= 1.0 - std::pow((double)numSpinners / (double)score.totalHits, 0.85); // see https://github.com/ppy/osu-performance/pull/110/
+
+		if (modsLegacy & OsuReplay::Mods::Relax) {
+			double okMultiplier = std::max(0.0, od > 0.0 ? 1 - std::pow(od / 13.33, 1.8) : 1.0); // 100
+			double mehMultiplier = std::max(0.0, od > 0.0 ? 1 - std::pow(od / 13.33, 5) : 1.0); // 50
+			effectiveMissCount = std::min(effectiveMissCount + c100 * okMultiplier + c50 * mehMultiplier, (double)score.totalHits);
+		}
 	}
 
-	const double aimValue = computeAimValue(score, attributes);
-	const double speedValue = computeSpeedValue(score, attributes);
+	const double aimValue = computeAimValue(score, attributes, effectiveMissCount);
+	const double speedValue = computeSpeedValue(score, attributes, effectiveMissCount);
 	const double accuracyValue = computeAccuracyValue(score, attributes);
 
 	const double totalValue = std::pow(
@@ -1095,24 +1114,21 @@ double OsuDifficultyCalculator::calculateTotalStarsFromSkills(double aim, double
 // https://github.com/ppy/osu-performance/blob/master/src/performance/osu/OsuScore.cpp
 // https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/OsuPerformanceCalculator.cs
 
-double OsuDifficultyCalculator::computeAimValue(const ScoreData &score, const OsuDifficultyCalculator::Attributes &attributes)
+double OsuDifficultyCalculator::computeAimValue(const ScoreData &score, const OsuDifficultyCalculator::Attributes &attributes, double effectiveMissCount)
 {
 	double rawAim = attributes.AimStrain;
-
-	// touch nerf
-	if (score.modsLegacy & OsuReplay::Mods::TouchDevice)
-		rawAim = std::pow(rawAim, 0.8);
 
 	double aimValue = std::pow(5.0 * std::max(1.0, rawAim / 0.0675) - 4.0, 3.0) / 100000.0;
 
 	// length bonus
-	aimValue *= 0.95 + 0.4 * std::min(1.0, ((double)score.totalHits / 2000.0))
+	double lengthBonus = 0.95 + 0.4 * std::min(1.0, ((double)score.totalHits / 2000.0))
 		+ (score.totalHits > 2000 ? std::log10(((double)score.totalHits / 2000.0)) * 0.5 : 0.0);
+	aimValue *= lengthBonus;
 
 	// see https://github.com/ppy/osu-performance/pull/129/
 	// Penalize misses by assessing # of misses relative to the total # of objects. Default a 3% reduction for any # of misses.
-	if (score.countMiss > 0 && score.totalHits > 0)
-		aimValue *= 0.97 * std::pow(1.0 - std::pow((double)score.countMiss / (double)score.totalHits, 0.775), (double)score.countMiss);
+	if (effectiveMissCount > 0 && score.totalHits > 0)
+		aimValue *= 0.97 * std::pow(1.0 - std::pow(effectiveMissCount / (double)score.totalHits, 0.775), effectiveMissCount);
 
 	// combo scaling
 	if (score.beatmapMaxCombo > 0)
@@ -1120,50 +1136,51 @@ double OsuDifficultyCalculator::computeAimValue(const ScoreData &score, const Os
 
 	// ar bonus
 	double approachRateFactor = 0.0; // see https://github.com/ppy/osu-performance/pull/125/
-	if (attributes.ApproachRate > 10.33)
-		approachRateFactor = attributes.ApproachRate - 10.33; // from 0.3 to 0.4 see https://github.com/ppy/osu-performance/pull/125/ // and completely changed the logic in https://github.com/ppy/osu-performance/pull/135/
-	else if (attributes.ApproachRate < 8.0)
-		approachRateFactor = 0.025 * (8.0 - attributes.ApproachRate); // from 0.01 to 0.1 see https://github.com/ppy/osu-performance/pull/125/ // and back again from 0.1 to 0.01 see https://github.com/ppy/osu-performance/pull/133/ // and completely changed the logic in https://github.com/ppy/osu-performance/pull/135/
+	if ((score.modsLegacy & OsuReplay::Relax) == 0) {
+		if (attributes.ApproachRate > 10.33)
+			approachRateFactor = 0.3 * (attributes.ApproachRate - 10.33); // from 0.3 to 0.4 see https://github.com/ppy/osu-performance/pull/125/ // and completely changed the logic in https://github.com/ppy/osu-performance/pull/135/
+		else if (attributes.ApproachRate < 8.0)
+			approachRateFactor = 0.05 * (8.0 - attributes.ApproachRate); // from 0.01 to 0.1 see https://github.com/ppy/osu-performance/pull/125/ // and back again from 0.1 to 0.01 see https://github.com/ppy/osu-performance/pull/133/ // and completely changed the logic in https://github.com/ppy/osu-performance/pull/135/
+	}
 
-	double approachRateTotalHitsFactor = 1.0 / (1.0 + std::exp(-(0.007 * (static_cast<double>(score.totalHits) - 400.0)))); // see https://github.com/ppy/osu-performance/pull/135/
-
-	double approachRateBonus = 1.0 + (0.03 + 0.37 * approachRateTotalHitsFactor) * approachRateFactor; // see https://github.com/ppy/osu-performance/pull/135/ // see https://github.com/ppy/osu-performance/pull/137/
+	aimValue *= 1.0 + approachRateFactor * lengthBonus;
 
 	// hidden
 	if (score.modsLegacy & OsuReplay::Mods::Hidden)
 		aimValue *= 1.0 + 0.04 * (std::max(12.0 - attributes.ApproachRate, 0.0)); // NOTE: clamped to 0 because McOsu allows AR > 12
 
-	// flashlight
-	double flashlightBonus = 1.0; // see https://github.com/ppy/osu-performance/pull/137/
-	if (score.modsLegacy & OsuReplay::Mods::Flashlight)
-	{
-		flashlightBonus = 1.0 + 0.35 * std::min(1.0, (double)score.totalHits / 200.0)
-			+ (score.totalHits > 200 ? 0.3 * std::min(1.0, (double)(score.totalHits - 200) / 300.0)
-			+ (score.totalHits > 500 ? (double)(score.totalHits - 500) / 1200.0 : 0.0) : 0.0);
+	// "We assume 15% of sliders in a map are difficult since there's no way to tell from the performance calculator."
+	double estimateDifficultSliders = attributes.SliderCount * 0.15;
+	if (attributes.SliderCount > 0) {
+		double estimateSliderEndsDropped = clamp<double>(std::min(score.countGood + score.countMeh + score.countMiss, score.beatmapMaxCombo - score.scoreMaxCombo), 0, estimateDifficultSliders);
+		double sliderNerfFactor = (1 - attributes.SliderFactor) * std::pow(1 - estimateSliderEndsDropped / estimateDifficultSliders, 3.0) + attributes.SliderFactor;
+		aimValue *= sliderNerfFactor;
 	}
 
-	aimValue *= std::max(flashlightBonus, approachRateBonus); // see https://github.com/ppy/osu-performance/pull/137/
-
-	// scale aim with acc slightly
-	aimValue *= 0.5 + score.accuracy / 2.0;
+	// scale aim with acc
+	aimValue *= score.accuracy;
 	// also consider acc difficulty when doing that
 	aimValue *= 0.98 + std::pow(attributes.OverallDifficulty, 2.0) / 2500.0;
 
 	return aimValue;
 }
 
-double OsuDifficultyCalculator::computeSpeedValue(const ScoreData &score, const Attributes &attributes)
+double OsuDifficultyCalculator::computeSpeedValue(const ScoreData &score, const Attributes &attributes, double effectiveMissCount)
 {
+	if (score.modsLegacy & OsuReplay::Relax)
+		return 0.0;
+
 	double speedValue = std::pow(5.0 * std::max(1.0, attributes.SpeedStrain / 0.0675) - 4.0, 3.0) / 100000.0;
 
 	// length bonus
-	speedValue *= 0.95 + 0.4 * std::min(1.0, ((double)score.totalHits / 2000.0))
+	double lengthBonus = 0.95 + 0.4 * std::min(1.0, ((double)score.totalHits / 2000.0))
 		+ (score.totalHits > 2000 ? std::log10(((double)score.totalHits / 2000.0)) * 0.5 : 0.0);
+	speedValue *= lengthBonus;
 
 	// see https://github.com/ppy/osu-performance/pull/129/
 	// Penalize misses by assessing # of misses relative to the total # of objects. Default a 3% reduction for any # of misses.
-	if (score.countMiss > 0 && score.totalHits > 0)
-		speedValue *= 0.97 * std::pow(1.0 - std::pow((double)score.countMiss / (double)score.totalHits, 0.775), std::pow((double)score.countMiss, 0.875));
+	if (effectiveMissCount > 0 && score.totalHits > 0)
+		speedValue *= 0.97 * std::pow(1.0 - std::pow(effectiveMissCount / (double)score.totalHits, 0.775), std::pow(effectiveMissCount, 0.875));
 
 	// combo scaling
 	if (score.beatmapMaxCombo > 0)
@@ -1172,21 +1189,26 @@ double OsuDifficultyCalculator::computeSpeedValue(const ScoreData &score, const 
 	// ar bonus
 	double approachRateFactor = 0.0; // see https://github.com/ppy/osu-performance/pull/125/
 	if (attributes.ApproachRate > 10.33)
-		approachRateFactor = attributes.ApproachRate - 10.33; // from 0.3 to 0.4 see https://github.com/ppy/osu-performance/pull/125/ // and completely changed the logic in https://github.com/ppy/osu-performance/pull/135/
+		approachRateFactor = 0.3 * (attributes.ApproachRate - 10.33); // from 0.3 to 0.4 see https://github.com/ppy/osu-performance/pull/125/ // and completely changed the logic in https://github.com/ppy/osu-performance/pull/135/
 
-	double approachRateTotalHitsFactor = 1.0 / (1.0 + std::exp(-(0.007 * (static_cast<double>(score.totalHits) - 400.0)))); // see https://github.com/ppy/osu-performance/pull/135/
-
-	speedValue *= 1.0 + (0.03 + 0.37 * approachRateTotalHitsFactor) * approachRateFactor; // see https://github.com/ppy/osu-performance/pull/135/
+	speedValue *= 1.0 + approachRateFactor * lengthBonus;
 
 	// hidden
 	if (score.modsLegacy & OsuReplay::Mods::Hidden)
 		speedValue *= 1.0 + 0.04 * (std::max(12.0 - attributes.ApproachRate, 0.0)); // NOTE: clamped to 0 because McOsu allows AR > 12
 
+	// "Calculate accuracy assuming the worst case scenario"
+	double relevantTotalDiff = score.totalHits - attributes.SpeedNoteCount;
+	double relevantCountGreat = std::max(0.0, score.countGreat - relevantTotalDiff);
+	double relevantCountOk = std::max(0.0, score.countGood - std::max(0.0, relevantTotalDiff - score.countGreat));
+	double relevantCountMeh = std::max(0.0, score.countMeh - std::max(0.0, relevantTotalDiff - score.countGreat - score.countGood));
+	double relevantAccuracy = attributes.SpeedNoteCount == 0 ? 0 : (relevantCountGreat * 6.0 + relevantCountOk * 2.0 + relevantCountMeh) / (attributes.SpeedNoteCount * 6.0);
+
 	// see https://github.com/ppy/osu-performance/pull/128/
 	// Scale the speed value with accuracy and OD
-	speedValue *= (0.95 + std::pow(attributes.OverallDifficulty, 2.0) / 750.0) * std::pow(score.accuracy, (14.5 - std::max(attributes.OverallDifficulty, 8.0)) / 2.0);
+	speedValue *= (0.95 + std::pow(attributes.OverallDifficulty, 2.0) / 750.0) * std::pow((score.accuracy + relevantAccuracy) / 2.0, (14.5 - std::max(attributes.OverallDifficulty, 8.0)) / 2.0);
 	// Scale the speed value with # of 50s to punish doubletapping.
-	speedValue *= std::pow(0.98, score.countMeh < (score.totalHits / 500.0) ? 0.0 : score.countMeh - (score.totalHits / 500.0));
+	speedValue *= std::pow(0.99, score.countMeh < (score.totalHits / 500.0) ? 0.0 : score.countMeh - (score.totalHits / 500.0));
 
 	return speedValue;
 }

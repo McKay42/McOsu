@@ -79,7 +79,7 @@ private:
 class OsuDifficultyCalculator
 {
 public:
-	static constexpr const int PP_ALGORITHM_VERSION = 20210722;
+	static constexpr const int PP_ALGORITHM_VERSION = 20220902;
 
 public:
 	// stars, fully static
@@ -100,9 +100,12 @@ private:
 	struct Attributes
 	{
 		double AimStrain;
+		double SliderFactor;
 		double SpeedStrain;
+		double SpeedNoteCount;
 		double ApproachRate;
 		double OverallDifficulty;
+		int SliderCount;
 	};
 
 	struct ScoreData
@@ -120,8 +123,8 @@ private:
 		int amountHitObjectsWithAccuracy;
 	};
 
-	static double computeAimValue(const ScoreData &score, const Attributes &attributes);
-	static double computeSpeedValue(const ScoreData &score, const Attributes &attributes);
+	static double computeAimValue(const ScoreData &score, const Attributes &attributes, double effectiveMissCount);
+	static double computeSpeedValue(const ScoreData &score, const Attributes &attributes, double effectiveMissCount);
 	static double computeAccuracyValue(const ScoreData &score, const Attributes &attributes);
 };
 
