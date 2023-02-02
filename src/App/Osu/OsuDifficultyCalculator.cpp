@@ -355,7 +355,8 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 		{
 			calculate_strain(prev, next, hitWindow300, Skills::Skill::SPEED);
 			calculate_strain(prev, next, hitWindow300, Skills::Skill::AIM_SLIDERS);
-			calculate_strain(prev, next, hitWindow300, Skills::Skill::AIM_NO_SLIDERS);
+			if (osu_stars_xexxar_angles_sliders.getBool())
+				calculate_strain(prev, next, hitWindow300, Skills::Skill::AIM_NO_SLIDERS);
 		}
 
 		void calculate_strain(const DiffObject &prev, const DiffObject* next, double hitWindow300, const Skills::Skill dtype)
@@ -453,7 +454,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 			// RelevantNoteCount @ https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/Speed.cs
 			if (outRelevantNotes) {
 				double maxStrain = objectStrains.empty() ? 0.0 : *std::max_element(objectStrains.begin(), objectStrains.end());
-				if (objectStrains.empty() || maxStrain == 0.0) {
+				if (objectStrains.empty() || maxStrain == 0.0 || !osu_stars_xexxar_angles_sliders.getBool()) {
 					*outRelevantNotes = 0.0;
 				} else {
 					double tempSum = 0.0;
@@ -564,7 +565,6 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 					else
 						return 0.95;
 
-				// TODO: properly adapt this
 				case Skills::Skill::AIM_SLIDERS:
 				case Skills::Skill::AIM_NO_SLIDERS:
 					return std::pow(distance, 0.99);
@@ -975,7 +975,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 	}
 
 	// calculate final difficulty (weigh strains)
-	double aimNoSliders = DiffObject::calculate_difficulty(Skills::Skill::AIM_NO_SLIDERS, diffObjects);
+	double aimNoSliders = osu_stars_xexxar_angles_sliders.getBool() ? DiffObject::calculate_difficulty(Skills::Skill::AIM_NO_SLIDERS, diffObjects) : 0.0;
 	*aim = DiffObject::calculate_difficulty(Skills::Skill::AIM_SLIDERS, diffObjects, outAimStrains);
 	*speed = DiffObject::calculate_difficulty(Skills::Skill::SPEED, diffObjects, outSpeedStrains, speedNotes);
 
@@ -985,7 +985,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 	*aim = std::sqrt(*aim) * star_scaling_factor;
 	*speed = std::sqrt(*speed) * star_scaling_factor;
 
-	*aimSliderFactor = *aim > 0 ? aimNoSliders / *aim : 1.0;
+	*aimSliderFactor = (*aim > 0 && osu_stars_xexxar_angles_sliders.getBool()) ? aimNoSliders / *aim : 1.0;
 
 	if (touchDevice)
 		*aim = std::pow(*aim, 0.8);
