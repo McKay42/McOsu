@@ -35,7 +35,10 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	std::vector<CHANGELOG> changelogs;
 
 	CHANGELOG alpha317;
-	alpha317.title = UString::format("33.03 (Build Date: %s, %s)", __DATE__, __TIME__); // (09.01.2022 - ?)
+	alpha317.title = UString::format("33.04 (Build Date: %s, %s)", __DATE__, __TIME__); // (09.01.2022 - ?)
+	alpha317.changes.push_back("- Updated star + pp algorithms to match current lazer implementation aka 20220902 (16) (thanks to @Khangaroo!)");
+	alpha317.changes.push_back("");
+	alpha317.changes.push_back("");
 	alpha317.changes.push_back("- Added new experimental mod \"Half Timing Window\"");
 	alpha317.changes.push_back("- Added \"Quick Seek\" key bindings (jump +-5 seconds, default LEFT/RIGHT arrow keys)");
 	alpha317.changes.push_back("- Added hitobject type percentage support to songbrowser search (e.g. \"sliders>80%\")");
