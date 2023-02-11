@@ -285,8 +285,9 @@ OsuUserStatsScreen::OsuUserStatsScreen(Osu *osu) : OsuScreenBackable(osu)
 
 	m_ppVersionInfoLabel = new OsuUIUserStatsScreenLabel(m_osu);
 	m_ppVersionInfoLabel->setText(UString::format("pp Version: %i", OsuDifficultyCalculator::PP_ALGORITHM_VERSION));
-	m_ppVersionInfoLabel->setTooltipText("WARNING: McOsu's star/pp algorithm is currently lagging behind the \"official\" version.\n \nReason being that keeping up-to-date requires a LOT of changes now.\nThe next goal is rewriting the algorithm architecture to be more similar to osu!lazer,\nas that will make porting star/pp changes infinitely easier for the foreseeable future.\n \nNo promises as to when all of that will be finished.");
-	m_ppVersionInfoLabel->setTextColor(/*0x77888888*/0xbbbb0000);
+	//m_ppVersionInfoLabel->setTooltipText("WARNING: McOsu's star/pp algorithm is currently lagging behind the \"official\" version.\n \nReason being that keeping up-to-date requires a LOT of changes now.\nThe next goal is rewriting the algorithm architecture to be more similar to osu!lazer,\nas that will make porting star/pp changes infinitely easier for the foreseeable future.\n \nNo promises as to when all of that will be finished.");
+	m_ppVersionInfoLabel->setTooltipText("This version number reads as the year YYYY and then month MM and then day DD.\nThat date specifies when the last pp/star algorithm changes were done/released by peppy.\nMcOsu always uses the in-use-for-public-global-online-rankings algorithms if possible.");
+	m_ppVersionInfoLabel->setTextColor(0x77888888/*0xbbbb0000*/);
 	m_ppVersionInfoLabel->setDrawBackground(false);
 	m_ppVersionInfoLabel->setDrawFrame(false);
 	m_container->addBaseUIElement(m_ppVersionInfoLabel);
