@@ -116,7 +116,9 @@ OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 	m_iAutoCursorDanceIndex = 0;
 
 	m_fAimStars = 0.0f;
+	m_fAimSliderFactor = 0.0f;
 	m_fSpeedStars = 0.0f;
+	m_fSpeedNotes = 0.0f;
 	m_starCacheLoader = new OsuBackgroundStarCacheLoader(this);
 	m_fStarCacheTime = 0.0f;
 
