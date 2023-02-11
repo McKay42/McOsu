@@ -303,11 +303,14 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignor
 		if (standardPointer != NULL && beatmap->getSelectedDifficulty2() != NULL)
 		{
 			double aimStars = standardPointer->getAimStars();
+			double aimSliderFactor = standardPointer->getAimSliderFactor();
 			double speedStars = standardPointer->getSpeedStars();
+			double speedNotes = standardPointer->getSpeedNotes();
 
 			//int numHitObjects = standardPointer->getNumHitObjects();
 			int maxPossibleCombo = beatmap->getMaxPossibleCombo();
 			int numCircles = beatmap->getSelectedDifficulty2()->getNumCircles();
+			int numSliders = beatmap->getSelectedDifficulty2()->getNumSliders();
 			int numSpinners = beatmap->getSelectedDifficulty2()->getNumSpinners();
 
 			// real (simulate beatmap being cut off after current hit, thus changing aimStars and speedStars on every hit)
@@ -315,16 +318,19 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignor
 				int curHitobjectIndex = beatmap->getHitObjectIndexForCurrentTime(); // current index of last hitobject to just finish at this time (e.g. if the first OsuCircle just finished and called addHitResult(), this would be 0)
 				maxPossibleCombo = m_iComboFull; // current maximum possible combo at this time
 				numCircles = clamp<int>(beatmap->getNumCirclesForCurrentTime() + 1, 0, beatmap->getSelectedDifficulty2()->getNumCircles()); // current maximum number of circles at this time (+1 because of 1 frame delay in update())
+				numSliders = clamp<int>(beatmap->getNumSlidersForCurrentTime(), 0, beatmap->getSelectedDifficulty2()->getNumSliders()); // current maximum number of sliders at this time (TODO: do I need delay here?)
 				numSpinners = clamp<int>(beatmap->getNumSpinnersForCurrentTime(), 0, beatmap->getSelectedDifficulty2()->getNumSpinners()); // current maximum number of spinners at this time (ignoring frame delay here)
 
 				//beatmap->getSelectedDifficulty()->calculateStarDiff(beatmap, &aimStars, &speedStars, curHitobjectIndex); // recalculating this live costs too much time
 				aimStars = beatmap->getAimStarsForUpToHitObjectIndex(curHitobjectIndex);
+				aimSliderFactor = beatmap->getAimSliderFactorForUpToHitObjectIndex(curHitobjectIndex);
 				speedStars = beatmap->getSpeedStarsForUpToHitObjectIndex(curHitobjectIndex);
+				speedNotes = beatmap->getSpeedNotesForUpToHitObjectIndex(curHitobjectIndex);
 
-				m_fPPv2 = OsuDifficultyCalculator::calculatePPv2(m_osu, beatmap, aimStars, speedStars, -1, numCircles, numSpinners, maxPossibleCombo, m_iComboMax, m_iNumMisses, m_iNum300s, m_iNum100s, m_iNum50s);
+				m_fPPv2 = OsuDifficultyCalculator::calculatePPv2(m_osu, beatmap, aimStars, aimSliderFactor, speedStars, speedNotes, -1, numCircles, numSliders, numSpinners, maxPossibleCombo, m_iComboMax, m_iNumMisses, m_iNum300s, m_iNum100s, m_iNum50s);
 
 				if (osu_debug_pp.getBool())
-					debugLog("pp = %f, aimstars = %f, speedstars = %f, curindex = %i, maxpossiblecombo = %i, numcircles = %i\n", m_fPPv2, aimStars, speedStars, curHitobjectIndex, maxPossibleCombo, numCircles);
+					debugLog("pp = %f, aimstars = %f, aimsliderfactor = %f, speedstars = %f, speednotes = %f, curindex = %i, maxpossiblecombo = %i, numcircles = %i, numsliders = %i\n", m_fPPv2, aimStars, aimSliderFactor, speedStars, speedNotes, curHitobjectIndex, maxPossibleCombo, numCircles, numSliders);
 			}
 		}
 		else

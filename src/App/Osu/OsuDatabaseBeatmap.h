@@ -314,7 +314,7 @@ private:
 		float sliderTimeWithoutRepeats;
 		std::vector<float> ticks;
 
-		std::vector<long> scoringTimesForStarCalc;
+		std::vector<std::pair<long, bool>> scoringTimesForStarCalc;
 	};
 
 	struct SPINNER
@@ -431,7 +431,7 @@ public:
 	void kill() {m_bDead = true;}
 	void revive() {m_bDead = false;}
 
-	void setBeatmapDifficulty(OsuDatabaseBeatmap *diff2, float AR, float CS, float speedMultiplier);
+	void setBeatmapDifficulty(OsuDatabaseBeatmap *diff2, float AR, float CS, float OD, float speedMultiplier, bool relax, bool touchDevice);
 
 	inline OsuDatabaseBeatmap *getBeatmapDifficulty() const {return m_diff2;}
 
@@ -460,11 +460,16 @@ private:
 
 	float m_fAR;
 	float m_fCS;
+	float m_fOD;
 	float m_fSpeedMultiplier;
+	bool m_bRelax;
+	bool m_bTouchDevice;
 
 	std::atomic<double> m_totalStars;
 	std::atomic<double> m_aimStars;
+	std::atomic<double> m_aimSliderFactor;
 	std::atomic<double> m_speedStars;
+	std::atomic<double> m_speedNotes;
 	std::atomic<double> m_pp;
 
 	std::atomic<long> m_iLengthMS;
@@ -476,6 +481,7 @@ private:
 	int m_iErrorCode;
 	std::atomic<int> m_iNumObjects;
 	std::atomic<int> m_iNumCircles;
+	std::atomic<int> m_iNumSliders;
 	std::atomic<int> m_iNumSpinners;
 	int m_iMaxPossibleCombo;
 };

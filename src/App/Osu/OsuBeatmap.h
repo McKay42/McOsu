@@ -102,11 +102,14 @@ public:
 	inline int getND() const {return m_iND;}
 	inline int getHitObjectIndexForCurrentTime() const {return m_iCurrentHitObjectIndex;}
 	inline int getNumCirclesForCurrentTime() const {return m_iCurrentNumCircles;}
+	inline int getNumSlidersForCurrentTime() const {return m_iCurrentNumSliders;}
 	inline int getNumSpinnersForCurrentTime() const {return m_iCurrentNumSpinners;}
 	inline int getMaxPossibleCombo() const {return m_iMaxPossibleCombo;}
 	inline unsigned long long getScoreV2ComboPortionMaximum() const {return m_iScoreV2ComboPortionMaximum;}
 	inline double getAimStarsForUpToHitObjectIndex(int upToHitObjectIndex) const {return (m_aimStarsForNumHitObjects.size() > 0 && upToHitObjectIndex > -1 ? m_aimStarsForNumHitObjects[clamp<int>(upToHitObjectIndex, 0, m_aimStarsForNumHitObjects.size()-1)] : 0);}
+	inline double getAimSliderFactorForUpToHitObjectIndex(int upToHitObjectIndex) const {return (m_aimSliderFactorForNumHitObjects.size() > 0 && upToHitObjectIndex > -1 ? m_aimSliderFactorForNumHitObjects[clamp<int>(upToHitObjectIndex, 0, m_aimSliderFactorForNumHitObjects.size()-1)] : 0);}
 	inline double getSpeedStarsForUpToHitObjectIndex(int upToHitObjectIndex) const {return (m_speedStarsForNumHitObjects.size() > 0 && upToHitObjectIndex > -1 ? m_speedStarsForNumHitObjects[clamp<int>(upToHitObjectIndex, 0, m_speedStarsForNumHitObjects.size()-1)] : 0);}
+	inline double getSpeedNotesForUpToHitObjectIndex(int upToHitObjectIndex) const {return (m_speedNotesForNumHitObjects.size() > 0 && upToHitObjectIndex > -1 ? m_speedNotesForNumHitObjects[clamp<int>(upToHitObjectIndex, 0, m_speedNotesForNumHitObjects.size()-1)] : 0);}
 	inline const std::vector<double> &getAimStrains() const {return m_aimStrains;}
 	inline const std::vector<double> &getSpeedStrains() const {return m_speedStrains;}
 
@@ -291,11 +294,14 @@ protected:
 	int m_iND;
 	int m_iCurrentHitObjectIndex;
 	int m_iCurrentNumCircles;
+	int m_iCurrentNumSliders;
 	int m_iCurrentNumSpinners;
 	int m_iMaxPossibleCombo;
 	unsigned long long m_iScoreV2ComboPortionMaximum;
 	std::vector<double> m_aimStarsForNumHitObjects;
+	std::vector<double> m_aimSliderFactorForNumHitObjects;
 	std::vector<double> m_speedStarsForNumHitObjects;
+	std::vector<double> m_speedNotesForNumHitObjects;
 	std::vector<double> m_aimStrains;
 	std::vector<double> m_speedStrains;
 
