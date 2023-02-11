@@ -607,6 +607,8 @@ UString OsuScore::getModsStringForRichPresence()
 		modsString.append("TP");
 	if (m_osu->getModNM())
 		modsString.append("NM");
+	if (m_osu->getModTD())
+		modsString.append("TD");
 
 	return modsString;
 }
