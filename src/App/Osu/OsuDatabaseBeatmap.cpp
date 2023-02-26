@@ -1867,6 +1867,8 @@ OsuDatabaseBeatmapStarCalculator::OsuDatabaseBeatmapStarCalculator() : Resource(
 	m_fCS = 5.0f;
 	m_fOD = 5.0f;
 	m_fSpeedMultiplier = 1.0f;
+	m_bRelax = false;
+	m_bTouchDevice = false;
 
 	m_totalStars = 0.0;
 	m_aimStars = 0.0;
