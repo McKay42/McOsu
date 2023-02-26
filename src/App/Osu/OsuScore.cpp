@@ -19,6 +19,7 @@
 #include "OsuHUD.h"
 #include "OsuGameRules.h"
 #include "OsuReplay.h"
+#include "OsuHitObject.h"
 
 ConVar osu_hiterrorbar_misses("osu_hiterrorbar_misses", true);
 ConVar osu_debug_pp("osu_debug_pp", false);
@@ -110,9 +111,9 @@ void OsuScore::reset()
 	onScoreChange();
 }
 
-void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignoreOnHitErrorBar, bool hitErrorBarOnly, bool ignoreCombo, bool ignoreScore)
+void OsuScore::addHitResult(OsuBeatmap *beatmap, OsuHitObject *hitObject, HIT hit, long delta, bool ignoreOnHitErrorBar, bool hitErrorBarOnly, bool ignoreCombo, bool ignoreScore)
 {
-	const int scoreComboMultiplier = std::max(m_iCombo-1, 0); // current combo, excluding the current hitobject which caused the addHitResult() call
+	const int scoreComboMultiplier = std::max(m_iCombo - 1, 0); // current combo, excluding the current hitobject which caused the addHitResult() call
 
 	// handle hits (and misses)
 	if (hit != OsuScore::HIT::HIT_MISS)
@@ -315,11 +316,19 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignor
 
 			// real (simulate beatmap being cut off after current hit, thus changing aimStars and speedStars on every hit)
 			{
-				int curHitobjectIndex = beatmap->getHitObjectIndexForCurrentTime(); // current index of last hitobject to just finish at this time (e.g. if the first OsuCircle just finished and called addHitResult(), this would be 0)
+				const int curHitobjectIndex = beatmap->getHitObjectIndexForCurrentTime(); // current index of last hitobject to just finish at this time (e.g. if the first OsuCircle just finished and called addHitResult(), this would be 0)
 				maxPossibleCombo = m_iComboFull; // current maximum possible combo at this time
-				numCircles = clamp<int>(beatmap->getNumCirclesForCurrentTime() + 1, 0, beatmap->getSelectedDifficulty2()->getNumCircles()); // current maximum number of circles at this time (+1 because of 1 frame delay in update())
-				numSliders = clamp<int>(beatmap->getNumSlidersForCurrentTime(), 0, beatmap->getSelectedDifficulty2()->getNumSliders()); // current maximum number of sliders at this time (TODO: do I need delay here?)
-				numSpinners = clamp<int>(beatmap->getNumSpinnersForCurrentTime(), 0, beatmap->getSelectedDifficulty2()->getNumSpinners()); // current maximum number of spinners at this time (ignoring frame delay here)
+
+				// NOTE: all pre-lazer-20220902 star/pp algorithm versions only ever considered everything a circle (except for spinners ofc), which is why simply "cheating" and adding a hardcoded +1 to the beatmap->getNumCirclesForCurrentTime() worked for live pp
+				// NOTE: the reason for the +1 is that in the mcosu update loop, when we get called where we are inside addHitResult(), the beatmap hitobject counters have not yet been updated.
+				// NOTE: we can not early update the counters since we don't yet know whether the hitobject will actually be "finished" in that part of the update loop.
+				// NOTE: now, since the algorithms do require each individual hitobject type counts (and not JUST the "circle" count), this workaround no longer works.
+				// NOTE: therefore, we simply query the hitobject type right here and add the +1 where relevant (because we know that we would only be at this point if the hitobject is actually "finished" now, as before when only circles existed)
+				// NOTE: of course, objects with "length", like sliders, call addHitResult() multiple times while they are being "finished". star and pp algorithms ONLY want FULLY FINISHED hitobjects in these counters, so we have to additionally check that.
+				// WARNING: hitObject can be NULL in some very rare cases (like the nightmare mod has some addHitResult(NULL, ...) calls just to drain more hp in some places)
+				numCircles = clamp<int>(beatmap->getNumCirclesForCurrentTime() + (hitObject != NULL && hitObject->isCircle() ? 1 : 0), 0, beatmap->getSelectedDifficulty2()->getNumCircles()); // current maximum number of fully finished (!) circles at this time
+				numSliders = clamp<int>(beatmap->getNumSlidersForCurrentTime() + (hitObject != NULL && hitObject->isSlider() && hitObject->isFinished() ? 1 : 0), 0, beatmap->getSelectedDifficulty2()->getNumSliders()); // current maximum number of fully finished (!) sliders at this time
+				numSpinners = clamp<int>(beatmap->getNumSpinnersForCurrentTime() + (hitObject != NULL && hitObject->isSpinner() && hitObject->isFinished() ? 1 : 0), 0, beatmap->getSelectedDifficulty2()->getNumSpinners()); // current maximum number of fully finished (!) spinners at this time
 
 				//beatmap->getSelectedDifficulty()->calculateStarDiff(beatmap, &aimStars, &speedStars, curHitobjectIndex); // recalculating this live costs too much time
 				aimStars = beatmap->getAimStarsForUpToHitObjectIndex(curHitobjectIndex);
@@ -330,7 +339,7 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, HIT hit, long delta, bool ignor
 				m_fPPv2 = OsuDifficultyCalculator::calculatePPv2(m_osu, beatmap, aimStars, aimSliderFactor, speedStars, speedNotes, -1, numCircles, numSliders, numSpinners, maxPossibleCombo, m_iComboMax, m_iNumMisses, m_iNum300s, m_iNum100s, m_iNum50s);
 
 				if (osu_debug_pp.getBool())
-					debugLog("pp = %f, aimstars = %f, aimsliderfactor = %f, speedstars = %f, speednotes = %f, curindex = %i, maxpossiblecombo = %i, numcircles = %i, numsliders = %i\n", m_fPPv2, aimStars, aimSliderFactor, speedStars, speedNotes, curHitobjectIndex, maxPossibleCombo, numCircles, numSliders);
+					debugLog("pp = %f, aimstars = %f, aimsliderfactor = %f, speedstars = %f, speednotes = %f, curindex = %i, maxPossibleCombo = %i, numCircles = %i, numSliders = %i, numSpinners = %i\n", m_fPPv2, aimStars, aimSliderFactor, speedStars, speedNotes, curHitobjectIndex, maxPossibleCombo, numCircles, numSliders, numSpinners);
 			}
 		}
 		else
