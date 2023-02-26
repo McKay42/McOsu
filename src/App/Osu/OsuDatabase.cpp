@@ -56,7 +56,7 @@ ConVar osu_database_stars_cache_enabled("osu_database_stars_cache_enabled", fals
 ConVar osu_scores_enabled("osu_scores_enabled", true);
 ConVar osu_scores_legacy_enabled("osu_scores_legacy_enabled", true, "load osu!'s scores.db");
 ConVar osu_scores_custom_enabled("osu_scores_custom_enabled", true, "load custom scores.db");
-ConVar osu_scores_custom_version("osu_scores_custom_version", 20220902, "maximum supported custom scores.db/scoresvr.db version");
+ConVar osu_scores_custom_version("osu_scores_custom_version", 20210110, "maximum supported custom scores.db/scoresvr.db version");
 ConVar osu_scores_save_immediately("osu_scores_save_immediately", true, "write scores.db as soon as a new score is added");
 ConVar osu_scores_sort_by_pp("osu_scores_sort_by_pp", true, "display pp in score browser instead of score");
 ConVar osu_scores_bonus_pp("osu_scores_bonus_pp", true, "whether to add bonus pp to total (real) pp or not");
