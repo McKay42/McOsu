@@ -19,6 +19,7 @@
 
 ConVar osu_stars_xexxar_angles_sliders("osu_stars_xexxar_angles_sliders", true, "completely enables/disables the new star/pp calc algorithm");
 ConVar osu_stars_slider_curve_points_separation("osu_stars_slider_curve_points_separation", 20.0f, "massively reduce curve accuracy for star calculations to save memory/performance");
+ConVar osu_stars_and_pp_lazer_relax_autopilot_nerf_disabled("osu_stars_and_pp_lazer_relax_autopilot_nerf_disabled", true, "generally disables all nerfs for relax/autopilot in both star/pp algorithms. since mcosu has always allowed these, the default is to not nerf them.");
 
 
 
@@ -1011,7 +1012,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 	if (touchDevice)
 		*aim = std::pow(*aim, 0.8);
 
-	if (relax)
+	if (relax && !osu_stars_and_pp_lazer_relax_autopilot_nerf_disabled.getBool())
 	{
 		*aim *= 0.9;
 		*speed = 0.0;
@@ -1104,7 +1105,7 @@ double OsuDifficultyCalculator::calculatePPv2(int modsLegacy, double timescale, 
 		if ((modsLegacy & OsuReplay::Mods::SpunOut) && score.totalHits > 0)
 			multiplier *= 1.0 - std::pow((double)numSpinners / (double)score.totalHits, 0.85); // see https://github.com/ppy/osu-performance/pull/110/
 
-		if (modsLegacy & OsuReplay::Mods::Relax)
+		if ((modsLegacy & OsuReplay::Mods::Relax) && !osu_stars_and_pp_lazer_relax_autopilot_nerf_disabled.getBool())
 		{
 			double okMultiplier = std::max(0.0, od > 0.0 ? 1.0 - std::pow(od / 13.33, 1.8) : 1.0);	// 100
 			double mehMultiplier = std::max(0.0, od > 0.0 ? 1.0 - std::pow(od / 13.33, 5.0) : 1.0);	// 50
@@ -1160,7 +1161,7 @@ double OsuDifficultyCalculator::computeAimValue(const ScoreData &score, const Os
 
 	// ar bonus
 	double approachRateFactor = 0.0; // see https://github.com/ppy/osu-performance/pull/125/
-	if ((score.modsLegacy & OsuReplay::Relax) == 0)
+	if ((score.modsLegacy & OsuReplay::Relax) == 0 || osu_stars_and_pp_lazer_relax_autopilot_nerf_disabled.getBool())
 	{
 		if (attributes.ApproachRate > 10.33)
 			approachRateFactor = 0.3 * (attributes.ApproachRate - 10.33); // from 0.3 to 0.4 see https://github.com/ppy/osu-performance/pull/125/ // and completely changed the logic in https://github.com/ppy/osu-performance/pull/135/
@@ -1193,7 +1194,7 @@ double OsuDifficultyCalculator::computeAimValue(const ScoreData &score, const Os
 
 double OsuDifficultyCalculator::computeSpeedValue(const ScoreData &score, const Attributes &attributes, double effectiveMissCount)
 {
-	if (score.modsLegacy & OsuReplay::Relax)
+	if ((score.modsLegacy & OsuReplay::Relax) && !osu_stars_and_pp_lazer_relax_autopilot_nerf_disabled.getBool())
 		return 0.0;
 
 	double speedValue = std::pow(5.0 * std::max(1.0, attributes.SpeedStrain / 0.0675) - 4.0, 3.0) / 100000.0;
