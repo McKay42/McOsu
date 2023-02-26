@@ -37,8 +37,10 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	CHANGELOG alpha317;
 	alpha317.title = UString::format("33.04 (Build Date: %s, %s)", __DATE__, __TIME__); // (09.01.2022 - ?)
 	alpha317.changes.push_back("- Updated star + pp algorithms to match current lazer implementation aka 20220902 (16) (thanks to @Khangaroo!)");
+	alpha317.changes.push_back("- Added option \"Disable osu!lazer star/pp algorithm nerfs for relax/autopilot\" (Options > General > Player)");
 	alpha317.changes.push_back("- Fixed extremely rare AMD OpenGL driver crash when slider preview in options menu comes into view (via workaround)");
 	alpha317.changes.push_back("- Added ConVars: osu_options_slider_preview_use_legacy_renderer, osu_songbrowser_scorebrowser_enabled");
+	alpha317.changes.push_back("- Disabled new star/pp algorithm relax/autopilot nerfs by default in order to match previous behavior");
 	alpha317.changes.push_back("");
 	alpha317.changes.push_back("");
 	alpha317.changes.push_back("- Added new experimental mod \"Half Timing Window\"");

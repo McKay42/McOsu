@@ -544,6 +544,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_nameTextbox = addTextbox(convar->getConVarByName("name")->getString(), convar->getConVarByName("name"));
 	addSpacer();
 	addCheckbox("Include Relax/Autopilot for total weighted pp/acc", "NOTE: osu! does not allow this (since these mods are unranked).\nShould relax/autopilot scores be included in the weighted pp/acc calculation?", convar->getConVarByName("osu_user_include_relax_and_autopilot_for_stats"));
+	addCheckbox("Disable osu!lazer star/pp Relax/Autopilot nerfs", "Disabled: osu!lazer algorithm default. Relax/Autopilot scores are nerfed.\nEnabled: McOsu default. All Relax/Autopilot nerfs are disabled.", convar->getConVarByName("osu_stars_and_pp_lazer_relax_autopilot_nerf_disabled"));
 	addCheckbox("Show pp instead of score in scorebrowser", "Only McOsu scores will show pp.", convar->getConVarByName("osu_scores_sort_by_pp"));
 	addCheckbox("Always enable touch device pp nerf mod", "Keep touch device pp nerf mod active even when resetting all mods.", convar->getConVarByName("osu_mod_touchdevice"));
 	addCheckbox("Show osu! scores.db user names in user switcher", "Only relevant if \"Load osu! scores.db\" is enabled.\nShould the user switcher show ALL user names from ALL scores?\n(Even from ones you got in your database because you watched a replay?)", convar->getConVarByName("osu_user_switcher_include_legacy_scores_for_names"));
