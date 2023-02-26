@@ -53,6 +53,7 @@
 ConVar osu_options_save_on_back("osu_options_save_on_back", true);
 ConVar osu_options_high_quality_sliders("osu_options_high_quality_sliders", false);
 ConVar osu_mania_keylayout_wizard("osu_mania_keylayout_wizard");
+ConVar osu_options_slider_preview_use_legacy_renderer("osu_options_slider_preview_use_legacy_renderer", false, "apparently newer AMD drivers with old gpus are crashing here with the legacy renderer? was just me being lazy anyway, so now there is a vao render path as it should be");
 
 void _osuOptionsSliderQualityWrapper(UString oldValue, UString newValue)
 {
@@ -72,6 +73,8 @@ public:
 
 	virtual void draw(Graphics *g)
 	{
+		if (!m_bVisible) return;
+
 		OsuSkin *skin = m_osu->getSkin();
 
 		float hitcircleDiameter = m_vSize.y*0.5f;
@@ -136,10 +139,16 @@ public:
 	{
 		m_osu = osu;
 		m_bDrawSliderHack = true;
+		m_fPrevLength = 0.0f;
+		m_vao = NULL;
+
+		m_osu_force_legacy_slider_renderer_ref = convar->getConVarByName("osu_force_legacy_slider_renderer");
 	}
 
 	virtual void draw(Graphics *g)
 	{
+		if (!m_bVisible) return;
+
 		/*
 		g->setColor(0xffffffff);
 		g->drawRect(m_vPos.x, m_vPos.y, m_vSize.x, m_vSize.y);
@@ -149,21 +158,23 @@ public:
 		const float numberScale = (hitcircleDiameter / (160.0f * (m_osu->getSkin()->isDefault12x() ? 2.0f : 1.0f))) * 1 * convar->getConVarByName("osu_number_scale_multiplier")->getFloat();
 		const float overlapScale = (hitcircleDiameter / (160.0f)) * 1 * convar->getConVarByName("osu_number_scale_multiplier")->getFloat();
 
-		float approachScale = clamp<float>(1.0f + 1.5f - fmod(engine->getTime()*3, 3.0f), 0.0f, 2.5f);
+		const float approachScale = clamp<float>(1.0f + 1.5f - fmod(engine->getTime()*3, 3.0f), 0.0f, 2.5f);
 		float approachAlpha = clamp<float>(fmod(engine->getTime()*3, 3.0f)/1.5f, 0.0f, 1.0f);
 
 		approachAlpha = -approachAlpha*(approachAlpha-2.0f);
 		approachAlpha = -approachAlpha*(approachAlpha-2.0f);
 
-		float approachCircleAlpha = approachAlpha;
+		const float approachCircleAlpha = approachAlpha;
 		approachAlpha = 1.0f;
 
 		const float length = (m_vSize.x-hitcircleDiameter);
 		const int numPoints = length;
 		const float pointDist = length / numPoints;
 
-		std::vector<Vector2> emptyVector;
+		static std::vector<Vector2> emptyVector;
 		std::vector<Vector2> points;
+
+		const bool useLegacyRenderer = (osu_options_slider_preview_use_legacy_renderer.getBool() || m_osu_force_legacy_slider_renderer_ref->getBool());
 
 		for (int i=0; i<numPoints; i++)
 		{
@@ -176,20 +187,43 @@ public:
 			temp *= temp;
 			heightAddPercent = 1.0f - temp;
 
-			points.push_back(Vector2(m_vPos.x + hitcircleDiameter/2 + i*pointDist, m_vPos.y + m_vSize.y/2 - hitcircleDiameter/3 + heightAddPercent*(m_vSize.y/2 - hitcircleDiameter/2)));
+			points.push_back(Vector2((useLegacyRenderer ? m_vPos.x : 0) + hitcircleDiameter/2 + i*pointDist, (useLegacyRenderer ? m_vPos.y : 0) + m_vSize.y/2 - hitcircleDiameter/3 + heightAddPercent*(m_vSize.y/2 - hitcircleDiameter/2)));
 		}
 
 		if (points.size() > 0)
 		{
-			OsuCircle::drawCircle(g, m_osu->getSkin(), points[numPoints/2], hitcircleDiameter, numberScale, overlapScale, 2, 420, 0, approachScale, approachAlpha, approachAlpha, true, false);
-			OsuCircle::drawApproachCircle(g, m_osu->getSkin(), points[numPoints/2], m_osu->getSkin()->getComboColorForCounter(420, 0), hitcircleDiameter, approachScale, approachCircleAlpha, false, false);
+			OsuCircle::drawCircle(g, m_osu->getSkin(), points[numPoints/2] + (!useLegacyRenderer ? m_vPos : Vector2(0, 0)), hitcircleDiameter, numberScale, overlapScale, 2, 420, 0, approachScale, approachAlpha, approachAlpha, true, false);
+			OsuCircle::drawApproachCircle(g, m_osu->getSkin(), points[numPoints/2] + (!useLegacyRenderer ? m_vPos : Vector2(0, 0)), m_osu->getSkin()->getComboColorForCounter(420, 0), hitcircleDiameter, approachScale, approachCircleAlpha, false, false);
 			{
 				// recursive shared usage of the same RenderTarget is invalid, therefore we block slider rendering while the options menu is animating
 				if (m_bDrawSliderHack)
-					OsuSliderRenderer::draw(g, m_osu, points, emptyVector, hitcircleDiameter, 0, 1, m_osu->getSkin()->getComboColorForCounter(420, 0));
+				{
+					if (useLegacyRenderer)
+						OsuSliderRenderer::draw(g, m_osu, points, emptyVector, hitcircleDiameter, 0, 1, m_osu->getSkin()->getComboColorForCounter(420, 0));
+					else
+					{
+						// (lazy generate vao)
+						if (m_vao == NULL || length != m_fPrevLength)
+						{
+							m_fPrevLength = length;
+
+							debugLog("Regenerating options menu slider preview vao ...\n");
+
+							if (m_vao != NULL)
+							{
+								engine->getResourceManager()->destroyResource(m_vao);
+								m_vao = NULL;
+							}
+
+							if (m_vao == NULL)
+								m_vao = OsuSliderRenderer::generateVAO(m_osu, points, hitcircleDiameter, Vector3(0, 0, 0), false);
+						}
+						OsuSliderRenderer::draw(g, m_osu, m_vao, emptyVector, m_vPos, 1, hitcircleDiameter, 0, 1, m_osu->getSkin()->getComboColorForCounter(420, 0));
+					}
+				}
 			}
-			OsuCircle::drawSliderStartCircle(g, m_osu->getSkin(), points[0], hitcircleDiameter, numberScale, overlapScale, 1, 420, 0);
-			OsuCircle::drawSliderEndCircle(g, m_osu->getSkin(), points[points.size()-1], hitcircleDiameter, numberScale, overlapScale, 0, 0, 0, 1.0f, 1.0f, 0.0f, false, false);
+			OsuCircle::drawSliderStartCircle(g, m_osu->getSkin(), points[0] + (!useLegacyRenderer ? m_vPos : Vector2(0, 0)), hitcircleDiameter, numberScale, overlapScale, 1, 420, 0);
+			OsuCircle::drawSliderEndCircle(g, m_osu->getSkin(), points[points.size()-1] + (!useLegacyRenderer ? m_vPos : Vector2(0, 0)), hitcircleDiameter, numberScale, overlapScale, 0, 0, 0, 1.0f, 1.0f, 0.0f, false, false);
 		}
 	}
 
@@ -198,6 +232,9 @@ public:
 private:
 	Osu *m_osu;
 	bool m_bDrawSliderHack;
+	VertexArrayObject *m_vao;
+	float m_fPrevLength;
+	ConVar *m_osu_force_legacy_slider_renderer_ref;
 };
 
 class OsuOptionsMenuKeyBindLabel : public CBaseUILabel
