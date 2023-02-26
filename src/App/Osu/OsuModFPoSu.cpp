@@ -170,7 +170,7 @@ void OsuModFPoSu::draw(Graphics *g)
 
 						Matrix4 worldMatrix = m_modelMatrix;
 
-#ifdef MCENGINE_FEATURE_DIRECTX
+#ifdef MCENGINE_FEATURE_DIRECTX11
 						{
 							DirectX11Interface *dx11 = dynamic_cast<DirectX11Interface*>(engine->getGraphics());
 							if (dx11 != NULL)
@@ -481,7 +481,7 @@ void OsuModFPoSu::makePlayfield()
 	m_vao->clear();
 	m_meshList.clear();
 
-#ifdef MCENGINE_FEATURE_DIRECTX
+#ifdef MCENGINE_FEATURE_DIRECTX11
 
 	float topTC = 1.0f;
 	float bottomTC = 0.0f;
