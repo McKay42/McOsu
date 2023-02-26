@@ -950,7 +950,8 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 					double last_travel = std::max(prev1.lazyTravelTime, 25.0);
 					cur.minJumpTime = std::max(cur_strain_time - last_travel, 25.0);
 
-					// HACKHACK: TODO: curve shouldn't be null here, but Yin [test7] causes that to happen
+					// NOTE: "curve shouldn't be null here, but Yin [test7] causes that to happen"
+					// NOTE: the curve can be null if controlPoints.size() < 1 because the OsuDifficultyHitObject() constructor will then not set scheduledCurveAlloc to true (which is perfectly fine and correct)
 					float tail_jump_dist = (prev1.ho->curve ? prev1.ho->curve->pointAt(prev1.ho->repeats % 2 ? 1.0 : 0.0) : prev1.ho->pos).distance(cur.ho->pos) * radius_scaling_factor;
 					cur.minJumpDistance = std::max(0.0f, std::min((float)cur.minJumpDistance - (maximum_slider_radius - assumed_slider_radius), tail_jump_dist - maximum_slider_radius));
 				}
