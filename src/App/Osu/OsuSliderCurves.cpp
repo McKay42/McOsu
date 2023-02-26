@@ -346,7 +346,7 @@ void OsuSliderCurveEqualDistanceMulti::init(const std::vector<OsuSliderCurveType
 				for (int p=m_curvePointSegments[s].size()-1; p>=0; p--)
 				{
 					const float curLength = (p == 0) ? 0 : (m_curvePointSegments[s][p] - m_curvePointSegments[s][p-1]).length();
-					if (curLength >= excess)
+					if (curLength >= excess && p != 0)
 					{
 						Vector2 segmentVector = (m_curvePointSegments[s][p] - m_curvePointSegments[s][p-1]).normalize();
 						m_curvePointSegments[s][p] = m_curvePointSegments[s][p] - segmentVector*excess;

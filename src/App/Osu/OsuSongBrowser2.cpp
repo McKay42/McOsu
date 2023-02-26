@@ -72,6 +72,7 @@ ConVar osu_songbrowser_bottombar_percent("osu_songbrowser_bottombar_percent", 0.
 ConVar osu_draw_songbrowser_background_image("osu_draw_songbrowser_background_image", true);
 ConVar osu_draw_songbrowser_menu_background_image("osu_draw_songbrowser_menu_background_image", true);
 ConVar osu_draw_songbrowser_strain_graph("osu_draw_songbrowser_strain_graph", false);
+ConVar osu_songbrowser_scorebrowser_enabled("osu_songbrowser_scorebrowser_enabled", true);
 ConVar osu_songbrowser_background_fade_in_duration("osu_songbrowser_background_fade_in_duration", 0.1f);
 
 ConVar osu_songbrowser_search_delay("osu_songbrowser_search_delay", 0.5f, "delay until search update when entering text");
@@ -1292,8 +1293,9 @@ void OsuSongBrowser2::update()
 
 							const float AR = diffToCalc->getAR();
 							const float CS = diffToCalc->getCS();
+							const float OD = diffToCalc->getOD();
 							const float speedMultiplier = 1.0f;
-							m_backgroundStarCalculator->setBeatmapDifficulty(diffToCalc, AR, CS, speedMultiplier);
+							m_backgroundStarCalculator->setBeatmapDifficulty(diffToCalc, AR, CS, OD, speedMultiplier, false, false);
 							m_backgroundStarCalcTempParent = (diffs.size() > 0 ? beatmap : NULL);
 
 							engine->getResourceManager()->requestNextLoadAsync();
@@ -2902,8 +2904,9 @@ void OsuSongBrowser2::updateScoreBrowserLayout()
 {
 	const float dpiScale = Osu::getUIScale(m_osu);
 
-	if (m_osu_scores_enabled->getBool() != m_scoreBrowser->isVisible())
-		m_scoreBrowser->setVisible(m_osu_scores_enabled->getBool());
+	const bool shouldScoreBrowserBeVisible = (m_osu_scores_enabled->getBool() && osu_songbrowser_scorebrowser_enabled.getBool());
+	if (shouldScoreBrowserBeVisible != m_scoreBrowser->isVisible())
+		m_scoreBrowser->setVisible(shouldScoreBrowserBeVisible);
 
 	const int scoreBrowserExtraPaddingRight = 5 * dpiScale; // duplication, see above
 	const int scoreButtonWidthMax = m_topbarLeft->getSize().x + 2 * dpiScale;
@@ -4357,9 +4360,12 @@ void OsuSongBrowser2::recalculateStarsForSelectedBeatmap(bool force)
 
 		const float AR = m_selectedBeatmap->getAR();
 		const float CS = m_selectedBeatmap->getCS();
+		const float OD = m_selectedBeatmap->getOD();
 		const float speedMultiplier = m_osu->getSpeedMultiplier(); // NOTE: not m_selectedBeatmap->getSpeedMultiplier()!
+		const bool relax = m_osu->getModRelax();
+		const bool touchdevice = m_osu->getModTD();
 
-		m_dynamicStarCalculator->setBeatmapDifficulty(m_selectedBeatmap->getSelectedDifficulty2(), AR, CS, speedMultiplier);
+		m_dynamicStarCalculator->setBeatmapDifficulty(m_selectedBeatmap->getSelectedDifficulty2(), AR, CS, OD, speedMultiplier, relax, touchdevice);
 
 		engine->getResourceManager()->requestNextLoadAsync();
 		engine->getResourceManager()->loadResource(m_dynamicStarCalculator);

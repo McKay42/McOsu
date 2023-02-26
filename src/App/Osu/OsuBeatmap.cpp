@@ -231,6 +231,7 @@ OsuBeatmap::OsuBeatmap(Osu *osu)
 	m_iND = 0;
 	m_iCurrentHitObjectIndex = 0;
 	m_iCurrentNumCircles = 0;
+	m_iCurrentNumSliders = 0;
 	m_iCurrentNumSpinners = 0;
 	m_iMaxPossibleCombo = 0;
 	m_iScoreV2ComboPortionMaximum = 0;
@@ -565,6 +566,7 @@ void OsuBeatmap::update()
 	m_iNPS = 0;
 	m_iND = 0;
 	m_iCurrentNumCircles = 0;
+	m_iCurrentNumSliders = 0;
 	m_iCurrentNumSpinners = 0;
 	{
 		bool blockNextNotes = false;
@@ -591,6 +593,7 @@ void OsuBeatmap::update()
 
 			// ************ live pp block start ************ //
 			const bool isCircle = m_hitobjects[i]->isCircle();
+			const bool isSlider = m_hitobjects[i]->isSlider();
 			const bool isSpinner = m_hitobjects[i]->isSpinner();
 			// ************ live pp block end ************** //
 
@@ -618,6 +621,8 @@ void OsuBeatmap::update()
 					// ************ live pp block start ************ //
 					if (isCircle)
 						m_iCurrentNumCircles++;
+					if (isSlider)
+						m_iCurrentNumSliders++;
 					if (isSpinner)
 						m_iCurrentNumSpinners++;
 
@@ -807,6 +812,8 @@ void OsuBeatmap::update()
 			// ************ live pp block start ************ //
 			if (isCircle && m_hitobjects[i]->isFinished())
 				m_iCurrentNumCircles++;
+			if (isSlider && m_hitobjects[i]->isFinished())
+				m_iCurrentNumSliders++;
 			if (isSpinner && m_hitobjects[i]->isFinished())
 				m_iCurrentNumSpinners++;
 
@@ -1954,7 +1961,7 @@ OsuScore::HIT OsuBeatmap::addHitResult(OsuHitObject *hitObject, OsuScore::HIT hi
 		playMissSound();
 
 	// score
-	m_osu->getScore()->addHitResult(this, hit, delta, ignoreOnHitErrorBar, hitErrorBarOnly, ignoreCombo, ignoreScore);
+	m_osu->getScore()->addHitResult(this, hitObject, hit, delta, ignoreOnHitErrorBar, hitErrorBarOnly, ignoreCombo, ignoreScore);
 
 	// health
 	OsuScore::HIT returnedHit = OsuScore::HIT::HIT_MISS;

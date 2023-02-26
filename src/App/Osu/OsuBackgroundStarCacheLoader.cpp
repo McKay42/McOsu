@@ -40,32 +40,43 @@ void OsuBackgroundStarCacheLoader::initAsync()
 
 		// reset
 		m_beatmap->m_aimStarsForNumHitObjects.clear();
+		m_beatmap->m_aimSliderFactorForNumHitObjects.clear();
 		m_beatmap->m_speedStarsForNumHitObjects.clear();
+		m_beatmap->m_speedNotesForNumHitObjects.clear();
 
 		const UString &osuFilePath = diff2->getFilePath();
 		const Osu::GAMEMODE gameMode = m_beatmap->getOsu()->getGamemode();
 		const float AR = m_beatmap->getAR();
 		const float CS = m_beatmap->getCS();
+		const float OD = m_beatmap->getOD();
 		const float speedMultiplier = m_beatmap->getOsu()->getSpeedMultiplier(); // NOTE: not beatmap->getSpeedMultiplier()!
+		const bool relax = m_beatmap->getOsu()->getModRelax();
+		const bool touchDevice = m_beatmap->getOsu()->getModTD();
 
 		OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT diffres = OsuDatabaseBeatmap::loadDifficultyHitObjects(osuFilePath, gameMode, AR, CS, speedMultiplier);
 
 		for (size_t i=0; i<diffres.diffobjects.size(); i++)
 		{
 			double aimStars = 0.0;
+			double aimSliderFactor = 0.0;
 			double speedStars = 0.0;
+			double speedNotes = 0.0;
 
-			OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, CS, &aimStars, &speedStars, i);
+			OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, CS, OD, speedMultiplier, relax, touchDevice, &aimStars, &aimSliderFactor, &speedStars, &speedNotes, i);
 
 			m_beatmap->m_aimStarsForNumHitObjects.push_back(aimStars);
+			m_beatmap->m_aimSliderFactorForNumHitObjects.push_back(aimSliderFactor);
 			m_beatmap->m_speedStarsForNumHitObjects.push_back(speedStars);
+			m_beatmap->m_speedNotesForNumHitObjects.push_back(speedNotes);
 
 			m_iProgress = i;
 
 			if (m_bDead.load())
 			{
 				m_beatmap->m_aimStarsForNumHitObjects.clear();
+				m_beatmap->m_aimSliderFactorForNumHitObjects.clear();
 				m_beatmap->m_speedStarsForNumHitObjects.clear();
+				m_beatmap->m_speedNotesForNumHitObjects.clear();
 
 				break;
 			}

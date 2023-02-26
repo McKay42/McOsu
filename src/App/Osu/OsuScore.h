@@ -19,7 +19,7 @@ class OsuHitObject;
 class OsuScore
 {
 public:
-	static constexpr const int VERSION = 20210722;
+	static constexpr const int VERSION = 20220902;
 
 	enum class HIT
 	{
@@ -64,7 +64,7 @@ public:
 
 	void reset(); // only OsuBeatmap may call this function!
 
-	void addHitResult(OsuBeatmap *beatmap, OsuScore::HIT hit, long delta, bool ignoreOnHitErrorBar, bool hitErrorBarOnly, bool ignoreCombo, bool ignoreScore); // only OsuBeatmap may call this function!
+	void addHitResult(OsuBeatmap *beatmap, OsuHitObject *hitObject, OsuScore::HIT hit, long delta, bool ignoreOnHitErrorBar, bool hitErrorBarOnly, bool ignoreCombo, bool ignoreScore); // only OsuBeatmap may call this function!
 	void addHitResultComboEnd(OsuScore::HIT hit);
 	void addSliderBreak(); // only OsuBeatmap may call this function!
 	void addPoints(int points, bool isSpinner);

@@ -55,7 +55,9 @@ public:
 	// score
 	inline int getNumHitObjects() const {return m_hitobjects.size();}
 	inline float getAimStars() const {return m_fAimStars;}
+	inline float getAimSliderFactor() const {return m_fAimSliderFactor;}
 	inline float getSpeedStars() const {return m_fSpeedStars;}
+	inline float getSpeedNotes() const {return m_fSpeedNotes;}
 
 	// hud
 	inline bool isSpinnerActive() const {return m_bIsSpinnerActive;}
@@ -123,7 +125,9 @@ private:
 
 	// pp calculation buffer (only needs to be recalculated in onModUpdate(), instead of on every hit)
 	float m_fAimStars;
+	float m_fAimSliderFactor;
 	float m_fSpeedStars;
+	float m_fSpeedNotes;
 	OsuBackgroundStarCacheLoader *m_starCacheLoader;
 	float m_fStarCacheTime;
 
