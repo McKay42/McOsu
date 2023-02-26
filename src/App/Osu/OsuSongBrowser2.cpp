@@ -72,6 +72,7 @@ ConVar osu_songbrowser_bottombar_percent("osu_songbrowser_bottombar_percent", 0.
 ConVar osu_draw_songbrowser_background_image("osu_draw_songbrowser_background_image", true);
 ConVar osu_draw_songbrowser_menu_background_image("osu_draw_songbrowser_menu_background_image", true);
 ConVar osu_draw_songbrowser_strain_graph("osu_draw_songbrowser_strain_graph", false);
+ConVar osu_songbrowser_scorebrowser_enabled("osu_songbrowser_scorebrowser_enabled", true);
 ConVar osu_songbrowser_background_fade_in_duration("osu_songbrowser_background_fade_in_duration", 0.1f);
 
 ConVar osu_songbrowser_search_delay("osu_songbrowser_search_delay", 0.5f, "delay until search update when entering text");
@@ -2903,8 +2904,9 @@ void OsuSongBrowser2::updateScoreBrowserLayout()
 {
 	const float dpiScale = Osu::getUIScale(m_osu);
 
-	if (m_osu_scores_enabled->getBool() != m_scoreBrowser->isVisible())
-		m_scoreBrowser->setVisible(m_osu_scores_enabled->getBool());
+	const bool shouldScoreBrowserBeVisible = (m_osu_scores_enabled->getBool() && osu_songbrowser_scorebrowser_enabled.getBool());
+	if (shouldScoreBrowserBeVisible != m_scoreBrowser->isVisible())
+		m_scoreBrowser->setVisible(shouldScoreBrowserBeVisible);
 
 	const int scoreBrowserExtraPaddingRight = 5 * dpiScale; // duplication, see above
 	const int scoreButtonWidthMax = m_topbarLeft->getSize().x + 2 * dpiScale;
