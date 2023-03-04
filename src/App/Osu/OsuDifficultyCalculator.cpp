@@ -843,7 +843,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 			{
 				Vector2 diff;
 
-				if (slider.ho->scoringTimes[i].scoreType == OsuDifficultyHitObject::SLIDER_SCORE_TYPE::END)
+				if (slider.ho->scoringTimes[i].type == OsuDifficultyHitObject::SLIDER_SCORING_TIME::TYPE::END)
 				{
 					// NOTE: In lazer, the position of the slider end is at the visual end, but the time is at the scoring end
 					diff = slider.ho->curve->pointAt(slider.ho->repeats % 2 ? 1.0 : 0.0) - cursor_pos;
@@ -871,7 +871,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 						diff = lazy_diff;
 					diff_len = scaling_factor * diff.length();
 				}
-				else if (slider.ho->scoringTimes[i].scoreType == OsuDifficultyHitObject::SLIDER_SCORE_TYPE::REPEAT)
+				else if (slider.ho->scoringTimes[i].type == OsuDifficultyHitObject::SLIDER_SCORING_TIME::TYPE::REPEAT)
 				{
 					// Slider repeat
 					req_diff = 50.0;

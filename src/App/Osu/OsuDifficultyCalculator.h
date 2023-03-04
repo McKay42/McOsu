@@ -28,16 +28,16 @@ public:
 		SLIDER,
 	};
 
-	enum class SLIDER_SCORE_TYPE
-	{
-		TICK,
-		REPEAT,
-		END,
-	};
-
 	struct SLIDER_SCORING_TIME
 	{
-		SLIDER_SCORE_TYPE scoreType;
+		enum class TYPE
+		{
+			TICK,
+			REPEAT,
+			END,
+		};
+
+		TYPE type;
 		int time;
 
 		unsigned long long sortHack;
@@ -45,7 +45,7 @@ public:
 
 	struct SliderScoringTimeComparator
 	{
-		bool operator() (SLIDER_SCORING_TIME const& a, SLIDER_SCORING_TIME const& b) const
+		bool operator() (const SLIDER_SCORING_TIME &a, const SLIDER_SCORING_TIME &b) const
 		{
 			// strict weak ordering!
 			if (a.time == b.time)
