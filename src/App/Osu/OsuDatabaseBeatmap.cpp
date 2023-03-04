@@ -603,6 +603,7 @@ void OsuDatabaseBeatmap::calculateSliderTimesClicksTicks(int beatmapVersion, std
 			// NOTE: only necessary since the latest pp changes (Xexxar)
 			if (m_osu_stars_xexxar_angles_sliders_ref->getBool())
 			{
+				static unsigned long long sortHackCounter = 0;
 				const long osuSliderEndInsideCheckOffset = (long)m_osu_slider_end_inside_check_offset_ref->getInt();
 
 				// 1) "skip the head circle"
@@ -611,7 +612,11 @@ void OsuDatabaseBeatmap::calculateSliderTimesClicksTicks(int beatmapVersion, std
 				for (int i=0; i<(s.repeat - 1); i++)
 				{
 					const long time = s.time + (long)(s.sliderTimeWithoutRepeats * (i+1)); // see OsuSlider.cpp
-					s.scoringTimesForStarCalc.push_back(std::make_pair(time, true));
+					s.scoringTimesForStarCalc.push_back(OsuDifficultyHitObject::SLIDER_SCORING_TIME{
+						.scoreType = OsuDifficultyHitObject::SLIDER_SCORE_TYPE::REPEAT,
+						.time = time,
+						.sortHack = sortHackCounter++,
+					});
 				}
 
 				// 3) add tick times (somewhere within slider, repeated for every repeat)
@@ -621,16 +626,25 @@ void OsuDatabaseBeatmap::calculateSliderTimesClicksTicks(int beatmapVersion, std
 					{
 						const float tickPercentRelativeToRepeatFromStartAbs = (((i+1) % 2) != 0 ? s.ticks[t] : 1.0f - s.ticks[t]); // see OsuSlider.cpp
 						const long time = s.time + (long)(s.sliderTimeWithoutRepeats * i) + (long)(tickPercentRelativeToRepeatFromStartAbs * s.sliderTimeWithoutRepeats); // see OsuSlider.cpp
-						s.scoringTimesForStarCalc.push_back(std::make_pair(time, false));
+						s.scoringTimesForStarCalc.push_back(OsuDifficultyHitObject::SLIDER_SCORING_TIME{
+							.scoreType = OsuDifficultyHitObject::SLIDER_SCORE_TYPE::TICK,
+							.time = time,
+							.sortHack = sortHackCounter++,
+						});
 					}
 				}
 
 				// 4) add slider end (potentially before last tick for bullshit sliders, but sorting takes care of that)
 				// see https://github.com/ppy/osu/pull/4193#issuecomment-460127543
-				s.scoringTimesForStarCalc.push_back(std::make_pair(std::max(s.time + (long)s.sliderTime / 2, (s.time + (long)s.sliderTime) - osuSliderEndInsideCheckOffset), false)); // see OsuSlider.cpp
+				const long time = std::max(s.time + (long)s.sliderTime / 2, (s.time + (long)s.sliderTime) - osuSliderEndInsideCheckOffset);
+				s.scoringTimesForStarCalc.push_back(OsuDifficultyHitObject::SLIDER_SCORING_TIME{
+					.scoreType = OsuDifficultyHitObject::SLIDER_SCORE_TYPE::END,
+					.time = time,
+					.sortHack = sortHackCounter++,
+				});
 
 				// 5) sort scoringTimes from earliest to latest
-				std::sort(s.scoringTimesForStarCalc.begin(), s.scoringTimesForStarCalc.end(), std::less<std::pair<long, bool>>());
+				std::sort(s.scoringTimesForStarCalc.begin(), s.scoringTimesForStarCalc.end(), OsuDifficultyHitObject::SliderScoringTimeComparator());
 			}
 		}
 	}
@@ -707,7 +721,7 @@ OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT OsuDatabaseBeatmap::loadDifficultyHitObj
 					c.sliders[i].type,
 					std::vector<Vector2>(),	// NOTE: ignore curve when calculating inaccurately
 					c.sliders[i].pixelLength,
-					std::vector<std::pair<long, bool>>(),	// NOTE: ignore curve when calculating inaccurately
+					std::vector<OsuDifficultyHitObject::SLIDER_SCORING_TIME>(),	// NOTE: ignore curve when calculating inaccurately
 					c.sliders[i].repeat,
 					false));				// NOTE: ignore curve when calculating inaccurately
 		}
@@ -894,7 +908,7 @@ OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT OsuDatabaseBeatmap::loadDifficultyHitObj
 				result.diffobjects[i].spanDuration = (double)result.diffobjects[i].spanDuration * invSpeedMultiplier;
 				for (int s=0; s<result.diffobjects[i].scoringTimes.size(); s++)
 				{
-					result.diffobjects[i].scoringTimes[s] = std::make_pair((long)((double)result.diffobjects[i].scoringTimes[s].first * invSpeedMultiplier), result.diffobjects[i].scoringTimes[s].second);
+					result.diffobjects[i].scoringTimes[s].time = (long)((double)result.diffobjects[i].scoringTimes[s].time * invSpeedMultiplier);
 				}
 			}
 		}

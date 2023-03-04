@@ -104,7 +104,6 @@ public:
 	};
 
 
-
 public:
 	OsuDatabaseBeatmap(Osu *osu, UString filePath, UString folder, bool filePathIsInMemoryBeatmap = false);
 	OsuDatabaseBeatmap(Osu *osu, std::vector<OsuDatabaseBeatmap*> &difficulties);
@@ -314,7 +313,7 @@ private:
 		float sliderTimeWithoutRepeats;
 		std::vector<float> ticks;
 
-		std::vector<std::pair<long, bool>> scoringTimesForStarCalc;
+		std::vector<OsuDifficultyHitObject::SLIDER_SCORING_TIME> scoringTimesForStarCalc;
 	};
 
 	struct SPINNER
