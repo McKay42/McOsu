@@ -29,11 +29,11 @@ OsuDifficultyHitObject::OsuDifficultyHitObject(TYPE type, Vector2 pos, long time
 {
 }
 
-OsuDifficultyHitObject::OsuDifficultyHitObject(TYPE type, Vector2 pos, long time, long endTime) : OsuDifficultyHitObject(type, pos, time, endTime, 0.0f, '\0', std::vector<Vector2>(), 0.0f, std::vector<std::pair<long, bool>>(), 0, true)
+OsuDifficultyHitObject::OsuDifficultyHitObject(TYPE type, Vector2 pos, long time, long endTime) : OsuDifficultyHitObject(type, pos, time, endTime, 0.0f, '\0', std::vector<Vector2>(), 0.0f, std::vector<SLIDER_SCORING_TIME>(), 0, true)
 {
 }
 
-OsuDifficultyHitObject::OsuDifficultyHitObject(TYPE type, Vector2 pos, long time, long endTime, float spanDuration, char osuSliderCurveType, std::vector<Vector2> controlPoints, float pixelLength, std::vector<std::pair<long, bool>> scoringTimes, int repeats, bool calculateSliderCurveInConstructor)
+OsuDifficultyHitObject::OsuDifficultyHitObject(TYPE type, Vector2 pos, long time, long endTime, float spanDuration, char osuSliderCurveType, std::vector<Vector2> controlPoints, float pixelLength, std::vector<SLIDER_SCORING_TIME> scoringTimes, int repeats, bool calculateSliderCurveInConstructor)
 {
 	this->type = type;
 	this->pos = pos;
@@ -826,7 +826,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 		{
 			if (slider.lazyCalcFinished || slider.ho->curve == NULL) return;
 
-			slider.lazyTravelTime = slider.ho->scoringTimes.back().first - slider.ho->time;
+			slider.lazyTravelTime = slider.ho->scoringTimes.back().time - slider.ho->time;
 
 			double endTimeMin = slider.lazyTravelTime / slider.ho->spanDuration;
 			if (std::fmod(endTimeMin, 2.0) >= 1.0)
@@ -841,13 +841,24 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 
 			for (size_t i=0; i<slider.ho->scoringTimes.size(); i++)
 			{
-				double progress = (clamp<long>(slider.ho->scoringTimes[i].first - slider.ho->time, 0, slider.ho->getDuration())) / slider.ho->spanDuration;
-				if (std::fmod(progress, 2.0) >= 1.0)
-					progress = 1.0 - std::fmod(progress, 1.0);
-				else
-					progress = std::fmod(progress, 1.0);
+				Vector2 diff;
 
-				Vector2 diff = slider.ho->curve->pointAt(progress) - cursor_pos;
+				if (slider.ho->scoringTimes[i].type == OsuDifficultyHitObject::SLIDER_SCORING_TIME::TYPE::END)
+				{
+					// NOTE: In lazer, the position of the slider end is at the visual end, but the time is at the scoring end
+					diff = slider.ho->curve->pointAt(slider.ho->repeats % 2 ? 1.0 : 0.0) - cursor_pos;
+				}
+				else
+				{
+					double progress = (clamp<long>(slider.ho->scoringTimes[i].time - slider.ho->time, 0, slider.ho->getDuration())) / slider.ho->spanDuration;
+					if (std::fmod(progress, 2.0) >= 1.0)
+						progress = 1.0 - std::fmod(progress, 1.0);
+					else
+						progress = std::fmod(progress, 1.0);
+
+					diff = slider.ho->curve->pointAt(progress) - cursor_pos;
+				}
+
 				double diff_len = scaling_factor * diff.length();
 
 				double req_diff = 90.0;
@@ -860,7 +871,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 						diff = lazy_diff;
 					diff_len = scaling_factor * diff.length();
 				}
-				else if (slider.ho->scoringTimes[i].second)
+				else if (slider.ho->scoringTimes[i].type == OsuDifficultyHitObject::SLIDER_SCORING_TIME::TYPE::REPEAT)
 				{
 					// Slider repeat
 					req_diff = 50.0;

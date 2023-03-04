@@ -28,10 +28,37 @@ public:
 		SLIDER,
 	};
 
+	struct SLIDER_SCORING_TIME
+	{
+		enum class TYPE
+		{
+			TICK,
+			REPEAT,
+			END,
+		};
+
+		TYPE type;
+		int time;
+
+		unsigned long long sortHack;
+	};
+
+	struct SliderScoringTimeComparator
+	{
+		bool operator() (const SLIDER_SCORING_TIME &a, const SLIDER_SCORING_TIME &b) const
+		{
+			// strict weak ordering!
+			if (a.time == b.time)
+				return a.sortHack < b.sortHack;
+			else
+				return a.time < b.time;
+		}
+	};
+
 public:
 	OsuDifficultyHitObject(TYPE type, Vector2 pos, long time); // circle
 	OsuDifficultyHitObject(TYPE type, Vector2 pos, long time, long endTime); // spinner
-	OsuDifficultyHitObject(TYPE type, Vector2 pos, long time, long endTime, float spanDuration, char osuSliderCurveType, std::vector<Vector2> controlPoints, float pixelLength, std::vector<std::pair<long, bool>> scoringTimes, int repeats, bool calculateSliderCurveInConstructor); // slider
+	OsuDifficultyHitObject(TYPE type, Vector2 pos, long time, long endTime, float spanDuration, char osuSliderCurveType, std::vector<Vector2> controlPoints, float pixelLength, std::vector<SLIDER_SCORING_TIME> scoringTimes, int repeats, bool calculateSliderCurveInConstructor); // slider
 	~OsuDifficultyHitObject();
 
 	OsuDifficultyHitObject(const OsuDifficultyHitObject&) = delete;
@@ -58,7 +85,7 @@ public:
 	float spanDuration; // i.e. sliderTimeWithoutRepeats
 	char osuSliderCurveType;
 	float pixelLength;
-	std::vector<std::pair<long, bool>> scoringTimes; // bool = is repeat
+	std::vector<SLIDER_SCORING_TIME> scoringTimes;
 	int repeats;
 
 	// custom

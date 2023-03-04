@@ -527,111 +527,124 @@ OsuDatabaseBeatmap::PRIMITIVE_CONTAINER OsuDatabaseBeatmap::loadPrimitiveObjects
 
 void OsuDatabaseBeatmap::calculateSliderTimesClicksTicks(int beatmapVersion, std::vector<SLIDER> &sliders, std::vector<TIMINGPOINT> &timingpoints, float sliderMultiplier, float sliderTickRate)
 {
-	if (timingpoints.size() > 0)
+	if (timingpoints.size() < 1) return;
+
+	struct SliderHelper
 	{
-		struct SliderHelper
+		static float getSliderTickDistance(float sliderMultiplier, float sliderTickRate)
 		{
-			static float getSliderTickDistance(float sliderMultiplier, float sliderTickRate)
-			{
-				return ((100.0f * sliderMultiplier) / sliderTickRate);
-			}
+			return ((100.0f * sliderMultiplier) / sliderTickRate);
+		}
 
-			static float getSliderTimeForSlider(const SLIDER &slider, const TIMING_INFO &timingInfo, float sliderMultiplier)
-			{
-				const float duration = timingInfo.beatLength * (slider.pixelLength / sliderMultiplier) / 100.0f;
-				return duration >= 1.0f ? duration : 1.0f; // sanity check
-			}
-
-			static float getSliderVelocity(const SLIDER &slider, const TIMING_INFO &timingInfo, float sliderMultiplier, float sliderTickRate)
-			{
-				const float beatLength = timingInfo.beatLength;
-				if (beatLength > 0.0f)
-					return (getSliderTickDistance(sliderMultiplier, sliderTickRate) * sliderTickRate * (1000.0f / beatLength));
-				else
-					return getSliderTickDistance(sliderMultiplier, sliderTickRate) * sliderTickRate;
-			}
-
-			static float getTimingPointMultiplierForSlider(const SLIDER &slider, const TIMING_INFO &timingInfo) // needed for slider ticks
-			{
-				float beatLengthBase = timingInfo.beatLengthBase;
-				if (beatLengthBase == 0.0f) // sanity check
-					beatLengthBase = 1.0f;
-
-				return timingInfo.beatLength / beatLengthBase;
-			}
-		};
-
-		for (int i=0; i<sliders.size(); i++)
+		static float getSliderTimeForSlider(const SLIDER &slider, const TIMING_INFO &timingInfo, float sliderMultiplier)
 		{
-			SLIDER &s = sliders[i];
+			const float duration = timingInfo.beatLength * (slider.pixelLength / sliderMultiplier) / 100.0f;
+			return duration >= 1.0f ? duration : 1.0f; // sanity check
+		}
 
-			// sanity reset
-			s.ticks.clear();
-			s.scoringTimesForStarCalc.clear();
+		static float getSliderVelocity(const SLIDER &slider, const TIMING_INFO &timingInfo, float sliderMultiplier, float sliderTickRate)
+		{
+			const float beatLength = timingInfo.beatLength;
+			if (beatLength > 0.0f)
+				return (getSliderTickDistance(sliderMultiplier, sliderTickRate) * sliderTickRate * (1000.0f / beatLength));
+			else
+				return getSliderTickDistance(sliderMultiplier, sliderTickRate) * sliderTickRate;
+		}
 
-			// calculate duration
-			const TIMING_INFO timingInfo = getTimingInfoForTimeAndTimingPoints(s.time, timingpoints);
-			s.sliderTimeWithoutRepeats = SliderHelper::getSliderTimeForSlider(s, timingInfo, sliderMultiplier);
-			s.sliderTime = s.sliderTimeWithoutRepeats * s.repeat;
+		static float getTimingPointMultiplierForSlider(const SLIDER &slider, const TIMING_INFO &timingInfo) // needed for slider ticks
+		{
+			float beatLengthBase = timingInfo.beatLengthBase;
+			if (beatLengthBase == 0.0f) // sanity check
+				beatLengthBase = 1.0f;
 
-			// calculate ticks
+			return timingInfo.beatLength / beatLengthBase;
+		}
+	};
+
+	unsigned long long sortHackCounter = 0;
+	for (int i=0; i<sliders.size(); i++)
+	{
+		SLIDER &s = sliders[i];
+
+		// sanity reset
+		s.ticks.clear();
+		s.scoringTimesForStarCalc.clear();
+
+		// calculate duration
+		const TIMING_INFO timingInfo = getTimingInfoForTimeAndTimingPoints(s.time, timingpoints);
+		s.sliderTimeWithoutRepeats = SliderHelper::getSliderTimeForSlider(s, timingInfo, sliderMultiplier);
+		s.sliderTime = s.sliderTimeWithoutRepeats * s.repeat;
+
+		// calculate ticks
+		{
+			const float minTickPixelDistanceFromEnd = 0.01f * SliderHelper::getSliderVelocity(s, timingInfo, sliderMultiplier, sliderTickRate);
+			const float tickPixelLength = (beatmapVersion < 8 ? SliderHelper::getSliderTickDistance(sliderMultiplier, sliderTickRate) : SliderHelper::getSliderTickDistance(sliderMultiplier, sliderTickRate) / SliderHelper::getTimingPointMultiplierForSlider(s, timingInfo));
+			const float tickDurationPercentOfSliderLength = tickPixelLength / (s.pixelLength == 0.0f ? 1.0f : s.pixelLength);
+			const int tickCount = std::min((int)std::ceil(s.pixelLength / tickPixelLength) - 1, 65536/2); // NOTE: hard sanity limit number of ticks per slider
+
+			if (tickCount > 0 && !timingInfo.isNaN && !std::isnan(s.pixelLength) && !std::isnan(tickPixelLength)) // don't generate ticks for NaN timingpoints and infinite values
 			{
-				const float minTickPixelDistanceFromEnd = 0.01f * SliderHelper::getSliderVelocity(s, timingInfo, sliderMultiplier, sliderTickRate);
-				const float tickPixelLength = (beatmapVersion < 8 ? SliderHelper::getSliderTickDistance(sliderMultiplier, sliderTickRate) : SliderHelper::getSliderTickDistance(sliderMultiplier, sliderTickRate) / SliderHelper::getTimingPointMultiplierForSlider(s, timingInfo));
-				const float tickDurationPercentOfSliderLength = tickPixelLength / (s.pixelLength == 0.0f ? 1.0f : s.pixelLength);
-				const int tickCount = std::min((int)std::ceil(s.pixelLength / tickPixelLength) - 1, 65536/2); // NOTE: hard sanity limit number of ticks per slider
-
-				if (tickCount > 0 && !timingInfo.isNaN && !std::isnan(s.pixelLength) && !std::isnan(tickPixelLength)) // don't generate ticks for NaN timingpoints and infinite values
+				const float tickTOffset = tickDurationPercentOfSliderLength;
+				float pixelDistanceToEnd = s.pixelLength;
+				float t = tickTOffset;
+				for (int i=0; i<tickCount; i++, t+=tickTOffset)
 				{
-					const float tickTOffset = tickDurationPercentOfSliderLength;
-					float pixelDistanceToEnd = s.pixelLength;
-					float t = tickTOffset;
-					for (int i=0; i<tickCount; i++, t+=tickTOffset)
-					{
-						// skip ticks which are too close to the end of the slider
-						pixelDistanceToEnd -= tickPixelLength;
-						if (pixelDistanceToEnd <= minTickPixelDistanceFromEnd)
-							break;
+					// skip ticks which are too close to the end of the slider
+					pixelDistanceToEnd -= tickPixelLength;
+					if (pixelDistanceToEnd <= minTickPixelDistanceFromEnd)
+						break;
 
-						s.ticks.push_back(t);
-					}
+					s.ticks.push_back(t);
+				}
+			}
+		}
+
+		// calculate s.scoringTimesForStarCalc, which should include every point in time where the cursor must be within the followcircle radius and at least one key must be pressed:
+		// see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Preprocessing/OsuDifficultyHitObject.cs
+		// NOTE: only necessary since the latest pp changes (Xexxar)
+		if (m_osu_stars_xexxar_angles_sliders_ref->getBool())
+		{
+			const long osuSliderEndInsideCheckOffset = (long)m_osu_slider_end_inside_check_offset_ref->getInt();
+
+			// 1) "skip the head circle"
+
+			// 2) add repeat times (either at slider begin or end)
+			for (int i=0; i<(s.repeat - 1); i++)
+			{
+				const long time = s.time + (long)(s.sliderTimeWithoutRepeats * (i+1)); // see OsuSlider.cpp
+				s.scoringTimesForStarCalc.push_back(OsuDifficultyHitObject::SLIDER_SCORING_TIME{
+					.type = OsuDifficultyHitObject::SLIDER_SCORING_TIME::TYPE::REPEAT,
+					.time = time,
+					.sortHack = sortHackCounter++,
+				});
+			}
+
+			// 3) add tick times (somewhere within slider, repeated for every repeat)
+			for (int i=0; i<s.repeat; i++)
+			{
+				for (int t=0; t<s.ticks.size(); t++)
+				{
+					const float tickPercentRelativeToRepeatFromStartAbs = (((i+1) % 2) != 0 ? s.ticks[t] : 1.0f - s.ticks[t]); // see OsuSlider.cpp
+					const long time = s.time + (long)(s.sliderTimeWithoutRepeats * i) + (long)(tickPercentRelativeToRepeatFromStartAbs * s.sliderTimeWithoutRepeats); // see OsuSlider.cpp
+					s.scoringTimesForStarCalc.push_back(OsuDifficultyHitObject::SLIDER_SCORING_TIME{
+						.type = OsuDifficultyHitObject::SLIDER_SCORING_TIME::TYPE::TICK,
+						.time = time,
+						.sortHack = sortHackCounter++,
+					});
 				}
 			}
 
-			// calculate s.scoringTimesForStarCalc, which should include every point in time where the cursor must be within the followcircle radius and at least one key must be pressed:
-			// see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Preprocessing/OsuDifficultyHitObject.cs
-			// NOTE: only necessary since the latest pp changes (Xexxar)
-			if (m_osu_stars_xexxar_angles_sliders_ref->getBool())
-			{
-				const long osuSliderEndInsideCheckOffset = (long)m_osu_slider_end_inside_check_offset_ref->getInt();
+			// 4) add slider end (potentially before last tick for bullshit sliders, but sorting takes care of that)
+			// see https://github.com/ppy/osu/pull/4193#issuecomment-460127543
+			const long time = std::max(s.time + (long)s.sliderTime / 2, (s.time + (long)s.sliderTime) - osuSliderEndInsideCheckOffset);
+			s.scoringTimesForStarCalc.push_back(OsuDifficultyHitObject::SLIDER_SCORING_TIME{
+				.type = OsuDifficultyHitObject::SLIDER_SCORING_TIME::TYPE::END,
+				.time = time,
+				.sortHack = sortHackCounter++,
+			});
 
-				// 1) "skip the head circle"
-
-				// 2) add repeat times (either at slider begin or end)
-				for (int i=0; i<(s.repeat - 1); i++)
-				{
-					const long time = s.time + (long)(s.sliderTimeWithoutRepeats * (i+1)); // see OsuSlider.cpp
-					s.scoringTimesForStarCalc.push_back(std::make_pair(time, true));
-				}
-
-				// 3) add tick times (somewhere within slider, repeated for every repeat)
-				for (int i=0; i<s.repeat; i++)
-				{
-					for (int t=0; t<s.ticks.size(); t++)
-					{
-						const float tickPercentRelativeToRepeatFromStartAbs = (((i+1) % 2) != 0 ? s.ticks[t] : 1.0f - s.ticks[t]); // see OsuSlider.cpp
-						const long time = s.time + (long)(s.sliderTimeWithoutRepeats * i) + (long)(tickPercentRelativeToRepeatFromStartAbs * s.sliderTimeWithoutRepeats); // see OsuSlider.cpp
-						s.scoringTimesForStarCalc.push_back(std::make_pair(time, false));
-					}
-				}
-
-				// 4) add slider end (potentially before last tick for bullshit sliders, but sorting takes care of that)
-				// see https://github.com/ppy/osu/pull/4193#issuecomment-460127543
-				s.scoringTimesForStarCalc.push_back(std::make_pair(std::max(s.time + (long)s.sliderTime / 2, (s.time + (long)s.sliderTime) - osuSliderEndInsideCheckOffset), false)); // see OsuSlider.cpp
-
-				// 5) sort scoringTimes from earliest to latest
-				std::sort(s.scoringTimesForStarCalc.begin(), s.scoringTimesForStarCalc.end(), std::less<std::pair<long, bool>>());
-			}
+			// 5) sort scoringTimes from earliest to latest
+			std::sort(s.scoringTimesForStarCalc.begin(), s.scoringTimesForStarCalc.end(), OsuDifficultyHitObject::SliderScoringTimeComparator());
 		}
 	}
 }
@@ -707,7 +720,7 @@ OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT OsuDatabaseBeatmap::loadDifficultyHitObj
 					c.sliders[i].type,
 					std::vector<Vector2>(),	// NOTE: ignore curve when calculating inaccurately
 					c.sliders[i].pixelLength,
-					std::vector<std::pair<long, bool>>(),	// NOTE: ignore curve when calculating inaccurately
+					std::vector<OsuDifficultyHitObject::SLIDER_SCORING_TIME>(),	// NOTE: ignore curve when calculating inaccurately
 					c.sliders[i].repeat,
 					false));				// NOTE: ignore curve when calculating inaccurately
 		}
@@ -894,7 +907,7 @@ OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT OsuDatabaseBeatmap::loadDifficultyHitObj
 				result.diffobjects[i].spanDuration = (double)result.diffobjects[i].spanDuration * invSpeedMultiplier;
 				for (int s=0; s<result.diffobjects[i].scoringTimes.size(); s++)
 				{
-					result.diffobjects[i].scoringTimes[s] = std::make_pair((long)((double)result.diffobjects[i].scoringTimes[s].first * invSpeedMultiplier), result.diffobjects[i].scoringTimes[s].second);
+					result.diffobjects[i].scoringTimes[s].time = (long)((double)result.diffobjects[i].scoringTimes[s].time * invSpeedMultiplier);
 				}
 			}
 		}
