@@ -35,8 +35,12 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	std::vector<CHANGELOG> changelogs;
 
 	CHANGELOG alpha317;
-	alpha317.title = UString::format("33.04 (Build Date: %s, %s)", __DATE__, __TIME__); // (09.01.2022 - ?)
+	alpha317.title = UString::format("33.05 (Build Date: %s, %s)", __DATE__, __TIME__); // (09.01.2022 - ?)
+	alpha317.changes.push_back("- Added option \"[Beta] RawInputBuffer\" (Options > Input > Mouse)");
+	alpha317.changes.push_back("");
+	alpha317.changes.push_back("");
 	alpha317.changes.push_back("- Fixed visual vs scoring slider end check in new lazer star calc (@Khangaroo)");
+	alpha317.changes.push_back("- Fixed star calc stacking sometimes being calculated inaccurately");
 	alpha317.changes.push_back("");
 	alpha317.changes.push_back("");
 	alpha317.changes.push_back("- Updated star + pp algorithms to match current lazer implementation aka 20220902 (16) (thanks to @Khangaroo!)");

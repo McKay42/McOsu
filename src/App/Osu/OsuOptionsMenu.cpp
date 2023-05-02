@@ -867,6 +867,11 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	if (env->getOS() == Environment::OS::OS_WINDOWS)
 	{
 		addCheckbox("Raw Input", convar->getConVarByName("mouse_raw_input"));
+		{
+			ConVar *win_mouse_raw_input_buffer_ref = convar->getConVarByName("win_mouse_raw_input_buffer", false);
+			if (win_mouse_raw_input_buffer_ref != NULL)
+				addCheckbox("[Beta] RawInputBuffer", "Improves performance problems caused by insane mouse usb polling rates above 1000 Hz.\nOnly relevant if \"Raw Input\" is enabled, or if in FPoSu mode (with disabled \"Tablet/Absolute Mode\").", win_mouse_raw_input_buffer_ref);
+		}
 		addCheckbox("Map Absolute Raw Input to Window", convar->getConVarByName("mouse_raw_input_absolute_to_window"))->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onRawInputToAbsoluteWindowChange) );
 	}
 	if (env->getOS() == Environment::OS::OS_LINUX)
