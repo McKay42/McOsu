@@ -40,6 +40,7 @@ ConVar osu_mod_random_spinner_offset_y_percent("osu_mod_random_spinner_offset_y_
 ConVar osu_mod_reverse_sliders("osu_mod_reverse_sliders", false);
 ConVar osu_mod_strict_tracking("osu_mod_strict_tracking", false);
 ConVar osu_mod_strict_tracking_remove_slider_ticks("osu_mod_strict_tracking_remove_slider_ticks", false, "whether the strict tracking mod should remove slider ticks or not, this changed after its initial implementation in lazer");
+ConVar osu_mod_no_sliders("osu_mod_no_sliders", false);
 
 ConVar osu_show_approach_circle_on_first_hidden_object("osu_show_approach_circle_on_first_hidden_object", true);
 
@@ -51,6 +52,13 @@ ConVar osu_number_max("osu_number_max", 0, "0 = disabled, 1/2/3/4/etc. limits vi
 ConVar osu_ignore_beatmap_combo_numbers("osu_ignore_beatmap_combo_numbers", false, "may be used in conjunction with osu_number_max");
 
 ConVar osu_beatmap_version("osu_beatmap_version", 14, "maximum supported .osu file version, above this will simply not load");
+
+ConVar osu_map_pp_calc_dynamic_acc_mode("osu_map_pp_calc_dynamic_acc_mode", true);
+ConVar osu_map_pp_calc_dynamic_acc("osu_map_pp_calc_dynamic_acc", 1.0f);
+ConVar osu_map_pp_calc_combo("osu_map_pp_calc_combo", -1);
+ConVar osu_map_pp_calc_c100("osu_map_pp_calc_c100", 0);
+ConVar osu_map_pp_calc_c50("osu_map_pp_calc_c50", 0);
+ConVar osu_map_pp_calc_misses("osu_map_pp_calc_misses", 0);
 
 unsigned long long OsuDatabaseBeatmap::sortHackCounter = 0;
 
@@ -358,7 +366,7 @@ OsuDatabaseBeatmap::PRIMITIVE_CONTAINER OsuDatabaseBeatmap::loadPrimitiveObjects
 							colorOffset += (type >> 4) & 7; // special case 3: "Bits 4-6 (16, 32, 64) form a 3-bit number (0-7) that chooses how many combo colours to skip."
 						}
 
-						if (type & 0x1) // circle
+						if ((type & 0x1) || (osu_mod_no_sliders.getBool() && (type & 0x2))) // circle
 						{
 							HITCIRCLE h;
 							{
@@ -1900,12 +1908,26 @@ OsuDatabaseBeatmapStarCalculator::OsuDatabaseBeatmapStarCalculator() : Resource(
 	m_iMaxPossibleCombo = 0;
 }
 
+
+
+
+
+
 void OsuDatabaseBeatmapStarCalculator::init()
 {
 	// NOTE: this accesses runtime mods, so must be run sync (not async)
 	// technically the getSelectedBeatmap() call here is a bit unsafe, since the beatmap could have changed already between async and sync, but in that case we recalculate immediately after anyways
 	if (!m_bDead.load() && m_iErrorCode == 0 && m_diff2->m_osu->getSelectedBeatmap() != NULL)
-		m_pp = OsuDifficultyCalculator::calculatePPv2(m_diff2->m_osu, m_diff2->m_osu->getSelectedBeatmap(), m_aimStars.load(), m_aimSliderFactor.load(), m_speedStars.load(), m_speedNotes.load(), m_iNumObjects.load(), m_iNumCircles.load(), m_iNumSliders.load(), m_iNumSpinners.load(), m_iMaxPossibleCombo);
+		if (osu_map_pp_calc_dynamic_acc_mode.getBool())
+		{
+			float num_of_100s_dynamic = 1.5f * m_iNumObjects * (1.0f - osu_map_pp_calc_dynamic_acc.getFloat());
+			m_pp = OsuDifficultyCalculator::calculatePPv2(m_diff2->m_osu, m_diff2->m_osu->getSelectedBeatmap(), m_aimStars.load(), m_aimSliderFactor.load(), m_speedStars.load(), m_speedNotes.load(), m_iNumObjects.load(), m_iNumCircles.load(), m_iNumSliders.load(), m_iNumSpinners.load(), m_iMaxPossibleCombo, -1, 0, -1, round(num_of_100s_dynamic), 0);
+		}
+		else 
+		{
+			m_pp = OsuDifficultyCalculator::calculatePPv2(m_diff2->m_osu, m_diff2->m_osu->getSelectedBeatmap(), m_aimStars.load(), m_aimSliderFactor.load(), m_speedStars.load(), m_speedNotes.load(), m_iNumObjects.load(), m_iNumCircles.load(), m_iNumSliders.load(), m_iNumSpinners.load(), m_iMaxPossibleCombo, osu_map_pp_calc_combo.getInt(), osu_map_pp_calc_misses.getInt(), -1, osu_map_pp_calc_c100.getInt(), osu_map_pp_calc_c50.getInt());
+		}
+			
 
 	m_bReady = true;
 }

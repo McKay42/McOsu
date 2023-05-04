@@ -255,6 +255,8 @@ private:
 	void onModeChange(UString text);
 	void onModeChange2(UString text, int id = -1);
 
+	void onPpCalcChange(UString text);
+
 	void onUserButtonClicked();
 	void onUserButtonChange(UString text, int id);
 
@@ -282,6 +284,13 @@ private:
 	ConVar *m_osu_draw_statistics_totalstars_ref;
 
 	ConVar *m_osu_mod_fposu_ref;
+
+	ConVar *m_osu_map_pp_calc_dynamic_acc_mode_ref;
+	ConVar *m_osu_map_pp_calc_dynamic_acc_ref;
+	ConVar *m_osu_map_pp_calc_combo_ref;
+	ConVar *m_osu_map_pp_calc_c100_ref;
+	ConVar *m_osu_map_pp_calc_c50_ref;
+	ConVar *m_osu_map_pp_calc_misses_ref;
 
 	Osu *m_osu;
 	std::mt19937 m_rngalg;

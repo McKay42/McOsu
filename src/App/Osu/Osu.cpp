@@ -65,7 +65,7 @@
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 33.05f);
+ConVar osu_version("osu_version", 33.06f);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr");
 #else
@@ -194,6 +194,8 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_wobble2"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_shirone"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_approach_different"));
+
+	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_no_sliders"));
 
 	// engine settings/overrides
 	engine->getSound()->setOnOutputDeviceChange([this] {onAudioOutputDeviceChange();});
