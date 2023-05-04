@@ -290,6 +290,9 @@ private:
 	ConVar *m_win_snd_wasapi_period_size_ref;
 	ConVar *m_osu_notelock_type_ref;
 	ConVar *m_osu_drain_type_ref;
+	ConVar *m_osu_background_color_r_ref;
+	ConVar *m_osu_background_color_g_ref;
+	ConVar *m_osu_background_color_b_ref;
 
 	float m_fOsuFolderTextboxInvalidAnim;
 	float m_fVibrationStrengthExampleTimer;
