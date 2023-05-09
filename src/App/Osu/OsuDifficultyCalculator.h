@@ -70,6 +70,7 @@ public:
 	void updateCurveStackPosition(float stackOffset);
 
 	Vector2 getOriginalRawPosAt(long pos); // for stacking calculations, always returns the unstacked original position at that point in time
+	float getT(long pos, bool raw);
 
 	inline long getDuration() const {return endTime - time;}
 

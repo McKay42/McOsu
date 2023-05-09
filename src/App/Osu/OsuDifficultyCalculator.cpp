@@ -178,6 +178,8 @@ Vector2 OsuDifficultyHitObject::getOriginalRawPosAt(long pos)
 		}
 		*/
 
+		// old (broken)
+		/*
         float progress = (float)(clamp<long>(pos, time, endTime)) / spanDuration;
         if (std::fmod(progress, 2.0f) >= 1.0f)
             progress = 1.0f - std::fmod(progress, 1.0f);
@@ -185,6 +187,20 @@ Vector2 OsuDifficultyHitObject::getOriginalRawPosAt(long pos)
             progress = std::fmod(progress, 1.0f);
 
         const Vector2 originalPointAt = curve->originalPointAt(progress);
+        */
+
+		// new (correct)
+		if (pos <= time)
+			return curve->originalPointAt(0.0f);
+		else if (pos >= endTime)
+		{
+			if (repeats % 2 == 0)
+				return curve->originalPointAt(0.0f);
+			else
+				return curve->originalPointAt(1.0f);
+		}
+		else
+			return curve->originalPointAt(getT(pos, false));
 
         /*
         // MCKAY:
@@ -194,8 +210,18 @@ Vector2 OsuDifficultyHitObject::getOriginalRawPosAt(long pos)
         		SAFE_DELETE(curve);
         }
 		*/
+	}
+}
 
-        return originalPointAt;
+float OsuDifficultyHitObject::getT(long pos, bool raw)
+{
+	float t = (float)((long)pos - (long)time) / spanDuration;
+	if (raw)
+		return t;
+	else
+	{
+		float floorVal = (float) std::floor(t);
+		return ((int)floorVal % 2 == 0) ? t - floorVal : floorVal + 1 - t;
 	}
 }
 

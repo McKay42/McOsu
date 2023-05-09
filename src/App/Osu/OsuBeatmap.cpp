@@ -75,7 +75,10 @@ ConVar osu_background_dont_fade_during_breaks("osu_background_dont_fade_during_b
 ConVar osu_background_fade_min_duration("osu_background_fade_min_duration", 1.4f, "Only fade if the break is longer than this (in seconds)");
 ConVar osu_background_fade_in_duration("osu_background_fade_in_duration", 0.85f);
 ConVar osu_background_fade_out_duration("osu_background_fade_out_duration", 0.25f);
-ConVar osu_background_brightness("osu_background_brightness", 0.0f);
+ConVar osu_background_brightness("osu_background_brightness", 0.0f, "0 to 1, if this is larger than 0 then it will replace the entire beatmap background image with a solid color (see osu_background_color_r/g/b)");
+ConVar osu_background_color_r("osu_background_color_r", 255.0f, "0 to 255, only relevant if osu_background_brightness is larger than 0");
+ConVar osu_background_color_g("osu_background_color_g", 255.0f, "0 to 255, only relevant if osu_background_brightness is larger than 0");
+ConVar osu_background_color_b("osu_background_color_b", 255.0f, "0 to 255, only relevant if osu_background_brightness is larger than 0");
 ConVar osu_hiterrorbar_misaims("osu_hiterrorbar_misaims", true);
 
 ConVar osu_followpoints_prevfadetime("osu_followpoints_prevfadetime", 400.0f); // TODO: this shouldn't be in this class
@@ -315,9 +318,12 @@ void OsuBeatmap::drawBackground(Graphics *g)
 	// draw background
 	if (osu_background_brightness.getFloat() > 0.0f)
 	{
-		const short brightness = clamp<float>(osu_background_brightness.getFloat(), 0.0f, 1.0f)*255.0f;
+		const float brightness = osu_background_brightness.getFloat();
+		const short red = clamp<float>(brightness * osu_background_color_r.getFloat(), 0.0f, 255.0f);
+		const short green = clamp<float>(brightness * osu_background_color_g.getFloat(), 0.0f, 255.0f);
+		const short blue = clamp<float>(brightness * osu_background_color_b.getFloat(), 0.0f, 255.0f);
 		const short alpha = clamp<float>(1.0f - m_fBreakBackgroundFade, 0.0f, 1.0f)*255.0f;
-		g->setColor(COLOR(alpha, brightness, brightness, brightness));
+		g->setColor(COLOR(alpha, red, green, blue));
 		g->fillRect(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight());
 	}
 

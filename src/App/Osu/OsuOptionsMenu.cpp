@@ -413,6 +413,9 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_win_snd_wasapi_period_size_ref = convar->getConVarByName("win_snd_wasapi_period_size", false);
 	m_osu_notelock_type_ref = convar->getConVarByName("osu_notelock_type");
 	m_osu_drain_type_ref = convar->getConVarByName("osu_drain_type");
+	m_osu_background_color_r_ref = convar->getConVarByName("osu_background_color_r");
+	m_osu_background_color_g_ref = convar->getConVarByName("osu_background_color_g");
+	m_osu_background_color_b_ref = convar->getConVarByName("osu_background_color_b");
 
 	// convar callbacks
 	convar->getConVarByName("osu_skin_use_skin_hitsounds")->setCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onUseSkinsSoundSamplesChange) );
@@ -867,6 +870,11 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	if (env->getOS() == Environment::OS::OS_WINDOWS)
 	{
 		addCheckbox("Raw Input", convar->getConVarByName("mouse_raw_input"));
+		{
+			ConVar *win_mouse_raw_input_buffer_ref = convar->getConVarByName("win_mouse_raw_input_buffer", false);
+			if (win_mouse_raw_input_buffer_ref != NULL)
+				addCheckbox("[Beta] RawInputBuffer", "Improves performance problems caused by insane mouse usb polling rates above 1000 Hz.\nOnly relevant if \"Raw Input\" is enabled, or if in FPoSu mode (with disabled \"Tablet/Absolute Mode\").", win_mouse_raw_input_buffer_ref);
+		}
 		addCheckbox("Map Absolute Raw Input to Window", convar->getConVarByName("mouse_raw_input_absolute_to_window"))->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onRawInputToAbsoluteWindowChange) );
 	}
 	if (env->getOS() == Environment::OS::OS_LINUX)
@@ -1235,10 +1243,13 @@ void OsuOptionsMenu::draw(Graphics *g)
 	{
 		if (!isPlayingBeatmap)
 		{
-			const short brightness = clamp<float>(m_backgroundBrightnessSlider->getFloat(), 0.0f, 1.0f)*255.0f;
-			if (brightness > 0)
+			const float brightness = clamp<float>(m_backgroundBrightnessSlider->getFloat(), 0.0f, 1.0f);
+			const short red = clamp<float>(brightness * m_osu_background_color_r_ref->getFloat(), 0.0f, 255.0f);
+			const short green = clamp<float>(brightness * m_osu_background_color_g_ref->getFloat(), 0.0f, 255.0f);
+			const short blue = clamp<float>(brightness * m_osu_background_color_b_ref->getFloat(), 0.0f, 255.0f);
+			if (brightness > 0.0f)
 			{
-				g->setColor(COLOR(255, brightness, brightness, brightness));
+				g->setColor(COLOR(255, red, green, blue));
 				g->fillRect(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight());
 			}
 		}
