@@ -195,6 +195,8 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_shirone"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_approach_different"));
 
+	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_no_sliders"));
+
 	// engine settings/overrides
 	engine->getSound()->setOnOutputDeviceChange([this] {onAudioOutputDeviceChange();});
 	openvr->setDrawCallback( fastdelegate::MakeDelegate(this, &Osu::drawVR) );

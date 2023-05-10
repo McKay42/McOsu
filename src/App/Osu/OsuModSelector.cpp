@@ -254,6 +254,7 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen(osu)
 	addExperimentalCheckbox("Strict Tracking", "Leaving sliders in any way counts as a miss and combo break. (Reload beatmap to apply!)", convar->getConVarByName("osu_mod_strict_tracking"));
 	addExperimentalCheckbox("Flip Up/Down", "Playfield is flipped upside down (mirrored at horizontal axis).", convar->getConVarByName("osu_playfield_mirror_horizontal"));
 	addExperimentalCheckbox("Flip Left/Right", "Playfield is flipped left/right (mirrored at vertical axis).", convar->getConVarByName("osu_playfield_mirror_vertical"));
+	addExperimentalCheckbox("No Sliders", "Remove all sliders. Sliderheads are notes now.", convar->getConVarByName("osu_mod_no_sliders"));
 
 	// build score multiplier label
 	m_scoreMultiplierLabel = new CBaseUILabel();
