@@ -366,7 +366,7 @@ OsuDatabaseBeatmap::PRIMITIVE_CONTAINER OsuDatabaseBeatmap::loadPrimitiveObjects
 							colorOffset += (type >> 4) & 7; // special case 3: "Bits 4-6 (16, 32, 64) form a 3-bit number (0-7) that chooses how many combo colours to skip."
 						}
 
-						if ((type & 0x1) || (osu_mod_no_sliders.getBool() && (type & 0x2))) // circle
+						if (type & 0x1) // circle
 						{
 							HITCIRCLE h;
 							{
@@ -1444,30 +1444,49 @@ OsuDatabaseBeatmap::LOAD_GAMEPLAY_RESULT OsuDatabaseBeatmap::loadGameplay(OsuDat
 			}
 			maxPossibleCombo += c.hitcircles.size();
 
-			for (size_t i=0; i<c.sliders.size(); i++)
+			if (!osu_mod_no_sliders.getBool())
 			{
-				SLIDER &s = c.sliders[i];
-
-				if (osu_mod_strict_tracking.getBool() && osu_mod_strict_tracking_remove_slider_ticks.getBool())
-					s.ticks.clear();
-
-				if (osu_mod_random.getBool())
+				for (size_t i = 0; i < c.sliders.size(); i++)
 				{
-					for (int p=0; p<s.points.size(); p++)
+					SLIDER& s = c.sliders[i];
+
+					if (osu_mod_strict_tracking.getBool() && osu_mod_strict_tracking_remove_slider_ticks.getBool())
+						s.ticks.clear();
+
+					if (osu_mod_random.getBool())
 					{
-						s.points[p].x = clamp<int>(s.points[p].x - (int)(((rand() % OsuGameRules::OSU_COORD_WIDTH) / 3.0f) * osu_mod_random_slider_offset_x_percent.getFloat()), 0, OsuGameRules::OSU_COORD_WIDTH);
-						s.points[p].y = clamp<int>(s.points[p].y - (int)(((rand() % OsuGameRules::OSU_COORD_HEIGHT) / 3.0f) * osu_mod_random_slider_offset_y_percent.getFloat()), 0, OsuGameRules::OSU_COORD_HEIGHT);
+						for (int p = 0; p < s.points.size(); p++)
+						{
+							s.points[p].x = clamp<int>(s.points[p].x - (int)(((rand() % OsuGameRules::OSU_COORD_WIDTH) / 3.0f) * osu_mod_random_slider_offset_x_percent.getFloat()), 0, OsuGameRules::OSU_COORD_WIDTH);
+							s.points[p].y = clamp<int>(s.points[p].y - (int)(((rand() % OsuGameRules::OSU_COORD_HEIGHT) / 3.0f) * osu_mod_random_slider_offset_y_percent.getFloat()), 0, OsuGameRules::OSU_COORD_HEIGHT);
+						}
 					}
+
+					if (osu_mod_reverse_sliders.getBool())
+						std::reverse(s.points.begin(), s.points.end());
+
+					result.hitobjects.push_back(new OsuSlider(s.type, s.repeat, s.pixelLength, s.points, s.hitSounds, s.ticks, s.sliderTime, s.sliderTimeWithoutRepeats, s.time, s.sampleType, s.number, false, s.colorCounter, s.colorOffset, beatmapStandard));
+
+					const int repeats = std::max((s.repeat - 1), 0);
+					maxPossibleCombo += 2 + repeats + (repeats + 1) * s.ticks.size(); // start/end + repeat arrow + ticks
 				}
-
-				if (osu_mod_reverse_sliders.getBool())
-					std::reverse(s.points.begin(), s.points.end());
-
-				result.hitobjects.push_back(new OsuSlider(s.type, s.repeat, s.pixelLength, s.points, s.hitSounds, s.ticks, s.sliderTime, s.sliderTimeWithoutRepeats, s.time, s.sampleType, s.number, false, s.colorCounter, s.colorOffset, beatmapStandard));
-
-				const int repeats = std::max((s.repeat - 1), 0);
-				maxPossibleCombo += 2 + repeats + (repeats+1)*s.ticks.size(); // start/end + repeat arrow + ticks
 			}
+			else
+			{
+				for (size_t i = 0; i < c.sliders.size(); i++)
+				{
+					SLIDER& h = c.sliders[i];
+
+					if (osu_mod_random.getBool())
+					{
+						h.x = clamp<int>(h.x - (int)(((rand() % OsuGameRules::OSU_COORD_WIDTH) / 8.0f) * osu_mod_random_circle_offset_x_percent.getFloat()), 0, OsuGameRules::OSU_COORD_WIDTH);
+						h.y = clamp<int>(h.y - (int)(((rand() % OsuGameRules::OSU_COORD_HEIGHT) / 8.0f) * osu_mod_random_circle_offset_y_percent.getFloat()), 0, OsuGameRules::OSU_COORD_HEIGHT);
+					}
+
+					result.hitobjects.push_back(new OsuCircle(h.x, h.y, h.time, h.sampleType, h.number, false, h.colorCounter, h.colorOffset, beatmapStandard));
+				}
+			}
+			
 
 			for (size_t i=0; i<c.spinners.size(); i++)
 			{
@@ -1908,25 +1927,22 @@ OsuDatabaseBeatmapStarCalculator::OsuDatabaseBeatmapStarCalculator() : Resource(
 	m_iMaxPossibleCombo = 0;
 }
 
-
-
-
-
-
 void OsuDatabaseBeatmapStarCalculator::init()
 {
 	// NOTE: this accesses runtime mods, so must be run sync (not async)
 	// technically the getSelectedBeatmap() call here is a bit unsafe, since the beatmap could have changed already between async and sync, but in that case we recalculate immediately after anyways
 	if (!m_bDead.load() && m_iErrorCode == 0 && m_diff2->m_osu->getSelectedBeatmap() != NULL)
+	{
 		if (osu_map_pp_calc_dynamic_acc_mode.getBool())
 		{
 			float num_of_100s_dynamic = 1.5f * m_iNumObjects * (1.0f - osu_map_pp_calc_dynamic_acc.getFloat());
 			m_pp = OsuDifficultyCalculator::calculatePPv2(m_diff2->m_osu, m_diff2->m_osu->getSelectedBeatmap(), m_aimStars.load(), m_aimSliderFactor.load(), m_speedStars.load(), m_speedNotes.load(), m_iNumObjects.load(), m_iNumCircles.load(), m_iNumSliders.load(), m_iNumSpinners.load(), m_iMaxPossibleCombo, -1, 0, -1, round(num_of_100s_dynamic), 0);
 		}
-		else 
+		else
 		{
 			m_pp = OsuDifficultyCalculator::calculatePPv2(m_diff2->m_osu, m_diff2->m_osu->getSelectedBeatmap(), m_aimStars.load(), m_aimSliderFactor.load(), m_speedStars.load(), m_speedNotes.load(), m_iNumObjects.load(), m_iNumCircles.load(), m_iNumSliders.load(), m_iNumSpinners.load(), m_iMaxPossibleCombo, osu_map_pp_calc_combo.getInt(), osu_map_pp_calc_misses.getInt(), -1, osu_map_pp_calc_c100.getInt(), osu_map_pp_calc_c50.getInt());
 		}
+	}
 			
 
 	m_bReady = true;

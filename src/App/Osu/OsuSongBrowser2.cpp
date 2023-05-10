@@ -453,12 +453,12 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	// convar callbacks
 	osu_gamemode.setCallback( fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onModeChange) );
 
-	m_osu_map_pp_calc_dynamic_acc_mode_ref->setCallback(fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onPpCalcChange));
-	m_osu_map_pp_calc_dynamic_acc_ref->setCallback(fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onPpCalcChange));
-	m_osu_map_pp_calc_combo_ref->setCallback(fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onPpCalcChange));
-	m_osu_map_pp_calc_c100_ref->setCallback(fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onPpCalcChange));
-	m_osu_map_pp_calc_c50_ref->setCallback(fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onPpCalcChange));
-	m_osu_map_pp_calc_misses_ref->setCallback(fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onPpCalcChange));
+	m_osu_map_pp_calc_dynamic_acc_mode_ref->setCallback(fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onMapPpCalcCovnarChange));
+	m_osu_map_pp_calc_dynamic_acc_ref->setCallback(fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onMapPpCalcCovnarChange));
+	m_osu_map_pp_calc_combo_ref->setCallback(fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onMapPpCalcCovnarChange));
+	m_osu_map_pp_calc_c100_ref->setCallback(fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onMapPpCalcCovnarChange));
+	m_osu_map_pp_calc_c50_ref->setCallback(fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onMapPpCalcCovnarChange));
+	m_osu_map_pp_calc_misses_ref->setCallback(fastdelegate::MakeDelegate(this, &OsuSongBrowser2::onMapPpCalcCovnarChange));
 
 	// vars
 	m_bSongBrowserRightClickScrollCheck = false;
@@ -4065,7 +4065,7 @@ void OsuSongBrowser2::onModeChange2(UString text, int id)
 	}
 }
 
-void OsuSongBrowser2::onPpCalcChange(UString text)
+void OsuSongBrowser2::onMapPpCalcCovnarChange(UString text)
 {
 	recalculateStarsForSelectedBeatmap(true);
 }

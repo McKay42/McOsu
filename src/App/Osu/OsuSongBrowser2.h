@@ -255,7 +255,7 @@ private:
 	void onModeChange(UString text);
 	void onModeChange2(UString text, int id = -1);
 
-	void onPpCalcChange(UString text);
+	void onMapPpCalcCovnarChange(UString text);
 
 	void onUserButtonClicked();
 	void onUserButtonChange(UString text, int id);
