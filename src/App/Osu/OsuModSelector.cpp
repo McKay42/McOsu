@@ -243,7 +243,7 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen(osu)
 	addExperimentalCheckbox("Full Alternate", "You can never use the same key twice in a row.", convar->getConVarByName("osu_mod_fullalternate"));
 	addExperimentalCheckbox("Jigsaw 1", "Unnecessary clicks count as misses.", convar->getConVarByName("osu_mod_jigsaw1"));
 	addExperimentalCheckbox("Jigsaw 2", "Massively reduced slider follow circle radius.", convar->getConVarByName("osu_mod_jigsaw2"));
-	addExperimentalCheckbox("Random", "Randomizes hitobject positions. (VERY experimental!)", convar->getConVarByName("osu_mod_random"));
+	m_experimentalModRandomCheckbox = addExperimentalCheckbox("Random", "Randomizes hitobject positions. (VERY experimental!)\nUse osu_mod_random_seed to set a fixed rng seed.", convar->getConVarByName("osu_mod_random"));
 	addExperimentalCheckbox("Reverse Sliders", "Reverses the direction of all sliders. (Reload beatmap to apply!)", convar->getConVarByName("osu_mod_reverse_sliders"));
 	addExperimentalCheckbox("No 50s", "Only 300s or 100s. Try harder.", convar->getConVarByName("osu_mod_no50s"));
 	addExperimentalCheckbox("No 100s no 50s", "300 or miss. PF \"lite\"", convar->getConVarByName("osu_mod_no100s"));
@@ -534,6 +534,10 @@ void OsuModSelector::update()
 			}
 		}
 	}
+
+	// some experimental mod tooltip overrides
+	if (m_experimentalModRandomCheckbox->isChecked() && m_osu->getSelectedBeatmap() != NULL)
+		m_experimentalModRandomCheckbox->setTooltipText(UString::format("Seed = %i", m_osu->getSelectedBeatmap()->getRandomSeed()));
 
 	// handle experimental mods visibility
 	bool experimentalModEnabled = false;
@@ -1093,7 +1097,7 @@ CBaseUILabel *OsuModSelector::addExperimentalLabel(UString text)
 	return label;
 }
 
-CBaseUICheckbox *OsuModSelector::addExperimentalCheckbox(UString text, UString tooltipText, ConVar *cvar)
+OsuUICheckbox *OsuModSelector::addExperimentalCheckbox(UString text, UString tooltipText, ConVar *cvar)
 {
 	OsuUICheckbox *checkbox = new OsuUICheckbox(m_osu, 0, 0, 0, 35, text, text);
 	checkbox->setTooltipText(tooltipText);

@@ -121,6 +121,40 @@ ConVar osu_hud_statistics_spacing_scale("osu_hud_statistics_spacing_scale", 1.1f
 ConVar osu_hud_statistics_offset_x("osu_hud_statistics_offset_x", 5.0f);
 ConVar osu_hud_statistics_offset_y("osu_hud_statistics_offset_y", 50.0f);
 ConVar osu_hud_statistics_pp_decimal_places("osu_hud_statistics_pp_decimal_places", 0, "number of decimal places for the live pp counter (min = 0, max = 2)");
+ConVar osu_hud_statistics_pp_offset_x("osu_hud_statistics_pp_offset_x", 0.0f);
+ConVar osu_hud_statistics_pp_offset_y("osu_hud_statistics_pp_offset_y", 0.0f);
+ConVar osu_hud_statistics_perfectpp_offset_x("osu_hud_statistics_perfectpp_offset_x", 0.0f);
+ConVar osu_hud_statistics_perfectpp_offset_y("osu_hud_statistics_perfectpp_offset_y", 0.0f);
+ConVar osu_hud_statistics_misses_offset_x("osu_hud_statistics_misses_offset_x", 0.0f);
+ConVar osu_hud_statistics_misses_offset_y("osu_hud_statistics_misses_offset_y", 0.0f);
+ConVar osu_hud_statistics_sliderbreaks_offset_x("osu_hud_statistics_sliderbreaks_offset_x", 0.0f);
+ConVar osu_hud_statistics_sliderbreaks_offset_y("osu_hud_statistics_sliderbreaks_offset_y", 0.0f);
+ConVar osu_hud_statistics_maxpossiblecombo_offset_x("osu_hud_statistics_maxpossiblecombo_offset_x", 0.0f);
+ConVar osu_hud_statistics_maxpossiblecombo_offset_y("osu_hud_statistics_maxpossiblecombo_offset_y", 0.0f);
+ConVar osu_hud_statistics_livestars_offset_x("osu_hud_statistics_livestars_offset_x", 0.0f);
+ConVar osu_hud_statistics_livestars_offset_y("osu_hud_statistics_livestars_offset_y", 0.0f);
+ConVar osu_hud_statistics_totalstars_offset_x("osu_hud_statistics_totalstars_offset_x", 0.0f);
+ConVar osu_hud_statistics_totalstars_offset_y("osu_hud_statistics_totalstars_offset_y", 0.0f);
+ConVar osu_hud_statistics_bpm_offset_x("osu_hud_statistics_bpm_offset_x", 0.0f);
+ConVar osu_hud_statistics_bpm_offset_y("osu_hud_statistics_bpm_offset_y", 0.0f);
+ConVar osu_hud_statistics_ar_offset_x("osu_hud_statistics_ar_offset_x", 0.0f);
+ConVar osu_hud_statistics_ar_offset_y("osu_hud_statistics_ar_offset_y", 0.0f);
+ConVar osu_hud_statistics_cs_offset_x("osu_hud_statistics_cs_offset_x", 0.0f);
+ConVar osu_hud_statistics_cs_offset_y("osu_hud_statistics_cs_offset_y", 0.0f);
+ConVar osu_hud_statistics_od_offset_x("osu_hud_statistics_od_offset_x", 0.0f);
+ConVar osu_hud_statistics_od_offset_y("osu_hud_statistics_od_offset_y", 0.0f);
+ConVar osu_hud_statistics_hp_offset_x("osu_hud_statistics_hp_offset_x", 0.0f);
+ConVar osu_hud_statistics_hp_offset_y("osu_hud_statistics_hp_offset_y", 0.0f);
+ConVar osu_hud_statistics_hitwindow300_offset_x("osu_hud_statistics_hitwindow300_offset_x", 0.0f);
+ConVar osu_hud_statistics_hitwindow300_offset_y("osu_hud_statistics_hitwindow300_offset_y", 0.0f);
+ConVar osu_hud_statistics_nps_offset_x("osu_hud_statistics_nps_offset_x", 0.0f);
+ConVar osu_hud_statistics_nps_offset_y("osu_hud_statistics_nps_offset_y", 0.0f);
+ConVar osu_hud_statistics_nd_offset_x("osu_hud_statistics_nd_offset_x", 0.0f);
+ConVar osu_hud_statistics_nd_offset_y("osu_hud_statistics_nd_offset_y", 0.0f);
+ConVar osu_hud_statistics_ur_offset_x("osu_hud_statistics_ur_offset_x", 0.0f);
+ConVar osu_hud_statistics_ur_offset_y("osu_hud_statistics_ur_offset_y", 0.0f);
+ConVar osu_hud_statistics_hitdelta_offset_x("osu_hud_statistics_hitdelta_offset_x", 0.0f);
+ConVar osu_hud_statistics_hitdelta_offset_y("osu_hud_statistics_hitdelta_offset_y", 0.0f);
 ConVar osu_hud_volume_duration("osu_hud_volume_duration", 1.0f);
 ConVar osu_hud_volume_size_multiplier("osu_hud_volume_size_multiplier", 1.5f);
 ConVar osu_hud_scoreboard_scale("osu_hud_scoreboard_scale", 1.0f);
@@ -2554,92 +2588,109 @@ void OsuHUD::drawStatistics(Graphics *g, int misses, int sliderbreaks, int maxPo
 		const int yDelta = (int)((m_osu->getTitleFont()->getHeight() + 10)*osu_hud_scale.getFloat()*osu_hud_statistics_scale.getFloat()*osu_hud_statistics_spacing_scale.getFloat());
 		if (osu_draw_statistics_pp.getBool())
 		{
+			g->translate(osu_hud_statistics_pp_offset_x.getInt(), osu_hud_statistics_pp_offset_y.getInt());
 			drawStatisticText(g, (osu_hud_statistics_pp_decimal_places.getInt() < 1 ? UString::format("%ipp", (int)std::round(pp)) : (osu_hud_statistics_pp_decimal_places.getInt() > 1 ? UString::format("%.2fpp", pp) : UString::format("%.1fpp", pp))));
-			g->translate(0, yDelta);
+			g->translate(-osu_hud_statistics_pp_offset_x.getInt(), yDelta - osu_hud_statistics_pp_offset_y.getInt());
 		}
 		if (osu_draw_statistics_perfectpp.getBool())
 		{
+			g->translate(osu_hud_statistics_perfectpp_offset_x.getInt(), osu_hud_statistics_perfectpp_offset_y.getInt());
 			drawStatisticText(g, (osu_hud_statistics_pp_decimal_places.getInt() < 1 ? UString::format("SS: %ipp", (int)std::round(ppfc)) : (osu_hud_statistics_pp_decimal_places.getInt() > 1 ? UString::format("SS: %.2fpp", ppfc) : UString::format("SS: %.1fpp", ppfc))));
-			g->translate(0, yDelta);
+			g->translate(-osu_hud_statistics_perfectpp_offset_x.getInt(), yDelta - osu_hud_statistics_perfectpp_offset_y.getInt());
 		}
 		if (osu_draw_statistics_misses.getBool())
 		{
+			g->translate(osu_hud_statistics_misses_offset_x.getInt(), osu_hud_statistics_misses_offset_y.getInt());
 			drawStatisticText(g, UString::format("Miss: %i", misses));
-			g->translate(0, yDelta);
+			g->translate(-osu_hud_statistics_misses_offset_x.getInt(), yDelta - osu_hud_statistics_misses_offset_y.getInt());
 		}
 		if (osu_draw_statistics_sliderbreaks.getBool())
 		{
+			g->translate(osu_hud_statistics_sliderbreaks_offset_x.getInt(), osu_hud_statistics_sliderbreaks_offset_y.getInt());
 			drawStatisticText(g, UString::format("SBrk: %i", sliderbreaks));
-			g->translate(0, yDelta);
+			g->translate(-osu_hud_statistics_sliderbreaks_offset_x.getInt(), yDelta - osu_hud_statistics_sliderbreaks_offset_y.getInt());
 		}
 		if (osu_draw_statistics_maxpossiblecombo.getBool())
 		{
+			g->translate(osu_hud_statistics_maxpossiblecombo_offset_x.getInt(), osu_hud_statistics_maxpossiblecombo_offset_y.getInt());
 			drawStatisticText(g, UString::format("FC: %ix", maxPossibleCombo));
-			g->translate(0, yDelta);
+			g->translate(-osu_hud_statistics_maxpossiblecombo_offset_x.getInt(), yDelta - osu_hud_statistics_maxpossiblecombo_offset_y.getInt());
 		}
 		if (osu_draw_statistics_livestars.getBool())
 		{
+			g->translate(osu_hud_statistics_livestars_offset_x.getInt(), osu_hud_statistics_livestars_offset_y.getInt());
 			drawStatisticText(g, UString::format("%.3g***", liveStars));
-			g->translate(0, yDelta);
+			g->translate(-osu_hud_statistics_livestars_offset_x.getInt(), yDelta - osu_hud_statistics_livestars_offset_y.getInt());
 		}
 		if (osu_draw_statistics_totalstars.getBool())
 		{
+			g->translate(osu_hud_statistics_totalstars_offset_x.getInt(), osu_hud_statistics_totalstars_offset_y.getInt());
 			drawStatisticText(g, UString::format("%.3g*", totalStars));
-			g->translate(0, yDelta);
+			g->translate(-osu_hud_statistics_totalstars_offset_x.getInt(), yDelta - osu_hud_statistics_totalstars_offset_y.getInt());
 		}
 		if (osu_draw_statistics_bpm.getBool())
 		{
+			g->translate(osu_hud_statistics_bpm_offset_x.getInt(), osu_hud_statistics_bpm_offset_y.getInt());
 			drawStatisticText(g, UString::format("BPM: %i", bpm));
-			g->translate(0, yDelta);
+			g->translate(-osu_hud_statistics_bpm_offset_x.getInt(), yDelta - osu_hud_statistics_bpm_offset_y.getInt());
 		}
 		if (osu_draw_statistics_ar.getBool())
 		{
 			ar = std::round(ar * 100.0f) / 100.0f;
+			g->translate(osu_hud_statistics_ar_offset_x.getInt(), osu_hud_statistics_ar_offset_y.getInt());
 			drawStatisticText(g, UString::format("AR: %g", ar));
-			g->translate(0, yDelta);
+			g->translate(-osu_hud_statistics_ar_offset_x.getInt(), yDelta - osu_hud_statistics_ar_offset_y.getInt());
 		}
 		if (osu_draw_statistics_cs.getBool())
 		{
 			cs = std::round(cs * 100.0f) / 100.0f;
+			g->translate(osu_hud_statistics_cs_offset_x.getInt(), osu_hud_statistics_cs_offset_y.getInt());
 			drawStatisticText(g, UString::format("CS: %g", cs));
-			g->translate(0, yDelta);
+			g->translate(-osu_hud_statistics_cs_offset_x.getInt(), yDelta - osu_hud_statistics_cs_offset_y.getInt());
 		}
 		if (osu_draw_statistics_od.getBool())
 		{
 			od = std::round(od * 100.0f) / 100.0f;
+			g->translate(osu_hud_statistics_od_offset_x.getInt(), osu_hud_statistics_od_offset_y.getInt());
 			drawStatisticText(g, UString::format("OD: %g", od));
-			g->translate(0, yDelta);
+			g->translate(-osu_hud_statistics_od_offset_x.getInt(), yDelta - osu_hud_statistics_od_offset_y.getInt());
 		}
 		if (osu_draw_statistics_hp.getBool())
 		{
 			hp = std::round(hp * 100.0f) / 100.0f;
+			g->translate(osu_hud_statistics_hp_offset_x.getInt(), osu_hud_statistics_hp_offset_y.getInt());
 			drawStatisticText(g, UString::format("HP: %g", hp));
-			g->translate(0, yDelta);
+			g->translate(-osu_hud_statistics_hp_offset_x.getInt(), yDelta - osu_hud_statistics_hp_offset_y.getInt());
 		}
 		if (osu_draw_statistics_hitwindow300.getBool())
 		{
+			g->translate(osu_hud_statistics_hitwindow300_offset_x.getInt(), osu_hud_statistics_hitwindow300_offset_y.getInt());
 			drawStatisticText(g, UString::format("300: +-%ims", (int)hitWindow300));
-			g->translate(0, yDelta);
+			g->translate(-osu_hud_statistics_hitwindow300_offset_x.getInt(), yDelta - osu_hud_statistics_hitwindow300_offset_y.getInt());
 		}
 		if (osu_draw_statistics_nps.getBool())
 		{
+			g->translate(osu_hud_statistics_nps_offset_x.getInt(), osu_hud_statistics_nps_offset_y.getInt());
 			drawStatisticText(g, UString::format("NPS: %i", nps));
-			g->translate(0, yDelta);
+			g->translate(-osu_hud_statistics_nps_offset_x.getInt(), yDelta - osu_hud_statistics_nps_offset_y.getInt());
 		}
 		if (osu_draw_statistics_nd.getBool())
 		{
+			g->translate(osu_hud_statistics_nd_offset_x.getInt(), osu_hud_statistics_nd_offset_y.getInt());
 			drawStatisticText(g, UString::format("ND: %i", nd));
-			g->translate(0, yDelta);
+			g->translate(-osu_hud_statistics_nd_offset_x.getInt(), yDelta - osu_hud_statistics_nd_offset_y.getInt());
 		}
 		if (osu_draw_statistics_ur.getBool())
 		{
+			g->translate(osu_hud_statistics_ur_offset_x.getInt(), osu_hud_statistics_ur_offset_y.getInt());
 			drawStatisticText(g, UString::format("UR: %i", ur));
-			g->translate(0, yDelta);
+			g->translate(-osu_hud_statistics_ur_offset_x.getInt(), yDelta - osu_hud_statistics_ur_offset_y.getInt());
 		}
 		if (osu_draw_statistics_hitdelta.getBool())
 		{
+			g->translate(osu_hud_statistics_hitdelta_offset_x.getInt(), osu_hud_statistics_hitdelta_offset_y.getInt());
 			drawStatisticText(g, UString::format("-%ims +%ims", std::abs(hitdeltaMin), hitdeltaMax));
-			g->translate(0, yDelta);
+			g->translate(-osu_hud_statistics_hitdelta_offset_x.getInt(), yDelta - osu_hud_statistics_hitdelta_offset_y.getInt());
 		}
 	}
 	g->popTransform();

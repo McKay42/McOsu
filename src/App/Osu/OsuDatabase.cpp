@@ -29,7 +29,7 @@ ConVar osu_folder("osu_folder", "C:/Program Files (x86)/osu!/");
 
 #elif defined __linux__
 
-ConVar osu_folder("osu_folder", "/media/pg/Win7/Program Files (x86)/osu!/");
+ConVar osu_folder("osu_folder", "/home/pg/Desktop/osu!/");
 
 #elif defined __APPLE__
 
@@ -2190,7 +2190,8 @@ void OsuDatabase::loadScores()
 			if (originalScoresFile.canRead())
 			{
 				UString backupScoresFilePath = scoresFilePath;
-				backupScoresFilePath.append(UString::format(".%i.backup", (makeBackupType < 2 ? backupLessThanVersion : maxSupportedCustomDbVersion)));
+				const int forcedBackupCounter = 2;
+				backupScoresFilePath.append(UString::format(".%i_%i.backup", (makeBackupType < 2 ? backupLessThanVersion : maxSupportedCustomDbVersion), forcedBackupCounter));
 
 				if (!env->fileExists(backupScoresFilePath)) // NOTE: avoid overwriting when people switch betas
 				{
@@ -2716,7 +2717,8 @@ void OsuDatabase::loadCollections(UString collectionFilePath, bool isLegacy, con
 		if (originalCollectionsFile.canRead())
 		{
 			UString backupCollectionsFilePath = collectionFilePath;
-			backupCollectionsFilePath.append(UString::format(".%i.backup", osu_collections_custom_version.getInt()));
+			const int forcedBackupCounter = 2;
+			backupCollectionsFilePath.append(UString::format(".%i_%i.backup", osu_collections_custom_version.getInt(), forcedBackupCounter));
 
 			if (!env->fileExists(backupCollectionsFilePath)) // NOTE: avoid overwriting when people switch betas
 			{

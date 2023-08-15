@@ -83,9 +83,13 @@ public:
 		std::vector<BREAK> breaks;
 		std::vector<Color> combocolors;
 
+		int randomSeed;
+
 		LOAD_GAMEPLAY_RESULT()
 		{
 			errorCode = 0;
+
+			randomSeed = 0;
 		}
 	};
 

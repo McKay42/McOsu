@@ -97,7 +97,7 @@ ConVar osu_mod_arwobble_strength("osu_mod_arwobble_strength", 1.0f);
 ConVar osu_mod_arwobble_interval("osu_mod_arwobble_interval", 7.0f);
 ConVar osu_mod_fullalternate("osu_mod_fullalternate", false);
 
-ConVar osu_early_note_time("osu_early_note_time", 1000.0f, "Timeframe in ms at the beginning of a beatmap which triggers a starting delay for easier reading");
+ConVar osu_early_note_time("osu_early_note_time", 1500.0f, "Timeframe in ms at the beginning of a beatmap which triggers a starting delay for easier reading");
 ConVar osu_quick_retry_time("osu_quick_retry_time", 2000.0f, "Timeframe in ms subtracted from the first hitobject when quick retrying (not regular retry)");
 ConVar osu_end_delay_time("osu_end_delay_time", 750.0f, "Duration in ms which is added at the end of a beatmap after the last hitobject is finished but before the ranking screen is automatically shown");
 ConVar osu_end_skip("osu_end_skip", true, "whether the beatmap jumps to the ranking screen as soon as the last hitobject plus lenience has passed");
@@ -229,6 +229,8 @@ OsuBeatmap::OsuBeatmap(Osu *osu)
 	m_bClickedContinue = false;
 	m_bPrevKeyWasKey1 = false;
 	m_iAllowAnyNextKeyForFullAlternateUntilHitObjectIndex = 0;
+
+	m_iRandomSeed = 0;
 
 	m_iNPS = 0;
 	m_iND = 0;
@@ -1352,6 +1354,7 @@ bool OsuBeatmap::play()
 		}
 
 		// move temp result data into beatmap
+		m_iRandomSeed = result.randomSeed;
 		m_hitobjects = std::move(result.hitobjects);
 		m_breaks = std::move(result.breaks);
 		m_osu->getSkin()->setBeatmapComboColors(std::move(result.combocolors)); // update combo colors in skin
