@@ -81,6 +81,8 @@ ConVar osu_songbrowser_search_hardcoded_filter("osu_songbrowser_search_hardcoded
 ConVar osu_songbrowser_background_star_calculation("osu_songbrowser_background_star_calculation", true, "precalculate stars for all loaded beatmaps while in songbrowser");
 ConVar osu_songbrowser_dynamic_star_recalc("osu_songbrowser_dynamic_star_recalc", true, "dynamically recalculate displayed star value of currently selected beatmap in songbrowser");
 
+ConVar osu_debug_background_star_calc("osu_debug_background_star_calc", false, "prints the name of the beatmap about to get its stars calculated (cmd/terminal window only, no in-game log!)");
+
 void _osu_songbrowser_search_hardcoded_filter(UString oldValue, UString newValue)
 {
 	if (newValue.length() == 1 && newValue.isWhitespaceOnly())
@@ -1286,6 +1288,9 @@ void OsuSongBrowser2::update()
 					if (m_backgroundStarCalculator->isDead())
 					{
 						m_backgroundStarCalculator->revive();
+
+						if (osu_debug_background_star_calc.getBool())
+							printf("diffToCalc = %s\n", diffToCalc->getFilePath().toUtf8());
 
 						// start new calc (nomod stars)
 						{
