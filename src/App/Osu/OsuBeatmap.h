@@ -116,6 +116,7 @@ public:
 	// used by OsuHitObject children and OsuModSelector
 	inline Osu *getOsu() const {return m_osu;}
 	OsuSkin *getSkin() const; // maybe use this for beatmap skins, maybe
+	inline int getRandomSeed() const {return m_iRandomSeed;}
 
 	inline long getCurMusicPos() const {return m_iCurMusicPos;}
 	inline long getCurMusicPosWithOffsets() const {return m_iCurMusicPosWithOffsets;}
@@ -288,6 +289,7 @@ protected:
 	std::vector<OsuHitObject*> m_hitobjects;
 	std::vector<OsuHitObject*> m_hitobjectsSortedByEndTime;
 	std::vector<OsuHitObject*> m_misaimObjects;
+	int m_iRandomSeed;
 
 	// statistics
 	int m_iNPS;

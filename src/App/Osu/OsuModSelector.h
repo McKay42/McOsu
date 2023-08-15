@@ -25,6 +25,7 @@ class CBaseUICheckbox;
 class OsuUIModSelectorModButton;
 class OsuModSelectorOverrideSliderDescButton;
 class OsuUIButton;
+class OsuUICheckbox;
 
 class ConVar;
 
@@ -102,7 +103,7 @@ private:
 	UString getOverrideSliderLabelText(OVERRIDE_SLIDER s, bool active);
 
 	CBaseUILabel *addExperimentalLabel(UString text);
-	CBaseUICheckbox *addExperimentalCheckbox(UString text, UString tooltipText, ConVar *cvar = NULL);
+	OsuUICheckbox *addExperimentalCheckbox(UString text, UString tooltipText, ConVar *cvar = NULL);
 	void onCheckboxChange(CBaseUICheckbox *checkbox);
 
 	OsuUIButton *addActionButton(UString text);
@@ -155,6 +156,7 @@ private:
 
 	// experimental mods
 	std::vector<EXPERIMENTAL_MOD> m_experimentalMods;
+	OsuUICheckbox *m_experimentalModRandomCheckbox;
 
 	// score multiplier info label
 	CBaseUILabel *m_scoreMultiplierLabel;

@@ -31,6 +31,7 @@
 #include <iostream>
 
 ConVar osu_mod_random("osu_mod_random", false);
+ConVar osu_mod_random_seed("osu_mod_random_seed", 0, "0 = random seed every reload, any other value will force that value to be used as the seed");
 ConVar osu_mod_random_circle_offset_x_percent("osu_mod_random_circle_offset_x_percent", 1.0f, "how much the randomness affects things");
 ConVar osu_mod_random_circle_offset_y_percent("osu_mod_random_circle_offset_y_percent", 1.0f, "how much the randomness affects things");
 ConVar osu_mod_random_slider_offset_x_percent("osu_mod_random_slider_offset_x_percent", 1.0f, "how much the randomness affects things");
@@ -45,7 +46,8 @@ ConVar osu_show_approach_circle_on_first_hidden_object("osu_show_approach_circle
 
 ConVar osu_stars_stacking("osu_stars_stacking", true, "respect hitobject stacking before calculating stars/pp");
 
-ConVar osu_slider_max_repeat("osu_slider_max_repeat", 9000, "maximum number of repeats allowed per slider (clamp range)");
+ConVar osu_slider_max_repeats("osu_slider_max_repeats", 9000, "maximum number of repeats allowed per slider (clamp range)");
+ConVar osu_slider_max_ticks("osu_slider_max_ticks", 2048, "maximum number of ticks allowed per slider (clamp range)");
 
 ConVar osu_number_max("osu_number_max", 0, "0 = disabled, 1/2/3/4/etc. limits visual circle numbers to this number");
 ConVar osu_ignore_beatmap_combo_numbers("osu_ignore_beatmap_combo_numbers", false, "may be used in conjunction with osu_number_max");
@@ -159,7 +161,7 @@ OsuDatabaseBeatmap::PRIMITIVE_CONTAINER OsuDatabaseBeatmap::loadPrimitiveObjects
 	}
 
 	const float sliderSanityRange = m_osu_slider_curve_max_length_ref->getFloat(); // infinity sanity check, same as before
-	const int sliderMaxRepeatRange = osu_slider_max_repeat.getInt(); // NOTE: osu! will refuse to play any beatmap which has sliders with more than 9000 repeats, here we just clamp it instead
+	const int sliderMaxRepeatRange = osu_slider_max_repeats.getInt(); // NOTE: osu! will refuse to play any beatmap which has sliders with more than 9000 repeats, here we just clamp it instead
 
 
 
@@ -580,7 +582,7 @@ void OsuDatabaseBeatmap::calculateSliderTimesClicksTicks(int beatmapVersion, std
 			const float minTickPixelDistanceFromEnd = 0.01f * SliderHelper::getSliderVelocity(s, timingInfo, sliderMultiplier, sliderTickRate);
 			const float tickPixelLength = (beatmapVersion < 8 ? SliderHelper::getSliderTickDistance(sliderMultiplier, sliderTickRate) : SliderHelper::getSliderTickDistance(sliderMultiplier, sliderTickRate) / SliderHelper::getTimingPointMultiplierForSlider(s, timingInfo));
 			const float tickDurationPercentOfSliderLength = tickPixelLength / (s.pixelLength == 0.0f ? 1.0f : s.pixelLength);
-			const int tickCount = std::min((int)std::ceil(s.pixelLength / tickPixelLength) - 1, 65536/2); // NOTE: hard sanity limit number of ticks per slider
+			const int tickCount = std::min((int)std::ceil(s.pixelLength / tickPixelLength) - 1, osu_slider_max_ticks.getInt()); // NOTE: hard sanity limit number of ticks per slider
 
 			if (tickCount > 0 && !timingInfo.isNaN && !std::isnan(s.pixelLength) && !std::isnan(tickPixelLength)) // don't generate ticks for NaN timingpoints and infinite values
 			{
@@ -1171,6 +1173,15 @@ bool OsuDatabaseBeatmap::loadMetadata(OsuDatabaseBeatmap *databaseBeatmap)
 	if ((databaseBeatmap->m_iGameMode != 0 && databaseBeatmap->m_osu->getGamemode() == Osu::GAMEMODE::STD) || (databaseBeatmap->m_iGameMode != 0x03 && databaseBeatmap->m_osu->getGamemode() == Osu::GAMEMODE::MANIA))
 		return false; // nothing more to do here
 
+	// general sanity checks
+	if ((databaseBeatmap->m_timingpoints.size() < 1))
+	{
+		if (Osu::debug->getBool())
+			debugLog("OsuDatabaseBeatmap::loadMetadata() : no timingpoints in beatmap!\n");
+
+		return false; // nothing more to do here
+	}
+
 	// build sound file path
 	databaseBeatmap->m_sFullSoundFilePath = databaseBeatmap->m_sFolder;
 	databaseBeatmap->m_sFullSoundFilePath.append(databaseBeatmap->m_sAudioFileName);
@@ -1376,6 +1387,18 @@ OsuDatabaseBeatmap::LOAD_GAMEPLAY_RESULT OsuDatabaseBeatmap::loadGameplay(OsuDat
 	OsuBeatmapStandard *beatmapStandard = dynamic_cast<OsuBeatmapStandard*>(beatmap);
 	OsuBeatmapMania *beatmapMania = dynamic_cast<OsuBeatmapMania*>(beatmap);
 	{
+		struct Helper
+		{
+			static inline uint32_t pcgHash(uint32_t input)
+			{
+				const uint32_t state = input * 747796405u + 2891336453u;
+				const uint32_t word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+				return (word >> 22u) ^ word;
+			}
+		};
+
+		result.randomSeed = (osu_mod_random_seed.getInt() == 0 ? rand() : osu_mod_random_seed.getInt());
+
 		if (beatmapStandard != NULL)
 		{
 			// also calculate max possible combo
@@ -1387,8 +1410,8 @@ OsuDatabaseBeatmap::LOAD_GAMEPLAY_RESULT OsuDatabaseBeatmap::loadGameplay(OsuDat
 
 				if (osu_mod_random.getBool())
 				{
-					h.x = clamp<int>(h.x - (int)(((rand() % OsuGameRules::OSU_COORD_WIDTH) / 8.0f) * osu_mod_random_circle_offset_x_percent.getFloat()), 0, OsuGameRules::OSU_COORD_WIDTH);
-					h.y = clamp<int>(h.y - (int)(((rand() % OsuGameRules::OSU_COORD_HEIGHT) / 8.0f) * osu_mod_random_circle_offset_y_percent.getFloat()), 0, OsuGameRules::OSU_COORD_HEIGHT);
+					h.x = clamp<int>(h.x - (int)(((Helper::pcgHash(result.randomSeed + h.x) % OsuGameRules::OSU_COORD_WIDTH) / 8.0f) * osu_mod_random_circle_offset_x_percent.getFloat()), 0, OsuGameRules::OSU_COORD_WIDTH);
+					h.y = clamp<int>(h.y - (int)(((Helper::pcgHash(result.randomSeed + h.y) % OsuGameRules::OSU_COORD_HEIGHT) / 8.0f) * osu_mod_random_circle_offset_y_percent.getFloat()), 0, OsuGameRules::OSU_COORD_HEIGHT);
 				}
 
 				result.hitobjects.push_back(new OsuCircle(h.x, h.y, h.time, h.sampleType, h.number, false, h.colorCounter, h.colorOffset, beatmapStandard));
@@ -1447,8 +1470,8 @@ OsuDatabaseBeatmap::LOAD_GAMEPLAY_RESULT OsuDatabaseBeatmap::loadGameplay(OsuDat
 				{
 					for (int p=0; p<s.points.size(); p++)
 					{
-						s.points[p].x = clamp<int>(s.points[p].x - (int)(((rand() % OsuGameRules::OSU_COORD_WIDTH) / 3.0f) * osu_mod_random_slider_offset_x_percent.getFloat()), 0, OsuGameRules::OSU_COORD_WIDTH);
-						s.points[p].y = clamp<int>(s.points[p].y - (int)(((rand() % OsuGameRules::OSU_COORD_HEIGHT) / 3.0f) * osu_mod_random_slider_offset_y_percent.getFloat()), 0, OsuGameRules::OSU_COORD_HEIGHT);
+						s.points[p].x = clamp<int>(s.points[p].x - (int)(((Helper::pcgHash(result.randomSeed + s.points[p].x) % OsuGameRules::OSU_COORD_WIDTH) / 3.0f) * osu_mod_random_slider_offset_x_percent.getFloat()), 0, OsuGameRules::OSU_COORD_WIDTH);
+						s.points[p].y = clamp<int>(s.points[p].y - (int)(((Helper::pcgHash(result.randomSeed + s.points[p].y) % OsuGameRules::OSU_COORD_HEIGHT) / 3.0f) * osu_mod_random_slider_offset_y_percent.getFloat()), 0, OsuGameRules::OSU_COORD_HEIGHT);
 					}
 				}
 
@@ -1467,8 +1490,8 @@ OsuDatabaseBeatmap::LOAD_GAMEPLAY_RESULT OsuDatabaseBeatmap::loadGameplay(OsuDat
 
 				if (osu_mod_random.getBool())
 				{
-					s.x = clamp<int>(s.x - (int)(((rand() % OsuGameRules::OSU_COORD_WIDTH) / 1.25f) * (rand() % 2 == 0 ? 1.0f : -1.0f) * osu_mod_random_spinner_offset_x_percent.getFloat()), 0, OsuGameRules::OSU_COORD_WIDTH);
-					s.y = clamp<int>(s.y - (int)(((rand() % OsuGameRules::OSU_COORD_HEIGHT) / 1.25f) * (rand() % 2 == 0 ? 1.0f : -1.0f) * osu_mod_random_spinner_offset_y_percent.getFloat()), 0, OsuGameRules::OSU_COORD_HEIGHT);
+					s.x = clamp<int>(s.x - (int)(((Helper::pcgHash(result.randomSeed + s.x) % OsuGameRules::OSU_COORD_WIDTH) / 1.25f) * (Helper::pcgHash(result.randomSeed + s.x) % 2 == 0 ? 1.0f : -1.0f) * osu_mod_random_spinner_offset_x_percent.getFloat()), 0, OsuGameRules::OSU_COORD_WIDTH);
+					s.y = clamp<int>(s.y - (int)(((Helper::pcgHash(result.randomSeed + s.y) % OsuGameRules::OSU_COORD_HEIGHT) / 1.25f) * (Helper::pcgHash(result.randomSeed + s.y) % 2 == 0 ? 1.0f : -1.0f) * osu_mod_random_spinner_offset_y_percent.getFloat()), 0, OsuGameRules::OSU_COORD_HEIGHT);
 				}
 
 				result.hitobjects.push_back(new OsuSpinner(s.x, s.y, s.time, s.sampleType, false, s.endTime, beatmapStandard));
