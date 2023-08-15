@@ -35,9 +35,15 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	std::vector<CHANGELOG> changelogs;
 
 	CHANGELOG alpha317;
-	alpha317.title = UString::format("33.05 (Build Date: %s, %s)", __DATE__, __TIME__); // (09.01.2022 - ?)
+	alpha317.title = UString::format("33.06 (Build Date: %s, %s)", __DATE__, __TIME__); // (09.01.2022 - ?)
+	alpha317.changes.push_back("- Added ConVars: osu_mod_random_seed, osu_hud_statistics_*_offset_x/y, osu_slider_max_ticks");
+	alpha317.changes.push_back("- Updated mod selection screen to show rng seed when hovering over enabled \"Random\" experimental mod checkbox");
+	alpha317.changes.push_back("- Fixed another set of star calc crashes on stupid aspire beatmaps (lowered slider tick limit, no timingpoints)");
+	alpha317.changes.push_back("");
+	alpha317.changes.push_back("");
 	alpha317.changes.push_back("- Added option \"[Beta] RawInputBuffer\" (Options > Input > Mouse)");
 	alpha317.changes.push_back("- Added ConVars: osu_background_color_r/g/b");
+	alpha317.changes.push_back("- Linux: Fixed major executable corruption on newer distros (Ubuntu 23+) caused by gold linker (all files written were corrupt, e.g. scores.db/osu.cfg, also segfaults etc.)");
 	alpha317.changes.push_back("");
 	alpha317.changes.push_back("");
 	alpha317.changes.push_back("- Fixed visual vs scoring slider end check in new lazer star calc (@Khangaroo)");
