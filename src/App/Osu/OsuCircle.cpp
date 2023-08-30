@@ -398,6 +398,7 @@ OsuCircle::~OsuCircle()
 void OsuCircle::draw(Graphics *g)
 {
 	OsuHitObject::draw(g);
+	OsuSkin *skin = m_beatmap->getOsu()->getSkin();
 
 	// draw hit animation
 	if (m_fHitAnimation > 0.0f && m_fHitAnimation != 1.0f && !m_beatmap->getOsu()->getModHD())
@@ -407,12 +408,12 @@ void OsuCircle::draw(Graphics *g)
 		float scale = m_fHitAnimation;
 		scale = -scale*(scale-2.0f); // quad out scale
 
-		const bool drawNumber = m_beatmap->getSkin()->getVersion() > 1.0f ? false : true;
+		const bool drawNumber = skin->getVersion() > 1.0f ? false : true;
 
 		g->pushTransform();
 			g->scale((1.0f+scale*OsuGameRules::osu_circle_fade_out_scale.getFloat()), (1.0f+scale*OsuGameRules::osu_circle_fade_out_scale.getFloat()));
 			{
-				m_beatmap->getSkin()->getHitCircleOverlay2()->setAnimationTimeOffset(!m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iApproachTime : m_beatmap->getCurMusicPosWithOffsets());
+				skin->getHitCircleOverlay2()->setAnimationTimeOffset(skin->getAnimationSpeed(), !m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iApproachTime : m_beatmap->getCurMusicPosWithOffsets());
 				drawCircle(g, m_beatmap, m_vRawPos, m_iComboNumber, m_iColorCounter, m_iColorOffset, 1.0f, alpha, alpha, drawNumber);
 			}
 		g->popTransform();
@@ -436,7 +437,7 @@ void OsuCircle::draw(Graphics *g)
 		smooth = -smooth*(smooth-2); // quad out twice
 		shakeCorrectedPos.x += std::sin(engine->getTime()*120) * smooth * osu_circle_shake_strength.getFloat();
 	}
-	m_beatmap->getSkin()->getHitCircleOverlay2()->setAnimationTimeOffset(!m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iApproachTime : m_beatmap->getCurMusicPosWithOffsets());
+	skin->getHitCircleOverlay2()->setAnimationTimeOffset(skin->getAnimationSpeed(), !m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iApproachTime : m_beatmap->getCurMusicPosWithOffsets());
 	drawCircle(g, m_beatmap, shakeCorrectedPos, m_iComboNumber, m_iColorCounter, m_iColorOffset, m_bWaiting && !hd ? 1.0f : m_fApproachScale, m_bWaiting && !hd ? 1.0f : m_fAlpha, m_bWaiting && !hd ? 1.0f : m_fAlpha, true, m_bOverrideHDApproachCircle);
 
 	// debug

@@ -394,15 +394,15 @@ void OsuSlider::draw(Graphics *g)
 			g->scale((1.0f + scale*OsuGameRules::osu_circle_fade_out_scale.getFloat()), (1.0f + scale*OsuGameRules::osu_circle_fade_out_scale.getFloat()));
 			if (m_iCurRepeat < 1)
 			{
-				m_beatmap->getSkin()->getHitCircleOverlay2()->setAnimationTimeOffset(!m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iApproachTime : m_beatmap->getCurMusicPosWithOffsets());
-				m_beatmap->getSkin()->getSliderStartCircleOverlay2()->setAnimationTimeOffset(!m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iApproachTime : m_beatmap->getCurMusicPosWithOffsets());
+				skin->getHitCircleOverlay2()->setAnimationTimeOffset(skin->getAnimationSpeed(), !m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iApproachTime : m_beatmap->getCurMusicPosWithOffsets());
+				skin->getSliderStartCircleOverlay2()->setAnimationTimeOffset(skin->getAnimationSpeed(), !m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iApproachTime : m_beatmap->getCurMusicPosWithOffsets());
 
 				OsuCircle::drawSliderStartCircle(g, m_beatmap, m_curve->pointAt(0.0f), m_iComboNumber, m_iColorCounter, m_iColorOffset, 1.0f, alpha, alpha, drawNumber);
 			}
 			else
 			{
-				m_beatmap->getSkin()->getHitCircleOverlay2()->setAnimationTimeOffset(!m_beatmap->isInMafhamRenderChunk() ? m_iTime : m_beatmap->getCurMusicPosWithOffsets());
-				m_beatmap->getSkin()->getSliderEndCircleOverlay2()->setAnimationTimeOffset(!m_beatmap->isInMafhamRenderChunk() ? m_iTime : m_beatmap->getCurMusicPosWithOffsets());
+				skin->getHitCircleOverlay2()->setAnimationTimeOffset(skin->getAnimationSpeed(), !m_beatmap->isInMafhamRenderChunk() ? m_iTime : m_beatmap->getCurMusicPosWithOffsets());
+				skin->getSliderEndCircleOverlay2()->setAnimationTimeOffset(skin->getAnimationSpeed(), !m_beatmap->isInMafhamRenderChunk() ? m_iTime : m_beatmap->getCurMusicPosWithOffsets());
 
 				OsuCircle::drawSliderEndCircle(g, m_beatmap, m_curve->pointAt(0.0f), m_iComboNumber, m_iColorCounter, m_iColorOffset, 1.0f, alpha, alpha, drawNumber);
 			}
@@ -421,8 +421,8 @@ void OsuSlider::draw(Graphics *g)
 		{
 			g->scale((1.0f + scale*OsuGameRules::osu_circle_fade_out_scale.getFloat()), (1.0f + scale*OsuGameRules::osu_circle_fade_out_scale.getFloat()));
 			{
-				m_beatmap->getSkin()->getHitCircleOverlay2()->setAnimationTimeOffset(!m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iFadeInTime : m_beatmap->getCurMusicPosWithOffsets());
-				m_beatmap->getSkin()->getSliderEndCircleOverlay2()->setAnimationTimeOffset(!m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iFadeInTime : m_beatmap->getCurMusicPosWithOffsets());
+				skin->getHitCircleOverlay2()->setAnimationTimeOffset(skin->getAnimationSpeed(), !m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iFadeInTime : m_beatmap->getCurMusicPosWithOffsets());
+				skin->getSliderEndCircleOverlay2()->setAnimationTimeOffset(skin->getAnimationSpeed(), !m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iFadeInTime : m_beatmap->getCurMusicPosWithOffsets());
 
 				OsuCircle::drawSliderEndCircle(g, m_beatmap, m_curve->pointAt(1.0f), m_iComboNumber, m_iColorCounter, m_iColorOffset, 1.0f, alpha, 0.0f, false);
 			}
@@ -535,7 +535,7 @@ void OsuSlider::draw2(Graphics *g, bool drawApproachCircle, bool drawOnlyApproac
 
 		g->setColor(0xffffffff);
 		g->setAlpha(m_fFollowCircleAnimationAlpha);
-		skin->getSliderFollowCircle2()->setAnimationTimeOffset(m_iTime);
+		skin->getSliderFollowCircle2()->setAnimationTimeOffset(skin->getAnimationSpeed(), m_iTime);
 		skin->getSliderFollowCircle2()->drawRaw(g, point, (m_beatmap->getSliderFollowCircleDiameter() / skin->getSliderFollowCircle2()->getSizeBaseRaw().x)*tickAnimationScale*m_fFollowCircleAnimationScale*0.85f); // this is a bit strange, but seems to work perfectly with 0.85
 	}
 
@@ -558,7 +558,7 @@ void OsuSlider::draw2(Graphics *g, bool drawApproachCircle, bool drawOnlyApproac
 			g->pushTransform();
 			{
 				g->rotate(ballAngle);
-				skin->getSliderb()->setAnimationTimeOffset(m_iTime);
+				skin->getSliderb()->setAnimationTimeOffset(skin->getAnimationSpeed(), m_iTime);
 				skin->getSliderb()->drawRaw(g, point, m_beatmap->getHitcircleDiameter() / skin->getSliderb()->getSizeBaseRaw().x);
 			}
 			g->popTransform();
@@ -753,15 +753,15 @@ void OsuSlider::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 			g->scale((1.0f+scale*OsuGameRules::osu_circle_fade_out_scale.getFloat()), (1.0f+scale*OsuGameRules::osu_circle_fade_out_scale.getFloat()));
 			if (m_iCurRepeat < 1)
 			{
-				m_beatmap->getSkin()->getHitCircleOverlay2()->setAnimationTimeOffset(!m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iApproachTime : m_beatmap->getCurMusicPosWithOffsets());
-				m_beatmap->getSkin()->getSliderStartCircleOverlay2()->setAnimationTimeOffset(!m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iApproachTime : m_beatmap->getCurMusicPosWithOffsets());
+				skin->getHitCircleOverlay2()->setAnimationTimeOffset(skin->getAnimationSpeed(), !m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iApproachTime : m_beatmap->getCurMusicPosWithOffsets());
+				skin->getSliderStartCircleOverlay2()->setAnimationTimeOffset(skin->getAnimationSpeed(), !m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iApproachTime : m_beatmap->getCurMusicPosWithOffsets());
 
 				OsuCircle::drawSliderStartCircle(g, m_beatmap, m_curve->pointAt(0.0f), m_iComboNumber, m_iColorCounter, m_iColorOffset, 1.0f, alpha, alpha, drawNumber);
 			}
 			else
 			{
-				m_beatmap->getSkin()->getHitCircleOverlay2()->setAnimationTimeOffset(!m_beatmap->isInMafhamRenderChunk() ? m_iTime : m_beatmap->getCurMusicPosWithOffsets());
-				m_beatmap->getSkin()->getSliderEndCircleOverlay2()->setAnimationTimeOffset(!m_beatmap->isInMafhamRenderChunk() ? m_iTime : m_beatmap->getCurMusicPosWithOffsets());
+				skin->getHitCircleOverlay2()->setAnimationTimeOffset(skin->getAnimationSpeed(), !m_beatmap->isInMafhamRenderChunk() ? m_iTime : m_beatmap->getCurMusicPosWithOffsets());
+				skin->getSliderEndCircleOverlay2()->setAnimationTimeOffset(skin->getAnimationSpeed(), !m_beatmap->isInMafhamRenderChunk() ? m_iTime : m_beatmap->getCurMusicPosWithOffsets());
 
 				OsuCircle::drawSliderEndCircle(g, m_beatmap, m_curve->pointAt(0.0f), m_iComboNumber, m_iColorCounter, m_iColorOffset, 1.0f, alpha, alpha, drawNumber);
 			}
@@ -780,8 +780,8 @@ void OsuSlider::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 		{
 			g->scale((1.0f+scale*OsuGameRules::osu_circle_fade_out_scale.getFloat()), (1.0f+scale*OsuGameRules::osu_circle_fade_out_scale.getFloat()));
 			{
-				m_beatmap->getSkin()->getHitCircleOverlay2()->setAnimationTimeOffset(!m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iFadeInTime : m_beatmap->getCurMusicPosWithOffsets());
-				m_beatmap->getSkin()->getSliderEndCircleOverlay2()->setAnimationTimeOffset(!m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iFadeInTime : m_beatmap->getCurMusicPosWithOffsets());
+				skin->getHitCircleOverlay2()->setAnimationTimeOffset(skin->getAnimationSpeed(), !m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iFadeInTime : m_beatmap->getCurMusicPosWithOffsets());
+				skin->getSliderEndCircleOverlay2()->setAnimationTimeOffset(skin->getAnimationSpeed(), !m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iFadeInTime : m_beatmap->getCurMusicPosWithOffsets());
 
 				OsuCircle::drawSliderEndCircle(g, m_beatmap, m_curve->pointAt(1.0f), m_iComboNumber, m_iColorCounter, m_iColorOffset, 1.0f, alpha, 0.0f, false);
 			}
@@ -824,17 +824,19 @@ void OsuSlider::drawVR2(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 
 void OsuSlider::drawStartCircle(Graphics *g, float alpha)
 {
+	OsuSkin *skin = m_beatmap->getSkin();
+
 	if (m_bStartFinished)
 	{
-		m_beatmap->getSkin()->getHitCircleOverlay2()->setAnimationTimeOffset(!m_beatmap->isInMafhamRenderChunk() ? m_iTime : m_beatmap->getCurMusicPosWithOffsets());
-		m_beatmap->getSkin()->getSliderEndCircleOverlay2()->setAnimationTimeOffset(!m_beatmap->isInMafhamRenderChunk() ? m_iTime : m_beatmap->getCurMusicPosWithOffsets());
+		skin->getHitCircleOverlay2()->setAnimationTimeOffset(skin->getAnimationSpeed(), !m_beatmap->isInMafhamRenderChunk() ? m_iTime : m_beatmap->getCurMusicPosWithOffsets());
+		skin->getSliderEndCircleOverlay2()->setAnimationTimeOffset(skin->getAnimationSpeed(), !m_beatmap->isInMafhamRenderChunk() ? m_iTime : m_beatmap->getCurMusicPosWithOffsets());
 
 		OsuCircle::drawSliderEndCircle(g, m_beatmap, m_curve->pointAt(0.0f), m_iComboNumber, m_iColorCounter, m_iColorOffset, 1.0f, m_fAlpha, 0.0f, false, false);
 	}
 	else
 	{
-		m_beatmap->getSkin()->getHitCircleOverlay2()->setAnimationTimeOffset(!m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iApproachTime : m_beatmap->getCurMusicPosWithOffsets());
-		m_beatmap->getSkin()->getSliderStartCircleOverlay2()->setAnimationTimeOffset(!m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iApproachTime : m_beatmap->getCurMusicPosWithOffsets());
+		skin->getHitCircleOverlay2()->setAnimationTimeOffset(skin->getAnimationSpeed(), !m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iApproachTime : m_beatmap->getCurMusicPosWithOffsets());
+		skin->getSliderStartCircleOverlay2()->setAnimationTimeOffset(skin->getAnimationSpeed(), !m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iApproachTime : m_beatmap->getCurMusicPosWithOffsets());
 
 		OsuCircle::drawSliderStartCircle(g, m_beatmap, m_curve->pointAt(0.0f), m_iComboNumber, m_iColorCounter, m_iColorOffset, m_fApproachScale, m_fAlpha, m_fAlpha, !m_bHideNumberAfterFirstRepeatHit, m_bOverrideHDApproachCircle);
 	}
@@ -842,8 +844,10 @@ void OsuSlider::drawStartCircle(Graphics *g, float alpha)
 
 void OsuSlider::drawEndCircle(Graphics *g, float alpha, float sliderSnake)
 {
-	m_beatmap->getSkin()->getHitCircleOverlay2()->setAnimationTimeOffset(!m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iFadeInTime : m_beatmap->getCurMusicPosWithOffsets());
-	m_beatmap->getSkin()->getSliderEndCircleOverlay2()->setAnimationTimeOffset(!m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iFadeInTime : m_beatmap->getCurMusicPosWithOffsets());
+	OsuSkin *skin = m_beatmap->getSkin();
+
+	skin->getHitCircleOverlay2()->setAnimationTimeOffset(skin->getAnimationSpeed(), !m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iFadeInTime : m_beatmap->getCurMusicPosWithOffsets());
+	skin->getSliderEndCircleOverlay2()->setAnimationTimeOffset(skin->getAnimationSpeed(), !m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iFadeInTime : m_beatmap->getCurMusicPosWithOffsets());
 
 	OsuCircle::drawSliderEndCircle(g, m_beatmap, m_curve->pointAt(sliderSnake), m_iComboNumber, m_iColorCounter, m_iColorOffset, 1.0f, m_fAlpha, 0.0f, false, false);
 }
@@ -1342,18 +1346,26 @@ void OsuSlider::update(long curPos)
 
 void OsuSlider::updateAnimations(long curPos)
 {
+	Osu* osu = m_beatmap->getOsu();
+	float animation_multiplier = osu->getSpeedMultiplier() / osu->getAnimationSpeedMultiplier();
+
+	float fadein_fade_time = OsuGameRules::osu_slider_followcircle_fadein_fade_time.getFloat() * animation_multiplier;
+	float fadeout_fade_time = OsuGameRules::osu_slider_followcircle_fadeout_fade_time.getFloat() * animation_multiplier;
+	float fadein_scale_time = OsuGameRules::osu_slider_followcircle_fadein_scale_time.getFloat() * animation_multiplier;
+	float fadeout_scale_time = OsuGameRules::osu_slider_followcircle_fadeout_scale_time.getFloat() * animation_multiplier;
+
 	// handle followcircle animations
-	m_fFollowCircleAnimationAlpha = clamp<float>((float)((curPos - m_iTime)) / 1000.0f / clamp<float>(OsuGameRules::osu_slider_followcircle_fadein_fade_time.getFloat(), 0.0f, m_iObjectDuration/1000.0f), 0.0f, 1.0f);
+	m_fFollowCircleAnimationAlpha = clamp<float>((float)((curPos - m_iTime)) / 1000.0f / clamp<float>(fadein_fade_time, 0.0f, m_iObjectDuration/1000.0f), 0.0f, 1.0f);
 	if (m_bFinished)
 	{
-		m_fFollowCircleAnimationAlpha = 1.0f - clamp<float>((float)((curPos - (m_iTime+m_iObjectDuration))) / 1000.0f / OsuGameRules::osu_slider_followcircle_fadeout_fade_time.getFloat(), 0.0f, 1.0f);
+		m_fFollowCircleAnimationAlpha = 1.0f - clamp<float>((float)((curPos - (m_iTime+m_iObjectDuration))) / 1000.0f / fadeout_fade_time, 0.0f, 1.0f);
 		m_fFollowCircleAnimationAlpha *= m_fFollowCircleAnimationAlpha; // quad in
 	}
 
-	m_fFollowCircleAnimationScale = clamp<float>((float)((curPos - m_iTime)) / 1000.0f / clamp<float>(OsuGameRules::osu_slider_followcircle_fadein_scale_time.getFloat(), 0.0f, m_iObjectDuration/1000.0f), 0.0f, 1.0f);
+	m_fFollowCircleAnimationScale = clamp<float>((float)((curPos - m_iTime)) / 1000.0f / clamp<float>(fadein_scale_time, 0.0f, m_iObjectDuration/1000.0f), 0.0f, 1.0f);
 	if (m_bFinished)
 	{
-		m_fFollowCircleAnimationScale = clamp<float>((float)((curPos - (m_iTime+m_iObjectDuration))) / 1000.0f / OsuGameRules::osu_slider_followcircle_fadeout_scale_time.getFloat(), 0.0f, 1.0f);
+		m_fFollowCircleAnimationScale = clamp<float>((float)((curPos - (m_iTime+m_iObjectDuration))) / 1000.0f / fadeout_scale_time, 0.0f, 1.0f);
 	}
 	m_fFollowCircleAnimationScale = -m_fFollowCircleAnimationScale*(m_fFollowCircleAnimationScale-2.0f); // quad out
 
@@ -1640,8 +1652,12 @@ void OsuSlider::onRepeatHit(bool successful, bool sliderend)
 
 		m_beatmap->getSkin()->playHitCircleSound(m_iCurRepeatCounterForHitSounds < m_hitSounds.size() ? m_hitSounds[m_iCurRepeatCounterForHitSounds] : m_iSampleType, OsuGameRules::osuCoords2Pan(osuCoords.x));
 
+		Osu* osu = m_beatmap->getOsu();
+		float animation_multiplier = osu->getSpeedMultiplier() / osu->getAnimationSpeedMultiplier();
+		float tick_pulse_time = OsuGameRules::osu_slider_followcircle_tick_pulse_time.getFloat() * animation_multiplier;
+
 		m_fFollowCircleTickAnimationScale = 0.0f;
-		anim->moveLinear(&m_fFollowCircleTickAnimationScale, 1.0f, OsuGameRules::osu_slider_followcircle_tick_pulse_time.getFloat(), true);
+		anim->moveLinear(&m_fFollowCircleTickAnimationScale, 1.0f, tick_pulse_time, true);
 
 		if (sliderend)
 		{
@@ -1709,8 +1725,12 @@ void OsuSlider::onTickHit(bool successful, int tickIndex)
 
 		m_beatmap->getSkin()->playSliderTickSound(OsuGameRules::osuCoords2Pan(osuCoords.x));
 
+		Osu* osu = m_beatmap->getOsu();
+		float animation_multiplier = osu->getSpeedMultiplier() / osu->getAnimationSpeedMultiplier();
+		float tick_pulse_time = OsuGameRules::osu_slider_followcircle_tick_pulse_time.getFloat() * animation_multiplier;
+
 		m_fFollowCircleTickAnimationScale = 0.0f;
-		anim->moveLinear(&m_fFollowCircleTickAnimationScale, 1.0f, OsuGameRules::osu_slider_followcircle_tick_pulse_time.getFloat(), true);
+		anim->moveLinear(&m_fFollowCircleTickAnimationScale, 1.0f, tick_pulse_time, true);
 	}
 
 	// add score

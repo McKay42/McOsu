@@ -354,13 +354,13 @@ void OsuSkinImage::drawRaw(Graphics *g, Vector2 pos, float scale)
 	g->popTransform();
 }
 
-void OsuSkinImage::update(bool useEngineTimeForAnimations, long curMusicPos)
+void OsuSkinImage::update(float speedMultiplier, bool useEngineTimeForAnimations, long curMusicPos)
 {
 	if (m_images.size() < 1) return;
 
 	m_iCurMusicPos = curMusicPos;
 
-	const float frameDurationInSeconds = (osu_skin_animation_fps_override.getFloat() > 0.0f ? (1.0f / osu_skin_animation_fps_override.getFloat()) : m_fFrameDuration);
+	const float frameDurationInSeconds = (osu_skin_animation_fps_override.getFloat() > 0.0f ? (1.0f / osu_skin_animation_fps_override.getFloat()) : m_fFrameDuration) / speedMultiplier;
 
 	if (useEngineTimeForAnimations)
 	{
@@ -385,10 +385,10 @@ void OsuSkinImage::update(bool useEngineTimeForAnimations, long curMusicPos)
 	}
 }
 
-void OsuSkinImage::setAnimationTimeOffset(long offset)
+void OsuSkinImage::setAnimationTimeOffset(float speedMultiplier, long offset)
 {
 	m_iBeatmapAnimationTimeStartOffset = offset;
-	update(false, m_iCurMusicPos); // force update
+	update(speedMultiplier, false, m_iCurMusicPos); // force update
 }
 
 void OsuSkinImage::setAnimationFrameForce(int frame)

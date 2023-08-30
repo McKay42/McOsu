@@ -164,6 +164,7 @@ public:
 	float getRawSpeedMultiplier();	// without override
 	float getSpeedMultiplier();		// with override
 	float getPitchMultiplier();
+	float getAnimationSpeedMultiplier();
 
 	inline bool getModAuto() const {return m_bModAuto;}
 	inline bool getModAutopilot() const {return m_bModAutopilot;}
@@ -225,6 +226,9 @@ private:
 	void onMusicVolumeChange(UString oldValue, UString newValue);
 	void onSpeedChange(UString oldValue, UString newValue);
 	void onPitchChange(UString oldValue, UString newValue);
+	void onAnimationSpeedChange(UString oldValue, UString newValue);
+
+	void updateAnimationSpeed();
 
 	void onPlayfieldChange(UString oldValue, UString newValue);
 
