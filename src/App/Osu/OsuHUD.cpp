@@ -1142,10 +1142,6 @@ void OsuHUD::drawPlayfieldBorder(Graphics *g, Vector2 playfieldCenter, Vector2 p
 	Vector2 playfieldBorderTopLeft = Vector2((int)(playfieldCenter.x - playfieldSize.x/2 - hitcircleDiameter/2 - borderSize), (int)(playfieldCenter.y - playfieldSize.y/2 - hitcircleDiameter/2 - borderSize));
 	Vector2 playfieldBorderSize = Vector2((int)(playfieldSize.x + hitcircleDiameter), (int)(playfieldSize.y + hitcircleDiameter));
 
-	// HACKHACK: force glDisable(GL_TEXTURE_2D) by drawPixel(), to avoid invisible border on maps without a background image
-	g->setColor(0x00000000);
-	g->drawPixel(-999,-999);
-
 	const Color innerColor = 0x44ffffff;
 	const Color outerColor = 0x00000000;
 
@@ -1155,7 +1151,8 @@ void OsuHUD::drawPlayfieldBorder(Graphics *g, Vector2 playfieldCenter, Vector2 p
 
 		// top
 		{
-			VertexArrayObject vao(Graphics::PRIMITIVE::PRIMITIVE_QUADS);
+			static VertexArrayObject vao(Graphics::PRIMITIVE::PRIMITIVE_QUADS);
+			vao.empty();
 
 			vao.addVertex(playfieldBorderTopLeft);
 			vao.addColor(outerColor);
@@ -1171,7 +1168,8 @@ void OsuHUD::drawPlayfieldBorder(Graphics *g, Vector2 playfieldCenter, Vector2 p
 
 		// left
 		{
-			VertexArrayObject vao(Graphics::PRIMITIVE::PRIMITIVE_QUADS);
+			static VertexArrayObject vao(Graphics::PRIMITIVE::PRIMITIVE_QUADS);
+			vao.empty();
 
 			vao.addVertex(playfieldBorderTopLeft);
 			vao.addColor(outerColor);
@@ -1187,7 +1185,8 @@ void OsuHUD::drawPlayfieldBorder(Graphics *g, Vector2 playfieldCenter, Vector2 p
 
 		// right
 		{
-			VertexArrayObject vao(Graphics::PRIMITIVE::PRIMITIVE_QUADS);
+			static VertexArrayObject vao(Graphics::PRIMITIVE::PRIMITIVE_QUADS);
+			vao.empty();
 
 			vao.addVertex(playfieldBorderTopLeft + Vector2(playfieldBorderSize.x + 2*borderSize, 0));
 			vao.addColor(outerColor);
@@ -1203,7 +1202,8 @@ void OsuHUD::drawPlayfieldBorder(Graphics *g, Vector2 playfieldCenter, Vector2 p
 
 		// bottom
 		{
-			VertexArrayObject vao(Graphics::PRIMITIVE::PRIMITIVE_QUADS);
+			static VertexArrayObject vao(Graphics::PRIMITIVE::PRIMITIVE_QUADS);
+			vao.empty();
 
 			vao.addVertex(playfieldBorderTopLeft + Vector2(borderSize, playfieldBorderSize.y + borderSize));
 			vao.addColor(innerColor);
@@ -2444,7 +2444,9 @@ void OsuHUD::drawProgressBar(Graphics *g, float percent, bool waiting)
 		g->setColor(0xaaf2f2f2);
 
 	{
-		VertexArrayObject vao;
+		static VertexArrayObject vao;
+		vao.empty();
+
 		Vector2 prevVertex;
 		for (int i=0; i<num_segments+1; i++)
 		{
@@ -2522,7 +2524,9 @@ void OsuHUD::drawProgressBarVR(Graphics *g, Matrix4 &mvp, OsuVR *vr, float perce
 		g->setColor(0xaaf2f2f2);
 
 	{
-		VertexArrayObject vao;
+		static VertexArrayObject vao;
+		vao.empty();
+
 		Vector2 prevVertex;
 		for (int i=0; i<num_segments+1; i++)
 		{

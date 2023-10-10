@@ -135,11 +135,6 @@ public:
 		}
 		else
 		{
-			// HACKHACK: disable GL_TEXTURE_2D
-			// DEPRECATED LEGACY
-			g->setColor(0x00000000);
-			g->drawPixel(m_vPos.x, m_vPos.y);
-
 			g->setColor(0xffffffff);
 			VertexArrayObject vao;
 
@@ -846,11 +841,6 @@ void OsuMainMenu::draw(Graphics *g)
 				vao.addVertex(innerRight.x, innerRight.y);
 				vao.addVertex(right.x, right.y);
 			}
-
-			// HACKHACK: disable GL_TEXTURE_2D
-			// DEPRECATED LEGACY
-			g->setColor(0x00000000);
-			g->drawPixel(-1, -1);
 
 			// left
 			g->setColor(0xffc8faf1);
