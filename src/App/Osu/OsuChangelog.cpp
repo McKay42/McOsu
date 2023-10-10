@@ -35,7 +35,12 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	std::vector<CHANGELOG> changelogs;
 
 	CHANGELOG alpha317;
-	alpha317.title = UString::format("33.06 (Build Date: %s, %s)", __DATE__, __TIME__); // (09.01.2022 - ?)
+	alpha317.title = UString::format("33.07 (Build Date: %s, %s)", __DATE__, __TIME__); // (09.01.2022 - ?)
+	alpha317.changes.push_back("- Reenabled IME support to fix blocking keyboard language switching hotkeys (add \"-noime\" launch arg to get the old behavior back in case of problems)");
+	alpha317.changes.push_back("- Improved console autocomplete");
+	alpha317.changes.push_back("- Fixed pie progressbar fill being invisible under certain conditions");
+	alpha317.changes.push_back("");
+	alpha317.changes.push_back("");
 	alpha317.changes.push_back("- Added ConVars: osu_mod_random_seed, osu_hud_statistics_*_offset_x/y, osu_slider_max_ticks");
 	alpha317.changes.push_back("- Updated mod selection screen to show rng seed when hovering over enabled \"Random\" experimental mod checkbox");
 	alpha317.changes.push_back("- Fixed another set of star calc crashes on stupid aspire beatmaps (lowered slider tick limit, no timingpoints)");
