@@ -291,6 +291,22 @@ private:
 	Color m_textColorUnbound;
 };
 
+class OsuOptionsMenuKeyBindButton : public OsuUIButton
+{
+public:
+	OsuOptionsMenuKeyBindButton(Osu *osu, float xPos, float yPos, float xSize, float ySize, UString name, UString text) : OsuUIButton(osu, xPos, yPos, xSize, ySize, name, text)
+	{
+		m_bDisallowLeftMouseClickBinding = false;
+	}
+
+	void setDisallowLeftMouseClickBinding(bool disallowLeftMouseClickBinding) {m_bDisallowLeftMouseClickBinding = disallowLeftMouseClickBinding;}
+
+	inline bool isLeftMouseClickBindingAllowed() const {return !m_bDisallowLeftMouseClickBinding;}
+
+private:
+	bool m_bDisallowLeftMouseClickBinding;
+};
+
 class OsuOptionsMenuCategoryButton : public CBaseUIButton
 {
 public:
@@ -928,7 +944,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSubSection("Keys - FPoSu", keyboardSectionTags);
 	addKeyBindButton("Zoom", &OsuKeyBindings::FPOSU_ZOOM);
 	addSubSection("Keys - In-Game", keyboardSectionTags);
-	addKeyBindButton("Game Pause", &OsuKeyBindings::GAME_PAUSE);
+	addKeyBindButton("Game Pause", &OsuKeyBindings::GAME_PAUSE)->setDisallowLeftMouseClickBinding(true);
 	addKeyBindButton("Skip Cutscene", &OsuKeyBindings::SKIP_CUTSCENE);
 	addKeyBindButton("Toggle Scoreboard", &OsuKeyBindings::TOGGLE_SCOREBOARD);
 	addKeyBindButton("Scrubbing (+ Click Drag!)", &OsuKeyBindings::SEEK_TIME);
@@ -3175,7 +3191,10 @@ void OsuOptionsMenu::onKeyBindingButtonPressed(CBaseUIButton *button)
 					UString notificationText = "Press new key for ";
 					notificationText.append(button->getText());
 					notificationText.append(":");
-					m_osu->getNotificationOverlay()->addNotification(notificationText, 0xffffffff, true);
+
+					const bool waitForKey = true;
+					m_osu->getNotificationOverlay()->addNotification(notificationText, 0xffffffff, waitForKey);
+					m_osu->getNotificationOverlay()->setDisallowWaitForKeyLeftClick(!(dynamic_cast<OsuOptionsMenuKeyBindButton*>(button)->isLeftMouseClickBindingAllowed()));
 				}
 				break;
 			}
@@ -3777,7 +3796,7 @@ OsuOptionsMenu::OPTIONS_ELEMENT OsuOptionsMenu::addButtonButtonLabel(UString tex
 	return e;
 }
 
-OsuUIButton *OsuOptionsMenu::addKeyBindButton(UString text, ConVar *cvar)
+OsuOptionsMenuKeyBindButton *OsuOptionsMenu::addKeyBindButton(UString text, ConVar *cvar)
 {
 	///UString unbindIconString; unbindIconString.insert(0, OsuIcons::UNDO);
 	OsuUIButton *unbindButton = new OsuUIButton(m_osu, 0, 0, m_options->getSize().x, 50, text, "");
@@ -3788,7 +3807,7 @@ OsuUIButton *OsuOptionsMenu::addKeyBindButton(UString text, ConVar *cvar)
 	///unbindButton->setFont(m_osu->getFontIcons());
 	m_options->getContainer()->addBaseUIElement(unbindButton);
 
-	OsuUIButton *bindButton = new OsuUIButton(m_osu, 0, 0, m_options->getSize().x, 50, text, text);
+	OsuOptionsMenuKeyBindButton *bindButton = new OsuOptionsMenuKeyBindButton(m_osu, 0, 0, m_options->getSize().x, 50, text, text);
 	bindButton->setColor(0xff0e94b5);
 	bindButton->setUseDefaultSkin();
 	bindButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );

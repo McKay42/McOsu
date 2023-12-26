@@ -20,6 +20,7 @@ ConVar osu_notification_duration("osu_notification_duration", 1.25f);
 OsuNotificationOverlay::OsuNotificationOverlay(Osu *osu) : OsuScreen(osu)
 {
 	m_bWaitForKey = false;
+	m_bWaitForKeyDisallowsLeftClick = false;
 	m_bConsumeNextChar = false;
 	m_keyListener = NULL;
 }
@@ -95,12 +96,18 @@ void OsuNotificationOverlay::onKeyDown(KeyboardEvent &e)
 		osu_notification_duration.setValue(prevDuration); // restore convar
 		*/
 
-		stopWaitingForKey(true);
+		// HACKHACK: prevent left mouse click bindings if relevant
+		if (env->getOS() == Environment::OS::OS_WINDOWS && m_bWaitForKeyDisallowsLeftClick && e.getKeyCode() == 0x01) // 0x01 == VK_LBUTTON
+			stopWaitingForKey();
+		else
+		{
+			stopWaitingForKey(true);
 
-		debugLog("keyCode = %lu\n", e.getKeyCode());
+			debugLog("keyCode = %lu\n", e.getKeyCode());
 
-		if (m_keyListener != NULL)
-			m_keyListener->onKey(e);
+			if (m_keyListener != NULL)
+				m_keyListener->onKey(e);
+		}
 
 		e.consume();
 	}
@@ -179,6 +186,7 @@ void OsuNotificationOverlay::addNotification(UString text, Color textColor, bool
 void OsuNotificationOverlay::stopWaitingForKey(bool stillConsumeNextChar)
 {
 	m_bWaitForKey = false;
+	m_bWaitForKeyDisallowsLeftClick = false;
 	m_bConsumeNextChar = stillConsumeNextChar;
 }
 

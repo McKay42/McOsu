@@ -20,6 +20,7 @@ class OsuUISearchOverlay;
 
 class OsuOptionsMenuSliderPreviewElement;
 class OsuOptionsMenuCategoryButton;
+class OsuOptionsMenuKeyBindButton;
 class OsuOptionsMenuResetButton;
 
 class CBaseUIContainer;
@@ -192,7 +193,7 @@ private:
 	OPTIONS_ELEMENT addButton(UString text, UString labelText, bool withResetButton = false);
 	OPTIONS_ELEMENT addButtonButton(UString text1, UString text2);
 	OPTIONS_ELEMENT addButtonButtonLabel(UString text1, UString text2, UString labelText, bool withResetButton = false);
-	OsuUIButton *addKeyBindButton(UString text, ConVar *cvar);
+	OsuOptionsMenuKeyBindButton *addKeyBindButton(UString text, ConVar *cvar);
 	CBaseUICheckbox *addCheckbox(UString text, ConVar *cvar);
 	CBaseUICheckbox *addCheckbox(UString text, UString tooltipText = "", ConVar *cvar = NULL);
 	OsuUISlider *addSlider(UString text, float min = 0.0f, float max = 1.0f, ConVar *cvar = NULL, float label1Width = 0.0f, bool allowOverscale = false, bool allowUnderscale = false);

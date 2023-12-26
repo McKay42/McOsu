@@ -33,6 +33,7 @@ public:
 	virtual void onChar(KeyboardEvent &e);
 
 	void addNotification(UString text, Color textColor = 0xffffffff, bool waitForKey = false, float duration = -1.0f);
+	void setDisallowWaitForKeyLeftClick(bool disallowWaitForKeyLeftClick) {m_bWaitForKeyDisallowsLeftClick = disallowWaitForKeyLeftClick;}
 
 	void stopWaitingForKey(bool stillConsumeNextChar = false);
 
@@ -61,6 +62,7 @@ private:
 	NOTIFICATION m_notification2;
 
 	bool m_bWaitForKey;
+	bool m_bWaitForKeyDisallowsLeftClick;
 	bool m_bConsumeNextChar;
 	OsuNotificationOverlayKeyListener *m_keyListener;
 };
