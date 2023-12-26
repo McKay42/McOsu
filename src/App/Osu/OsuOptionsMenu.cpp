@@ -711,7 +711,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 		{
 #ifndef MCENGINE_FEATURE_BASS_WASAPI
 
-			CBaseUICheckbox *audioCompatibilityModeCheckbox = addCheckbox("Audio compatibility mode", "Use legacy audio engine (higher latency but more compatible)", m_win_snd_fallback_dsound_ref);
+			CBaseUICheckbox *audioCompatibilityModeCheckbox = addCheckbox("Audio compatibility mode (!)", "Use legacy audio engine (higher latency but more compatible)\nWARNING: May cause hitsound delays and stuttering!", m_win_snd_fallback_dsound_ref);
 			audioCompatibilityModeCheckbox->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onAudioCompatibilityModeChange) );
 
 			// HACKHACK: force manual change if user has enabled it (don't use convar callback)
