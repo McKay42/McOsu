@@ -52,7 +52,7 @@ ConVar osu_slider_max_ticks("osu_slider_max_ticks", 2048, "maximum number of tic
 ConVar osu_number_max("osu_number_max", 0, "0 = disabled, 1/2/3/4/etc. limits visual circle numbers to this number");
 ConVar osu_ignore_beatmap_combo_numbers("osu_ignore_beatmap_combo_numbers", false, "may be used in conjunction with osu_number_max");
 
-ConVar osu_beatmap_version("osu_beatmap_version", 14, "maximum supported .osu file version, above this will simply not load");
+ConVar osu_beatmap_version("osu_beatmap_version", 128, "maximum supported .osu file version, above this will simply not load (this was 14 but got bumped to 128 due to lazer backports)");
 
 unsigned long long OsuDatabaseBeatmap::sortHackCounter = 0;
 
