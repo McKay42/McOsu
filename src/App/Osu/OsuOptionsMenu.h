@@ -150,6 +150,7 @@ private:
 	void onCheckboxChange(CBaseUICheckbox *checkbox);
 	void onSliderChange(CBaseUISlider *slider);
 	void onSliderChangeOneDecimalPlace(CBaseUISlider *slider);
+	void onSliderChangeTwoDecimalPlaces(CBaseUISlider *slider);
 	void onSliderChangeOneDecimalPlaceMeters(CBaseUISlider *slider);
 	void onSliderChangeInt(CBaseUISlider *slider);
 	void onSliderChangeIntMS(CBaseUISlider *slider);
