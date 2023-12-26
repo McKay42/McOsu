@@ -1035,6 +1035,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Draw Accuracy", convar->getConVarByName("osu_draw_accuracy"));
 	addCheckbox("Draw ProgressBar", convar->getConVarByName("osu_draw_progressbar"));
 	addCheckbox("Draw HitErrorBar", convar->getConVarByName("osu_draw_hiterrorbar"));
+	addCheckbox("Draw HitErrorBar UR", "Unstable Rate", convar->getConVarByName("osu_draw_hiterrorbar_ur"));
 	addCheckbox("Draw ScoreBar", "Health/HP Bar.", convar->getConVarByName("osu_draw_scorebar"));
 	addCheckbox("Draw ScoreBar-bg", "Some skins abuse this as the playfield background image.\nIt is actually just the background image for the Health/HP Bar.", convar->getConVarByName("osu_draw_scorebarbg"));
 	addCheckbox("Draw ScoreBoard", convar->getConVarByName("osu_draw_scoreboard"));
@@ -1076,6 +1077,9 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_hudHiterrorbarScaleSlider = addSlider("HitErrorBar Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_hud_hiterrorbar_scale"), 165.0f);
 	m_hudHiterrorbarScaleSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
 	m_hudHiterrorbarScaleSlider->setKeyDelta(0.01f);
+	m_hudHiterrorbarURScaleSlider = addSlider("HitErrorBar UR Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_hud_hiterrorbar_ur_scale"), 165.0f);
+	m_hudHiterrorbarURScaleSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
+	m_hudHiterrorbarURScaleSlider->setKeyDelta(0.01f);
 	m_hudProgressbarScaleSlider = addSlider("ProgressBar Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_hud_progressbar_scale"), 165.0f);
 	m_hudProgressbarScaleSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
 	m_hudProgressbarScaleSlider->setKeyDelta(0.01f);
@@ -1272,6 +1276,7 @@ void OsuOptionsMenu::draw(Graphics *g)
 		|| m_hudScoreScaleSlider->isActive()
 		|| m_hudAccuracyScaleSlider->isActive()
 		|| m_hudHiterrorbarScaleSlider->isActive()
+		|| m_hudHiterrorbarURScaleSlider->isActive()
 		|| m_hudProgressbarScaleSlider->isActive()
 		|| m_hudScoreBarScaleSlider->isActive()
 		|| m_hudScoreBoardScaleSlider->isActive()

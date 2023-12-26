@@ -229,6 +229,7 @@ private:
 	CBaseUISlider *m_hudScoreScaleSlider;
 	CBaseUISlider *m_hudAccuracyScaleSlider;
 	CBaseUISlider *m_hudHiterrorbarScaleSlider;
+	CBaseUISlider *m_hudHiterrorbarURScaleSlider;
 	CBaseUISlider *m_hudProgressbarScaleSlider;
 	CBaseUISlider *m_hudScoreBarScaleSlider;
 	CBaseUISlider *m_hudScoreBoardScaleSlider;
