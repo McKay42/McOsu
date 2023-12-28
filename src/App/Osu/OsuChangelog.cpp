@@ -35,7 +35,17 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	std::vector<CHANGELOG> changelogs;
 
 	CHANGELOG alpha317;
-	alpha317.title = UString::format("33.07 (Build Date: %s, %s)", __DATE__, __TIME__); // (09.01.2022 - ?)
+	alpha317.title = UString::format("33.08 (Build Date: %s, %s)", __DATE__, __TIME__); // (09.01.2022 - ?)
+	alpha317.changes.push_back("- Added Options > Gameplay > HUD > \"Draw HitErrorBar UR\" (Unstable Rate text display above hiterrorbar, enabled by default)");
+	alpha317.changes.push_back("- Added ConVars (1): osu_hud_hiterrorbar_ur_scale, osu_hud_hiterrorbar_ur_alpha, osu_hud_hiterrorbar_ur_offset_x/y_percent");
+	alpha317.changes.push_back("- Added ConVars (2): osu_beatmap_max_num_hitobjects, osu_beatmap_max_num_slider_scoringtimes");
+	alpha317.changes.push_back("- FPoSu: Updated FOV sliders to allow two decimal places");
+	alpha317.changes.push_back("- Updated supported beatmap version from 14 to 128 (lazer exports)");
+	alpha317.changes.push_back("- Updated \"Game Pause\" keybind to prevent binding to left mouse click (to avoid menu deadlocks)");
+	alpha317.changes.push_back("- Updated mod selection screen to also close when ENTER key is pressed");
+	alpha317.changes.push_back("- Fixed even more star calc crashes on stupid deliberate game-breaking beatmaps (~65k sliders * ~9k repeats * 234 ticks = ~126149263360 scoring events)");
+	alpha317.changes.push_back("");
+	alpha317.changes.push_back("");
 	alpha317.changes.push_back("- Reenabled IME support to fix blocking keyboard language switching hotkeys (add \"-noime\" launch arg to get the old behavior back in case of problems)");
 	alpha317.changes.push_back("- Improved console autocomplete");
 	alpha317.changes.push_back("- Fixed pie progressbar fill being invisible under certain conditions");
