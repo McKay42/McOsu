@@ -3030,35 +3030,27 @@ bool OsuSongBrowser2::checkHandleKillDynamicStarCalculator(bool timeout)
 {
 	if (!m_dynamicStarCalculator->isDead())
 	{
-		if (timeout)
+		m_dynamicStarCalculator->kill();
+
+		if (!timeout)
 		{
-			// this is a bit stupid, but it does allow everything to keep running in the meantime
-			const bool isAsyncReady = m_dynamicStarCalculator->isAsyncReady();
-
-			if (isAsyncReady)
-				m_dynamicStarCalculator->kill();
-
-			return isAsyncReady;
-		}
-		else
-		{
-			m_dynamicStarCalculator->kill();
-
 			const double startTime = engine->getTimeReal();
 			while (!m_dynamicStarCalculator->isAsyncReady())
 			{
-				if (timeout && engine->getTimeReal() - startTime > 2)
+				env->sleep(1);
+
+				if (engine->getTimeReal() - startTime > 20.0)
 				{
 					debugLog("WARNING: Ignoring stuck DynamicStarCalculator thread!\n");
 					break;
 				}
 			}
-
-			return m_dynamicStarCalculator->isAsyncReady();
 		}
+
+		return m_dynamicStarCalculator->isAsyncReady();
 	}
 	else
-		return true;
+		return (!engine->getResourceManager()->isLoadingResource(m_dynamicStarCalculator) || m_dynamicStarCalculator->isAsyncReady());
 }
 
 void OsuSongBrowser2::checkHandleKillBackgroundSearchMatcher()
@@ -4340,9 +4332,7 @@ void OsuSongBrowser2::highlightScore(uint64_t unixTimestamp)
 void OsuSongBrowser2::recalculateStarsForSelectedBeatmap(bool force)
 {
 	if (!osu_songbrowser_dynamic_star_recalc.getBool()) return;
-
 	if (m_selectedBeatmap == NULL || m_selectedBeatmap->getSelectedDifficulty2() == NULL) return;
-	if (!force && m_selectedBeatmap->getSelectedDifficulty2() == m_dynamicStarCalculator->getBeatmapDifficulty()) return;
 
 	// HACKHACK: temporarily deactivated, see OsuSongBrowser2::update(), but only if drawing scrubbing timeline strain graph is enabled (or "Draw Stats: Stars* (Total)", or "Draw Stats: pp (SS)")
 	if (!m_osu_draw_scrubbing_timeline_strain_graph_ref->getBool() && !m_osu_draw_statistics_perfectpp_ref->getBool() && !m_osu_draw_statistics_totalstars_ref->getBool())
