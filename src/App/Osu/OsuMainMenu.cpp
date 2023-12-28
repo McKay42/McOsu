@@ -1480,7 +1480,7 @@ void OsuMainMenu::animMainButton()
 
 	m_iMainMenuRandomAnimType = (rand() % 4) == 1 ? 1 : 0;
 	if (!m_bMainMenuAnimFadeToFriendForNextAnim && osu_main_menu_friend.getBool() && env->getOS() == Environment::OS::OS_WINDOWS) // NOTE: z buffer bullshit on other platforms >:(
-		m_bMainMenuAnimFadeToFriendForNextAnim = (rand() % 12) == 1;
+		m_bMainMenuAnimFadeToFriendForNextAnim = (rand() % 24) == 1;
 
 	m_fMainMenuAnim = 0.0f;
 	m_fMainMenuAnim1 = 0.0f;

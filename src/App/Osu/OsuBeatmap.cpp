@@ -1348,6 +1348,16 @@ bool OsuBeatmap::play()
 						m_osu->getNotificationOverlay()->addNotification(errorMessage, 0xffff0000);
 				}
 				break;
+
+			case 5:
+				{
+					UString errorMessage = "Error: Too many hitobjects in beatmap :(";
+					debugLog("Osu Error: Too many hitobjects in beatmap %s\n", m_selectedDifficulty2->getFilePath().toUtf8());
+
+					if (m_osu != NULL)
+						m_osu->getNotificationOverlay()->addNotification(errorMessage, 0xffff0000);
+				}
+				break;
 			}
 
 			return false;

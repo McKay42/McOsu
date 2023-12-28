@@ -53,6 +53,8 @@ ConVar osu_number_max("osu_number_max", 0, "0 = disabled, 1/2/3/4/etc. limits vi
 ConVar osu_ignore_beatmap_combo_numbers("osu_ignore_beatmap_combo_numbers", false, "may be used in conjunction with osu_number_max");
 
 ConVar osu_beatmap_version("osu_beatmap_version", 128, "maximum supported .osu file version, above this will simply not load (this was 14 but got bumped to 128 due to lazer backports)");
+ConVar osu_beatmap_max_num_hitobjects("osu_beatmap_max_num_hitobjects", 32768, "maximum number of total allowed hitobjects per beatmap (prevent crashing on deliberate game-breaking beatmaps)");
+ConVar osu_beatmap_max_num_slider_scoringtimes("osu_beatmap_max_num_slider_scoringtimes", 32768, "maximum number of slider score increase events allowed per slider (prevent crashing on deliberate game-breaking beatmaps)");
 
 unsigned long long OsuDatabaseBeatmap::sortHackCounter = 0;
 
@@ -520,6 +522,14 @@ OsuDatabaseBeatmap::PRIMITIVE_CONTAINER OsuDatabaseBeatmap::loadPrimitiveObjects
 		}
 	}
 
+	// late bail if too many hitobjects would run out of memory and crash
+	const size_t numHitobjects = c.hitcircles.size() + c.sliders.size() + c.spinners.size();
+	if (numHitobjects > (size_t)osu_beatmap_max_num_hitobjects.getInt())
+	{
+		c.errorCode = 5;
+		return c;
+	}
+
 	// sort timingpoints by time
 	if (c.timingpoints.size() > 0)
 		std::sort(c.timingpoints.begin(), c.timingpoints.end(), TimingPointSortComparator());
@@ -527,9 +537,18 @@ OsuDatabaseBeatmap::PRIMITIVE_CONTAINER OsuDatabaseBeatmap::loadPrimitiveObjects
 	return c;
 }
 
-void OsuDatabaseBeatmap::calculateSliderTimesClicksTicks(int beatmapVersion, std::vector<SLIDER> &sliders, std::vector<TIMINGPOINT> &timingpoints, float sliderMultiplier, float sliderTickRate)
+OsuDatabaseBeatmap::CALCULATE_SLIDER_TIMES_CLICKS_TICKS_RESULT OsuDatabaseBeatmap::calculateSliderTimesClicksTicks(int beatmapVersion, std::vector<SLIDER> &sliders, std::vector<TIMINGPOINT> &timingpoints, float sliderMultiplier, float sliderTickRate)
 {
-	if (timingpoints.size() < 1) return;
+	CALCULATE_SLIDER_TIMES_CLICKS_TICKS_RESULT r;
+	{
+		r.errorCode = 0;
+	}
+
+	if (timingpoints.size() < 1)
+	{
+		r.errorCode = 3;
+		return r;
+	}
 
 	struct SliderHelper
 	{
@@ -601,6 +620,13 @@ void OsuDatabaseBeatmap::calculateSliderTimesClicksTicks(int beatmapVersion, std
 			}
 		}
 
+		// bail if too many predicted heuristic scoringTimes would run out of memory and crash
+		if ((size_t)std::abs(s.repeat) * s.ticks.size() > (size_t)osu_beatmap_max_num_slider_scoringtimes.getInt())
+		{
+			r.errorCode = 5;
+			return r;
+		}
+
 		// calculate s.scoringTimesForStarCalc, which should include every point in time where the cursor must be within the followcircle radius and at least one key must be pressed:
 		// see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Preprocessing/OsuDifficultyHitObject.cs
 		// NOTE: only necessary since the latest pp changes (Xexxar)
@@ -649,6 +675,8 @@ void OsuDatabaseBeatmap::calculateSliderTimesClicksTicks(int beatmapVersion, std
 			std::sort(s.scoringTimesForStarCalc.begin(), s.scoringTimesForStarCalc.end(), OsuDifficultyHitObject::SliderScoringTimeComparator());
 		}
 	}
+
+	return r;
 }
 
 OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT OsuDatabaseBeatmap::loadDifficultyHitObjects(const UString &osuFilePath, Osu::GAMEMODE gameMode, float AR, float CS, float speedMultiplier, bool calculateStarsInaccurately)
@@ -667,7 +695,12 @@ OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT OsuDatabaseBeatmap::loadDifficultyHitObj
 	}
 
 	// calculate sliderTimes, and build slider clicks and ticks
-	calculateSliderTimesClicksTicks(c.version, c.sliders, c.timingpoints, c.sliderMultiplier, c.sliderTickRate);
+	CALCULATE_SLIDER_TIMES_CLICKS_TICKS_RESULT sliderTimeCalcResult = calculateSliderTimesClicksTicks(c.version, c.sliders, c.timingpoints, c.sliderMultiplier, c.sliderTickRate);
+	if (sliderTimeCalcResult.errorCode != 0)
+	{
+		result.errorCode = sliderTimeCalcResult.errorCode;
+		return result;
+	}
 
 	// now we can calculate the max possible combo (because that needs ticks/clicks to be filled, mostly convenience)
 	{
@@ -1381,7 +1414,12 @@ OsuDatabaseBeatmap::LOAD_GAMEPLAY_RESULT OsuDatabaseBeatmap::loadGameplay(OsuDat
 	}
 
 	// calculate sliderTimes, and build slider clicks and ticks
-	calculateSliderTimesClicksTicks(c.version, c.sliders, databaseBeatmap->m_timingpoints, databaseBeatmap->m_fSliderMultiplier, databaseBeatmap->m_fSliderTickRate);
+	CALCULATE_SLIDER_TIMES_CLICKS_TICKS_RESULT sliderTimeCalcResult = calculateSliderTimesClicksTicks(c.version, c.sliders, databaseBeatmap->m_timingpoints, databaseBeatmap->m_fSliderMultiplier, databaseBeatmap->m_fSliderTickRate);
+	if (sliderTimeCalcResult.errorCode != 0)
+	{
+		result.errorCode = sliderTimeCalcResult.errorCode;
+		return result;
+	}
 
 	// build hitobjects from the primitive data we loaded from the osu file
 	OsuBeatmapStandard *beatmapStandard = dynamic_cast<OsuBeatmapStandard*>(beatmap);

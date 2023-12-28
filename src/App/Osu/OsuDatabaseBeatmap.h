@@ -349,6 +349,11 @@ private:
 		int version;
 	};
 
+	struct CALCULATE_SLIDER_TIMES_CLICKS_TICKS_RESULT
+	{
+		int errorCode;
+	};
+
 
 
 private:
@@ -369,7 +374,7 @@ private:
 
 
 	static PRIMITIVE_CONTAINER loadPrimitiveObjects(const UString &osuFilePath, Osu::GAMEMODE gameMode, bool filePathIsInMemoryBeatmap = false);
-	static void calculateSliderTimesClicksTicks(int beatmapVersion, std::vector<SLIDER> &sliders, std::vector<TIMINGPOINT> &timingpoints, float sliderMultiplier, float sliderTickRate);
+	static CALCULATE_SLIDER_TIMES_CLICKS_TICKS_RESULT calculateSliderTimesClicksTicks(int beatmapVersion, std::vector<SLIDER> &sliders, std::vector<TIMINGPOINT> &timingpoints, float sliderMultiplier, float sliderTickRate);
 
 
 
