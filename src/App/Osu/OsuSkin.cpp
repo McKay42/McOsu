@@ -67,6 +67,7 @@ OsuSkin::OsuSkin(Osu *osu, UString name, UString filepath, bool isDefaultSkin, b
 	m_sFilePath = filepath;
 	m_bIsDefaultSkin = isDefaultSkin;
 	m_bIsWorkshopSkin = isWorkshopSkin;
+	m_animationSpeedMultiplier = 1.0f;
 
 	m_bReady = false;
 
@@ -358,7 +359,7 @@ void OsuSkin::update()
 	const long curMusicPos = m_osu->getSelectedBeatmap() != NULL ? m_osu->getSelectedBeatmap()->getCurMusicPosWithOffsets() : 0;
 	for (int i=0; i<m_images.size(); i++)
 	{
-		m_images[i]->update(useEngineTimeForAnimations, curMusicPos);
+		m_images[i]->update(m_animationSpeedMultiplier, useEngineTimeForAnimations, curMusicPos);
 	}
 }
 

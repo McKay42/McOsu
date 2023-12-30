@@ -52,7 +52,7 @@ public:
 
 	static float getFadeOutTime(OsuBeatmap *beatmap) // this scales the fadeout duration with the current speed multiplier
 	{
-		return osu_hitobject_fade_out_time.getFloat() * (1.0f / std::max(beatmap->getSpeedMultiplier(), osu_hitobject_fade_out_time_speed_multiplier_min.getFloat()));
+		return osu_hitobject_fade_out_time.getFloat() * (1.0f / std::max(beatmap->getOsu()->getAnimationSpeedMultiplier(), osu_hitobject_fade_out_time_speed_multiplier_min.getFloat()));
 	}
 
 	static inline long getFadeInTime() {return (long)osu_hitobject_fade_in_time.getInt();}

@@ -94,6 +94,7 @@ ConVar osu_volume_change_interval("osu_volume_change_interval", 0.05f);
 
 ConVar osu_speed_override("osu_speed_override", -1.0f);
 ConVar osu_pitch_override("osu_pitch_override", -1.0f);
+ConVar osu_animation_speed_override("osu_animation_speed_override", -1.0f);
 
 ConVar osu_pause_on_focus_loss("osu_pause_on_focus_loss", true);
 ConVar osu_quick_retry_delay("osu_quick_retry_delay", 0.27f);
@@ -294,6 +295,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	osu_volume_music.setCallback( fastdelegate::MakeDelegate(this, &Osu::onMusicVolumeChange) );
 	osu_speed_override.setCallback( fastdelegate::MakeDelegate(this, &Osu::onSpeedChange) );
 	osu_pitch_override.setCallback( fastdelegate::MakeDelegate(this, &Osu::onPitchChange) );
+	osu_animation_speed_override.setCallback( fastdelegate::MakeDelegate(this, &Osu::onAnimationSpeedChange) );
 
 	m_osu_playfield_rotation->setCallback( fastdelegate::MakeDelegate(this, &Osu::onPlayfieldChange) );
 	m_osu_playfield_stretch_x->setCallback( fastdelegate::MakeDelegate(this, &Osu::onPlayfieldChange) );
@@ -2004,6 +2006,16 @@ float Osu::getPitchMultiplier()
 	return pitchMultiplier;
 }
 
+float Osu::getAnimationSpeedMultiplier()
+{
+	float animationSpeedMultiplier = getSpeedMultiplier();
+
+	if (osu_animation_speed_override.getFloat() >= 0.0f)
+		return std::max(osu_animation_speed_override.getFloat(), 0.05f);
+
+	return animationSpeedMultiplier;
+}
+
 bool Osu::isInPlayMode()
 {
 	return (m_songBrowser2 != NULL && m_songBrowser2->hasSelectedAndIsPlaying());
@@ -2385,12 +2397,27 @@ void Osu::onMusicVolumeChange(UString oldValue, UString newValue)
 		getSelectedBeatmap()->setVolume(newValue.toFloat());
 }
 
+void Osu::updateAnimationSpeed()
+{
+	if (getSkin() != NULL && getSelectedBeatmap() != NULL)
+	{
+		float speed = getAnimationSpeedMultiplier() / getSpeedMultiplier();
+		getSkin()->setAnimationSpeed(speed >= 0.0f ? speed : 0.0f);
+	}
+}
+
+void Osu::onAnimationSpeedChange(UString oldValue, UString newValue)
+{
+	updateAnimationSpeed();
+}
+
 void Osu::onSpeedChange(UString oldValue, UString newValue)
 {
 	if (getSelectedBeatmap() != NULL)
 	{
 		float speed = newValue.toFloat();
 		getSelectedBeatmap()->setSpeed(speed >= 0.0f ? speed : getSpeedMultiplier());
+		updateAnimationSpeed();
 	}
 }
 

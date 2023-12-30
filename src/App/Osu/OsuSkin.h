@@ -39,6 +39,9 @@ public:
 	void loadBeatmapOverride(UString filepath);
 	void reloadSounds();
 
+	void setAnimationSpeed(float animationSpeed) {m_animationSpeedMultiplier = animationSpeed;}
+	float getAnimationSpeed() {return m_animationSpeedMultiplier;}
+
 	// samples
 	void setSampleSet(int sampleSet);
 	void setSampleVolume(float volume, bool force = false);
@@ -364,6 +367,7 @@ private:
 	bool m_bReady;
 	bool m_bIsDefaultSkin;
 	bool m_bIsWorkshopSkin;
+	float m_animationSpeedMultiplier;
 	UString m_sName;
 	UString m_sFilePath;
 	UString m_sSkinIniFilePath;

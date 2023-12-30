@@ -407,12 +407,12 @@ void OsuBeatmapStandard::drawFollowPoints(Graphics *g)
 	// I absolutely hate this, followpoints can be abused for cheesing high AR reading since they always fade in with a fixed 800 ms custom approach time
 	// capping it at the current approach rate seems sensible, but unfortunately that's not what osu is doing
 	// it was non-osu-compliant-clamped since this client existed, but let's see how many people notice a change after all this time (26.02.2020)
-	const long followPointApproachTime = osu_followpoints_clamp.getBool() ? std::min((long)OsuGameRules::getApproachTime(this), (long)osu_followpoints_approachtime.getFloat()) : (long)osu_followpoints_approachtime.getFloat();
-
+	const double animationMutiplier = m_osu->getSpeedMultiplier() / m_osu->getAnimationSpeedMultiplier(); //0.7x means animation lasts only 0.7 of it's time
+	const long followPointApproachTime = animationMutiplier * (osu_followpoints_clamp.getBool() ? std::min((long)OsuGameRules::getApproachTime(this), (long)osu_followpoints_approachtime.getFloat()) : (long)osu_followpoints_approachtime.getFloat());
 	const bool followPointsConnectCombos = osu_followpoints_connect_combos.getBool();
 	const bool followPointsConnectSpinners = osu_followpoints_connect_spinners.getBool();
 	const float followPointSeparationMultiplier = std::max(osu_followpoints_separation_multiplier.getFloat(), 0.1f);
-	const float followPointPrevFadeTime = m_osu_followpoints_prevfadetime_ref->getFloat();
+	const float followPointPrevFadeTime = animationMutiplier * m_osu_followpoints_prevfadetime_ref->getFloat();
 	const float followPointScaleMultiplier = osu_followpoints_scale_multiplier.getFloat();
 
 	// include previous object in followpoints
@@ -506,7 +506,7 @@ void OsuBeatmapStandard::drawFollowPoints(Graphics *g)
 				{
 					g->rotate(rad2deg(std::atan2(yDiff, xDiff)));
 
-					skin->getFollowPoint2()->setAnimationTimeOffset(fadeInTime);
+					skin->getFollowPoint2()->setAnimationTimeOffset(skin->getAnimationSpeed(), fadeInTime);
 
 					// NOTE: getSizeBaseRaw() depends on the current animation time being set correctly beforehand! (otherwise you get incorrect scales, e.g. for animated elements with inconsistent @2x mixed in)
 					// the followpoints are scaled by one eighth of the hitcirclediameter (not the raw diameter, but the scaled diameter)

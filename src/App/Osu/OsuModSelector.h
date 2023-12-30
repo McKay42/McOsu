@@ -131,6 +131,7 @@ private:
 	CBaseUISlider *m_ODSlider;
 	CBaseUISlider *m_HPSlider;
 	CBaseUISlider *m_speedSlider;
+	CBaseUISlider *m_animationSpeedSlider;
 	CBaseUICheckbox *m_ARLock;
 	CBaseUICheckbox *m_ODLock;
 	bool m_bShowOverrideSliderALTHint;

@@ -170,6 +170,7 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen(osu)
 	m_bWaitForHPChangeFinished = false;
 
 	m_speedSlider = NULL;
+	m_animationSpeedSlider = NULL;
 	m_bShowOverrideSliderALTHint = true;
 
 	// convar refs
@@ -218,12 +219,16 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen(osu)
 	if (env->getOS() != Environment::OS::OS_HORIZON)
 	{
 		OVERRIDE_SLIDER overrideSpeed = addOverrideSlider("Speed/BPM Multiplier", "x", convar->getConVarByName("osu_speed_override"), 0.0f, 2.5f);
+		OVERRIDE_SLIDER overrideAnimationSpeed = addOverrideSlider("Animation Speed Multiplier", "x", convar->getConVarByName("osu_animation_speed_override"), 0.0f, 2.5f);
 
 		overrideSpeed.slider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
+		overrideAnimationSpeed.slider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuModSelector::onOverrideSliderChange) );
 		//overrideSpeed.slider->setValue(-1.0f, false);
 		overrideSpeed.slider->setAnimated(false); // same quick fix as above
+		overrideAnimationSpeed.slider->setAnimated(false);
 
 		m_speedSlider = overrideSpeed.slider;
+		m_animationSpeedSlider = overrideAnimationSpeed.slider;
 	}
 
 	// build experimental buttons
@@ -1381,7 +1386,17 @@ UString OsuModSelector::getOverrideSliderLabelText(OsuModSelector::OVERRIDE_SLID
 			beatmapValue = clamp<float>(m_osu->getSelectedBeatmap()->getSelectedDifficulty2()->getHP()*m_osu->getDifficultyMultiplier(), 0.0f, 10.0f);
 			convarValue = m_osu->getSelectedBeatmap()->getHP();
 		}
-		else if (s.desc->getText().find("Speed") != -1)
+		else if (s.desc->getText().find("Animation") != -1)
+		{
+			float speedMultiplier = m_osu->getSpeedMultiplier();
+
+			wasSpeedSlider = true;
+			if (!active)
+				newLabelText.append(UString::format(" %.4g", speedMultiplier));
+			else
+				newLabelText.append(UString::format(" %.4g -> %.4g", speedMultiplier, convarValue));
+		}
+		else if (s.desc->getText().find("BPM") != -1)
 		{
 			beatmapValue = active ? m_osu->getRawSpeedMultiplier() : m_osu->getSpeedMultiplier();
 
