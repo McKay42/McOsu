@@ -312,7 +312,8 @@ void OsuCircle::drawHitCircleNumber(Graphics *g, OsuSkin *skin, float numberScal
 	digits.push_back(number);
 
 	// set color
-	g->setColor(COLORf(1.0f, colorRGBMultiplier, colorRGBMultiplier, colorRGBMultiplier));
+	//g->setColor(COLORf(1.0f, colorRGBMultiplier, colorRGBMultiplier, colorRGBMultiplier)); // see https://github.com/ppy/osu/issues/24506
+	g->setColor(0xffffffff);
 	if (osu_circle_number_rainbow.getBool())
 	{
 		float frequency = 0.3f;
