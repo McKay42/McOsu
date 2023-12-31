@@ -32,6 +32,10 @@ public:
 	//	Hitobject Animations  //
 	//************************//
 
+	static ConVar osu_hitobject_hittable_dim;
+	static ConVar osu_hitobject_hittable_dim_start_percent;
+	static ConVar osu_hitobject_hittable_dim_duration;
+
 	static ConVar osu_hitobject_fade_in_time;
 
 	static ConVar osu_hitobject_fade_out_time;

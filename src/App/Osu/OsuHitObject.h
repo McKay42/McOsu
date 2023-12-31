@@ -30,6 +30,8 @@ public:
 
 	static ConVar *m_osu_vr_draw_desktop_playfield;
 
+	static ConVar *m_osu_mod_mafham_ref;
+
 public:
 	OsuHitObject(long time, int sampleType, int comboNumber, bool isEndOfCombo, int colorCounter, int colorOffset, OsuBeatmap *beatmap);
 	virtual ~OsuHitObject() {;}
@@ -97,6 +99,7 @@ protected:
 	float m_fAlphaWithoutHidden;
 	float m_fAlphaForApproachCircle;
 	float m_fApproachScale;
+	float m_fHittableDimRGBColorMultiplierPercent;
 	long m_iDelta; // this must be signed
 	long m_iApproachTime;
 	long m_iFadeInTime;		// extra time added before the approachTime to let the object smoothly become visible
