@@ -15,6 +15,7 @@
 #include "CBaseUIContainer.h"
 #include "CBaseUIScrollView.h"
 #include "CBaseUILabel.h"
+#include "CBaseUIButton.h"
 
 #include "Osu.h"
 #include "OsuSkin.h"
@@ -854,10 +855,10 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 		// changes
 		for (int c=0; c<changelogs[i].changes.size(); c++)
 		{
-			class CustomCBaseUILabel : public CBaseUILabel
+			class CustomCBaseUILabel : public CBaseUIButton
 			{
 			public:
-				CustomCBaseUILabel(UString text) : CBaseUILabel(0, 0, 0, 0, "", text) {;}
+				CustomCBaseUILabel(UString text) : CBaseUIButton(0, 0, 0, 0, "", text) {;}
 
 				virtual void draw(Graphics *g)
 				{
@@ -870,12 +871,20 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 						g->fillRect(m_vPos.x - marginX, m_vPos.y - margin, m_vSize.x + marginX*2, m_vSize.y + margin*2);
 					}
 
-					CBaseUILabel::draw(g);
 					if (!m_bVisible) return;
+
+					g->setColor(m_textColor);
+					g->pushTransform();
+					{
+						g->translate((int)(m_vPos.x + m_vSize.x/2.0f - m_fStringWidth/2.0f), (int)(m_vPos.y + m_vSize.y/2.0f + m_fStringHeight/2.0f));
+						g->drawString(m_font, m_sText);
+					}
+					g->popTransform();
 				}
 			};
 
-			CBaseUILabel *change = new CustomCBaseUILabel(changelogs[i].changes[c]);
+			CBaseUIButton *change = new CustomCBaseUILabel(changelogs[i].changes[c]);
+			change->setClickCallback(fastdelegate::MakeDelegate(this, &OsuChangelog::onChangeClicked));
 
 			if (i > 0)
 				change->setTextColor(0xff888888);
@@ -954,7 +963,7 @@ void OsuChangelog::updateLayout()
 		changelog.title->setRelPos(15 * dpiScale, yCounter);
 		///yCounter += 10 * dpiScale;
 
-		for (CBaseUILabel *change : changelog.changes)
+		for (CBaseUIButton *change : changelog.changes)
 		{
 			change->onResized(); // HACKHACK: framework, setSizeToContent() does not update string metrics
 			change->setSizeToContent();
@@ -975,4 +984,22 @@ void OsuChangelog::onBack()
 	engine->getSound()->play(m_osu->getSkin()->getMenuClick());
 
 	m_osu->toggleChangelog();
+}
+
+void OsuChangelog::onChangeClicked(CBaseUIButton *button)
+{
+	const UString changeTextMaybeContainingClickableURL = button->getText();
+
+	const int maybeURLBeginIndex = changeTextMaybeContainingClickableURL.find("http");
+	if (maybeURLBeginIndex != -1 && changeTextMaybeContainingClickableURL.find("://") != -1)
+	{
+		UString url = changeTextMaybeContainingClickableURL.substr(maybeURLBeginIndex);
+		if (url.length() > 0 && url[url.length() - 1] == L')')
+			url = url.substr(0, url.length() - 1);
+
+		debugLog("url = %s\n", url.toUtf8());
+
+		m_osu->getNotificationOverlay()->addNotification("Opening browser, please wait ...", 0xffffffff, false, 0.75f);
+		env->openURLInDefaultBrowser(url);
+	}
 }
