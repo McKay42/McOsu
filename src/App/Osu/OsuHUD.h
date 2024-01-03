@@ -164,8 +164,9 @@ private:
 
 	void drawWarningArrows(Graphics *g, float hitcircleDiameter = 0.0f);
 	void drawContinue(Graphics *g, Vector2 cursor, float hitcircleDiameter = 0.0f);
-	void drawHitErrorBar(Graphics *g, float hitWindow300, float hitWindow100, float hitWindow50, float hitWindowMiss);
+	void drawHitErrorBar(Graphics *g, float hitWindow300, float hitWindow100, float hitWindow50, float hitWindowMiss, int ur);
 	void drawHitErrorBarInt(Graphics *g, float hitWindow300, float hitWindow100, float hitWindow50, float hitWindowMiss);
+	void drawHitErrorBarInt2(Graphics *g, Vector2 center, int ur);
 	void drawProgressBar(Graphics *g, float percent, bool waiting);
 	void drawProgressBarVR(Graphics *g, Matrix4 &mvp, OsuVR *vr, float percent, bool waiting);
 	void drawStatistics(Graphics *g, int misses, int sliderbreaks, int maxPossibleCombo, float liveStars, float totalStars, int bpm, float ar, float cs, float od, float hp, int nps, int nd, int ur, float pp, float ppfc, float hitWindow300, int hitdeltaMin, int hitdeltaMax);

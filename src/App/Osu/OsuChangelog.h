@@ -30,6 +30,8 @@ private:
 	virtual void updateLayout();
 	virtual void onBack();
 
+	void onChangeClicked(CBaseUIButton *button);
+
 	CBaseUIContainer *m_container;
 	CBaseUIScrollView *m_scrollView;
 
@@ -42,7 +44,7 @@ private:
 	struct CHANGELOG_UI
 	{
 		CBaseUILabel *title;
-		std::vector<CBaseUILabel*> changes;
+		std::vector<CBaseUIButton*> changes;
 	};
 
 	std::vector<CHANGELOG_UI> m_changelogs;

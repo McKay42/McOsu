@@ -108,6 +108,10 @@ ConVar osu_hud_hiterrorbar_bar_width_scale("osu_hud_hiterrorbar_bar_width_scale"
 ConVar osu_hud_hiterrorbar_bar_height_scale("osu_hud_hiterrorbar_bar_height_scale", 3.4f);
 ConVar osu_hud_hiterrorbar_max_entries("osu_hud_hiterrorbar_max_entries", 32, "maximum number of entries/lines");
 ConVar osu_hud_hiterrorbar_hide_during_spinner("osu_hud_hiterrorbar_hide_during_spinner", true);
+ConVar osu_hud_hiterrorbar_ur_scale("osu_hud_hiterrorbar_ur_scale", 1.0f);
+ConVar osu_hud_hiterrorbar_ur_alpha("osu_hud_hiterrorbar_ur_alpha", 0.5f, "opacity multiplier for unstable rate text above hiterrorbar");
+ConVar osu_hud_hiterrorbar_ur_offset_x_percent("osu_hud_hiterrorbar_ur_offset_x_percent", 0.0f);
+ConVar osu_hud_hiterrorbar_ur_offset_y_percent("osu_hud_hiterrorbar_ur_offset_y_percent", 0.0f);
 ConVar osu_hud_scorebar_scale("osu_hud_scorebar_scale", 1.0f);
 ConVar osu_hud_scorebar_hide_during_breaks("osu_hud_scorebar_hide_during_breaks", true);
 ConVar osu_hud_scorebar_hide_anim_duration("osu_hud_scorebar_hide_anim_duration", 0.5f);
@@ -183,6 +187,7 @@ ConVar osu_draw_hud("osu_draw_hud", true);
 ConVar osu_draw_scorebar("osu_draw_scorebar", true);
 ConVar osu_draw_scorebarbg("osu_draw_scorebarbg", true);
 ConVar osu_draw_hiterrorbar("osu_draw_hiterrorbar", true);
+ConVar osu_draw_hiterrorbar_ur("osu_draw_hiterrorbar_ur", true);
 ConVar osu_draw_hiterrorbar_bottom("osu_draw_hiterrorbar_bottom", true);
 ConVar osu_draw_hiterrorbar_top("osu_draw_hiterrorbar_top", false);
 ConVar osu_draw_hiterrorbar_left("osu_draw_hiterrorbar_left", false);
@@ -398,9 +403,9 @@ void OsuHUD::draw(Graphics *g)
 			if (osu_draw_hiterrorbar.getBool() && (beatmapStd == NULL || (!beatmapStd->isSpinnerActive() || !osu_hud_hiterrorbar_hide_during_spinner.getBool())) && !beatmap->isLoading())
 			{
 				if (beatmapStd != NULL)
-					drawHitErrorBar(g, OsuGameRules::getHitWindow300(beatmap), OsuGameRules::getHitWindow100(beatmap), OsuGameRules::getHitWindow50(beatmap), OsuGameRules::getHitWindowMiss(beatmap));
+					drawHitErrorBar(g, OsuGameRules::getHitWindow300(beatmap), OsuGameRules::getHitWindow100(beatmap), OsuGameRules::getHitWindow50(beatmap), OsuGameRules::getHitWindowMiss(beatmap), m_osu->getScore()->getUnstableRate());
 				else if (beatmapMania != NULL)
-					drawHitErrorBar(g, OsuGameRulesMania::getHitWindow300(beatmap), OsuGameRulesMania::getHitWindow100(beatmap), OsuGameRulesMania::getHitWindow50(beatmap), OsuGameRulesMania::getHitWindowMiss(beatmap));
+					drawHitErrorBar(g, OsuGameRulesMania::getHitWindow300(beatmap), OsuGameRulesMania::getHitWindow100(beatmap), OsuGameRulesMania::getHitWindow50(beatmap), OsuGameRulesMania::getHitWindowMiss(beatmap), m_osu->getScore()->getUnstableRate());
 			}
 		}
 
@@ -434,9 +439,9 @@ void OsuHUD::draw(Graphics *g)
 			if (osu_draw_hiterrorbar.getBool() && (beatmapStd == NULL || (!beatmapStd->isSpinnerActive() || !osu_hud_hiterrorbar_hide_during_spinner.getBool())) && !beatmap->isLoading())
 			{
 				if (beatmapStd != NULL)
-					drawHitErrorBar(g, OsuGameRules::getHitWindow300(beatmap), OsuGameRules::getHitWindow100(beatmap), OsuGameRules::getHitWindow50(beatmap), OsuGameRules::getHitWindowMiss(beatmap));
+					drawHitErrorBar(g, OsuGameRules::getHitWindow300(beatmap), OsuGameRules::getHitWindow100(beatmap), OsuGameRules::getHitWindow50(beatmap), OsuGameRules::getHitWindowMiss(beatmap), m_osu->getScore()->getUnstableRate());
 				else if (beatmapMania != NULL)
-					drawHitErrorBar(g, OsuGameRulesMania::getHitWindow300(beatmap), OsuGameRulesMania::getHitWindow100(beatmap), OsuGameRulesMania::getHitWindow50(beatmap), OsuGameRulesMania::getHitWindowMiss(beatmap));
+					drawHitErrorBar(g, OsuGameRulesMania::getHitWindow300(beatmap), OsuGameRulesMania::getHitWindow100(beatmap), OsuGameRulesMania::getHitWindow50(beatmap), OsuGameRulesMania::getHitWindowMiss(beatmap), m_osu->getScore()->getUnstableRate());
 			}
 		}
 	}
@@ -681,7 +686,7 @@ void OsuHUD::drawDummy(Graphics *g)
 		drawAccuracy(g, scoreEntry.accuracy*100.0f);
 
 	if (osu_draw_hiterrorbar.getBool())
-		drawHitErrorBar(g, 50, 100, 150, 400);
+		drawHitErrorBar(g, 50, 100, 150, 400, 70);
 }
 
 void OsuHUD::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
@@ -2247,11 +2252,11 @@ void OsuHUD::drawHitErrorBar(Graphics *g, OsuBeatmapStandard *beatmapStd)
 	if (osu_draw_hud.getBool() || !osu_hud_shift_tab_toggles_everything.getBool())
 	{
 		if (osu_draw_hiterrorbar.getBool() && (!beatmapStd->isSpinnerActive() || !osu_hud_hiterrorbar_hide_during_spinner.getBool()) && !beatmapStd->isLoading())
-			drawHitErrorBar(g, OsuGameRules::getHitWindow300(beatmapStd), OsuGameRules::getHitWindow100(beatmapStd), OsuGameRules::getHitWindow50(beatmapStd), OsuGameRules::getHitWindowMiss(beatmapStd));
+			drawHitErrorBar(g, OsuGameRules::getHitWindow300(beatmapStd), OsuGameRules::getHitWindow100(beatmapStd), OsuGameRules::getHitWindow50(beatmapStd), OsuGameRules::getHitWindowMiss(beatmapStd), m_osu->getScore()->getUnstableRate());
 	}
 }
 
-void OsuHUD::drawHitErrorBar(Graphics *g, float hitWindow300, float hitWindow100, float hitWindow50, float hitWindowMiss)
+void OsuHUD::drawHitErrorBar(Graphics *g, float hitWindow300, float hitWindow100, float hitWindow50, float hitWindowMiss, int ur)
 {
 	const Vector2 center = Vector2(m_osu->getScreenWidth()/2.0f, m_osu->getScreenHeight() - m_osu->getScreenHeight()*2.15f*osu_hud_hiterrorbar_height_percent.getFloat()*osu_hud_scale.getFloat()*osu_hud_hiterrorbar_scale.getFloat() - m_osu->getScreenHeight()*osu_hud_hiterrorbar_offset_percent.getFloat());
 
@@ -2259,7 +2264,10 @@ void OsuHUD::drawHitErrorBar(Graphics *g, float hitWindow300, float hitWindow100
 	{
 		g->pushTransform();
 		{
-			g->translate(center.x, center.y - (m_osu->getScreenHeight() * osu_hud_hiterrorbar_offset_bottom_percent.getFloat()));
+			const Vector2 localCenter = Vector2(center.x, center.y - (m_osu->getScreenHeight() * osu_hud_hiterrorbar_offset_bottom_percent.getFloat()));
+
+			drawHitErrorBarInt2(g, localCenter, ur);
+			g->translate(localCenter.x, localCenter.y);
 			drawHitErrorBarInt(g, hitWindow300, hitWindow100, hitWindow50, hitWindowMiss);
 		}
 		g->popTransform();
@@ -2269,8 +2277,11 @@ void OsuHUD::drawHitErrorBar(Graphics *g, float hitWindow300, float hitWindow100
 	{
 		g->pushTransform();
 		{
+			const Vector2 localCenter = Vector2(center.x, m_osu->getScreenHeight() - center.y + (m_osu->getScreenHeight() * osu_hud_hiterrorbar_offset_top_percent.getFloat()));
+
 			g->scale(1, -1);
-			g->translate(center.x, m_osu->getScreenHeight() - center.y + (m_osu->getScreenHeight() * osu_hud_hiterrorbar_offset_top_percent.getFloat()));
+			//drawHitErrorBarInt2(g, localCenter, ur);
+			g->translate(localCenter.x, localCenter.y);
 			drawHitErrorBarInt(g, hitWindow300, hitWindow100, hitWindow50, hitWindowMiss);
 		}
 		g->popTransform();
@@ -2280,8 +2291,11 @@ void OsuHUD::drawHitErrorBar(Graphics *g, float hitWindow300, float hitWindow100
 	{
 		g->pushTransform();
 		{
+			const Vector2 localCenter = Vector2(m_osu->getScreenHeight() - center.y + (m_osu->getScreenWidth() * osu_hud_hiterrorbar_offset_left_percent.getFloat()), m_osu->getScreenHeight()/2.0f);
+
 			g->rotate(90);
-			g->translate(m_osu->getScreenHeight() - center.y + (m_osu->getScreenWidth() * osu_hud_hiterrorbar_offset_left_percent.getFloat()), m_osu->getScreenHeight()/2.0f);
+			//drawHitErrorBarInt2(g, localCenter, ur);
+			g->translate(localCenter.x, localCenter.y);
 			drawHitErrorBarInt(g, hitWindow300, hitWindow100, hitWindow50, hitWindowMiss);
 		}
 		g->popTransform();
@@ -2291,9 +2305,12 @@ void OsuHUD::drawHitErrorBar(Graphics *g, float hitWindow300, float hitWindow100
 	{
 		g->pushTransform();
 		{
+			const Vector2 localCenter = Vector2(m_osu->getScreenWidth() - (m_osu->getScreenHeight() - center.y) - (m_osu->getScreenWidth() * osu_hud_hiterrorbar_offset_right_percent.getFloat()), m_osu->getScreenHeight()/2.0f);
+
 			g->scale(-1, 1);
 			g->rotate(-90);
-			g->translate(m_osu->getScreenWidth() - (m_osu->getScreenHeight() - center.y) - (m_osu->getScreenWidth() * osu_hud_hiterrorbar_offset_right_percent.getFloat()), m_osu->getScreenHeight()/2.0f);
+			//drawHitErrorBarInt2(g, localCenter, ur);
+			g->translate(localCenter.x, localCenter.y);
 			drawHitErrorBarInt(g, hitWindow300, hitWindow100, hitWindow50, hitWindowMiss);
 		}
 		g->popTransform();
@@ -2408,6 +2425,47 @@ void OsuHUD::drawHitErrorBarInt(Graphics *g, float hitWindow300, float hitWindow
 	{
 		g->setColor(COLOR(alphaCenterlineInt, clamp<int>(osu_hud_hiterrorbar_centerline_r.getInt(), 0, 255), clamp<int>(osu_hud_hiterrorbar_centerline_g.getInt(), 0, 255), clamp<int>(osu_hud_hiterrorbar_centerline_b.getInt(), 0, 255)));
 		g->fillRect(center.x - entryWidth/2.0f/2.0f, center.y - entryHeight/2.0f, entryWidth/2.0f, entryHeight);
+	}
+}
+
+void OsuHUD::drawHitErrorBarInt2(Graphics *g, Vector2 center, int ur)
+{
+	const float alpha = osu_hud_hiterrorbar_alpha.getFloat() * osu_hud_hiterrorbar_ur_alpha.getFloat();
+	if (alpha <= 0.0f) return;
+
+	const float dpiScale = Osu::getUIScale(m_osu);
+
+	const float hitErrorBarSizeY = m_osu->getScreenHeight()*osu_hud_hiterrorbar_height_percent.getFloat()*osu_hud_scale.getFloat()*osu_hud_hiterrorbar_scale.getFloat();
+	const float entryHeight = hitErrorBarSizeY*osu_hud_hiterrorbar_bar_height_scale.getFloat();
+
+	if (osu_draw_hiterrorbar_ur.getBool())
+	{
+		g->pushTransform();
+		{
+			UString urText = UString::format("%i UR", ur);
+			McFont *urTextFont = m_osu->getSongBrowserFont();
+
+			const float hitErrorBarScale = osu_hud_scale.getFloat() * osu_hud_hiterrorbar_scale.getFloat();
+			const float urTextScale = hitErrorBarScale * osu_hud_hiterrorbar_ur_scale.getFloat() * 0.5f;
+			const float urTextWidth = urTextFont->getStringWidth(urText) * urTextScale;
+			const float urTextHeight = urTextFont->getHeight() * hitErrorBarScale;
+
+			g->scale(urTextScale, urTextScale);
+			g->translate((int)(center.x + (-urTextWidth/2.0f) + (urTextHeight)*(osu_hud_hiterrorbar_ur_offset_x_percent.getFloat())*dpiScale) + 1, (int)(center.y + (urTextHeight)*(osu_hud_hiterrorbar_ur_offset_y_percent.getFloat())*dpiScale - entryHeight/1.25f) + 1);
+
+			// shadow
+			g->setColor(0xff000000);
+			g->setAlpha(alpha);
+			g->drawString(urTextFont, urText);
+
+			g->translate(-1, -1);
+
+			// text
+			g->setColor(0xffffffff);
+			g->setAlpha(alpha);
+			g->drawString(urTextFont, urText);
+		}
+		g->popTransform();
 	}
 }
 

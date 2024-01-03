@@ -10,6 +10,10 @@
 ConVar OsuGameRules::osu_playfield_border_top_percent("osu_playfield_border_top_percent", 0.117f);
 ConVar OsuGameRules::osu_playfield_border_bottom_percent("osu_playfield_border_bottom_percent", 0.0834f);
 
+ConVar OsuGameRules::osu_hitobject_hittable_dim("osu_hitobject_hittable_dim", true, "whether to dim objects not yet within the miss-range (when they can't even be missed yet)");
+ConVar OsuGameRules::osu_hitobject_hittable_dim_start_percent("osu_hitobject_hittable_dim_start_percent", 0.7647f, "dimmed objects start at this brightness value before becoming fullbright (only RGB, this does not affect alpha/transparency)");
+ConVar OsuGameRules::osu_hitobject_hittable_dim_duration("osu_hitobject_hittable_dim_duration", 100, "in milliseconds (!)");
+
 ConVar OsuGameRules::osu_hitobject_fade_in_time("osu_hitobject_fade_in_time", 400, "in milliseconds (!)");
 
 ConVar OsuGameRules::osu_hitobject_fade_out_time("osu_hitobject_fade_out_time", 0.293f, "in seconds (!)");

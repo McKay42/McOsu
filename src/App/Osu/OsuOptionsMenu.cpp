@@ -91,18 +91,23 @@ public:
 			float approachCircleAlpha = approachAlpha;
 			approachAlpha = 1.0f;
 
-			OsuCircle::drawCircle(g, m_osu->getSkin(), m_vPos + Vector2(0, m_vSize.y/2) + Vector2(m_vSize.x*(1.0f/5.0f), 0.0f), hitcircleDiameter, numberScale, overlapScale, 1, 42, 0, approachScale, approachAlpha, approachAlpha, true, false);
+			const int number = 1;
+			const int colorCounter = 42;
+			const int colorOffset = 0;
+			const float colorRGBMultiplier = 1.0f;
+
+			OsuCircle::drawCircle(g, m_osu->getSkin(), m_vPos + Vector2(0, m_vSize.y/2) + Vector2(m_vSize.x*(1.0f/5.0f), 0.0f), hitcircleDiameter, numberScale, overlapScale, number, colorCounter, colorOffset, colorRGBMultiplier, approachScale, approachAlpha, approachAlpha, true, false);
 			OsuCircle::drawHitResult(g, m_osu->getSkin(), hitcircleDiameter, hitcircleDiameter, m_vPos + Vector2(0, m_vSize.y/2) + Vector2(m_vSize.x*(2.0f/5.0f), 0.0f), OsuScore::HIT::HIT_100, 0.45f, 0.33f);
 			OsuCircle::drawHitResult(g, m_osu->getSkin(), hitcircleDiameter, hitcircleDiameter, m_vPos + Vector2(0, m_vSize.y/2) + Vector2(m_vSize.x*(3.0f/5.0f), 0.0f), OsuScore::HIT::HIT_50, 0.45f, 0.66f);
 			OsuCircle::drawHitResult(g, m_osu->getSkin(), hitcircleDiameter, hitcircleDiameter, m_vPos + Vector2(0, m_vSize.y/2) + Vector2(m_vSize.x*(4.0f/5.0f), 0.0f), OsuScore::HIT::HIT_MISS, 0.45f, 1.0f);
-			OsuCircle::drawApproachCircle(g, m_osu->getSkin(), m_vPos + Vector2(0, m_vSize.y/2) + Vector2(m_vSize.x*(1.0f/5.0f), 0.0f), m_osu->getSkin()->getComboColorForCounter(42, 0), hitcircleDiameter, approachScale, approachCircleAlpha, false, false);
+			OsuCircle::drawApproachCircle(g, m_osu->getSkin(), m_vPos + Vector2(0, m_vSize.y/2) + Vector2(m_vSize.x*(1.0f/5.0f), 0.0f), m_osu->getSkin()->getComboColorForCounter(colorCounter, colorOffset), hitcircleDiameter, approachScale, approachCircleAlpha, false, false);
 		}
 		else if (m_iMode == 1)
 		{
 			const int numNumbers = 6;
 			for (int i=1; i<numNumbers+1; i++)
 			{
-				OsuCircle::drawHitCircleNumber(g, skin, numberScale, overlapScale, m_vPos + Vector2(0, m_vSize.y/2) + Vector2(m_vSize.x*((float)i/(numNumbers+1.0f)), 0.0f), i-1, 1.0f);
+				OsuCircle::drawHitCircleNumber(g, skin, numberScale, overlapScale, m_vPos + Vector2(0, m_vSize.y/2) + Vector2(m_vSize.x*((float)i/(numNumbers+1.0f)), 0.0f), i-1, 1.0f, 1.0f);
 			}
 		}
 		else if (m_iMode == 2)
@@ -192,8 +197,18 @@ public:
 
 		if (points.size() > 0)
 		{
-			OsuCircle::drawCircle(g, m_osu->getSkin(), points[numPoints/2] + (!useLegacyRenderer ? m_vPos : Vector2(0, 0)), hitcircleDiameter, numberScale, overlapScale, 2, 420, 0, approachScale, approachAlpha, approachAlpha, true, false);
-			OsuCircle::drawApproachCircle(g, m_osu->getSkin(), points[numPoints/2] + (!useLegacyRenderer ? m_vPos : Vector2(0, 0)), m_osu->getSkin()->getComboColorForCounter(420, 0), hitcircleDiameter, approachScale, approachCircleAlpha, false, false);
+			// draw regular circle with animated approach circle beneath slider
+			{
+				const int number = 2;
+				const int colorCounter = 420;
+				const int colorOffset = 0;
+				const float colorRGBMultiplier = 1.0f;
+
+				OsuCircle::drawCircle(g, m_osu->getSkin(), points[numPoints/2] + (!useLegacyRenderer ? m_vPos : Vector2(0, 0)), hitcircleDiameter, numberScale, overlapScale, number, colorCounter, colorOffset, colorRGBMultiplier, approachScale, approachAlpha, approachAlpha, true, false);
+				OsuCircle::drawApproachCircle(g, m_osu->getSkin(), points[numPoints/2] + (!useLegacyRenderer ? m_vPos : Vector2(0, 0)), m_osu->getSkin()->getComboColorForCounter(420, 0), hitcircleDiameter, approachScale, approachCircleAlpha, false, false);
+			}
+
+			// draw slider body
 			{
 				// recursive shared usage of the same RenderTarget is invalid, therefore we block slider rendering while the options menu is animating
 				if (m_bDrawSliderHack)
@@ -222,8 +237,17 @@ public:
 					}
 				}
 			}
-			OsuCircle::drawSliderStartCircle(g, m_osu->getSkin(), points[0] + (!useLegacyRenderer ? m_vPos : Vector2(0, 0)), hitcircleDiameter, numberScale, overlapScale, 1, 420, 0);
-			OsuCircle::drawSliderEndCircle(g, m_osu->getSkin(), points[points.size()-1] + (!useLegacyRenderer ? m_vPos : Vector2(0, 0)), hitcircleDiameter, numberScale, overlapScale, 0, 0, 0, 1.0f, 1.0f, 0.0f, false, false);
+
+			// and slider head/tail circles
+			{
+				const int number = 1;
+				const int colorCounter = 420;
+				const int colorOffset = 0;
+				const float colorRGBMultiplier = 1.0f;
+
+				OsuCircle::drawSliderStartCircle(g, m_osu->getSkin(), points[0] + (!useLegacyRenderer ? m_vPos : Vector2(0, 0)), hitcircleDiameter, numberScale, overlapScale, number, colorCounter, colorOffset, colorRGBMultiplier);
+				OsuCircle::drawSliderEndCircle(g, m_osu->getSkin(), points[points.size()-1] + (!useLegacyRenderer ? m_vPos : Vector2(0, 0)), hitcircleDiameter, numberScale, overlapScale, number, colorCounter, colorOffset, colorRGBMultiplier, 1.0f, 1.0f, 0.0f, false, false);
+			}
 		}
 	}
 
@@ -289,6 +313,22 @@ private:
 
 	Color m_textColorBound;
 	Color m_textColorUnbound;
+};
+
+class OsuOptionsMenuKeyBindButton : public OsuUIButton
+{
+public:
+	OsuOptionsMenuKeyBindButton(Osu *osu, float xPos, float yPos, float xSize, float ySize, UString name, UString text) : OsuUIButton(osu, xPos, yPos, xSize, ySize, name, text)
+	{
+		m_bDisallowLeftMouseClickBinding = false;
+	}
+
+	void setDisallowLeftMouseClickBinding(bool disallowLeftMouseClickBinding) {m_bDisallowLeftMouseClickBinding = disallowLeftMouseClickBinding;}
+
+	inline bool isLeftMouseClickBindingAllowed() const {return !m_bDisallowLeftMouseClickBinding;}
+
+private:
+	bool m_bDisallowLeftMouseClickBinding;
 };
 
 class OsuOptionsMenuCategoryButton : public CBaseUIButton
@@ -711,7 +751,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 		{
 #ifndef MCENGINE_FEATURE_BASS_WASAPI
 
-			CBaseUICheckbox *audioCompatibilityModeCheckbox = addCheckbox("Audio compatibility mode", "Use legacy audio engine (higher latency but more compatible)", m_win_snd_fallback_dsound_ref);
+			CBaseUICheckbox *audioCompatibilityModeCheckbox = addCheckbox("Audio compatibility mode (!)", "Use legacy audio engine (higher latency but more compatible)\nWARNING: May cause hitsound delays and stuttering!", m_win_snd_fallback_dsound_ref);
 			audioCompatibilityModeCheckbox->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onAudioCompatibilityModeChange) );
 
 			// HACKHACK: force manual change if user has enabled it (don't use convar callback)
@@ -928,7 +968,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSubSection("Keys - FPoSu", keyboardSectionTags);
 	addKeyBindButton("Zoom", &OsuKeyBindings::FPOSU_ZOOM);
 	addSubSection("Keys - In-Game", keyboardSectionTags);
-	addKeyBindButton("Game Pause", &OsuKeyBindings::GAME_PAUSE);
+	addKeyBindButton("Game Pause", &OsuKeyBindings::GAME_PAUSE)->setDisallowLeftMouseClickBinding(true);
 	addKeyBindButton("Skip Cutscene", &OsuKeyBindings::SKIP_CUTSCENE);
 	addKeyBindButton("Toggle Scoreboard", &OsuKeyBindings::TOGGLE_SCOREBOARD);
 	addKeyBindButton("Scrubbing (+ Click Drag!)", &OsuKeyBindings::SEEK_TIME);
@@ -1035,6 +1075,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Draw Accuracy", convar->getConVarByName("osu_draw_accuracy"));
 	addCheckbox("Draw ProgressBar", convar->getConVarByName("osu_draw_progressbar"));
 	addCheckbox("Draw HitErrorBar", convar->getConVarByName("osu_draw_hiterrorbar"));
+	addCheckbox("Draw HitErrorBar UR", "Unstable Rate", convar->getConVarByName("osu_draw_hiterrorbar_ur"));
 	addCheckbox("Draw ScoreBar", "Health/HP Bar.", convar->getConVarByName("osu_draw_scorebar"));
 	addCheckbox("Draw ScoreBar-bg", "Some skins abuse this as the playfield background image.\nIt is actually just the background image for the Health/HP Bar.", convar->getConVarByName("osu_draw_scorebarbg"));
 	addCheckbox("Draw ScoreBoard", convar->getConVarByName("osu_draw_scoreboard"));
@@ -1076,6 +1117,9 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_hudHiterrorbarScaleSlider = addSlider("HitErrorBar Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_hud_hiterrorbar_scale"), 165.0f);
 	m_hudHiterrorbarScaleSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
 	m_hudHiterrorbarScaleSlider->setKeyDelta(0.01f);
+	m_hudHiterrorbarURScaleSlider = addSlider("HitErrorBar UR Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_hud_hiterrorbar_ur_scale"), 165.0f);
+	m_hudHiterrorbarURScaleSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
+	m_hudHiterrorbarURScaleSlider->setKeyDelta(0.01f);
 	m_hudProgressbarScaleSlider = addSlider("ProgressBar Scale:", 0.01f, 3.0f, convar->getConVarByName("osu_hud_progressbar_scale"), 165.0f);
 	m_hudProgressbarScaleSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
 	m_hudProgressbarScaleSlider->setKeyDelta(0.01f);
@@ -1128,11 +1172,11 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	fposuDistanceSlider->setKeyDelta(0.01f);
 	addCheckbox("Vertical FOV", "If enabled: Vertical FOV.\nIf disabled: Horizontal FOV (default).", convar->getConVarByName("fposu_vertical_fov"));
 	CBaseUISlider *fovSlider = addSlider("FOV:", 10.0f, 160.0f, convar->getConVarByName("fposu_fov"), -1.0f, true, true);
-	fovSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeOneDecimalPlace) );
-	fovSlider->setKeyDelta(0.1f);
+	fovSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeTwoDecimalPlaces) );
+	fovSlider->setKeyDelta(0.01f);
 	CBaseUISlider *zoomedFovSlider = addSlider("FOV (Zoom):", 10.0f, 160.0f, convar->getConVarByName("fposu_zoom_fov"), -1.0f, true, true);
-	zoomedFovSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeOneDecimalPlace) );
-	zoomedFovSlider->setKeyDelta(0.1f);
+	zoomedFovSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeTwoDecimalPlaces) );
+	zoomedFovSlider->setKeyDelta(0.01f);
 	addCheckbox("Zoom Key Toggle", "Enabled: Zoom key toggles zoom.\nDisabled: Zoom while zoom key is held.", convar->getConVarByName("fposu_zoom_toggle"));
 
 	if (env->getOS() == Environment::OS::OS_WINDOWS)
@@ -1272,6 +1316,7 @@ void OsuOptionsMenu::draw(Graphics *g)
 		|| m_hudScoreScaleSlider->isActive()
 		|| m_hudAccuracyScaleSlider->isActive()
 		|| m_hudHiterrorbarScaleSlider->isActive()
+		|| m_hudHiterrorbarURScaleSlider->isActive()
 		|| m_hudProgressbarScaleSlider->isActive()
 		|| m_hudScoreBarScaleSlider->isActive()
 		|| m_hudScoreBoardScaleSlider->isActive()
@@ -2999,6 +3044,31 @@ void OsuOptionsMenu::onSliderChangeOneDecimalPlace(CBaseUISlider *slider)
 	}
 }
 
+void OsuOptionsMenu::onSliderChangeTwoDecimalPlaces(CBaseUISlider *slider)
+{
+	for (int i=0; i<m_elements.size(); i++)
+	{
+		for (int e=0; e<m_elements[i].elements.size(); e++)
+		{
+			if (m_elements[i].elements[e] == slider)
+			{
+				if (m_elements[i].cvar != NULL)
+					m_elements[i].cvar->setValue(std::round(slider->getFloat()*100.0f)/100.0f); // round to 2 decimal places
+
+				if (m_elements[i].elements.size() == 3)
+				{
+					CBaseUILabel *labelPointer = dynamic_cast<CBaseUILabel*>(m_elements[i].elements[2]);
+					labelPointer->setText(m_elements[i].cvar->getString());
+				}
+
+				onResetUpdate(m_elements[i].resetButton);
+
+				break;
+			}
+		}
+	}
+}
+
 void OsuOptionsMenu::onSliderChangeOneDecimalPlaceMeters(CBaseUISlider *slider)
 {
 	for (int i=0; i<m_elements.size(); i++)
@@ -3145,7 +3215,10 @@ void OsuOptionsMenu::onKeyBindingButtonPressed(CBaseUIButton *button)
 					UString notificationText = "Press new key for ";
 					notificationText.append(button->getText());
 					notificationText.append(":");
-					m_osu->getNotificationOverlay()->addNotification(notificationText, 0xffffffff, true);
+
+					const bool waitForKey = true;
+					m_osu->getNotificationOverlay()->addNotification(notificationText, 0xffffffff, waitForKey);
+					m_osu->getNotificationOverlay()->setDisallowWaitForKeyLeftClick(!(dynamic_cast<OsuOptionsMenuKeyBindButton*>(button)->isLeftMouseClickBindingAllowed()));
 				}
 				break;
 			}
@@ -3747,7 +3820,7 @@ OsuOptionsMenu::OPTIONS_ELEMENT OsuOptionsMenu::addButtonButtonLabel(UString tex
 	return e;
 }
 
-OsuUIButton *OsuOptionsMenu::addKeyBindButton(UString text, ConVar *cvar)
+OsuOptionsMenuKeyBindButton *OsuOptionsMenu::addKeyBindButton(UString text, ConVar *cvar)
 {
 	///UString unbindIconString; unbindIconString.insert(0, OsuIcons::UNDO);
 	OsuUIButton *unbindButton = new OsuUIButton(m_osu, 0, 0, m_options->getSize().x, 50, text, "");
@@ -3758,7 +3831,7 @@ OsuUIButton *OsuOptionsMenu::addKeyBindButton(UString text, ConVar *cvar)
 	///unbindButton->setFont(m_osu->getFontIcons());
 	m_options->getContainer()->addBaseUIElement(unbindButton);
 
-	OsuUIButton *bindButton = new OsuUIButton(m_osu, 0, 0, m_options->getSize().x, 50, text, text);
+	OsuOptionsMenuKeyBindButton *bindButton = new OsuOptionsMenuKeyBindButton(m_osu, 0, 0, m_options->getSize().x, 50, text, text);
 	bindButton->setColor(0xff0e94b5);
 	bindButton->setUseDefaultSkin();
 	bindButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onKeyBindingButtonPressed) );

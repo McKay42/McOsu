@@ -58,6 +58,8 @@ ConVar osu_mod_target_300_percent("osu_mod_target_300_percent", 0.5f);
 ConVar osu_mod_target_100_percent("osu_mod_target_100_percent", 0.7f);
 ConVar osu_mod_target_50_percent("osu_mod_target_50_percent", 0.95f);
 
+ConVar osu_mod_mafham_ignore_hittable_dim("osu_mod_mafham_ignore_hittable_dim", true, "having hittable dim enabled makes it possible to \"read\" the beatmap by looking at the un-dim animations (thus making it a lot easier)");
+
 ConVar osu_mod_approach_different("osu_mod_approach_different", false, "replicates osu!lazer's \"Approach Different\" mod");
 ConVar osu_mod_approach_different_initial_size("osu_mod_approach_different_initial_size", 4.0f, "initial size of the approach circles, relative to hit circles (as a multiplier)");
 ConVar osu_mod_approach_different_style("osu_mod_approach_different_style", 1, "0 = linear, 1 = gravity, 2 = InOut1, 3 = InOut2, 4 = Accelerate1, 5 = Accelerate2, 6 = Accelerate3, 7 = Decelerate1, 8 = Decelerate2, 9 = Decelerate3");
@@ -73,6 +75,8 @@ ConVar *OsuHitObject::m_osu_vr_approach_circles_on_top = &osu_vr_approach_circle
 ConVar *OsuHitObject::m_osu_relax_offset_ref = &osu_relax_offset;
 
 ConVar *OsuHitObject::m_osu_vr_draw_desktop_playfield = NULL;
+
+ConVar *OsuHitObject::m_osu_mod_mafham_ref = NULL;
 
 unsigned long long OsuHitObject::sortHackCounter = 0;
 
@@ -263,11 +267,14 @@ OsuHitObject::OsuHitObject(long time, int sampleType, int comboNumber, bool isEn
 
 	if (m_osu_vr_draw_desktop_playfield == NULL)
 		m_osu_vr_draw_desktop_playfield = convar->getConVarByName("osu_vr_draw_desktop_playfield");
+	if (m_osu_mod_mafham_ref == NULL)
+		m_osu_mod_mafham_ref = convar->getConVarByName("osu_mod_mafham");
 
 	m_fAlpha = 0.0f;
 	m_fAlphaWithoutHidden = 0.0f;
 	m_fAlphaForApproachCircle = 0.0f;
 	m_fApproachScale = 0.0f;
+	m_fHittableDimRGBColorMultiplierPercent = 1.0f;
 	m_iApproachTime = 0;
 	m_iFadeInTime = 0;
 	m_iObjectDuration = 0;
@@ -336,6 +343,7 @@ void OsuHitObject::drawHitResultAnim(Graphics *g, const HITRESULTANIM &hitresult
 void OsuHitObject::update(long curPos)
 {
 	m_fAlphaForApproachCircle = 0.0f;
+	m_fHittableDimRGBColorMultiplierPercent = 1.0f;
 
 	m_iApproachTime = (m_bUseFadeInTimeAsApproachTime ? OsuGameRules::getFadeInTime() : (long)OsuGameRules::getApproachTime(m_beatmap));
 	m_iFadeInTime = OsuGameRules::getFadeInTime();
@@ -407,7 +415,8 @@ void OsuHitObject::update(long curPos)
 		// hitobject body fadein
 		const long fadeInStart = m_iTime - m_iApproachTime;
 		const long fadeInEnd = std::min(m_iTime, m_iTime - m_iApproachTime + m_iFadeInTime); // min() ensures that the fade always finishes at m_iTime (even if the fadeintime is longer than the approachtime)
-		m_fAlpha = m_fAlphaWithoutHidden = clamp<float>(1.0f - ((float)(fadeInEnd - curPos) / (float)(fadeInEnd - fadeInStart)), 0.0f, 1.0f);
+		m_fAlpha = clamp<float>(1.0f - ((float)(fadeInEnd - curPos) / (float)(fadeInEnd - fadeInStart)), 0.0f, 1.0f);
+		m_fAlphaWithoutHidden = m_fAlpha;
 
 		if (m_beatmap->getOsu()->getModHD())
 		{
@@ -427,6 +436,15 @@ void OsuHitObject::update(long curPos)
 		const long approachCircleFadeStart = m_iTime - m_iApproachTime;
 		const long approachCircleFadeEnd = std::min(m_iTime, m_iTime - m_iApproachTime + 2*m_iFadeInTime); // min() ensures that the fade always finishes at m_iTime (even if the fadeintime is longer than the approachtime)
 		m_fAlphaForApproachCircle = clamp<float>(1.0f - ((float)(approachCircleFadeEnd - curPos) / (float)(approachCircleFadeEnd - approachCircleFadeStart)), 0.0f, 1.0f);
+
+		// hittable dim, see https://github.com/ppy/osu/pull/20572
+		if (OsuGameRules::osu_hitobject_hittable_dim.getBool() && (!m_osu_mod_mafham_ref->getBool() || !osu_mod_mafham_ignore_hittable_dim.getBool()))
+		{
+			const long hittableDimFadeStart = m_iTime - (long)OsuGameRules::getHitWindowMiss(m_beatmap);
+			const long hittableDimFadeEnd = hittableDimFadeStart + (long)OsuGameRules::osu_hitobject_hittable_dim_duration.getInt(); // yes, this means the un-dim animation cuts into the already clickable range
+
+			m_fHittableDimRGBColorMultiplierPercent = lerp<float>(OsuGameRules::osu_hitobject_hittable_dim_start_percent.getFloat(), 1.0f, clamp<float>(1.0f - (float)(hittableDimFadeEnd - curPos) / (float)(hittableDimFadeEnd - hittableDimFadeStart), 0.0f, 1.0f));
+		}
 
 		m_bVisible = true;
 	}

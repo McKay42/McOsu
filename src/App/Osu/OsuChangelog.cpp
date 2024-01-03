@@ -15,6 +15,7 @@
 #include "CBaseUIContainer.h"
 #include "CBaseUIScrollView.h"
 #include "CBaseUILabel.h"
+#include "CBaseUIButton.h"
 
 #include "Osu.h"
 #include "OsuSkin.h"
@@ -35,7 +36,19 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	std::vector<CHANGELOG> changelogs;
 
 	CHANGELOG alpha317;
-	alpha317.title = UString::format("33.07 (Build Date: %s, %s)", __DATE__, __TIME__); // (09.01.2022 - ?)
+	alpha317.title = UString::format("33.08 (Build Date: %s, %s)", __DATE__, __TIME__); // (09.01.2022 - ?)
+	alpha317.changes.push_back("- Added hittable dim (hitobjects outside even the miss-range are dimmed, see https://github.com/ppy/osu/pull/20572)");
+	alpha317.changes.push_back("- Added Options > Gameplay > HUD > \"Draw HitErrorBar UR\" (Unstable Rate text display above hiterrorbar, enabled by default)");
+	alpha317.changes.push_back("- Added ConVars (1): osu_hud_hiterrorbar_ur_scale, osu_hud_hiterrorbar_ur_alpha, osu_hud_hiterrorbar_ur_offset_x/y_percent");
+	alpha317.changes.push_back("- Added ConVars (2): osu_beatmap_max_num_hitobjects, osu_beatmap_max_num_slider_scoringtimes");
+	alpha317.changes.push_back("- Added ConVars (3): osu_hitobject_hittable_dim, osu_hitobject_hittable_dim_start_percent, osu_hitobject_hittable_dim_duration, osu_mod_mafham_ignore_hittable_dim");
+	alpha317.changes.push_back("- FPoSu: Updated FOV sliders to allow two decimal places");
+	alpha317.changes.push_back("- Updated supported beatmap version from 14 to 128 (lazer exports)");
+	alpha317.changes.push_back("- Updated \"Game Pause\" keybind to prevent binding to left mouse click (to avoid menu deadlocks)");
+	alpha317.changes.push_back("- Updated mod selection screen to also close when ENTER key is pressed");
+	alpha317.changes.push_back("- Fixed even more star calc crashes on stupid deliberate game-breaking beatmaps (~65k sliders * ~9k repeats * 234 ticks = ~126149263360 scoring events)");
+	alpha317.changes.push_back("");
+	alpha317.changes.push_back("");
 	alpha317.changes.push_back("- Reenabled IME support to fix blocking keyboard language switching hotkeys (add \"-noime\" launch arg to get the old behavior back in case of problems)");
 	alpha317.changes.push_back("- Improved console autocomplete");
 	alpha317.changes.push_back("- Fixed pie progressbar fill being invisible under certain conditions");
@@ -842,10 +855,10 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 		// changes
 		for (int c=0; c<changelogs[i].changes.size(); c++)
 		{
-			class CustomCBaseUILabel : public CBaseUILabel
+			class CustomCBaseUILabel : public CBaseUIButton
 			{
 			public:
-				CustomCBaseUILabel(UString text) : CBaseUILabel(0, 0, 0, 0, "", text) {;}
+				CustomCBaseUILabel(UString text) : CBaseUIButton(0, 0, 0, 0, "", text) {;}
 
 				virtual void draw(Graphics *g)
 				{
@@ -858,12 +871,20 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 						g->fillRect(m_vPos.x - marginX, m_vPos.y - margin, m_vSize.x + marginX*2, m_vSize.y + margin*2);
 					}
 
-					CBaseUILabel::draw(g);
 					if (!m_bVisible) return;
+
+					g->setColor(m_textColor);
+					g->pushTransform();
+					{
+						g->translate((int)(m_vPos.x + m_vSize.x/2.0f - m_fStringWidth/2.0f), (int)(m_vPos.y + m_vSize.y/2.0f + m_fStringHeight/2.0f));
+						g->drawString(m_font, m_sText);
+					}
+					g->popTransform();
 				}
 			};
 
-			CBaseUILabel *change = new CustomCBaseUILabel(changelogs[i].changes[c]);
+			CBaseUIButton *change = new CustomCBaseUILabel(changelogs[i].changes[c]);
+			change->setClickCallback(fastdelegate::MakeDelegate(this, &OsuChangelog::onChangeClicked));
 
 			if (i > 0)
 				change->setTextColor(0xff888888);
@@ -942,7 +963,7 @@ void OsuChangelog::updateLayout()
 		changelog.title->setRelPos(15 * dpiScale, yCounter);
 		///yCounter += 10 * dpiScale;
 
-		for (CBaseUILabel *change : changelog.changes)
+		for (CBaseUIButton *change : changelog.changes)
 		{
 			change->onResized(); // HACKHACK: framework, setSizeToContent() does not update string metrics
 			change->setSizeToContent();
@@ -963,4 +984,22 @@ void OsuChangelog::onBack()
 	engine->getSound()->play(m_osu->getSkin()->getMenuClick());
 
 	m_osu->toggleChangelog();
+}
+
+void OsuChangelog::onChangeClicked(CBaseUIButton *button)
+{
+	const UString changeTextMaybeContainingClickableURL = button->getText();
+
+	const int maybeURLBeginIndex = changeTextMaybeContainingClickableURL.find("http");
+	if (maybeURLBeginIndex != -1 && changeTextMaybeContainingClickableURL.find("://") != -1)
+	{
+		UString url = changeTextMaybeContainingClickableURL.substr(maybeURLBeginIndex);
+		if (url.length() > 0 && url[url.length() - 1] == L')')
+			url = url.substr(0, url.length() - 1);
+
+		debugLog("url = %s\n", url.toUtf8());
+
+		m_osu->getNotificationOverlay()->addNotification("Opening browser, please wait ...", 0xffffffff, false, 0.75f);
+		env->openURLInDefaultBrowser(url);
+	}
 }
