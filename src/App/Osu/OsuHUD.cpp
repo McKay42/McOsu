@@ -2433,6 +2433,11 @@ void OsuHUD::drawHitErrorBarInt2(Graphics *g, Vector2 center, int ur)
 	const float alpha = osu_hud_hiterrorbar_alpha.getFloat() * osu_hud_hiterrorbar_ur_alpha.getFloat();
 	if (alpha <= 0.0f) return;
 
+	const float dpiScale = Osu::getUIScale(m_osu);
+
+	const float hitErrorBarSizeY = m_osu->getScreenHeight()*osu_hud_hiterrorbar_height_percent.getFloat()*osu_hud_scale.getFloat()*osu_hud_hiterrorbar_scale.getFloat();
+	const float entryHeight = hitErrorBarSizeY*osu_hud_hiterrorbar_bar_height_scale.getFloat();
+
 	if (osu_draw_hiterrorbar_ur.getBool())
 	{
 		g->pushTransform();
@@ -2446,7 +2451,7 @@ void OsuHUD::drawHitErrorBarInt2(Graphics *g, Vector2 center, int ur)
 			const float urTextHeight = urTextFont->getHeight() * hitErrorBarScale;
 
 			g->scale(urTextScale, urTextScale);
-			g->translate((int)(center.x + (-urTextWidth/2.0f) + (urTextHeight)*(osu_hud_hiterrorbar_ur_offset_x_percent.getFloat())) + 1, (int)(center.y + (-urTextHeight/2.0f)*(1.0f + osu_hud_hiterrorbar_ur_offset_y_percent.getFloat())) + 1);
+			g->translate((int)(center.x + (-urTextWidth/2.0f) + (urTextHeight)*(osu_hud_hiterrorbar_ur_offset_x_percent.getFloat())*dpiScale) + 1, (int)(center.y + (urTextHeight)*(osu_hud_hiterrorbar_ur_offset_y_percent.getFloat())*dpiScale - entryHeight/1.25f) + 1);
 
 			// shadow
 			g->setColor(0xff000000);
