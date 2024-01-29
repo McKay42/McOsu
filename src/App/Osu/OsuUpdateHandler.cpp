@@ -13,8 +13,8 @@
 #include "ConVar.h"
 #include "File.h"
 
-#include "JSON.h"
-#include "miniz.h"
+//#include "JSON.h"
+//#include "miniz.h"
 
 #include "Osu.h"
 
@@ -195,6 +195,7 @@ void OsuUpdateHandler::_requestUpdate()
 	//		}
 	//	]
 
+	/*
 	JSONValue *value = JSON::Parse(gitReleases.toUtf8());
 	if (value != NULL)
 	{
@@ -271,6 +272,7 @@ void OsuUpdateHandler::_requestUpdate()
 		}
 		delete value;
 	}
+	*/
 
 	m_releases = asyncReleases;
 
@@ -343,6 +345,7 @@ void OsuUpdateHandler::_installUpdate(UString zipFilePath)
 	}
 	const char *content = f.readFile();
 
+	/*
 	// initialize zip
 	mz_zip_archive zip_archive;
 	memset(&zip_archive, 0, sizeof(zip_archive));
@@ -444,6 +447,7 @@ void OsuUpdateHandler::_installUpdate(UString zipFilePath)
 	}
 
 	mz_zip_reader_end(&zip_archive);
+	*/
 
 	m_status = STATUS::STATUS_SUCCESS_INSTALLATION;
 }
