@@ -280,6 +280,11 @@ void OsuSpinner::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 	}
 }
 
+void OsuSpinner::draw3D(Graphics *g)
+{
+	// TODO: implement
+}
+
 void OsuSpinner::update(long curPos)
 {
 	OsuHitObject::update(curPos);

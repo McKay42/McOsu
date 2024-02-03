@@ -535,6 +535,11 @@ void OsuCircle::drawVR2(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 	}
 }
 
+void OsuCircle::draw3D(Graphics *g)
+{
+	// TODO: implement
+}
+
 void OsuCircle::update(long curPos)
 {
 	OsuHitObject::update(curPos);

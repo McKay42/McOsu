@@ -18,13 +18,6 @@ class Osu;
 
 class Camera;
 class ConVar;
-
-#ifdef FPOSU_FEATURE_MAP3D
-
-class Map3DLoader;
-
-#endif
-
 class Image;
 class VertexArrayObject;
 
@@ -56,6 +49,7 @@ private:
 	};
 
 	void handleZoomedChange();
+	void noclipMove();
 
 	void setMousePosCompensated(Vector2 newMousePos);
 	Vector2 intersectRayMesh(Vector3 pos, Vector3 dir);
@@ -66,8 +60,7 @@ private:
 
 	void onCurvedChange(UString oldValue, UString newValue);
 	void onDistanceChange(UString oldValue, UString newValue);
-
-	void onMap(UString args);
+	void on3dChange(UString oldValue, UString newValue);
 
 	Osu *m_osu;
 
@@ -79,6 +72,14 @@ private:
 	std::list<VertexPair> m_meshList;
 	float m_fCircumLength;
 	Camera *m_camera;
+	Vector3 m_vPrevNoclipCameraPos;
+	bool m_bKeyLeftDown;
+	bool m_bKeyUpDown;
+	bool m_bKeyRightDown;
+	bool m_bKeyDownDown;
+	bool m_bKeySpaceDown;
+	bool m_bKeySpaceUpDown;
+	Vector3 m_vVelocity;
 	bool m_bZoomKeyDown;
 	bool m_bZoomed;
 	float m_fZoomFOVAnimPercent;
@@ -86,12 +87,6 @@ private:
 	Matrix4 m_modelMatrix;
 
 	bool m_bCrosshairIntersectsScreen;
-
-#ifdef FPOSU_FEATURE_MAP3D
-
-	Map3DLoader *m_map;
-
-#endif
 
 	// helper functions
 	static float subdivide(std::list<VertexPair> &meshList, const std::list<VertexPair>::iterator &begin, const std::list<VertexPair>::iterator &end, int n, float edgeDistance);

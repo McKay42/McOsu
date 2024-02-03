@@ -398,6 +398,18 @@ void OsuBeatmapStandard::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 	m_bIsVRDraw = false;
 }
 
+void OsuBeatmapStandard::draw3D(Graphics *g)
+{
+	OsuBeatmap::draw3D(g);
+	if (!canDraw()) return;
+	if (isLoading()) return;
+
+	updateHitobjectMetrics(); // needed for raw hitcircleDiameter
+
+	// TODO: implement
+
+}
+
 void OsuBeatmapStandard::drawFollowPoints(Graphics *g)
 {
 	OsuSkin *skin = m_osu->getSkin();

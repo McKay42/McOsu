@@ -40,6 +40,7 @@ public:
 	virtual void draw2(Graphics *g);
 	virtual void drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr) {;}
 	virtual void drawVR2(Graphics *g, Matrix4 &mvp, OsuVR *vr) {;}
+	virtual void draw3D(Graphics *g) {;}
 	virtual void update(long curPos);
 
 	virtual void updateStackPosition(float stackOffset) = 0;

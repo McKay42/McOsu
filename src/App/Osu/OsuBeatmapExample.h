@@ -17,6 +17,7 @@ public:
 
 	virtual void draw(Graphics *g);
 	virtual void drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr);
+	virtual void draw3D(Graphics *g);
 	virtual void update();
 
 	virtual void onModUpdate();

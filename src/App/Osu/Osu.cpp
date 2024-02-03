@@ -161,6 +161,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_osu_volume_effects_ref = convar->getConVarByName("osu_volume_effects");
 	m_osu_mod_mafham_ref = convar->getConVarByName("osu_mod_mafham");
 	m_osu_mod_fposu_ref = convar->getConVarByName("osu_mod_fposu");
+	m_osu_mod_fposu_3d_ref = convar->getConVarByName("osu_mod_fposu_3d");
 	m_snd_change_check_interval_ref = convar->getConVarByName("snd_change_check_interval");
 	m_ui_scrollview_scrollbarwidth_ref = convar->getConVarByName("ui_scrollview_scrollbarwidth");
 	m_mouse_raw_input_absolute_to_window_ref = convar->getConVarByName("mouse_raw_input_absolute_to_window");
@@ -587,14 +588,20 @@ void Osu::draw(Graphics *g)
 	// draw everything in the correct order
 	if (isInPlayMode()) // if we are playing a beatmap
 	{
-		const bool isBufferedPlayfieldDraw = m_osu_mod_fposu_ref->getBool();
+		const bool isFPoSu = (m_osu_mod_fposu_ref->getBool());
+		const bool isFPoSu3d = (isFPoSu && m_osu_mod_fposu_3d_ref->getBool());
+
+		const bool isBufferedPlayfieldDraw = (isFPoSu && !isFPoSu3d);
 
 		if (isBufferedPlayfieldDraw)
 			m_playfieldBuffer->enable();
 
-		getSelectedBeatmap()->draw(g);
+		if (!isFPoSu3d)
+			getSelectedBeatmap()->draw(g);
+		else
+			m_fposu->draw(g);
 
-		if (!m_osu_mod_fposu_ref->getBool())
+		if (!isFPoSu || isFPoSu3d)
 			m_hud->draw(g);
 
 		// quick retry fadeout overlay
@@ -610,7 +617,6 @@ void Osu::draw(Graphics *g)
 
 		// special cursor handling (fading cursor + invisible cursor mods + draw order etc.)
 		const bool isAuto = (m_bModAuto || m_bModAutopilot);
-		const bool isFPoSu = (m_osu_mod_fposu_ref->getBool());
 		const bool allowDoubleCursor = (env->getOS() == Environment::OS::OS_HORIZON || isFPoSu);
 		const bool allowDrawCursor = (!osu_hide_cursor_during_gameplay.getBool() || getSelectedBeatmap()->isPaused());
 		float fadingCursorAlpha = 1.0f - clamp<float>((float)m_score->getCombo()/osu_mod_fadingcursor_combo.getFloat(), 0.0f, 1.0f);
@@ -627,24 +633,24 @@ void Osu::draw(Graphics *g)
 		m_modSelector->draw(g);
 		m_optionsMenu->draw(g);
 
-		if (osu_draw_fps.getBool() && !isFPoSu)
+		if (osu_draw_fps.getBool() && (!isFPoSu || isFPoSu3d))
 			m_hud->drawFps(g);
 
 		m_hud->drawVolumeChange(g);
 
 		m_windowManager->draw(g);
 
-		if (isFPoSu && m_osu_draw_cursor_ripples_ref->getBool())
+		if (isFPoSu && !isFPoSu3d && m_osu_draw_cursor_ripples_ref->getBool())
 			m_hud->drawCursorRipples(g);
 
 		// draw FPoSu cursor trail
-		if (isFPoSu && m_fposu_draw_cursor_trail_ref->getBool())
+		if (isFPoSu && !isFPoSu3d && m_fposu_draw_cursor_trail_ref->getBool() && !m_osu_mod_fposu_3d_ref->getBool())
 			m_hud->drawCursorTrail(g, beatmapStd->getCursorPos(), osu_mod_fadingcursor.getBool() ? fadingCursorAlpha : 1.0f);
 
 		if (isBufferedPlayfieldDraw)
 			m_playfieldBuffer->disable();
 
-		if (isFPoSu)
+		if (isFPoSu && !isFPoSu3d)
 		{
 			m_fposu->draw(g);
 			m_hud->draw(g);
@@ -769,16 +775,7 @@ void Osu::draw(Graphics *g)
 		}
 
 		g->setBlending(false);
-		///g->push3DScene(McRect(0, 0, getScreenWidth(), getScreenHeight()));
 		{
-			///const float screenRotationDegrees = 90.0f;
-			///const float screenRotationPercent = (engine->getMouse()->getPos().x/20.0f) / screenRotationDegrees;
-			///g->offset3DScene(0, 0, getScreenWidth()/2);
-			///float depthAnimPercent = (screenRotationPercent < 0.5f ? screenRotationPercent / 0.5f : (1.0f - screenRotationPercent) / 0.5f);
-			///depthAnimPercent = -depthAnimPercent*(depthAnimPercent-2.0f);
-			///g->translate3DScene(0, 0, -getScreenWidth()*0.3f*depthAnimPercent);
-			///g->rotate3DScene(0, screenRotationPercent * screenRotationDegrees, 0);
-
 			if (env->getOS() == Environment::OS::OS_HORIZON)
 			{
 				// NOTE: the nintendo switch always draws in 1080p, even undocked
@@ -811,7 +808,6 @@ void Osu::draw(Graphics *g)
 				}
 			}
 		}
-		///g->pop3DScene();
 		g->setBlending(true);
 	}
 

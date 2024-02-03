@@ -262,6 +262,7 @@ private:
 	ConVar *m_osu_volume_effects_ref;
 	ConVar *m_osu_mod_mafham_ref;
 	ConVar *m_osu_mod_fposu_ref;
+	ConVar *m_osu_mod_fposu_3d_ref;
 	ConVar *m_snd_change_check_interval_ref;
 	ConVar *m_ui_scrollview_scrollbarwidth_ref;
 	ConVar *m_mouse_raw_input_absolute_to_window_ref;

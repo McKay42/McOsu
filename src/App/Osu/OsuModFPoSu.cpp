@@ -11,6 +11,7 @@
 #include "ConVar.h"
 #include "Camera.h"
 #include "Mouse.h"
+#include "Keyboard.h"
 #include "Environment.h"
 #include "ResourceManager.h"
 #include "AnimationHandler.h"
@@ -21,13 +22,8 @@
 #include "OsuKeyBindings.h"
 #include "OsuBeatmapStandard.h"
 
-#ifdef FPOSU_FEATURE_MAP3D
-
-#include "Map3DLoaderVBSP.h"
-
-#endif
-
 ConVar osu_mod_fposu("osu_mod_fposu", false);
+ConVar osu_mod_fposu_3d("osu_mod_fposu_3d", false);
 
 ConVar fposu_mouse_dpi("fposu_mouse_dpi", 400);
 ConVar fposu_mouse_cm_360("fposu_mouse_cm_360", 30.0f);
@@ -54,6 +50,11 @@ ConVar fposu_cube_tint_b("fposu_cube_tint_b", 255, "from 0 to 255");
 ConVar fposu_invert_vertical("fposu_invert_vertical", false);
 ConVar fposu_invert_horizontal("fposu_invert_horizontal", false);
 
+ConVar fposu_noclip("fposu_noclip", false);
+ConVar fposu_noclipspeed("fposu_noclipspeed", 16.5f);
+ConVar fposu_noclipaccelerate("fposu_noclipaccelerate", 20.0f);
+ConVar fposu_noclipfriction("fposu_noclipfriction", 10.0f);
+
 ConVar fposu_draw_cursor_trail("fposu_draw_cursor_trail", true);
 ConVar fposu_draw_scorebarbg_on_top("fposu_draw_scorebarbg_on_top", false);
 ConVar fposu_transparent_playfield("fposu_transparent_playfield", false, "only works if background dim is 100% and background brightness is 0%");
@@ -77,16 +78,16 @@ OsuModFPoSu::OsuModFPoSu(Osu *osu)
 
 	// vars
 	m_fCircumLength = 0.0f;
-	m_camera = new Camera(Vector3(0, 0, 0),Vector3(0, 0, -1));
+	m_camera = new Camera(Vector3(0, 0, 0), Vector3(0, 0, -1));
+	m_bKeyLeftDown= false;
+	m_bKeyUpDown= false;
+	m_bKeyRightDown= false;
+	m_bKeyDownDown= false;
+	m_bKeySpaceDown= false;
+	m_bKeySpaceUpDown= false;
 	m_bZoomKeyDown = false;
 	m_bZoomed = false;
 	m_fZoomFOVAnimPercent = 0.0f;
-
-#ifdef FPOSU_FEATURE_MAP3D
-
-	m_map = NULL;
-
-#endif
 
 	// load resources
 	m_vao = engine->getResourceManager()->createVertexArrayObject();
@@ -95,9 +96,7 @@ OsuModFPoSu::OsuModFPoSu(Osu *osu)
 	// convar callbacks
 	fposu_curved.setCallback( fastdelegate::MakeDelegate(this, &OsuModFPoSu::onCurvedChange) );
 	fposu_distance.setCallback( fastdelegate::MakeDelegate(this, &OsuModFPoSu::onDistanceChange) );
-	ConVar *map = convar->getConVarByName("map", false);
-	if (map != NULL)
-		map->setCallback( fastdelegate::MakeDelegate(this, &OsuModFPoSu::onMap) );
+	osu_mod_fposu_3d.setCallback( fastdelegate::MakeDelegate(this, &OsuModFPoSu::on3dChange) );
 
 	// init
 	makePlayfield();
@@ -107,12 +106,6 @@ OsuModFPoSu::OsuModFPoSu(Osu *osu)
 OsuModFPoSu::~OsuModFPoSu()
 {
 	anim->deleteExistingAnimation(&m_fZoomFOVAnimPercent);
-
-#ifdef FPOSU_FEATURE_MAP3D
-
-	SAFE_DELETE(m_map);
-
-#endif
 }
 
 void OsuModFPoSu::draw(Graphics *g)
@@ -122,7 +115,7 @@ void OsuModFPoSu::draw(Graphics *g)
 	const float fov = lerp<float>(fposu_fov.getFloat(), fposu_zoom_fov.getFloat(), m_fZoomFOVAnimPercent);
 	Matrix4 projectionMatrix = fposu_vertical_fov.getBool() ? Camera::buildMatrixPerspectiveFovVertical(deg2rad(fov), ((float)m_osu->getScreenWidth()/(float)m_osu->getScreenHeight()), 0.05f, 1000.0f)
 															: Camera::buildMatrixPerspectiveFovHorizontal(deg2rad(fov), ((float)m_osu->getScreenHeight() / (float)m_osu->getScreenWidth()), 0.05f, 1000.0f);
-	Matrix4 viewMatrix = Camera::buildMatrixLookAt(m_camera->getPos(), m_camera->getViewDirection(), m_camera->getViewUp());
+	Matrix4 viewMatrix = Camera::buildMatrixLookAt(m_camera->getPos(), m_camera->getPos() + m_camera->getViewDirection(), m_camera->getViewUp());
 
 	// HACKHACK: there is currently no way to directly modify the viewport origin, so the only option for rendering non-2d stuff with correct offsets (i.e. top left) is by rendering into a rendertarget
 	// HACKHACK: abusing sliderFrameBuffer
@@ -151,20 +144,11 @@ void OsuModFPoSu::draw(Graphics *g)
 						m_osu->getSkin()->getBackgroundCube()->unbind();
 					}
 
-					// draw map
-#ifdef FPOSU_FEATURE_MAP3D
-
-					g->setDepthBuffer(true);
-					{
-						if (m_map != NULL)
-							m_map->draw(g);
-					}
-					g->setDepthBuffer(false);
-
-#endif
-
 					// draw playfield mesh
+					if (!osu_mod_fposu_3d.getBool())
 					{
+						// regular fposu "3d" render path
+
 						if (fposu_transparent_playfield.getBool())
 							g->setBlending(true);
 
@@ -192,6 +176,54 @@ void OsuModFPoSu::draw(Graphics *g)
 							m_osu->getPlayfieldBuffer()->unbind();
 						}
 					}
+					else if (m_osu->isInPlayMode() && m_osu->getSelectedBeatmap() != NULL) // sanity
+					{
+						// real 3d render path (osu_mod_fposu_3d)
+
+						// axis lines at (0, 0, 0)
+						if (fposu_noclip.getBool())
+						{
+							static VertexArrayObject vao(Graphics::PRIMITIVE::PRIMITIVE_LINES);
+							vao.empty();
+							{
+								Vector3 pos = Vector3(0, 0, 0);
+								float length = 1.0f;
+
+								vao.addColor(0xffff0000);
+								vao.addVertex(pos.x, pos.y, pos.z);
+								vao.addColor(0xffff0000);
+								vao.addVertex(pos.x + length, pos.y, pos.z);
+
+								vao.addColor(0xff00ff00);
+								vao.addVertex(pos.x, pos.y, pos.z);
+								vao.addColor(0xff00ff00);
+								vao.addVertex(pos.x, pos.y + length, pos.z);
+
+								vao.addColor(0xff0000ff);
+								vao.addVertex(pos.x, pos.y, pos.z);
+								vao.addColor(0xff0000ff);
+								vao.addVertex(pos.x, pos.y, pos.z + length);
+							}
+							g->setColor(0xffffffff);
+							g->drawVAO(&vao);
+						}
+
+						// HACKHACK: TEMP DEBUG: triangle
+						VertexArrayObject vao;
+						{
+							const float offset = 5.0f;
+
+							vao.addColor(0xffff0000);
+							vao.addVertex(-0.5f + offset, 0.0f, 0.0f + offset);
+							vao.addColor(0xff00ff00);
+							vao.addVertex(0.0f + offset, 1.0f, 0.0f + offset);
+							vao.addColor(0xff0000ff);
+							vao.addVertex(0.5f + offset, 0.0f, 0.0f + offset);
+						}
+						g->drawVAO(&vao);
+
+						m_osu->getSelectedBeatmap()->draw3D(g);
+					}
 				}
 				if (!fposu_transparent_playfield.getBool())
 					g->setBlending(true);
@@ -214,13 +246,8 @@ void OsuModFPoSu::update()
 {
 	if (!osu_mod_fposu.getBool()) return;
 
-	// lazy load
-#ifdef FPOSU_FEATURE_MAP3D
-
-	if (m_map == NULL)
-		onMap("fposu_home");
-
-#endif
+	if (osu_mod_fposu_3d.getBool() && fposu_noclip.getBool())
+		noclipMove();
 
 	m_modelMatrix = Matrix4();
 	{
@@ -316,6 +343,79 @@ void OsuModFPoSu::update()
 	}
 }
 
+void OsuModFPoSu::noclipMove()
+{
+	const float noclipSpeed = fposu_noclipspeed.getFloat() * (engine->getKeyboard()->isShiftDown() ? 3.0f : 1.0f) * (engine->getKeyboard()->isControlDown() ? 0.2f : 1);
+	const float noclipAccelerate = fposu_noclipaccelerate.getFloat();
+	const float friction = fposu_noclipfriction.getFloat();
+
+	// build direction vector based on player key inputs
+	Vector3 wishdir;
+	{
+		wishdir += (m_bKeyUpDown ? m_camera->getViewDirection() : Vector3());
+		wishdir -= (m_bKeyDownDown ? m_camera->getViewDirection() : Vector3());
+		wishdir += (m_bKeyLeftDown ? m_camera->getViewRight() : Vector3());
+		wishdir -= (m_bKeyRightDown ? m_camera->getViewRight() : Vector3());
+		wishdir += (m_bKeySpaceDown ? (m_bKeySpaceUpDown ? Vector3(0.0f, 1.0f, 0.0f) : Vector3(0.0f, -1.0f, 0.0f)) : Vector3());
+	}
+
+	// normalize
+	float wishspeed = 0.0f;
+	{
+		const float length = wishdir.length();
+		if (length > 0.0f)
+		{
+			wishdir /= length; // normalize
+			wishspeed = noclipSpeed;
+		}
+	}
+
+	// friction (deccelerate)
+	{
+		const float spd = m_vVelocity.length();
+		if (spd > 0.00000001f)
+		{
+			// only apply friction once we "stop" moving (special case for noclip mode)
+			if (wishspeed == 0.0f)
+			{
+				const float drop = spd * friction * engine->getFrameTime();
+
+				float newSpeed = spd - drop;
+				{
+					if (newSpeed < 0.0f)
+						newSpeed = 0.0f;
+				}
+				newSpeed /= spd;
+
+				m_vVelocity *= newSpeed;
+			}
+		}
+		else
+			m_vVelocity.zero();
+	}
+
+	// accelerate
+	{
+		float addspeed = wishspeed;
+		if (addspeed > 0.0f)
+		{
+			float accelspeed = noclipAccelerate * engine->getFrameTime() * wishspeed;
+
+			if (accelspeed > addspeed)
+				accelspeed = addspeed;
+
+			m_vVelocity += accelspeed * wishdir;
+		}
+	}
+
+	// clamp to max speed
+	if (m_vVelocity.length() > noclipSpeed)
+		m_vVelocity.setLength(noclipSpeed);
+
+	// move
+	m_camera->setPos(m_camera->getPos() + m_vVelocity * engine->getFrameTime());
+}
+
 void OsuModFPoSu::onKeyDown(KeyboardEvent &key)
 {
 	if (key == (KEYCODE)OsuKeyBindings::FPOSU_ZOOM.getInt() && !m_bZoomKeyDown)
@@ -332,6 +432,22 @@ void OsuModFPoSu::onKeyDown(KeyboardEvent &key)
 			handleZoomedChange();
 		}
 	}
+
+	if (key == KEY_A)
+		m_bKeyLeftDown = true;
+	if (key == KEY_W)
+		m_bKeyUpDown = true;
+	if (key == KEY_D)
+		m_bKeyRightDown = true;
+	if (key == KEY_S)
+		m_bKeyDownDown = true;
+	if (key == KEY_SPACE)
+	{
+		if (!m_bKeySpaceDown)
+			m_bKeySpaceUpDown = !m_bKeySpaceUpDown;
+
+		m_bKeySpaceDown = true;
+	}
 }
 
 void OsuModFPoSu::onKeyUp(KeyboardEvent &key)
@@ -346,6 +462,17 @@ void OsuModFPoSu::onKeyUp(KeyboardEvent &key)
 			handleZoomedChange();
 		}
 	}
+
+	if (key == KEY_A)
+		m_bKeyLeftDown = false;
+	if (key == KEY_W)
+		m_bKeyUpDown = false;
+	if (key == KEY_D)
+		m_bKeyRightDown = false;
+	if (key == KEY_S)
+		m_bKeyDownDown = false;
+	if (key == KEY_SPACE)
+		m_bKeySpaceDown = false;
 }
 
 void OsuModFPoSu::handleZoomedChange()
@@ -620,18 +747,15 @@ void OsuModFPoSu::onDistanceChange(UString oldValue, UString newValue)
 	makePlayfield();
 }
 
-void OsuModFPoSu::onMap(UString args)
+void OsuModFPoSu::on3dChange(UString oldValue, UString newValue)
 {
-	args.insert(0, "maps/");
-	args.append(".bsp");
-
-	// TODO: async load
-#ifdef FPOSU_FEATURE_MAP3D
-
-	SAFE_DELETE(m_map);
-	m_map = new Map3DLoaderVBSP(args);
-
-#endif
+	if (osu_mod_fposu_3d.getBool())
+		m_camera->setPos(m_vPrevNoclipCameraPos);
+	else
+	{
+		m_vPrevNoclipCameraPos = m_camera->getPos();
+		m_camera->setPos(Vector3(0, 0, 0));
+	}
 }
 
 float OsuModFPoSu::subdivide(std::list<VertexPair> &meshList, const std::list<VertexPair>::iterator &begin, const std::list<VertexPair>::iterator &end, int n, float edgeDistance)

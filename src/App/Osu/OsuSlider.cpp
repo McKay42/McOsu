@@ -826,6 +826,11 @@ void OsuSlider::drawVR2(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 	draw2(g, true, true);
 }
 
+void OsuSlider::draw3D(Graphics *g)
+{
+	// TODO: implement
+}
+
 void OsuSlider::drawStartCircle(Graphics *g, float alpha)
 {
 	if (m_bStartFinished)
