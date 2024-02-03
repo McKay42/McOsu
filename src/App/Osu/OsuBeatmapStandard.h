@@ -31,6 +31,7 @@ public:
 	Vector2 osuCoords2Pixels(Vector2 coords) const; // hitobjects should use this one (includes lots of special behaviour)
 	Vector2 osuCoords2RawPixels(Vector2 coords) const; // raw transform from osu!pixels to absolute screen pixels (without any mods whatsoever)
 	Vector2 osuCoords2VRPixels(Vector2 coords) const; // this gets called by osuCoords2Pixels() during a VR draw(), for easier backwards compatibility
+	Vector3 osuCoordsTo3D(Vector2 coords) const;
 	Vector2 osuCoords2LegacyPixels(Vector2 coords) const; // only applies vanilla osu mods and static mods to the coordinates (used for generating the static slider mesh) centered at (0, 0, 0)
 
 	// cursor
@@ -68,6 +69,10 @@ private:
 	static ConVar *m_osu_draw_statistics_livestars_ref;
 	static ConVar *m_osu_mod_fullalternate_ref;
 	static ConVar *m_osu_mod_fposu_ref;
+	static ConVar *m_fposu_distance_ref;
+	static ConVar *m_fposu_curved_ref;
+	static ConVar *m_fposu_3d_playfield_scale_ref;
+	static ConVar *m_fposu_3d_curve_multiplier_ref;
 	static ConVar *m_osu_slider_scorev2_ref;
 
 	static inline Vector2 mapNormalizedCoordsOntoUnitCircle(const Vector2 &in)

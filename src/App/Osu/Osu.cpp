@@ -161,7 +161,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_osu_volume_effects_ref = convar->getConVarByName("osu_volume_effects");
 	m_osu_mod_mafham_ref = convar->getConVarByName("osu_mod_mafham");
 	m_osu_mod_fposu_ref = convar->getConVarByName("osu_mod_fposu");
-	m_osu_mod_fposu_3d_ref = convar->getConVarByName("osu_mod_fposu_3d");
+	m_fposu_3d_ref = convar->getConVarByName("fposu_3d");
 	m_snd_change_check_interval_ref = convar->getConVarByName("snd_change_check_interval");
 	m_ui_scrollview_scrollbarwidth_ref = convar->getConVarByName("ui_scrollview_scrollbarwidth");
 	m_mouse_raw_input_absolute_to_window_ref = convar->getConVarByName("mouse_raw_input_absolute_to_window");
@@ -589,7 +589,7 @@ void Osu::draw(Graphics *g)
 	if (isInPlayMode()) // if we are playing a beatmap
 	{
 		const bool isFPoSu = (m_osu_mod_fposu_ref->getBool());
-		const bool isFPoSu3d = (isFPoSu && m_osu_mod_fposu_3d_ref->getBool());
+		const bool isFPoSu3d = (isFPoSu && m_fposu_3d_ref->getBool());
 
 		const bool isBufferedPlayfieldDraw = (isFPoSu && !isFPoSu3d);
 
@@ -644,7 +644,7 @@ void Osu::draw(Graphics *g)
 			m_hud->drawCursorRipples(g);
 
 		// draw FPoSu cursor trail
-		if (isFPoSu && !isFPoSu3d && m_fposu_draw_cursor_trail_ref->getBool() && !m_osu_mod_fposu_3d_ref->getBool())
+		if (isFPoSu && !isFPoSu3d && m_fposu_draw_cursor_trail_ref->getBool())
 			m_hud->drawCursorTrail(g, beatmapStd->getCursorPos(), osu_mod_fadingcursor.getBool() ? fadingCursorAlpha : 1.0f);
 
 		if (isBufferedPlayfieldDraw)

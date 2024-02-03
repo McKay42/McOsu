@@ -23,7 +23,10 @@
 #include "OsuBeatmapStandard.h"
 
 ConVar osu_mod_fposu("osu_mod_fposu", false);
-ConVar osu_mod_fposu_3d("osu_mod_fposu_3d", false);
+
+ConVar fposu_3d("fposu_3d", false);
+ConVar fposu_3d_playfield_scale("fposu_3d_playfield_scale", 1.0f, "3d x/y position scalar multiplier (does not affect hitobject sizes!)");
+ConVar fposu_3d_curve_multiplier("fposu_3d_curve_multiplier", 1.0f, "multiplier for the default curving factor (only relevant if fposu_curved is enabled)");
 
 ConVar fposu_mouse_dpi("fposu_mouse_dpi", 400);
 ConVar fposu_mouse_cm_360("fposu_mouse_cm_360", 30.0f);
@@ -78,6 +81,7 @@ OsuModFPoSu::OsuModFPoSu(Osu *osu)
 
 	// vars
 	m_fCircumLength = 0.0f;
+	m_fEdgeDistance = 0.0f;
 	m_camera = new Camera(Vector3(0, 0, 0), Vector3(0, 0, -1));
 	m_bKeyLeftDown= false;
 	m_bKeyUpDown= false;
@@ -96,7 +100,7 @@ OsuModFPoSu::OsuModFPoSu(Osu *osu)
 	// convar callbacks
 	fposu_curved.setCallback( fastdelegate::MakeDelegate(this, &OsuModFPoSu::onCurvedChange) );
 	fposu_distance.setCallback( fastdelegate::MakeDelegate(this, &OsuModFPoSu::onDistanceChange) );
-	osu_mod_fposu_3d.setCallback( fastdelegate::MakeDelegate(this, &OsuModFPoSu::on3dChange) );
+	fposu_3d.setCallback( fastdelegate::MakeDelegate(this, &OsuModFPoSu::on3dChange) );
 
 	// init
 	makePlayfield();
@@ -145,7 +149,7 @@ void OsuModFPoSu::draw(Graphics *g)
 					}
 
 					// draw playfield mesh
-					if (!osu_mod_fposu_3d.getBool())
+					if (!fposu_3d.getBool())
 					{
 						// regular fposu "3d" render path
 
@@ -178,7 +182,7 @@ void OsuModFPoSu::draw(Graphics *g)
 					}
 					else if (m_osu->isInPlayMode() && m_osu->getSelectedBeatmap() != NULL) // sanity
 					{
-						// real 3d render path (osu_mod_fposu_3d)
+						// real 3d render path (fposu_3d)
 
 						// axis lines at (0, 0, 0)
 						if (fposu_noclip.getBool())
@@ -246,7 +250,7 @@ void OsuModFPoSu::update()
 {
 	if (!osu_mod_fposu.getBool()) return;
 
-	if (osu_mod_fposu_3d.getBool() && fposu_noclip.getBool())
+	if (fposu_3d.getBool() && fposu_noclip.getBool())
 		noclipMove();
 
 	m_modelMatrix = Matrix4();
@@ -633,7 +637,7 @@ void OsuModFPoSu::makePlayfield()
 	VertexPair vp1 = VertexPair(Vector3(-0.5, 0.5, dist), Vector3(-0.5, -0.5, dist), 0);
 	VertexPair vp2 = VertexPair(Vector3(0.5, 0.5, dist), Vector3(0.5, -0.5, dist), 1);
 
-	const float edgeDistance = Vector3(0, 0, 0).distance(Vector3(-0.5, 0.0, dist));
+	m_fEdgeDistance = Vector3(0, 0, 0).distance(Vector3(-0.5, 0.0, dist));
 
 	m_meshList.push_back(vp1);
 	m_meshList.push_back(vp2);
@@ -641,7 +645,7 @@ void OsuModFPoSu::makePlayfield()
 	std::list<VertexPair>::iterator begin = m_meshList.begin();
 	std::list<VertexPair>::iterator end = m_meshList.end();
 	--end;
-	m_fCircumLength = subdivide(m_meshList, begin, end, SUBDIVISIONS, edgeDistance);
+	m_fCircumLength = subdivide(m_meshList, begin, end, SUBDIVISIONS, m_fEdgeDistance);
 
 	begin = m_meshList.begin();
 	std::list<VertexPair>::iterator next = ++m_meshList.begin();
@@ -749,7 +753,7 @@ void OsuModFPoSu::onDistanceChange(UString oldValue, UString newValue)
 
 void OsuModFPoSu::on3dChange(UString oldValue, UString newValue)
 {
-	if (osu_mod_fposu_3d.getBool())
+	if (fposu_3d.getBool())
 		m_camera->setPos(m_vPrevNoclipCameraPos);
 	else
 	{

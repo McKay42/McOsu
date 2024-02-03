@@ -33,6 +33,7 @@ public:
 	void onKeyDown(KeyboardEvent &key);
 	void onKeyUp(KeyboardEvent &key);
 
+	inline float getEdgeDistance() const {return m_fEdgeDistance;}
 	inline bool isCrosshairIntersectingScreen() const {return m_bCrosshairIntersectsScreen;}
 
 private:
@@ -71,6 +72,7 @@ private:
 
 	std::list<VertexPair> m_meshList;
 	float m_fCircumLength;
+	float m_fEdgeDistance;
 	Camera *m_camera;
 	Vector3 m_vPrevNoclipCameraPos;
 	bool m_bKeyLeftDown;

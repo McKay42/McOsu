@@ -22,6 +22,7 @@
 #include "OsuSkin.h"
 #include "OsuSkinImage.h"
 #include "OsuGameRules.h"
+#include "OsuModFPoSu.h"
 #include "OsuDatabase.h"
 #include "OsuSongBrowser2.h"
 #include "OsuNotificationOverlay.h"
@@ -96,6 +97,10 @@ ConVar *OsuBeatmapStandard::m_osu_draw_statistics_pp_ref = NULL;
 ConVar *OsuBeatmapStandard::m_osu_draw_statistics_livestars_ref = NULL;
 ConVar *OsuBeatmapStandard::m_osu_mod_fullalternate_ref = NULL;
 ConVar *OsuBeatmapStandard::m_osu_mod_fposu_ref = NULL;
+ConVar *OsuBeatmapStandard::m_fposu_distance_ref = NULL;
+ConVar *OsuBeatmapStandard::m_fposu_curved_ref = NULL;
+ConVar *OsuBeatmapStandard::m_fposu_3d_playfield_scale_ref = NULL;
+ConVar *OsuBeatmapStandard::m_fposu_3d_curve_multiplier_ref = NULL;
 ConVar *OsuBeatmapStandard::m_osu_slider_scorev2_ref = NULL;
 
 OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
@@ -159,6 +164,14 @@ OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 		m_osu_mod_fullalternate_ref = convar->getConVarByName("osu_mod_fullalternate");
 	if (m_osu_mod_fposu_ref == NULL)
 		m_osu_mod_fposu_ref = convar->getConVarByName("osu_mod_fposu");
+	if (m_fposu_distance_ref == NULL)
+		m_fposu_distance_ref = convar->getConVarByName("fposu_distance");
+	if (m_fposu_curved_ref == NULL)
+		m_fposu_curved_ref = convar->getConVarByName("fposu_curved");
+	if (m_fposu_3d_playfield_scale_ref == NULL)
+		m_fposu_3d_playfield_scale_ref = convar->getConVarByName("fposu_3d_playfield_scale");
+	if (m_fposu_3d_curve_multiplier_ref == NULL)
+		m_fposu_3d_curve_multiplier_ref = convar->getConVarByName("fposu_3d_curve_multiplier");
 	if (m_osu_slider_scorev2_ref == NULL)
 		m_osu_slider_scorev2_ref = convar->getConVarByName("osu_slider_scorev2");
 }
@@ -1225,6 +1238,58 @@ Vector2 OsuBeatmapStandard::osuCoords2VRPixels(Vector2 coords) const
 	coords.y *= 1.0f + osu_playfield_stretch_y.getFloat();
 
 	return coords;
+}
+
+Vector3 OsuBeatmapStandard::osuCoordsTo3D(Vector2 coords) const
+{
+	const float sizediv = (1.0f / (float)OsuGameRules::OSU_COORD_WIDTH);
+
+	// TODO: rotation support
+	{
+
+	}
+
+	// 3d center
+	coords.x -= OsuGameRules::OSU_COORD_WIDTH / 2;
+	coords.y -= OsuGameRules::OSU_COORD_HEIGHT / 2;
+
+	// TODO: osu_playfield_circular support
+	{
+
+	}
+
+	const float curveMultiplier = m_fposu_3d_curve_multiplier_ref->getFloat();
+	const float xCurvePercent = (1.0f + ((coords.x / ((float)OsuGameRules::OSU_COORD_WIDTH / 2.0f)) * curveMultiplier)) / 2.0f;
+
+	Vector3 coords3d = Vector3(coords.x, coords.y, 0) * sizediv * m_fposu_3d_playfield_scale_ref->getFloat();
+
+	// 3d scale
+	coords.x *= 1.0f + osu_playfield_stretch_x.getFloat();
+	coords.y *= 1.0f + osu_playfield_stretch_y.getFloat();
+
+	struct Helper
+	{
+		static float quadLerp3f(float left, float center, float right, float percent)
+		{
+			if (percent >= 0.5f)
+			{
+				percent = (percent - 0.5f) / 0.5f;
+				percent *= percent;
+				return lerp<float>(center, right, percent);
+			}
+			else
+			{
+				percent = percent / 0.5f;
+				percent = 1.0f - (1.0f - percent)*(1.0f - percent);
+				return lerp<float>(left, center, percent);
+			}
+		}
+	};
+
+	if (m_fposu_curved_ref->getBool())
+		return (coords3d + Vector3(0, 0, -Helper::quadLerp3f(m_fposu_distance_ref->getFloat(), m_osu->getFPoSu()->getEdgeDistance(), m_fposu_distance_ref->getFloat(), xCurvePercent)));
+	else
+		return (coords3d + Vector3(0, 0, -m_fposu_distance_ref->getFloat()));
 }
 
 Vector2 OsuBeatmapStandard::osuCoords2LegacyPixels(Vector2 coords) const
