@@ -53,7 +53,7 @@ ConVar osu_number_max("osu_number_max", 0, "0 = disabled, 1/2/3/4/etc. limits vi
 ConVar osu_ignore_beatmap_combo_numbers("osu_ignore_beatmap_combo_numbers", false, "may be used in conjunction with osu_number_max");
 
 ConVar osu_beatmap_version("osu_beatmap_version", 128, "maximum supported .osu file version, above this will simply not load (this was 14 but got bumped to 128 due to lazer backports)");
-ConVar osu_beatmap_max_num_hitobjects("osu_beatmap_max_num_hitobjects", 32768, "maximum number of total allowed hitobjects per beatmap (prevent crashing on deliberate game-breaking beatmaps)");
+ConVar osu_beatmap_max_num_hitobjects("osu_beatmap_max_num_hitobjects", 40000, "maximum number of total allowed hitobjects per beatmap (prevent crashing on deliberate game-breaking beatmaps)");
 ConVar osu_beatmap_max_num_slider_scoringtimes("osu_beatmap_max_num_slider_scoringtimes", 32768, "maximum number of slider score increase events allowed per slider (prevent crashing on deliberate game-breaking beatmaps)");
 
 unsigned long long OsuDatabaseBeatmap::sortHackCounter = 0;
