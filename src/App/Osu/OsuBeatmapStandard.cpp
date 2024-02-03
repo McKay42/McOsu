@@ -1261,7 +1261,7 @@ Vector3 OsuBeatmapStandard::osuCoordsTo3D(Vector2 coords) const
 	const float curveMultiplier = m_fposu_3d_curve_multiplier_ref->getFloat();
 	const float xCurvePercent = (1.0f + ((coords.x / ((float)OsuGameRules::OSU_COORD_WIDTH / 2.0f)) * curveMultiplier)) / 2.0f;
 
-	Vector3 coords3d = Vector3(coords.x, coords.y, 0) * sizediv * m_fposu_3d_playfield_scale_ref->getFloat();
+	Vector3 coords3d = Vector3(coords.x, -coords.y, 0) * sizediv * m_fposu_3d_playfield_scale_ref->getFloat();
 
 	// 3d scale
 	coords.x *= 1.0f + osu_playfield_stretch_x.getFloat();

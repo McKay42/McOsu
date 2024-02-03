@@ -32,6 +32,8 @@ public:
 
 	static ConVar *m_osu_mod_mafham_ref;
 
+	static ConVar *m_fposu_3d_hitobjects_look_at_player_ref;
+
 public:
 	OsuHitObject(long time, int sampleType, int comboNumber, bool isEndOfCombo, int colorCounter, int colorOffset, OsuBeatmap *beatmap);
 	virtual ~OsuHitObject() {;}

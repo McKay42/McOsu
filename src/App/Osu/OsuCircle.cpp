@@ -13,6 +13,7 @@
 #include "SoundEngine.h"
 #include "OpenVRInterface.h"
 #include "OpenVRController.h"
+#include "Camera.h"
 #include "ConVar.h"
 
 #include "Osu.h"
@@ -21,6 +22,7 @@
 #include "OsuSkinImage.h"
 #include "OsuGameRules.h"
 #include "OsuBeatmapStandard.h"
+#include "OsuModFPoSu.h"
 
 ConVar osu_bug_flicker_log("osu_bug_flicker_log", false);
 
@@ -537,7 +539,38 @@ void OsuCircle::drawVR2(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 
 void OsuCircle::draw3D(Graphics *g)
 {
-	// TODO: implement
+	if (m_bFinished || (!m_bVisible && !m_bWaiting)) return; // special case needed for when we are past this objects time, but still within not-miss range, because we still need to draw the object
+
+	const float sizediv = 1.0f / (float)OsuGameRules::OSU_COORD_WIDTH; // TODO: move this to a global constant somewhere
+	const Vector3 pos = m_beatmap->osuCoordsTo3D(m_vRawPos);
+
+	g->pushTransform();
+	{
+		Matrix4 translation;
+		translation.translate(pos.x, pos.y, pos.z);
+
+		Matrix4 scale;
+		scale.scale(m_beatmap->getRawHitcircleDiameter() * sizediv);
+
+		Matrix4 modelMatrix;
+		{
+			if (m_fposu_3d_hitobjects_look_at_player_ref->getBool())
+				modelMatrix = translation * Camera::buildMatrixLookAt(Vector3(0, 0, 0), pos - m_beatmap->getOsu()->getFPoSu()->getCamera()->getPos(), Vector3(0, 1, 0)).invert() * scale;
+			else
+				modelMatrix = translation * scale;
+		}
+		g->setWorldMatrixMul(modelMatrix);
+
+		g->setColor(0xffffffff);
+		m_beatmap->getSkin()->getHitCircle()->bind();
+		{
+			m_beatmap->getOsu()->getFPoSu()->getHitcircle3DModel()->draw3D(g);
+
+			// TODO: proper transparency, animations, approach circles, hitresults, etc.
+		}
+		m_beatmap->getSkin()->getHitCircle()->unbind();
+	}
+	g->popTransform();
 }
 
 void OsuCircle::update(long curPos)

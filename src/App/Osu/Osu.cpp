@@ -664,7 +664,7 @@ void Osu::draw(Graphics *g)
 		{
 			Vector2 cursorPos = (beatmapStd != NULL && !isAuto) ? beatmapStd->getCursorPos() : engine->getMouse()->getPos();
 
-			if (isFPoSu)
+			if (isFPoSu && (!isFPoSu3d || !getSelectedBeatmap()->isPaused()))
 				cursorPos = getScreenSize() / 2.0f;
 
 			const bool updateAndDrawTrail = !isFPoSu;
@@ -1210,13 +1210,13 @@ void Osu::updateMods()
 	// handle auto/pilot cursor visibility
 	if (!m_bModAuto && !m_bModAutopilot)
 	{
-		env->setCursorVisible(false);
 		m_bShouldCursorBeVisible = false;
+		env->setCursorVisible(m_bShouldCursorBeVisible);
 	}
 	else if (isInPlayMode())
 	{
-		env->setCursorVisible(true);
 		m_bShouldCursorBeVisible = true;
+		env->setCursorVisible(m_bShouldCursorBeVisible);
 	}
 
 	// handle windows key disable/enable
@@ -1823,8 +1823,8 @@ void Osu::onPlayStart()
 
 	if (m_bModAuto || m_bModAutopilot)
 	{
-		env->setCursorVisible(true);
 		m_bShouldCursorBeVisible = true;
+		env->setCursorVisible(m_bShouldCursorBeVisible);
 	}
 
 	if (getSelectedBeatmap()->getSelectedDifficulty2()->getLocalOffset() != 0)

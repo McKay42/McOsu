@@ -27,6 +27,8 @@ ConVar osu_mod_fposu("osu_mod_fposu", false);
 ConVar fposu_3d("fposu_3d", false);
 ConVar fposu_3d_playfield_scale("fposu_3d_playfield_scale", 1.0f, "3d x/y position scalar multiplier (does not affect hitobject sizes!)");
 ConVar fposu_3d_curve_multiplier("fposu_3d_curve_multiplier", 1.0f, "multiplier for the default curving factor (only relevant if fposu_curved is enabled)");
+ConVar fposu_3d_hitobjects_look_at_player("fposu_3d_hitobjects_look_at_player", true);
+ConVar fposu_3d_wireframe("fposu_3d_wireframe", false);
 
 ConVar fposu_mouse_dpi("fposu_mouse_dpi", 400);
 ConVar fposu_mouse_cm_360("fposu_mouse_cm_360", 30.0f);
@@ -54,7 +56,7 @@ ConVar fposu_invert_vertical("fposu_invert_vertical", false);
 ConVar fposu_invert_horizontal("fposu_invert_horizontal", false);
 
 ConVar fposu_noclip("fposu_noclip", false);
-ConVar fposu_noclipspeed("fposu_noclipspeed", 16.5f);
+ConVar fposu_noclipspeed("fposu_noclipspeed", 2.0f);
 ConVar fposu_noclipaccelerate("fposu_noclipaccelerate", 20.0f);
 ConVar fposu_noclipfriction("fposu_noclipfriction", 10.0f);
 
@@ -81,7 +83,6 @@ OsuModFPoSu::OsuModFPoSu(Osu *osu)
 
 	// vars
 	m_fCircumLength = 0.0f;
-	m_fEdgeDistance = 0.0f;
 	m_camera = new Camera(Vector3(0, 0, 0), Vector3(0, 0, -1));
 	m_bKeyLeftDown= false;
 	m_bKeyUpDown= false;
@@ -93,9 +94,14 @@ OsuModFPoSu::OsuModFPoSu(Osu *osu)
 	m_bZoomed = false;
 	m_fZoomFOVAnimPercent = 0.0f;
 
+	m_fEdgeDistance = 0.0f;
+	m_bCrosshairIntersectsScreen = false;
+
 	// load resources
 	m_vao = engine->getResourceManager()->createVertexArrayObject();
 	m_vaoCube = engine->getResourceManager()->createVertexArrayObject();
+
+	m_hitcircle3DModel = new OsuModFPoSu3DModel("hitcircle.obj");
 
 	// convar callbacks
 	fposu_curved.setCallback( fastdelegate::MakeDelegate(this, &OsuModFPoSu::onCurvedChange) );
@@ -110,6 +116,8 @@ OsuModFPoSu::OsuModFPoSu(Osu *osu)
 OsuModFPoSu::~OsuModFPoSu()
 {
 	anim->deleteExistingAnimation(&m_fZoomFOVAnimPercent);
+
+	SAFE_DELETE(m_hitcircle3DModel);
 }
 
 void OsuModFPoSu::draw(Graphics *g)
@@ -184,6 +192,9 @@ void OsuModFPoSu::draw(Graphics *g)
 					{
 						// real 3d render path (fposu_3d)
 
+						if (fposu_3d_wireframe.getBool())
+							g->setWireframe(true);
+
 						// axis lines at (0, 0, 0)
 						if (fposu_noclip.getBool())
 						{
@@ -212,21 +223,16 @@ void OsuModFPoSu::draw(Graphics *g)
 							g->drawVAO(&vao);
 						}
 
-						// HACKHACK: TEMP DEBUG: triangle
-						VertexArrayObject vao;
+						g->setCulling(true);
+						g->setDepthBuffer(true);
 						{
-							const float offset = 5.0f;
-
-							vao.addColor(0xffff0000);
-							vao.addVertex(-0.5f + offset, 0.0f, 0.0f + offset);
-							vao.addColor(0xff00ff00);
-							vao.addVertex(0.0f + offset, 1.0f, 0.0f + offset);
-							vao.addColor(0xff0000ff);
-							vao.addVertex(0.5f + offset, 0.0f, 0.0f + offset);
+							m_osu->getSelectedBeatmap()->draw3D(g);
 						}
-						g->drawVAO(&vao);
+						g->setDepthBuffer(false);
+						g->setCulling(false);
 
-						m_osu->getSelectedBeatmap()->draw3D(g);
+						if (fposu_3d_wireframe.getBool())
+							g->setWireframe(false);
 					}
 				}
 				if (!fposu_transparent_playfield.getBool())
@@ -290,8 +296,10 @@ void OsuModFPoSu::update()
 	const bool isAutoCursor = (m_osu->getModAuto() || m_osu->getModAutopilot());
 
 	m_bCrosshairIntersectsScreen = true;
-	if (!fposu_absolute_mode.getBool() && !isAutoCursor && env->getOS() == Environment::OS::OS_WINDOWS) // HACKHACK: windows only for now (raw input support)
+	if (!fposu_3d.getBool() && !fposu_absolute_mode.getBool() && !isAutoCursor && env->getOS() == Environment::OS::OS_WINDOWS) // HACKHACK: windows only for now (raw input support)
 	{
+		// regular mouse position mode
+
 		// calculate mouse delta
 		// HACKHACK: undo engine mouse sensitivity multiplier
 		Vector2 rawDelta = engine->getMouse()->getRawDelta() / m_mouse_sensitivity_ref->getFloat();
@@ -330,8 +338,10 @@ void OsuModFPoSu::update()
 			setMousePosCompensated(newMousePos);
 		}
 	}
-	else // absolute mouse position mode
+	else if (!fposu_3d.getBool())
 	{
+		// absolute mouse position mode (or auto)
+
 		m_bCrosshairIntersectsScreen = true;
 
 		// auto support, because it looks pretty cool
@@ -344,6 +354,43 @@ void OsuModFPoSu::update()
 		}
 
 		m_camera->lookAt(calculateUnProjectedVector(mousePos));
+	}
+	else if (fposu_3d.getBool())
+	{
+		// 3d mouse position mode (and auto)
+
+		// HACKHACK: code duplication (see above)
+
+		// calculate mouse delta
+		// HACKHACK: undo engine mouse sensitivity multiplier
+		Vector2 rawDelta = engine->getMouse()->getRawDelta() / m_mouse_sensitivity_ref->getFloat();
+
+		// apply fposu mouse sensitivity multiplier
+		const double countsPerCm = (double)fposu_mouse_dpi.getInt() / 2.54;
+		const double cmPer360 = fposu_mouse_cm_360.getFloat();
+		const double countsPer360 = cmPer360 * countsPerCm;
+		const double multiplier = 360.0 / countsPer360;
+		rawDelta *= multiplier;
+
+		// apply zoom_sensitivity_ratio if zoomed
+		if (m_bZoomed && fposu_zoom_sensitivity_ratio.getFloat() > 0.0f)
+			rawDelta *= (fposu_zoom_fov.getFloat() / fposu_fov.getFloat()) * fposu_zoom_sensitivity_ratio.getFloat(); // see https://www.reddit.com/r/GlobalOffensive/comments/3vxkav/how_zoomed_sensitivity_works/
+
+		// update camera
+		if (rawDelta.x != 0.0f)
+			m_camera->rotateY(rawDelta.x * (fposu_invert_horizontal.getBool() ? 1.0f : -1.0f));
+		if (rawDelta.y != 0.0f)
+			m_camera->rotateX(rawDelta.y * (fposu_invert_vertical.getBool() ? 1.0f : -1.0f));
+
+		if (!isAutoCursor && m_osu->isInPlayMode() && m_osu->getSelectedBeatmap() != NULL)
+		{
+			if (!m_osu->getSelectedBeatmap()->isPaused())
+				setMousePosCompensated(engine->getScreenSize()/2);
+		}
+		else
+		{
+			// TODO: implement 3d auto
+		}
 	}
 }
 
@@ -806,4 +853,113 @@ Vector3 OsuModFPoSu::normalFromTriangle(Vector3 p1, Vector3 p2, Vector3 p3)
 	const Vector3 v = (p3 - p1);
 
 	return u.cross(v).normalize();
+}
+
+
+
+OsuModFPoSu3DModel::OsuModFPoSu3DModel(UString filePath)
+{
+	filePath.insert(0, "models/");
+
+	m_vao = engine->getResourceManager()->createVertexArrayObject(Graphics::PRIMITIVE::PRIMITIVE_TRIANGLES);
+
+	// load
+	{
+		struct RAW_FACE
+		{
+			int vertexIndex1;
+			int vertexIndex2;
+			int vertexIndex3;
+			int uvIndex1;
+			int uvIndex2;
+			int uvIndex3;
+
+			RAW_FACE()
+			{
+				vertexIndex1 = 0;
+				vertexIndex2 = 0;
+				vertexIndex3 = 0;
+				uvIndex1 = 0;
+				uvIndex2 = 0;
+				uvIndex3 = 0;
+			}
+		};
+
+		// load model data
+		std::vector<Vector3> rawVertices;
+		std::vector<Vector2> rawTexcoords;
+		std::vector<RAW_FACE> rawFaces;
+		{
+			std::ifstream f(filePath.toUtf8(), std::ios::in | std::ios::binary);
+			if (f.good())
+			{
+				std::string line;
+				while (std::getline(f, line))
+				{
+					if (line.find("v ") == 0)
+					{
+						Vector3 vertex;
+						if (sscanf(line.c_str(), "v %f %f %f ", &vertex.x, &vertex.y, &vertex.z) == 3)
+							rawVertices.push_back(vertex);
+					}
+					else if (line.find("vt ") == 0)
+					{
+						Vector2 uv;
+						if (sscanf(line.c_str(), "vt %f %f ", &uv.x, &uv.y) == 2)
+							rawTexcoords.push_back(uv);
+					}
+					else if (line.find("f ") == 0)
+					{
+						RAW_FACE face;
+						if (sscanf(line.c_str(), "f %i/%i %i/%i %i/%i ", &face.vertexIndex1, &face.uvIndex1, &face.vertexIndex2, &face.uvIndex2, &face.vertexIndex3, &face.uvIndex3) == 6)
+							rawFaces.push_back(face);
+					}
+				}
+			}
+			else
+				debugLog("Failed to load %s\n", filePath.toUtf8());
+		}
+
+		// build vao
+		if (rawVertices.size() > 0 && rawTexcoords.size() > 0)
+		{
+			bool hasAtLeastOneTriangle = false;
+
+			for (const RAW_FACE &face : rawFaces)
+			{
+				if ((size_t)(face.vertexIndex1 - 1) < rawVertices.size()
+				 && (size_t)(face.vertexIndex2 - 1) < rawVertices.size()
+				 && (size_t)(face.vertexIndex3 - 1) < rawVertices.size()
+				 && (size_t)(face.uvIndex1 - 1) < rawTexcoords.size()
+				 && (size_t)(face.uvIndex2 - 1) < rawTexcoords.size()
+				 && (size_t)(face.uvIndex3 - 1) < rawTexcoords.size())
+				{
+					hasAtLeastOneTriangle = true;
+
+					m_vao->addVertex(rawVertices[(size_t)(face.vertexIndex1 - 1)]);
+					m_vao->addTexcoord(rawTexcoords[(size_t)(face.uvIndex1 - 1)]);
+
+					m_vao->addVertex(rawVertices[(size_t)(face.vertexIndex2 - 1)]);
+					m_vao->addTexcoord(rawTexcoords[(size_t)(face.uvIndex2 - 1)]);
+
+					m_vao->addVertex(rawVertices[(size_t)(face.vertexIndex3 - 1)]);
+					m_vao->addTexcoord(rawTexcoords[(size_t)(face.uvIndex3 - 1)]);
+				}
+			}
+
+			// bake it for performance
+			if (hasAtLeastOneTriangle)
+				engine->getResourceManager()->loadResource(m_vao);
+		}
+	}
+}
+
+OsuModFPoSu3DModel::~OsuModFPoSu3DModel()
+{
+	engine->getResourceManager()->destroyResource(m_vao);
+}
+
+void OsuModFPoSu3DModel::draw3D(Graphics *g)
+{
+	g->drawVAO(m_vao);
 }
