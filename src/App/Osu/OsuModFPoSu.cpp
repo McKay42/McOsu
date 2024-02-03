@@ -21,6 +21,7 @@
 #include "OsuSkin.h"
 #include "OsuKeyBindings.h"
 #include "OsuBeatmapStandard.h"
+#include "OsuBackgroundImageHandler.h"
 
 ConVar osu_mod_fposu("osu_mod_fposu", false);
 
@@ -28,6 +29,8 @@ ConVar fposu_3d("fposu_3d", false);
 ConVar fposu_3d_playfield_scale("fposu_3d_playfield_scale", 1.0f, "3d x/y position scalar multiplier (does not affect hitobject sizes!)");
 ConVar fposu_3d_curve_multiplier("fposu_3d_curve_multiplier", 1.0f, "multiplier for the default curving factor (only relevant if fposu_curved is enabled)");
 ConVar fposu_3d_hitobjects_look_at_player("fposu_3d_hitobjects_look_at_player", true);
+ConVar fposu_3d_approachcircles_look_at_player("fposu_3d_approachcircles_look_at_player", true);
+ConVar fposu_3d_skybox("fposu_3d_skybox", true);
 ConVar fposu_3d_wireframe("fposu_3d_wireframe", false);
 
 ConVar fposu_mouse_dpi("fposu_mouse_dpi", 400);
@@ -80,6 +83,8 @@ OsuModFPoSu::OsuModFPoSu(Osu *osu)
 
 	// convar refs
 	m_mouse_sensitivity_ref = convar->getConVarByName("mouse_sensitivity");
+	m_osu_draw_beatmap_background_image_ref = convar->getConVarByName("osu_draw_beatmap_background_image");
+	m_osu_background_dim_ref = convar->getConVarByName("osu_background_dim");
 
 	// vars
 	m_fCircumLength = 0.0f;
@@ -101,7 +106,10 @@ OsuModFPoSu::OsuModFPoSu(Osu *osu)
 	m_vao = engine->getResourceManager()->createVertexArrayObject();
 	m_vaoCube = engine->getResourceManager()->createVertexArrayObject();
 
-	m_hitcircle3DModel = new OsuModFPoSu3DModel("hitcircle.obj");
+	// TODO: lazy load these on demand
+	m_uvPlaneModel = new OsuModFPoSu3DModel("uvplane.obj");
+	m_hitcircle3DModel = NULL /*new OsuModFPoSu3DModel("hitcircle.obj")*/;
+	m_approachcircle3DModel = NULL /*new OsuModFPoSu3DModel("approachcircle.obj")*/;
 
 	// convar callbacks
 	fposu_curved.setCallback( fastdelegate::MakeDelegate(this, &OsuModFPoSu::onCurvedChange) );
@@ -117,7 +125,9 @@ OsuModFPoSu::~OsuModFPoSu()
 {
 	anim->deleteExistingAnimation(&m_fZoomFOVAnimPercent);
 
+	SAFE_DELETE(m_uvPlaneModel);
 	SAFE_DELETE(m_hitcircle3DModel);
+	SAFE_DELETE(m_approachcircle3DModel);
 }
 
 void OsuModFPoSu::draw(Graphics *g)
@@ -159,7 +169,7 @@ void OsuModFPoSu::draw(Graphics *g)
 					// draw playfield mesh
 					if (!fposu_3d.getBool())
 					{
-						// regular fposu "3d" render path
+						// regular fposu "2d" render path
 
 						if (fposu_transparent_playfield.getBool())
 							g->setBlending(true);
@@ -192,9 +202,6 @@ void OsuModFPoSu::draw(Graphics *g)
 					{
 						// real 3d render path (fposu_3d)
 
-						if (fposu_3d_wireframe.getBool())
-							g->setWireframe(true);
-
 						// axis lines at (0, 0, 0)
 						if (fposu_noclip.getBool())
 						{
@@ -223,13 +230,49 @@ void OsuModFPoSu::draw(Graphics *g)
 							g->drawVAO(&vao);
 						}
 
-						g->setCulling(true);
-						g->setDepthBuffer(true);
+						if (fposu_3d_wireframe.getBool())
+							g->setWireframe(true);
+
+						// draw skybox
+						if (fposu_3d_skybox.getBool())
+						{
+							Image *backgroundImage = m_osu->getBackgroundImageHandler()->getLoadBackgroundImage(m_osu->getSelectedBeatmap()->getSelectedDifficulty2());
+							if (m_osu_draw_beatmap_background_image_ref->getBool() && backgroundImage != NULL && (m_osu_background_dim_ref->getFloat() < 1.0f || m_osu->getSelectedBeatmap()->getBreakBackgroundFadeAnim() > 0.0f))
+							{
+								g->pushTransform();
+								{
+									const float aspectRatio = ((float)backgroundImage->getWidth() / (float)backgroundImage->getHeight());
+									Matrix4 modelMatrix;
+									{
+										Matrix4 translation;
+										translation.translate(0, 0, -5*fposu_distance.getFloat());
+
+										Matrix4 scale;
+										scale.scale(aspectRatio, 1.0f, 1.0f);
+
+										modelMatrix = translation * scale;
+									}
+									g->setWorldMatrixMul(modelMatrix);
+
+									const float backgroundFadeDimMultiplier = clamp<float>(1.0f - (m_osu_background_dim_ref->getFloat() - 0.3f), 0.0f, 1.0f);
+									const short dim = clamp<float>((1.0f - m_osu_background_dim_ref->getFloat()) + m_osu->getSelectedBeatmap()->getBreakBackgroundFadeAnim()*backgroundFadeDimMultiplier, 0.0f, 1.0f)*255.0f;
+
+									g->setColor(COLOR(255, dim, dim, dim));
+									backgroundImage->bind();
+									{
+										m_uvPlaneModel->draw3D(g);
+									}
+									backgroundImage->unbind();
+								}
+								g->popTransform();
+							}
+						}
+
+						g->setBlending(true);
 						{
 							m_osu->getSelectedBeatmap()->draw3D(g);
 						}
-						g->setDepthBuffer(false);
-						g->setCulling(false);
+						g->setBlending(false);
 
 						if (fposu_3d_wireframe.getBool())
 							g->setWireframe(false);
@@ -387,9 +430,12 @@ void OsuModFPoSu::update()
 			if (!m_osu->getSelectedBeatmap()->isPaused())
 				setMousePosCompensated(engine->getScreenSize()/2);
 		}
-		else
+		else if (isAutoCursor && m_osu->isInPlayMode() && m_osu->getSelectedBeatmap() != NULL)
 		{
-			// TODO: implement 3d auto
+			// 3d auto support
+			OsuBeatmapStandard *beatmapStd = dynamic_cast<OsuBeatmapStandard*>(m_osu->getSelectedBeatmap());
+			if (beatmapStd != NULL && !beatmapStd->isPaused())
+				m_camera->lookAt(beatmapStd->osuCoordsTo3D(beatmapStd->pixels2OsuCoords(beatmapStd->getCursorPos())));
 		}
 	}
 }

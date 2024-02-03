@@ -79,6 +79,7 @@ ConVar *OsuHitObject::m_osu_vr_draw_desktop_playfield = NULL;
 ConVar *OsuHitObject::m_osu_mod_mafham_ref = NULL;
 
 ConVar *OsuHitObject::m_fposu_3d_hitobjects_look_at_player_ref = NULL;
+ConVar *OsuHitObject::m_fposu_3d_approachcircles_look_at_player_ref = NULL;
 
 unsigned long long OsuHitObject::sortHackCounter = 0;
 
@@ -273,6 +274,8 @@ OsuHitObject::OsuHitObject(long time, int sampleType, int comboNumber, bool isEn
 		m_osu_mod_mafham_ref = convar->getConVarByName("osu_mod_mafham");
 	if (m_fposu_3d_hitobjects_look_at_player_ref == NULL)
 		m_fposu_3d_hitobjects_look_at_player_ref = convar->getConVarByName("fposu_3d_hitobjects_look_at_player");
+	if (m_fposu_3d_approachcircles_look_at_player_ref == NULL)
+		m_fposu_3d_approachcircles_look_at_player_ref = convar->getConVarByName("fposu_3d_approachcircles_look_at_player");
 
 	m_fAlpha = 0.0f;
 	m_fAlphaWithoutHidden = 0.0f;

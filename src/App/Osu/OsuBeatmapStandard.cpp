@@ -101,6 +101,13 @@ ConVar *OsuBeatmapStandard::m_fposu_distance_ref = NULL;
 ConVar *OsuBeatmapStandard::m_fposu_curved_ref = NULL;
 ConVar *OsuBeatmapStandard::m_fposu_3d_playfield_scale_ref = NULL;
 ConVar *OsuBeatmapStandard::m_fposu_3d_curve_multiplier_ref = NULL;
+ConVar *OsuBeatmapStandard::m_fposu_mod_strafing_ref = NULL;
+ConVar *OsuBeatmapStandard::m_fposu_mod_strafing_frequency_x_ref = NULL;
+ConVar *OsuBeatmapStandard::m_fposu_mod_strafing_frequency_y_ref = NULL;
+ConVar *OsuBeatmapStandard::m_fposu_mod_strafing_frequency_z_ref = NULL;
+ConVar *OsuBeatmapStandard::m_fposu_mod_strafing_strength_x_ref = NULL;
+ConVar *OsuBeatmapStandard::m_fposu_mod_strafing_strength_y_ref = NULL;
+ConVar *OsuBeatmapStandard::m_fposu_mod_strafing_strength_z_ref = NULL;
 ConVar *OsuBeatmapStandard::m_osu_slider_scorev2_ref = NULL;
 
 OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
@@ -172,6 +179,21 @@ OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 		m_fposu_3d_playfield_scale_ref = convar->getConVarByName("fposu_3d_playfield_scale");
 	if (m_fposu_3d_curve_multiplier_ref == NULL)
 		m_fposu_3d_curve_multiplier_ref = convar->getConVarByName("fposu_3d_curve_multiplier");
+	if (m_fposu_mod_strafing_ref == NULL)
+		m_fposu_mod_strafing_ref = convar->getConVarByName("fposu_mod_strafing");
+	if (m_fposu_mod_strafing_frequency_x_ref == NULL)
+		m_fposu_mod_strafing_frequency_x_ref = convar->getConVarByName("fposu_mod_strafing_frequency_x");
+	if (m_fposu_mod_strafing_frequency_y_ref == NULL)
+		m_fposu_mod_strafing_frequency_y_ref = convar->getConVarByName("fposu_mod_strafing_frequency_y");
+	if (m_fposu_mod_strafing_frequency_z_ref == NULL)
+		m_fposu_mod_strafing_frequency_z_ref = convar->getConVarByName("fposu_mod_strafing_frequency_z");
+	if (m_fposu_mod_strafing_strength_x_ref == NULL)
+		m_fposu_mod_strafing_strength_x_ref = convar->getConVarByName("fposu_mod_strafing_strength_x");
+	if (m_fposu_mod_strafing_strength_y_ref == NULL)
+		m_fposu_mod_strafing_strength_y_ref = convar->getConVarByName("fposu_mod_strafing_strength_y");
+	if (m_fposu_mod_strafing_strength_z_ref == NULL)
+		m_fposu_mod_strafing_strength_z_ref = convar->getConVarByName("fposu_mod_strafing_strength_z");
+
 	if (m_osu_slider_scorev2_ref == NULL)
 		m_osu_slider_scorev2_ref = convar->getConVarByName("osu_slider_scorev2");
 }
@@ -1266,6 +1288,19 @@ Vector3 OsuBeatmapStandard::osuCoordsTo3D(Vector2 coords) const
 	// 3d scale
 	coords.x *= 1.0f + osu_playfield_stretch_x.getFloat();
 	coords.y *= 1.0f + osu_playfield_stretch_y.getFloat();
+
+	if (m_fposu_mod_strafing_ref->getBool())
+	{
+		const long curMusicPos = getCurMusicPos();
+
+		const float speedMultiplierCompensation = 1.0f / getSpeedMultiplier();
+
+		const float x = std::sin((curMusicPos/1000.0f)*5*speedMultiplierCompensation*m_fposu_mod_strafing_frequency_x_ref->getFloat())*m_fposu_mod_strafing_strength_x_ref->getFloat();
+		const float y = std::sin((curMusicPos/1000.0f)*5*speedMultiplierCompensation*m_fposu_mod_strafing_frequency_y_ref->getFloat())*m_fposu_mod_strafing_strength_y_ref->getFloat();
+		const float z = std::sin((curMusicPos/1000.0f)*5*speedMultiplierCompensation*m_fposu_mod_strafing_frequency_z_ref->getFloat())*m_fposu_mod_strafing_strength_z_ref->getFloat();
+
+		coords3d += Vector3(x, y, z);
+	}
 
 	struct Helper
 	{

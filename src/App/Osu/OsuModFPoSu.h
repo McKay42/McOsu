@@ -38,7 +38,9 @@ public:
 
 	inline const Camera *getCamera() const {return m_camera;}
 
-	inline OsuModFPoSu3DModel *getHitcircle3DModel() const {return m_hitcircle3DModel;}
+	inline OsuModFPoSu3DModel *getUVPlaneModel() const {return m_uvPlaneModel;}
+	//inline OsuModFPoSu3DModel *getHitcircle3DModel() const {return m_hitcircle3DModel;}
+	//inline OsuModFPoSu3DModel *getApproachcircle3DModel() const {return m_approachcircle3DModel;}
 
 	inline float getEdgeDistance() const {return m_fEdgeDistance;}
 	inline bool isCrosshairIntersectingScreen() const {return m_bCrosshairIntersectsScreen;}
@@ -77,6 +79,8 @@ private:
 	Osu *m_osu;
 
 	ConVar *m_mouse_sensitivity_ref;
+	ConVar *m_osu_draw_beatmap_background_image_ref;
+	ConVar *m_osu_background_dim_ref;
 
 	VertexArrayObject *m_vao;
 	VertexArrayObject *m_vaoCube;
@@ -101,7 +105,9 @@ private:
 	float m_fEdgeDistance;
 	bool m_bCrosshairIntersectsScreen;
 
+	OsuModFPoSu3DModel *m_uvPlaneModel;
 	OsuModFPoSu3DModel *m_hitcircle3DModel;
+	OsuModFPoSu3DModel *m_approachcircle3DModel;
 };
 
 class OsuModFPoSu3DModel

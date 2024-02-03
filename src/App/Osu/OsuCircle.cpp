@@ -539,38 +539,93 @@ void OsuCircle::drawVR2(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 
 void OsuCircle::draw3D(Graphics *g)
 {
+	if (!osu_draw_circles.getBool()) return;
 	if (m_bFinished || (!m_bVisible && !m_bWaiting)) return; // special case needed for when we are past this objects time, but still within not-miss range, because we still need to draw the object
 
 	const float sizediv = 1.0f / (float)OsuGameRules::OSU_COORD_WIDTH; // TODO: move this to a global constant somewhere
 	const Vector3 pos = m_beatmap->osuCoordsTo3D(m_vRawPos);
-
-	g->pushTransform();
 	{
+		const bool hd = m_beatmap->getOsu()->getModHD();
+
+		Matrix4 baseScale;
+		baseScale.scale(m_beatmap->getRawHitcircleDiameter() * sizediv);
+
 		Matrix4 translation;
 		translation.translate(pos.x, pos.y, pos.z);
 
-		Matrix4 scale;
-		scale.scale(m_beatmap->getRawHitcircleDiameter() * sizediv);
-
-		Matrix4 modelMatrix;
+		// draw hitcircle
 		{
-			if (m_fposu_3d_hitobjects_look_at_player_ref->getBool())
-				modelMatrix = translation * Camera::buildMatrixLookAt(Vector3(0, 0, 0), pos - m_beatmap->getOsu()->getFPoSu()->getCamera()->getPos(), Vector3(0, 1, 0)).invert() * scale;
-			else
-				modelMatrix = translation * scale;
-		}
-		g->setWorldMatrixMul(modelMatrix);
+			const float circleAlpha = (m_bWaiting && !hd ? 1.0f : m_fAlpha);
+			if (circleAlpha > 0.0f)
+			{
+				const float circleImageScale = (m_beatmap->getRawHitcircleDiameter() / 128.0f);
 
-		g->setColor(0xffffffff);
-		m_beatmap->getSkin()->getHitCircle()->bind();
+				g->pushTransform();
+				{
+					Matrix4 modelMatrix;
+					{
+						Matrix4 scale = baseScale;
+						scale.scale(circleImageScale);
+
+						if (m_fposu_3d_hitobjects_look_at_player_ref->getBool())
+							modelMatrix = translation * Camera::buildMatrixLookAt(Vector3(0, 0, 0), pos - m_beatmap->getOsu()->getFPoSu()->getCamera()->getPos(), Vector3(0, 1, 0)).invert() * scale;
+						else
+							modelMatrix = translation * scale;
+					}
+					g->setWorldMatrixMul(modelMatrix);
+
+					Color comboColor = m_beatmap->getSkin()->getComboColorForCounter(m_iColorCounter, m_iColorOffset);
+					comboColor = COLOR(255, (int)(COLOR_GET_Ri(comboColor)*m_fHittableDimRGBColorMultiplierPercent*osu_circle_color_saturation.getFloat()), (int)(COLOR_GET_Gi(comboColor)*m_fHittableDimRGBColorMultiplierPercent*osu_circle_color_saturation.getFloat()), (int)(COLOR_GET_Bi(comboColor)*m_fHittableDimRGBColorMultiplierPercent*osu_circle_color_saturation.getFloat()));
+
+					g->setColor(comboColor);
+					g->setAlpha(circleAlpha);
+					m_beatmap->getSkin()->getHitCircleOverlay2()->getImageForCurrentFrame().img->bind();
+					{
+						m_beatmap->getOsu()->getFPoSu()->getUVPlaneModel()->draw3D(g);
+					}
+					m_beatmap->getSkin()->getHitCircleOverlay2()->getImageForCurrentFrame().img->unbind();
+				}
+				g->popTransform();
+			}
+		}
+
+		// draw approachcircle
+		if (osu_draw_approach_circles.getBool() && !OsuGameRules::osu_mod_mafham.getBool())
 		{
-			m_beatmap->getOsu()->getFPoSu()->getHitcircle3DModel()->draw3D(g);
+			const float approachScale = (m_bWaiting && !hd ? 1.0f : m_fApproachScale);
+			if ((!hd || m_bOverrideHDApproachCircle) && approachScale > 1.0f)
+			{
+				const float approachCircleImageScale = (m_beatmap->getRawHitcircleDiameter() / 128.0f);
+				const float approachCircleAlpha = (m_bWaiting && !hd ? 1.0f : m_fAlphaForApproachCircle);
 
-			// TODO: proper transparency, animations, approach circles, hitresults, etc.
+				g->pushTransform();
+				{
+					Matrix4 modelMatrix;
+					{
+						Matrix4 scale = baseScale;
+						scale.scale(approachCircleImageScale * approachScale);
+
+						if (m_fposu_3d_hitobjects_look_at_player_ref->getBool() && m_fposu_3d_approachcircles_look_at_player_ref->getBool())
+							modelMatrix = translation * Camera::buildMatrixLookAt(Vector3(0, 0, 0), pos - m_beatmap->getOsu()->getFPoSu()->getCamera()->getPos(), Vector3(0, 1, 0)).invert() * scale;
+						else
+							modelMatrix = translation * scale;
+					}
+					g->setWorldMatrixMul(modelMatrix);
+
+					g->setColor(0xffffffff);
+					g->setAlpha(approachCircleAlpha);
+					m_beatmap->getSkin()->getApproachCircle()->bind();
+					{
+						m_beatmap->getOsu()->getFPoSu()->getUVPlaneModel()->draw3D(g);
+					}
+					m_beatmap->getSkin()->getApproachCircle()->unbind();
+				}
+				g->popTransform();
+			}
 		}
-		m_beatmap->getSkin()->getHitCircle()->unbind();
+
+		// TODO: proper hitcircle drawing with numbers/overlay/combocolors/etc., hitresults, etc.
 	}
-	g->popTransform();
 }
 
 void OsuCircle::update(long curPos)
