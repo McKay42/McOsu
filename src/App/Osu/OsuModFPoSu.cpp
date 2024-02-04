@@ -56,6 +56,7 @@ ConVar fposu_zoom_anim_duration("fposu_zoom_anim_duration", 0.065f, "time in sec
 ConVar fposu_zoom_toggle("fposu_zoom_toggle", false, "whether the zoom key acts as a toggle");
 ConVar fposu_vertical_fov("fposu_vertical_fov", false);
 ConVar fposu_curved("fposu_curved", true);
+ConVar fposu_skybox("fposu_skybox", true);
 ConVar fposu_cube("fposu_cube", true);
 ConVar fposu_cube_size("fposu_cube_size", 500.0f);
 ConVar fposu_cube_tint_r("fposu_cube_tint_r", 255, "from 0 to 255");
@@ -173,6 +174,31 @@ void OsuModFPoSu::draw(Graphics *g)
 					{
 						// regular fposu "2d" render path
 
+						if (fposu_skybox.getBool())
+						{
+							handleLazyLoad3DModels();
+
+							g->pushTransform();
+							{
+								Matrix4 modelMatrix;
+								{
+									Matrix4 scale;
+									scale.scale(fposu_3d_skybox_size.getFloat());
+
+									modelMatrix = scale;
+								}
+								g->setWorldMatrixMul(modelMatrix);
+
+								g->setColor(0xffffffff);
+								m_osu->getSkin()->getSkybox()->bind();
+								{
+									m_skyboxModel->draw3D(g);
+								}
+								m_osu->getSkin()->getSkybox()->unbind();
+							}
+							g->popTransform();
+						}
+
 						if (fposu_transparent_playfield.getBool())
 							g->setBlending(true);
 
@@ -242,7 +268,7 @@ void OsuModFPoSu::draw(Graphics *g)
 							// draw skybox
 							{
 								// actual skybox
-								if (fposu_3d_skybox.getBool())
+								if (fposu_skybox.getBool() && fposu_3d_skybox.getBool())
 								{
 									g->pushTransform();
 									{

@@ -1165,8 +1165,6 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	{
 		addCheckbox("[Beta] 4D Mode", "Actual 3D circles instead of a flat playfield.\nNOTE: Not compatible with \"Tablet/Absolute Mode\".", convar->getConVarByName("fposu_3d"));
 	}
-	addCheckbox("Curved play area", convar->getConVarByName("fposu_curved"));
-	addCheckbox("Background cube", convar->getConVarByName("fposu_cube"));
 	addLabel("");
 	addLabel("NOTE: Use CTRL + O during gameplay to get here!")->setTextColor(0xff555555);
 	addLabel("");
@@ -1182,7 +1180,10 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	zoomedFovSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeTwoDecimalPlaces) );
 	zoomedFovSlider->setKeyDelta(0.01f);
 	addCheckbox("Zoom Key Toggle", "Enabled: Zoom key toggles zoom.\nDisabled: Zoom while zoom key is held.", convar->getConVarByName("fposu_zoom_toggle"));
-
+	addSubSection("FPoSu - Playfield");
+	addCheckbox("Curved play area", convar->getConVarByName("fposu_curved"));
+	addCheckbox("Background cube", convar->getConVarByName("fposu_cube"));
+	addCheckbox("Skybox", "NOTE: Overrides the background cube.", convar->getConVarByName("fposu_skybox"));
 	if (env->getOS() == Environment::OS::OS_WINDOWS)
 	{
 		addSubSection("FPoSu - Mouse");
