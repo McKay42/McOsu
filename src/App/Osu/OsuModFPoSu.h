@@ -23,6 +23,9 @@ class OsuModFPoSu3DModel;
 
 class OsuModFPoSu
 {
+public:
+	static constexpr const float SIZEDIV3D = 1.0f / 512.0f; // 1.0f / (float)OsuGameRules::OSU_COORD_WIDTH
+
 private:
 	static int SUBDIVISIONS;
 

@@ -12,13 +12,16 @@
 
 class ConVar;
 
+class OsuModFPoSu;
 class OsuBeatmapStandard;
 
 class OsuHitObject
 {
 public:
 	static void drawHitResult(Graphics *g, OsuBeatmapStandard *beatmap, Vector2 rawPos, OsuScore::HIT result, float animPercentInv, float hitDeltaRangePercent);
+	static void draw3DHitResult(Graphics *g, OsuBeatmapStandard *beatmap, Vector2 rawPos, OsuScore::HIT result, float animPercentInv, float hitDeltaRangePercent);
 	static void drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiameter, float rawHitcircleDiameter, Vector2 rawPos, OsuScore::HIT result, float animPercentInv, float hitDeltaRangePercent);
+	static void draw3DHitResult(Graphics *g, OsuModFPoSu *fposu, OsuSkin *skin, float hitcircleDiameter, float rawHitcircleDiameter, Vector2 rawPos, OsuScore::HIT result, float animPercentInv, float hitDeltaRangePercent);
 
 	static ConVar *m_osu_approach_scale_multiplier_ref;
 	static ConVar *m_osu_timingpoints_force;
@@ -43,7 +46,7 @@ public:
 	virtual void draw2(Graphics *g);
 	virtual void drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr) {;}
 	virtual void drawVR2(Graphics *g, Matrix4 &mvp, OsuVR *vr) {;}
-	virtual void draw3D(Graphics *g) {;}
+	virtual void draw3D(Graphics *g);
 	virtual void update(long curPos);
 
 	virtual void updateStackPosition(float stackOffset) = 0;
@@ -133,6 +136,7 @@ private:
 	};
 
 	void drawHitResultAnim(Graphics *g, const HITRESULTANIM &hitresultanim);
+	void draw3DHitResultAnim(Graphics *g, const HITRESULTANIM &hitresultanim);
 
 	HITRESULTANIM m_hitresultanim1;
 	HITRESULTANIM m_hitresultanim2;

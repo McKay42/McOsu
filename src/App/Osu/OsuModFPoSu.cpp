@@ -82,6 +82,8 @@ ConVar fposu_mod_strafing_frequency_y("fposu_mod_strafing_frequency_y", 0.2f);
 ConVar fposu_mod_strafing_strength_z("fposu_mod_strafing_strength_z", 0.15f);
 ConVar fposu_mod_strafing_frequency_z("fposu_mod_strafing_frequency_z", 0.15f);
 
+constexpr const float OsuModFPoSu::SIZEDIV3D;
+
 int OsuModFPoSu::SUBDIVISIONS = 4;
 
 OsuModFPoSu::OsuModFPoSu(Osu *osu)
