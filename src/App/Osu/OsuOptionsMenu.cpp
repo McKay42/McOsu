@@ -1161,6 +1161,10 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 
 	addSubSection("FPoSu - General");
 	addCheckbox("FPoSu", "The real 3D FPS mod.\nPlay from a first person shooter perspective in a 3D environment.\nThis is only intended for mouse! (Enable \"Tablet/Absolute Mode\" for tablets.)", convar->getConVarByName("osu_mod_fposu"));
+	if (env->getOS() == Environment::OS::OS_WINDOWS)
+	{
+		addCheckbox("[Beta] 4D Mode", "Actual 3D circles instead of a flat playfield.\nNOTE: Not compatible with \"Tablet/Absolute Mode\".", convar->getConVarByName("fposu_3d"));
+	}
 	addCheckbox("Curved play area", convar->getConVarByName("fposu_curved"));
 	addCheckbox("Background cube", convar->getConVarByName("fposu_cube"));
 	addLabel("");

@@ -23,6 +23,8 @@
 #include "OsuBeatmapStandard.h"
 #include "OsuBackgroundImageHandler.h"
 
+#include <sstream>
+
 ConVar osu_mod_fposu("osu_mod_fposu", false);
 
 ConVar fposu_3d("fposu_3d", false);
@@ -30,7 +32,10 @@ ConVar fposu_3d_playfield_scale("fposu_3d_playfield_scale", 1.0f, "3d x/y positi
 ConVar fposu_3d_curve_multiplier("fposu_3d_curve_multiplier", 1.0f, "multiplier for the default curving factor (only relevant if fposu_curved is enabled)");
 ConVar fposu_3d_hitobjects_look_at_player("fposu_3d_hitobjects_look_at_player", true);
 ConVar fposu_3d_approachcircles_look_at_player("fposu_3d_approachcircles_look_at_player", true);
+ConVar fposu_3d_draw_beatmap_background_image("fposu_3d_draw_beatmap_background_image", true);
+ConVar fposu_3d_beatmap_background_image_distance("fposu_3d_beatmap_background_image_distance", 5.0f);
 ConVar fposu_3d_skybox("fposu_3d_skybox", true);
+ConVar fposu_3d_skybox_size("fposu_3d_skybox_size", 450.0f);
 ConVar fposu_3d_wireframe("fposu_3d_wireframe", false);
 
 ConVar fposu_mouse_dpi("fposu_mouse_dpi", 400);
@@ -52,6 +57,7 @@ ConVar fposu_zoom_toggle("fposu_zoom_toggle", false, "whether the zoom key acts 
 ConVar fposu_vertical_fov("fposu_vertical_fov", false);
 ConVar fposu_curved("fposu_curved", true);
 ConVar fposu_cube("fposu_cube", true);
+ConVar fposu_cube_size("fposu_cube_size", 500.0f);
 ConVar fposu_cube_tint_r("fposu_cube_tint_r", 255, "from 0 to 255");
 ConVar fposu_cube_tint_g("fposu_cube_tint_g", 255, "from 0 to 255");
 ConVar fposu_cube_tint_b("fposu_cube_tint_b", 255, "from 0 to 255");
@@ -106,15 +112,13 @@ OsuModFPoSu::OsuModFPoSu(Osu *osu)
 	m_vao = engine->getResourceManager()->createVertexArrayObject();
 	m_vaoCube = engine->getResourceManager()->createVertexArrayObject();
 
-	// TODO: lazy load these on demand
-	m_uvPlaneModel = new OsuModFPoSu3DModel("uvplane.obj");
-	m_hitcircle3DModel = NULL /*new OsuModFPoSu3DModel("hitcircle.obj")*/;
-	m_approachcircle3DModel = NULL /*new OsuModFPoSu3DModel("approachcircle.obj")*/;
+	m_uvPlaneModel = NULL;
+	m_skyboxModel = NULL;
 
 	// convar callbacks
 	fposu_curved.setCallback( fastdelegate::MakeDelegate(this, &OsuModFPoSu::onCurvedChange) );
 	fposu_distance.setCallback( fastdelegate::MakeDelegate(this, &OsuModFPoSu::onDistanceChange) );
-	fposu_3d.setCallback( fastdelegate::MakeDelegate(this, &OsuModFPoSu::on3dChange) );
+	fposu_noclip.setCallback( fastdelegate::MakeDelegate(this, &OsuModFPoSu::onNoclipChange) );
 
 	// init
 	makePlayfield();
@@ -126,8 +130,6 @@ OsuModFPoSu::~OsuModFPoSu()
 	anim->deleteExistingAnimation(&m_fZoomFOVAnimPercent);
 
 	SAFE_DELETE(m_uvPlaneModel);
-	SAFE_DELETE(m_hitcircle3DModel);
-	SAFE_DELETE(m_approachcircle3DModel);
 }
 
 void OsuModFPoSu::draw(Graphics *g)
@@ -202,71 +204,104 @@ void OsuModFPoSu::draw(Graphics *g)
 					{
 						// real 3d render path (fposu_3d)
 
-						// axis lines at (0, 0, 0)
-						if (fposu_noclip.getBool())
+						handleLazyLoad3DModels();
+
+						g->setDepthBuffer(true);
 						{
-							static VertexArrayObject vao(Graphics::PRIMITIVE::PRIMITIVE_LINES);
-							vao.empty();
+							// axis lines at (0, 0, 0)
+							if (fposu_noclip.getBool())
 							{
-								Vector3 pos = Vector3(0, 0, 0);
-								float length = 1.0f;
-
-								vao.addColor(0xffff0000);
-								vao.addVertex(pos.x, pos.y, pos.z);
-								vao.addColor(0xffff0000);
-								vao.addVertex(pos.x + length, pos.y, pos.z);
-
-								vao.addColor(0xff00ff00);
-								vao.addVertex(pos.x, pos.y, pos.z);
-								vao.addColor(0xff00ff00);
-								vao.addVertex(pos.x, pos.y + length, pos.z);
-
-								vao.addColor(0xff0000ff);
-								vao.addVertex(pos.x, pos.y, pos.z);
-								vao.addColor(0xff0000ff);
-								vao.addVertex(pos.x, pos.y, pos.z + length);
-							}
-							g->setColor(0xffffffff);
-							g->drawVAO(&vao);
-						}
-
-						if (fposu_3d_wireframe.getBool())
-							g->setWireframe(true);
-
-						// draw skybox
-						if (fposu_3d_skybox.getBool())
-						{
-							Image *backgroundImage = m_osu->getBackgroundImageHandler()->getLoadBackgroundImage(m_osu->getSelectedBeatmap()->getSelectedDifficulty2());
-							if (m_osu_draw_beatmap_background_image_ref->getBool() && backgroundImage != NULL && (m_osu_background_dim_ref->getFloat() < 1.0f || m_osu->getSelectedBeatmap()->getBreakBackgroundFadeAnim() > 0.0f))
-							{
-								g->pushTransform();
+								static VertexArrayObject vao(Graphics::PRIMITIVE::PRIMITIVE_LINES);
+								vao.empty();
 								{
-									const float aspectRatio = ((float)backgroundImage->getWidth() / (float)backgroundImage->getHeight());
-									Matrix4 modelMatrix;
-									{
-										Matrix4 translation;
-										translation.translate(0, 0, -5*fposu_distance.getFloat());
+									Vector3 pos = Vector3(0, 0, 0);
+									float length = 1.0f;
 
-										Matrix4 scale;
-										scale.scale(aspectRatio, 1.0f, 1.0f);
+									vao.addColor(0xffff0000);
+									vao.addVertex(pos.x, pos.y, pos.z);
+									vao.addColor(0xffff0000);
+									vao.addVertex(pos.x + length, pos.y, pos.z);
 
-										modelMatrix = translation * scale;
-									}
-									g->setWorldMatrixMul(modelMatrix);
+									vao.addColor(0xff00ff00);
+									vao.addVertex(pos.x, pos.y, pos.z);
+									vao.addColor(0xff00ff00);
+									vao.addVertex(pos.x, pos.y + length, pos.z);
 
-									const float backgroundFadeDimMultiplier = clamp<float>(1.0f - (m_osu_background_dim_ref->getFloat() - 0.3f), 0.0f, 1.0f);
-									const short dim = clamp<float>((1.0f - m_osu_background_dim_ref->getFloat()) + m_osu->getSelectedBeatmap()->getBreakBackgroundFadeAnim()*backgroundFadeDimMultiplier, 0.0f, 1.0f)*255.0f;
-
-									g->setColor(COLOR(255, dim, dim, dim));
-									backgroundImage->bind();
-									{
-										m_uvPlaneModel->draw3D(g);
-									}
-									backgroundImage->unbind();
+									vao.addColor(0xff0000ff);
+									vao.addVertex(pos.x, pos.y, pos.z);
+									vao.addColor(0xff0000ff);
+									vao.addVertex(pos.x, pos.y, pos.z + length);
 								}
-								g->popTransform();
+								g->setColor(0xffffffff);
+								g->drawVAO(&vao);
+							}
+
+							if (fposu_3d_wireframe.getBool())
+								g->setWireframe(true);
+
+							// draw skybox
+							{
+								// actual skybox
+								if (fposu_3d_skybox.getBool())
+								{
+									g->pushTransform();
+									{
+										Matrix4 modelMatrix;
+										{
+											Matrix4 scale;
+											scale.scale(fposu_3d_skybox_size.getFloat());
+
+											modelMatrix = scale;
+										}
+										g->setWorldMatrixMul(modelMatrix);
+
+										g->setColor(0xffffffff);
+										m_osu->getSkin()->getSkybox()->bind();
+										{
+											m_skyboxModel->draw3D(g);
+										}
+										m_osu->getSkin()->getSkybox()->unbind();
+									}
+									g->popTransform();
+								}
+
+								// beatmap background image
+								if (fposu_3d_draw_beatmap_background_image.getBool())
+								{
+									Image *backgroundImage = m_osu->getBackgroundImageHandler()->getLoadBackgroundImage(m_osu->getSelectedBeatmap()->getSelectedDifficulty2());
+									if (m_osu_draw_beatmap_background_image_ref->getBool() && backgroundImage != NULL && (m_osu_background_dim_ref->getFloat() < 1.0f || m_osu->getSelectedBeatmap()->getBreakBackgroundFadeAnim() > 0.0f))
+									{
+										g->pushTransform();
+										{
+											const float aspectRatio = ((float)backgroundImage->getWidth() / (float)backgroundImage->getHeight());
+											Matrix4 modelMatrix;
+											{
+												Matrix4 translation;
+												translation.translate(0, 0, -fposu_3d_beatmap_background_image_distance.getFloat()*fposu_distance.getFloat());
+
+												Matrix4 scale;
+												scale.scale(aspectRatio, 1.0f, 1.0f);
+
+												modelMatrix = translation * scale;
+											}
+											g->setWorldMatrixMul(modelMatrix);
+
+											const float backgroundFadeDimMultiplier = clamp<float>(1.0f - (m_osu_background_dim_ref->getFloat() - 0.3f), 0.0f, 1.0f);
+											const short dim = clamp<float>((1.0f - m_osu_background_dim_ref->getFloat()) + m_osu->getSelectedBeatmap()->getBreakBackgroundFadeAnim()*backgroundFadeDimMultiplier, 0.0f, 1.0f)*255.0f;
+
+											g->setColor(COLOR(255, dim, dim, dim));
+											backgroundImage->bind();
+											{
+												m_uvPlaneModel->draw3D(g);
+											}
+											backgroundImage->unbind();
+										}
+										g->popTransform();
+									}
+								}
 							}
 						}
+						g->setDepthBuffer(false);
 
 						g->setBlending(true);
 						{
@@ -777,7 +812,7 @@ void OsuModFPoSu::makeBackgroundCube()
 {
 	m_vaoCube->clear();
 
-	const float size = 500.0f;
+	const float size = fposu_cube_size.getFloat();
 
 	// front
 	m_vaoCube->addVertex(-size, -size, -size);  m_vaoCube->addTexcoord(0.0f, 1.0f);
@@ -834,6 +869,31 @@ void OsuModFPoSu::makeBackgroundCube()
 	m_vaoCube->addVertex(-size,	 size, -size);	m_vaoCube->addTexcoord(0.0f, 1.0f);
 }
 
+void OsuModFPoSu::handleLazyLoad3DModels()
+{
+	if (!fposu_3d.getBool()) return;
+
+	const char *uvplaneObj = "# Blender 3.6.0\r\n"
+			"# www.blender.org\r\n"
+			"o Plane\r\n"
+			"v -1.000000 -1.000000 -0.000000\r\n"
+			"v 1.000000 -1.000000 -0.000000\r\n"
+			"v -1.000000 1.000000 0.000000\r\n"
+			"v 1.000000 1.000000 0.000000\r\n"
+			"vt 1.000000 0.000000\r\n"
+			"vt 0.000000 1.000000\r\n"
+			"vt 0.000000 0.000000\r\n"
+			"vt 1.000000 1.000000\r\n"
+			"s 0\r\n"
+			"f 2/1 3/2 1/3\r\n"
+			"f 2/1 4/4 3/2";
+
+	if (m_uvPlaneModel == NULL)
+		m_uvPlaneModel = new OsuModFPoSu3DModel(uvplaneObj, true);
+	if (m_skyboxModel == NULL)
+		m_skyboxModel = new OsuModFPoSu3DModel("skybox.obj");
+}
+
 void OsuModFPoSu::onCurvedChange(UString oldValue, UString newValue)
 {
 	makePlayfield();
@@ -844,9 +904,9 @@ void OsuModFPoSu::onDistanceChange(UString oldValue, UString newValue)
 	makePlayfield();
 }
 
-void OsuModFPoSu::on3dChange(UString oldValue, UString newValue)
+void OsuModFPoSu::onNoclipChange(UString oldValue, UString newValue)
 {
-	if (fposu_3d.getBool())
+	if (fposu_noclip.getBool())
 		m_camera->setPos(m_vPrevNoclipCameraPos);
 	else
 	{
@@ -903,10 +963,8 @@ Vector3 OsuModFPoSu::normalFromTriangle(Vector3 p1, Vector3 p2, Vector3 p3)
 
 
 
-OsuModFPoSu3DModel::OsuModFPoSu3DModel(UString filePath)
+OsuModFPoSu3DModel::OsuModFPoSu3DModel(const UString &objFilePathOrContents, bool source)
 {
-	filePath.insert(0, "models/");
-
 	m_vao = engine->getResourceManager()->createVertexArrayObject(Graphics::PRIMITIVE::PRIMITIVE_TRIANGLES);
 
 	// load
@@ -936,34 +994,53 @@ OsuModFPoSu3DModel::OsuModFPoSu3DModel(UString filePath)
 		std::vector<Vector2> rawTexcoords;
 		std::vector<RAW_FACE> rawFaces;
 		{
-			std::ifstream f(filePath.toUtf8(), std::ios::in | std::ios::binary);
-			if (f.good())
+			UString fileContents;
+			if (!source)
 			{
-				std::string line;
-				while (std::getline(f, line))
+				UString filePath = "models/";
+				filePath.append(objFilePathOrContents);
+
+				std::string stdFileContents;
 				{
-					if (line.find("v ") == 0)
+					std::ifstream f(filePath.toUtf8(), std::ios::in | std::ios::binary);
+					if (f.good())
 					{
-						Vector3 vertex;
-						if (sscanf(line.c_str(), "v %f %f %f ", &vertex.x, &vertex.y, &vertex.z) == 3)
-							rawVertices.push_back(vertex);
+						f.seekg(0, std::ios::end);
+						const std::streampos numBytes = f.tellg();
+						f.seekg(0, std::ios::beg);
+
+						stdFileContents.resize(numBytes);
+						f.read(&stdFileContents[0], numBytes);
 					}
-					else if (line.find("vt ") == 0)
-					{
-						Vector2 uv;
-						if (sscanf(line.c_str(), "vt %f %f ", &uv.x, &uv.y) == 2)
-							rawTexcoords.push_back(uv);
-					}
-					else if (line.find("f ") == 0)
-					{
-						RAW_FACE face;
-						if (sscanf(line.c_str(), "f %i/%i %i/%i %i/%i ", &face.vertexIndex1, &face.uvIndex1, &face.vertexIndex2, &face.uvIndex2, &face.vertexIndex3, &face.uvIndex3) == 6)
-							rawFaces.push_back(face);
-					}
+					else
+						debugLog("Failed to load %s\n", objFilePathOrContents.toUtf8());
+				}
+				fileContents = UString(stdFileContents.c_str(), stdFileContents.size());
+			}
+
+			std::istringstream iss(source ? objFilePathOrContents.toUtf8() : fileContents.toUtf8());
+			std::string line;
+			while (std::getline(iss, line))
+			{
+				if (line.find("v ") == 0)
+				{
+					Vector3 vertex;
+					if (sscanf(line.c_str(), "v %f %f %f ", &vertex.x, &vertex.y, &vertex.z) == 3)
+						rawVertices.push_back(vertex);
+				}
+				else if (line.find("vt ") == 0)
+				{
+					Vector2 uv;
+					if (sscanf(line.c_str(), "vt %f %f ", &uv.x, &uv.y) == 2)
+						rawTexcoords.push_back(Vector2(uv.x, 1.0f - uv.y));
+				}
+				else if (line.find("f ") == 0)
+				{
+					RAW_FACE face;
+					if (sscanf(line.c_str(), "f %i/%i %i/%i %i/%i ", &face.vertexIndex1, &face.uvIndex1, &face.vertexIndex2, &face.uvIndex2, &face.vertexIndex3, &face.uvIndex3) == 6)
+						rawFaces.push_back(face);
 				}
 			}
-			else
-				debugLog("Failed to load %s\n", filePath.toUtf8());
 		}
 
 		// build vao

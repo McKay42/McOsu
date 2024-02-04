@@ -197,6 +197,7 @@ OsuSkin::OsuSkin(Osu *osu, UString name, UString filepath, bool isDefaultSkin, b
 	m_userIcon = m_missingTexture;
 	m_backgroundCube = m_missingTexture;
 	m_menuBackground = m_missingTexture;
+	m_skybox = m_missingTexture;
 
 	m_normalHitNormal = NULL;
 	m_normalHitWhistle = NULL;
@@ -811,6 +812,8 @@ void OsuSkin::load()
 	checkLoadImage(&m_backgroundCube, "backgroundcube", "OSU_SKIN_FPOSU_BACKGROUNDCUBE", false, "png", true); // force mipmaps
 	randomizeFilePath();
 	checkLoadImage(&m_menuBackground, "menu-background", "OSU_SKIN_MENU_BACKGROUND", false, "jpg");
+	randomizeFilePath();
+	checkLoadImage(&m_skybox, "skybox", "OSU_SKIN_FPOSU_3D_SKYBOX");
 
 	// sounds
 

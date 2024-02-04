@@ -39,8 +39,6 @@ public:
 	inline const Camera *getCamera() const {return m_camera;}
 
 	inline OsuModFPoSu3DModel *getUVPlaneModel() const {return m_uvPlaneModel;}
-	//inline OsuModFPoSu3DModel *getHitcircle3DModel() const {return m_hitcircle3DModel;}
-	//inline OsuModFPoSu3DModel *getApproachcircle3DModel() const {return m_approachcircle3DModel;}
 
 	inline float getEdgeDistance() const {return m_fEdgeDistance;}
 	inline bool isCrosshairIntersectingScreen() const {return m_bCrosshairIntersectsScreen;}
@@ -55,10 +53,11 @@ private:
 
 	void makePlayfield();
 	void makeBackgroundCube();
+	void handleLazyLoad3DModels();
 
 	void onCurvedChange(UString oldValue, UString newValue);
 	void onDistanceChange(UString oldValue, UString newValue);
-	void on3dChange(UString oldValue, UString newValue);
+	void onNoclipChange(UString oldValue, UString newValue);
 
 private:
 	struct VertexPair
@@ -106,14 +105,14 @@ private:
 	bool m_bCrosshairIntersectsScreen;
 
 	OsuModFPoSu3DModel *m_uvPlaneModel;
-	OsuModFPoSu3DModel *m_hitcircle3DModel;
-	OsuModFPoSu3DModel *m_approachcircle3DModel;
+	OsuModFPoSu3DModel *m_skyboxModel;
 };
 
 class OsuModFPoSu3DModel
 {
 public:
-	OsuModFPoSu3DModel(UString filePath);
+	OsuModFPoSu3DModel(const UString &objFilePath) : OsuModFPoSu3DModel(objFilePath, false) {;}
+	OsuModFPoSu3DModel(const UString &objFilePathOrContents, bool source);
 	~OsuModFPoSu3DModel();
 
 	void draw3D(Graphics *g);
