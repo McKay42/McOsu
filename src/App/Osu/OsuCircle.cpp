@@ -58,9 +58,9 @@ void OsuCircle::drawCircle(Graphics *g, OsuBeatmapStandard *beatmap, Vector2 raw
 	drawCircle(g, beatmap->getSkin(), beatmap->osuCoords2Pixels(rawPos), beatmap->getHitcircleDiameter(), beatmap->getNumberScale(), beatmap->getHitcircleOverlapScale(), number, colorCounter, colorOffset, colorRGBMultiplier, approachScale, alpha, numberAlpha, drawNumber, overrideHDApproachCircle);
 }
 
-void OsuCircle::draw3DCircle(Graphics *g, OsuBeatmapStandard *beatmap, const Matrix4 &baseScale, Vector2 rawPos, int number, int colorCounter, int colorOffset, float colorRGBMultiplier, float approachScale, float alpha, float numberAlpha, bool drawNumber, bool overrideHDApproachCircle)
+void OsuCircle::draw3DCircle(Graphics *g, OsuBeatmapStandard *beatmap, const OsuHitObject *hitObject, const Matrix4 &baseScale, Vector2 rawPos, int number, int colorCounter, int colorOffset, float colorRGBMultiplier, float approachScale, float alpha, float numberAlpha, bool drawNumber, bool overrideHDApproachCircle)
 {
-	draw3DCircle(g, beatmap->getOsu()->getFPoSu(), baseScale, beatmap->getSkin(), beatmap->osuCoordsTo3D(rawPos), beatmap->getRawHitcircleDiameter(), beatmap->getNumberScale(), beatmap->getHitcircleOverlapScale(), number, colorCounter, colorOffset, colorRGBMultiplier, approachScale, alpha, numberAlpha, drawNumber, beatmap->getOsu()->getModHD(), overrideHDApproachCircle);
+	draw3DCircle(g, beatmap->getOsu()->getFPoSu(), baseScale, beatmap->getSkin(), beatmap->osuCoordsTo3D(rawPos, hitObject), beatmap->getRawHitcircleDiameter(), beatmap->getNumberScale(), beatmap->getHitcircleOverlapScale(), number, colorCounter, colorOffset, colorRGBMultiplier, approachScale, alpha, numberAlpha, drawNumber, beatmap->getOsu()->getModHD(), overrideHDApproachCircle);
 }
 
 void OsuCircle::drawCircle(Graphics *g, OsuSkin *skin, Vector2 pos, float hitcircleDiameter, float numberScale, float overlapScale, int number, int colorCounter, int colorOffset, float colorRGBMultiplier, float approachScale, float alpha, float numberAlpha, bool drawNumber, bool overrideHDApproachCircle)
@@ -710,7 +710,7 @@ void OsuCircle::draw3D(Graphics *g)
 		baseScale.scale((1.0f+scale*OsuGameRules::osu_circle_fade_out_scale.getFloat()));
 
 		m_beatmap->getSkin()->getHitCircleOverlay2()->setAnimationTimeOffset(!m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iApproachTime : m_beatmap->getCurMusicPosWithOffsets());
-		draw3DCircle(g, m_beatmap, baseScale, m_vRawPos, m_iComboNumber, m_iColorCounter, m_iColorOffset, 1.0f, 1.0f, alpha, alpha, drawNumber);
+		draw3DCircle(g, m_beatmap, this, baseScale, m_vRawPos, m_iComboNumber, m_iColorCounter, m_iColorOffset, 1.0f, 1.0f, alpha, alpha, drawNumber);
 	}
 
 	if (m_bFinished || (!m_bVisible && !m_bWaiting)) // special case needed for when we are past this objects time, but still within not-miss range, because we still need to draw the object
@@ -735,7 +735,7 @@ void OsuCircle::draw3D(Graphics *g)
 		shakeCorrectedRawPos.x += std::sin(engine->getTime()*120) * smooth * osu_circle_shake_strength.getFloat();
 	}
 	m_beatmap->getSkin()->getHitCircleOverlay2()->setAnimationTimeOffset(!m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iApproachTime : m_beatmap->getCurMusicPosWithOffsets());
-	draw3DCircle(g, m_beatmap, baseScale, shakeCorrectedRawPos, m_iComboNumber, m_iColorCounter, m_iColorOffset, m_fHittableDimRGBColorMultiplierPercent, m_bWaiting && !hd ? 1.0f : m_fApproachScale, m_bWaiting && !hd ? 1.0f : m_fAlpha, m_bWaiting && !hd ? 1.0f : m_fAlpha, true, m_bOverrideHDApproachCircle);
+	draw3DCircle(g, m_beatmap, this, baseScale, shakeCorrectedRawPos, m_iComboNumber, m_iColorCounter, m_iColorOffset, m_fHittableDimRGBColorMultiplierPercent, m_bWaiting && !hd ? 1.0f : m_fApproachScale, m_bWaiting && !hd ? 1.0f : m_fAlpha, m_bWaiting && !hd ? 1.0f : m_fAlpha, true, m_bOverrideHDApproachCircle);
 }
 
 void OsuCircle::update(long curPos)

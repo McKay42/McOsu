@@ -19,6 +19,7 @@ public:
 	virtual ~OsuBeatmapStandard();
 
 	virtual void draw(Graphics *g);
+	virtual void drawInt(Graphics *g);
 	virtual void drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr);
 	virtual void draw3D(Graphics *g);
 	virtual void update();
@@ -31,7 +32,8 @@ public:
 	Vector2 osuCoords2Pixels(Vector2 coords) const; // hitobjects should use this one (includes lots of special behaviour)
 	Vector2 osuCoords2RawPixels(Vector2 coords) const; // raw transform from osu!pixels to absolute screen pixels (without any mods whatsoever)
 	Vector2 osuCoords2VRPixels(Vector2 coords) const; // this gets called by osuCoords2Pixels() during a VR draw(), for easier backwards compatibility
-	Vector3 osuCoordsTo3D(Vector2 coords) const;
+	Vector3 osuCoordsTo3D(Vector2 coords, const OsuHitObject *hitObject) const;
+	Vector3 osuCoordsToRaw3D(Vector2 coords) const; // (without any mods whatsoever)
 	Vector2 osuCoords2LegacyPixels(Vector2 coords) const; // only applies vanilla osu mods and static mods to the coordinates (used for generating the static slider mesh) centered at (0, 0, 0)
 
 	// cursor
@@ -68,7 +70,6 @@ private:
 	static ConVar *m_osu_draw_statistics_pp_ref;
 	static ConVar *m_osu_draw_statistics_livestars_ref;
 	static ConVar *m_osu_mod_fullalternate_ref;
-	static ConVar *m_osu_mod_fposu_ref;
 	static ConVar *m_fposu_distance_ref;
 	static ConVar *m_fposu_curved_ref;
 	static ConVar *m_fposu_3d_playfield_scale_ref;
@@ -80,11 +81,28 @@ private:
 	static ConVar *m_fposu_mod_strafing_strength_x_ref;
 	static ConVar *m_fposu_mod_strafing_strength_y_ref;
 	static ConVar *m_fposu_mod_strafing_strength_z_ref;
+	static ConVar *m_fposu_mod_3d_depthwobble_ref;
 	static ConVar *m_osu_slider_scorev2_ref;
 
 	static inline Vector2 mapNormalizedCoordsOntoUnitCircle(const Vector2 &in)
 	{
 		return Vector2(in.x * std::sqrt(1.0f - in.y * in.y / 2.0f), in.y * std::sqrt(1.0f - in.x * in.x / 2.0f));
+	}
+
+	static float quadLerp3f(float left, float center, float right, float percent)
+	{
+		if (percent >= 0.5f)
+		{
+			percent = (percent - 0.5f) / 0.5f;
+			percent *= percent;
+			return lerp<float>(center, right, percent);
+		}
+		else
+		{
+			percent = percent / 0.5f;
+			percent = 1.0f - (1.0f - percent)*(1.0f - percent);
+			return lerp<float>(left, center, percent);
+		}
 	}
 
 	virtual void onBeforeLoad();

@@ -52,6 +52,8 @@ public:
 	virtual void updateStackPosition(float stackOffset) = 0;
 	virtual void miss(long curPos) = 0; // only used by notelock
 
+	inline OsuBeatmap *getBeatmap() const {return m_beatmap;}
+
 	virtual int getCombo() {return 1;} // how much combo this hitobject is "worth"
 	virtual bool isCircle() {return false;}
 	virtual bool isSlider() {return false;}
@@ -77,6 +79,9 @@ public:
 	inline bool isEndOfCombo() const {return m_bIsEndOfCombo;}
 	inline int getColorCounter() const {return m_iColorCounter;}
 	inline int getColorOffset() const {return m_iColorOffset;}
+	inline float getApproachScale() const {return m_fApproachScale;}
+	inline long getDelta() const {return m_iDelta;}
+	inline long getApproachTime() const {return m_iApproachTime;}
 	inline long getAutopilotDelta() const {return m_iAutopilotDelta;}
 	inline unsigned long long getSortHack() const {return m_iSortHack;}
 

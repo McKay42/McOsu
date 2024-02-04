@@ -170,6 +170,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 
 	// experimental mods list
 	m_experimentalMods.push_back(convar->getConVarByName("fposu_mod_strafing"));
+	m_experimentalMods.push_back(convar->getConVarByName("fposu_mod_3d_depthwobble"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_wobble"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_arwobble"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_timewarp"));
@@ -599,7 +600,15 @@ void Osu::draw(Graphics *g)
 		if (!isFPoSu3d)
 			getSelectedBeatmap()->draw(g);
 		else
+		{
+			m_playfieldBuffer->enable();
+			{
+				getSelectedBeatmap()->drawInt(g);
+			}
+			m_playfieldBuffer->disable();
+
 			m_fposu->draw(g);
+		}
 
 		if (!isFPoSu || isFPoSu3d)
 			m_hud->draw(g);
