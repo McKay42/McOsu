@@ -1330,10 +1330,9 @@ OsuModFPoSu3DModel::OsuModFPoSu3DModel(const UString &objFilePathOrContents, Ima
 				}
 			}
 
-			// TODO: why crash :(
 			// bake it for performance
-			//if (hasAtLeastOneTriangle)
-			//	engine->getResourceManager()->loadResource(m_vao);
+			if (hasAtLeastOneTriangle)
+				engine->getResourceManager()->loadResource(m_vao);
 		}
 	}
 }
