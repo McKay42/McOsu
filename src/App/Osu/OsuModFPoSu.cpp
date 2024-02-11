@@ -77,7 +77,7 @@ ConVar fposu_3d_spheres_light_phong("fposu_3d_spheres_light_phong", 1.0f);
 ConVar fposu_3d_spheres_light_phong_exponent("fposu_3d_spheres_light_phong_exponent", 10.0f);
 ConVar fposu_3d_spheres_light_position_x("fposu_3d_spheres_light_position_x", 500.0f);
 ConVar fposu_3d_spheres_light_position_y("fposu_3d_spheres_light_position_y", 500.0f);
-ConVar fposu_3d_spheres_light_position_z("fposu_3d_spheres_light_position_z", 250.0f);
+ConVar fposu_3d_spheres_light_position_z("fposu_3d_spheres_light_position_z", 325.0f);
 ConVar fposu_3d_spheres_light_rim("fposu_3d_spheres_light_rim", 1.0f);
 ConVar fposu_3d_curve_multiplier("fposu_3d_curve_multiplier", 1.0f, "multiplier for the default curving factor (only relevant if fposu_curved is enabled)");
 ConVar fposu_3d_hitobjects_look_at_player("fposu_3d_hitobjects_look_at_player", true);
@@ -174,12 +174,6 @@ void OsuModFPoSu::draw(Graphics *g)
 		const Vector2 resolutionBackup = g->getResolution();
 		g->onResolutionChange(m_osu->getSliderFrameBuffer()->getSize()); // set renderer resolution to game resolution (to correctly support letterboxing etc.)
 		{
-			if (fposu_3d.getBool() && fposu_3d_wireframe.getBool())
-			{
-				g->setColor(0xffffffff);
-				g->fillRect(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight());
-			}
-
 			g->clearDepthBuffer();
 			g->pushTransform();
 			{
@@ -307,6 +301,9 @@ void OsuModFPoSu::draw(Graphics *g)
 
 						handleLazyLoad3DModels();
 
+						if (fposu_3d_wireframe.getBool())
+							g->setWireframe(true);
+
 						if (fposu_3d_spheres.getBool())
 						{
 							handleLazyLoadShaders();
@@ -383,9 +380,6 @@ void OsuModFPoSu::draw(Graphics *g)
 								g->setColor(0xffffffff);
 								g->drawVAO(&vao);
 							}
-
-							if (fposu_3d_wireframe.getBool())
-								g->setWireframe(true);
 
 							g->setBlending(true);
 							{
