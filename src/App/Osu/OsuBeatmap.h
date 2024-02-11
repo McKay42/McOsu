@@ -43,6 +43,7 @@ public:
 	virtual void drawInt(Graphics *g);
 	virtual void drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr);
 	virtual void draw3D(Graphics *g);
+	virtual void draw3D2(Graphics *g);
 	void drawDebug(Graphics *g);
 	void drawBackground(Graphics *g);
 	virtual void update();

@@ -1160,11 +1160,9 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	CBaseUIElement *sectionFposu = addSection("FPoSu (3D)");
 
 	addSubSection("FPoSu - General");
-	addCheckbox("FPoSu", "The real 3D FPS mod.\nPlay from a first person shooter perspective in a 3D environment.\nThis is only intended for mouse! (Enable \"Tablet/Absolute Mode\" for tablets.)", convar->getConVarByName("osu_mod_fposu"));
-	if (env->getOS() == Environment::OS::OS_WINDOWS)
-	{
-		addCheckbox("[Beta] 4D Mode", "Actual 3D circles instead of a flat playfield.\nNOTE: Not compatible with \"Tablet/Absolute Mode\".", convar->getConVarByName("fposu_3d"));
-	}
+	addCheckbox("FPoSu", (env->getOS() == Environment::OS::OS_WINDOWS ? "The real 3D FPS mod.\nPlay from a first person shooter perspective in a 3D environment.\nThis is only intended for mouse! (Enable \"Tablet/Absolute Mode\" for tablets.)" : "The real 3D FPS mod.\nPlay from a first person shooter perspective in a 3D environment.\nThis is only intended for mouse!"), convar->getConVarByName("osu_mod_fposu"));
+	addCheckbox("[Beta] 4D Mode", (env->getOS() == Environment::OS::OS_WINDOWS ? "Actual 3D circles instead of \"just\" a flat playfield in 3D.\nNOTE: Not compatible with \"Tablet/Absolute Mode\"." : "Actual 3D circles instead of \"just\" a flat playfield in 3D."), convar->getConVarByName("fposu_3d"));
+	addCheckbox("[Beta] 4D Mode - Spheres", "Combocolored lit 3D spheres instead of flat 3D circles.\nOnly relevant if \"[Beta] 4D Mode\" is enabled.", convar->getConVarByName("fposu_3d_spheres"));
 	addLabel("");
 	addLabel("NOTE: Use CTRL + O during gameplay to get here!")->setTextColor(0xff555555);
 	addLabel("");
@@ -1183,7 +1181,14 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSubSection("FPoSu - Playfield");
 	addCheckbox("Curved play area", convar->getConVarByName("fposu_curved"));
 	addCheckbox("Background cube", convar->getConVarByName("fposu_cube"));
-	addCheckbox("Skybox", "NOTE: Overrides the background cube.", convar->getConVarByName("fposu_skybox"));
+	addCheckbox("Skybox", "NOTE: Overrides \"Background cube\".\nSee skybox_example.png for cubemap layout.", convar->getConVarByName("fposu_skybox"));
+	CBaseUISlider *playfieldScaleSlider = addSlider("[Beta] 4D Mode - Scale", 0.1f, 10.0f, convar->getConVarByName("fposu_3d_playfield_scale"), 0.0f, true);
+	playfieldScaleSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
+	playfieldScaleSlider->setKeyDelta(0.01f);
+	CBaseUISlider *spheresAASlider = addSlider("[Beta] 4D Mode - Spheres - MSAA", 0.0f, 16.0f, convar->getConVarByName("fposu_3d_spheres_aa"));
+	spheresAASlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeVRAntiAliasing) );
+	spheresAASlider->setKeyDelta(2.0f);
+	spheresAASlider->setAnimated(false);
 	if (env->getOS() == Environment::OS::OS_WINDOWS)
 	{
 		addSubSection("FPoSu - Mouse");
@@ -1197,6 +1202,11 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 		addCheckbox("Invert Vertical", convar->getConVarByName("fposu_invert_vertical"));
 		addCheckbox("Invert Horizontal", convar->getConVarByName("fposu_invert_horizontal"));
 		addCheckbox("Tablet/Absolute Mode (!)", "WARNING: Do NOT enable this if you are using a mouse!\nIf this is enabled, then DPI and cm per 360 will be ignored!", convar->getConVarByName("fposu_absolute_mode"));
+	}
+	else if (env->getOS() == Environment::OS::OS_LINUX)
+	{
+		addSubSection("[Beta] FPoSu 4D Mode - Mouse");
+		addSlider("Sensitivity:", (env->getOS() == Environment::OS::OS_HORIZON ? 1.0f : 0.1f), 6.0f, convar->getConVarByName("mouse_sensitivity"))->setKeyDelta(0.01f);
 	}
 
 	//**************************************************************************************************************************//
@@ -3330,6 +3340,8 @@ void OsuOptionsMenu::onSliderChangeVRAntiAliasing(CBaseUISlider *slider)
 		{
 			if (m_elements[i].elements[e] == slider)
 			{
+				const int prevAA = (m_elements[i].cvar != NULL ? m_elements[i].cvar->getInt() : -1);
+
 				int number = std::round(slider->getFloat()); // round to int
 				int aa = 0;
 				if (number > 8)
@@ -3341,8 +3353,11 @@ void OsuOptionsMenu::onSliderChangeVRAntiAliasing(CBaseUISlider *slider)
 				else if (number > 0)
 					aa = 2;
 
-				if (m_elements[i].cvar != NULL)
-					m_elements[i].cvar->setValue(aa);
+				if (aa != prevAA)
+				{
+					if (m_elements[i].cvar != NULL)
+						m_elements[i].cvar->setValue(aa);
+				}
 
 				if (m_elements[i].elements.size() == 3)
 				{

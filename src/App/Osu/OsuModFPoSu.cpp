@@ -22,21 +22,17 @@
 #include "OsuKeyBindings.h"
 #include "OsuBeatmapStandard.h"
 #include "OsuBackgroundImageHandler.h"
+#include "OsuOptionsMenu.h"
+#include "OsuModSelector.h"
+
+#include "OpenGLHeaders.h"
+#include "OpenGLLegacyInterface.h"
+#include "OpenGL3Interface.h"
+#include "OpenGLES2Interface.h"
 
 #include <sstream>
 
 ConVar osu_mod_fposu("osu_mod_fposu", false);
-
-ConVar fposu_3d("fposu_3d", false);
-ConVar fposu_3d_playfield_scale("fposu_3d_playfield_scale", 1.0f, "3d x/y position scalar multiplier (does not affect hitobject sizes!)");
-ConVar fposu_3d_curve_multiplier("fposu_3d_curve_multiplier", 1.0f, "multiplier for the default curving factor (only relevant if fposu_curved is enabled)");
-ConVar fposu_3d_hitobjects_look_at_player("fposu_3d_hitobjects_look_at_player", true);
-ConVar fposu_3d_approachcircles_look_at_player("fposu_3d_approachcircles_look_at_player", true);
-ConVar fposu_3d_draw_beatmap_background_image("fposu_3d_draw_beatmap_background_image", true);
-ConVar fposu_3d_beatmap_background_image_distance_multiplier("fposu_3d_beatmap_background_image_distance_multiplier", 1.0f);
-ConVar fposu_3d_skybox("fposu_3d_skybox", true);
-ConVar fposu_3d_skybox_size("fposu_3d_skybox_size", 450.0f);
-ConVar fposu_3d_wireframe("fposu_3d_wireframe", false);
 
 ConVar fposu_mouse_dpi("fposu_mouse_dpi", 400);
 ConVar fposu_mouse_cm_360("fposu_mouse_cm_360", 30.0f);
@@ -65,10 +61,32 @@ ConVar fposu_cube_tint_b("fposu_cube_tint_b", 255, "from 0 to 255");
 ConVar fposu_invert_vertical("fposu_invert_vertical", false);
 ConVar fposu_invert_horizontal("fposu_invert_horizontal", false);
 
-ConVar fposu_noclip("fposu_noclip", false);
+ConVar fposu_noclip("fposu_noclip", true);
 ConVar fposu_noclipspeed("fposu_noclipspeed", 2.0f);
 ConVar fposu_noclipaccelerate("fposu_noclipaccelerate", 20.0f);
 ConVar fposu_noclipfriction("fposu_noclipfriction", 10.0f);
+
+ConVar fposu_3d("fposu_3d", true);
+ConVar fposu_3d_playfield_scale("fposu_3d_playfield_scale", 1.0f);
+ConVar fposu_3d_spheres("fposu_3d_spheres", true, "whether to draw combocolored lit 3d spheres instead of flat skin image quads");
+ConVar fposu_3d_spheres_aa("fposu_3d_spheres_aa", 4, "MSAA factor, valid values are: 0, 2, 4, 8, 16");
+ConVar fposu_3d_spheres_light_ambient("fposu_3d_spheres_light_ambient", 0.15f);
+ConVar fposu_3d_spheres_light_brightness("fposu_3d_spheres_light_brightness", 1.15f);
+ConVar fposu_3d_spheres_light_diffuse("fposu_3d_spheres_light_diffuse", 1.0f);
+ConVar fposu_3d_spheres_light_phong("fposu_3d_spheres_light_phong", 1.0f);
+ConVar fposu_3d_spheres_light_phong_exponent("fposu_3d_spheres_light_phong_exponent", 10.0f);
+ConVar fposu_3d_spheres_light_position_x("fposu_3d_spheres_light_position_x", 500.0f);
+ConVar fposu_3d_spheres_light_position_y("fposu_3d_spheres_light_position_y", 500.0f);
+ConVar fposu_3d_spheres_light_position_z("fposu_3d_spheres_light_position_z", 250.0f);
+ConVar fposu_3d_spheres_light_rim("fposu_3d_spheres_light_rim", 1.0f);
+ConVar fposu_3d_curve_multiplier("fposu_3d_curve_multiplier", 1.0f, "multiplier for the default curving factor (only relevant if fposu_curved is enabled)");
+ConVar fposu_3d_hitobjects_look_at_player("fposu_3d_hitobjects_look_at_player", true);
+ConVar fposu_3d_approachcircles_look_at_player("fposu_3d_approachcircles_look_at_player", true);
+ConVar fposu_3d_draw_beatmap_background_image("fposu_3d_draw_beatmap_background_image", true);
+ConVar fposu_3d_beatmap_background_image_distance_multiplier("fposu_3d_beatmap_background_image_distance_multiplier", 1.0f);
+ConVar fposu_3d_skybox("fposu_3d_skybox", true);
+ConVar fposu_3d_skybox_size("fposu_3d_skybox_size", 450.0f);
+ConVar fposu_3d_wireframe("fposu_3d_wireframe", false);
 
 ConVar fposu_draw_cursor_trail("fposu_draw_cursor_trail", true);
 ConVar fposu_draw_scorebarbg_on_top("fposu_draw_scorebarbg_on_top", false);
@@ -85,8 +103,7 @@ ConVar fposu_mod_strafing_frequency_z("fposu_mod_strafing_frequency_z", 0.15f);
 ConVar fposu_mod_3d_depthwobble("fposu_mod_3d_depthwobble", false);
 
 constexpr const float OsuModFPoSu::SIZEDIV3D;
-
-int OsuModFPoSu::SUBDIVISIONS = 4;
+constexpr const int OsuModFPoSu::SUBDIVISIONS;
 
 OsuModFPoSu::OsuModFPoSu(Osu *osu)
 {
@@ -119,6 +136,9 @@ OsuModFPoSu::OsuModFPoSu(Osu *osu)
 
 	m_uvPlaneModel = NULL;
 	m_skyboxModel = NULL;
+	m_hitcircleModel = NULL;
+
+	m_hitcircleShader = NULL;
 
 	// convar callbacks
 	fposu_curved.setCallback( fastdelegate::MakeDelegate(this, &OsuModFPoSu::onCurvedChange) );
@@ -154,6 +174,12 @@ void OsuModFPoSu::draw(Graphics *g)
 		const Vector2 resolutionBackup = g->getResolution();
 		g->onResolutionChange(m_osu->getSliderFrameBuffer()->getSize()); // set renderer resolution to game resolution (to correctly support letterboxing etc.)
 		{
+			if (fposu_3d.getBool() && fposu_3d_wireframe.getBool())
+			{
+				g->setColor(0xffffffff);
+				g->fillRect(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight());
+			}
+
 			g->clearDepthBuffer();
 			g->pushTransform();
 			{
@@ -162,18 +188,6 @@ void OsuModFPoSu::draw(Graphics *g)
 
 				g->setBlending(false);
 				{
-					// draw cube/skybox
-					if (fposu_cube.getBool())
-					{
-						m_osu->getSkin()->getBackgroundCube()->bind();
-						{
-							g->setColor(COLOR(255, clamp<int>(fposu_cube_tint_r.getInt(), 0, 255), clamp<int>(fposu_cube_tint_g.getInt(), 0, 255), clamp<int>(fposu_cube_tint_b.getInt(), 0, 255)));
-							g->drawVAO(m_vaoCube);
-						}
-						m_osu->getSkin()->getBackgroundCube()->unbind();
-					}
-
-					// draw playfield mesh
 					if (!fposu_3d.getBool())
 					{
 						// regular fposu "2d" render path
@@ -208,7 +222,7 @@ void OsuModFPoSu::draw(Graphics *g)
 								g->drawVAO(&vao);
 							}
 
-							// skybox
+							// skybox/cube
 							if (fposu_skybox.getBool())
 							{
 								handleLazyLoad3DModels();
@@ -232,6 +246,15 @@ void OsuModFPoSu::draw(Graphics *g)
 									m_osu->getSkin()->getSkybox()->unbind();
 								}
 								g->popTransform();
+							}
+							else if (fposu_cube.getBool())
+							{
+								m_osu->getSkin()->getBackgroundCube()->bind();
+								{
+									g->setColor(COLOR(255, clamp<int>(fposu_cube_tint_r.getInt(), 0, 255), clamp<int>(fposu_cube_tint_g.getInt(), 0, 255), clamp<int>(fposu_cube_tint_b.getInt(), 0, 255)));
+									g->drawVAO(m_vaoCube);
+								}
+								m_osu->getSkin()->getBackgroundCube()->unbind();
 							}
 						}
 						g->setDepthBuffer(false);
@@ -269,7 +292,67 @@ void OsuModFPoSu::draw(Graphics *g)
 					{
 						// real 3d render path (fposu_3d)
 
+						// NOTE: the render path for fposu_3d_spheres is a bit weird in order to support max blending for the spheres
+						// NOTE: this is necessary, since using regular depth testing looks like shit if spheres overlap (also "unreadable" streams/stacks/etc., also because we want proper transparency)
+
+#if defined(MCENGINE_FEATURE_OPENGL)
+
+						const bool isOpenGLRendererHack = (dynamic_cast<OpenGLLegacyInterface*>(g) != NULL || dynamic_cast<OpenGL3Interface*>(g) != NULL);
+
+#elif defined(MCENGINE_FEATURE_OPENGLES)
+
+						const bool isOpenGLRendererHack = (dynamic_cast<OpenGLES2Interface*>(g) != NULL);
+
+#endif
+
 						handleLazyLoad3DModels();
+
+						if (fposu_3d_spheres.getBool())
+						{
+							handleLazyLoadShaders();
+
+							m_hitcircleShader->enable();
+							{
+								m_hitcircleShader->setUniform1f("time", (float)engine->getTime());
+								m_hitcircleShader->setUniform3f("eye", m_camera->getPos().x, m_camera->getPos().y, m_camera->getPos().z);
+								m_hitcircleShader->setUniform1f("brightness", fposu_3d_spheres_light_brightness.getFloat());
+								m_hitcircleShader->setUniform1f("ambient", fposu_3d_spheres_light_ambient.getFloat());
+								m_hitcircleShader->setUniform3f("lightPosition", fposu_3d_spheres_light_position_x.getFloat(), fposu_3d_spheres_light_position_y.getFloat(), fposu_3d_spheres_light_position_z.getFloat());
+								m_hitcircleShader->setUniform1f("diffuse", fposu_3d_spheres_light_diffuse.getFloat());
+								m_hitcircleShader->setUniform1f("phong", fposu_3d_spheres_light_phong.getFloat());
+								m_hitcircleShader->setUniform1f("phongExponent", fposu_3d_spheres_light_phong_exponent.getFloat());
+								m_hitcircleShader->setUniform1f("rim", fposu_3d_spheres_light_rim.getFloat());
+							}
+							m_hitcircleShader->disable();
+
+#if defined(MCENGINE_FEATURE_OPENGL) || defined (MCENGINE_FEATURE_OPENGLES)
+
+							if (isOpenGLRendererHack)
+								glBlendEquation(GL_MAX); // HACKHACK: OpenGL hardcoded
+
+#endif
+
+							if (fposu_3d_spheres_aa.getInt() > 0)
+								g->setAntialiasing(true);
+
+							g->setBlending(true);
+							g->setCulling(true);
+							{
+								m_osu->getSelectedBeatmap()->draw3D(g);
+							}
+							g->setCulling(false);
+							g->setBlending(false);
+
+							if (fposu_3d_spheres_aa.getInt() > 0)
+								g->setAntialiasing(false);
+
+#if defined(MCENGINE_FEATURE_OPENGL) || defined (MCENGINE_FEATURE_OPENGLES)
+
+							if (isOpenGLRendererHack)
+								glBlendEquation(GL_FUNC_ADD); // HACKHACK: OpenGL hardcoded
+
+#endif
+						}
 
 						g->setDepthBuffer(true);
 						{
@@ -304,31 +387,18 @@ void OsuModFPoSu::draw(Graphics *g)
 							if (fposu_3d_wireframe.getBool())
 								g->setWireframe(true);
 
-							// draw skybox
+							g->setBlending(true);
 							{
-								// actual skybox
-								if (fposu_skybox.getBool() && fposu_3d_skybox.getBool())
+#if defined(MCENGINE_FEATURE_OPENGL) || defined (MCENGINE_FEATURE_OPENGLES)
+
+								if (isOpenGLRendererHack)
 								{
-									g->pushTransform();
-									{
-										Matrix4 modelMatrix;
-										{
-											Matrix4 scale;
-											scale.scale(fposu_3d_skybox_size.getFloat());
-
-											modelMatrix = scale;
-										}
-										g->setWorldMatrixMul(modelMatrix);
-
-										g->setColor(0xffffffff);
-										m_osu->getSkin()->getSkybox()->bind();
-										{
-											m_skyboxModel->draw3D(g);
-										}
-										m_osu->getSkin()->getSkybox()->unbind();
-									}
-									g->popTransform();
+									// HACKHACK: OpenGL hardcoded
+									glBlendFunc(GL_ONE_MINUS_DST_ALPHA, GL_DST_ALPHA);
+									glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_FALSE);
 								}
+
+#endif
 
 								// beatmap background image
 								if (fposu_3d_draw_beatmap_background_image.getBool())
@@ -356,15 +426,76 @@ void OsuModFPoSu::draw(Graphics *g)
 									}
 									g->popTransform();
 								}
+
+								// skybox/cube
+								if (fposu_skybox.getBool() && fposu_3d_skybox.getBool())
+								{
+									g->pushTransform();
+									{
+										Matrix4 modelMatrix;
+										{
+											Matrix4 scale;
+											scale.scale(fposu_3d_skybox_size.getFloat());
+
+											modelMatrix = scale;
+										}
+										g->setWorldMatrixMul(modelMatrix);
+
+										g->setColor(0xffffffff);
+										m_osu->getSkin()->getSkybox()->bind();
+										{
+											m_skyboxModel->draw3D(g);
+										}
+										m_osu->getSkin()->getSkybox()->unbind();
+									}
+									g->popTransform();
+								}
+								else if (fposu_cube.getBool())
+								{
+									m_osu->getSkin()->getBackgroundCube()->bind();
+									{
+										g->setColor(COLOR(255, clamp<int>(fposu_cube_tint_r.getInt(), 0, 255), clamp<int>(fposu_cube_tint_g.getInt(), 0, 255), clamp<int>(fposu_cube_tint_b.getInt(), 0, 255)));
+										g->drawVAO(m_vaoCube);
+									}
+									m_osu->getSkin()->getBackgroundCube()->unbind();
+								}
+
+#if defined(MCENGINE_FEATURE_OPENGL) || defined (MCENGINE_FEATURE_OPENGLES)
+
+								if (isOpenGLRendererHack)
+								{
+									// HACKHACK: OpenGL hardcoded
+									glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+									glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+								}
+
+#endif
 							}
+							g->setBlending(false);
 						}
 						g->setDepthBuffer(false);
 
-						g->setBlending(true);
+						if (!fposu_3d_spheres.getBool())
 						{
-							m_osu->getSelectedBeatmap()->draw3D(g);
+							g->setBlending(true);
+							g->setCulling(true);
+							{
+								m_osu->getSelectedBeatmap()->draw3D(g);
+								m_osu->getSelectedBeatmap()->draw3D2(g);
+							}
+							g->setCulling(false);
+							// (no setBlending(false), since we are already at the end)
 						}
-						// (no setBlending(false), since we are already at the end)
+						else
+						{
+							g->setBlending(true);
+							g->setCulling(true);
+							{
+								m_osu->getSelectedBeatmap()->draw3D2(g);
+							}
+							g->setCulling(false);
+							// (no setBlending(false), since we are already at the end)
+						}
 
 						if (fposu_3d_wireframe.getBool())
 							g->setWireframe(false);
@@ -436,8 +567,7 @@ void OsuModFPoSu::update()
 		// regular mouse position mode
 
 		// calculate mouse delta
-		// HACKHACK: undo engine mouse sensitivity multiplier
-		Vector2 rawDelta = engine->getMouse()->getRawDelta() / m_mouse_sensitivity_ref->getFloat();
+		Vector2 rawDelta = engine->getMouse()->getRawDelta() / m_mouse_sensitivity_ref->getFloat(); // HACKHACK: undo engine mouse sensitivity multiplier
 
 		// apply fposu mouse sensitivity multiplier
 		const double countsPerCm = (double)fposu_mouse_dpi.getInt() / 2.54;
@@ -494,40 +624,48 @@ void OsuModFPoSu::update()
 	{
 		// 3d mouse position mode (and auto)
 
-		// HACKHACK: code duplication (see above)
-
 		// calculate mouse delta
-		// HACKHACK: undo engine mouse sensitivity multiplier
-		Vector2 rawDelta = engine->getMouse()->getRawDelta() / m_mouse_sensitivity_ref->getFloat();
+		Vector2 delta;
+		{
+			if (env->getOS() == Environment::OS::OS_WINDOWS)
+			{
+				delta = (engine->getMouse()->getRawDelta() / m_mouse_sensitivity_ref->getFloat()); // HACKHACK: undo engine mouse sensitivity multiplier
 
-		// apply fposu mouse sensitivity multiplier
-		const double countsPerCm = (double)fposu_mouse_dpi.getInt() / 2.54;
-		const double cmPer360 = fposu_mouse_cm_360.getFloat();
-		const double countsPer360 = cmPer360 * countsPerCm;
-		const double multiplier = 360.0 / countsPer360;
-		rawDelta *= multiplier;
+				// apply fposu mouse sensitivity multiplier
+				const double countsPerCm = (double)fposu_mouse_dpi.getInt() / 2.54;
+				const double cmPer360 = fposu_mouse_cm_360.getFloat();
+				const double countsPer360 = cmPer360 * countsPerCm;
+				const double multiplier = 360.0 / countsPer360;
+				delta *= multiplier;
+			}
+			else
+				delta = engine->getMouse()->getDelta() * m_mouse_sensitivity_ref->getFloat();
 
-		// apply zoom_sensitivity_ratio if zoomed
-		if (m_bZoomed && fposu_zoom_sensitivity_ratio.getFloat() > 0.0f)
-			rawDelta *= (fposu_zoom_fov.getFloat() / fposu_fov.getFloat()) * fposu_zoom_sensitivity_ratio.getFloat(); // see https://www.reddit.com/r/GlobalOffensive/comments/3vxkav/how_zoomed_sensitivity_works/
+			// apply zoom_sensitivity_ratio if zoomed
+			if (m_bZoomed && fposu_zoom_sensitivity_ratio.getFloat() > 0.0f)
+				delta *= (fposu_zoom_fov.getFloat() / fposu_fov.getFloat()) * fposu_zoom_sensitivity_ratio.getFloat(); // see https://www.reddit.com/r/GlobalOffensive/comments/3vxkav/how_zoomed_sensitivity_works/
+		}
 
 		// update camera
-		if (rawDelta.x != 0.0f)
-			m_camera->rotateY(rawDelta.x * (fposu_invert_horizontal.getBool() ? 1.0f : -1.0f));
-		if (rawDelta.y != 0.0f)
-			m_camera->rotateX(rawDelta.y * (fposu_invert_vertical.getBool() ? 1.0f : -1.0f));
+		if (delta.x != 0.0f)
+			m_camera->rotateY(delta.x * (fposu_invert_horizontal.getBool() ? 1.0f : -1.0f));
+		if (delta.y != 0.0f)
+			m_camera->rotateX(delta.y * (fposu_invert_vertical.getBool() ? 1.0f : -1.0f));
 
-		if (!isAutoCursor && m_osu->isInPlayMode() && m_osu->getSelectedBeatmap() != NULL)
+		if (m_osu->isInPlayMode() && m_osu->getSelectedBeatmap() != NULL)
 		{
-			if (!m_osu->getSelectedBeatmap()->isPaused())
-				setMousePosCompensated(engine->getScreenSize()/2);
-		}
-		else if (isAutoCursor && m_osu->isInPlayMode() && m_osu->getSelectedBeatmap() != NULL)
-		{
-			// 3d auto support
-			OsuBeatmapStandard *beatmapStd = dynamic_cast<OsuBeatmapStandard*>(m_osu->getSelectedBeatmap());
-			if (beatmapStd != NULL && !beatmapStd->isPaused())
-				m_camera->lookAt(beatmapStd->osuCoordsToRaw3D(beatmapStd->pixels2OsuCoords(beatmapStd->getCursorPos())));
+			if (!isAutoCursor)
+			{
+				if (!m_osu->getSelectedBeatmap()->isPaused() && !m_osu->getOptionsMenu()->isVisible() && !m_osu->getModSelector()->isVisible())
+					setMousePosCompensated(engine->getScreenSize()/2);
+			}
+			else
+			{
+				// 3d auto support
+				OsuBeatmapStandard *beatmapStd = dynamic_cast<OsuBeatmapStandard*>(m_osu->getSelectedBeatmap());
+				if (beatmapStd != NULL && !beatmapStd->isPaused())
+					m_camera->lookAt(beatmapStd->osuCoordsToRaw3D(beatmapStd->pixels2OsuCoords(beatmapStd->getCursorPos())));
+			}
 		}
 	}
 }
@@ -662,6 +800,11 @@ void OsuModFPoSu::onKeyUp(KeyboardEvent &key)
 		m_bKeyDownDown = false;
 	if (key == KEY_SPACE)
 		m_bKeySpaceDown = false;
+}
+
+float OsuModFPoSu::get3DPlayfieldScale() const
+{
+	return fposu_3d_playfield_scale.getFloat() * 0.75f;
 }
 
 void OsuModFPoSu::handleZoomedChange()
@@ -944,9 +1087,17 @@ void OsuModFPoSu::handleLazyLoad3DModels()
 			"f 2/1 4/4 3/2";
 
 	if (m_uvPlaneModel == NULL)
-		m_uvPlaneModel = new OsuModFPoSu3DModel(uvplaneObj, true);
+		m_uvPlaneModel = new OsuModFPoSu3DModel(uvplaneObj, NULL, true);
 	if (m_skyboxModel == NULL)
 		m_skyboxModel = new OsuModFPoSu3DModel("skybox.obj");
+	if (m_hitcircleModel == NULL)
+		m_hitcircleModel = new OsuModFPoSu3DModel("hitcircle.obj");
+}
+
+void OsuModFPoSu::handleLazyLoadShaders()
+{
+	if (m_hitcircleShader == NULL)
+		m_hitcircleShader = engine->getResourceManager()->loadShader("hitcircle3D.vsh", "hitcircle3D.fsh", "hitcircle3D");
 }
 
 void OsuModFPoSu::onCurvedChange(UString oldValue, UString newValue)
@@ -1018,8 +1169,10 @@ Vector3 OsuModFPoSu::normalFromTriangle(Vector3 p1, Vector3 p2, Vector3 p3)
 
 
 
-OsuModFPoSu3DModel::OsuModFPoSu3DModel(const UString &objFilePathOrContents, bool source)
+OsuModFPoSu3DModel::OsuModFPoSu3DModel(const UString &objFilePathOrContents, Image *texture, bool source)
 {
+	m_texture = texture;
+
 	m_vao = engine->getResourceManager()->createVertexArrayObject(Graphics::PRIMITIVE::PRIMITIVE_TRIANGLES);
 
 	// load
@@ -1032,6 +1185,9 @@ OsuModFPoSu3DModel::OsuModFPoSu3DModel(const UString &objFilePathOrContents, boo
 			int uvIndex1;
 			int uvIndex2;
 			int uvIndex3;
+			int normalIndex1;
+			int normalIndex2;
+			int normalIndex3;
 
 			RAW_FACE()
 			{
@@ -1041,12 +1197,17 @@ OsuModFPoSu3DModel::OsuModFPoSu3DModel(const UString &objFilePathOrContents, boo
 				uvIndex1 = 0;
 				uvIndex2 = 0;
 				uvIndex3 = 0;
+				normalIndex1 = 0;
+				normalIndex2 = 0;
+				normalIndex3 = 0;
 			}
 		};
 
 		// load model data
 		std::vector<Vector3> rawVertices;
 		std::vector<Vector2> rawTexcoords;
+		std::vector<Color> rawColors;
+		std::vector<Vector3> rawNormals;
 		std::vector<RAW_FACE> rawFaces;
 		{
 			UString fileContents;
@@ -1080,7 +1241,14 @@ OsuModFPoSu3DModel::OsuModFPoSu3DModel(const UString &objFilePathOrContents, boo
 				if (line.find("v ") == 0)
 				{
 					Vector3 vertex;
-					if (sscanf(line.c_str(), "v %f %f %f ", &vertex.x, &vertex.y, &vertex.z) == 3)
+					Vector3 rgb;
+
+					if (sscanf(line.c_str(), "v %f %f %f %f %f %f ", &vertex.x, &vertex.y, &vertex.z, &rgb.x, &rgb.y, &rgb.z) == 6)
+					{
+						rawVertices.push_back(vertex);
+						rawColors.push_back(COLORf(1.0f, rgb.x, rgb.y, rgb.z));
+					}
+					else if (sscanf(line.c_str(), "v %f %f %f ", &vertex.x, &vertex.y, &vertex.z) == 3)
 						rawVertices.push_back(vertex);
 				}
 				else if (line.find("vt ") == 0)
@@ -1089,45 +1257,84 @@ OsuModFPoSu3DModel::OsuModFPoSu3DModel(const UString &objFilePathOrContents, boo
 					if (sscanf(line.c_str(), "vt %f %f ", &uv.x, &uv.y) == 2)
 						rawTexcoords.push_back(Vector2(uv.x, 1.0f - uv.y));
 				}
+				else if (line.find("vn ") == 0)
+				{
+					Vector3 normal;
+					if (sscanf(line.c_str(), "vn %f %f %f ", &normal.x, &normal.y, &normal.z) == 3)
+						rawNormals.push_back(normal);
+				}
 				else if (line.find("f ") == 0)
 				{
 					RAW_FACE face;
-					if (sscanf(line.c_str(), "f %i/%i %i/%i %i/%i ", &face.vertexIndex1, &face.uvIndex1, &face.vertexIndex2, &face.uvIndex2, &face.vertexIndex3, &face.uvIndex3) == 6)
+					if (sscanf(line.c_str(), "f %i/%i/%i %i/%i/%i %i/%i/%i ", &face.vertexIndex1, &face.uvIndex1, &face.normalIndex1, &face.vertexIndex2, &face.uvIndex2, &face.normalIndex2, &face.vertexIndex3, &face.uvIndex3, &face.normalIndex3) == 9
+					 || sscanf(line.c_str(), "f %i//%i %i//%i %i//%i ", &face.vertexIndex1, &face.normalIndex1, &face.vertexIndex2, &face.normalIndex2, &face.vertexIndex3, &face.normalIndex3) == 6
+					 || sscanf(line.c_str(), "f %i/%i/ %i/%i/ %i/%i/ ", &face.vertexIndex1, &face.uvIndex1, &face.vertexIndex2, &face.uvIndex2, &face.vertexIndex3, &face.uvIndex3) == 6
+					 || sscanf(line.c_str(), "f %i/%i %i/%i %i/%i ", &face.vertexIndex1, &face.uvIndex1, &face.vertexIndex2, &face.uvIndex2, &face.vertexIndex3, &face.uvIndex3) == 6)
+					{
 						rawFaces.push_back(face);
+					}
 				}
 			}
 		}
 
 		// build vao
-		if (rawVertices.size() > 0 && rawTexcoords.size() > 0)
+		if (rawVertices.size() > 0)
 		{
+			const bool hasTexcoords = (rawTexcoords.size() > 0);
+			const bool hasColors = (rawColors.size() > 0);
+			const bool hasNormals = (rawNormals.size() > 0);
+
 			bool hasAtLeastOneTriangle = false;
 
-			for (const RAW_FACE &face : rawFaces)
+			for (size_t i=0; i<rawFaces.size(); i++)
 			{
+				const RAW_FACE &face = rawFaces[i];
+
 				if ((size_t)(face.vertexIndex1 - 1) < rawVertices.size()
 				 && (size_t)(face.vertexIndex2 - 1) < rawVertices.size()
 				 && (size_t)(face.vertexIndex3 - 1) < rawVertices.size()
-				 && (size_t)(face.uvIndex1 - 1) < rawTexcoords.size()
-				 && (size_t)(face.uvIndex2 - 1) < rawTexcoords.size()
-				 && (size_t)(face.uvIndex3 - 1) < rawTexcoords.size())
+				 && (!hasTexcoords || (size_t)(face.uvIndex1 - 1) < rawTexcoords.size())
+				 && (!hasTexcoords || (size_t)(face.uvIndex2 - 1) < rawTexcoords.size())
+				 && (!hasTexcoords || (size_t)(face.uvIndex3 - 1) < rawTexcoords.size())
+				 && (!hasColors || (size_t)(face.vertexIndex1 - 1) < rawColors.size())
+				 && (!hasColors || (size_t)(face.vertexIndex2 - 1) < rawColors.size())
+				 && (!hasColors || (size_t)(face.vertexIndex3 - 1) < rawColors.size())
+				 && (!hasNormals || (size_t)(face.normalIndex1 - 1) < rawNormals.size())
+				 && (!hasNormals || (size_t)(face.normalIndex2 - 1) < rawNormals.size())
+				 && (!hasNormals || (size_t)(face.normalIndex3 - 1) < rawNormals.size()))
 				{
 					hasAtLeastOneTriangle = true;
 
 					m_vao->addVertex(rawVertices[(size_t)(face.vertexIndex1 - 1)]);
-					m_vao->addTexcoord(rawTexcoords[(size_t)(face.uvIndex1 - 1)]);
+					if (hasTexcoords)
+						m_vao->addTexcoord(rawTexcoords[(size_t)(face.uvIndex1 - 1)]);
+					if (hasColors)
+						m_vao->addColor(rawColors[(size_t)(face.vertexIndex1 - 1)]);
+					if (hasNormals)
+						m_vao->addNormal(rawNormals[(size_t)(face.normalIndex1 - 1)]);
 
 					m_vao->addVertex(rawVertices[(size_t)(face.vertexIndex2 - 1)]);
-					m_vao->addTexcoord(rawTexcoords[(size_t)(face.uvIndex2 - 1)]);
+					if (hasTexcoords)
+						m_vao->addTexcoord(rawTexcoords[(size_t)(face.uvIndex2 - 1)]);
+					if (hasColors)
+						m_vao->addColor(rawColors[(size_t)(face.vertexIndex2 - 1)]);
+					if (hasNormals)
+						m_vao->addNormal(rawNormals[(size_t)(face.normalIndex2 - 1)]);
 
 					m_vao->addVertex(rawVertices[(size_t)(face.vertexIndex3 - 1)]);
-					m_vao->addTexcoord(rawTexcoords[(size_t)(face.uvIndex3 - 1)]);
+					if (hasTexcoords)
+						m_vao->addTexcoord(rawTexcoords[(size_t)(face.uvIndex3 - 1)]);
+					if (hasColors)
+						m_vao->addColor(rawColors[(size_t)(face.vertexIndex3 - 1)]);
+					if (hasNormals)
+						m_vao->addNormal(rawNormals[(size_t)(face.normalIndex3 - 1)]);
 				}
 			}
 
+			// TODO: why crash :(
 			// bake it for performance
-			if (hasAtLeastOneTriangle)
-				engine->getResourceManager()->loadResource(m_vao);
+			//if (hasAtLeastOneTriangle)
+			//	engine->getResourceManager()->loadResource(m_vao);
 		}
 	}
 }
@@ -1139,5 +1346,11 @@ OsuModFPoSu3DModel::~OsuModFPoSu3DModel()
 
 void OsuModFPoSu3DModel::draw3D(Graphics *g)
 {
+	if (m_texture != NULL)
+		m_texture->bind();
+
 	g->drawVAO(m_vao);
+
+	if (m_texture != NULL)
+		m_texture->unbind();
 }

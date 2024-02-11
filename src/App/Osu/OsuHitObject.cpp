@@ -78,6 +78,7 @@ ConVar *OsuHitObject::m_osu_vr_draw_desktop_playfield = NULL;
 
 ConVar *OsuHitObject::m_osu_mod_mafham_ref = NULL;
 
+ConVar *OsuHitObject::m_fposu_3d_spheres_ref = NULL;
 ConVar *OsuHitObject::m_fposu_3d_hitobjects_look_at_player_ref = NULL;
 ConVar *OsuHitObject::m_fposu_3d_approachcircles_look_at_player_ref = NULL;
 
@@ -282,6 +283,8 @@ OsuHitObject::OsuHitObject(long time, int sampleType, int comboNumber, bool isEn
 		m_osu_vr_draw_desktop_playfield = convar->getConVarByName("osu_vr_draw_desktop_playfield");
 	if (m_osu_mod_mafham_ref == NULL)
 		m_osu_mod_mafham_ref = convar->getConVarByName("osu_mod_mafham");
+	if (m_fposu_3d_spheres_ref == NULL)
+		m_fposu_3d_spheres_ref = convar->getConVarByName("fposu_3d_spheres");
 	if (m_fposu_3d_hitobjects_look_at_player_ref == NULL)
 		m_fposu_3d_hitobjects_look_at_player_ref = convar->getConVarByName("fposu_3d_hitobjects_look_at_player");
 	if (m_fposu_3d_approachcircles_look_at_player_ref == NULL)
@@ -320,7 +323,7 @@ void OsuHitObject::draw2(Graphics *g)
 	drawHitResultAnim(g, m_hitresultanim2);
 }
 
-void OsuHitObject::draw3D(Graphics *g)
+void OsuHitObject::draw3D2(Graphics *g)
 {
 	draw3DHitResultAnim(g, m_hitresultanim1);
 	draw3DHitResultAnim(g, m_hitresultanim2);

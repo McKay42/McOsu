@@ -98,7 +98,6 @@ ConVar *OsuBeatmapStandard::m_osu_draw_statistics_livestars_ref = NULL;
 ConVar *OsuBeatmapStandard::m_osu_mod_fullalternate_ref = NULL;
 ConVar *OsuBeatmapStandard::m_fposu_distance_ref = NULL;
 ConVar *OsuBeatmapStandard::m_fposu_curved_ref = NULL;
-ConVar *OsuBeatmapStandard::m_fposu_3d_playfield_scale_ref = NULL;
 ConVar *OsuBeatmapStandard::m_fposu_3d_curve_multiplier_ref = NULL;
 ConVar *OsuBeatmapStandard::m_fposu_mod_strafing_ref = NULL;
 ConVar *OsuBeatmapStandard::m_fposu_mod_strafing_frequency_x_ref = NULL;
@@ -173,8 +172,6 @@ OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 		m_fposu_distance_ref = convar->getConVarByName("fposu_distance");
 	if (m_fposu_curved_ref == NULL)
 		m_fposu_curved_ref = convar->getConVarByName("fposu_curved");
-	if (m_fposu_3d_playfield_scale_ref == NULL)
-		m_fposu_3d_playfield_scale_ref = convar->getConVarByName("fposu_3d_playfield_scale");
 	if (m_fposu_3d_curve_multiplier_ref == NULL)
 		m_fposu_3d_curve_multiplier_ref = convar->getConVarByName("fposu_3d_curve_multiplier");
 	if (m_fposu_mod_strafing_ref == NULL)
@@ -445,14 +442,6 @@ void OsuBeatmapStandard::draw3D(Graphics *g)
 
 	updateHitobjectMetrics(); // needed for raw hitcircleDiameter
 
-	// TODO: draw followpoints
-	{
-		/*
-		if (osu_draw_followpoints.getBool() && !OsuGameRules::osu_mod_mafham.getBool())
-			drawFollowPoints(g);
-		*/
-	}
-
 	// draw all hitobjects in reverse
 	if (m_osu_draw_hitobjects_ref->getBool())
 	{
@@ -491,6 +480,45 @@ void OsuBeatmapStandard::draw3D(Graphics *g)
 
 				m_hitobjectsSortedByEndTime[i]->draw3D(g);
 			}
+		}
+	}
+}
+
+void OsuBeatmapStandard::draw3D2(Graphics *g)
+{
+	OsuBeatmap::draw3D2(g);
+	if (!canDraw()) return;
+	if (isLoading()) return; // only start drawing the rest of the playfield if everything has loaded
+
+	updateHitobjectMetrics(); // needed for raw hitcircleDiameter
+
+	// TODO: draw followpoints
+	{
+		/*
+		if (osu_draw_followpoints.getBool() && !OsuGameRules::osu_mod_mafham.getBool())
+			drawFollowPoints(g);
+		*/
+	}
+
+	// draw all hitobjects in reverse
+	if (m_osu_draw_hitobjects_ref->getBool())
+	{
+		const long curPos = m_iCurMusicPosWithOffsets;
+		const long pvs = getPVS();
+		const bool usePVS = m_osu_pvs->getBool();
+
+		for (int i=0; i<(int)m_hitobjectsSortedByEndTime.size(); i++)
+		{
+			// PVS optimization
+			if (usePVS)
+			{
+				if (m_hitobjectsSortedByEndTime[i]->isFinished() && (curPos - pvs > m_hitobjectsSortedByEndTime[i]->getTime() + m_hitobjectsSortedByEndTime[i]->getDuration())) // past objects
+					continue;
+				if (m_hitobjectsSortedByEndTime[i]->getTime() > curPos + pvs) // future objects
+					break;
+			}
+
+			m_hitobjectsSortedByEndTime[i]->draw3D2(g);
 		}
 	}
 }
@@ -1371,7 +1399,7 @@ Vector3 OsuBeatmapStandard::osuCoordsTo3D(Vector2 coords, const OsuHitObject *hi
 
 	const float xCurvePercent = (1.0f + ((coords.x / ((float)OsuGameRules::OSU_COORD_WIDTH / 2.0f)) * m_fposu_3d_curve_multiplier_ref->getFloat())) / 2.0f;
 
-	Vector3 coords3d = Vector3(coords.x, -coords.y, 0) * OsuModFPoSu::SIZEDIV3D * m_fposu_3d_playfield_scale_ref->getFloat();
+	Vector3 coords3d = Vector3(coords.x, -coords.y, 0) * OsuModFPoSu::SIZEDIV3D * m_osu->getFPoSu()->get3DPlayfieldScale();
 
 	if (m_fposu_mod_strafing_ref->getBool())
 	{
@@ -1429,7 +1457,7 @@ Vector3 OsuBeatmapStandard::osuCoordsToRaw3D(Vector2 coords) const
 
 	const float xCurvePercent = (1.0f + ((coords.x / ((float)OsuGameRules::OSU_COORD_WIDTH / 2.0f)) * m_fposu_3d_curve_multiplier_ref->getFloat())) / 2.0f;
 
-	Vector3 coords3d = Vector3(coords.x, -coords.y, 0) * OsuModFPoSu::SIZEDIV3D * m_fposu_3d_playfield_scale_ref->getFloat();
+	Vector3 coords3d = Vector3(coords.x, -coords.y, 0) * OsuModFPoSu::SIZEDIV3D * m_osu->getFPoSu()->get3DPlayfieldScale();
 
 	if (m_fposu_mod_strafing_ref->getBool())
 	{
@@ -1444,7 +1472,7 @@ Vector3 OsuBeatmapStandard::osuCoordsToRaw3D(Vector2 coords) const
 
 	if (m_fposu_mod_3d_depthwobble_ref->getBool())
 	{
-		// TODO: implement
+		// TODO: implement (all 3d transforms need to match osuCoordsTo3D(), otherwise auto and traceLine() would break)
 	}
 
 	if (m_fposu_curved_ref->getBool())

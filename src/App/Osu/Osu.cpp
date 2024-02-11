@@ -65,7 +65,7 @@
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 33.08f);
+ConVar osu_version("osu_version", 33.09f);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr");
 #else
@@ -162,6 +162,8 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_osu_mod_mafham_ref = convar->getConVarByName("osu_mod_mafham");
 	m_osu_mod_fposu_ref = convar->getConVarByName("osu_mod_fposu");
 	m_fposu_3d_ref = convar->getConVarByName("fposu_3d");
+	m_fposu_3d_spheres_ref = convar->getConVarByName("fposu_3d_spheres");
+	m_fposu_3d_spheres_aa_ref = convar->getConVarByName("fposu_3d_spheres_aa");
 	m_snd_change_check_interval_ref = convar->getConVarByName("snd_change_check_interval");
 	m_ui_scrollview_scrollbarwidth_ref = convar->getConVarByName("ui_scrollview_scrollbarwidth");
 	m_mouse_raw_input_absolute_to_window_ref = convar->getConVarByName("mouse_raw_input_absolute_to_window");
@@ -541,9 +543,12 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	}
 	*/
 
-	// memory/performance optimization; if osu_mod_mafham is not enabled, reduce the two rendertarget sizes to 64x64, same for fposu
+	// memory/performance optimization; if osu_mod_mafham is not enabled, reduce the two rendertarget sizes to 64x64, same for fposu (and fposu_3d, and fposu_3d_spheres, and fposu_3d_spheres_aa)
 	m_osu_mod_mafham_ref->setCallback( fastdelegate::MakeDelegate(this, &Osu::onModMafhamChange) );
 	m_osu_mod_fposu_ref->setCallback( fastdelegate::MakeDelegate(this, &Osu::onModFPoSuChange) );
+	m_fposu_3d_ref->setCallback( fastdelegate::MakeDelegate(this, &Osu::onModFPoSu3DChange) );
+	m_fposu_3d_spheres_ref->setCallback( fastdelegate::MakeDelegate(this, &Osu::onModFPoSu3DSpheresChange) );
+	m_fposu_3d_spheres_aa_ref->setCallback( fastdelegate::MakeDelegate(this, &Osu::onModFPoSu3DSpheresAAChange) );
 }
 
 Osu::~Osu()
@@ -673,7 +678,7 @@ void Osu::draw(Graphics *g)
 		{
 			Vector2 cursorPos = (beatmapStd != NULL && !isAuto) ? beatmapStd->getCursorPos() : engine->getMouse()->getPos();
 
-			if (isFPoSu && (!isFPoSu3d || !getSelectedBeatmap()->isPaused()))
+			if (isFPoSu && (!isFPoSu3d || ((isAuto && !getSelectedBeatmap()->isPaused()) || (!getSelectedBeatmap()->isPaused() && !m_optionsMenu->isVisible() && !m_modSelector->isVisible()))))
 				cursorPos = getScreenSize() / 2.0f;
 
 			const bool updateAndDrawTrail = !isFPoSu;
@@ -1252,6 +1257,7 @@ void Osu::onKeyDown(KeyboardEvent &key)
 		Shader *sliderShader = engine->getResourceManager()->getShader("slider");
 		Shader *sliderShaderVR = engine->getResourceManager()->getShader("sliderVR");
 		Shader *cursorTrailShader = engine->getResourceManager()->getShader("cursortrail");
+		Shader *hitcircle3DShader = engine->getResourceManager()->getShader("hitcircle3D");
 
 		if (sliderShader != NULL)
 			sliderShader->reload();
@@ -1259,6 +1265,8 @@ void Osu::onKeyDown(KeyboardEvent &key)
 			sliderShaderVR->reload();
 		if (cursorTrailShader != NULL)
 			cursorTrailShader->reload();
+		if (hitcircle3DShader != NULL)
+			hitcircle3DShader->reload();
 
 		key.consume();
 	}
@@ -2122,12 +2130,29 @@ void Osu::rebuildRenderTargets()
 	debugLog("Osu(%i)::rebuildRenderTargets: %fx%f\n", m_iInstanceID, g_vInternalResolution.x, g_vInternalResolution.y);
 
 	m_backBuffer->rebuild(0, 0, g_vInternalResolution.x, g_vInternalResolution.y);
-	m_sliderFrameBuffer->rebuild(0, 0, g_vInternalResolution.x, g_vInternalResolution.y);
 
 	if (m_osu_mod_fposu_ref->getBool())
 		m_playfieldBuffer->rebuild(0, 0, g_vInternalResolution.x, g_vInternalResolution.y);
 	else
 		m_playfieldBuffer->rebuild(0, 0, 64, 64);
+
+	if (m_osu_mod_fposu_ref->getBool() && m_fposu_3d_ref->getBool() && m_fposu_3d_spheres_ref->getBool())
+	{
+		Graphics::MULTISAMPLE_TYPE multisampleType = Graphics::MULTISAMPLE_TYPE::MULTISAMPLE_0X;
+		{
+			if (m_fposu_3d_spheres_aa_ref->getInt() > 8)
+				multisampleType = Graphics::MULTISAMPLE_TYPE::MULTISAMPLE_16X;
+			else if (m_fposu_3d_spheres_aa_ref->getInt() > 4)
+				multisampleType = Graphics::MULTISAMPLE_TYPE::MULTISAMPLE_8X;
+			else if (m_fposu_3d_spheres_aa_ref->getInt() > 2)
+				multisampleType = Graphics::MULTISAMPLE_TYPE::MULTISAMPLE_4X;
+			else if (m_fposu_3d_spheres_aa_ref->getInt() > 0)
+				multisampleType = Graphics::MULTISAMPLE_TYPE::MULTISAMPLE_2X;
+		}
+		m_sliderFrameBuffer->rebuild(0, 0, g_vInternalResolution.x, g_vInternalResolution.y, multisampleType);
+	}
+	else
+		m_sliderFrameBuffer->rebuild(0, 0, g_vInternalResolution.x, g_vInternalResolution.y, Graphics::MULTISAMPLE_TYPE::MULTISAMPLE_0X);
 
 	if (m_osu_mod_mafham_ref->getBool())
 	{
@@ -2183,7 +2208,8 @@ void Osu::updateMouseSettings()
 
 void Osu::updateWindowsKeyDisable()
 {
-	debugLog("Osu::updateWindowsKeyDisable()\n");
+	if (debug->getBool())
+		debugLog("Osu::updateWindowsKeyDisable()\n");
 
 	if (isInVRMode()) return;
 
@@ -2454,7 +2480,8 @@ void Osu::onLetterboxingChange(UString oldValue, UString newValue)
 
 void Osu::updateConfineCursor()
 {
-	debugLog("Osu::updateConfineCursor()\n");
+	if (debug->getBool())
+		debugLog("Osu::updateConfineCursor()\n");
 
 	if (isInVRMode() || m_iInstanceID > 0) return;
 
@@ -2566,6 +2593,21 @@ void Osu::onModMafhamChange(UString oldValue, UString newValue)
 }
 
 void Osu::onModFPoSuChange(UString oldValue, UString newValue)
+{
+	rebuildRenderTargets();
+}
+
+void Osu::onModFPoSu3DChange(UString oldValue, UString newValue)
+{
+	rebuildRenderTargets();
+}
+
+void Osu::onModFPoSu3DSpheresChange(UString oldValue, UString newValue)
+{
+	rebuildRenderTargets();
+}
+
+void Osu::onModFPoSu3DSpheresAAChange(UString oldValue, UString newValue)
 {
 	rebuildRenderTargets();
 }

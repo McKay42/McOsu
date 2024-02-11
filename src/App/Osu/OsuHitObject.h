@@ -35,6 +35,7 @@ public:
 
 	static ConVar *m_osu_mod_mafham_ref;
 
+	static ConVar *m_fposu_3d_spheres_ref;
 	static ConVar *m_fposu_3d_hitobjects_look_at_player_ref;
 	static ConVar *m_fposu_3d_approachcircles_look_at_player_ref;
 
@@ -46,7 +47,8 @@ public:
 	virtual void draw2(Graphics *g);
 	virtual void drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr) {;}
 	virtual void drawVR2(Graphics *g, Matrix4 &mvp, OsuVR *vr) {;}
-	virtual void draw3D(Graphics *g);
+	virtual void draw3D(Graphics *g) {;}
+	virtual void draw3D2(Graphics *g);
 	virtual void update(long curPos);
 
 	virtual void updateStackPosition(float stackOffset) = 0;

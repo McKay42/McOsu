@@ -287,6 +287,13 @@ void OsuBeatmap::draw3D(Graphics *g)
 	// empty atm
 }
 
+void OsuBeatmap::draw3D2(Graphics *g)
+{
+	if (!canDraw()) return;
+
+	// empty atm
+}
+
 void OsuBeatmap::drawDebug(Graphics *g)
 {
 	if (osu_debug_draw_timingpoints.getBool())

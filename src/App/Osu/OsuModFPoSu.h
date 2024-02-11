@@ -17,6 +17,7 @@ class Osu;
 class Camera;
 class ConVar;
 class Image;
+class Shader;
 class VertexArrayObject;
 
 class OsuModFPoSu3DModel;
@@ -27,7 +28,7 @@ public:
 	static constexpr const float SIZEDIV3D = 1.0f / 512.0f; // 1.0f / (float)OsuGameRules::OSU_COORD_WIDTH
 
 private:
-	static int SUBDIVISIONS;
+	static constexpr const int SUBDIVISIONS = 4;
 
 public:
 	OsuModFPoSu(Osu *osu);
@@ -41,10 +42,14 @@ public:
 
 	inline const Camera *getCamera() const {return m_camera;}
 
-	inline OsuModFPoSu3DModel *getUVPlaneModel() const {return m_uvPlaneModel;}
-
 	inline float getEdgeDistance() const {return m_fEdgeDistance;}
 	inline bool isCrosshairIntersectingScreen() const {return m_bCrosshairIntersectsScreen;}
+	float get3DPlayfieldScale() const;
+
+	inline OsuModFPoSu3DModel *getUVPlaneModel() const {return m_uvPlaneModel;}
+	inline OsuModFPoSu3DModel *getHitcircleModel() const {return m_hitcircleModel;}
+
+	inline Shader *getHitcircleShader() const {return m_hitcircleShader;}
 
 private:
 	void handleZoomedChange();
@@ -57,6 +62,7 @@ private:
 	void makePlayfield();
 	void makeBackgroundCube();
 	void handleLazyLoad3DModels();
+	void handleLazyLoadShaders();
 
 	void onCurvedChange(UString oldValue, UString newValue);
 	void onDistanceChange(UString oldValue, UString newValue);
@@ -109,19 +115,23 @@ private:
 
 	OsuModFPoSu3DModel *m_uvPlaneModel;
 	OsuModFPoSu3DModel *m_skyboxModel;
+	OsuModFPoSu3DModel *m_hitcircleModel;
+
+	Shader *m_hitcircleShader;
 };
 
 class OsuModFPoSu3DModel
 {
 public:
-	OsuModFPoSu3DModel(const UString &objFilePath) : OsuModFPoSu3DModel(objFilePath, false) {;}
-	OsuModFPoSu3DModel(const UString &objFilePathOrContents, bool source);
+	OsuModFPoSu3DModel(const UString &objFilePath, Image *texture = NULL) : OsuModFPoSu3DModel(objFilePath, texture, false) {;}
+	OsuModFPoSu3DModel(const UString &objFilePathOrContents, Image *texture, bool source);
 	~OsuModFPoSu3DModel();
 
 	void draw3D(Graphics *g);
 
 private:
 	VertexArrayObject *m_vao;
+	Image *m_texture;
 };
 
 #endif
