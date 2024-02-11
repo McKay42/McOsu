@@ -37,9 +37,9 @@ public:
 	static void drawApproachCircle(Graphics *g, OsuSkin *skin, Vector2 pos, Color comboColor, float hitcircleDiameter, float approachScale, float alpha, bool modHD, bool overrideHDApproachCircle);
 	static void draw3DApproachCircle(Graphics *g, OsuModFPoSu *fposu, const Matrix4 &baseScale, OsuSkin *skin, Vector3 pos, Color comboColor, float rawHitcircleDiameter, float approachScale, float alpha, bool modHD, bool overrideHDApproachCircle);
 	static void drawHitCircleOverlay(Graphics *g, OsuSkinImage *hitCircleOverlayImage, Vector2 pos, float circleOverlayImageScale, float alpha, float colorRGBMultiplier);
-	static void draw3DHitCircleOverlay(Graphics *g, OsuModFPoSu *fposu, const Matrix4 &baseScale, OsuSkinImage *hitCircleOverlayImage, Vector3 pos, float circleOverlayImageScale, float alpha, float colorRGBMultiplier);
+	static void draw3DHitCircleOverlay(Graphics *g, OsuModFPoSu *fposu, const Matrix4 &baseScale, OsuSkinImage *hitCircleOverlayImage, Vector3 pos, float alpha, float colorRGBMultiplier);
 	static void drawHitCircle(Graphics *g, Image *hitCircleImage, Vector2 pos, Color comboColor, float circleImageScale, float alpha);
-	static void draw3DHitCircle(Graphics *g, OsuModFPoSu *fposu, const Matrix4 &baseScale, Image *hitCircleImage, Vector3 pos, Color comboColor, float circleImageScale, float alpha);
+	static void draw3DHitCircle(Graphics *g, OsuModFPoSu *fposu, OsuSkin *skin, const Matrix4 &baseScale, Image *hitCircleImage, Vector3 pos, Color comboColor, float alpha);
 	static void drawHitCircleNumber(Graphics *g, OsuSkin *skin, float numberScale, float overlapScale, Vector2 pos, int number, float numberAlpha, float colorRGBMultiplier);
 	static void draw3DHitCircleNumber(Graphics *g, OsuSkin *skin, float numberScale, float overlapScale, Vector3 pos, int number, float numberAlpha, float colorRGBMultiplier);
 

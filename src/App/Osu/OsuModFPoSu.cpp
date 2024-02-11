@@ -1073,17 +1073,17 @@ void OsuModFPoSu::handleLazyLoad3DModels()
 	const char *uvplaneObj = "# Blender 3.6.0\r\n"
 			"# www.blender.org\r\n"
 			"o Plane\r\n"
-			"v -1.000000 -1.000000 -0.000000\r\n"
-			"v 1.000000 -1.000000 -0.000000\r\n"
-			"v -1.000000 1.000000 0.000000\r\n"
-			"v 1.000000 1.000000 0.000000\r\n"
+			"v -0.500000 -0.500000 -0.000000\r\n"
+			"v 0.500000 -0.500000 -0.000000\r\n"
+			"v -0.500000 0.500000 0.000000\r\n"
+			"v 0.500000 0.500000 0.000000\r\n"
 			"vt 1.000000 0.000000\r\n"
 			"vt 0.000000 1.000000\r\n"
 			"vt 0.000000 0.000000\r\n"
 			"vt 1.000000 1.000000\r\n"
 			"s 0\r\n"
 			"f 2/1 3/2 1/3\r\n"
-			"f 2/1 4/4 3/2";
+			"f 2/1 4/4 3/2\r\n";
 
 	if (m_uvPlaneModel == NULL)
 		m_uvPlaneModel = new OsuModFPoSu3DModel(uvplaneObj, NULL, true);

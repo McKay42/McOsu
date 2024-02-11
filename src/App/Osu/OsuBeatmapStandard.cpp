@@ -2011,12 +2011,12 @@ void OsuBeatmapStandard::updateHitobjectMetrics()
 	m_fHitcircleDiameter = OsuGameRules::getHitCircleDiameter(this);
 
 	const float osuCoordScaleMultiplier = (getHitcircleDiameter() / m_fRawHitcircleDiameter);
-
 	m_fNumberScale = (m_fRawHitcircleDiameter / (160.0f * (skin->isDefault12x() ? 2.0f : 1.0f))) * osuCoordScaleMultiplier * osu_number_scale_multiplier.getFloat();
 	m_fHitcircleOverlapScale = (m_fRawHitcircleDiameter / (160.0f)) * osuCoordScaleMultiplier * osu_number_scale_multiplier.getFloat();
 
-	m_fRawSliderFollowCircleDiameter = getRawHitcircleDiameter() * (m_osu->getModNM() || osu_mod_jigsaw2.getBool() ? (1.0f*(1.0f - osu_mod_jigsaw_followcircle_radius_factor.getFloat()) + osu_mod_jigsaw_followcircle_radius_factor.getFloat()*OsuGameRules::osu_slider_followcircle_size_multiplier.getFloat()) : OsuGameRules::osu_slider_followcircle_size_multiplier.getFloat());
-	m_fSliderFollowCircleDiameter = getHitcircleDiameter() * (m_osu->getModNM() || osu_mod_jigsaw2.getBool() ? (1.0f*(1.0f - osu_mod_jigsaw_followcircle_radius_factor.getFloat()) + osu_mod_jigsaw_followcircle_radius_factor.getFloat()*OsuGameRules::osu_slider_followcircle_size_multiplier.getFloat()) : OsuGameRules::osu_slider_followcircle_size_multiplier.getFloat());
+	const float sliderFollowCircleDiameterMultiplier = (m_osu->getModNM() || osu_mod_jigsaw2.getBool() ? (1.0f*(1.0f - osu_mod_jigsaw_followcircle_radius_factor.getFloat()) + osu_mod_jigsaw_followcircle_radius_factor.getFloat()*OsuGameRules::osu_slider_followcircle_size_multiplier.getFloat()) : OsuGameRules::osu_slider_followcircle_size_multiplier.getFloat());
+	m_fRawSliderFollowCircleDiameter = m_fRawHitcircleDiameter * sliderFollowCircleDiameterMultiplier;
+	m_fSliderFollowCircleDiameter = getHitcircleDiameter() * sliderFollowCircleDiameterMultiplier;
 }
 
 void OsuBeatmapStandard::updateSliderVertexBuffers()

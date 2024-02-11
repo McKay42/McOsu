@@ -10,6 +10,7 @@
 
 #include "Engine.h"
 #include "ConVar.h"
+#include "Camera.h"
 #include "AnimationHandler.h"
 #include "ResourceManager.h"
 #include "OpenVRInterface.h"
@@ -1068,6 +1069,8 @@ void OsuSlider::draw3D2(Graphics *g)
 {
 	OsuHitObject::draw3D2(g);
 
+	OsuSkin *skin = m_beatmap->getSkin();
+
 	// HACKHACK: so much code duplication aaaaaaah
 	if (m_bVisible || (m_bStartFinished && !m_bFinished)) // extra possibility to avoid flicker between OsuHitObject::m_bVisible delay and the fadeout animation below this if block
 	{
@@ -1099,8 +1102,106 @@ void OsuSlider::draw3D2(Graphics *g)
 		}
 	}
 
-	// TODO: followcircle
-	// TODO: sliderb
+	// draw followcircle
+	// HACKHACK: this is not entirely correct (due to m_bHeldTillEnd, if held within 300 range but then released, will flash followcircle at the end)
+	if ((m_bVisible && m_bCursorInside && (isClickHeldSlider() || m_beatmap->getOsu()->getModAuto() || m_beatmap->getOsu()->getModRelax())) || (m_bFinished && m_fFollowCircleAnimationAlpha > 0.0f && m_bHeldTillEnd))
+	{
+		Matrix4 baseScale;
+		baseScale.scale(m_beatmap->getRawHitcircleDiameter() * OsuModFPoSu::SIZEDIV3D);
+		baseScale.scale(m_beatmap->getOsu()->getFPoSu()->get3DPlayfieldScale());
+
+		Vector3 point = m_beatmap->osuCoordsTo3D(m_vCurPointRaw, this);
+
+		// HACKHACK: this is shit
+		float tickAnimation = (m_fFollowCircleTickAnimationScale < 0.1f ? m_fFollowCircleTickAnimationScale/0.1f : (1.0f - m_fFollowCircleTickAnimationScale)/0.9f);
+		if (m_fFollowCircleTickAnimationScale < 0.1f)
+		{
+			tickAnimation = -tickAnimation*(tickAnimation-2.0f);
+			tickAnimation = clamp<float>(tickAnimation / 0.02f, 0.0f, 1.0f);
+		}
+		float tickAnimationScale = 1.0f + tickAnimation*OsuGameRules::osu_slider_followcircle_tick_pulse_scale.getFloat();
+
+		g->setColor(0xffffffff);
+		g->setAlpha(m_fFollowCircleAnimationAlpha);
+		g->pushTransform();
+		{
+			skin->getSliderFollowCircle2()->setAnimationTimeOffset(m_iTime);
+
+			Matrix4 modelMatrix;
+			{
+				Matrix4 scale = baseScale;
+				scale.scale((m_beatmap->getRawSliderFollowCircleDiameter() / m_beatmap->getRawHitcircleDiameter()) * (skin->getSliderFollowCircle2()->getImageSizeForCurrentFrame().x / skin->getSliderFollowCircle2()->getSizeBaseRaw().x) * tickAnimationScale*m_fFollowCircleAnimationScale*0.85f);
+
+				Matrix4 translation;
+				translation.translate(point.x, point.y, point.z);
+
+				if (m_fposu_3d_hitobjects_look_at_player_ref->getBool())
+					modelMatrix = translation * Camera::buildMatrixLookAt(Vector3(0, 0, 0), point - m_beatmap->getOsu()->getFPoSu()->getCamera()->getPos(), Vector3(0, 1, 0)).invert() * scale;
+				else
+					modelMatrix = translation * scale;
+			}
+			g->setWorldMatrixMul(modelMatrix);
+
+			skin->getSliderFollowCircle2()->getImageForCurrentFrame().img->bind();
+			{
+				m_beatmap->getOsu()->getFPoSu()->getUVPlaneModel()->draw3D(g);
+			}
+			skin->getSliderFollowCircle2()->getImageForCurrentFrame().img->unbind();
+		}
+		g->popTransform();
+	}
+
+	const bool isCompletelyFinished = m_bStartFinished && m_bEndFinished && m_bFinished;
+
+	// draw sliderb on top of everything
+	if ((m_bVisible || (m_bStartFinished && !m_bFinished)) && !isCompletelyFinished) // extra possibility in the if-block to avoid flicker between OsuHitObject::m_bVisible delay and the fadeout animation below this if-block
+	{
+		if (m_fSlidePercent > 0.0f)
+		{
+			Matrix4 baseScale;
+			baseScale.scale(m_beatmap->getRawHitcircleDiameter() * OsuModFPoSu::SIZEDIV3D);
+			baseScale.scale(m_beatmap->getOsu()->getFPoSu()->get3DPlayfieldScale());
+
+			// draw sliderb
+			Vector3 point = m_beatmap->osuCoordsTo3D(m_vCurPointRaw, this);
+			Vector2 c1 = m_beatmap->osuCoords2Pixels(m_curve->pointAt(m_fSlidePercent + 0.01f <= 1.0f ? m_fSlidePercent : m_fSlidePercent - 0.01f));
+			Vector2 c2 = m_beatmap->osuCoords2Pixels(m_curve->pointAt(m_fSlidePercent + 0.01f <= 1.0f ? m_fSlidePercent + 0.01f : m_fSlidePercent));
+			float ballAngle = rad2deg( atan2(c2.y - c1.y, c2.x - c1.x) );
+			if (skin->getSliderBallFlip())
+				ballAngle += (m_iCurRepeat % 2 == 0) ? 0 : 180;
+
+			Matrix4 rotate;
+			rotate.rotateZ(ballAngle);
+
+			g->setColor(skin->getAllowSliderBallTint() ? (osu_slider_ball_tint_combo_color.getBool() ? skin->getComboColorForCounter(m_iColorCounter, m_iColorOffset) : skin->getSliderBallColor()) : 0xffffffff);
+			g->pushTransform();
+			{
+				skin->getSliderb()->setAnimationTimeOffset(m_iTime);
+
+				Matrix4 modelMatrix;
+				{
+					Matrix4 scale = baseScale;
+					scale.scale(skin->getSliderb()->getImageSizeForCurrentFrame().x / skin->getSliderb()->getSizeBaseRaw().x);
+
+					Matrix4 translation;
+					translation.translate(point.x, point.y, point.z);
+
+					if (m_fposu_3d_hitobjects_look_at_player_ref->getBool())
+						modelMatrix = translation * Camera::buildMatrixLookAt(Vector3(0, 0, 0), point - m_beatmap->getOsu()->getFPoSu()->getCamera()->getPos(), Vector3(0, 1, 0)).invert() * scale * rotate;
+					else
+						modelMatrix = translation * scale * rotate;
+				}
+				g->setWorldMatrixMul(modelMatrix);
+
+				skin->getSliderb()->getImageForCurrentFrame().img->bind();
+				{
+					m_beatmap->getOsu()->getFPoSu()->getUVPlaneModel()->draw3D(g);
+				}
+				skin->getSliderb()->getImageForCurrentFrame().img->unbind();
+			}
+			g->popTransform();
+		}
+	}
 }
 
 void OsuSlider::drawStartCircle(Graphics *g, float alpha)

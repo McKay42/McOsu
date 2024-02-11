@@ -119,13 +119,11 @@ void OsuCircle::draw3DCircle(Graphics *g, OsuModFPoSu *fposu, const Matrix4 &bas
 	///draw3DApproachCircle(g, fposu, baseScale, skin, pos, comboColor, rawHitcircleDiameter, approachScale, alpha, modHD, overrideHDApproachCircle); // they are now drawn separately in draw3D2()
 
 	// circle
-	const float circleImageScale = rawHitcircleDiameter / 128.0f;
-	draw3DHitCircle(g, fposu, baseScale, skin->getHitCircle(), pos, comboColor, circleImageScale, alpha);
+	draw3DHitCircle(g, fposu, skin, baseScale, skin->getHitCircle(), pos, comboColor, alpha);
 
 	// overlay
-	const float circleOverlayImageScale = rawHitcircleDiameter / skin->getHitCircleOverlay2()->getSizeBaseRawForScaling2x().x;
 	if (!skin->getHitCircleOverlayAboveNumber())
-		draw3DHitCircleOverlay(g, fposu, baseScale, skin->getHitCircleOverlay2(), pos, circleOverlayImageScale, alpha, colorRGBMultiplier);
+		draw3DHitCircleOverlay(g, fposu, baseScale, skin->getHitCircleOverlay2(), pos, alpha, colorRGBMultiplier);
 
 	// number
 	if (drawNumber)
@@ -133,7 +131,7 @@ void OsuCircle::draw3DCircle(Graphics *g, OsuModFPoSu *fposu, const Matrix4 &bas
 
 	// overlay
 	if (skin->getHitCircleOverlayAboveNumber())
-		draw3DHitCircleOverlay(g, fposu, baseScale, skin->getHitCircleOverlay2(), pos, circleOverlayImageScale, alpha, colorRGBMultiplier);
+		draw3DHitCircleOverlay(g, fposu, baseScale, skin->getHitCircleOverlay2(), pos, alpha, colorRGBMultiplier);
 }
 
 void OsuCircle::drawCircle(Graphics *g, OsuSkin *skin, Vector2 pos, float hitcircleDiameter, Color color, float alpha)
@@ -224,15 +222,13 @@ void OsuCircle::draw3DSliderStartCircle(Graphics *g, OsuModFPoSu *fposu, const M
 	///drawApproachCircle(g, skin, pos, comboColor, beatmap->getHitcircleDiameter(), approachScale, alpha, beatmap->getOsu()->getModHD(), overrideHDApproachCircle); // they are now drawn separately in draw3D2()
 
 	// circle
-	const float circleImageScale = (rawHitcircleDiameter / 128.0f);
-	draw3DHitCircle(g, fposu, baseScale, skin->getHitCircle(), pos, comboColor, circleImageScale, alpha);
+	draw3DHitCircle(g, fposu, skin, baseScale, skin->getHitCircle(), pos, comboColor, alpha);
 
 	// overlay
-	const float circleOverlayImageScale = rawHitcircleDiameter / skin->getHitCircleOverlay2()->getSizeBaseRawForScaling2x().x;
 	if (skin->getSliderStartCircleOverlay() != skin->getMissingTexture())
 	{
 		if (!skin->getHitCircleOverlayAboveNumber())
-			draw3DHitCircleOverlay(g, fposu, baseScale, skin->getHitCircleOverlay2(), pos, circleOverlayImageScale, alpha, colorRGBMultiplier);
+			draw3DHitCircleOverlay(g, fposu, baseScale, skin->getHitCircleOverlay2(), pos, alpha, colorRGBMultiplier);
 	}
 
 	// number
@@ -243,7 +239,7 @@ void OsuCircle::draw3DSliderStartCircle(Graphics *g, OsuModFPoSu *fposu, const M
 	if (skin->getSliderStartCircleOverlay() != skin->getMissingTexture())
 	{
 		if (skin->getHitCircleOverlayAboveNumber())
-			draw3DHitCircleOverlay(g, fposu, baseScale, skin->getHitCircleOverlay2(), pos, circleOverlayImageScale, alpha, colorRGBMultiplier);
+			draw3DHitCircleOverlay(g, fposu, baseScale, skin->getHitCircleOverlay2(), pos, alpha, colorRGBMultiplier);
 	}
 }
 
@@ -305,15 +301,11 @@ void OsuCircle::draw3DSliderEndCircle(Graphics *g, OsuModFPoSu *fposu, const Mat
 	comboColor = COLOR(255, (int)(COLOR_GET_Ri(comboColor)*colorRGBMultiplier*osu_circle_color_saturation.getFloat()), (int)(COLOR_GET_Gi(comboColor)*colorRGBMultiplier*osu_circle_color_saturation.getFloat()), (int)(COLOR_GET_Bi(comboColor)*colorRGBMultiplier*osu_circle_color_saturation.getFloat()));
 
 	// circle
-	const float circleImageScale = (rawHitcircleDiameter / 128.0f);
-	draw3DHitCircle(g, fposu, baseScale, skin->getSliderEndCircle(), pos, comboColor, circleImageScale, alpha);
+	draw3DHitCircle(g, fposu, skin, baseScale, skin->getSliderEndCircle(), pos, comboColor, alpha);
 
 	// overlay
 	if (skin->getSliderEndCircleOverlay() != skin->getMissingTexture())
-	{
-		const float circleOverlayImageScale = rawHitcircleDiameter / skin->getSliderEndCircleOverlay2()->getSizeBaseRawForScaling2x().x;
-		draw3DHitCircleOverlay(g, fposu, baseScale, skin->getSliderEndCircleOverlay2(), pos, circleOverlayImageScale, alpha, colorRGBMultiplier);
-	}
+		draw3DHitCircleOverlay(g, fposu, baseScale, skin->getSliderEndCircleOverlay2(), pos, alpha, colorRGBMultiplier);
 }
 
 void OsuCircle::drawApproachCircle(Graphics *g, OsuSkin *skin, Vector2 pos, Color comboColor, float hitcircleDiameter, float approachScale, float alpha, bool modHD, bool overrideHDApproachCircle)
@@ -357,7 +349,7 @@ void OsuCircle::draw3DApproachCircle(Graphics *g, OsuModFPoSu *fposu, const Matr
 	{
 		if (approachScale > 1.0f)
 		{
-			const float approachCircleImageScale = rawHitcircleDiameter / 128.0f;
+			const float approachCircleImageScale = skin->getApproachCircle()->getSize().x / (128.0f * (skin->isApproachCircle2x() ? 2.0f : 1.0f));
 
 			g->setColor(comboColor);
 
@@ -410,7 +402,7 @@ void OsuCircle::drawHitCircleOverlay(Graphics *g, OsuSkinImage *hitCircleOverlay
 	hitCircleOverlayImage->drawRaw(g, pos, circleOverlayImageScale);
 }
 
-void OsuCircle::draw3DHitCircleOverlay(Graphics *g, OsuModFPoSu *fposu, const Matrix4 &baseScale, OsuSkinImage *hitCircleOverlayImage, Vector3 pos, float circleOverlayImageScale, float alpha, float colorRGBMultiplier)
+void OsuCircle::draw3DHitCircleOverlay(Graphics *g, OsuModFPoSu *fposu, const Matrix4 &baseScale, OsuSkinImage *hitCircleOverlayImage, Vector3 pos, float alpha, float colorRGBMultiplier)
 {
 	if (m_fposu_3d_spheres_ref->getBool()) return;
 
@@ -421,7 +413,7 @@ void OsuCircle::draw3DHitCircleOverlay(Graphics *g, OsuModFPoSu *fposu, const Ma
 		Matrix4 modelMatrix;
 		{
 			Matrix4 scale = baseScale;
-			scale.scale(circleOverlayImageScale);
+			scale.scale((hitCircleOverlayImage->getImageSizeForCurrentFrame().x / hitCircleOverlayImage->getSizeBaseRaw().x));
 
 			Matrix4 translation;
 			translation.translate(pos.x, pos.y, pos.z);
@@ -469,7 +461,7 @@ void OsuCircle::drawHitCircle(Graphics *g, Image *hitCircleImage, Vector2 pos, C
 	g->popTransform();
 }
 
-void OsuCircle::draw3DHitCircle(Graphics *g, OsuModFPoSu *fposu, const Matrix4 &baseScale, Image *hitCircleImage, Vector3 pos, Color comboColor, float circleImageScale, float alpha)
+void OsuCircle::draw3DHitCircle(Graphics *g, OsuModFPoSu *fposu, OsuSkin *skin, const Matrix4 &baseScale, Image *hitCircleImage, Vector3 pos, Color comboColor, float alpha)
 {
 	g->setColor(comboColor);
 
@@ -489,23 +481,20 @@ void OsuCircle::draw3DHitCircle(Graphics *g, OsuModFPoSu *fposu, const Matrix4 &
 
 	g->pushTransform();
 	{
-		Matrix4 modelMatrix;
-		{
-			Matrix4 scale = baseScale;
-			scale.scale(circleImageScale);
-
-			Matrix4 translation;
-			translation.translate(pos.x, pos.y, pos.z);
-
-			if (m_fposu_3d_hitobjects_look_at_player_ref->getBool())
-				modelMatrix = translation * Camera::buildMatrixLookAt(Vector3(0, 0, 0), pos - fposu->getCamera()->getPos(), Vector3(0, 1, 0)).invert() * scale;
-			else
-				modelMatrix = translation * scale;
-		}
-		g->setWorldMatrixMul(modelMatrix);
-
 		if (m_fposu_3d_spheres_ref->getBool())
 		{
+			Matrix4 modelMatrix;
+			{
+				Matrix4 translation;
+				translation.translate(pos.x, pos.y, pos.z);
+
+				if (m_fposu_3d_hitobjects_look_at_player_ref->getBool())
+					modelMatrix = translation * Camera::buildMatrixLookAt(Vector3(0, 0, 0), pos - fposu->getCamera()->getPos(), Vector3(0, 1, 0)).invert() * baseScale;
+				else
+					modelMatrix = translation * baseScale;
+			}
+			g->setWorldMatrixMul(modelMatrix);
+
 			Matrix4 modelMatrixInverseTransposed = modelMatrix;
 			modelMatrixInverseTransposed.invert();
 			modelMatrixInverseTransposed.transpose();
@@ -521,6 +510,21 @@ void OsuCircle::draw3DHitCircle(Graphics *g, OsuModFPoSu *fposu, const Matrix4 &
 		}
 		else
 		{
+			Matrix4 modelMatrix;
+			{
+				Matrix4 scale = baseScale;
+				scale.scale(hitCircleImage->getSize().x / (128.0f * (skin->isHitCircle2x() ? 2.0f : 1.0f)));
+
+				Matrix4 translation;
+				translation.translate(pos.x, pos.y, pos.z);
+
+				if (m_fposu_3d_hitobjects_look_at_player_ref->getBool())
+					modelMatrix = translation * Camera::buildMatrixLookAt(Vector3(0, 0, 0), pos - fposu->getCamera()->getPos(), Vector3(0, 1, 0)).invert() * scale;
+				else
+					modelMatrix = translation * scale;
+			}
+			g->setWorldMatrixMul(modelMatrix);
+
 			hitCircleImage->bind();
 			{
 				fposu->getUVPlaneModel()->draw3D(g);
