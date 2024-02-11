@@ -1351,6 +1351,9 @@ void OsuMainMenu::onKeyDown(KeyboardEvent &e)
 		}
 	}
 
+	if (e == KEY_C || e == KEY_F4)
+		onPausePressed();
+
 	if (!m_bMenuElementsVisible)
 	{
 		if (e == KEY_P || e == KEY_ENTER)
