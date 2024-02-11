@@ -589,7 +589,7 @@ void OsuModFPoSu::update()
 		// calculate ray-mesh intersection and set new mouse pos
 		Vector2 newMousePos = intersectRayMesh(m_camera->getPos(), m_camera->getViewDirection());
 
-		const bool osCursorVisible = env->isCursorVisible() || !env->isCursorInWindow() || !engine->hasFocus();
+		const bool osCursorVisible = (env->isCursorVisible() || !env->isCursorInWindow() || !engine->hasFocus());
 
 		if (!osCursorVisible)
 		{
@@ -656,8 +656,13 @@ void OsuModFPoSu::update()
 		{
 			if (!isAutoCursor)
 			{
-				if (!m_osu->getSelectedBeatmap()->isPaused() && !m_osu->getOptionsMenu()->isVisible() && !m_osu->getModSelector()->isVisible())
-					setMousePosCompensated(engine->getScreenSize()/2);
+				const bool osCursorVisible = (env->isCursorVisible() || !env->isCursorInWindow() || !engine->hasFocus());
+
+				if (!osCursorVisible)
+				{
+					if (!m_osu->getSelectedBeatmap()->isPaused() && !m_osu->getOptionsMenu()->isVisible() && !m_osu->getModSelector()->isVisible())
+						setMousePosCompensated(engine->getScreenSize()/2);
+				}
 			}
 			else
 			{
