@@ -289,6 +289,8 @@ void OsuModFPoSu::draw(Graphics *g)
 						// NOTE: the render path for fposu_3d_spheres is a bit weird in order to support max blending for the spheres
 						// NOTE: this is necessary, since using regular depth testing looks like shit if spheres overlap (also "unreadable" streams/stacks/etc., also because we want proper transparency)
 
+						handleLazyLoad3DModels();
+
 #if defined(MCENGINE_FEATURE_OPENGL)
 
 						const bool isOpenGLRendererHack = (dynamic_cast<OpenGLLegacyInterface*>(g) != NULL || dynamic_cast<OpenGL3Interface*>(g) != NULL);
@@ -298,8 +300,6 @@ void OsuModFPoSu::draw(Graphics *g)
 						const bool isOpenGLRendererHack = (dynamic_cast<OpenGLES2Interface*>(g) != NULL);
 
 #endif
-
-						handleLazyLoad3DModels();
 
 						if (fposu_3d_wireframe.getBool())
 							g->setWireframe(true);
@@ -322,13 +322,6 @@ void OsuModFPoSu::draw(Graphics *g)
 							}
 							m_hitcircleShader->disable();
 
-#if defined(MCENGINE_FEATURE_OPENGL) || defined (MCENGINE_FEATURE_OPENGLES)
-
-							if (isOpenGLRendererHack)
-								glBlendEquation(GL_MAX); // HACKHACK: OpenGL hardcoded
-
-#endif
-
 							if (fposu_3d_spheres_aa.getInt() > 0)
 								g->setAntialiasing(true);
 
@@ -342,13 +335,6 @@ void OsuModFPoSu::draw(Graphics *g)
 
 							if (fposu_3d_spheres_aa.getInt() > 0)
 								g->setAntialiasing(false);
-
-#if defined(MCENGINE_FEATURE_OPENGL) || defined (MCENGINE_FEATURE_OPENGLES)
-
-							if (isOpenGLRendererHack)
-								glBlendEquation(GL_FUNC_ADD); // HACKHACK: OpenGL hardcoded
-
-#endif
 						}
 
 						g->setDepthBuffer(true);

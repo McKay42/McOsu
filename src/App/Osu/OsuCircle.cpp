@@ -24,6 +24,11 @@
 #include "OsuBeatmapStandard.h"
 #include "OsuModFPoSu.h"
 
+#include "OpenGLHeaders.h"
+#include "OpenGLLegacyInterface.h"
+#include "OpenGL3Interface.h"
+#include "OpenGLES2Interface.h"
+
 ConVar osu_bug_flicker_log("osu_bug_flicker_log", false);
 
 ConVar osu_circle_color_saturation("osu_circle_color_saturation", 1.0f);
@@ -483,6 +488,16 @@ void OsuCircle::draw3DHitCircle(Graphics *g, OsuModFPoSu *fposu, OsuSkin *skin, 
 	{
 		if (m_fposu_3d_spheres_ref->getBool())
 		{
+#if defined(MCENGINE_FEATURE_OPENGL)
+
+			const bool isOpenGLRendererHack = (dynamic_cast<OpenGLLegacyInterface*>(g) != NULL || dynamic_cast<OpenGL3Interface*>(g) != NULL);
+
+#elif defined(MCENGINE_FEATURE_OPENGLES)
+
+			const bool isOpenGLRendererHack = (dynamic_cast<OpenGLES2Interface*>(g) != NULL);
+
+#endif
+
 			Matrix4 modelMatrix;
 			{
 				Matrix4 translation;
@@ -499,6 +514,13 @@ void OsuCircle::draw3DHitCircle(Graphics *g, OsuModFPoSu *fposu, OsuSkin *skin, 
 			modelMatrixInverseTransposed.invert();
 			modelMatrixInverseTransposed.transpose();
 
+#if defined(MCENGINE_FEATURE_OPENGL) || defined (MCENGINE_FEATURE_OPENGLES)
+
+			if (isOpenGLRendererHack)
+				glBlendEquation(GL_MAX); // HACKHACK: OpenGL hardcoded
+
+#endif
+
 			fposu->getHitcircleShader()->enable();
 			{
 				fposu->getHitcircleShader()->setUniformMatrix4fv("modelMatrix", modelMatrix);
@@ -507,6 +529,13 @@ void OsuCircle::draw3DHitCircle(Graphics *g, OsuModFPoSu *fposu, OsuSkin *skin, 
 				fposu->getHitcircleModel()->draw3D(g);
 			}
 			fposu->getHitcircleShader()->disable();
+
+#if defined(MCENGINE_FEATURE_OPENGL) || defined (MCENGINE_FEATURE_OPENGLES)
+
+			if (isOpenGLRendererHack)
+				glBlendEquation(GL_FUNC_ADD); // HACKHACK: OpenGL hardcoded
+
+#endif
 		}
 		else
 		{

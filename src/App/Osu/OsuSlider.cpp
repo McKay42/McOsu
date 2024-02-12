@@ -860,29 +860,43 @@ void OsuSlider::draw3D(Graphics *g)
 			drawBody(g, alpha, sliderSnakeStart, sliderSnake);
 		*/
 
-		// TODO: draw slider ticks
-		/*
+		// draw slider ticks
 		Color tickColor = 0xffffffff;
 		tickColor = COLOR(255, (int)(COLOR_GET_Ri(tickColor)*m_fHittableDimRGBColorMultiplierPercent), (int)(COLOR_GET_Gi(tickColor)*m_fHittableDimRGBColorMultiplierPercent), (int)(COLOR_GET_Bi(tickColor)*m_fHittableDimRGBColorMultiplierPercent));
-		const float tickImageScale = (m_beatmap->getHitcircleDiameter() / (16.0f * (skin->isSliderScorePoint2x() ? 2.0f : 1.0f)))*0.125f;
 		for (int t=0; t<m_ticks.size(); t++)
 		{
 			if (m_ticks[t].finished || m_ticks[t].percent > sliderSnake)
 				continue;
 
-			Vector2 pos = m_beatmap->osuCoords2Pixels(m_curve->pointAt(m_ticks[t].percent));
+			Vector3 pos = m_beatmap->osuCoordsTo3D(m_curve->pointAt(m_ticks[t].percent), this);
 
 			g->setColor(tickColor);
 			g->setAlpha(alpha);
 			g->pushTransform();
 			{
-				g->scale(tickImageScale, tickImageScale);
-				g->translate(pos.x, pos.y);
-				g->drawImage(skin->getSliderScorePoint());
+				Matrix4 modelMatrix;
+				{
+					Matrix4 scale = baseScale;
+					scale.scale((skin->getSliderScorePoint()->getSize().x / (16.0f * (skin->isSliderScorePoint2x() ? 2.0f : 1.0f)))*0.125f);
+
+					Matrix4 translation;
+					translation.translate(pos.x, pos.y, pos.z);
+
+					if (m_fposu_3d_hitobjects_look_at_player_ref->getBool())
+						modelMatrix = translation * Camera::buildMatrixLookAt(Vector3(0, 0, 0), pos - m_beatmap->getOsu()->getFPoSu()->getCamera()->getPos(), Vector3(0, 1, 0)).invert() * scale;
+					else
+						modelMatrix = translation * scale;
+				}
+				g->setWorldMatrixMul(modelMatrix);
+
+				skin->getSliderScorePoint()->bind();
+				{
+					m_beatmap->getOsu()->getFPoSu()->getUVPlaneModel()->draw3D(g);
+				}
+				skin->getSliderScorePoint()->unbind();
 			}
 			g->popTransform();
 		}
-		*/
 
 		// draw start & end circle & reverse arrows
 		if (m_points.size() > 1)
@@ -915,8 +929,7 @@ void OsuSlider::draw3D(Graphics *g)
 			if (!m_bStartFinished || (!sliderRepeatStartCircleFinished && (ifStrictTrackingModShouldDrawEndCircle || (m_iRepeat > 1 && !endCircleIsAtActualSliderEnd) || (m_iRepeat > 1 && std::abs(m_iRepeat - m_iCurRepeat) > 2))) || (!m_bEndFinished && m_iRepeat % 2 == 0 && ifStrictTrackingModShouldDrawEndCircle))
 				draw3DStartCircle(g, baseScale, alpha);
 
-			// TODO: reverse arrows
-			/*
+			// reverse arrows
 			if (m_fReverseArrowAlpha > 0.0f)
 			{
 				// if the combo color is nearly white, blacken the reverse arrow
@@ -937,7 +950,7 @@ void OsuSlider::draw3D(Graphics *g)
 				// end
 				if (m_iReverseArrowPos == 2 || m_iReverseArrowPos == 3)
 				{
-					Vector2 pos = m_beatmap->osuCoords2Pixels(m_curve->pointAt(1.0f));
+					Vector3 pos = m_beatmap->osuCoordsTo3D(m_curve->pointAt(1.0f), this);
 					float rotation = m_curve->getEndAngle() - m_osu_playfield_rotation_ref->getFloat() - m_beatmap->getPlayfieldRotation();
 					if (m_beatmap->getOsu()->getModHR())
 						rotation = 360.0f - rotation;
@@ -946,8 +959,7 @@ void OsuSlider::draw3D(Graphics *g)
 					if (m_osu_playfield_mirror_vertical_ref->getBool())
 						rotation = 180.0f - rotation;
 
-					const float osuCoordScaleMultiplier = m_beatmap->getHitcircleDiameter() / m_beatmap->getRawHitcircleDiameter();
-					float reverseArrowImageScale = (m_beatmap->getRawHitcircleDiameter() / (128.0f * (skin->isReverseArrow2x() ? 2.0f : 1.0f))) * osuCoordScaleMultiplier;
+					float reverseArrowImageScale = skin->getReverseArrow()->getSize().x / (128.0f * (skin->isReverseArrow2x() ? 2.0f : 1.0f));
 
 					reverseArrowImageScale *= 1.0f + pulse*0.30f;
 
@@ -955,10 +967,29 @@ void OsuSlider::draw3D(Graphics *g)
 					g->setAlpha(m_fReverseArrowAlpha);
 					g->pushTransform();
 					{
-						g->rotate(rotation);
-						g->scale(reverseArrowImageScale, reverseArrowImageScale);
-						g->translate(pos.x, pos.y);
-						g->drawImage(skin->getReverseArrow());
+						Matrix4 modelMatrix;
+						{
+							Matrix4 rotate;
+							rotate.rotateZ(-rotation);
+
+							Matrix4 scale = baseScale;
+							scale.scale(reverseArrowImageScale);
+
+							Matrix4 translation;
+							translation.translate(pos.x, pos.y, pos.z);
+
+							if (m_fposu_3d_hitobjects_look_at_player_ref->getBool())
+								modelMatrix = translation * Camera::buildMatrixLookAt(Vector3(0, 0, 0), pos - m_beatmap->getOsu()->getFPoSu()->getCamera()->getPos(), Vector3(0, 1, 0)).invert() * scale * rotate;
+							else
+								modelMatrix = translation * scale * rotate;
+						}
+						g->setWorldMatrixMul(modelMatrix);
+
+						skin->getReverseArrow()->bind();
+						{
+							m_beatmap->getOsu()->getFPoSu()->getUVPlaneModel()->draw3D(g);
+						}
+						skin->getReverseArrow()->unbind();
 					}
 					g->popTransform();
 				}
@@ -966,7 +997,7 @@ void OsuSlider::draw3D(Graphics *g)
 				// start
 				if (m_iReverseArrowPos == 1 || m_iReverseArrowPos == 3)
 				{
-					Vector2 pos = m_beatmap->osuCoords2Pixels(m_curve->pointAt(0.0f));
+					Vector3 pos = m_beatmap->osuCoordsTo3D(m_curve->pointAt(0.0f), this);
 					float rotation = m_curve->getStartAngle() - m_osu_playfield_rotation_ref->getFloat() - m_beatmap->getPlayfieldRotation();
 					if (m_beatmap->getOsu()->getModHR())
 						rotation = 360.0f - rotation;
@@ -975,8 +1006,7 @@ void OsuSlider::draw3D(Graphics *g)
 					if (m_osu_playfield_mirror_vertical_ref->getBool())
 						rotation = 180.0f - rotation;
 
-					const float osuCoordScaleMultiplier = m_beatmap->getHitcircleDiameter() / m_beatmap->getRawHitcircleDiameter();
-					float reverseArrowImageScale = (m_beatmap->getRawHitcircleDiameter() / (128.0f * (skin->isReverseArrow2x() ? 2.0f : 1.0f))) * osuCoordScaleMultiplier;
+					float reverseArrowImageScale = skin->getReverseArrow()->getSize().x / (128.0f * (skin->isReverseArrow2x() ? 2.0f : 1.0f));
 
 					reverseArrowImageScale *= 1.0f + pulse*0.30f;
 
@@ -984,15 +1014,33 @@ void OsuSlider::draw3D(Graphics *g)
 					g->setAlpha(m_fReverseArrowAlpha);
 					g->pushTransform();
 					{
-						g->rotate(rotation);
-						g->scale(reverseArrowImageScale, reverseArrowImageScale);
-						g->translate(pos.x, pos.y);
-						g->drawImage(skin->getReverseArrow());
+						Matrix4 modelMatrix;
+						{
+							Matrix4 rotate;
+							rotate.rotateZ(-rotation);
+
+							Matrix4 scale = baseScale;
+							scale.scale(reverseArrowImageScale);
+
+							Matrix4 translation;
+							translation.translate(pos.x, pos.y, pos.z);
+
+							if (m_fposu_3d_hitobjects_look_at_player_ref->getBool())
+								modelMatrix = translation * Camera::buildMatrixLookAt(Vector3(0, 0, 0), pos - m_beatmap->getOsu()->getFPoSu()->getCamera()->getPos(), Vector3(0, 1, 0)).invert() * scale * rotate;
+							else
+								modelMatrix = translation * scale * rotate;
+						}
+						g->setWorldMatrixMul(modelMatrix);
+
+						skin->getReverseArrow()->bind();
+						{
+							m_beatmap->getOsu()->getFPoSu()->getUVPlaneModel()->draw3D(g);
+						}
+						skin->getReverseArrow()->unbind();
 					}
 					g->popTransform();
 				}
 			}
-			*/
 		}
 	}
 
@@ -1171,7 +1219,7 @@ void OsuSlider::draw3D2(Graphics *g)
 				ballAngle += (m_iCurRepeat % 2 == 0) ? 0 : 180;
 
 			Matrix4 rotate;
-			rotate.rotateZ(ballAngle);
+			rotate.rotateZ(-ballAngle);
 
 			g->setColor(skin->getAllowSliderBallTint() ? (osu_slider_ball_tint_combo_color.getBool() ? skin->getComboColorForCounter(m_iColorCounter, m_iColorOffset) : skin->getSliderBallColor()) : 0xffffffff);
 			g->pushTransform();
