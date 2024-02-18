@@ -41,22 +41,22 @@ float OsuSliderRenderer::m_fBoundingBoxMaxX = 0.0f;
 float OsuSliderRenderer::m_fBoundingBoxMinY = std::numeric_limits<float>::max();
 float OsuSliderRenderer::m_fBoundingBoxMaxY = 0.0f;
 
-ConVar osu_slider_debug_draw("osu_slider_debug_draw", false, "draw hitcircle at every curve point and nothing else (no vao, no rt, no shader, nothing) (requires enabling legacy slider renderer)");
-ConVar osu_slider_debug_draw_square_vao("osu_slider_debug_draw_square_vao", false, "generate square vaos and nothing else (no rt, no shader) (requires disabling legacy slider renderer)");
-ConVar osu_slider_debug_wireframe("osu_slider_debug_wireframe", false, "unused");
+ConVar osu_slider_debug_draw("osu_slider_debug_draw", false, FCVAR_NONE, "draw hitcircle at every curve point and nothing else (no vao, no rt, no shader, nothing) (requires enabling legacy slider renderer)");
+ConVar osu_slider_debug_draw_square_vao("osu_slider_debug_draw_square_vao", false, FCVAR_NONE, "generate square vaos and nothing else (no rt, no shader) (requires disabling legacy slider renderer)");
+ConVar osu_slider_debug_wireframe("osu_slider_debug_wireframe", false, FCVAR_NONE, "unused");
 
-ConVar osu_slider_alpha_multiplier("osu_slider_alpha_multiplier", 1.0f);
-ConVar osu_slider_body_alpha_multiplier("osu_slider_body_alpha_multiplier", 1.0f);
-ConVar osu_slider_body_color_saturation("osu_slider_body_color_saturation", 1.0f);
-ConVar osu_slider_border_feather("osu_slider_border_feather", 0.0f);
-ConVar osu_slider_border_size_multiplier("osu_slider_border_size_multiplier", 1.0f);
-ConVar osu_slider_border_tint_combo_color("osu_slider_border_tint_combo_color", false);
-ConVar osu_slider_osu_next_style("osu_slider_osu_next_style", false);
-ConVar osu_slider_rainbow("osu_slider_rainbow", false);
-ConVar osu_slider_use_gradient_image("osu_slider_use_gradient_image", false);
+ConVar osu_slider_alpha_multiplier("osu_slider_alpha_multiplier", 1.0f, FCVAR_NONE);
+ConVar osu_slider_body_alpha_multiplier("osu_slider_body_alpha_multiplier", 1.0f, FCVAR_NONE);
+ConVar osu_slider_body_color_saturation("osu_slider_body_color_saturation", 1.0f, FCVAR_NONE);
+ConVar osu_slider_border_feather("osu_slider_border_feather", 0.0f, FCVAR_NONE);
+ConVar osu_slider_border_size_multiplier("osu_slider_border_size_multiplier", 1.0f, FCVAR_NONE);
+ConVar osu_slider_border_tint_combo_color("osu_slider_border_tint_combo_color", false, FCVAR_NONE);
+ConVar osu_slider_osu_next_style("osu_slider_osu_next_style", false, FCVAR_NONE);
+ConVar osu_slider_rainbow("osu_slider_rainbow", false, FCVAR_NONE);
+ConVar osu_slider_use_gradient_image("osu_slider_use_gradient_image", false, FCVAR_NONE);
 
-ConVar osu_slider_body_unit_circle_subdivisions("osu_slider_body_unit_circle_subdivisions", 42);
-ConVar osu_slider_legacy_use_baked_vao("osu_slider_legacy_use_baked_vao", false, "use baked cone mesh instead of raw mesh for legacy slider renderer (disabled by default because usually slower on very old gpus even though it should not be)");
+ConVar osu_slider_body_unit_circle_subdivisions("osu_slider_body_unit_circle_subdivisions", 42, FCVAR_NONE);
+ConVar osu_slider_legacy_use_baked_vao("osu_slider_legacy_use_baked_vao", false, FCVAR_NONE, "use baked cone mesh instead of raw mesh for legacy slider renderer (disabled by default because usually slower on very old gpus even though it should not be)");
 
 VertexArrayObject *OsuSliderRenderer::generateVAO(Osu *osu, const std::vector<Vector2> &points, float hitcircleDiameter, Vector3 translation, bool skipOOBPoints)
 {

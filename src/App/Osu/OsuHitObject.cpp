@@ -21,50 +21,50 @@
 #include "OsuBeatmapMania.h"
 #include "OsuHUD.h"
 
-ConVar osu_hitresult_draw_300s("osu_hitresult_draw_300s", false);
+ConVar osu_hitresult_draw_300s("osu_hitresult_draw_300s", false, FCVAR_NONE);
 
-ConVar osu_hitresult_scale("osu_hitresult_scale", 1.0f);
-ConVar osu_hitresult_duration("osu_hitresult_duration", 1.100f, "max duration of the entire hitresult in seconds (this limits all other values, except for animated skins!)");
-ConVar osu_hitresult_duration_max("osu_hitresult_duration_max", 5.0f, "absolute hard limit in seconds, even for animated skins");
-ConVar osu_hitresult_animated("osu_hitresult_animated", true, "whether to animate hitresult scales (depending on particle<SCORE>.png, either scale wobble or smooth scale)");
-ConVar osu_hitresult_fadein_duration("osu_hitresult_fadein_duration", 0.120f);
-ConVar osu_hitresult_fadeout_start_time("osu_hitresult_fadeout_start_time", 0.500f);
-ConVar osu_hitresult_fadeout_duration("osu_hitresult_fadeout_duration", 0.600f);
-ConVar osu_hitresult_miss_fadein_scale("osu_hitresult_miss_fadein_scale", 2.0f);
-ConVar osu_hitresult_delta_colorize("osu_hitresult_delta_colorize", false, "whether to colorize hitresults depending on how early/late the hit (delta) was");
-ConVar osu_hitresult_delta_colorize_interpolate("osu_hitresult_delta_colorize_interpolate", true, "whether colorized hitresults should smoothly interpolate between early/late colors depending on the hit delta amount");
-ConVar osu_hitresult_delta_colorize_multiplier("osu_hitresult_delta_colorize_multiplier", 2.0f, "early/late colors are multiplied by this (assuming interpolation is enabled, increasing this will make early/late colors appear fully earlier)");
-ConVar osu_hitresult_delta_colorize_early_r("osu_hitresult_delta_colorize_early_r", 255, "from 0 to 255");
-ConVar osu_hitresult_delta_colorize_early_g("osu_hitresult_delta_colorize_early_g", 0, "from 0 to 255");
-ConVar osu_hitresult_delta_colorize_early_b("osu_hitresult_delta_colorize_early_b", 0, "from 0 to 255");
-ConVar osu_hitresult_delta_colorize_late_r("osu_hitresult_delta_colorize_late_r", 0, "from 0 to 255");
-ConVar osu_hitresult_delta_colorize_late_g("osu_hitresult_delta_colorize_late_g", 0, "from 0 to 255");
-ConVar osu_hitresult_delta_colorize_late_b("osu_hitresult_delta_colorize_late_b", 255, "from 0 to 255");
+ConVar osu_hitresult_scale("osu_hitresult_scale", 1.0f, FCVAR_NONE);
+ConVar osu_hitresult_duration("osu_hitresult_duration", 1.100f, FCVAR_NONE, "max duration of the entire hitresult in seconds (this limits all other values, except for animated skins!)");
+ConVar osu_hitresult_duration_max("osu_hitresult_duration_max", 5.0f, FCVAR_NONE, "absolute hard limit in seconds, even for animated skins");
+ConVar osu_hitresult_animated("osu_hitresult_animated", true, FCVAR_NONE, "whether to animate hitresult scales (depending on particle<SCORE>.png, either scale wobble or smooth scale)");
+ConVar osu_hitresult_fadein_duration("osu_hitresult_fadein_duration", 0.120f, FCVAR_NONE);
+ConVar osu_hitresult_fadeout_start_time("osu_hitresult_fadeout_start_time", 0.500f, FCVAR_NONE);
+ConVar osu_hitresult_fadeout_duration("osu_hitresult_fadeout_duration", 0.600f, FCVAR_NONE);
+ConVar osu_hitresult_miss_fadein_scale("osu_hitresult_miss_fadein_scale", 2.0f, FCVAR_NONE);
+ConVar osu_hitresult_delta_colorize("osu_hitresult_delta_colorize", false, FCVAR_NONE, "whether to colorize hitresults depending on how early/late the hit (delta) was");
+ConVar osu_hitresult_delta_colorize_interpolate("osu_hitresult_delta_colorize_interpolate", true, FCVAR_NONE, "whether colorized hitresults should smoothly interpolate between early/late colors depending on the hit delta amount");
+ConVar osu_hitresult_delta_colorize_multiplier("osu_hitresult_delta_colorize_multiplier", 2.0f, FCVAR_NONE, "early/late colors are multiplied by this (assuming interpolation is enabled, increasing this will make early/late colors appear fully earlier)");
+ConVar osu_hitresult_delta_colorize_early_r("osu_hitresult_delta_colorize_early_r", 255, FCVAR_NONE, "from 0 to 255");
+ConVar osu_hitresult_delta_colorize_early_g("osu_hitresult_delta_colorize_early_g", 0, FCVAR_NONE, "from 0 to 255");
+ConVar osu_hitresult_delta_colorize_early_b("osu_hitresult_delta_colorize_early_b", 0, FCVAR_NONE, "from 0 to 255");
+ConVar osu_hitresult_delta_colorize_late_r("osu_hitresult_delta_colorize_late_r", 0, FCVAR_NONE, "from 0 to 255");
+ConVar osu_hitresult_delta_colorize_late_g("osu_hitresult_delta_colorize_late_g", 0, FCVAR_NONE, "from 0 to 255");
+ConVar osu_hitresult_delta_colorize_late_b("osu_hitresult_delta_colorize_late_b", 255, FCVAR_NONE, "from 0 to 255");
 
-ConVar osu_approach_scale_multiplier("osu_approach_scale_multiplier", 3.0f);
-ConVar osu_vr_approach_type("osu_vr_approach_type", 0, "0 = linear (default), 1 = quadratic");
-ConVar osu_vr_draw_approach_circles("osu_vr_draw_approach_circles", false);
-ConVar osu_vr_approach_circles_on_playfield("osu_vr_approach_circles_on_playfield", false);
-ConVar osu_vr_approach_circles_on_top("osu_vr_approach_circles_on_top", false);
+ConVar osu_approach_scale_multiplier("osu_approach_scale_multiplier", 3.0f, FCVAR_NONE);
+ConVar osu_vr_approach_type("osu_vr_approach_type", 0, FCVAR_NONE, "0 = linear (default), 1 = quadratic");
+ConVar osu_vr_draw_approach_circles("osu_vr_draw_approach_circles", false, FCVAR_NONE);
+ConVar osu_vr_approach_circles_on_playfield("osu_vr_approach_circles_on_playfield", false, FCVAR_NONE);
+ConVar osu_vr_approach_circles_on_top("osu_vr_approach_circles_on_top", false, FCVAR_NONE);
 
-ConVar osu_timingpoints_force("osu_timingpoints_force", true, "Forces the correct sample type and volume to be used, by getting the active timingpoint through iteration EVERY TIME a hitsound is played (performance!)");
+ConVar osu_timingpoints_force("osu_timingpoints_force", true, FCVAR_NONE, "Forces the correct sample type and volume to be used, by getting the active timingpoint through iteration EVERY TIME a hitsound is played (performance!)");
 
-ConVar osu_mod_hd_circle_fadein_start_percent("osu_mod_hd_circle_fadein_start_percent", 1.0f, "hiddenFadeInStartTime = circleTime - approachTime * osu_mod_hd_circle_fadein_start_percent");
-ConVar osu_mod_hd_circle_fadein_end_percent("osu_mod_hd_circle_fadein_end_percent", 0.6f, "hiddenFadeInEndTime = circleTime - approachTime * osu_mod_hd_circle_fadein_end_percent");
-ConVar osu_mod_hd_circle_fadeout_start_percent("osu_mod_hd_circle_fadeout_start_percent", 0.6f, "hiddenFadeOutStartTime = circleTime - approachTime * osu_mod_hd_circle_fadeout_start_percent");
-ConVar osu_mod_hd_circle_fadeout_end_percent("osu_mod_hd_circle_fadeout_end_percent", 0.3f, "hiddenFadeOutEndTime = circleTime - approachTime * osu_mod_hd_circle_fadeout_end_percent");
+ConVar osu_mod_hd_circle_fadein_start_percent("osu_mod_hd_circle_fadein_start_percent", 1.0f, FCVAR_NONE, "hiddenFadeInStartTime = circleTime - approachTime * osu_mod_hd_circle_fadein_start_percent");
+ConVar osu_mod_hd_circle_fadein_end_percent("osu_mod_hd_circle_fadein_end_percent", 0.6f, FCVAR_NONE, "hiddenFadeInEndTime = circleTime - approachTime * osu_mod_hd_circle_fadein_end_percent");
+ConVar osu_mod_hd_circle_fadeout_start_percent("osu_mod_hd_circle_fadeout_start_percent", 0.6f, FCVAR_NONE, "hiddenFadeOutStartTime = circleTime - approachTime * osu_mod_hd_circle_fadeout_start_percent");
+ConVar osu_mod_hd_circle_fadeout_end_percent("osu_mod_hd_circle_fadeout_end_percent", 0.3f, FCVAR_NONE, "hiddenFadeOutEndTime = circleTime - approachTime * osu_mod_hd_circle_fadeout_end_percent");
 
-ConVar osu_mod_target_300_percent("osu_mod_target_300_percent", 0.5f);
-ConVar osu_mod_target_100_percent("osu_mod_target_100_percent", 0.7f);
-ConVar osu_mod_target_50_percent("osu_mod_target_50_percent", 0.95f);
+ConVar osu_mod_target_300_percent("osu_mod_target_300_percent", 0.5f, FCVAR_NONE);
+ConVar osu_mod_target_100_percent("osu_mod_target_100_percent", 0.7f, FCVAR_NONE);
+ConVar osu_mod_target_50_percent("osu_mod_target_50_percent", 0.95f, FCVAR_NONE);
 
-ConVar osu_mod_mafham_ignore_hittable_dim("osu_mod_mafham_ignore_hittable_dim", true, "having hittable dim enabled makes it possible to \"read\" the beatmap by looking at the un-dim animations (thus making it a lot easier)");
+ConVar osu_mod_mafham_ignore_hittable_dim("osu_mod_mafham_ignore_hittable_dim", true, FCVAR_NONE, "having hittable dim enabled makes it possible to \"read\" the beatmap by looking at the un-dim animations (thus making it a lot easier)");
 
-ConVar osu_mod_approach_different("osu_mod_approach_different", false, "replicates osu!lazer's \"Approach Different\" mod");
-ConVar osu_mod_approach_different_initial_size("osu_mod_approach_different_initial_size", 4.0f, "initial size of the approach circles, relative to hit circles (as a multiplier)");
-ConVar osu_mod_approach_different_style("osu_mod_approach_different_style", 1, "0 = linear, 1 = gravity, 2 = InOut1, 3 = InOut2, 4 = Accelerate1, 5 = Accelerate2, 6 = Accelerate3, 7 = Decelerate1, 8 = Decelerate2, 9 = Decelerate3");
+ConVar osu_mod_approach_different("osu_mod_approach_different", false, FCVAR_NONE, "replicates osu!lazer's \"Approach Different\" mod");
+ConVar osu_mod_approach_different_initial_size("osu_mod_approach_different_initial_size", 4.0f, FCVAR_NONE, "initial size of the approach circles, relative to hit circles (as a multiplier)");
+ConVar osu_mod_approach_different_style("osu_mod_approach_different_style", 1, FCVAR_NONE, "0 = linear, 1 = gravity, 2 = InOut1, 3 = InOut2, 4 = Accelerate1, 5 = Accelerate2, 6 = Accelerate3, 7 = Decelerate1, 8 = Decelerate2, 9 = Decelerate3");
 
-ConVar osu_relax_offset("osu_relax_offset", 0, "osu!relax always hits -12 ms too early, so set this to -12 (note the negative) if you want it to be the same");
+ConVar osu_relax_offset("osu_relax_offset", 0, FCVAR_NONE, "osu!relax always hits -12 ms too early, so set this to -12 (note the negative) if you want it to be the same");
 
 ConVar *OsuHitObject::m_osu_approach_scale_multiplier_ref = &osu_approach_scale_multiplier;
 ConVar *OsuHitObject::m_osu_timingpoints_force = &osu_timingpoints_force;

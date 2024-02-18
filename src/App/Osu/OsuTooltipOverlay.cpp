@@ -15,7 +15,7 @@
 
 #include "Osu.h"
 
-ConVar osu_tooltip_anim_duration("osu_tooltip_anim_duration", 0.4f);
+ConVar osu_tooltip_anim_duration("osu_tooltip_anim_duration", 0.4f, FCVAR_NONE);
 
 OsuTooltipOverlay::OsuTooltipOverlay(Osu *osu) : OsuScreen(osu)
 {

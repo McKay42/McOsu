@@ -65,71 +65,71 @@
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 33.09f);
+ConVar osu_version("osu_version", 33.09f, FCVAR_NONE);
 #ifdef MCENGINE_FEATURE_OPENVR
-ConVar osu_release_stream("osu_release_stream", "vr");
+ConVar osu_release_stream("osu_release_stream", "vr", FCVAR_NONE);
 #else
-ConVar osu_release_stream("osu_release_stream", "desktop");
+ConVar osu_release_stream("osu_release_stream", "desktop", FCVAR_NONE);
 #endif
-ConVar osu_debug("osu_debug", false);
+ConVar osu_debug("osu_debug", false, FCVAR_NONE);
 
-ConVar osu_vr("osu_vr", false);
-ConVar osu_vr_tutorial("osu_vr_tutorial", true);
+ConVar osu_vr("osu_vr", false, FCVAR_NONE);
+ConVar osu_vr_tutorial("osu_vr_tutorial", true, FCVAR_NONE);
 
-ConVar osu_disable_mousebuttons("osu_disable_mousebuttons", false);
-ConVar osu_disable_mousewheel("osu_disable_mousewheel", false);
-ConVar osu_confine_cursor_windowed("osu_confine_cursor_windowed", false);
-ConVar osu_confine_cursor_fullscreen("osu_confine_cursor_fullscreen", true);
+ConVar osu_disable_mousebuttons("osu_disable_mousebuttons", false, FCVAR_NONE);
+ConVar osu_disable_mousewheel("osu_disable_mousewheel", false, FCVAR_NONE);
+ConVar osu_confine_cursor_windowed("osu_confine_cursor_windowed", false, FCVAR_NONE);
+ConVar osu_confine_cursor_fullscreen("osu_confine_cursor_fullscreen", true, FCVAR_NONE);
 
-ConVar osu_skin("osu_skin", ""); // set dynamically below in the constructor
-ConVar osu_skin_is_from_workshop("osu_skin_is_from_workshop", false, "determines whether osu_skin contains a relative folder name, or a full absolute path (for workshop skins)");
-ConVar osu_skin_workshop_title("osu_skin_workshop_title", "", "holds the title/name of the currently selected workshop skin, because osu_skin is already used up for the absolute path then");
-ConVar osu_skin_workshop_id("osu_skin_workshop_id", "0", "holds the id of the currently selected workshop skin");
+ConVar osu_skin("osu_skin", "", FCVAR_NONE); // set dynamically below in the constructor
+ConVar osu_skin_is_from_workshop("osu_skin_is_from_workshop", false, FCVAR_NONE, "determines whether osu_skin contains a relative folder name, or a full absolute path (for workshop skins)");
+ConVar osu_skin_workshop_title("osu_skin_workshop_title", "", FCVAR_NONE, "holds the title/name of the currently selected workshop skin, because osu_skin is already used up for the absolute path then");
+ConVar osu_skin_workshop_id("osu_skin_workshop_id", "0", FCVAR_NONE, "holds the id of the currently selected workshop skin");
 ConVar osu_skin_reload("osu_skin_reload");
 
-ConVar osu_volume_master("osu_volume_master", 1.0f);
-ConVar osu_volume_master_inactive("osu_volume_master_inactive", 0.25f);
-ConVar osu_volume_music("osu_volume_music", 0.4f);
-ConVar osu_volume_change_interval("osu_volume_change_interval", 0.05f);
+ConVar osu_volume_master("osu_volume_master", 1.0f, FCVAR_NONE);
+ConVar osu_volume_master_inactive("osu_volume_master_inactive", 0.25f, FCVAR_NONE);
+ConVar osu_volume_music("osu_volume_music", 0.4f, FCVAR_NONE);
+ConVar osu_volume_change_interval("osu_volume_change_interval", 0.05f, FCVAR_NONE);
 
-ConVar osu_speed_override("osu_speed_override", -1.0f);
-ConVar osu_pitch_override("osu_pitch_override", -1.0f);
+ConVar osu_speed_override("osu_speed_override", -1.0f, FCVAR_NONE);
+ConVar osu_pitch_override("osu_pitch_override", -1.0f, FCVAR_NONE);
 
-ConVar osu_pause_on_focus_loss("osu_pause_on_focus_loss", true);
-ConVar osu_quick_retry_delay("osu_quick_retry_delay", 0.27f);
-ConVar osu_scrubbing_smooth("osu_scrubbing_smooth", true);
-ConVar osu_skip_intro_enabled("osu_skip_intro_enabled", true, "enables/disables skip button for intro until first hitobject");
-ConVar osu_skip_breaks_enabled("osu_skip_breaks_enabled", true, "enables/disables skip button for breaks in the middle of beatmaps");
-ConVar osu_seek_delta("osu_seek_delta", 5, "how many seconds to skip backward/forward when quick seeking");
+ConVar osu_pause_on_focus_loss("osu_pause_on_focus_loss", true, FCVAR_NONE);
+ConVar osu_quick_retry_delay("osu_quick_retry_delay", 0.27f, FCVAR_NONE);
+ConVar osu_scrubbing_smooth("osu_scrubbing_smooth", true, FCVAR_NONE);
+ConVar osu_skip_intro_enabled("osu_skip_intro_enabled", true, FCVAR_NONE, "enables/disables skip button for intro until first hitobject");
+ConVar osu_skip_breaks_enabled("osu_skip_breaks_enabled", true, FCVAR_NONE, "enables/disables skip button for breaks in the middle of beatmaps");
+ConVar osu_seek_delta("osu_seek_delta", 5, FCVAR_NONE, "how many seconds to skip backward/forward when quick seeking");
 
-ConVar osu_mods("osu_mods", "");
-ConVar osu_mod_touchdevice("osu_mod_touchdevice", false, "used for force applying touch pp nerf always");
-ConVar osu_mod_fadingcursor("osu_mod_fadingcursor", false);
-ConVar osu_mod_fadingcursor_combo("osu_mod_fadingcursor_combo", 50.0f);
-ConVar osu_mod_endless("osu_mod_endless", false);
+ConVar osu_mods("osu_mods", "", FCVAR_NONE);
+ConVar osu_mod_touchdevice("osu_mod_touchdevice", false, FCVAR_NONE, "used for force applying touch pp nerf always");
+ConVar osu_mod_fadingcursor("osu_mod_fadingcursor", false, FCVAR_NONE);
+ConVar osu_mod_fadingcursor_combo("osu_mod_fadingcursor_combo", 50.0f, FCVAR_NONE);
+ConVar osu_mod_endless("osu_mod_endless", false, FCVAR_NONE);
 
 ConVar osu_notification("osu_notification");
-ConVar osu_notification_color_r("osu_notification_color_r", 255);
-ConVar osu_notification_color_g("osu_notification_color_g", 255);
-ConVar osu_notification_color_b("osu_notification_color_b", 255);
+ConVar osu_notification_color_r("osu_notification_color_r", 255, FCVAR_NONE);
+ConVar osu_notification_color_g("osu_notification_color_g", 255, FCVAR_NONE);
+ConVar osu_notification_color_b("osu_notification_color_b", 255, FCVAR_NONE);
 
-ConVar osu_ui_scale("osu_ui_scale", 1.0f, "multiplier");
-ConVar osu_ui_scale_to_dpi("osu_ui_scale_to_dpi", true, "whether the game should scale its UI based on the DPI reported by your operating system");
-ConVar osu_ui_scale_to_dpi_minimum_width("osu_ui_scale_to_dpi_minimum_width", 2200, "any in-game resolutions below this will have osu_ui_scale_to_dpi force disabled");
-ConVar osu_ui_scale_to_dpi_minimum_height("osu_ui_scale_to_dpi_minimum_height", 1300, "any in-game resolutions below this will have osu_ui_scale_to_dpi force disabled");
-ConVar osu_letterboxing("osu_letterboxing", true);
-ConVar osu_letterboxing_offset_x("osu_letterboxing_offset_x", 0.0f);
-ConVar osu_letterboxing_offset_y("osu_letterboxing_offset_y", 0.0f);
-ConVar osu_resolution("osu_resolution", "1280x720");
-ConVar osu_resolution_enabled("osu_resolution_enabled", false);
-ConVar osu_resolution_keep_aspect_ratio("osu_resolution_keep_aspect_ratio", false);
-ConVar osu_force_legacy_slider_renderer("osu_force_legacy_slider_renderer", false, "on some older machines, this may be faster than vertexbuffers");
+ConVar osu_ui_scale("osu_ui_scale", 1.0f, FCVAR_NONE, "multiplier");
+ConVar osu_ui_scale_to_dpi("osu_ui_scale_to_dpi", true, FCVAR_NONE, "whether the game should scale its UI based on the DPI reported by your operating system");
+ConVar osu_ui_scale_to_dpi_minimum_width("osu_ui_scale_to_dpi_minimum_width", 2200, FCVAR_NONE, "any in-game resolutions below this will have osu_ui_scale_to_dpi force disabled");
+ConVar osu_ui_scale_to_dpi_minimum_height("osu_ui_scale_to_dpi_minimum_height", 1300, FCVAR_NONE, "any in-game resolutions below this will have osu_ui_scale_to_dpi force disabled");
+ConVar osu_letterboxing("osu_letterboxing", true, FCVAR_NONE);
+ConVar osu_letterboxing_offset_x("osu_letterboxing_offset_x", 0.0f, FCVAR_NONE);
+ConVar osu_letterboxing_offset_y("osu_letterboxing_offset_y", 0.0f, FCVAR_NONE);
+ConVar osu_resolution("osu_resolution", "1280x720", FCVAR_NONE);
+ConVar osu_resolution_enabled("osu_resolution_enabled", false, FCVAR_NONE);
+ConVar osu_resolution_keep_aspect_ratio("osu_resolution_keep_aspect_ratio", false, FCVAR_NONE);
+ConVar osu_force_legacy_slider_renderer("osu_force_legacy_slider_renderer", false, FCVAR_NONE, "on some older machines, this may be faster than vertexbuffers");
 
-ConVar osu_draw_fps("osu_draw_fps", true);
-ConVar osu_hide_cursor_during_gameplay("osu_hide_cursor_during_gameplay", false);
+ConVar osu_draw_fps("osu_draw_fps", true, FCVAR_NONE);
+ConVar osu_hide_cursor_during_gameplay("osu_hide_cursor_during_gameplay", false, FCVAR_NONE);
 
-ConVar osu_alt_f4_quits_even_while_playing("osu_alt_f4_quits_even_while_playing", true);
-ConVar osu_win_disable_windows_key_while_playing("osu_win_disable_windows_key_while_playing", true);
+ConVar osu_alt_f4_quits_even_while_playing("osu_alt_f4_quits_even_while_playing", true, FCVAR_NONE);
+ConVar osu_win_disable_windows_key_while_playing("osu_win_disable_windows_key_while_playing", true, FCVAR_NONE);
 
 ConVar *Osu::version = &osu_version;
 ConVar *Osu::debug = &osu_debug;

@@ -28,9 +28,9 @@
 
 #include "OsuUIPauseMenuButton.h"
 
-ConVar osu_pause_dim_background("osu_pause_dim_background", true);
-ConVar osu_pause_dim_alpha("osu_pause_dim_alpha", 0.58f);
-ConVar osu_pause_anim_duration("osu_pause_anim_duration", 0.15f);
+ConVar osu_pause_dim_background("osu_pause_dim_background", true, FCVAR_NONE);
+ConVar osu_pause_dim_alpha("osu_pause_dim_alpha", 0.58f, FCVAR_NONE);
+ConVar osu_pause_anim_duration("osu_pause_anim_duration", 0.15f, FCVAR_NONE);
 
 OsuPauseMenu::OsuPauseMenu(Osu *osu) : OsuScreen(osu)
 {

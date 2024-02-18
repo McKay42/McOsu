@@ -22,7 +22,7 @@
 #include "OsuGameRules.h"
 #include "OsuBeatmapStandard.h"
 
-ConVar osu_spinner_use_ar_fadein("osu_spinner_use_ar_fadein", false, "whether spinners should fade in with AR (same as circles), or with hardcoded 400 ms fadein time (osu!default)");
+ConVar osu_spinner_use_ar_fadein("osu_spinner_use_ar_fadein", false, FCVAR_NONE, "whether spinners should fade in with AR (same as circles), or with hardcoded 400 ms fadein time (osu!default)");
 
 OsuSpinner::OsuSpinner(int x, int y, long time, int sampleType, bool isEndOfCombo, long endTime, OsuBeatmapStandard *beatmap) : OsuHitObject(time, sampleType, -1, isEndOfCombo, -1, -1, beatmap)
 {

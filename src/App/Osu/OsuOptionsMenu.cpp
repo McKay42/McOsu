@@ -50,17 +50,17 @@
 #include <iostream>
 #include <fstream>
 
-ConVar osu_options_save_on_back("osu_options_save_on_back", true);
-ConVar osu_options_high_quality_sliders("osu_options_high_quality_sliders", false);
+ConVar osu_options_save_on_back("osu_options_save_on_back", true, FCVAR_NONE);
+ConVar osu_options_high_quality_sliders("osu_options_high_quality_sliders", false, FCVAR_NONE);
 ConVar osu_mania_keylayout_wizard("osu_mania_keylayout_wizard");
-ConVar osu_options_slider_preview_use_legacy_renderer("osu_options_slider_preview_use_legacy_renderer", false, "apparently newer AMD drivers with old gpus are crashing here with the legacy renderer? was just me being lazy anyway, so now there is a vao render path as it should be");
+ConVar osu_options_slider_preview_use_legacy_renderer("osu_options_slider_preview_use_legacy_renderer", false, FCVAR_NONE, "apparently newer AMD drivers with old gpus are crashing here with the legacy renderer? was just me being lazy anyway, so now there is a vao render path as it should be");
 
 void _osuOptionsSliderQualityWrapper(UString oldValue, UString newValue)
 {
 	float value = lerp<float>(1.0f, 2.5f, 1.0f - newValue.toFloat());
 	convar->getConVarByName("osu_slider_curve_points_separation")->setValue(value);
 };
-ConVar osu_options_slider_quality("osu_options_slider_quality", 0.0f, _osuOptionsSliderQualityWrapper);
+ConVar osu_options_slider_quality("osu_options_slider_quality", 0.0f, FCVAR_NONE, _osuOptionsSliderQualityWrapper);
 
 const char *OsuOptionsMenu::OSU_CONFIG_FILE_NAME = ""; // set dynamically below in the constructor
 

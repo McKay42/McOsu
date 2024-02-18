@@ -16,8 +16,8 @@
 #include "OsuGameRulesMania.h"
 #include "OsuBeatmapMania.h"
 
-ConVar osu_mania_note_height("osu_mania_note_height", 20.0f);
-ConVar osu_mania_speed("osu_mania_speed", 1.0f);
+ConVar osu_mania_note_height("osu_mania_note_height", 20.0f, FCVAR_NONE);
+ConVar osu_mania_speed("osu_mania_speed", 1.0f, FCVAR_NONE);
 
 OsuManiaNote::OsuManiaNote(int column, long sliderTime, long time, int sampleType, int comboNumber, int colorCounter, OsuBeatmapMania *beatmap) : OsuHitObject(time, sampleType, comboNumber, false, colorCounter, -1, beatmap)
 {

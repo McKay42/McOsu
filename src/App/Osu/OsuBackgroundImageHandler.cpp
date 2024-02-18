@@ -13,12 +13,12 @@
 
 #include "OsuDatabaseBeatmap.h"
 
-ConVar osu_load_beatmap_background_images("osu_load_beatmap_background_images", true);
+ConVar osu_load_beatmap_background_images("osu_load_beatmap_background_images", true, FCVAR_NONE);
 
-ConVar osu_background_image_cache_size("osu_background_image_cache_size", 32, "how many images can stay loaded in parallel");
-ConVar osu_background_image_loading_delay("osu_background_image_loading_delay", 0.1f, "how many seconds to wait until loading background images for visible beatmaps starts");
-ConVar osu_background_image_eviction_delay_seconds("osu_background_image_eviction_delay_seconds", 0.05f, "how many seconds to keep stale background images in the cache before deleting them (if seconds && frames)");
-ConVar osu_background_image_eviction_delay_frames("osu_background_image_eviction_delay_frames", 0, "how many frames to keep stale background images in the cache before deleting them (if seconds && frames)");
+ConVar osu_background_image_cache_size("osu_background_image_cache_size", 32, FCVAR_NONE, "how many images can stay loaded in parallel");
+ConVar osu_background_image_loading_delay("osu_background_image_loading_delay", 0.1f, FCVAR_NONE, "how many seconds to wait until loading background images for visible beatmaps starts");
+ConVar osu_background_image_eviction_delay_seconds("osu_background_image_eviction_delay_seconds", 0.05f, FCVAR_NONE, "how many seconds to keep stale background images in the cache before deleting them (if seconds && frames)");
+ConVar osu_background_image_eviction_delay_frames("osu_background_image_eviction_delay_frames", 0, FCVAR_NONE, "how many frames to keep stale background images in the cache before deleting them (if seconds && frames)");
 
 OsuBackgroundImageHandler::OsuBackgroundImageHandler()
 {

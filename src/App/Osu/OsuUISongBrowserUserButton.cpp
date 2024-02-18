@@ -22,10 +22,10 @@
 
 // NOTE: selected username is stored in m_sText
 
-ConVar osu_user_draw_pp("osu_user_draw_pp", true);
-ConVar osu_user_draw_accuracy("osu_user_draw_accuracy", true);
-ConVar osu_user_draw_level("osu_user_draw_level", true);
-ConVar osu_user_draw_level_bar("osu_user_draw_level_bar", true);
+ConVar osu_user_draw_pp("osu_user_draw_pp", true, FCVAR_NONE);
+ConVar osu_user_draw_accuracy("osu_user_draw_accuracy", true, FCVAR_NONE);
+ConVar osu_user_draw_level("osu_user_draw_level", true, FCVAR_NONE);
+ConVar osu_user_draw_level_bar("osu_user_draw_level_bar", true, FCVAR_NONE);
 
 OsuUISongBrowserUserButton::OsuUISongBrowserUserButton(Osu *osu) : CBaseUIButton()
 {

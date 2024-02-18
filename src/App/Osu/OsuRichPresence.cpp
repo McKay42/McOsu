@@ -21,10 +21,10 @@
 #include "OsuBeatmap.h"
 #include "OsuDatabaseBeatmap.h"
 
-ConVar osu_rich_presence("osu_rich_presence", true, OsuRichPresence::onRichPresenceChange);
-ConVar osu_rich_presence_dynamic_windowtitle("osu_rich_presence_dynamic_windowtitle", true, "should the window title show the currently playing beatmap Artist - Title and [Difficulty] name");
-ConVar osu_rich_presence_show_recentplaystats("osu_rich_presence_show_recentplaystats", true);
-ConVar osu_rich_presence_discord_show_totalpp("osu_rich_presence_discord_show_totalpp", true);
+ConVar osu_rich_presence("osu_rich_presence", true, FCVAR_NONE, OsuRichPresence::onRichPresenceChange);
+ConVar osu_rich_presence_dynamic_windowtitle("osu_rich_presence_dynamic_windowtitle", true, FCVAR_NONE, "should the window title show the currently playing beatmap Artist - Title and [Difficulty] name");
+ConVar osu_rich_presence_show_recentplaystats("osu_rich_presence_show_recentplaystats", true, FCVAR_NONE);
+ConVar osu_rich_presence_discord_show_totalpp("osu_rich_presence_discord_show_totalpp", true, FCVAR_NONE);
 
 ConVar *OsuRichPresence::m_name_ref = NULL;
 

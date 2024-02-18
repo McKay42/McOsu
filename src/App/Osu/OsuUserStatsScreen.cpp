@@ -36,7 +36,7 @@
 #include "OsuUISongBrowserUserButton.h"
 #include "OsuUIUserStatsScreenLabel.h"
 
-ConVar osu_ui_top_ranks_max("osu_ui_top_ranks_max", 200, "maximum number of displayed scores, to keep the ui/scrollbar manageable");
+ConVar osu_ui_top_ranks_max("osu_ui_top_ranks_max", 200, FCVAR_NONE, "maximum number of displayed scores, to keep the ui/scrollbar manageable");
 
 
 

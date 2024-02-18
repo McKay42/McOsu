@@ -42,56 +42,56 @@
 #include <algorithm>
 #include <chrono>
 
-ConVar osu_draw_followpoints("osu_draw_followpoints", true);
-ConVar osu_draw_reverse_order("osu_draw_reverse_order", false);
-ConVar osu_draw_playfield_border("osu_draw_playfield_border", true);
+ConVar osu_draw_followpoints("osu_draw_followpoints", true, FCVAR_NONE);
+ConVar osu_draw_reverse_order("osu_draw_reverse_order", false, FCVAR_NONE);
+ConVar osu_draw_playfield_border("osu_draw_playfield_border", true, FCVAR_NONE);
 
-ConVar osu_stacking("osu_stacking", true, "Whether to use stacking calculations or not");
-ConVar osu_stacking_leniency_override("osu_stacking_leniency_override", -1.0f);
+ConVar osu_stacking("osu_stacking", true, FCVAR_NONE, "Whether to use stacking calculations or not");
+ConVar osu_stacking_leniency_override("osu_stacking_leniency_override", -1.0f, FCVAR_NONE);
 
-ConVar osu_auto_snapping_strength("osu_auto_snapping_strength", 1.0f, "How many iterations of quadratic interpolation to use, more = snappier, 0 = linear");
-ConVar osu_auto_cursordance("osu_auto_cursordance", false);
-ConVar osu_autopilot_snapping_strength("osu_autopilot_snapping_strength", 2.0f, "How many iterations of quadratic interpolation to use, more = snappier, 0 = linear");
-ConVar osu_autopilot_lenience("osu_autopilot_lenience", 0.75f);
+ConVar osu_auto_snapping_strength("osu_auto_snapping_strength", 1.0f, FCVAR_NONE, "How many iterations of quadratic interpolation to use, more = snappier, 0 = linear");
+ConVar osu_auto_cursordance("osu_auto_cursordance", false, FCVAR_NONE);
+ConVar osu_autopilot_snapping_strength("osu_autopilot_snapping_strength", 2.0f, FCVAR_NONE, "How many iterations of quadratic interpolation to use, more = snappier, 0 = linear");
+ConVar osu_autopilot_lenience("osu_autopilot_lenience", 0.75f, FCVAR_NONE);
 
-ConVar osu_followpoints_clamp("osu_followpoints_clamp", false, "clamp followpoint approach time to current circle approach time (instead of using the hardcoded default 800 ms raw)");
-ConVar osu_followpoints_anim("osu_followpoints_anim", false, "scale + move animation while fading in followpoints (osu only does this when its internal default skin is being used)");
-ConVar osu_followpoints_connect_combos("osu_followpoints_connect_combos", false, "connect followpoints even if a new combo has started");
-ConVar osu_followpoints_connect_spinners("osu_followpoints_connect_spinners", false, "connect followpoints even through spinners");
-ConVar osu_followpoints_approachtime("osu_followpoints_approachtime", 800.0f);
-ConVar osu_followpoints_scale_multiplier("osu_followpoints_scale_multiplier", 1.0f);
-ConVar osu_followpoints_separation_multiplier("osu_followpoints_separation_multiplier", 1.0f);
+ConVar osu_followpoints_clamp("osu_followpoints_clamp", false, FCVAR_NONE, "clamp followpoint approach time to current circle approach time (instead of using the hardcoded default 800 ms raw)");
+ConVar osu_followpoints_anim("osu_followpoints_anim", false, FCVAR_NONE, "scale + move animation while fading in followpoints (osu only does this when its internal default skin is being used)");
+ConVar osu_followpoints_connect_combos("osu_followpoints_connect_combos", false, FCVAR_NONE, "connect followpoints even if a new combo has started");
+ConVar osu_followpoints_connect_spinners("osu_followpoints_connect_spinners", false, FCVAR_NONE, "connect followpoints even through spinners");
+ConVar osu_followpoints_approachtime("osu_followpoints_approachtime", 800.0f, FCVAR_NONE);
+ConVar osu_followpoints_scale_multiplier("osu_followpoints_scale_multiplier", 1.0f, FCVAR_NONE);
+ConVar osu_followpoints_separation_multiplier("osu_followpoints_separation_multiplier", 1.0f, FCVAR_NONE);
 
-ConVar osu_number_scale_multiplier("osu_number_scale_multiplier", 1.0f);
+ConVar osu_number_scale_multiplier("osu_number_scale_multiplier", 1.0f, FCVAR_NONE);
 
-ConVar osu_playfield_mirror_horizontal("osu_playfield_mirror_horizontal", false);
-ConVar osu_playfield_mirror_vertical("osu_playfield_mirror_vertical", false);
-ConVar osu_playfield_rotation("osu_playfield_rotation", 0.0f, "rotates the entire playfield by this many degrees");
-ConVar osu_playfield_stretch_x("osu_playfield_stretch_x", 0.0f, "offsets/multiplies all hitobject coordinates by it (0 = default 1x playfield size, -1 = on a line, -0.5 = 0.5x playfield size, 0.5 = 1.5x playfield size)");
-ConVar osu_playfield_stretch_y("osu_playfield_stretch_y", 0.0f, "offsets/multiplies all hitobject coordinates by it (0 = default 1x playfield size, -1 = on a line, -0.5 = 0.5x playfield size, 0.5 = 1.5x playfield size)");
-ConVar osu_playfield_circular("osu_playfield_circular", false, "whether the playfield area should be transformed from a rectangle into a circle/disc/oval");
+ConVar osu_playfield_mirror_horizontal("osu_playfield_mirror_horizontal", false, FCVAR_NONE);
+ConVar osu_playfield_mirror_vertical("osu_playfield_mirror_vertical", false, FCVAR_NONE);
+ConVar osu_playfield_rotation("osu_playfield_rotation", 0.0f, FCVAR_NONE, "rotates the entire playfield by this many degrees");
+ConVar osu_playfield_stretch_x("osu_playfield_stretch_x", 0.0f, FCVAR_NONE, "offsets/multiplies all hitobject coordinates by it (0 = default 1x playfield size, -1 = on a line, -0.5 = 0.5x playfield size, 0.5 = 1.5x playfield size)");
+ConVar osu_playfield_stretch_y("osu_playfield_stretch_y", 0.0f, FCVAR_NONE, "offsets/multiplies all hitobject coordinates by it (0 = default 1x playfield size, -1 = on a line, -0.5 = 0.5x playfield size, 0.5 = 1.5x playfield size)");
+ConVar osu_playfield_circular("osu_playfield_circular", false, FCVAR_NONE, "whether the playfield area should be transformed from a rectangle into a circle/disc/oval");
 
-ConVar osu_drain_lazer_health_min("osu_drain_lazer_health_min", 0.95f);
-ConVar osu_drain_lazer_health_mid("osu_drain_lazer_health_mid", 0.70f);
-ConVar osu_drain_lazer_health_max("osu_drain_lazer_health_max", 0.30f);
+ConVar osu_drain_lazer_health_min("osu_drain_lazer_health_min", 0.95f, FCVAR_NONE);
+ConVar osu_drain_lazer_health_mid("osu_drain_lazer_health_mid", 0.70f, FCVAR_NONE);
+ConVar osu_drain_lazer_health_max("osu_drain_lazer_health_max", 0.30f, FCVAR_NONE);
 
-ConVar osu_mod_wobble("osu_mod_wobble", false);
-ConVar osu_mod_wobble2("osu_mod_wobble2", false);
-ConVar osu_mod_wobble_strength("osu_mod_wobble_strength", 25.0f);
-ConVar osu_mod_wobble_frequency("osu_mod_wobble_frequency", 1.0f);
-ConVar osu_mod_wobble_rotation_speed("osu_mod_wobble_rotation_speed", 1.0f);
-ConVar osu_mod_jigsaw2("osu_mod_jigsaw2", false);
-ConVar osu_mod_jigsaw_followcircle_radius_factor("osu_mod_jigsaw_followcircle_radius_factor", 0.0f);
-ConVar osu_mod_shirone("osu_mod_shirone", false);
-ConVar osu_mod_shirone_combo("osu_mod_shirone_combo", 20.0f);
-ConVar osu_mod_mafham_render_chunksize("osu_mod_mafham_render_chunksize", 15, "render this many hitobjects per frame chunk into the scene buffer (spreads rendering across many frames to minimize lag)");
+ConVar osu_mod_wobble("osu_mod_wobble", false, FCVAR_NONE);
+ConVar osu_mod_wobble2("osu_mod_wobble2", false, FCVAR_NONE);
+ConVar osu_mod_wobble_strength("osu_mod_wobble_strength", 25.0f, FCVAR_NONE);
+ConVar osu_mod_wobble_frequency("osu_mod_wobble_frequency", 1.0f, FCVAR_NONE);
+ConVar osu_mod_wobble_rotation_speed("osu_mod_wobble_rotation_speed", 1.0f, FCVAR_NONE);
+ConVar osu_mod_jigsaw2("osu_mod_jigsaw2", false, FCVAR_NONE);
+ConVar osu_mod_jigsaw_followcircle_radius_factor("osu_mod_jigsaw_followcircle_radius_factor", 0.0f, FCVAR_NONE);
+ConVar osu_mod_shirone("osu_mod_shirone", false, FCVAR_NONE);
+ConVar osu_mod_shirone_combo("osu_mod_shirone_combo", 20.0f, FCVAR_NONE);
+ConVar osu_mod_mafham_render_chunksize("osu_mod_mafham_render_chunksize", 15, FCVAR_NONE, "render this many hitobjects per frame chunk into the scene buffer (spreads rendering across many frames to minimize lag)");
 
-ConVar osu_mandala("osu_mandala", false);
-ConVar osu_mandala_num("osu_mandala_num", 7);
+ConVar osu_mandala("osu_mandala", false, FCVAR_NONE);
+ConVar osu_mandala_num("osu_mandala_num", 7, FCVAR_NONE);
 
-ConVar osu_debug_hiterrorbar_misaims("osu_debug_hiterrorbar_misaims", false);
+ConVar osu_debug_hiterrorbar_misaims("osu_debug_hiterrorbar_misaims", false, FCVAR_NONE);
 
-ConVar osu_pp_live_timeout("osu_pp_live_timeout", 1.0f, "show message that we're still calculating stars after this many seconds, on the first start of the beatmap");
+ConVar osu_pp_live_timeout("osu_pp_live_timeout", 1.0f, FCVAR_NONE, "show message that we're still calculating stars after this many seconds, on the first start of the beatmap");
 
 ConVar *OsuBeatmapStandard::m_osu_draw_statistics_pp_ref = NULL;
 ConVar *OsuBeatmapStandard::m_osu_draw_statistics_livestars_ref = NULL;
@@ -1420,16 +1420,23 @@ Vector3 OsuBeatmapStandard::osuCoordsTo3D(Vector2 coords, const OsuHitObject *hi
 		if (depthMultiplier >= -1.0f)
 		{
 			const float spawnDistance = -0.5f;
-			const float overshootDistance = 0.0f;
+			const float overshootDistance = 0.2f;
 
-			const float stopOvershootPercent = -0.2f;
+			const float stopOvershootPercent = 0.5f;
 
 			float depthMultiplierClamped = clamp<float>(depthMultiplier, -1.0f, stopOvershootPercent); // -1 0 stopOvershootPercent
-			depthMultiplierClamped = (depthMultiplierClamped + 1.0f) / (1.0f + stopOvershootPercent); // 0 1
+			depthMultiplierClamped = (depthMultiplierClamped + 1.0f) / (1.0f); // 0 1+stopOvershootPercent
 
-			depthMultiplierClamped = 1.0f - (1.0f - depthMultiplierClamped)*(1.0f - depthMultiplierClamped);
-			//depthMultiplierClamped = 1.0f - (1.0f - depthMultiplierClamped)*(1.0f - depthMultiplierClamped);
-			//depthMultiplierClamped = 1.0f - (1.0f - depthMultiplierClamped)*(1.0f - depthMultiplierClamped);
+			if (depthMultiplierClamped < 1.0f)
+			{
+				//depthMultiplierClamped = 1.0f - (1.0f - depthMultiplierClamped)*(1.0f - depthMultiplierClamped);
+				//depthMultiplierClamped = 1.0f - (1.0f - depthMultiplierClamped)*(1.0f - depthMultiplierClamped);
+				//depthMultiplierClamped = 1.0f - (1.0f - depthMultiplierClamped)*(1.0f - depthMultiplierClamped);
+			}
+			else
+			{
+				//depthMultiplierClamped = 1.0f - (1.0f - (depthMultiplierClamped - 1.0f)) * (1.0f - (depthMultiplierClamped - 1.0f));
+			}
 
 			coords3d.z += lerp<float>(spawnDistance, overshootDistance, depthMultiplierClamped);
 		}

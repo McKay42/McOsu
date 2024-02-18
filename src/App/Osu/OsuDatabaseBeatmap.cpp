@@ -30,31 +30,31 @@
 #include <sstream>
 #include <iostream>
 
-ConVar osu_mod_random("osu_mod_random", false);
-ConVar osu_mod_random_seed("osu_mod_random_seed", 0, "0 = random seed every reload, any other value will force that value to be used as the seed");
-ConVar osu_mod_random_circle_offset_x_percent("osu_mod_random_circle_offset_x_percent", 1.0f, "how much the randomness affects things");
-ConVar osu_mod_random_circle_offset_y_percent("osu_mod_random_circle_offset_y_percent", 1.0f, "how much the randomness affects things");
-ConVar osu_mod_random_slider_offset_x_percent("osu_mod_random_slider_offset_x_percent", 1.0f, "how much the randomness affects things");
-ConVar osu_mod_random_slider_offset_y_percent("osu_mod_random_slider_offset_y_percent", 1.0f, "how much the randomness affects things");
-ConVar osu_mod_random_spinner_offset_x_percent("osu_mod_random_spinner_offset_x_percent", 1.0f, "how much the randomness affects things");
-ConVar osu_mod_random_spinner_offset_y_percent("osu_mod_random_spinner_offset_y_percent", 1.0f, "how much the randomness affects things");
-ConVar osu_mod_reverse_sliders("osu_mod_reverse_sliders", false);
-ConVar osu_mod_strict_tracking("osu_mod_strict_tracking", false);
-ConVar osu_mod_strict_tracking_remove_slider_ticks("osu_mod_strict_tracking_remove_slider_ticks", false, "whether the strict tracking mod should remove slider ticks or not, this changed after its initial implementation in lazer");
+ConVar osu_mod_random("osu_mod_random", false, FCVAR_NONE);
+ConVar osu_mod_random_seed("osu_mod_random_seed", 0, FCVAR_NONE, "0 = random seed every reload, any other value will force that value to be used as the seed");
+ConVar osu_mod_random_circle_offset_x_percent("osu_mod_random_circle_offset_x_percent", 1.0f, FCVAR_NONE, "how much the randomness affects things");
+ConVar osu_mod_random_circle_offset_y_percent("osu_mod_random_circle_offset_y_percent", 1.0f, FCVAR_NONE, "how much the randomness affects things");
+ConVar osu_mod_random_slider_offset_x_percent("osu_mod_random_slider_offset_x_percent", 1.0f, FCVAR_NONE, "how much the randomness affects things");
+ConVar osu_mod_random_slider_offset_y_percent("osu_mod_random_slider_offset_y_percent", 1.0f, FCVAR_NONE, "how much the randomness affects things");
+ConVar osu_mod_random_spinner_offset_x_percent("osu_mod_random_spinner_offset_x_percent", 1.0f, FCVAR_NONE, "how much the randomness affects things");
+ConVar osu_mod_random_spinner_offset_y_percent("osu_mod_random_spinner_offset_y_percent", 1.0f, FCVAR_NONE, "how much the randomness affects things");
+ConVar osu_mod_reverse_sliders("osu_mod_reverse_sliders", false, FCVAR_NONE);
+ConVar osu_mod_strict_tracking("osu_mod_strict_tracking", false, FCVAR_NONE);
+ConVar osu_mod_strict_tracking_remove_slider_ticks("osu_mod_strict_tracking_remove_slider_ticks", false, FCVAR_NONE, "whether the strict tracking mod should remove slider ticks or not, this changed after its initial implementation in lazer");
 
-ConVar osu_show_approach_circle_on_first_hidden_object("osu_show_approach_circle_on_first_hidden_object", true);
+ConVar osu_show_approach_circle_on_first_hidden_object("osu_show_approach_circle_on_first_hidden_object", true, FCVAR_NONE);
 
-ConVar osu_stars_stacking("osu_stars_stacking", true, "respect hitobject stacking before calculating stars/pp");
+ConVar osu_stars_stacking("osu_stars_stacking", true, FCVAR_NONE, "respect hitobject stacking before calculating stars/pp");
 
-ConVar osu_slider_max_repeats("osu_slider_max_repeats", 9000, "maximum number of repeats allowed per slider (clamp range)");
-ConVar osu_slider_max_ticks("osu_slider_max_ticks", 2048, "maximum number of ticks allowed per slider (clamp range)");
+ConVar osu_slider_max_repeats("osu_slider_max_repeats", 9000, FCVAR_NONE, "maximum number of repeats allowed per slider (clamp range)");
+ConVar osu_slider_max_ticks("osu_slider_max_ticks", 2048, FCVAR_NONE, "maximum number of ticks allowed per slider (clamp range)");
 
-ConVar osu_number_max("osu_number_max", 0, "0 = disabled, 1/2/3/4/etc. limits visual circle numbers to this number");
-ConVar osu_ignore_beatmap_combo_numbers("osu_ignore_beatmap_combo_numbers", false, "may be used in conjunction with osu_number_max");
+ConVar osu_number_max("osu_number_max", 0, FCVAR_NONE, "0 = disabled, 1/2/3/4/etc. limits visual circle numbers to this number");
+ConVar osu_ignore_beatmap_combo_numbers("osu_ignore_beatmap_combo_numbers", false, FCVAR_NONE, "may be used in conjunction with osu_number_max");
 
-ConVar osu_beatmap_version("osu_beatmap_version", 128, "maximum supported .osu file version, above this will simply not load (this was 14 but got bumped to 128 due to lazer backports)");
-ConVar osu_beatmap_max_num_hitobjects("osu_beatmap_max_num_hitobjects", 40000, "maximum number of total allowed hitobjects per beatmap (prevent crashing on deliberate game-breaking beatmaps)");
-ConVar osu_beatmap_max_num_slider_scoringtimes("osu_beatmap_max_num_slider_scoringtimes", 32768, "maximum number of slider score increase events allowed per slider (prevent crashing on deliberate game-breaking beatmaps)");
+ConVar osu_beatmap_version("osu_beatmap_version", 128, FCVAR_NONE, "maximum supported .osu file version, above this will simply not load (this was 14 but got bumped to 128 due to lazer backports)");
+ConVar osu_beatmap_max_num_hitobjects("osu_beatmap_max_num_hitobjects", 40000, FCVAR_NONE, "maximum number of total allowed hitobjects per beatmap (prevent crashing on deliberate game-breaking beatmaps)");
+ConVar osu_beatmap_max_num_slider_scoringtimes("osu_beatmap_max_num_slider_scoringtimes", 32768, FCVAR_NONE, "maximum number of slider score increase events allowed per slider (prevent crashing on deliberate game-breaking beatmaps)");
 
 unsigned long long OsuDatabaseBeatmap::sortHackCounter = 0;
 
