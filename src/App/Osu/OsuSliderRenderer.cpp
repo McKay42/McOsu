@@ -24,6 +24,7 @@
 #include "OpenGLLegacyInterface.h"
 #include "OpenGL3Interface.h"
 #include "OpenGLES2Interface.h"
+#include "DirectX11Interface.h"
 
 Shader *OsuSliderRenderer::BLEND_SHADER = NULL;
 Shader *OsuSliderRenderer::BLEND_SHADER_VR = NULL;
@@ -393,8 +394,23 @@ void OsuSliderRenderer::draw(Graphics *g, Osu *osu, VertexArrayObject *vao, cons
 							OpenGLES2Interface *gles2 = dynamic_cast<OpenGLES2Interface*>(g);
 							if (gles2 != NULL)
 							{
-								gles2->forceUpdateTransform();
-								Matrix4 mvp = gles2->getMVP();
+								g->forceUpdateTransform();
+								Matrix4 mvp = g->getMVP();
+								BLEND_SHADER->setUniformMatrix4fv("mvp", mvp);
+							}
+						}
+
+#endif
+
+#ifdef MCENGINE_FEATURE_DIRECTX11
+
+						if (!osu_slider_use_gradient_image.getBool())
+						{
+							DirectX11Interface *dx11 = dynamic_cast<DirectX11Interface*>(g);
+							if (dx11 != NULL)
+							{
+								g->forceUpdateTransform();
+								Matrix4 mvp = g->getMVP();
 								BLEND_SHADER->setUniformMatrix4fv("mvp", mvp);
 							}
 						}
@@ -434,10 +450,6 @@ void OsuSliderRenderer::drawVR(Graphics *g, Osu *osu, OsuVR *vr, Matrix4 &mvp, f
 #if defined(MCENGINE_FEATURE_OPENGL)
 
 	const bool isOpenGLRendererHack = (dynamic_cast<OpenGLLegacyInterface*>(g) != NULL || dynamic_cast<OpenGL3Interface*>(g) != NULL);
-
-#elif defined(MCENGINE_FEATURE_OPENGLES)
-
-	//const bool isOpenGLRendererHack = (dynamic_cast<OpenGLES2Interface*>(g) != NULL);
 
 #endif
 
@@ -627,94 +639,6 @@ void OsuSliderRenderer::drawVR(Graphics *g, Osu *osu, OsuVR *vr, Matrix4 &mvp, f
 	vr->getShaderTexturedLegacyGeneric()->enable();
 }
 
-void OsuSliderRenderer::drawMM(Graphics *g, Osu *osu, const std::vector<Vector2> &points, float hitcircleDiameter, float from, float to, Color undimmedColor, float colorRGBMultiplier, float alpha, long sliderTimeForRainbow)
-{
-	if (osu_slider_alpha_multiplier.getFloat() <= 0.0f || alpha <= 0.0f) return;
-
-	checkUpdateVars(osu, hitcircleDiameter);
-
-	// TODO: shit
-	int numPointsTotal = points.size();
-	///int numPointsTotal = 0;
-	///for (int i=0; i<points.size(); i++)
-	///{
-	///	numPointsTotal += points[i].size();
-	///}
-
-	const int drawFromIndex = clamp<int>((int)std::round(numPointsTotal * from), 0, numPointsTotal);
-	const int drawUpToIndex = clamp<int>((int)std::round(numPointsTotal * to), 0, numPointsTotal);
-
-	// reset
-	resetRenderTargetBoundingBox();
-
-	g->setDepthBuffer(true);
-	g->setBlending(false);
-	{
-		osu->getSliderFrameBuffer()->enable();
-
-		const Color undimmedBorderColor = osu_slider_border_tint_combo_color.getBool() ? undimmedColor : osu->getSkin()->getSliderBorderColor();
-		const Color undimmedBodyColor = osu->getSkin()->isSliderTrackOverridden() ? osu->getSkin()->getSliderTrackOverride() : undimmedColor;
-
-		Color dimmedBorderColor = COLOR(255, (int)(COLOR_GET_Ri(undimmedBorderColor)*colorRGBMultiplier), (int)(COLOR_GET_Gi(undimmedBorderColor)*colorRGBMultiplier), (int)(COLOR_GET_Bi(undimmedBorderColor)*colorRGBMultiplier));
-		Color dimmedBodyColor = COLOR(255, (int)(COLOR_GET_Ri(undimmedBodyColor)*colorRGBMultiplier), (int)(COLOR_GET_Gi(undimmedBodyColor)*colorRGBMultiplier), (int)(COLOR_GET_Bi(undimmedBodyColor)*colorRGBMultiplier));
-
-		if (osu_slider_rainbow.getBool())
-		{
-			float frequency = 0.3f;
-			float time = engine->getTime()*20;
-
-			char red1	= std::sin(frequency*time + 0 + sliderTimeForRainbow) * 127 + 128;
-			char green1	= std::sin(frequency*time + 2 + sliderTimeForRainbow) * 127 + 128;
-			char blue1	= std::sin(frequency*time + 4 + sliderTimeForRainbow) * 127 + 128;
-
-			char red2	= std::sin(frequency*time*1.5f + 0 + sliderTimeForRainbow) * 127 + 128;
-			char green2	= std::sin(frequency*time*1.5f + 2 + sliderTimeForRainbow) * 127 + 128;
-			char blue2	= std::sin(frequency*time*1.5f + 4 + sliderTimeForRainbow) * 127 + 128;
-
-			dimmedBorderColor = COLOR(255, red1, green1, blue1);
-			dimmedBodyColor = COLOR(255, red2, green2, blue2);
-		}
-
-		if (!osu_slider_use_gradient_image.getBool())
-		{
-			BLEND_SHADER->enable();
-			BLEND_SHADER->setUniform1i("style", osu_slider_osu_next_style.getBool() ? 1 : 0);
-			BLEND_SHADER->setUniform1f("bodyAlphaMultiplier", osu_slider_body_alpha_multiplier.getFloat());
-			BLEND_SHADER->setUniform1f("bodyColorSaturation", osu_slider_body_color_saturation.getFloat());
-			BLEND_SHADER->setUniform1f("borderSizeMultiplier", osu_slider_border_size_multiplier.getFloat());
-			BLEND_SHADER->setUniform1f("borderFeather", osu_slider_border_feather.getFloat());
-			BLEND_SHADER->setUniform3f("colBorder", COLOR_GET_Rf(dimmedBorderColor), COLOR_GET_Gf(dimmedBorderColor), COLOR_GET_Bf(dimmedBorderColor));
-			BLEND_SHADER->setUniform3f("colBody", COLOR_GET_Rf(dimmedBodyColor), COLOR_GET_Gf(dimmedBodyColor), COLOR_GET_Bf(dimmedBodyColor));
-		}
-
-		g->setColor(COLORf(1.0f, colorRGBMultiplier, colorRGBMultiplier, colorRGBMultiplier)); // this only affects the gradient image if used (meaning shaders either don't work or are disabled on purpose)
-		osu->getSkin()->getSliderGradient()->bind();
-
-		// draw curve mesh
-		{
-			drawFillSliderBodyMM(g, points, hitcircleDiameter/2.0f, drawFromIndex, drawUpToIndex);
-		}
-
-		if (!osu_slider_use_gradient_image.getBool())
-			BLEND_SHADER->disable();
-
-		osu->getSliderFrameBuffer()->disable();
-	}
-	g->setBlending(true);
-	g->setDepthBuffer(false);
-
-	// now draw the slider to the screen (with alpha blending enabled again)
-	int pixelFudge = 2;
-	m_fBoundingBoxMinX -= pixelFudge;
-	m_fBoundingBoxMaxX += pixelFudge;
-	m_fBoundingBoxMinY -= pixelFudge;
-	m_fBoundingBoxMaxY += pixelFudge;
-
-	osu->getSliderFrameBuffer()->setColor(COLORf(alpha*osu_slider_alpha_multiplier.getFloat(), 1.0f, 1.0f, 1.0f));
-	///osu->getSliderFrameBuffer()->drawRect(g, m_fBoundingBoxMinX, m_fBoundingBoxMinY, m_fBoundingBoxMaxX - m_fBoundingBoxMinX, m_fBoundingBoxMaxY - m_fBoundingBoxMinY);
-	osu->getSliderFrameBuffer()->draw(g, 0, 0);
-}
-
 void OsuSliderRenderer::drawFillSliderBodyPeppy(Graphics *g, Osu *osu, const std::vector<Vector2> &points, VertexArrayObject *circleMesh, float radius, int drawFromIndex, int drawUpToIndex, Shader *shader)
 {
 	if (drawFromIndex < 0)
@@ -725,6 +649,12 @@ void OsuSliderRenderer::drawFillSliderBodyPeppy(Graphics *g, Osu *osu, const std
 #ifdef MCENGINE_FEATURE_OPENGLES
 
 	OpenGLES2Interface *gles2 = dynamic_cast<OpenGLES2Interface*>(g);
+
+#endif
+
+#ifdef MCENGINE_FEATURE_DIRECTX11
+
+	DirectX11Interface *dx11 = dynamic_cast<DirectX11Interface*>(g);
 
 #endif
 
@@ -748,8 +678,19 @@ void OsuSliderRenderer::drawFillSliderBodyPeppy(Graphics *g, Osu *osu, const std
 
 			if (shader != NULL && gles2 != NULL)
 			{
-				gles2->forceUpdateTransform();
-				Matrix4 mvp = gles2->getMVP();
+				g->forceUpdateTransform();
+				Matrix4 mvp = g->getMVP();
+				shader->setUniformMatrix4fv("mvp", mvp);
+			}
+
+#endif
+
+#ifdef MCENGINE_FEATURE_DIRECTX11
+
+			if (shader != NULL && dx11 != NULL)
+			{
+				g->forceUpdateTransform();
+				Matrix4 mvp = g->getMVP();
 				shader->setUniformMatrix4fv("mvp", mvp);
 			}
 
@@ -829,168 +770,29 @@ void OsuSliderRenderer::drawFillSliderBodyPeppyVR2(Graphics *g, OsuVR *vr, Matri
 	}
 }
 
-void OsuSliderRenderer::drawFillSliderBodyMM(Graphics *g, const std::vector<Vector2> &points, float radius, int drawFromIndex, int drawUpToIndex)
-{
-	// modified version of https://github.com/ppy/osu-framework/blob/master/osu.Framework/Graphics/Lines/Path_DrawNode.cs
-
-	// TODO: remaining problems
-	// 1) how to handle snaking? very very annoying to do via draw call bounds (due to inconsistent mesh topology)
-	// 2) check performance for baked vao, maybe as a compatibility option for slower pcs
-	// 3) recalculating every frame is not an option, way too slow
-	// 4) since we already have smoothsnake begin+end circles, could precalculate a list of draw call bounds indices for snaking and shrinking respectively
-	// 5) unbaked performance is way worse than legacy sliders, so it will only be used in baked form
-
-	VertexArrayObject vao(Graphics::PRIMITIVE::PRIMITIVE_TRIANGLES);
-
-	struct Helper
-	{
-		static inline Vector2 pointOnCircle(float angle) {return Vector2(std::sin(angle), -std::cos(angle));}
-
-		static void addLineCap(Vector2 origin, float theta, float thetaDiff, float radius, VertexArrayObject &vao)
-		{
-			const float step = PI / 32.0f; // MAX_RES
-
-			const float dir = sign<float>(thetaDiff);
-			thetaDiff = dir * thetaDiff;
-
-			const int amountPoints = (int)std::ceil(thetaDiff / step);
-
-			if (amountPoints > 0)
-			{
-				if (dir < 0)
-					theta += PI;
-
-				Vector2 current = origin + pointOnCircle(theta) * radius;
-
-				for (int p=1; p<=amountPoints; p++)
-				{
-					// center
-					vao.addTexcoord(1, 0);
-					vao.addVertex(origin.x, origin.y, MESH_CENTER_HEIGHT);
-
-					// first outer point
-					vao.addTexcoord(0, 0);
-					vao.addVertex(current.x, current.y);
-
-					const float angularOffset = std::min(p * step, thetaDiff);
-					current = origin + pointOnCircle(theta + dir * angularOffset) * radius;
-
-					// second outer point
-					vao.addTexcoord(0, 0);
-					vao.addVertex(current.x, current.y);
-				}
-			}
-		}
-	};
-
-	float prevLineTheta = 0.0f;
-
-	for (int i=1; i<points.size(); i++)
-	{
-		const Vector2 lineStartPoint = points[i - 1];
-		const Vector2 lineEndPoint = points[i];
-
-		const Vector2 lineDirection = (lineEndPoint - lineStartPoint);
-		const Vector2 lineDirectionNormalized = Vector2(lineDirection.x, lineDirection.y).normalize();
-		const Vector2 lineOrthogonalDirection = Vector2(-lineDirectionNormalized.y, lineDirectionNormalized.x);
-
-		const float lineTheta = std::atan2(lineEndPoint.y - lineStartPoint.y, lineEndPoint.x - lineStartPoint.x);
-
-		// start cap
-		if (i == 1)
-			Helper::addLineCap(lineStartPoint, lineTheta + PI, PI, radius, vao);
-
-		// body
-		{
-			const Vector2 ortho = lineOrthogonalDirection;
-
-			const Vector2 screenLineLeftStartPoint = lineStartPoint + ortho * radius;
-			const Vector2 screenLineLeftEndPoint = lineEndPoint + ortho * radius;
-
-			const Vector2 screenLineRightStartPoint = lineStartPoint - ortho * radius;
-			const Vector2 screenLineRightEndPoint = lineEndPoint - ortho * radius;
-
-			const Vector2 screenLineStartPoint = lineStartPoint;
-			const Vector2 screenLineEndPoint = lineEndPoint;
-
-			// type is triangles, build a rectangle out of 6 vertices
-
-			//
-			// 1   3   5
-			// *---*---*
-			// |  /|  /|
-			// | / | / |     // the line 3-4 is the center of the slider (with a raised z-coordinate for blending)
-			// |/  |/  |
-			// *---*---*
-			// 2   4   6
-			//
-
-			vao.addTexcoord(0, 0);
-			vao.addVertex(screenLineLeftEndPoint.x, screenLineLeftEndPoint.y); // 1
-			vao.addTexcoord(0, 0);
-			vao.addVertex(screenLineLeftStartPoint.x, screenLineLeftStartPoint.y); // 2
-			vao.addTexcoord(1, 0);
-			vao.addVertex(screenLineEndPoint.x, screenLineEndPoint.y, MESH_CENTER_HEIGHT); // 3
-
-			vao.addTexcoord(1, 0);
-			vao.addVertex(screenLineEndPoint.x, screenLineEndPoint.y, MESH_CENTER_HEIGHT); // 3
-			vao.addTexcoord(0, 0);
-			vao.addVertex(screenLineLeftStartPoint.x, screenLineLeftStartPoint.y); // 2
-			vao.addTexcoord(1, 0);
-			vao.addVertex(screenLineStartPoint.x, screenLineStartPoint.y, MESH_CENTER_HEIGHT); // 4
-
-			vao.addTexcoord(1, 0);
-			vao.addVertex(screenLineEndPoint.x, screenLineEndPoint.y, MESH_CENTER_HEIGHT); // 3
-			vao.addTexcoord(1, 0);
-			vao.addVertex(screenLineStartPoint.x, screenLineStartPoint.y, MESH_CENTER_HEIGHT); // 4
-			vao.addTexcoord(0, 0);
-			vao.addVertex(screenLineRightEndPoint.x, screenLineRightEndPoint.y); // 5
-
-			vao.addTexcoord(0, 0);
-			vao.addVertex(screenLineRightEndPoint.x, screenLineRightEndPoint.y); // 5
-			vao.addTexcoord(1, 0);
-			vao.addVertex(screenLineStartPoint.x, screenLineStartPoint.y, MESH_CENTER_HEIGHT); // 4
-			vao.addTexcoord(0, 0);
-			vao.addVertex(screenLineRightStartPoint.x, screenLineRightStartPoint.y); // 6
-		}
-
-		// TODO: fix non-rolled-over theta causing full circle to be built at perfect angle points at e.g. reach out at 0:48
-		// these would also break snaking, so we have to handle that special case and not generate any meshes there
-
-		// wedges
-		if (i > 1)
-			Helper::addLineCap(lineStartPoint, prevLineTheta, lineTheta - prevLineTheta, radius, vao);
-
-		// end cap
-		if (i == (points.size() - 1))
-			Helper::addLineCap(lineEndPoint, lineTheta, PI, radius, vao);
-
-		prevLineTheta = lineTheta;
-	}
-
-	// draw it
-	if (vao.getNumVertices() > 0)
-	{
-		if (osu_slider_debug_wireframe.getBool())
-			g->setWireframe(true);
-
-		// draw body
-		g->drawVAO(&vao);
-
-		if (osu_slider_debug_wireframe.getBool())
-			g->setWireframe(false);
-	}
-}
-
 void OsuSliderRenderer::checkUpdateVars(Osu *osu, float hitcircleDiameter)
 {
 	// static globals
+
+#ifdef MCENGINE_FEATURE_DIRECTX11
+
+	{
+		DirectX11Interface *dx11 = dynamic_cast<DirectX11Interface*>(engine->getGraphics());
+		if (dx11 != NULL)
+		{
+			// NOTE: compensate for zn/zf Camera::buildMatrixOrtho2DDXLH() differences compared to OpenGL
+			if (MESH_CENTER_HEIGHT > 0.0f)
+				MESH_CENTER_HEIGHT = -MESH_CENTER_HEIGHT;
+		}
+	}
+
+#endif
 
 	// build shaders and circle mesh
 	if (BLEND_SHADER == NULL) // only do this once
 	{
 		// build shaders
-		BLEND_SHADER = engine->getResourceManager()->loadShader("slider.vsh", "slider.fsh", "slider");
+		BLEND_SHADER = engine->getResourceManager()->loadShader2("slider.mcshader", "slider");
 		if (osu != NULL && osu->isInVRMode())
 			BLEND_SHADER_VR = engine->getResourceManager()->loadShader("sliderVR.vsh", "sliderVR.fsh", "sliderVR");
 	}

@@ -207,7 +207,8 @@ OsuVR::OsuVR(Osu *osu)
 				"   gl_FragColor = texture2D(mytexture, texCoords) * gl_Color;\n"
 				"}\n"
 		);
-		///m_shaderTexturedLegacyGeneric = engine->getResourceManager()->loadShader("texturedLegacyGeneric.vsh", "texturedLegacyGeneric.fsh");
+		/////m_shaderTexturedLegacyGeneric = engine->getResourceManager()->loadShader("texturedLegacyGeneric.vsh", "texturedLegacyGeneric.fsh");
+		///m_shaderTexturedLegacyGeneric = engine->getResourceManager()->loadShader2("texturedLegacyGeneric.mcshader");
 
 		m_shaderGenericUntextured = engine->getResourceManager()->createShader(
 

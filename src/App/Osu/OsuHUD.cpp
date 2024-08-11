@@ -43,6 +43,7 @@
 
 #include "OsuUIVolumeSlider.h"
 
+#include "DirectX11Interface.h"
 #include "OpenGLES2Interface.h"
 
 ConVar osu_automatic_cursor_size("osu_automatic_cursor_size", false, FCVAR_NONE);
@@ -255,7 +256,7 @@ OsuHUD::OsuHUD(Osu *osu) : OsuScreen(osu)
 
 	// resources
 	m_tempFont = engine->getResourceManager()->getFont("FONT_DEFAULT");
-	m_cursorTrailShader = engine->getResourceManager()->loadShader("cursortrail.vsh", "cursortrail.fsh", "cursortrail");
+	m_cursorTrailShader = engine->getResourceManager()->loadShader2("cursortrail.mcshader", "cursortrail");
 	m_cursorTrail.reserve(osu_cursor_trail_max_size.getInt()*2);
 	if (env->getOS() == Environment::OS::OS_HORIZON)
 		m_cursorTrail2.reserve(osu_cursor_trail_max_size.getInt()*2);
@@ -945,8 +946,20 @@ void OsuHUD::drawCursorTrailInt(Graphics *g, Shader *trailShader, std::vector<CU
 					OpenGLES2Interface *gles2 = dynamic_cast<OpenGLES2Interface*>(g);
 					if (gles2 != NULL)
 					{
-						gles2->forceUpdateTransform();
-						Matrix4 mvp = gles2->getMVP();
+						g->forceUpdateTransform();
+						Matrix4 mvp = g->getMVP();
+						trailShader->setUniformMatrix4fv("mvp", mvp);
+					}
+				}
+#endif
+
+#ifdef MCENGINE_FEATURE_DIRECTX11
+				{
+					DirectX11Interface *dx11 = dynamic_cast<DirectX11Interface*>(g);
+					if (dx11 != NULL)
+					{
+						g->forceUpdateTransform();
+						Matrix4 mvp = g->getMVP();
 						trailShader->setUniformMatrix4fv("mvp", mvp);
 					}
 				}

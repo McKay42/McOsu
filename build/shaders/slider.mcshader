@@ -1,0 +1,446 @@
+###OpenGLLegacyInterface::VertexShader##########################################################################################
+
+#version 110
+
+varying vec2 tex_coord;
+
+void main()
+{	
+	gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+	
+	gl_FrontColor = gl_Color;
+	tex_coord = gl_MultiTexCoord0.xy;
+}
+
+###OpenGLLegacyInterface::FragmentShader########################################################################################
+
+#version 110
+
+uniform sampler2D tex;
+uniform int style;
+uniform float bodyColorSaturation;
+uniform float bodyAlphaMultiplier;
+uniform float borderSizeMultiplier;
+uniform float borderFeather;
+uniform vec3 colBorder;
+uniform vec3 colBody;
+
+varying vec2 tex_coord;
+
+const float defaultTransitionSize = 0.011;
+const float defaultBorderSize = 0.11;
+const float outerShadowSize = 0.08;
+
+vec4 getInnerBodyColor(in vec4 bodyColor)
+{
+	float brightnessMultiplier = 0.25;
+	bodyColor.r = min(1.0, bodyColor.r * (1.0 + 0.5 * brightnessMultiplier) + brightnessMultiplier);
+	bodyColor.g = min(1.0, bodyColor.g * (1.0 + 0.5 * brightnessMultiplier) + brightnessMultiplier);
+	bodyColor.b = min(1.0, bodyColor.b * (1.0 + 0.5 * brightnessMultiplier) + brightnessMultiplier);
+	return vec4(bodyColor);
+}
+
+vec4 getOuterBodyColor(in vec4 bodyColor)
+{
+	float darknessMultiplier = 0.1;
+	bodyColor.r = min(1.0, bodyColor.r / (1.0 + darknessMultiplier));
+	bodyColor.g = min(1.0, bodyColor.g / (1.0 + darknessMultiplier));
+	bodyColor.b = min(1.0, bodyColor.b / (1.0 + darknessMultiplier));
+	return vec4(bodyColor);
+}
+
+void main()
+{
+	float borderSize = (defaultBorderSize + borderFeather) * borderSizeMultiplier;
+	float transitionSize = defaultTransitionSize + borderFeather;
+
+	// output var
+	vec4 out_color = vec4(0.0);
+	
+	// dynamic color calculations
+	vec4 borderColor = vec4(colBorder.x, colBorder.y, colBorder.z, 1.0);
+	vec4 bodyColor = vec4(colBody.x, colBody.y, colBody.z, 0.7*bodyAlphaMultiplier);
+	vec4 outerShadowColor = vec4(0, 0, 0, 0.25);
+	vec4 innerBodyColor = getInnerBodyColor(bodyColor);
+	vec4 outerBodyColor = getOuterBodyColor(bodyColor);
+	
+	innerBodyColor.rgb *= bodyColorSaturation;
+	outerBodyColor.rgb *= bodyColorSaturation;
+	
+	// osu!next style color modifications
+	if (style == 1)
+	{
+		outerBodyColor.rgb = bodyColor.rgb * bodyColorSaturation;
+		outerBodyColor.a = 1.0*bodyAlphaMultiplier;
+		innerBodyColor.rgb = bodyColor.rgb * 0.5 * bodyColorSaturation;
+		innerBodyColor.a = 0.0;
+	}
+	
+	// a bit of a hack, but better than rough edges
+	if (borderSizeMultiplier < 0.01)
+		borderColor = outerShadowColor;
+	
+	// conditional variant
+	
+	if (tex_coord.x < outerShadowSize - transitionSize) // just shadow
+	{
+		float delta = tex_coord.x / (outerShadowSize - transitionSize);
+		out_color = mix(vec4(0), outerShadowColor, delta);
+	}
+	if (tex_coord.x > outerShadowSize - transitionSize && tex_coord.x < outerShadowSize + transitionSize) // shadow + border
+	{
+		float delta = (tex_coord.x - outerShadowSize + transitionSize) / (2.0*transitionSize);
+		out_color = mix(outerShadowColor, borderColor, delta);
+	}
+	if (tex_coord.x > outerShadowSize + transitionSize && tex_coord.x < outerShadowSize + borderSize - transitionSize) // just border
+	{
+		out_color = borderColor;
+	}
+	if (tex_coord.x > outerShadowSize + borderSize - transitionSize && tex_coord.x < outerShadowSize + borderSize + transitionSize) // border + outer body
+	{
+		float delta = (tex_coord.x - outerShadowSize - borderSize + transitionSize) / (2.0*transitionSize);
+		out_color = mix(borderColor, outerBodyColor, delta);
+	}
+	if (tex_coord.x > outerShadowSize + borderSize + transitionSize) // outer body + inner body
+	{	
+		float size = outerShadowSize + borderSize + transitionSize;
+		float delta = ((tex_coord.x - size) / (1.0-size));
+		out_color = mix(outerBodyColor, innerBodyColor, delta);
+	}
+	
+	// linear variant
+	/*
+	// just shadow
+	float delta = tex_coord.x/(outerShadowSize-transitionSize);
+	out_color += mix(vec4(0.0), outerShadowColor, delta) * clamp(ceil(-delta+1.0), 0.0, 1.0);
+	
+	// shadow + border
+	delta = (tex_coord.x - outerShadowSize + transitionSize) / (2.0*transitionSize);
+	out_color += mix(outerShadowColor, borderColor, delta) * clamp(ceil(tex_coord.x - (outerShadowSize - transitionSize)), 0.0, 1.0) * clamp(ceil(-abs(delta)+1.0), 0.0, 1.0);
+	
+	// just border
+	out_color += borderColor * clamp(ceil(tex_coord.x - (outerShadowSize + transitionSize)), 0.0, 1.0) * clamp(ceil(-(tex_coord.x - (outerShadowSize + borderSize - transitionSize))), 0.0, 1.0);
+	
+	// border + outer body
+	delta = (tex_coord.x - outerShadowSize - borderSize + transitionSize) / (2.0*transitionSize);
+	out_color += mix(borderColor, outerBodyColor, delta) * clamp(ceil(tex_coord.x - (outerShadowSize + borderSize - transitionSize)), 0.0, 1.0) * clamp(ceil(-abs(delta)+1.0), 0.0, 1.0);
+	
+	// outer body + inner body
+	delta = outerShadowSize + borderSize + transitionSize;
+	delta = (tex_coord.x - delta) / (1.0-delta); // [VARIABLE REUSING INTENSIFIES]
+	out_color += mix(outerBodyColor, innerBodyColor, delta) * clamp(ceil(tex_coord.x - (outerShadowSize + borderSize + transitionSize)), 0.0, 1.0);
+	*/
+	
+	gl_FragColor = out_color;
+}
+
+###OpenGLES2Interface::VertexShader#############################################################################################
+
+#version 100
+
+attribute vec3 position;
+attribute vec2 uv;
+
+varying vec2 tex_coord;
+
+uniform mat4 mvp;
+
+void main()
+{	
+	gl_Position = mvp * vec4(position, 1.0);
+	tex_coord = uv;
+}
+
+###OpenGLES2Interface::FragmentShader###########################################################################################
+
+#version 100
+precision highp float;
+
+uniform sampler2D tex;
+uniform int style;
+uniform float bodyColorSaturation;
+uniform float bodyAlphaMultiplier;
+uniform float borderSizeMultiplier;
+uniform vec3 colBorder;
+uniform vec3 colBody;
+
+varying vec2 tex_coord;
+
+const float defaultTransitionSize = 0.011;
+const float defaultBorderSize = 0.11;
+const float outerShadowSize = 0.08;
+
+vec4 getInnerBodyColor(in vec4 bodyColor)
+{
+	float brightnessMultiplier = 0.25;
+	bodyColor.r = min(1.0, bodyColor.r * (1.0 + 0.5 * brightnessMultiplier) + brightnessMultiplier);
+	bodyColor.g = min(1.0, bodyColor.g * (1.0 + 0.5 * brightnessMultiplier) + brightnessMultiplier);
+	bodyColor.b = min(1.0, bodyColor.b * (1.0 + 0.5 * brightnessMultiplier) + brightnessMultiplier);
+	return vec4(bodyColor);
+}
+
+vec4 getOuterBodyColor(in vec4 bodyColor)
+{
+	float darknessMultiplier = 0.1;
+	bodyColor.r = min(1.0, bodyColor.r / (1.0 + darknessMultiplier));
+	bodyColor.g = min(1.0, bodyColor.g / (1.0 + darknessMultiplier));
+	bodyColor.b = min(1.0, bodyColor.b / (1.0 + darknessMultiplier));
+	return vec4(bodyColor);
+}
+
+void main()
+{
+	float borderSize = defaultBorderSize*borderSizeMultiplier;
+	const float transitionSize = defaultTransitionSize;
+
+	// output var
+	vec4 out_color = vec4(0.0);
+
+	
+	// dynamic color calculations
+	vec4 borderColor = vec4(colBorder.x, colBorder.y, colBorder.z, 1.0);
+	vec4 bodyColor = vec4(colBody.x, colBody.y, colBody.z, 0.7*bodyAlphaMultiplier);
+	vec4 outerShadowColor = vec4(0, 0, 0, 0.25);
+	vec4 innerBodyColor = getInnerBodyColor(bodyColor);
+	vec4 outerBodyColor = getOuterBodyColor(bodyColor);
+	
+	innerBodyColor.rgb *= bodyColorSaturation;
+	outerBodyColor.rgb *= bodyColorSaturation;
+	
+	// osu!next style color modifications
+	if (style == 1)
+	{
+		outerBodyColor.rgb = bodyColor.rgb * bodyColorSaturation;
+		outerBodyColor.a = 1.0*bodyAlphaMultiplier;
+		innerBodyColor.rgb = bodyColor.rgb * 0.5 * bodyColorSaturation;
+		innerBodyColor.a = 0.0;
+	}
+	
+	// a bit of a hack, but better than rough edges
+	if (borderSizeMultiplier < 0.01)
+		borderColor = outerShadowColor;
+	
+	// conditional variant
+	
+	if (tex_coord.x < outerShadowSize - transitionSize) // just shadow
+	{
+		float delta = tex_coord.x / (outerShadowSize - transitionSize);
+		out_color = mix(vec4(0), outerShadowColor, delta);
+	}
+	if (tex_coord.x > outerShadowSize - transitionSize && tex_coord.x < outerShadowSize + transitionSize) // shadow + border
+	{
+		float delta = (tex_coord.x - outerShadowSize + transitionSize) / (2.0*transitionSize);
+		out_color = mix(outerShadowColor, borderColor, delta);
+	}
+	if (tex_coord.x > outerShadowSize + transitionSize && tex_coord.x < outerShadowSize + borderSize - transitionSize) // just border
+	{
+		out_color = borderColor;
+	}
+	if (tex_coord.x > outerShadowSize + borderSize - transitionSize && tex_coord.x < outerShadowSize + borderSize + transitionSize) // border + outer body
+	{
+		float delta = (tex_coord.x - outerShadowSize - borderSize + transitionSize) / (2.0*transitionSize);
+		out_color = mix(borderColor, outerBodyColor, delta);
+	}
+	if (tex_coord.x > outerShadowSize + borderSize + transitionSize) // outer body + inner body
+	{	
+		float size = outerShadowSize + borderSize + transitionSize;
+		float delta = ((tex_coord.x - size) / (1.0-size));
+		out_color = mix(outerBodyColor, innerBodyColor, delta);
+	}
+
+	
+	// linear variant
+	/*
+	// just shadow
+	float delta = tex_coord.x/(outerShadowSize-transitionSize);
+	out_color += mix(vec4(0.0), outerShadowColor, delta) * clamp(ceil(-delta+1.0), 0.0, 1.0);
+	
+	// shadow + border
+	delta = (tex_coord.x - outerShadowSize + transitionSize) / (2.0*transitionSize);
+	out_color += mix(outerShadowColor, borderColor, delta) * clamp(ceil(tex_coord.x - (outerShadowSize - transitionSize)), 0.0, 1.0) * clamp(ceil(-abs(delta)+1.0), 0.0, 1.0);
+	
+	// just border
+	out_color += borderColor * clamp(ceil(tex_coord.x - (outerShadowSize + transitionSize)), 0.0, 1.0) * clamp(ceil(-(tex_coord.x - (outerShadowSize + borderSize - transitionSize))), 0.0, 1.0);
+	
+	// border + outer body
+	delta = (tex_coord.x - outerShadowSize - borderSize + transitionSize) / (2.0*transitionSize);
+	out_color += mix(borderColor, outerBodyColor, delta) * clamp(ceil(tex_coord.x - (outerShadowSize + borderSize - transitionSize)), 0.0, 1.0) * clamp(ceil(-abs(delta)+1.0), 0.0, 1.0);
+	
+	// outer body + inner body
+	delta = outerShadowSize + borderSize + transitionSize;
+	delta = (tex_coord.x - delta) / (1.0-delta); // [VARIABLE REUSING INTENSIFIES]
+	out_color += mix(outerBodyColor, innerBodyColor, delta) * clamp(ceil(tex_coord.x - (outerShadowSize + borderSize + transitionSize)), 0.0, 1.0);
+	*/
+	
+	gl_FragColor = out_color;
+}
+
+###DirectX11Interface::VertexShader#############################################################################################
+
+##D3D11_INPUT_ELEMENT_DESC::VS_INPUT::POSITION::DXGI_FORMAT_R32G32B32_FLOAT::D3D11_INPUT_PER_VERTEX_DATA
+##D3D11_INPUT_ELEMENT_DESC::VS_INPUT::COLOR0::DXGI_FORMAT_R32G32B32A32_FLOAT::D3D11_INPUT_PER_VERTEX_DATA
+##D3D11_INPUT_ELEMENT_DESC::VS_INPUT::TEXCOORD0::DXGI_FORMAT_R32G32_FLOAT::D3D11_INPUT_PER_VERTEX_DATA
+
+##D3D11_BUFFER_DESC::D3D11_BIND_CONSTANT_BUFFER::ModelViewProjectionConstantBuffer::mvp::float4x4
+##D3D11_BUFFER_DESC::D3D11_BIND_CONSTANT_BUFFER::ModelViewProjectionConstantBuffer::style::int
+##D3D11_BUFFER_DESC::D3D11_BIND_CONSTANT_BUFFER::ModelViewProjectionConstantBuffer::bodyAlphaMultiplier::float
+##D3D11_BUFFER_DESC::D3D11_BIND_CONSTANT_BUFFER::ModelViewProjectionConstantBuffer::bodyColorSaturation::float
+##D3D11_BUFFER_DESC::D3D11_BIND_CONSTANT_BUFFER::ModelViewProjectionConstantBuffer::borderSizeMultiplier::float
+##D3D11_BUFFER_DESC::D3D11_BIND_CONSTANT_BUFFER::ModelViewProjectionConstantBuffer::borderFeather::float
+##D3D11_BUFFER_DESC::D3D11_BIND_CONSTANT_BUFFER::ModelViewProjectionConstantBuffer::colBorder::float3
+##D3D11_BUFFER_DESC::D3D11_BIND_CONSTANT_BUFFER::ModelViewProjectionConstantBuffer::colBody::float3
+##D3D11_BUFFER_DESC::D3D11_BIND_CONSTANT_BUFFER::ModelViewProjectionConstantBuffer::padding1::float
+
+cbuffer ModelViewProjectionConstantBuffer : register(b0)
+{
+	float4x4 mvp;
+	int style;
+	float bodyAlphaMultiplier;
+	float bodyColorSaturation;
+	float borderSizeMultiplier;
+	float borderFeather;
+	float3 colBorder;
+	float3 colBody;
+	float padding1;
+};
+
+struct VS_INPUT
+{
+	float4 pos	: POSITION;
+	float4 col	: COLOR0;
+	float2 tex	: TEXCOORD0;
+};
+
+struct VS_OUTPUT
+{
+	float4 pos	: SV_Position;
+	float2 tex	: TEXCOORD0;
+	int style	: BLENDINDICES0;
+	float bodyAlphaMultiplier	: PSIZE0;
+	float bodyColorSaturation	: PSIZE1;
+	float borderSizeMultiplier	: PSIZE2;
+	float borderFeather			: PSIZE3;
+	float4 colBorder	: COLOR1;
+	float4 colBody		: COLOR2;
+};
+
+VS_OUTPUT vsmain(in VS_INPUT In)
+{
+	VS_OUTPUT Out;
+	In.pos.w = 1.0f;
+	Out.pos = mul(In.pos, mvp);
+	Out.tex = In.tex;
+	Out.style = style;
+	Out.bodyAlphaMultiplier = bodyAlphaMultiplier;
+	Out.bodyColorSaturation = bodyColorSaturation;
+	Out.borderSizeMultiplier = borderSizeMultiplier;
+	Out.borderFeather = borderFeather;
+	Out.colBorder.rgb = colBorder;
+	Out.colBorder.a = 1.0f;
+	Out.colBody.rgb = colBody;
+	Out.colBody.a = 1.0f;
+	return Out;
+};
+
+###DirectX11Interface::PixelShader##############################################################################################
+
+struct PS_INPUT
+{
+	float4 pos	: SV_Position;
+	float2 tex	: TEXCOORD0;
+	int style	: BLENDINDICES0;
+	float bodyAlphaMultiplier	: PSIZE0;
+	float bodyColorSaturation	: PSIZE1;
+	float borderSizeMultiplier	: PSIZE2;
+	float borderFeather			: PSIZE3;
+	float4 colBorder	: COLOR1;
+	float4 colBody		: COLOR2;
+};
+
+struct PS_OUTPUT
+{
+	float4 col	: SV_Target;
+};
+
+static float defaultTransitionSize = 0.011f;
+static float defaultBorderSize = 0.11f;
+static float outerShadowSize = 0.08f;
+
+float4 getInnerBodyColor(in float4 bodyColor)
+{
+	float brightnessMultiplier = 0.25f;
+	bodyColor.r = min(1.0f, bodyColor.r * (1.0f + 0.5f * brightnessMultiplier) + brightnessMultiplier);
+	bodyColor.g = min(1.0f, bodyColor.g * (1.0f + 0.5f * brightnessMultiplier) + brightnessMultiplier);
+	bodyColor.b = min(1.0f, bodyColor.b * (1.0f + 0.5f * brightnessMultiplier) + brightnessMultiplier);
+	return float4(bodyColor);
+}
+
+float4 getOuterBodyColor(in float4 bodyColor)
+{
+	float darknessMultiplier = 0.1f;
+	bodyColor.r = min(1.0f, bodyColor.r / (1.0f + darknessMultiplier));
+	bodyColor.g = min(1.0f, bodyColor.g / (1.0f + darknessMultiplier));
+	bodyColor.b = min(1.0f, bodyColor.b / (1.0f + darknessMultiplier));
+	return float4(bodyColor);
+}
+
+PS_OUTPUT psmain(in PS_INPUT In)
+{
+	PS_OUTPUT Out;
+
+	float borderSize = (defaultBorderSize + In.borderFeather) * In.borderSizeMultiplier;
+	float transitionSize = defaultTransitionSize + In.borderFeather;
+	
+	// dynamic color calculations
+	float4 borderColor = float4(In.colBorder.x, In.colBorder.y, In.colBorder.z, 1.0f);
+	float4 bodyColor = float4(In.colBody.x, In.colBody.y, In.colBody.z, 0.7f*In.bodyAlphaMultiplier);
+	float4 outerShadowColor = float4(0, 0, 0, 0.25f);
+	float4 innerBodyColor = getInnerBodyColor(bodyColor);
+	float4 outerBodyColor = getOuterBodyColor(bodyColor);
+	
+	innerBodyColor.rgb *= In.bodyColorSaturation;
+	outerBodyColor.rgb *= In.bodyColorSaturation;
+	
+	// osu!next style color modifications
+	if (In.style == 1)
+	{
+		outerBodyColor.rgb = bodyColor.rgb * In.bodyColorSaturation;
+		outerBodyColor.a = 1.0f*In.bodyAlphaMultiplier;
+		innerBodyColor.rgb = bodyColor.rgb * 0.5f * In.bodyColorSaturation;
+		innerBodyColor.a = 0.0f;
+	}
+	
+	// a bit of a hack, but better than rough edges
+	if (In.borderSizeMultiplier < 0.01f)
+		borderColor = outerShadowColor;
+	
+	// conditional variant
+	
+	if (In.tex.x < outerShadowSize - transitionSize) // just shadow
+	{
+		float delta = In.tex.x / (outerShadowSize - transitionSize);
+		Out.col = lerp(float4(0, 0, 0, 0), outerShadowColor, delta);
+	}
+	if (In.tex.x > outerShadowSize - transitionSize && In.tex.x < outerShadowSize + transitionSize) // shadow + border
+	{
+		float delta = (In.tex.x - outerShadowSize + transitionSize) / (2.0f*transitionSize);
+		Out.col = lerp(outerShadowColor, borderColor, delta);
+	}
+	if (In.tex.x > outerShadowSize + transitionSize && In.tex.x < outerShadowSize + borderSize - transitionSize) // just border
+	{
+		Out.col = borderColor;
+	}
+	if (In.tex.x > outerShadowSize + borderSize - transitionSize && In.tex.x < outerShadowSize + borderSize + transitionSize) // border + outer body
+	{
+		float delta = (In.tex.x - outerShadowSize - borderSize + transitionSize) / (2.0f*transitionSize);
+		Out.col = lerp(borderColor, outerBodyColor, delta);
+	}
+	if (In.tex.x > outerShadowSize + borderSize + transitionSize) // outer body + inner body
+	{	
+		float size = outerShadowSize + borderSize + transitionSize;
+		float delta = ((In.tex.x - size) / (1.0f-size));
+		Out.col = lerp(outerBodyColor, innerBodyColor, delta);
+	}
+	
+	return Out;
+};
