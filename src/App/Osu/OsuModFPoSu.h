@@ -62,7 +62,7 @@ private:
 	void makePlayfield();
 	void makeBackgroundCube();
 	void handleLazyLoad3DModels();
-	void handleLazyLoadShaders();
+	void handleLazyLoad3DShaders();
 
 	void onCurvedChange(UString oldValue, UString newValue);
 	void onDistanceChange(UString oldValue, UString newValue);

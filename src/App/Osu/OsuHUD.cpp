@@ -1303,6 +1303,7 @@ void OsuHUD::drawVolumeChange(Graphics *g)
 
 	const float dpiScale = Osu::getUIScale(m_osu);
 	const float sizeMultiplier = osu_hud_volume_size_multiplier.getFloat() * dpiScale;
+	const float height = m_osu->getScreenHeight() - m_volumeMusic->getPos().y;
 
 	// legacy
 	/*
@@ -1313,8 +1314,10 @@ void OsuHUD::drawVolumeChange(Graphics *g)
 	if (m_fVolumeChangeFade != 1.0f)
 	{
 		g->push3DScene(McRect(m_volumeMaster->getPos().x, m_volumeMaster->getPos().y, m_volumeMaster->getSize().x, (m_osu->getScreenHeight() - m_volumeMaster->getPos().y)*2.05f));
-		g->rotate3DScene(-(1.0f - m_fVolumeChangeFade)*90, 0, 0);
-		g->translate3DScene(0, (m_fVolumeChangeFade*60 - 60) * sizeMultiplier / 1.5f, ((m_fVolumeChangeFade)*500 - 500) * sizeMultiplier / 1.5f);
+		//g->rotate3DScene(-(1.0f - m_fVolumeChangeFade)*90, 0, 0);
+		//g->translate3DScene(0, (m_fVolumeChangeFade*60 - 60) * sizeMultiplier / 1.5f, ((m_fVolumeChangeFade)*500 - 500) * sizeMultiplier / 1.5f);
+		g->translate3DScene(0, (m_fVolumeChangeFade*height - height)*1.05f, 0.0f);
+
 	}
 
 	m_volumeMaster->setPos(m_osu->getScreenSize() - m_volumeMaster->getSize() - Vector2(m_volumeMaster->getMinimumExtraTextWidth(), m_volumeMaster->getSize().y));
@@ -3334,7 +3337,7 @@ void OsuHUD::animateVolumeChange()
 	else
 		anim->moveQuadOut(&m_fVolumeChangeFade, 1.0f, 0.1f * (1.0f - m_fVolumeChangeFade), true);
 
-	anim->moveQuadOut(&m_fVolumeChangeFade, 0.0f, 0.20f, osu_hud_volume_duration.getFloat(), false);
+	anim->moveQuadOut(&m_fVolumeChangeFade, 0.0f, 0.25f, osu_hud_volume_duration.getFloat(), false);
 	anim->moveQuadOut(&m_fLastVolume, m_osu_volume_master_ref->getFloat(), 0.15f, 0.0f, true);
 }
 

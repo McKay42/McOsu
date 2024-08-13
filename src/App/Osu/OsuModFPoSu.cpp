@@ -61,32 +61,33 @@ ConVar fposu_cube_tint_b("fposu_cube_tint_b", 255, FCVAR_NONE, "from 0 to 255");
 ConVar fposu_invert_vertical("fposu_invert_vertical", false, FCVAR_NONE);
 ConVar fposu_invert_horizontal("fposu_invert_horizontal", false, FCVAR_NONE);
 
-ConVar fposu_noclip("fposu_noclip", true, FCVAR_NONE);
+ConVar fposu_noclip("fposu_noclip", false, FCVAR_NONE);
 ConVar fposu_noclipspeed("fposu_noclipspeed", 2.0f, FCVAR_NONE);
 ConVar fposu_noclipaccelerate("fposu_noclipaccelerate", 20.0f, FCVAR_NONE);
 ConVar fposu_noclipfriction("fposu_noclipfriction", 10.0f, FCVAR_NONE);
 
-ConVar fposu_3d("fposu_3d", true, FCVAR_NONE);
-ConVar fposu_3d_playfield_scale("fposu_3d_playfield_scale", 1.0f, FCVAR_NONE);
-ConVar fposu_3d_spheres("fposu_3d_spheres", true, FCVAR_NONE, "whether to draw combocolored lit 3d spheres instead of flat skin image quads");
-ConVar fposu_3d_spheres_aa("fposu_3d_spheres_aa", 4, FCVAR_NONE, "MSAA factor, valid values are: 0, 2, 4, 8, 16");
-ConVar fposu_3d_spheres_light_ambient("fposu_3d_spheres_light_ambient", 0.15f, FCVAR_NONE);
-ConVar fposu_3d_spheres_light_brightness("fposu_3d_spheres_light_brightness", 1.15f, FCVAR_NONE);
-ConVar fposu_3d_spheres_light_diffuse("fposu_3d_spheres_light_diffuse", 1.0f, FCVAR_NONE);
-ConVar fposu_3d_spheres_light_phong("fposu_3d_spheres_light_phong", 1.0f, FCVAR_NONE);
-ConVar fposu_3d_spheres_light_phong_exponent("fposu_3d_spheres_light_phong_exponent", 10.0f, FCVAR_NONE);
-ConVar fposu_3d_spheres_light_position_x("fposu_3d_spheres_light_position_x", 500.0f, FCVAR_NONE);
-ConVar fposu_3d_spheres_light_position_y("fposu_3d_spheres_light_position_y", 500.0f, FCVAR_NONE);
-ConVar fposu_3d_spheres_light_position_z("fposu_3d_spheres_light_position_z", 325.0f, FCVAR_NONE);
-ConVar fposu_3d_spheres_light_rim("fposu_3d_spheres_light_rim", 1.0f, FCVAR_NONE);
-ConVar fposu_3d_curve_multiplier("fposu_3d_curve_multiplier", 1.0f, FCVAR_NONE, "multiplier for the default curving factor (only relevant if fposu_curved is enabled)");
-ConVar fposu_3d_hitobjects_look_at_player("fposu_3d_hitobjects_look_at_player", true, FCVAR_NONE);
-ConVar fposu_3d_approachcircles_look_at_player("fposu_3d_approachcircles_look_at_player", true, FCVAR_NONE);
-ConVar fposu_3d_draw_beatmap_background_image("fposu_3d_draw_beatmap_background_image", true, FCVAR_NONE);
-ConVar fposu_3d_beatmap_background_image_distance_multiplier("fposu_3d_beatmap_background_image_distance_multiplier", 1.0f, FCVAR_NONE);
-ConVar fposu_3d_skybox("fposu_3d_skybox", true, FCVAR_NONE);
-ConVar fposu_3d_skybox_size("fposu_3d_skybox_size", 450.0f, FCVAR_NONE);
-ConVar fposu_3d_wireframe("fposu_3d_wireframe", false, FCVAR_NONE);
+#define MCOSU_FPOSU_4D_MODE_CVAR_FLAGS (FCVAR_DEVELOPMENTONLY|FCVAR_HARDCODED)
+ConVar fposu_3d("fposu_3d", false, MCOSU_FPOSU_4D_MODE_CVAR_FLAGS);
+ConVar fposu_3d_playfield_scale("fposu_3d_playfield_scale", 1.0f, MCOSU_FPOSU_4D_MODE_CVAR_FLAGS);
+ConVar fposu_3d_spheres("fposu_3d_spheres", true, MCOSU_FPOSU_4D_MODE_CVAR_FLAGS, "whether to draw combocolored lit 3d spheres instead of flat skin image quads");
+ConVar fposu_3d_spheres_aa("fposu_3d_spheres_aa", 4, MCOSU_FPOSU_4D_MODE_CVAR_FLAGS, "MSAA factor, valid values are: 0, 2, 4, 8, 16");
+ConVar fposu_3d_spheres_light_ambient("fposu_3d_spheres_light_ambient", 0.15f, MCOSU_FPOSU_4D_MODE_CVAR_FLAGS);
+ConVar fposu_3d_spheres_light_brightness("fposu_3d_spheres_light_brightness", 1.15f, MCOSU_FPOSU_4D_MODE_CVAR_FLAGS);
+ConVar fposu_3d_spheres_light_diffuse("fposu_3d_spheres_light_diffuse", 1.0f, MCOSU_FPOSU_4D_MODE_CVAR_FLAGS);
+ConVar fposu_3d_spheres_light_phong("fposu_3d_spheres_light_phong", 1.0f, MCOSU_FPOSU_4D_MODE_CVAR_FLAGS);
+ConVar fposu_3d_spheres_light_phong_exponent("fposu_3d_spheres_light_phong_exponent", 10.0f, MCOSU_FPOSU_4D_MODE_CVAR_FLAGS);
+ConVar fposu_3d_spheres_light_position_x("fposu_3d_spheres_light_position_x", 500.0f, MCOSU_FPOSU_4D_MODE_CVAR_FLAGS);
+ConVar fposu_3d_spheres_light_position_y("fposu_3d_spheres_light_position_y", 500.0f, MCOSU_FPOSU_4D_MODE_CVAR_FLAGS);
+ConVar fposu_3d_spheres_light_position_z("fposu_3d_spheres_light_position_z", 325.0f, MCOSU_FPOSU_4D_MODE_CVAR_FLAGS);
+ConVar fposu_3d_spheres_light_rim("fposu_3d_spheres_light_rim", 1.0f, MCOSU_FPOSU_4D_MODE_CVAR_FLAGS);
+ConVar fposu_3d_curve_multiplier("fposu_3d_curve_multiplier", 1.0f, MCOSU_FPOSU_4D_MODE_CVAR_FLAGS, "multiplier for the default curving factor (only relevant if fposu_curved is enabled)");
+ConVar fposu_3d_hitobjects_look_at_player("fposu_3d_hitobjects_look_at_player", true, MCOSU_FPOSU_4D_MODE_CVAR_FLAGS);
+ConVar fposu_3d_approachcircles_look_at_player("fposu_3d_approachcircles_look_at_player", true, MCOSU_FPOSU_4D_MODE_CVAR_FLAGS);
+ConVar fposu_3d_draw_beatmap_background_image("fposu_3d_draw_beatmap_background_image", true, MCOSU_FPOSU_4D_MODE_CVAR_FLAGS);
+ConVar fposu_3d_beatmap_background_image_distance_multiplier("fposu_3d_beatmap_background_image_distance_multiplier", 1.0f, MCOSU_FPOSU_4D_MODE_CVAR_FLAGS);
+ConVar fposu_3d_skybox("fposu_3d_skybox", true, MCOSU_FPOSU_4D_MODE_CVAR_FLAGS);
+ConVar fposu_3d_skybox_size("fposu_3d_skybox_size", 450.0f, MCOSU_FPOSU_4D_MODE_CVAR_FLAGS);
+ConVar fposu_3d_wireframe("fposu_3d_wireframe", false, MCOSU_FPOSU_4D_MODE_CVAR_FLAGS);
 
 ConVar fposu_draw_cursor_trail("fposu_draw_cursor_trail", true, FCVAR_NONE);
 ConVar fposu_draw_scorebarbg_on_top("fposu_draw_scorebarbg_on_top", false, FCVAR_NONE);
@@ -100,7 +101,7 @@ ConVar fposu_mod_strafing_frequency_y("fposu_mod_strafing_frequency_y", 0.2f, FC
 ConVar fposu_mod_strafing_strength_z("fposu_mod_strafing_strength_z", 0.15f, FCVAR_NONE);
 ConVar fposu_mod_strafing_frequency_z("fposu_mod_strafing_frequency_z", 0.15f, FCVAR_NONE);
 
-ConVar fposu_mod_3d_depthwobble("fposu_mod_3d_depthwobble", false, FCVAR_NONE);
+ConVar fposu_mod_3d_depthwobble("fposu_mod_3d_depthwobble", false, MCOSU_FPOSU_4D_MODE_CVAR_FLAGS);
 
 constexpr const float OsuModFPoSu::SIZEDIV3D;
 constexpr const int OsuModFPoSu::SUBDIVISIONS;
@@ -306,7 +307,7 @@ void OsuModFPoSu::draw(Graphics *g)
 
 						if (fposu_3d_spheres.getBool())
 						{
-							handleLazyLoadShaders();
+							handleLazyLoad3DShaders();
 
 							m_hitcircleShader->enable();
 							{
@@ -1079,10 +1080,10 @@ void OsuModFPoSu::handleLazyLoad3DModels()
 		m_hitcircleModel = new OsuModFPoSu3DModel("hitcircle.obj");
 }
 
-void OsuModFPoSu::handleLazyLoadShaders()
+void OsuModFPoSu::handleLazyLoad3DShaders()
 {
 	if (m_hitcircleShader == NULL)
-		m_hitcircleShader = engine->getResourceManager()->loadShader("hitcircle3D.vsh", "hitcircle3D.fsh", "hitcircle3D");
+		m_hitcircleShader = engine->getResourceManager()->loadShader2("hitcircle3D.mcshader", "hitcircle3D");
 }
 
 void OsuModFPoSu::onCurvedChange(UString oldValue, UString newValue)

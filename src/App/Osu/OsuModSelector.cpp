@@ -229,7 +229,9 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen(osu)
 	// build experimental buttons
 	addExperimentalLabel(" Experimental Mods (!)");
 	addExperimentalCheckbox("FPoSu: Strafing", "Playfield moves in 3D space (see fposu_mod_strafing_...).\nOnly works in FPoSu mode!", convar->getConVarByName("fposu_mod_strafing"));
+#ifdef MCOSU_FPOSU_4D_MODE_FINISHED
 	addExperimentalCheckbox("FPoSu 4D: Z Wobble", "Each hitobject individually moves in 3D space (see fposu_mod_3d_depthwobble_...)\nOnly works in FPoSu \"4D Mode\"!", convar->getConVarByName("fposu_mod_3d_depthwobble"));
+#endif
 	addExperimentalCheckbox("Wobble", "Playfield rotates and moves.", convar->getConVarByName("osu_mod_wobble"));
 	addExperimentalCheckbox("AR Wobble", "Approach rate oscillates between -1 and +1.", convar->getConVarByName("osu_mod_arwobble"));
 	addExperimentalCheckbox("Approach Different", "Customize the approach circle animation.\nSee osu_mod_approach_different_style.\nSee osu_mod_approach_different_initial_size.", convar->getConVarByName("osu_mod_approach_different"));
