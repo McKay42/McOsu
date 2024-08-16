@@ -1031,17 +1031,15 @@ float OsuDatabase::getWeightForIndex(int i)
 	return std::pow(0.95, (double)i);
 }
 
-float OsuDatabase::getBonusPPForNumScores(int numScores)
+float OsuDatabase::getBonusPPForNumScores(size_t numScores)
 {
-	// TODO: rework to take size_t numScores instead of useless early int conversion
-	// TODO: not actually sure if the new version is even correct, not on any official osu github repositories yet, so still waiting for confirmation
-	// see https://github.com/ppy/osu-queue-score-statistics/blob/185ad3c00423f6209bcfd8f7177fbe915179055a/osu.Server.Queues.ScoreStatisticsProcessor/Processors/UserTotalPerformanceProcessor.cs#L72
+	// see https://github.com/ppy/osu-queue-score-statistics/blob/master/osu.Server.Queues.ScoreStatisticsProcessor/Helpers/UserTotalPerformanceAggregateHelper.cs
 	
 	// old
-	return (416.6667 * (1.0 - std::pow(0.9994, (double)numScores)));
+	//return (416.6667 * (1.0 - std::pow(0.9994, (double)numScores)));
 	
 	// new
-	//return ((417.0 - 1.0 / 3.0) * (1.0 - std::pow(0.995, (double)std::min(1000, numScores))));
+	return (417.0 - 1.0 / 3.0) * (1.0 - std::pow(0.995, std::min(1000.0, (double)numScores)));
 }
 
 unsigned long long OsuDatabase::getRequiredScoreForLevel(int level)
