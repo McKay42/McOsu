@@ -91,7 +91,6 @@ ConVar fposu_3d_wireframe("fposu_3d_wireframe", false, MCOSU_FPOSU_4D_MODE_CVAR_
 
 ConVar fposu_draw_cursor_trail("fposu_draw_cursor_trail", true, FCVAR_NONE);
 ConVar fposu_draw_scorebarbg_on_top("fposu_draw_scorebarbg_on_top", false, FCVAR_NONE);
-ConVar fposu_transparent_playfield("fposu_transparent_playfield", false, FCVAR_NONE, "only works if background dim is 100% and background brightness is 0%");
 
 ConVar fposu_mod_strafing("fposu_mod_strafing", false, FCVAR_NONE);
 ConVar fposu_mod_strafing_strength_x("fposu_mod_strafing_strength_x", 0.3f, FCVAR_NONE);
@@ -113,7 +112,7 @@ OsuModFPoSu::OsuModFPoSu(Osu *osu)
 	// convar refs
 	m_mouse_sensitivity_ref = convar->getConVarByName("mouse_sensitivity");
 	m_osu_draw_beatmap_background_image_ref = convar->getConVarByName("osu_draw_beatmap_background_image");
-	m_osu_background_dim_ref = convar->getConVarByName("osu_background_dim");
+	m_osu_background_alpha_ref = convar->getConVarByName("osu_background_alpha");
 
 	// vars
 	m_fCircumLength = 0.0f;
@@ -254,8 +253,12 @@ void OsuModFPoSu::draw(Graphics *g)
 						}
 						g->setDepthBuffer(false);
 
-						if (fposu_transparent_playfield.getBool())
+						const bool isTransparent = (m_osu_background_alpha_ref->getFloat() < 1.0f);
+						if (isTransparent)
+						{
 							g->setBlending(true);
+							g->setBlendMode(Graphics::BLEND_MODE::BLEND_MODE_PREMUL_COLOR);
+						}
 
 						Matrix4 worldMatrix = m_modelMatrix;
 
@@ -280,6 +283,9 @@ void OsuModFPoSu::draw(Graphics *g)
 							}
 							m_osu->getPlayfieldBuffer()->unbind();
 						}
+
+						if (isTransparent)
+							g->setBlendMode(Graphics::BLEND_MODE::BLEND_MODE_ALPHA);
 
 						// (no setBlending(false), since we are already at the end)
 					}
@@ -482,8 +488,7 @@ void OsuModFPoSu::draw(Graphics *g)
 							g->setWireframe(false);
 					}
 				}
-				if (!fposu_transparent_playfield.getBool())
-					g->setBlending(true);
+				// (no setBlending(false), since we are already at the end)
 			}
 			g->popTransform();
 		}

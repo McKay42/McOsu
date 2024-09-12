@@ -1073,6 +1073,31 @@ void Osu::update()
 		m_mainMenu->setVisible(!m_mainMenu->isVisible());
 		m_editor->setVisible(!m_mainMenu->isVisible());
 	}
+	// HACKHACK: workaround for the garbage code above, the 1-frame delayed screen visibility changes can cause players to extremely rarely get stuck on a black screen without anything visible anymore (just because of quick menu navigation skills)
+	if (!isInPlayMode())
+	{
+		int numVisibleScreens = 0;
+		for (const OsuScreen *screen : m_screens)
+		{
+			if (screen->isVisible())
+				numVisibleScreens++;
+		}
+		if (numVisibleScreens < 1)
+		{
+			if (m_fPrevNoScreenVisibleWorkaroundTime == 0.0f)
+				m_fPrevNoScreenVisibleWorkaroundTime = engine->getTime();
+
+			if (engine->getTime() > m_fPrevNoScreenVisibleWorkaroundTime + 2.0f)
+			{
+				m_fPrevNoScreenVisibleWorkaroundTime = 0.0f;
+				m_mainMenu->setVisible(true);
+			}
+		}
+		else
+			m_fPrevNoScreenVisibleWorkaroundTime = 0.0f;
+	}
+	else
+		m_fPrevNoScreenVisibleWorkaroundTime = 0.0f;
 
 	// handle cursor visibility if outside of internal resolution
 	// TODO: not a critical bug, but the real cursor gets visible way too early if sensitivity is > 1.0f, due to this using scaled/offset getMouse()->getPos()
@@ -1779,7 +1804,8 @@ void Osu::onAudioOutputDeviceChange()
 		getSelectedBeatmap()->select();
 	}
 
-	reloadSkin();
+	if (m_skin != NULL)
+		m_skin->reloadSounds();
 }
 
 void Osu::saveScreenshot()

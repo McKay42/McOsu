@@ -95,6 +95,8 @@ ConVar osu_hud_hiterrorbar_centerline_g("osu_hud_hiterrorbar_centerline_g", 255,
 ConVar osu_hud_hiterrorbar_centerline_b("osu_hud_hiterrorbar_centerline_b", 255, FCVAR_NONE);
 ConVar osu_hud_hiterrorbar_entry_hit_fade_time("osu_hud_hiterrorbar_entry_hit_fade_time", 6.0f, FCVAR_NONE, "fade duration of 50/100/300 hit entries/lines in seconds");
 ConVar osu_hud_hiterrorbar_entry_miss_fade_time("osu_hud_hiterrorbar_entry_miss_fade_time", 4.0f, FCVAR_NONE, "fade duration of miss entries/lines in seconds");
+ConVar osu_hud_hiterrorbar_entry_miss_height_multiplier("osu_hud_hiterrorbar_entry_miss_height_multiplier", 1.5f, FCVAR_NONE);
+ConVar osu_hud_hiterrorbar_entry_misaim_height_multiplier("osu_hud_hiterrorbar_entry_misaim_height_multiplier", 4.0f, FCVAR_NONE);
 ConVar osu_hud_hiterrorbar_scale("osu_hud_hiterrorbar_scale", 1.0f, FCVAR_NONE);
 ConVar osu_hud_hiterrorbar_showmisswindow("osu_hud_hiterrorbar_showmisswindow", false, FCVAR_NONE);
 ConVar osu_hud_hiterrorbar_width_percent_with_misswindow("osu_hud_hiterrorbar_width_percent_with_misswindow", 0.4f, FCVAR_NONE);
@@ -2419,9 +2421,9 @@ void OsuHUD::drawHitErrorBarInt(Graphics *g, float hitWindow300, float hitWindow
 
 			float missHeightMultiplier = 1.0f;
 			if (m_hiterrors[i].miss)
-				missHeightMultiplier = 1.5f;
+				missHeightMultiplier = osu_hud_hiterrorbar_entry_miss_height_multiplier.getFloat();
 			if (m_hiterrors[i].misaim)
-				missHeightMultiplier = 4.0f;
+				missHeightMultiplier = osu_hud_hiterrorbar_entry_misaim_height_multiplier.getFloat();
 
 			//Color leftColor = COLOR((int)((255/2) * alphaEntry * fade), COLOR_GET_Ri(barColor), COLOR_GET_Gi(barColor), COLOR_GET_Bi(barColor));
 			//Color centerColor = COLOR((int)(COLOR_GET_Ai(barColor) * alphaEntry * fade), COLOR_GET_Ri(barColor), COLOR_GET_Gi(barColor), COLOR_GET_Bi(barColor));
@@ -2549,9 +2551,7 @@ void OsuHUD::drawProgressBar(Graphics *g, float percent, bool waiting)
 		}
 
 		// draw it
-		///g->setAntialiasing(true); // commented for now
 		g->drawVAO(&vao);
-		///g->setAntialiasing(false);
 	}
 
 	// draw circularmetre

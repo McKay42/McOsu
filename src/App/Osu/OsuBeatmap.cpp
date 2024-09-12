@@ -70,6 +70,7 @@ ConVar osu_ar_override_lock("osu_ar_override_lock", false, FCVAR_NONE, "always f
 ConVar osu_od_override_lock("osu_od_override_lock", false, FCVAR_NONE, "always force constant OD even through speed changes");
 
 ConVar osu_background_dim("osu_background_dim", 0.9f, FCVAR_NONE);
+ConVar osu_background_alpha("osu_background_alpha", 1.0f, FCVAR_NONE, "transparency of all background layers at once, only useful for FPoSu");
 ConVar osu_background_fade_after_load("osu_background_fade_after_load", true, FCVAR_NONE);
 ConVar osu_background_dont_fade_during_breaks("osu_background_dont_fade_during_breaks", false, FCVAR_NONE);
 ConVar osu_background_fade_min_duration("osu_background_fade_min_duration", 1.4f, FCVAR_NONE, "Only fade if the break is longer than this (in seconds)");
@@ -318,6 +319,7 @@ void OsuBeatmap::drawBackground(Graphics *g)
 	if (!canDraw()) return;
 
 	// draw beatmap background image
+	if (osu_background_brightness.getFloat() <= 0.0f)
 	{
 		Image *backgroundImage = m_osu->getBackgroundImageHandler()->getLoadBackgroundImage(m_selectedDifficulty2);
 		if (osu_draw_beatmap_background_image.getBool() && backgroundImage != NULL && (osu_background_dim.getFloat() < 1.0f || m_fBreakBackgroundFade > 0.0f))
@@ -328,7 +330,7 @@ void OsuBeatmap::drawBackground(Graphics *g)
 			const float backgroundFadeDimMultiplier = clamp<float>(1.0f - (osu_background_dim.getFloat() - 0.3f), 0.0f, 1.0f);
 			const short dim = clamp<float>((1.0f - osu_background_dim.getFloat()) + m_fBreakBackgroundFade*backgroundFadeDimMultiplier, 0.0f, 1.0f)*255.0f;
 
-			g->setColor(COLOR(255, dim, dim, dim));
+			g->setColor(COLOR((uint8_t)clamp<float>((m_osu_mod_fposu_ref->getBool() ? osu_background_alpha.getFloat() : 1.0f) * 255.0f, 0.0f, 255.0f), (uint8_t)dim, (uint8_t)dim, (uint8_t)dim));
 			g->pushTransform();
 			{
 				g->scale(scale, scale);
@@ -343,11 +345,13 @@ void OsuBeatmap::drawBackground(Graphics *g)
 	if (osu_background_brightness.getFloat() > 0.0f)
 	{
 		const float brightness = osu_background_brightness.getFloat();
+
 		const short red = clamp<float>(brightness * osu_background_color_r.getFloat(), 0.0f, 255.0f);
 		const short green = clamp<float>(brightness * osu_background_color_g.getFloat(), 0.0f, 255.0f);
 		const short blue = clamp<float>(brightness * osu_background_color_b.getFloat(), 0.0f, 255.0f);
-		const short alpha = clamp<float>(1.0f - m_fBreakBackgroundFade, 0.0f, 1.0f)*255.0f;
-		g->setColor(COLOR(alpha, red, green, blue));
+		const short alpha = clamp<float>((1.0f - m_fBreakBackgroundFade) * (m_osu_mod_fposu_ref->getBool() ? osu_background_alpha.getFloat() : 1.0f), 0.0f, 1.0f) * 255.0f;
+
+		g->setColor(COLOR((uint8_t)alpha, (uint8_t)red, (uint8_t)green, (uint8_t)blue));
 		g->fillRect(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight());
 	}
 

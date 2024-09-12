@@ -301,6 +301,7 @@ private:
 	OsuModFPoSu *m_fposu;
 
 	std::vector<OsuScreen*> m_screens;
+	float m_fPrevNoScreenVisibleWorkaroundTime;
 
 	// rendering
 	RenderTarget *m_backBuffer;
