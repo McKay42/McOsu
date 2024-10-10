@@ -40,7 +40,7 @@ public:
 		};
 
 		TYPE type;
-		int time;
+		float time;
 
 		unsigned long long sortHack;
 	};
@@ -112,7 +112,7 @@ private:
 class OsuDifficultyCalculator
 {
 public:
-	static constexpr const int PP_ALGORITHM_VERSION = 20220902;
+	static constexpr const int PP_ALGORITHM_VERSION = 20241007;
 
 public:
 	class Skills
@@ -148,7 +148,7 @@ public:
 	// see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/Aim.cs
 
 	static constexpr const double decay_base[Skills::NUM_SKILLS] = {0.3, 0.15, 0.15};				// how much strains decay per interval (if the previous interval's peak strains after applying decay are still higher than the current one's, they will be used as the peak strains).
-	static constexpr const double weight_scaling[Skills::NUM_SKILLS] = {1375.0, 23.55, 23.55};	// used to keep speed and aim balanced between eachother
+	static constexpr const double weight_scaling[Skills::NUM_SKILLS] = {1.430, 25.18, 25.18};	// used to keep speed and aim balanced between eachother
 
 	class DiffObject
 	{
@@ -191,36 +191,41 @@ public:
 
 		void calculate_strains(const DiffObject &prev, const DiffObject *next, double hitWindow300);
 		void calculate_strain(const DiffObject &prev, const DiffObject *next, double hitWindow300, const Skills::Skill dtype);
-		static double calculate_difficulty(const Skills::Skill type, const std::vector<DiffObject> &dobjects, std::vector<double> *outStrains = NULL, double *outRelevantNotes = NULL);
+		static double calculate_difficulty(const Skills::Skill type, const std::vector<DiffObject> &dobjects, std::vector<double> *outStrains = NULL, double *outDifficultStrains = NULL, double *outRelevantNotes = NULL);
 		static double spacing_weight1(const double distance, const Skills::Skill diff_type);
 		double spacing_weight2(const Skills::Skill diff_type, const DiffObject& prev, const DiffObject *next, double hitWindow300);
+		double get_doubletapness(const DiffObject *next, double hitWindow300) const;
 	};
 
 public:
 	// stars, fully static
-	static double calculateStarDiffForHitObjects(std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, float OD, float speedMultiplier, bool relax, bool touchDevice, double *aim, double *aimSliderFactor, double *speed, double *speedNotes, int upToObjectIndex = -1, std::vector<double> *outAimStrains = NULL, std::vector<double> *outSpeedStrains = NULL);
-	static double calculateStarDiffForHitObjects(std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, float OD, float speedMultiplier, bool relax, bool touchDevice, double *aim, double *aimSliderFactor, double *speed, double *speedNotes, int upToObjectIndex, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains, const std::atomic<bool> &dead);
-	static double calculateStarDiffForHitObjectsInt(std::vector<DiffObject> &cachedDiffObjects, std::vector<DiffObject> &diffObjects, std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, float OD, float speedMultiplier, bool relax, bool touchDevice, double *aim, double* aimSliderFactor, double *speed, double *speedNotes, int upToObjectIndex, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains, const std::atomic<bool> &dead);
+	static double calculateStarDiffForHitObjects(std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, float OD, float speedMultiplier, bool relax, bool touchDevice, double *aim, double *aimSliderFactor, double *difficultAimStrains, double *speed, double *speedNotes, double *difficultSpeedStrains, int upToObjectIndex = -1, std::vector<double> *outAimStrains = NULL, std::vector<double> *outSpeedStrains = NULL);
+	static double calculateStarDiffForHitObjects(std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, float OD, float speedMultiplier, bool relax, bool touchDevice, double *aim, double *aimSliderFactor, double *difficultAimStrains, double *speed, double *speedNotes, double *difficultSpeedStrains, int upToObjectIndex, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains, const std::atomic<bool> &dead);
+	static double calculateStarDiffForHitObjectsInt(std::vector<DiffObject> &cachedDiffObjects, std::vector<DiffObject> &diffObjects, std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, float OD, float speedMultiplier, bool relax, bool touchDevice, double *aim, double *aimSliderFactor, double *difficultAimStrains, double *speed, double *speedNotes, double *difficultSpeedStrains, int upToObjectIndex, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains, const std::atomic<bool> &dead);
 
 	// pp, use runtime mods (convenience)
-	static double calculatePPv2(Osu *osu, OsuBeatmap *beatmap, double aim, double aimSliderFactor, double speed, double speedNotes, int numHitObjects, int numCircles, int numSliders, int numSpinners, int maxPossibleCombo, int combo = -1, int misses = 0, int c300 = -1, int c100 = 0, int c50 = 0);
+	static double calculatePPv2(Osu *osu, OsuBeatmap *beatmap, double aim, double aimSliderFactor, double difficultAimStrains, double speed, double speedNotes, double difficultSpeedStrains, int numHitObjects, int numCircles, int numSliders, int numSpinners, int maxPossibleCombo, int combo = -1, int misses = 0, int c300 = -1, int c100 = 0, int c50 = 0);
 
 	// pp, fully static
-	static double calculatePPv2(int modsLegacy, double timescale, double ar, double od, double aim, double aimSliderFactor, double speed, double speedNotes, int numHitObjects, int numCircles, int numSliders, int numSpinners, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50);
+	static double calculatePPv2(int modsLegacy, double timescale, double ar, double od, double aim, double aimSliderFactor, double difficultAimStrains, double speed, double speedNotes, double difficultSpeedStrains, int numHitObjects, int numCircles, int numSliders, int numSpinners, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50);
 
 	// helper functions
 	static double calculateTotalStarsFromSkills(double aim, double speed);
 
 private:
 	static ConVar *m_osu_slider_scorev2_ref;
+	static ConVar *m_osu_slider_end_inside_check_offset_ref;
+	static ConVar *m_osu_slider_curve_max_length_ref;
 
 private:
 	struct Attributes
 	{
 		double AimStrain;
 		double SliderFactor;
+		double AimDifficultStrainCount;
 		double SpeedStrain;
 		double SpeedNoteCount;
+		double SpeedDifficultStrainCount;
 		double ApproachRate;
 		double OverallDifficulty;
 		int SliderCount;
@@ -239,6 +244,15 @@ private:
 		int beatmapMaxCombo;
 		int scoreMaxCombo;
 		int amountHitObjectsWithAccuracy;
+	};
+
+	struct RhythmIsland
+	{
+		// NOTE: lazer stores "deltaDifferenceEpsilon" (hitWindow300 * 0.3) in this struct, but OD is constant here
+		int delta;
+		int deltaCount;
+
+		inline bool equals(RhythmIsland &other, double deltaDifferenceEpsilon) const {return std::abs(delta - other.delta) < deltaDifferenceEpsilon && deltaCount == other.deltaCount;}
 	};
 
 private:
