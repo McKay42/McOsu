@@ -1010,12 +1010,19 @@ bool OsuSkin::parseSkinINI(UString filepath)
 		return false;
 	}
 
+	int nonEmptyLineCounter = 0;
 	int curBlock = 0; // NOTE: was -1, but osu incorrectly defaults to [General] and loads properties even before the actual section start (just for this first section though)
 	while (file.canRead())
 	{
 		UString uCurLine = file.readLine();
+
+		if (uCurLine == "")
+			continue;
+
 		const char *curLineChar = uCurLine.toUtf8();
 		std::string curLine(curLineChar);
+
+		nonEmptyLineCounter++;
 
 		if (curLine.find("//") > 2) // ignore comments // TODO: this is incorrect, but it works well enough
 		{
@@ -1152,6 +1159,9 @@ bool OsuSkin::parseSkinINI(UString filepath)
 			}
 		}
 	}
+
+	if (nonEmptyLineCounter < 1)
+		return false;
 
 	return true;
 }
