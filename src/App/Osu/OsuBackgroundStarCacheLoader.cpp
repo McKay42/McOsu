@@ -43,8 +43,10 @@ void OsuBackgroundStarCacheLoader::initAsync()
 		// reset
 		m_beatmap->m_aimStarsForNumHitObjects.clear();
 		m_beatmap->m_aimSliderFactorForNumHitObjects.clear();
+		m_beatmap->m_aimDifficultStrainsForNumHitObjects.clear();
 		m_beatmap->m_speedStarsForNumHitObjects.clear();
 		m_beatmap->m_speedNotesForNumHitObjects.clear();
+		m_beatmap->m_speedDifficultStrainsForNumHitObjects.clear();
 
 		const UString &osuFilePath = diff2->getFilePath();
 		const Osu::GAMEMODE gameMode = m_beatmap->getOsu()->getGamemode();
@@ -59,20 +61,24 @@ void OsuBackgroundStarCacheLoader::initAsync()
 
 		double aimStars = 0.0;
 		double aimSliderFactor = 0.0;
+		double aimDifficultStrains = 0.0;
 		double speedStars = 0.0;
 		double speedNotes = 0.0;
+		double speedDifficultStrains = 0.0;
 
 		// new fast method  (build full cached DiffObjects once) (1/2)
 		std::vector<OsuDifficultyCalculator::DiffObject> cachedDiffObjects;
 		std::vector<OsuDifficultyCalculator::DiffObject> diffObjects;
-		OsuDifficultyCalculator::calculateStarDiffForHitObjectsInt(cachedDiffObjects, diffObjects, diffres.diffobjects, CS, OD, speedMultiplier, relax, touchDevice, &aimStars, &aimSliderFactor, &speedStars, &speedNotes, -1, NULL, NULL, m_bDead);
+		OsuDifficultyCalculator::calculateStarDiffForHitObjectsInt(cachedDiffObjects, diffObjects, diffres.diffobjects, CS, OD, speedMultiplier, relax, touchDevice, &aimStars, &aimSliderFactor, &aimDifficultStrains, &speedStars, &speedNotes, &speedDifficultStrains, -1, NULL, NULL, m_bDead);
 
 		for (size_t i=0; i<diffres.diffobjects.size(); i++)
 		{
 			aimStars = 0.0;
 			aimSliderFactor = 0.0;
+			aimDifficultStrains = 0.0;
 			speedStars = 0.0;
 			speedNotes = 0.0;
+			speedDifficultStrains = 0.0;
 
 			// old slow method:
 			/*
@@ -85,7 +91,7 @@ void OsuBackgroundStarCacheLoader::initAsync()
 			//OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, CS, OD, speedMultiplier, relax, touchDevice, &aimStars, &aimSliderFactor, &speedStars, &speedNotes, i, NULL, NULL, m_bDead);
 
 			// new fast method (reuse cached DiffObjects instead of re-computing them every single iteration for the entire beatmap) (2/2)
-			OsuDifficultyCalculator::calculateStarDiffForHitObjectsInt(cachedDiffObjects, diffObjects, diffres.diffobjects, CS, OD, speedMultiplier, relax, touchDevice, &aimStars, &aimSliderFactor, &speedStars, &speedNotes, i, NULL, NULL, m_bDead);
+			OsuDifficultyCalculator::calculateStarDiffForHitObjectsInt(cachedDiffObjects, diffObjects, diffres.diffobjects, CS, OD, speedMultiplier, relax, touchDevice, &aimStars, &aimSliderFactor, &aimDifficultStrains, &speedStars, &speedNotes, &speedDifficultStrains, i, NULL, NULL, m_bDead);
 			/*
 			const double deltaOldAimStars = std::abs(aimStars - oldAimStars);
 			const double deltaOldAimSliderFactor = std::abs(aimSliderFactor - oldAimSliderFactor);
@@ -106,8 +112,10 @@ void OsuBackgroundStarCacheLoader::initAsync()
 
 			m_beatmap->m_aimStarsForNumHitObjects.push_back(aimStars);
 			m_beatmap->m_aimSliderFactorForNumHitObjects.push_back(aimSliderFactor);
+			m_beatmap->m_aimDifficultStrainsForNumHitObjects.push_back(aimDifficultStrains);
 			m_beatmap->m_speedStarsForNumHitObjects.push_back(speedStars);
 			m_beatmap->m_speedNotesForNumHitObjects.push_back(speedNotes);
+			m_beatmap->m_speedDifficultStrainsForNumHitObjects.push_back(speedDifficultStrains);
 
 			m_iProgress = i;
 
@@ -115,8 +123,10 @@ void OsuBackgroundStarCacheLoader::initAsync()
 			{
 				m_beatmap->m_aimStarsForNumHitObjects.clear();
 				m_beatmap->m_aimSliderFactorForNumHitObjects.clear();
+				m_beatmap->m_aimDifficultStrainsForNumHitObjects.clear();
 				m_beatmap->m_speedStarsForNumHitObjects.clear();
 				m_beatmap->m_speedNotesForNumHitObjects.clear();
+				m_beatmap->m_speedDifficultStrainsForNumHitObjects.clear();
 
 				break;
 			}

@@ -357,9 +357,14 @@ public:
 	// for all plays, but by an amount so small it should only be effective in replays."
 	static constexpr const float broken_gamefield_rounding_allowance = 1.00041f;
 
-	static float getRawHitCircleDiameter(float CS, bool applyBrokenGamefieldRoundingAllowance = true)
+	static float getRawHitCircleScale(float CS)
 	{
-		return std::max(0.0f, ((1.0f - 0.7f*(CS - 5.0f) / 5.0f) / 2.0f) * 128.0f * (applyBrokenGamefieldRoundingAllowance ? broken_gamefield_rounding_allowance : 1.0f)); // gives the circle diameter in osu!pixels, goes negative above CS 12.1429
+		return std::max(0.0f, ((1.0f - 0.7f * (CS - 5.0f) / 5.0f) / 2.0f) * broken_gamefield_rounding_allowance);
+	}
+
+	static float getRawHitCircleDiameter(float CS)
+	{
+		return getRawHitCircleScale(CS) * 128.0f; // gives the circle diameter in osu!pixels, goes negative above CS 12.1429
 	}
 
 	static float getHitCircleXMultiplier(Osu *osu)
