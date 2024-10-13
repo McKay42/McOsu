@@ -67,10 +67,19 @@ void OsuBackgroundStarCacheLoader::initAsync()
 		double speedDifficultStrains = 0.0;
 
 		// new fast method  (build full cached DiffObjects once) (1/2)
+		double cacheObjectsStart = engine->getTimeReal();
 		std::vector<OsuDifficultyCalculator::DiffObject> cachedDiffObjects;
-		std::vector<OsuDifficultyCalculator::DiffObject> diffObjects;
-		OsuDifficultyCalculator::calculateStarDiffForHitObjectsInt(cachedDiffObjects, diffObjects, diffres.diffobjects, CS, OD, speedMultiplier, relax, touchDevice, &aimStars, &aimSliderFactor, &aimDifficultStrains, &speedStars, &speedNotes, &speedDifficultStrains, -1, NULL, NULL, m_bDead);
+		OsuDifficultyCalculator::calculateStarDiffForHitObjectsInt(cachedDiffObjects, diffres.diffobjects, CS, OD, speedMultiplier, relax, touchDevice, &aimStars, &aimSliderFactor, &aimDifficultStrains, &speedStars, &speedNotes, &speedDifficultStrains, -1, NULL, NULL, NULL, m_bDead);
+		double cacheObjectsEnd = engine->getTimeReal();
 
+		double calcStrainsStart = engine->getTimeReal();
+		OsuDifficultyCalculator::IncrementalState incremental[OsuDifficultyCalculator::Skills::NUM_SKILLS] = {};
+		if (cachedDiffObjects.size()>0)
+		{
+			static const double strain_step = 400.0;
+			for (size_t i=0; i<OsuDifficultyCalculator::Skills::NUM_SKILLS; i++)
+				incremental[i].interval_end = std::ceil((double)cachedDiffObjects[0].ho->time / strain_step) * strain_step;
+		}
 		for (size_t i=0; i<diffres.diffobjects.size(); i++)
 		{
 			aimStars = 0.0;
@@ -91,7 +100,7 @@ void OsuBackgroundStarCacheLoader::initAsync()
 			//OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, CS, OD, speedMultiplier, relax, touchDevice, &aimStars, &aimSliderFactor, &speedStars, &speedNotes, i, NULL, NULL, m_bDead);
 
 			// new fast method (reuse cached DiffObjects instead of re-computing them every single iteration for the entire beatmap) (2/2)
-			OsuDifficultyCalculator::calculateStarDiffForHitObjectsInt(cachedDiffObjects, diffObjects, diffres.diffobjects, CS, OD, speedMultiplier, relax, touchDevice, &aimStars, &aimSliderFactor, &aimDifficultStrains, &speedStars, &speedNotes, &speedDifficultStrains, i, NULL, NULL, m_bDead);
+			OsuDifficultyCalculator::calculateStarDiffForHitObjectsInt(cachedDiffObjects, diffres.diffobjects, CS, OD, speedMultiplier, relax, touchDevice, &aimStars, &aimSliderFactor, &aimDifficultStrains, &speedStars, &speedNotes, &speedDifficultStrains, i, incremental, NULL, NULL, m_bDead);
 			/*
 			const double deltaOldAimStars = std::abs(aimStars - oldAimStars);
 			const double deltaOldAimSliderFactor = std::abs(aimSliderFactor - oldAimSliderFactor);
@@ -131,6 +140,7 @@ void OsuBackgroundStarCacheLoader::initAsync()
 				break;
 			}
 		}
+		debugLog("Cached diffobjects in %f seconds, calculated strain sections in %f\n", cacheObjectsEnd - cacheObjectsStart, engine->getTimeReal() - calcStrainsStart);
 	}
 
 	m_bAsyncReady = true;

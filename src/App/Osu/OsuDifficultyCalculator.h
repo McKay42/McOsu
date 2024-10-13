@@ -150,6 +150,19 @@ public:
 	static constexpr const double decay_base[Skills::NUM_SKILLS] = {0.3, 0.15, 0.15};				// how much strains decay per interval (if the previous interval's peak strains after applying decay are still higher than the current one's, they will be used as the peak strains).
 	static constexpr const double weight_scaling[Skills::NUM_SKILLS] = {1.430, 25.18, 25.18};	// used to keep speed and aim balanced between eachother
 
+	static constexpr const double DIFFCALC_EPSILON = 1e-32;
+
+	struct IncrementalState
+	{
+		double interval_end;
+		double max_strain;
+		double max_object_strain;
+		double relevant_note_sum; // speed only
+		double consistent_top_strain;
+		double difficult_strains;
+		std::vector<double> highest_strains;
+	};
+
 	class DiffObject
 	{
 	public:
@@ -186,12 +199,13 @@ public:
 		DiffObject(OsuDifficultyHitObject *base_object, float radius_scaling_factor, std::vector<DiffObject> &diff_objects, int prevObjectIdx);
 
 		inline const DiffObject *get_previous(int backwardsIdx) const {return (objects.size() > 0 && prevObjectIndex - backwardsIdx < (int)objects.size() ? &objects[std::max(0, prevObjectIndex - backwardsIdx)] : NULL);}
+		inline double get_strain(Skills::Skill type) const {return strains[Skills::skillToIndex(type)] * (type == Skills::Skill::SPEED ? rhythm : 1.0);}
 		inline static double applyDiminishingExp(double val) {return std::pow(val, 0.99);}
 		inline static double strainDecay(Skills::Skill type, double ms) {return std::pow(decay_base[Skills::skillToIndex(type)], ms / 1000.0);}
 
 		void calculate_strains(const DiffObject &prev, const DiffObject *next, double hitWindow300);
 		void calculate_strain(const DiffObject &prev, const DiffObject *next, double hitWindow300, const Skills::Skill dtype);
-		static double calculate_difficulty(const Skills::Skill type, const std::vector<DiffObject> &dobjects, std::vector<double> *outStrains = NULL, double *outDifficultStrains = NULL, double *outRelevantNotes = NULL);
+		static double calculate_difficulty(const Skills::Skill type, const DiffObject *dobjects, size_t dobjectCount, IncrementalState *incremental, std::vector<double> *outStrains = NULL, double *outDifficultStrains = NULL, double *outRelevantNotes = NULL);
 		static double spacing_weight1(const double distance, const Skills::Skill diff_type);
 		double spacing_weight2(const Skills::Skill diff_type, const DiffObject& prev, const DiffObject *next, double hitWindow300);
 		double get_doubletapness(const DiffObject *next, double hitWindow300) const;
@@ -201,7 +215,7 @@ public:
 	// stars, fully static
 	static double calculateStarDiffForHitObjects(std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, float OD, float speedMultiplier, bool relax, bool touchDevice, double *aim, double *aimSliderFactor, double *difficultAimStrains, double *speed, double *speedNotes, double *difficultSpeedStrains, int upToObjectIndex = -1, std::vector<double> *outAimStrains = NULL, std::vector<double> *outSpeedStrains = NULL);
 	static double calculateStarDiffForHitObjects(std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, float OD, float speedMultiplier, bool relax, bool touchDevice, double *aim, double *aimSliderFactor, double *difficultAimStrains, double *speed, double *speedNotes, double *difficultSpeedStrains, int upToObjectIndex, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains, const std::atomic<bool> &dead);
-	static double calculateStarDiffForHitObjectsInt(std::vector<DiffObject> &cachedDiffObjects, std::vector<DiffObject> &diffObjects, std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, float OD, float speedMultiplier, bool relax, bool touchDevice, double *aim, double *aimSliderFactor, double *difficultAimStrains, double *speed, double *speedNotes, double *difficultSpeedStrains, int upToObjectIndex, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains, const std::atomic<bool> &dead);
+	static double calculateStarDiffForHitObjectsInt(std::vector<DiffObject> &cachedDiffObjects, std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, float OD, float speedMultiplier, bool relax, bool touchDevice, double *aim, double *aimSliderFactor, double *difficultAimStrains, double *speed, double *speedNotes, double *difficultSpeedStrains, int upToObjectIndex, IncrementalState *incremental, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains, const std::atomic<bool> &dead);
 
 	// pp, use runtime mods (convenience)
 	static double calculatePPv2(Osu *osu, OsuBeatmap *beatmap, double aim, double aimSliderFactor, double difficultAimStrains, double speed, double speedNotes, double difficultSpeedStrains, int numHitObjects, int numCircles, int numSliders, int numSpinners, int maxPossibleCombo, int combo = -1, int misses = 0, int c300 = -1, int c100 = 0, int c50 = 0);
