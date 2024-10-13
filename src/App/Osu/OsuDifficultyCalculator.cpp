@@ -245,11 +245,10 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDi
 double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, float OD, float speedMultiplier, bool relax, bool touchDevice, double *aim, double *aimSliderFactor, double *difficultAimStrains, double *speed, double *speedNotes, double *difficultSpeedStrains, int upToObjectIndex, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains, const std::atomic<bool> &dead)
 {
 	std::vector<DiffObject> emptyCachedDiffObjects;
-	std::vector<DiffObject> diffObjects;
-	return calculateStarDiffForHitObjectsInt(emptyCachedDiffObjects, diffObjects, sortedHitObjects, CS, OD, speedMultiplier, relax, touchDevice, aim, aimSliderFactor, difficultAimStrains, speed, speedNotes, difficultSpeedStrains, upToObjectIndex, outAimStrains, outSpeedStrains, dead);
+	return calculateStarDiffForHitObjectsInt(emptyCachedDiffObjects, sortedHitObjects, CS, OD, speedMultiplier, relax, touchDevice, aim, aimSliderFactor, difficultAimStrains, speed, speedNotes, difficultSpeedStrains, upToObjectIndex, NULL, outAimStrains, outSpeedStrains, dead);
 }
 
-double OsuDifficultyCalculator::calculateStarDiffForHitObjectsInt(std::vector<DiffObject> &cachedDiffObjects, std::vector<DiffObject> &diffObjects, std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, float OD, float speedMultiplier, bool relax, bool touchDevice, double *aim, double *aimSliderFactor, double *difficultAimStrains, double *speed, double *speedNotes, double *difficultSpeedStrains, int upToObjectIndex, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains, const std::atomic<bool> &dead)
+double OsuDifficultyCalculator::calculateStarDiffForHitObjectsInt(std::vector<DiffObject> &cachedDiffObjects, std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, float OD, float speedMultiplier, bool relax, bool touchDevice, double *aim, double *aimSliderFactor, double *difficultAimStrains, double *speed, double *speedNotes, double *difficultSpeedStrains, int upToObjectIndex, IncrementalState* incremental, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains, const std::atomic<bool> &dead)
 {
 	// NOTE: depends on speed multiplier + CS + OD + relax + touchDevice
 
@@ -399,33 +398,22 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjectsInt(std::vector<Di
 	// ****************************************************************************************************************************************** //
 
 	// initialize dobjects
+	const size_t numDiffObjects = (upToObjectIndex < 0) ? sortedHitObjects.size() : upToObjectIndex + 1;
 	const bool isUsingCachedDiffObjects = (cachedDiffObjects.size() > 0);
-	diffObjects.clear();
-	diffObjects.reserve((upToObjectIndex < 0) ? sortedHitObjects.size() : upToObjectIndex+1);
+	DiffObject* diffObjects;
 	if (!isUsingCachedDiffObjects)
 	{
 		// not cached (full rebuild computation)
-		for (size_t i=0; i<sortedHitObjects.size() && (upToObjectIndex < 0 || i < upToObjectIndex+1); i++) // respect upToObjectIndex!
+		cachedDiffObjects.reserve(numDiffObjects);
+		for (size_t i=0; i<numDiffObjects; i++) // respect upToObjectIndex!
 		{
 			if (dead.load())
 				return 0.0;
 
-			diffObjects.push_back(DiffObject(&sortedHitObjects[i], radius_scaling_factor, diffObjects, (int)i - 1)); // this already initializes the angle to NaN
+			cachedDiffObjects.push_back(DiffObject(&sortedHitObjects[i], radius_scaling_factor, cachedDiffObjects, (int)i - 1)); // this already initializes the angle to NaN
 		}
 	}
-	else
-	{
-		// cached (assumption is cache always contains all, so we build up the partial set of diffObjects we need from it here)
-		for (size_t i=0; i<sortedHitObjects.size() && (upToObjectIndex < 0 || i < upToObjectIndex+1); i++) // respect upToObjectIndex!
-		{
-			if (dead.load())
-				return 0.0;
-
-			diffObjects.push_back(cachedDiffObjects[i]);
-		}
-	}
-
-	const size_t numDiffObjects = diffObjects.size();
+	diffObjects = cachedDiffObjects.data();
 
 	// calculate angles and travel/jump distances (before calculating strains)
 	if (!isUsingCachedDiffObjects)
@@ -529,9 +517,9 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjectsInt(std::vector<Di
 	}
 
 	// calculate final difficulty (weigh strains)
-	double aimNoSliders = osu_stars_xexxar_angles_sliders.getBool() ? DiffObject::calculate_difficulty(Skills::Skill::AIM_NO_SLIDERS, diffObjects) : 0.0;
-	*aim = DiffObject::calculate_difficulty(Skills::Skill::AIM_SLIDERS, diffObjects, outAimStrains, difficultAimStrains);
-	*speed = DiffObject::calculate_difficulty(Skills::Skill::SPEED, diffObjects, outSpeedStrains, difficultSpeedStrains, speedNotes);
+	double aimNoSliders = osu_stars_xexxar_angles_sliders.getBool() ? DiffObject::calculate_difficulty(Skills::Skill::AIM_NO_SLIDERS, diffObjects, numDiffObjects, incremental ? &incremental[(size_t)Skills::Skill::AIM_NO_SLIDERS] : NULL) : 0.0;
+	*aim = DiffObject::calculate_difficulty(Skills::Skill::AIM_SLIDERS, diffObjects, numDiffObjects, incremental ? &incremental[(size_t)Skills::Skill::AIM_SLIDERS] : NULL, outAimStrains, difficultAimStrains);
+	*speed = DiffObject::calculate_difficulty(Skills::Skill::SPEED, diffObjects, numDiffObjects, incremental ? &incremental[(size_t)Skills::Skill::SPEED] : NULL, outSpeedStrains, difficultSpeedStrains, speedNotes);
 
 	static const double star_scaling_factor = 0.0675;
 
@@ -548,15 +536,6 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjectsInt(std::vector<Di
 	{
 		*aim *= 0.9;
 		*speed = 0.0;
-	}
-
-	// fill cache
-	if (!isUsingCachedDiffObjects)
-	{
-		for (size_t i=0; i<diffObjects.size(); i++)
-		{
-			cachedDiffObjects.push_back(diffObjects[i]);
-		}
 	}
 
 	return calculateTotalStarsFromSkills(*aim, *speed);
@@ -890,7 +869,7 @@ void OsuDifficultyCalculator::DiffObject::calculate_strain(const DiffObject &pre
 	strains[Skills::skillToIndex(dtype)] = currentStrain;
 }
 
-double OsuDifficultyCalculator::DiffObject::calculate_difficulty(const Skills::Skill type, const std::vector<DiffObject> &dobjects, std::vector<double> *outStrains, double *outDifficultStrains, double *outRelevantNotes)
+double OsuDifficultyCalculator::DiffObject::calculate_difficulty(const Skills::Skill type, const DiffObject *dobjects, size_t dobjectCount, IncrementalState *incremental, std::vector<double> *outStrains, double *outDifficultStrains, double *outRelevantNotes)
 {
 	// (old) see https://github.com/ppy/osu/blob/master/osu.Game/Rulesets/Difficulty/Skills/Skill.cs
 	// (new) see https://github.com/ppy/osu/blob/master/osu.Game/Rulesets/Difficulty/Skills/StrainSkill.cs
@@ -898,16 +877,14 @@ double OsuDifficultyCalculator::DiffObject::calculate_difficulty(const Skills::S
 	static const double strain_step = 400.0;	// the length of each strain section
 	static const double decay_weight = 0.9;		// max strains are weighted from highest to lowest, and this is how much the weight decays.
 
-	if (dobjects.size() < 1) return 0.0;
+	if (dobjectCount < 1) return 0.0;
 
-	double interval_end = std::ceil((double)dobjects[0].ho->time / strain_step) * strain_step;
-	double max_strain = 0.0;
-
-	// used for calculating relevant note count for speed pp and difficult strains
-	std::vector<double> objectStrains;
+	double interval_end = incremental ? incremental->interval_end : (std::ceil((double)dobjects[0].ho->time / strain_step) * strain_step);
+	double max_strain = incremental ? incremental->max_strain : 0.0;
 
 	std::vector<double> highestStrains;
-	for (size_t i=0; i<dobjects.size(); i++)
+	std::vector<double> *highestStrainsRef = incremental ? &incremental->highest_strains : &highestStrains;
+	for (size_t i=(incremental ? dobjectCount-1 : 0); i<dobjectCount; i++)
 	{
 		const DiffObject &cur = dobjects[i];
 		const DiffObject &prev = dobjects[i > 0 ? i - 1 : i];
@@ -915,25 +892,37 @@ double OsuDifficultyCalculator::DiffObject::calculate_difficulty(const Skills::S
 		// make previous peak strain decay until the current object
 		while (cur.ho->time > interval_end)
 		{
-			highestStrains.push_back(max_strain);
+			if (incremental)
+				highestStrainsRef->insert(std::upper_bound(highestStrainsRef->begin(), highestStrainsRef->end(), max_strain), max_strain);
+			else
+				highestStrainsRef->push_back(max_strain);
 
 			if (i < 1) // !prev
 				max_strain = 0.0;
 			else
-				max_strain = prev.strains[Skills::skillToIndex(type)] * (type == Skills::Skill::SPEED ? prev.rhythm : 1.0) * strainDecay(type, (interval_end - (double)prev.ho->time));
+				max_strain = prev.get_strain(type) * strainDecay(type, (interval_end - (double)prev.ho->time));
 
 			interval_end += strain_step;
 		}
 
 		// calculate max strain for this interval
-		double cur_strain = cur.strains[Skills::skillToIndex(type)] * (type == Skills::Skill::SPEED ? cur.rhythm : 1.0);
+		double cur_strain = cur.get_strain(type);
 		max_strain = std::max(max_strain, cur_strain);
-		if (outRelevantNotes || outDifficultStrains)
-			objectStrains.push_back(cur_strain);
 	}
 
 	// the peak strain will not be saved for the last section in the above loop
-	highestStrains.push_back(max_strain);
+	if (incremental)
+	{
+		incremental->interval_end = interval_end;
+		incremental->max_strain = max_strain;
+		highestStrains.reserve(incremental->highest_strains.size() + 1); // required so insert call doesn't reallocate
+		highestStrains = incremental->highest_strains;
+		highestStrains.insert(std::upper_bound(highestStrains.begin(), highestStrains.end(), max_strain), max_strain);
+	}
+	else
+	{
+		highestStrains.push_back(max_strain);
+	}
 
 	if (outStrains != NULL)
 		(*outStrains) = highestStrains; // save a copy
@@ -942,15 +931,36 @@ double OsuDifficultyCalculator::DiffObject::calculate_difficulty(const Skills::S
 	// RelevantNoteCount @ https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/Speed.cs
 	if (outRelevantNotes)
 	{
-		double maxStrain = (objectStrains.size() < 1 ? 0.0 : *std::max_element(objectStrains.begin(), objectStrains.end()));
-		if (objectStrains.size() < 1 || maxStrain == 0.0 || !osu_stars_xexxar_angles_sliders.getBool())
+		const auto diffObjCompare = [=](const DiffObject& x, const DiffObject& y)
+			{
+				return x.get_strain(type)<y.get_strain(type);
+			};
+		double maxStrain;
+		if (incremental)
+			maxStrain = std::max(incremental->max_object_strain, dobjects[dobjectCount-1].get_strain(type));
+		else
+			maxStrain = (dobjectCount < 1 ? 0.0 : (*std::max_element(dobjects, dobjects + dobjectCount, diffObjCompare)).get_strain(type));
+		if (dobjectCount < 1 || maxStrain == 0.0 || !osu_stars_xexxar_angles_sliders.getBool())
 			*outRelevantNotes = 0.0;
 		else
 		{
 			double tempSum = 0.0;
-			for (size_t i=0; i<objectStrains.size(); i++)
+			if (incremental && incremental->max_object_strain == maxStrain)
 			{
-				tempSum += 1.0 / (1.0 + std::exp(-(objectStrains[i] / maxStrain * 12.0 - 6.0)));
+				incremental->relevant_note_sum += 1.0 / (1.0 + std::exp(-(dobjects[dobjectCount-1].get_strain(type) / maxStrain * 12.0 - 6.0)));
+				tempSum = incremental->relevant_note_sum;
+			}
+			else
+			{
+				for (size_t i=0; i<dobjectCount; i++)
+				{
+					tempSum += 1.0 / (1.0 + std::exp(-(dobjects[i].get_strain(type) / maxStrain * 12.0 - 6.0)));
+				}
+				if (incremental)
+				{
+					incremental->max_object_strain = maxStrain;
+					incremental->relevant_note_sum = tempSum;
+				}
 			}
 			*outRelevantNotes = tempSum;
 		}
@@ -966,8 +976,10 @@ double OsuDifficultyCalculator::DiffObject::calculate_difficulty(const Skills::S
 	double difficulty = 0.0;
 	double weight = 1.0;
 
-	// sort strains from greatest to lowest
-	std::sort(highestStrains.begin(), highestStrains.end(), std::greater<double>());
+	// sort strains
+	// NOTE: lazer does this from highest to lowest, but sorting it in reverse lets the reduced top section loop below have a better average insertion time
+	if (!incremental)
+		std::sort(highestStrains.begin(), highestStrains.end());
 
 	// old implementation
 	/*
@@ -999,20 +1011,28 @@ double OsuDifficultyCalculator::DiffObject::calculate_difficulty(const Skills::S
 		}
 
 		// "We are reducing the highest strains first to account for extreme difficulty spikes"
-		for (size_t i=0; i<std::min(highestStrains.size(), skillSpecificReducedSectionCount); i++)
+		size_t actualReducedSectionCount = std::min(highestStrains.size(), skillSpecificReducedSectionCount);
+		for (size_t i=0; i<actualReducedSectionCount; i++)
 		{
 			const double scale = std::log10(lerp<double>(1.0, 10.0, clamp<double>((double)i / (double)skillSpecificReducedSectionCount, 0.0, 1.0)));
-			highestStrains[i] *= lerp<double>(reducedStrainBaseline, 1.0, scale);
+			highestStrains[highestStrains.size()-i-1] *= lerp<double>(reducedStrainBaseline, 1.0, scale);
 		}
 
 		// re-sort
-		std::sort(highestStrains.begin(), highestStrains.end(), std::greater<double>());
+		double reducedSections[reducedSectionCount]; // actualReducedSectionCount <= skillSpecificReducedSectionCount <= reducedSectionCount
+		memcpy(reducedSections, &highestStrains[highestStrains.size() - actualReducedSectionCount], actualReducedSectionCount * sizeof(double));
+		highestStrains.erase(highestStrains.end() - actualReducedSectionCount, highestStrains.end());
+		for (size_t i=0; i<actualReducedSectionCount; i++)
+			highestStrains.insert(std::upper_bound(highestStrains.begin(), highestStrains.end(), reducedSections[i]), reducedSections[i]);
 
 		// weigh the top strains
 		for (size_t i=0; i<highestStrains.size(); i++)
 		{
-			difficulty += highestStrains[i] * weight;
+			double last = difficulty;
+			difficulty += highestStrains[highestStrains.size()-i-1] * weight;
 			weight *= decay_weight;
+			if (difficulty == last)
+				break;
 		}
 	}
 
@@ -1027,9 +1047,22 @@ double OsuDifficultyCalculator::DiffObject::calculate_difficulty(const Skills::S
 		{
 			double consistentTopStrain = difficulty / 10.0;
 			double tempSum = 0.0;
-			for (size_t i=0; i<objectStrains.size(); i++)
+			if (incremental && incremental->consistent_top_strain == consistentTopStrain)
 			{
-				tempSum += 1.1 / (1 + std::exp(-10 * (objectStrains[i] / consistentTopStrain - 0.88)));
+				incremental->difficult_strains += 1.1 / (1 + std::exp(-10 * (dobjects[dobjectCount-1].get_strain(type) / consistentTopStrain - 0.88)));
+				tempSum = incremental->difficult_strains;
+			}
+			else
+			{
+				for (size_t i=0; i<dobjectCount; i++)
+				{
+					tempSum += 1.1 / (1 + std::exp(-10 * (dobjects[i].get_strain(type) / consistentTopStrain - 0.88)));
+				}
+				if (incremental)
+				{
+					incremental->consistent_top_strain = consistentTopStrain;
+					incremental->difficult_strains = tempSum;
+				}
 			}
 			*outDifficultStrains = tempSum;
 		}
