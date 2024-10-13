@@ -147,7 +147,7 @@ public:
 	// see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/Speed.cs
 	// see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/Aim.cs
 
-	static constexpr const double decay_base[Skills::NUM_SKILLS] = {0.3, 0.15, 0.15};				// how much strains decay per interval (if the previous interval's peak strains after applying decay are still higher than the current one's, they will be used as the peak strains).
+	static constexpr const double decay_base[Skills::NUM_SKILLS] = {0.3, 0.15, 0.15};			// how much strains decay per interval (if the previous interval's peak strains after applying decay are still higher than the current one's, they will be used as the peak strains).
 	static constexpr const double weight_scaling[Skills::NUM_SKILLS] = {1.430, 25.18, 25.18};	// used to keep speed and aim balanced between eachother
 
 	static constexpr const double DIFFCALC_EPSILON = 1e-32;

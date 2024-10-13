@@ -8,6 +8,7 @@
 #include "OsuBackgroundStarCacheLoader.h"
 
 #include "Engine.h"
+#include "Timer.h"
 
 #include "OsuBeatmap.h"
 #include "OsuDatabaseBeatmap.h"
@@ -67,18 +68,22 @@ void OsuBackgroundStarCacheLoader::initAsync()
 		double speedDifficultStrains = 0.0;
 
 		// new fast method  (build full cached DiffObjects once) (1/2)
-		double cacheObjectsStart = engine->getTimeReal();
+		Timer cacheObjectsTimer;
+		cacheObjectsTimer.start();
 		std::vector<OsuDifficultyCalculator::DiffObject> cachedDiffObjects;
 		OsuDifficultyCalculator::calculateStarDiffForHitObjectsInt(cachedDiffObjects, diffres.diffobjects, CS, OD, speedMultiplier, relax, touchDevice, &aimStars, &aimSliderFactor, &aimDifficultStrains, &speedStars, &speedNotes, &speedDifficultStrains, -1, NULL, NULL, NULL, m_bDead);
-		double cacheObjectsEnd = engine->getTimeReal();
+		cacheObjectsTimer.update();
 
-		double calcStrainsStart = engine->getTimeReal();
+		Timer calcStrainsTimer;
+		calcStrainsTimer.start();
 		OsuDifficultyCalculator::IncrementalState incremental[OsuDifficultyCalculator::Skills::NUM_SKILLS] = {};
-		if (cachedDiffObjects.size()>0)
+		if (cachedDiffObjects.size() > 0)
 		{
 			static const double strain_step = 400.0;
 			for (size_t i=0; i<OsuDifficultyCalculator::Skills::NUM_SKILLS; i++)
+			{
 				incremental[i].interval_end = std::ceil((double)cachedDiffObjects[0].ho->time / strain_step) * strain_step;
+			}
 		}
 		for (size_t i=0; i<diffres.diffobjects.size(); i++)
 		{
@@ -140,7 +145,8 @@ void OsuBackgroundStarCacheLoader::initAsync()
 				break;
 			}
 		}
-		debugLog("Cached diffobjects in %f seconds, calculated strain sections in %f\n", cacheObjectsEnd - cacheObjectsStart, engine->getTimeReal() - calcStrainsStart);
+		calcStrainsTimer.update();
+		debugLog("OsuBackgroundStarCacheLoader: Took %f sec total = %f sec (diffobjects) + %f sec (strains)\n", cacheObjectsTimer.getElapsedTime() + calcStrainsTimer.getElapsedTime(), cacheObjectsTimer.getElapsedTime(), calcStrainsTimer.getElapsedTime());
 	}
 
 	m_bAsyncReady = true;
