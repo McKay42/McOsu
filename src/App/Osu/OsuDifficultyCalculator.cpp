@@ -897,10 +897,13 @@ double OsuDifficultyCalculator::DiffObject::calculate_difficulty(const Skills::S
 			else
 				highestStrainsRef->push_back(max_strain);
 
-			if (i < 1) // !prev
+			// skip calculating strain decay for very long breaks (e.g. beatmap upload size limit hack diffs)
+			// strainDecay with a base of 0.3 at 60 seconds is 4.23911583e-32, well below any meaningful difference even after being multiplied by object strain
+			double strainDelta = interval_end - (double)prev.ho->time;
+			if (i < 1 || strainDelta > 600000.0) // !prev
 				max_strain = 0.0;
 			else
-				max_strain = prev.get_strain(type) * strainDecay(type, (interval_end - (double)prev.ho->time));
+				max_strain = prev.get_strain(type) * strainDecay(type, strainDelta);
 
 			interval_end += strain_step;
 		}
