@@ -9,10 +9,13 @@
 
 #include "Engine.h"
 #include "Timer.h"
+#include "ConVar.h"
 
 #include "OsuBeatmap.h"
 #include "OsuDatabaseBeatmap.h"
 #include "OsuDifficultyCalculator.h"
+
+ConVar osu_debug_background_star_cache_loader("osu_debug_background_star_cache_loader", false, FCVAR_NONE, "prints the time it took to build the cache");
 
 OsuBackgroundStarCacheLoader::OsuBackgroundStarCacheLoader(OsuBeatmap *beatmap) : Resource()
 {
@@ -146,7 +149,8 @@ void OsuBackgroundStarCacheLoader::initAsync()
 			}
 		}
 		calcStrainsTimer.update();
-		debugLog("OsuBackgroundStarCacheLoader: Took %f sec total = %f sec (diffobjects) + %f sec (strains)\n", cacheObjectsTimer.getElapsedTime() + calcStrainsTimer.getElapsedTime(), cacheObjectsTimer.getElapsedTime(), calcStrainsTimer.getElapsedTime());
+		if (osu_debug_background_star_cache_loader.getBool())
+			debugLog("OsuBackgroundStarCacheLoader: Took %f sec total = %f sec (diffobjects) + %f sec (strains)\n", cacheObjectsTimer.getElapsedTime() + calcStrainsTimer.getElapsedTime(), cacheObjectsTimer.getElapsedTime(), calcStrainsTimer.getElapsedTime());
 	}
 
 	m_bAsyncReady = true;
