@@ -140,7 +140,7 @@ void OsuBackgroundStarCacheLoader::initAsync()
 				break;
 			}
 		}
-		debugLog("cached diffobjects in %f, calculated strains in %f\n", cacheObjectsEnd - cacheObjectsStart, engine->getTimeReal() - calcStrainsStart);
+		debugLog("Cached diffobjects in %f seconds, calculated strain sections in %f\n", cacheObjectsEnd - cacheObjectsStart, engine->getTimeReal() - calcStrainsStart);
 	}
 
 	m_bAsyncReady = true;

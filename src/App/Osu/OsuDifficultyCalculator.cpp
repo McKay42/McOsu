@@ -938,30 +938,30 @@ double OsuDifficultyCalculator::DiffObject::calculate_difficulty(const Skills::S
 			{
 				return x.get_strain(type)<y.get_strain(type);
 			};
-		double maxStrain;
+		double maxObjectStrain;
 		if (incremental)
-			maxStrain = std::max(incremental->max_object_strain, dobjects[dobjectCount-1].get_strain(type));
+			maxObjectStrain = std::max(incremental->max_object_strain, dobjects[dobjectCount-1].get_strain(type));
 		else
-			maxStrain = (dobjectCount < 1 ? 0.0 : (*std::max_element(dobjects, dobjects + dobjectCount, diffObjCompare)).get_strain(type));
-		if (dobjectCount < 1 || maxStrain == 0.0 || !osu_stars_xexxar_angles_sliders.getBool())
+			maxObjectStrain = (*std::max_element(dobjects, dobjects + dobjectCount, diffObjCompare)).get_strain(type);
+		if (maxObjectStrain == 0.0 || !osu_stars_xexxar_angles_sliders.getBool())
 			*outRelevantNotes = 0.0;
 		else
 		{
 			double tempSum = 0.0;
-			if (incremental && incremental->max_object_strain == maxStrain)
+			if (incremental && std::abs(incremental->max_object_strain - maxObjectStrain) < DIFFCALC_EPSILON)
 			{
-				incremental->relevant_note_sum += 1.0 / (1.0 + std::exp(-(dobjects[dobjectCount-1].get_strain(type) / maxStrain * 12.0 - 6.0)));
+				incremental->relevant_note_sum += 1.0 / (1.0 + std::exp(-(dobjects[dobjectCount-1].get_strain(type) / maxObjectStrain * 12.0 - 6.0)));
 				tempSum = incremental->relevant_note_sum;
 			}
 			else
 			{
 				for (size_t i=0; i<dobjectCount; i++)
 				{
-					tempSum += 1.0 / (1.0 + std::exp(-(dobjects[i].get_strain(type) / maxStrain * 12.0 - 6.0)));
+					tempSum += 1.0 / (1.0 + std::exp(-(dobjects[i].get_strain(type) / maxObjectStrain * 12.0 - 6.0)));
 				}
 				if (incremental)
 				{
-					incremental->max_object_strain = maxStrain;
+					incremental->max_object_strain = maxObjectStrain;
 					incremental->relevant_note_sum = tempSum;
 				}
 			}
@@ -1034,7 +1034,7 @@ double OsuDifficultyCalculator::DiffObject::calculate_difficulty(const Skills::S
 			double last = difficulty;
 			difficulty += highestStrains[highestStrains.size()-i-1] * weight;
 			weight *= decay_weight;
-			if (difficulty == last)
+			if (std::abs(difficulty - last) < DIFFCALC_EPSILON)
 				break;
 		}
 	}
@@ -1050,7 +1050,7 @@ double OsuDifficultyCalculator::DiffObject::calculate_difficulty(const Skills::S
 		{
 			double consistentTopStrain = difficulty / 10.0;
 			double tempSum = 0.0;
-			if (incremental && incremental->consistent_top_strain == consistentTopStrain)
+			if (incremental && std::abs(incremental->consistent_top_strain - consistentTopStrain) < DIFFCALC_EPSILON)
 			{
 				incremental->difficult_strains += 1.1 / (1 + std::exp(-10 * (dobjects[dobjectCount-1].get_strain(type) / consistentTopStrain - 0.88)));
 				tempSum = incremental->difficult_strains;
