@@ -66,6 +66,7 @@ ConVar osu_collections_legacy_enabled("osu_collections_legacy_enabled", true, FC
 ConVar osu_collections_custom_enabled("osu_collections_custom_enabled", true, FCVAR_NONE, "load custom collections.db");
 ConVar osu_collections_custom_version("osu_collections_custom_version", 20220110, FCVAR_NONE, "maximum supported custom collections.db version");
 ConVar osu_collections_save_immediately("osu_collections_save_immediately", true, FCVAR_NONE, "write collections.db as soon as anything is changed");
+ConVar osu_user_beatmap_pp_sanity_limit_for_stats("osu_user_beatmap_pp_sanity_limit_for_stats", 10000.0f, FCVAR_NONE, "ignore scores with a higher pp value than this for the total profile pp calc");
 ConVar osu_user_include_relax_and_autopilot_for_stats("osu_user_include_relax_and_autopilot_for_stats", false, FCVAR_NONE);
 ConVar osu_user_switcher_include_legacy_scores_for_names("osu_user_switcher_include_legacy_scores_for_names", true, FCVAR_NONE);
 
@@ -927,6 +928,7 @@ OsuDatabase::PlayerPPScores OsuDatabase::getPlayerPPScores(UString playerName)
 	};
 
 	unsigned long long totalScore = 0;
+	const float userBeatmapPpSanityLimitForStats = osu_user_beatmap_pp_sanity_limit_for_stats.getFloat();
 	for (auto &key : keys)
 	{
 		if (m_scores[key].size() > 0)
@@ -940,16 +942,20 @@ OsuDatabase::PlayerPPScores OsuDatabase::getPlayerPPScores(UString playerName)
 			{
 				if (!score.isLegacyScore && (osu_user_include_relax_and_autopilot_for_stats.getBool() ? true : !((score.modsLegacy & OsuReplay::Mods::Relax) || (score.modsLegacy & OsuReplay::Mods::Relax2))) && score.playerName == playerName)
 				{
-					foundValidScore = true;
-
-					totalScore += score.score;
-
-					score.sortHack = m_iSortHackCounter++;
-
-					if (score.pp > prevPP || prevPP < 0.0f)
+					const bool isSaneScore = (userBeatmapPpSanityLimitForStats <= 0.0f || score.pp <= userBeatmapPpSanityLimitForStats);
+					if (isSaneScore)
 					{
-						prevPP = score.pp;
-						tempScore = &score;
+						foundValidScore = true;
+
+						totalScore += score.score;
+
+						score.sortHack = m_iSortHackCounter++;
+
+						if ((score.pp > prevPP || prevPP < 0.0f))
+						{
+							prevPP = score.pp;
+							tempScore = &score;
+						}
 					}
 				}
 			}
