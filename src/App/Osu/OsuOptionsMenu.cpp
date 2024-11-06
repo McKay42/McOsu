@@ -1019,6 +1019,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("SuddenDeath restart on miss", "Skips the failing animation, and instantly restarts like SS/PF.", convar->getConVarByName("osu_mod_suddendeath_restart"));
 	addCheckbox("Show Skip Button during Intro", "Skip intro to first hitobject.", convar->getConVarByName("osu_skip_intro_enabled"));
 	addCheckbox("Show Skip Button during Breaks", "Skip breaks in the middle of beatmaps.", convar->getConVarByName("osu_skip_breaks_enabled"));
+	addCheckbox("Auto restart","Skips the failing animation, and instantly restarts", convar->getConVarByName("osu_auto_reset"));
 	addSpacer();
 	addSubSection("Mechanics", "health drain notelock lock block blocking noteblock");
 	addCheckbox("Kill Player upon Failing", "Enabled: Singleplayer default. You die upon failing and the beatmap stops.\nDisabled: Multiplayer default. Allows you to keep playing even after failing.", convar->getConVarByName("osu_drain_kill"));
@@ -3884,6 +3885,8 @@ CBaseUICheckbox *OsuOptionsMenu::addCheckbox(UString text, ConVar *cvar)
 {
 	return addCheckbox(text, "", cvar);
 }
+
+
 
 CBaseUICheckbox *OsuOptionsMenu::addCheckbox(UString text, UString tooltipText, ConVar *cvar)
 {
