@@ -37,8 +37,9 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 
 	CHANGELOG alpha317;
 	alpha317.title = UString::format("33.09 (Build Date: %s, %s)", __DATE__, __TIME__); // (09.01.2022 - ?)
-	alpha317.changes.push_back("- Updated star + pp algorithms to match current lazer implementation aka 20241007 (18) (thanks to @Khangaroo!)");
-	alpha317.changes.push_back("- Increased performance of star/pp calc by ~100x (yes, two orders of magnitude faster. thanks to @Khangaroo!)");
+	alpha317.changes.push_back("- For more info on the star/pp changes in this update see https://osu.ppy.sh/home/news/2024-10-28-performance-points-star-rating-updates");
+	alpha317.changes.push_back("- Updated star + pp algorithms to match current lazer implementation aka CSR aka Combo Scaling Removal aka 20241007 (18) (thanks to @Khangaroo!)");
+	alpha317.changes.push_back("- Increased performance of live star/pp calc by ~100x (yes, two orders of magnitude faster. thanks to @Khangaroo!)");
 	alpha317.changes.push_back("- FPoSu: Added Skybox cubemap support (Options > FPoSu - Playfield > \"Skybox\", enabled by default)");
 	alpha317.changes.push_back("- FPoSu: Added Options > FPoSu - Playfield > \"Background Opacity\" (transparent playfield backgrounds so you can see the skybox/cube through it)");
 	alpha317.changes.push_back("- Added C/F4 hotkeys to pause music at main menu");

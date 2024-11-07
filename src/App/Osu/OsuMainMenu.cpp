@@ -226,6 +226,7 @@ ConVar osu_main_menu_banner_always_text("osu_main_menu_banner_always_text", "", 
 ConVar osu_main_menu_banner_ifupdatedfromoldversion_text("osu_main_menu_banner_ifupdatedfromoldversion_text", "", FCVAR_NONE);
 ConVar osu_main_menu_banner_ifupdatedfromoldversion_le3300_text("osu_main_menu_banner_ifupdatedfromoldversion_le3300_text", "", FCVAR_NONE);
 ConVar osu_main_menu_banner_ifupdatedfromoldversion_le3303_text("osu_main_menu_banner_ifupdatedfromoldversion_le3303_text", "", FCVAR_NONE);
+ConVar osu_main_menu_banner_ifupdatedfromoldversion_le3308_text("osu_main_menu_banner_ifupdatedfromoldversion_le3308_text", "", FCVAR_NONE);
 
 ConVar *OsuMainMenu::m_osu_universal_offset_ref = NULL;
 ConVar *OsuMainMenu::m_osu_universal_offset_hardcoded_ref = NULL;
@@ -335,6 +336,7 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen(osu)
 	m_bDidUserUpdateFromOlderVersion = false;
 	m_bDidUserUpdateFromOlderVersionLe3300 = false;
 	m_bDidUserUpdateFromOlderVersionLe3303 = false;
+	m_bDidUserUpdateFromOlderVersionLe3308 = false;
 	{
 		m_bDrawVersionNotificationArrow = false;
 		if (env->fileExists(MCOSU_NEWVERSION_NOTIFICATION_TRIGGER_FILE))
@@ -350,6 +352,8 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen(osu)
 					m_bDidUserUpdateFromOlderVersionLe3300 = true;
 				if (version < 33.04f - 0.0001f)
 					m_bDidUserUpdateFromOlderVersionLe3303 = true;
+				if (version < 33.09f - 0.0001f)
+					m_bDidUserUpdateFromOlderVersionLe3308 = true;
 			}
 			else
 				m_bDrawVersionNotificationArrow = true;
@@ -593,6 +597,8 @@ void OsuMainMenu::draw(Graphics *g)
 			bannerText = osu_main_menu_banner_ifupdatedfromoldversion_le3300_text.getString();
 		else if (m_bDidUserUpdateFromOlderVersionLe3303 && osu_main_menu_banner_ifupdatedfromoldversion_le3303_text.getString().length() > 0)
 			bannerText = osu_main_menu_banner_ifupdatedfromoldversion_le3303_text.getString();
+		else if (m_bDidUserUpdateFromOlderVersionLe3308 && osu_main_menu_banner_ifupdatedfromoldversion_le3308_text.getString().length() > 0)
+			bannerText = osu_main_menu_banner_ifupdatedfromoldversion_le3308_text.getString();
 
 		if (bannerText.length() > 0)
 		{
@@ -608,7 +614,7 @@ void OsuMainMenu::draw(Graphics *g)
 			for (int i=-1; i<numBanners; i++)
 			{
 				g->pushTransform();
-				g->translate(i*bannerStringWidth + i*bannerDiff + fmod(engine->getTime()*30, bannerStringWidth + bannerDiff), bannerFont->getHeight() + bannerMargin);
+				g->translate(i*bannerStringWidth + i*bannerDiff + fmod(-engine->getTime()*30, bannerStringWidth + bannerDiff), bannerFont->getHeight() + bannerMargin);
 				g->drawString(bannerFont, bannerText);
 				g->popTransform();
 			}
@@ -617,7 +623,7 @@ void OsuMainMenu::draw(Graphics *g)
 			for (int i=-1; i<numBanners; i++)
 			{
 				g->pushTransform();
-				g->translate(i*bannerStringWidth + i*bannerDiff + fmod(engine->getTime()*30, bannerStringWidth + bannerDiff), bannerFont->getHeight() + bannerMargin);
+				g->translate(i*bannerStringWidth + i*bannerDiff + fmod(-engine->getTime()*30, bannerStringWidth + bannerDiff), bannerFont->getHeight() + bannerMargin);
 				g->drawString(bannerFont, bannerText);
 				g->popTransform();
 			}
