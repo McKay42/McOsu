@@ -1017,9 +1017,9 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Don't change dim level during breaks", "Makes the background basically impossible to see during breaks.\nNot recommended.", convar->getConVarByName("osu_background_dont_fade_during_breaks"));
 	addCheckbox("Show approach circle on first \"Hidden\" object", convar->getConVarByName("osu_show_approach_circle_on_first_hidden_object"));
 	addCheckbox("SuddenDeath restart on miss", "Skips the failing animation, and instantly restarts like SS/PF.", convar->getConVarByName("osu_mod_suddendeath_restart"));
+	addCheckbox("Restart on death", "Skips the failing animation, and instantly restarts.", convar->getConVarByName("osu_restart_on_death"));
 	addCheckbox("Show Skip Button during Intro", "Skip intro to first hitobject.", convar->getConVarByName("osu_skip_intro_enabled"));
 	addCheckbox("Show Skip Button during Breaks", "Skip breaks in the middle of beatmaps.", convar->getConVarByName("osu_skip_breaks_enabled"));
-	addCheckbox("Auto restart","Skips the failing animation, and instantly restarts", convar->getConVarByName("osu_auto_reset"));
 	addSpacer();
 	addSubSection("Mechanics", "health drain notelock lock block blocking noteblock");
 	addCheckbox("Kill Player upon Failing", "Enabled: Singleplayer default. You die upon failing and the beatmap stops.\nDisabled: Multiplayer default. Allows you to keep playing even after failing.", convar->getConVarByName("osu_drain_kill"));
@@ -3883,10 +3883,8 @@ OsuOptionsMenuKeyBindButton *OsuOptionsMenu::addKeyBindButton(UString text, ConV
 
 CBaseUICheckbox *OsuOptionsMenu::addCheckbox(UString text, ConVar *cvar)
 {
-	return addCheckbox(text, "", cvar);
+	return addButton(text, "", cvar);
 }
-
-
 
 CBaseUICheckbox *OsuOptionsMenu::addCheckbox(UString text, UString tooltipText, ConVar *cvar)
 {

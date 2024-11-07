@@ -108,7 +108,7 @@ ConVar osu_fail_time("osu_fail_time", 2.25f, FCVAR_NONE, "Timeframe in s for the
 ConVar osu_notelock_type("osu_notelock_type", 2, FCVAR_NONE, "which notelock algorithm to use (0 = None, 1 = McOsu, 2 = osu!stable, 3 = osu!lazer 2020)");
 ConVar osu_notelock_stable_tolerance2b("osu_notelock_stable_tolerance2b", 3, FCVAR_NONE, "time tolerance in milliseconds to allow hitting simultaneous objects close together (e.g. circle at end of slider)");
 ConVar osu_mod_suddendeath_restart("osu_mod_suddendeath_restart", false, FCVAR_NONE, "osu! has this set to false (i.e. you fail after missing). if set to true, then behave like SS/PF, instantly restarting the map");
-ConVar osu_auto_reset("osu_auto_reset", false, FCVAR_NONE, "autoreset");
+ConVar osu_restart_on_death("osu_restart_on_death", false, FCVAR_NONE, "instantly restarts the beatmap from the beginning if the player dies due to running out of hp");
 ConVar osu_drain_type("osu_drain_type", 2, FCVAR_NONE, "which hp drain algorithm to use (0 = None, 1 = VR, 2 = osu!stable, 3 = osu!lazer 2020, 4 = osu!lazer 2018)");
 ConVar osu_drain_kill("osu_drain_kill", true, FCVAR_NONE, "whether to kill the player upon failing");
 ConVar osu_drain_kill_notification_duration("osu_drain_kill_notification_duration", 1.0f, FCVAR_NONE, "how long to display the \"You have failed, but you can keep playing!\" notification (0 = disabled)");
@@ -1626,10 +1626,8 @@ void OsuBeatmap::fail()
 
 	if (!m_osu->isInMultiplayer() && osu_drain_kill.getBool())
 	{
-		if(osu_auto_reset.getBool())
-		{
+		if(osu_restart_on_death.getBool()) 
 			restart();
-		}
 		else{
 			engine->getSound()->play(getSkin()->getFailsound());
 
