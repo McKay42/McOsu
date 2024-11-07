@@ -46,6 +46,8 @@ public:
 	inline const std::vector<Vector2> &getPoints() const {return m_curvePoints;}
 	inline const std::vector<std::vector<Vector2>> &getPointSegments() const {return m_curvePointSegments;}
 
+	inline float getPixelLength() const {return m_fPixelLength;}
+
 protected:
 	// original input values
 	float m_fPixelLength;

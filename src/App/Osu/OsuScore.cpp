@@ -21,31 +21,31 @@
 #include "OsuReplay.h"
 #include "OsuHitObject.h"
 
-ConVar osu_hiterrorbar_misses("osu_hiterrorbar_misses", true);
-ConVar osu_debug_pp("osu_debug_pp", false);
+ConVar osu_hiterrorbar_misses("osu_hiterrorbar_misses", true, FCVAR_NONE);
+ConVar osu_debug_pp("osu_debug_pp", false, FCVAR_NONE);
 
-ConVar osu_hud_statistics_hitdelta_chunksize("osu_hud_statistics_hitdelta_chunksize", 30, "how many recent hit deltas to average (-1 = all)");
+ConVar osu_hud_statistics_hitdelta_chunksize("osu_hud_statistics_hitdelta_chunksize", 30, FCVAR_NONE, "how many recent hit deltas to average (-1 = all)");
 
-ConVar osu_drain_vr_multiplier("osu_drain_vr_multiplier", 1.0f);
-ConVar osu_drain_vr_300("osu_drain_vr_300", 0.035f);
-ConVar osu_drain_vr_100("osu_drain_vr_100", -0.10f);
-ConVar osu_drain_vr_50("osu_drain_vr_50", -0.125f);
-ConVar osu_drain_vr_miss("osu_drain_vr_miss", -0.15f);
-ConVar osu_drain_vr_sliderbreak("osu_drain_vr_sliderbreak", -0.10f);
+ConVar osu_drain_vr_multiplier("osu_drain_vr_multiplier", 1.0f, FCVAR_NONE);
+ConVar osu_drain_vr_300("osu_drain_vr_300", 0.035f, FCVAR_NONE);
+ConVar osu_drain_vr_100("osu_drain_vr_100", -0.10f, FCVAR_NONE);
+ConVar osu_drain_vr_50("osu_drain_vr_50", -0.125f, FCVAR_NONE);
+ConVar osu_drain_vr_miss("osu_drain_vr_miss", -0.15f, FCVAR_NONE);
+ConVar osu_drain_vr_sliderbreak("osu_drain_vr_sliderbreak", -0.10f, FCVAR_NONE);
 
-ConVar osu_drain_stable_hpbar_maximum("osu_drain_stable_hpbar_maximum", 200.0f);
+ConVar osu_drain_stable_hpbar_maximum("osu_drain_stable_hpbar_maximum", 200.0f, FCVAR_NONE);
 
-ConVar osu_drain_lazer_multiplier("osu_drain_lazer_multiplier", 0.05f, "DEFAULT_MAX_HEALTH_INCREASE, expressed as a percentage of full health");
-ConVar osu_drain_lazer_300("osu_drain_lazer_300", 1.0f);
-ConVar osu_drain_lazer_100("osu_drain_lazer_100", 0.5f);
-ConVar osu_drain_lazer_50("osu_drain_lazer_50", -0.05f);
-ConVar osu_drain_lazer_miss("osu_drain_lazer_miss", -1.0f);
+ConVar osu_drain_lazer_multiplier("osu_drain_lazer_multiplier", 0.05f, FCVAR_NONE, "DEFAULT_MAX_HEALTH_INCREASE, expressed as a percentage of full health");
+ConVar osu_drain_lazer_300("osu_drain_lazer_300", 1.0f, FCVAR_NONE);
+ConVar osu_drain_lazer_100("osu_drain_lazer_100", 0.5f, FCVAR_NONE);
+ConVar osu_drain_lazer_50("osu_drain_lazer_50", -0.05f, FCVAR_NONE);
+ConVar osu_drain_lazer_miss("osu_drain_lazer_miss", -1.0f, FCVAR_NONE);
 
-ConVar osu_drain_lazer_2018_multiplier("osu_drain_lazer_2018_multiplier", 1.0f);
-ConVar osu_drain_lazer_2018_300("osu_drain_lazer_2018_300", 0.01f);
-ConVar osu_drain_lazer_2018_100("osu_drain_lazer_2018_100", 0.01f);
-ConVar osu_drain_lazer_2018_50("osu_drain_lazer_2018_50", 0.01f);
-ConVar osu_drain_lazer_2018_miss("osu_drain_lazer_2018_miss", -0.02f);
+ConVar osu_drain_lazer_2018_multiplier("osu_drain_lazer_2018_multiplier", 1.0f, FCVAR_NONE);
+ConVar osu_drain_lazer_2018_300("osu_drain_lazer_2018_300", 0.01f, FCVAR_NONE);
+ConVar osu_drain_lazer_2018_100("osu_drain_lazer_2018_100", 0.01f, FCVAR_NONE);
+ConVar osu_drain_lazer_2018_50("osu_drain_lazer_2018_50", 0.01f, FCVAR_NONE);
+ConVar osu_drain_lazer_2018_miss("osu_drain_lazer_2018_miss", -0.02f, FCVAR_NONE);
 
 ConVar *OsuScore::m_osu_draw_statistics_pp_ref = NULL;
 ConVar *OsuScore::m_osu_drain_type_ref = NULL;
@@ -305,8 +305,10 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, OsuHitObject *hitObject, HIT hi
 		{
 			double aimStars = standardPointer->getAimStars();
 			double aimSliderFactor = standardPointer->getAimSliderFactor();
+			double aimDifficultStrains = standardPointer->getAimDifficultStrains();
 			double speedStars = standardPointer->getSpeedStars();
 			double speedNotes = standardPointer->getSpeedNotes();
+			double speedDifficultStrains = standardPointer->getSpeedDifficultStrains();
 
 			//int numHitObjects = standardPointer->getNumHitObjects();
 			int maxPossibleCombo = beatmap->getMaxPossibleCombo();
@@ -333,10 +335,12 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, OsuHitObject *hitObject, HIT hi
 				//beatmap->getSelectedDifficulty()->calculateStarDiff(beatmap, &aimStars, &speedStars, curHitobjectIndex); // recalculating this live costs too much time
 				aimStars = beatmap->getAimStarsForUpToHitObjectIndex(curHitobjectIndex);
 				aimSliderFactor = beatmap->getAimSliderFactorForUpToHitObjectIndex(curHitobjectIndex);
+				aimDifficultStrains = beatmap->getAimDifficultStrainsForUpToHitObjectIndex(curHitobjectIndex);
 				speedStars = beatmap->getSpeedStarsForUpToHitObjectIndex(curHitobjectIndex);
 				speedNotes = beatmap->getSpeedNotesForUpToHitObjectIndex(curHitobjectIndex);
+				speedDifficultStrains = beatmap->getSpeedDifficultStrainsForUpToHitObjectIndex(curHitobjectIndex);
 
-				m_fPPv2 = OsuDifficultyCalculator::calculatePPv2(m_osu, beatmap, aimStars, aimSliderFactor, speedStars, speedNotes, -1, numCircles, numSliders, numSpinners, maxPossibleCombo, m_iComboMax, m_iNumMisses, m_iNum300s, m_iNum100s, m_iNum50s);
+				m_fPPv2 = OsuDifficultyCalculator::calculatePPv2(m_osu, beatmap, aimStars, aimSliderFactor, aimDifficultStrains, speedStars, speedNotes, speedDifficultStrains, -1, numCircles, numSliders, numSpinners, maxPossibleCombo, m_iComboMax, m_iNumMisses, m_iNum300s, m_iNum100s, m_iNum50s);
 
 				if (osu_debug_pp.getBool())
 					debugLog("pp = %f, aimstars = %f, aimsliderfactor = %f, speedstars = %f, speednotes = %f, curindex = %i, maxPossibleCombo = %i, numCircles = %i, numSliders = %i, numSpinners = %i\n", m_fPPv2, aimStars, aimSliderFactor, speedStars, speedNotes, curHitobjectIndex, maxPossibleCombo, numCircles, numSliders, numSpinners);

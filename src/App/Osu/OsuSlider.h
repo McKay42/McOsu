@@ -36,6 +36,8 @@ public:
 	void draw2(Graphics *g, bool drawApproachCircle, bool drawOnlyApproachCircle);
 	virtual void drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr);
 	virtual void drawVR2(Graphics *g, Matrix4 &mvp, OsuVR *vr);
+	virtual void draw3D(Graphics *g);
+	virtual void draw3D2(Graphics *g);
 	virtual void update(long curPos);
 
 	virtual bool isSlider() { return true; }
@@ -75,7 +77,9 @@ private:
 	static ConVar *m_osu_drain_type_ref;
 
 	void drawStartCircle(Graphics *g, float alpha);
+	void draw3DStartCircle(Graphics *g, const Matrix4 &baseScale, float alpha);
 	void drawEndCircle(Graphics *g, float alpha, float sliderSnake = 1.0f);
+	void draw3DEndCircle(Graphics *g, const Matrix4 &baseScale, float alpha, float sliderSnake = 1.0f);
 	void drawBody(Graphics *g, float alpha, float from, float to);
 	void drawBodyVR(Graphics *g, OsuVR *vr, Matrix4 &mvp, float alpha, float from, float to);
 

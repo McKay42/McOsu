@@ -28,10 +28,10 @@
 
 #include "OsuUISongBrowserInfoLabel.h"
 
-ConVar osu_mp_freemod("osu_mp_freemod", false);
-ConVar osu_mp_freemod_all("osu_mp_freemod_all", true, "allow everything, or only standard osu mods");
-ConVar osu_mp_win_condition_accuracy("osu_mp_win_condition_accuracy", false);
-ConVar osu_mp_allow_client_beatmap_select("osu_mp_sv_allow_client_beatmap_select", true);
+ConVar osu_mp_freemod("osu_mp_freemod", false, FCVAR_NONE);
+ConVar osu_mp_freemod_all("osu_mp_freemod_all", true, FCVAR_NONE, "allow everything, or only standard osu mods");
+ConVar osu_mp_win_condition_accuracy("osu_mp_win_condition_accuracy", false, FCVAR_NONE);
+ConVar osu_mp_allow_client_beatmap_select("osu_mp_sv_allow_client_beatmap_select", true, FCVAR_NONE);
 ConVar osu_mp_broadcastcommand("osu_mp_broadcastcommand");
 ConVar osu_mp_clientcastcommand("osu_mp_clientcastcommand");
 ConVar osu_mp_broadcastforceclientbeatmapdownload("osu_mp_broadcastforceclientbeatmapdownload");

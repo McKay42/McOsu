@@ -1,0 +1,179 @@
+###OpenGLLegacyInterface::VertexShader##########################################################################################
+
+#version 110
+
+uniform float time;
+
+varying vec2 tex_coord;
+varying float vtx_alpha;
+
+void main()
+{	
+	gl_Position = gl_ModelViewProjectionMatrix * vec4(gl_Vertex.x, gl_Vertex.y, 0.0, 1.0);
+	gl_FrontColor = gl_Color;
+	
+	tex_coord = gl_MultiTexCoord0.xy;
+	vtx_alpha = gl_Vertex.z;
+}
+
+###OpenGLLegacyInterface::FragmentShader########################################################################################
+
+#version 110
+
+uniform float time;
+uniform sampler2D tex;
+
+varying vec2 tex_coord;
+varying float vtx_alpha;
+
+void main()
+{
+	vec4 color = texture2D(tex, tex_coord);
+	color.a *= vtx_alpha;
+	
+	/*
+	float speedMultiplier = 0.8;
+	float spreadMultiplier = 2.0;
+	color.r = sin(time*speedMultiplier + vtx_alpha*spreadMultiplier + 0.0)*0.5 + 0.5;
+	color.g = sin(time*speedMultiplier + vtx_alpha*spreadMultiplier + 2.0)*0.5 + 0.5;
+	color.b = sin(time*speedMultiplier + vtx_alpha*spreadMultiplier + 4.0)*0.5 + 0.5;
+	*/
+	
+	gl_FragColor = color; 
+}
+
+###OpenGLES2Interface::VertexShader#############################################################################################
+
+#version 100
+
+attribute vec3 position;
+attribute vec2 uv;
+
+uniform float time;
+uniform mat4 mvp;
+
+varying vec2 tex_coord;
+varying float vtx_alpha;
+
+void main()
+{	
+	gl_Position = mvp * vec4(position, 1.0);
+	
+	tex_coord = uv;
+	vtx_alpha = position.z;
+}
+
+###OpenGLES2Interface::FragmentShader###########################################################################################
+
+#version 100
+precision highp float;
+
+uniform float time;
+uniform sampler2D tex;
+
+varying vec2 tex_coord;
+varying float vtx_alpha;
+
+void main()
+{
+	vec4 color = texture2D(tex, tex_coord);
+	color.a *= vtx_alpha;
+	
+	/*
+	float speedMultiplier = 0.8;
+	float spreadMultiplier = 2.0;
+	color.r = sin(time*speedMultiplier + vtx_alpha*spreadMultiplier + 0.0)*0.5 + 0.5;
+	color.g = sin(time*speedMultiplier + vtx_alpha*spreadMultiplier + 2.0)*0.5 + 0.5;
+	color.b = sin(time*speedMultiplier + vtx_alpha*spreadMultiplier + 4.0)*0.5 + 0.5;
+	*/
+	
+	gl_FragColor = color; 
+}
+
+###DirectX11Interface::VertexShader#############################################################################################
+
+##D3D11_INPUT_ELEMENT_DESC::VS_INPUT::POSITION::DXGI_FORMAT_R32G32B32_FLOAT::D3D11_INPUT_PER_VERTEX_DATA
+##D3D11_INPUT_ELEMENT_DESC::VS_INPUT::COLOR0::DXGI_FORMAT_R32G32B32A32_FLOAT::D3D11_INPUT_PER_VERTEX_DATA
+##D3D11_INPUT_ELEMENT_DESC::VS_INPUT::TEXCOORD0::DXGI_FORMAT_R32G32_FLOAT::D3D11_INPUT_PER_VERTEX_DATA
+
+##D3D11_BUFFER_DESC::D3D11_BIND_CONSTANT_BUFFER::ModelViewProjectionConstantBuffer::mvp::float4x4
+##D3D11_BUFFER_DESC::D3D11_BIND_CONSTANT_BUFFER::ModelViewProjectionConstantBuffer::time::float
+##D3D11_BUFFER_DESC::D3D11_BIND_CONSTANT_BUFFER::ModelViewProjectionConstantBuffer::padding1::float
+##D3D11_BUFFER_DESC::D3D11_BIND_CONSTANT_BUFFER::ModelViewProjectionConstantBuffer::padding2::float
+##D3D11_BUFFER_DESC::D3D11_BIND_CONSTANT_BUFFER::ModelViewProjectionConstantBuffer::padding3::float
+
+cbuffer ModelViewProjectionConstantBuffer : register(b0)
+{
+	float4x4 mvp;
+	float time;
+	float padding1;
+	float padding2;
+	float padding3;
+};
+
+struct VS_INPUT
+{
+	float4 pos	: POSITION;
+	float4 col	: COLOR0;
+	float2 tex	: TEXCOORD0;
+};
+
+struct VS_OUTPUT
+{
+	float4 pos	: SV_Position;
+	float2 tex	: TEXCOORD0;
+	float time  : PSIZE0;
+	float vtx_alpha : PSIZE1;
+};
+
+VS_OUTPUT vsmain(in VS_INPUT In)
+{
+	VS_OUTPUT Out;
+	In.pos.w = 1.0f;
+	Out.pos = mul(In.pos, mvp);
+	Out.tex = In.tex;
+	Out.time = time;
+	Out.vtx_alpha = In.pos.z;
+	return Out;
+};
+
+###DirectX11Interface::PixelShader##############################################################################################
+
+Texture2D tex2D;
+SamplerState samplerState
+{
+	Filter = MIN_MAG_MIP_LINEAR;
+	AddressU = Clamp;
+	AddressV = Clamp;
+};
+
+struct PS_INPUT
+{
+	float4 pos	: SV_Position;
+	float2 tex	: TEXCOORD0;
+	float time  : PSIZE0;
+	float vtx_alpha : PSIZE1;
+};
+
+struct PS_OUTPUT
+{
+	float4 col	: SV_Target;
+};
+
+PS_OUTPUT psmain(in PS_INPUT In)
+{
+	PS_OUTPUT Out;
+
+	Out.col = tex2D.Sample(samplerState, In.tex);
+	Out.col.a *= In.vtx_alpha;
+	
+	/*
+	float speedMultiplier = 0.8f;
+	float spreadMultiplier = 2.0f;
+	Out.col.r = sin(In.time*speedMultiplier + In.vtx_alpha*spreadMultiplier + 0.0f)*0.5f + 0.5f;
+	Out.col.g = sin(In.time*speedMultiplier + In.vtx_alpha*spreadMultiplier + 2.0f)*0.5f + 0.5f;
+	Out.col.b = sin(In.time*speedMultiplier + In.vtx_alpha*spreadMultiplier + 4.0f)*0.5f + 0.5f;
+	*/
+
+	return Out;
+};

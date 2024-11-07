@@ -25,19 +25,19 @@
 
 #if defined(_WIN32) || defined(_WIN64) || defined(__WIN32__) || defined(__CYGWIN__) || defined(__CYGWIN32__) || defined(__TOS_WIN__) || defined(__WINDOWS__)
 
-ConVar osu_folder("osu_folder", "C:/Program Files (x86)/osu!/");
+ConVar osu_folder("osu_folder", "C:/Program Files (x86)/osu!/", FCVAR_NONE);
 
 #elif defined __linux__
 
-ConVar osu_folder("osu_folder", "/home/pg/Desktop/osu!/");
+ConVar osu_folder("osu_folder", "/home/pg/Desktop/osu!/", FCVAR_NONE);
 
 #elif defined __APPLE__
 
-ConVar osu_folder("osu_folder", "/osu!/");
+ConVar osu_folder("osu_folder", "/osu!/", FCVAR_NONE);
 
 #elif defined __SWITCH__
 
-ConVar osu_folder("osu_folder", "sdmc:/switch/McOsu/");
+ConVar osu_folder("osu_folder", "sdmc:/switch/McOsu/", FCVAR_NONE);
 
 #else
 
@@ -45,29 +45,30 @@ ConVar osu_folder("osu_folder", "sdmc:/switch/McOsu/");
 
 #endif
 
-ConVar osu_folder_sub_songs("osu_folder_sub_songs", "Songs/");
-ConVar osu_folder_sub_skins("osu_folder_sub_skins", "Skins/");
+ConVar osu_folder_sub_songs("osu_folder_sub_songs", "Songs/", FCVAR_NONE);
+ConVar osu_folder_sub_skins("osu_folder_sub_skins", "Skins/", FCVAR_NONE);
 
-ConVar osu_database_enabled("osu_database_enabled", true);
-ConVar osu_database_version("osu_database_version", 20191114, "maximum supported osu!.db version, above this will use fallback loader");
-ConVar osu_database_ignore_version_warnings("osu_database_ignore_version_warnings", false);
-ConVar osu_database_ignore_version("osu_database_ignore_version", false, "ignore upper version limit and force load the db file (may crash)");
-ConVar osu_database_stars_cache_enabled("osu_database_stars_cache_enabled", false);
-ConVar osu_scores_enabled("osu_scores_enabled", true);
-ConVar osu_scores_legacy_enabled("osu_scores_legacy_enabled", true, "load osu!'s scores.db");
-ConVar osu_scores_custom_enabled("osu_scores_custom_enabled", true, "load custom scores.db");
-ConVar osu_scores_custom_version("osu_scores_custom_version", 20210110, "maximum supported custom scores.db/scoresvr.db version");
-ConVar osu_scores_save_immediately("osu_scores_save_immediately", true, "write scores.db as soon as a new score is added");
-ConVar osu_scores_sort_by_pp("osu_scores_sort_by_pp", true, "display pp in score browser instead of score");
-ConVar osu_scores_bonus_pp("osu_scores_bonus_pp", true, "whether to add bonus pp to total (real) pp or not");
+ConVar osu_database_enabled("osu_database_enabled", true, FCVAR_NONE);
+ConVar osu_database_version("osu_database_version", 20191114, FCVAR_NONE, "maximum supported osu!.db version, above this will use fallback loader");
+ConVar osu_database_ignore_version_warnings("osu_database_ignore_version_warnings", false, FCVAR_NONE);
+ConVar osu_database_ignore_version("osu_database_ignore_version", false, FCVAR_NONE, "ignore upper version limit and force load the db file (may crash)");
+ConVar osu_database_stars_cache_enabled("osu_database_stars_cache_enabled", false, FCVAR_NONE);
+ConVar osu_scores_enabled("osu_scores_enabled", true, FCVAR_NONE);
+ConVar osu_scores_legacy_enabled("osu_scores_legacy_enabled", true, FCVAR_NONE, "load osu!'s scores.db");
+ConVar osu_scores_custom_enabled("osu_scores_custom_enabled", true, FCVAR_NONE, "load custom scores.db");
+ConVar osu_scores_custom_version("osu_scores_custom_version", 20210110, FCVAR_NONE, "maximum supported custom scores.db/scoresvr.db version");
+ConVar osu_scores_save_immediately("osu_scores_save_immediately", true, FCVAR_NONE, "write scores.db as soon as a new score is added");
+ConVar osu_scores_sort_by_pp("osu_scores_sort_by_pp", true, FCVAR_NONE, "display pp in score browser instead of score");
+ConVar osu_scores_bonus_pp("osu_scores_bonus_pp", true, FCVAR_NONE, "whether to add bonus pp to total (real) pp or not");
 ConVar osu_scores_rename("osu_scores_rename");
 ConVar osu_scores_export("osu_scores_export");
-ConVar osu_collections_legacy_enabled("osu_collections_legacy_enabled", true, "load osu!'s collection.db");
-ConVar osu_collections_custom_enabled("osu_collections_custom_enabled", true, "load custom collections.db");
-ConVar osu_collections_custom_version("osu_collections_custom_version", 20220110, "maximum supported custom collections.db version");
-ConVar osu_collections_save_immediately("osu_collections_save_immediately", true, "write collections.db as soon as anything is changed");
-ConVar osu_user_include_relax_and_autopilot_for_stats("osu_user_include_relax_and_autopilot_for_stats", false);
-ConVar osu_user_switcher_include_legacy_scores_for_names("osu_user_switcher_include_legacy_scores_for_names", true);
+ConVar osu_collections_legacy_enabled("osu_collections_legacy_enabled", true, FCVAR_NONE, "load osu!'s collection.db");
+ConVar osu_collections_custom_enabled("osu_collections_custom_enabled", true, FCVAR_NONE, "load custom collections.db");
+ConVar osu_collections_custom_version("osu_collections_custom_version", 20220110, FCVAR_NONE, "maximum supported custom collections.db version");
+ConVar osu_collections_save_immediately("osu_collections_save_immediately", true, FCVAR_NONE, "write collections.db as soon as anything is changed");
+ConVar osu_user_beatmap_pp_sanity_limit_for_stats("osu_user_beatmap_pp_sanity_limit_for_stats", 10000.0f, FCVAR_NONE, "ignore scores with a higher pp value than this for the total profile pp calc");
+ConVar osu_user_include_relax_and_autopilot_for_stats("osu_user_include_relax_and_autopilot_for_stats", false, FCVAR_NONE);
+ConVar osu_user_switcher_include_legacy_scores_for_names("osu_user_switcher_include_legacy_scores_for_names", true, FCVAR_NONE);
 
 
 
@@ -927,6 +928,7 @@ OsuDatabase::PlayerPPScores OsuDatabase::getPlayerPPScores(UString playerName)
 	};
 
 	unsigned long long totalScore = 0;
+	const float userBeatmapPpSanityLimitForStats = osu_user_beatmap_pp_sanity_limit_for_stats.getFloat();
 	for (auto &key : keys)
 	{
 		if (m_scores[key].size() > 0)
@@ -940,16 +942,20 @@ OsuDatabase::PlayerPPScores OsuDatabase::getPlayerPPScores(UString playerName)
 			{
 				if (!score.isLegacyScore && (osu_user_include_relax_and_autopilot_for_stats.getBool() ? true : !((score.modsLegacy & OsuReplay::Mods::Relax) || (score.modsLegacy & OsuReplay::Mods::Relax2))) && score.playerName == playerName)
 				{
-					foundValidScore = true;
-
-					totalScore += score.score;
-
-					score.sortHack = m_iSortHackCounter++;
-
-					if (score.pp > prevPP || prevPP < 0.0f)
+					const bool isSaneScore = (userBeatmapPpSanityLimitForStats <= 0.0f || score.pp <= userBeatmapPpSanityLimitForStats);
+					if (isSaneScore)
 					{
-						prevPP = score.pp;
-						tempScore = &score;
+						foundValidScore = true;
+
+						totalScore += score.score;
+
+						score.sortHack = m_iSortHackCounter++;
+
+						if ((score.pp > prevPP || prevPP < 0.0f))
+						{
+							prevPP = score.pp;
+							tempScore = &score;
+						}
 					}
 				}
 			}
@@ -1031,9 +1037,15 @@ float OsuDatabase::getWeightForIndex(int i)
 	return std::pow(0.95, (double)i);
 }
 
-float OsuDatabase::getBonusPPForNumScores(int numScores)
+float OsuDatabase::getBonusPPForNumScores(size_t numScores)
 {
-	return (416.6667 * (1.0 - std::pow(0.9994, (double)numScores)));
+	// see https://github.com/ppy/osu-queue-score-statistics/blob/master/osu.Server.Queues.ScoreStatisticsProcessor/Helpers/UserTotalPerformanceAggregateHelper.cs
+	
+	// old
+	//return (416.6667 * (1.0 - std::pow(0.9994, (double)numScores)));
+	
+	// new
+	return (417.0 - 1.0 / 3.0) * (1.0 - std::pow(0.995, std::min(1000.0, (double)numScores)));
 }
 
 unsigned long long OsuDatabase::getRequiredScoreForLevel(int level)
@@ -2190,7 +2202,7 @@ void OsuDatabase::loadScores()
 			if (originalScoresFile.canRead())
 			{
 				UString backupScoresFilePath = scoresFilePath;
-				const int forcedBackupCounter = 3;
+				const int forcedBackupCounter = 4;
 				backupScoresFilePath.append(UString::format(".%i_%i.backup", (makeBackupType < 2 ? backupLessThanVersion : maxSupportedCustomDbVersion), forcedBackupCounter));
 
 				if (!env->fileExists(backupScoresFilePath)) // NOTE: avoid overwriting when people switch betas
@@ -2717,7 +2729,7 @@ void OsuDatabase::loadCollections(UString collectionFilePath, bool isLegacy, con
 		if (originalCollectionsFile.canRead())
 		{
 			UString backupCollectionsFilePath = collectionFilePath;
-			const int forcedBackupCounter = 3;
+			const int forcedBackupCounter = 4;
 			backupCollectionsFilePath.append(UString::format(".%i_%i.backup", osu_collections_custom_version.getInt(), forcedBackupCounter));
 
 			if (!env->fileExists(backupCollectionsFilePath)) // NOTE: avoid overwriting when people switch betas

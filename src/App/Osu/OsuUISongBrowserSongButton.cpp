@@ -25,9 +25,9 @@
 #include "OsuUISongBrowserScoreButton.h"
 #include "OsuUIContextMenu.h"
 
-ConVar osu_draw_songbrowser_thumbnails("osu_draw_songbrowser_thumbnails", true);
-ConVar osu_songbrowser_thumbnail_delay("osu_songbrowser_thumbnail_delay", 0.1f);
-ConVar osu_songbrowser_thumbnail_fade_in_duration("osu_songbrowser_thumbnail_fade_in_duration", 0.1f);
+ConVar osu_draw_songbrowser_thumbnails("osu_draw_songbrowser_thumbnails", true, FCVAR_NONE);
+ConVar osu_songbrowser_thumbnail_delay("osu_songbrowser_thumbnail_delay", 0.1f, FCVAR_NONE);
+ConVar osu_songbrowser_thumbnail_fade_in_duration("osu_songbrowser_thumbnail_fade_in_duration", 0.1f, FCVAR_NONE);
 
 float OsuUISongBrowserSongButton::thumbnailYRatio = 1.333333f;
 

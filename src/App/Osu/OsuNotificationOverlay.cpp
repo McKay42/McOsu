@@ -15,7 +15,7 @@
 
 #include "Osu.h"
 
-ConVar osu_notification_duration("osu_notification_duration", 1.25f);
+ConVar osu_notification_duration("osu_notification_duration", 1.25f, FCVAR_NONE);
 
 OsuNotificationOverlay::OsuNotificationOverlay(Osu *osu) : OsuScreen(osu)
 {

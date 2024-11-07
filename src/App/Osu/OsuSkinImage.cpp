@@ -15,7 +15,7 @@
 #include "Osu.h"
 #include "OsuSkin.h"
 
-ConVar osu_skin_animation_fps_override("osu_skin_animation_fps_override", -1.0f);
+ConVar osu_skin_animation_fps_override("osu_skin_animation_fps_override", -1.0f, FCVAR_NONE);
 
 ConVar *OsuSkinImage::m_osu_skin_mipmaps_ref = NULL;
 

@@ -36,7 +36,7 @@
 #include "OsuUISongBrowserUserButton.h"
 #include "OsuUIUserStatsScreenLabel.h"
 
-ConVar osu_ui_top_ranks_max("osu_ui_top_ranks_max", 200, "maximum number of displayed scores, to keep the ui/scrollbar manageable");
+ConVar osu_ui_top_ranks_max("osu_ui_top_ranks_max", 200, FCVAR_NONE, "maximum number of displayed scores, to keep the ui/scrollbar manageable");
 
 
 
@@ -182,9 +182,11 @@ private:
 					// 3) calculate stars
 					double aimStars = 0.0;
 					double aimSliderFactor = 0.0;
+					double aimDifficultStrains = 0.0;
 					double speedStars = 0.0;
 					double speedNotes = 0.0;
-					const double totalStars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, CS, OD, speedMultiplier, relax, touchDevice, &aimStars, &aimSliderFactor, &speedStars, &speedNotes);
+					double speedDifficultStrains = 0.0;
+					const double totalStars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, CS, OD, speedMultiplier, relax, touchDevice, &aimStars, &aimSliderFactor, &aimDifficultStrains, &speedStars, &speedNotes, &speedDifficultStrains);
 
 					// 4) calculate pp
 					double pp = 0.0;
@@ -211,7 +213,7 @@ private:
 						if (maxPossibleCombo < 1)
 							continue;
 
-						pp = OsuDifficultyCalculator::calculatePPv2(score.modsLegacy, speedMultiplier, AR, OD, aimStars, aimSliderFactor, speedStars, speedNotes, numHitObjects, numCircles, numSliders, numSpinners, maxPossibleCombo, score.comboMax, score.numMisses, score.num300s, score.num100s, score.num50s);
+						pp = OsuDifficultyCalculator::calculatePPv2(score.modsLegacy, speedMultiplier, AR, OD, aimStars, aimSliderFactor, aimDifficultStrains, speedStars, speedNotes, speedDifficultStrains, numHitObjects, numCircles, numSliders, numSpinners, maxPossibleCombo, score.comboMax, score.numMisses, score.num300s, score.num100s, score.num50s);
 					}
 
 					// 5) overwrite score with new pp data (and handle imports)

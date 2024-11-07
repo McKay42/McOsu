@@ -21,10 +21,10 @@
 
 #include "OsuHitObject.h"
 
-ConVar osu_mania_playfield_width_percent("osu_mania_playfield_width_percent", 0.25f);
-ConVar osu_mania_playfield_height_percent("osu_mania_playfield_height_percent", 0.85f);
-ConVar osu_mania_playfield_offset_x_percent("osu_mania_playfield_offset_x_percent", 0.44f);
-ConVar osu_mania_k_override("osu_mania_k_override", -1);
+ConVar osu_mania_playfield_width_percent("osu_mania_playfield_width_percent", 0.25f, FCVAR_NONE);
+ConVar osu_mania_playfield_height_percent("osu_mania_playfield_height_percent", 0.85f, FCVAR_NONE);
+ConVar osu_mania_playfield_offset_x_percent("osu_mania_playfield_offset_x_percent", 0.44f, FCVAR_NONE);
+ConVar osu_mania_k_override("osu_mania_k_override", -1, FCVAR_NONE);
 
 OsuBeatmapMania::OsuBeatmapMania(Osu *osu) : OsuBeatmap(osu)
 {

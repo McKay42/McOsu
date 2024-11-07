@@ -17,6 +17,13 @@ class Image;
 class OsuSkinImage
 {
 public:
+	struct IMAGE
+	{
+		Image *img;
+		float scale;
+	};
+
+public:
 	OsuSkinImage(OsuSkin *skin, UString skinElementName, Vector2 baseSizeForScaling2x, float osuSize, UString animationSeparator = "-", bool ignoreDefaultSkin = false);
 	virtual ~OsuSkinImage();
 
@@ -34,8 +41,10 @@ public:
 	Vector2 getSize(); // absolute size scaled to the current resolution (depending on the osuSize as defined when loaded in OsuSkin.cpp)
 	Vector2 getSizeBase(); // default assumed size scaled to the current resolution. this is the base resolution which is used for all scaling calculations (to allow skins to overscale or underscale objects)
 	Vector2 getSizeBaseRaw(); // default assumed size UNSCALED. that means that e.g. hitcircles will return either 128x128 or 256x256 depending on the @2x flag in the filename
+	inline Vector2 getSizeBaseRawForScaling2x() const {return m_vBaseSizeForScaling2x;}
 
 	Vector2 getImageSizeForCurrentFrame(); // width/height of the actual image texture as loaded from disk
+	IMAGE getImageForCurrentFrame();
 
 	float getResolutionScale();
 
@@ -52,19 +61,11 @@ public:
 private:
 	static ConVar *m_osu_skin_mipmaps_ref;
 
-	struct IMAGE
-	{
-		Image *img;
-		float scale;
-	};
-
 	bool load(UString skinElementName, UString animationSeparator, bool ignoreDefaultSkin);
 	bool loadImage(UString skinElementName, bool ignoreDefaultSkin);
 
 	float getScale();
 	float getImageScale();
-
-	IMAGE getImageForCurrentFrame();
 
 	OsuSkin *m_skin;
 	bool m_bReady;

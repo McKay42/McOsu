@@ -44,6 +44,16 @@ void OsuBeatmapExample::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 	// draw all hitobjects and stuff
 }
 
+void OsuBeatmapExample::draw3D(Graphics *g)
+{
+	OsuBeatmap::draw3D(g);
+	if (!canDraw()) return;
+
+	if (isLoading()) return; // only start drawing the rest of the playfield if everything has loaded
+
+	// draw all hitobjects and stuff
+}
+
 void OsuBeatmapExample::update()
 {
 	if (!canUpdate())

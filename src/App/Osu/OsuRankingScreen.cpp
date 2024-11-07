@@ -37,9 +37,9 @@
 #include "OsuUIRankingScreenRankingPanel.h"
 #include "OsuUISongBrowserScoreButton.h"
 
-ConVar osu_rankingscreen_topbar_height_percent("osu_rankingscreen_topbar_height_percent", 0.785f);
-ConVar osu_rankingscreen_pp("osu_rankingscreen_pp", true);
-ConVar osu_draw_rankingscreen_background_image("osu_draw_rankingscreen_background_image", true);
+ConVar osu_rankingscreen_topbar_height_percent("osu_rankingscreen_topbar_height_percent", 0.785f, FCVAR_NONE);
+ConVar osu_rankingscreen_pp("osu_rankingscreen_pp", true, FCVAR_NONE);
+ConVar osu_draw_rankingscreen_background_image("osu_draw_rankingscreen_background_image", true, FCVAR_NONE);
 
 
 

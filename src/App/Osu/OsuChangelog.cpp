@@ -36,7 +36,22 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	std::vector<CHANGELOG> changelogs;
 
 	CHANGELOG alpha317;
-	alpha317.title = UString::format("33.08 (Build Date: %s, %s)", __DATE__, __TIME__); // (09.01.2022 - ?)
+	alpha317.title = UString::format("33.09 (Build Date: %s, %s)", __DATE__, __TIME__); // (09.01.2022 - ?)
+	alpha317.changes.push_back("- For more info on the star/pp changes in this update see https://osu.ppy.sh/home/news/2024-10-28-performance-points-star-rating-updates");
+	alpha317.changes.push_back("- Updated star + pp algorithms to match current lazer implementation aka CSR aka Combo Scaling Removal aka 20241007 (18) (thanks to @Khangaroo!)");
+	alpha317.changes.push_back("- Increased performance of live star/pp calc by ~100x (yes, two orders of magnitude faster. thanks to @Khangaroo!)");
+	alpha317.changes.push_back("- FPoSu: Added Skybox cubemap support (Options > FPoSu - Playfield > \"Skybox\", enabled by default)");
+	alpha317.changes.push_back("- FPoSu: Added Options > FPoSu - Playfield > \"Background Opacity\" (transparent playfield backgrounds so you can see the skybox/cube through it)");
+	alpha317.changes.push_back("- Added C/F4 hotkeys to pause music at main menu");
+	alpha317.changes.push_back("- Added ConVars (1): osu_stars_always_recalc_live_strains, osu_stars_ignore_clamped_sliders, osu_user_beatmap_pp_sanity_limit_for_stats, osu_background_alpha");
+	alpha317.changes.push_back("- Added ConVars (2): osu_hud_hiterrorbar_entry_miss_height_multiplier, osu_hud_hiterrorbar_entry_misaim_height_multiplier");
+	alpha317.changes.push_back("- Added ConVars (3): osu_draw_main_menu_button, osu_draw_main_menu_button_subtext, osu_main_menu_slider_text_scissor, osu_main_menu_slider_text_feather");
+	alpha317.changes.push_back("- Updated bonus pp algorithm (17) (see https://osu.ppy.sh/home/news/2024-03-19-changes-to-performance-points)");
+	alpha317.changes.push_back("- Increased osu_beatmap_max_num_hitobjects from 32768 to 40000");
+	alpha317.changes.push_back("- Fixed snd_restart not reloading skin sound buffers automatically");
+	alpha317.changes.push_back("- Fixed extremely rare cases of getting stuck on a black screen permanently due to quick menu navigation skills");
+	alpha317.changes.push_back("");
+	alpha317.changes.push_back("");
 	alpha317.changes.push_back("- Added hittable dim (hitobjects outside even the miss-range are dimmed, see https://github.com/ppy/osu/pull/20572)");
 	alpha317.changes.push_back("- Added Options > Gameplay > HUD > \"Draw HitErrorBar UR\" (Unstable Rate text display above hiterrorbar, enabled by default)");
 	alpha317.changes.push_back("- Added ConVars (1): osu_hud_hiterrorbar_ur_scale, osu_hud_hiterrorbar_ur_alpha, osu_hud_hiterrorbar_ur_offset_x/y_percent");

@@ -50,17 +50,17 @@
 #include <iostream>
 #include <fstream>
 
-ConVar osu_options_save_on_back("osu_options_save_on_back", true);
-ConVar osu_options_high_quality_sliders("osu_options_high_quality_sliders", false);
+ConVar osu_options_save_on_back("osu_options_save_on_back", true, FCVAR_NONE);
+ConVar osu_options_high_quality_sliders("osu_options_high_quality_sliders", false, FCVAR_NONE);
 ConVar osu_mania_keylayout_wizard("osu_mania_keylayout_wizard");
-ConVar osu_options_slider_preview_use_legacy_renderer("osu_options_slider_preview_use_legacy_renderer", false, "apparently newer AMD drivers with old gpus are crashing here with the legacy renderer? was just me being lazy anyway, so now there is a vao render path as it should be");
+ConVar osu_options_slider_preview_use_legacy_renderer("osu_options_slider_preview_use_legacy_renderer", false, FCVAR_NONE, "apparently newer AMD drivers with old gpus are crashing here with the legacy renderer? was just me being lazy anyway, so now there is a vao render path as it should be");
 
 void _osuOptionsSliderQualityWrapper(UString oldValue, UString newValue)
 {
 	float value = lerp<float>(1.0f, 2.5f, 1.0f - newValue.toFloat());
 	convar->getConVarByName("osu_slider_curve_points_separation")->setValue(value);
 };
-ConVar osu_options_slider_quality("osu_options_slider_quality", 0.0f, _osuOptionsSliderQualityWrapper);
+ConVar osu_options_slider_quality("osu_options_slider_quality", 0.0f, FCVAR_NONE, _osuOptionsSliderQualityWrapper);
 
 const char *OsuOptionsMenu::OSU_CONFIG_FILE_NAME = ""; // set dynamically below in the constructor
 
@@ -628,7 +628,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 		m_resolutionSelectButton = resolutionSelect.elements[0];
 		m_fullscreenCheckbox = addCheckbox("Fullscreen");
 		m_fullscreenCheckbox->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onFullscreenChange) );
-		addCheckbox("Borderless", "If enabled: plz enjoy input lag.", convar->getConVarByName("fullscreen_windowed_borderless"))->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onBorderlessWindowedChange) );
+		addCheckbox("Borderless", "May cause extra input lag if enabled.\nDepends on your operating system version/updates.", convar->getConVarByName("fullscreen_windowed_borderless"))->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onBorderlessWindowedChange) );
 		addCheckbox("Keep Aspect Ratio", "Black borders instead of a stretched image.\nOnly relevant if fullscreen is enabled, and letterboxing is disabled.\nUse the two position sliders below to move the viewport around.", convar->getConVarByName("osu_resolution_keep_aspect_ratio"));
 		addCheckbox("Letterboxing", "Useful to get the low latency of fullscreen with a smaller game resolution.\nUse the two position sliders below to move the viewport around.", convar->getConVarByName("osu_letterboxing"));
 		m_letterboxingOffsetXSlider = addSlider("Horizontal position", -1.0f, 1.0f, convar->getConVarByName("osu_letterboxing_offset_x"), 170)->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeLetterboxingOffset) )->setKeyDelta(0.01f)->setAnimated(false);
@@ -1160,9 +1160,11 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	CBaseUIElement *sectionFposu = addSection("FPoSu (3D)");
 
 	addSubSection("FPoSu - General");
-	addCheckbox("FPoSu", "The real 3D FPS mod.\nPlay from a first person shooter perspective in a 3D environment.\nThis is only intended for mouse! (Enable \"Tablet/Absolute Mode\" for tablets.)", convar->getConVarByName("osu_mod_fposu"));
-	addCheckbox("Curved play area", convar->getConVarByName("fposu_curved"));
-	addCheckbox("Background cube", convar->getConVarByName("fposu_cube"));
+	addCheckbox("FPoSu", (env->getOS() == Environment::OS::OS_WINDOWS ? "The real 3D FPS mod.\nPlay from a first person shooter perspective in a 3D environment.\nThis is only intended for mouse! (Enable \"Tablet/Absolute Mode\" for tablets.)" : "The real 3D FPS mod.\nPlay from a first person shooter perspective in a 3D environment.\nThis is only intended for mouse!"), convar->getConVarByName("osu_mod_fposu"));
+#ifdef MCOSU_FPOSU_4D_MODE_FINISHED
+	addCheckbox("[Beta] 4D Mode", (env->getOS() == Environment::OS::OS_WINDOWS ? "Actual 3D circles instead of \"just\" a flat playfield in 3D.\nNOTE: Not compatible with \"Tablet/Absolute Mode\"." : "Actual 3D circles instead of \"just\" a flat playfield in 3D."), convar->getConVarByName("fposu_3d"));
+	addCheckbox("[Beta] 4D Mode - Spheres", "Combocolored lit 3D spheres instead of flat 3D circles.\nOnly relevant if \"[Beta] 4D Mode\" is enabled.", convar->getConVarByName("fposu_3d_spheres"));
+#endif
 	addLabel("");
 	addLabel("NOTE: Use CTRL + O during gameplay to get here!")->setTextColor(0xff555555);
 	addLabel("");
@@ -1178,7 +1180,20 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	zoomedFovSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeTwoDecimalPlaces) );
 	zoomedFovSlider->setKeyDelta(0.01f);
 	addCheckbox("Zoom Key Toggle", "Enabled: Zoom key toggles zoom.\nDisabled: Zoom while zoom key is held.", convar->getConVarByName("fposu_zoom_toggle"));
-
+	addSubSection("FPoSu - Playfield");
+	addCheckbox("Curved play area", convar->getConVarByName("fposu_curved"));
+	addCheckbox("Background cube", convar->getConVarByName("fposu_cube"));
+	addCheckbox("Skybox", "NOTE: Overrides \"Background cube\".\nSee skybox_example.png for cubemap layout.", convar->getConVarByName("fposu_skybox"));
+	addSlider("Background Opacity", 0.0f, 1.0f, convar->getConVarByName("osu_background_alpha"))->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
+#ifdef MCOSU_FPOSU_4D_MODE_FINISHED
+	CBaseUISlider *playfieldScaleSlider = addSlider("[Beta] 4D Mode - Scale", 0.1f, 10.0f, convar->getConVarByName("fposu_3d_playfield_scale"), 0.0f, true);
+	playfieldScaleSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangePercent) );
+	playfieldScaleSlider->setKeyDelta(0.01f);
+	CBaseUISlider *spheresAASlider = addSlider("[Beta] 4D Mode - Spheres - MSAA", 0.0f, 16.0f, convar->getConVarByName("fposu_3d_spheres_aa"));
+	spheresAASlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeVRAntiAliasing) );
+	spheresAASlider->setKeyDelta(2.0f);
+	spheresAASlider->setAnimated(false);
+#endif
 	if (env->getOS() == Environment::OS::OS_WINDOWS)
 	{
 		addSubSection("FPoSu - Mouse");
@@ -1192,6 +1207,13 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 		addCheckbox("Invert Vertical", convar->getConVarByName("fposu_invert_vertical"));
 		addCheckbox("Invert Horizontal", convar->getConVarByName("fposu_invert_horizontal"));
 		addCheckbox("Tablet/Absolute Mode (!)", "WARNING: Do NOT enable this if you are using a mouse!\nIf this is enabled, then DPI and cm per 360 will be ignored!", convar->getConVarByName("fposu_absolute_mode"));
+	}
+	else if (env->getOS() == Environment::OS::OS_LINUX)
+	{
+#ifdef MCOSU_FPOSU_4D_MODE_FINISHED
+		addSubSection("[Beta] FPoSu 4D Mode - Mouse");
+		addSlider("Sensitivity:", (env->getOS() == Environment::OS::OS_HORIZON ? 1.0f : 0.1f), 6.0f, convar->getConVarByName("mouse_sensitivity"))->setKeyDelta(0.01f);
+#endif
 	}
 
 	//**************************************************************************************************************************//
@@ -3325,6 +3347,8 @@ void OsuOptionsMenu::onSliderChangeVRAntiAliasing(CBaseUISlider *slider)
 		{
 			if (m_elements[i].elements[e] == slider)
 			{
+				const int prevAA = (m_elements[i].cvar != NULL ? m_elements[i].cvar->getInt() : -1);
+
 				int number = std::round(slider->getFloat()); // round to int
 				int aa = 0;
 				if (number > 8)
@@ -3336,8 +3360,11 @@ void OsuOptionsMenu::onSliderChangeVRAntiAliasing(CBaseUISlider *slider)
 				else if (number > 0)
 					aa = 2;
 
-				if (m_elements[i].cvar != NULL)
-					m_elements[i].cvar->setValue(aa);
+				if (aa != prevAA)
+				{
+					if (m_elements[i].cvar != NULL)
+						m_elements[i].cvar->setValue(aa);
+				}
 
 				if (m_elements[i].elements.size() == 3)
 				{

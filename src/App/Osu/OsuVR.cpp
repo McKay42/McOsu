@@ -32,36 +32,36 @@
 ConVar osu_vr_matrix_screen("osu_vr_matrix_screen");
 ConVar osu_vr_matrix_playfield("osu_vr_matrix_playfield");
 ConVar osu_vr_reset_matrices("osu_vr_reset_matrices");
-ConVar osu_vr_layout_lock("osu_vr_layout_lock", false);
+ConVar osu_vr_layout_lock("osu_vr_layout_lock", false, FCVAR_NONE);
 
-ConVar osu_vr_screen_scale("osu_vr_screen_scale", 1.64613f);
-ConVar osu_vr_playfield_scale("osu_vr_playfield_scale", 0.945593f);
-ConVar osu_vr_hud_scale("osu_vr_hud_scale", 4.0f);
-ConVar osu_vr_controller_offset_x("osu_vr_controller_offset_x", 0.0f);
-ConVar osu_vr_controller_offset_y("osu_vr_controller_offset_y", 0.0f);
-ConVar osu_vr_controller_offset_z("osu_vr_controller_offset_z", 0.0f);
-ConVar osu_vr_controller_pinch_scale_multiplier("osu_vr_controller_pinch_scale_multiplier", 2.0f);
-ConVar osu_vr_controller_warning_distance_enabled("osu_vr_controller_warning_distance_enabled", true);
-ConVar osu_vr_controller_warning_distance_start("osu_vr_controller_warning_distance_start", -0.20f);
-ConVar osu_vr_controller_warning_distance_end("osu_vr_controller_warning_distance_end", -0.30f);
+ConVar osu_vr_screen_scale("osu_vr_screen_scale", 1.64613f, FCVAR_NONE);
+ConVar osu_vr_playfield_scale("osu_vr_playfield_scale", 0.945593f, FCVAR_NONE);
+ConVar osu_vr_hud_scale("osu_vr_hud_scale", 4.0f, FCVAR_NONE);
+ConVar osu_vr_controller_offset_x("osu_vr_controller_offset_x", 0.0f, FCVAR_NONE);
+ConVar osu_vr_controller_offset_y("osu_vr_controller_offset_y", 0.0f, FCVAR_NONE);
+ConVar osu_vr_controller_offset_z("osu_vr_controller_offset_z", 0.0f, FCVAR_NONE);
+ConVar osu_vr_controller_pinch_scale_multiplier("osu_vr_controller_pinch_scale_multiplier", 2.0f, FCVAR_NONE);
+ConVar osu_vr_controller_warning_distance_enabled("osu_vr_controller_warning_distance_enabled", true, FCVAR_NONE);
+ConVar osu_vr_controller_warning_distance_start("osu_vr_controller_warning_distance_start", -0.20f, FCVAR_NONE);
+ConVar osu_vr_controller_warning_distance_end("osu_vr_controller_warning_distance_end", -0.30f, FCVAR_NONE);
 
-ConVar osu_vr_approach_distance("osu_vr_approach_distance", 15.0f, "distance from which hitobjects start flying + fading in, in meters");
-ConVar osu_vr_hud_distance("osu_vr_hud_distance", 15.0f, "distance at which the HUD is drawn, in meters");
-ConVar osu_vr_playfield_native_draw_scale("osu_vr_playfield_native_draw_scale", 0.003f);
+ConVar osu_vr_approach_distance("osu_vr_approach_distance", 15.0f, FCVAR_NONE, "distance from which hitobjects start flying + fading in, in meters");
+ConVar osu_vr_hud_distance("osu_vr_hud_distance", 15.0f, FCVAR_NONE, "distance at which the HUD is drawn, in meters");
+ConVar osu_vr_playfield_native_draw_scale("osu_vr_playfield_native_draw_scale", 0.003f, FCVAR_NONE);
 
-ConVar osu_vr_circle_hitbox_scale("osu_vr_circle_hitbox_scale", 1.5f, "scales the invisible hitbox radius of all hitobjects, to make it feel better");
+ConVar osu_vr_circle_hitbox_scale("osu_vr_circle_hitbox_scale", 1.5f, FCVAR_NONE, "scales the invisible hitbox radius of all hitobjects, to make it feel better");
 
-ConVar osu_vr_cursor_alpha("osu_vr_cursor_alpha", 0.15f);
+ConVar osu_vr_cursor_alpha("osu_vr_cursor_alpha", 0.15f, FCVAR_NONE);
 
-ConVar osu_vr_controller_vibration_strength("osu_vr_controller_vibration_strength", 0.45f);
-ConVar osu_vr_slider_controller_vibration_strength("osu_vr_slider_controller_vibration_strength", 0.05f /*0.0f*/);
+ConVar osu_vr_controller_vibration_strength("osu_vr_controller_vibration_strength", 0.45f, FCVAR_NONE);
+ConVar osu_vr_slider_controller_vibration_strength("osu_vr_slider_controller_vibration_strength", 0.05f /*0.0f*/, FCVAR_NONE);
 
-ConVar osu_vr_draw_playfield("osu_vr_draw_playfield", true);
-ConVar osu_vr_draw_floor("osu_vr_draw_floor", true);
-ConVar osu_vr_draw_laser_game("osu_vr_draw_laser_game", true);
-ConVar osu_vr_draw_laser_menu("osu_vr_draw_laser_menu", true);
+ConVar osu_vr_draw_playfield("osu_vr_draw_playfield", true, FCVAR_NONE);
+ConVar osu_vr_draw_floor("osu_vr_draw_floor", true, FCVAR_NONE);
+ConVar osu_vr_draw_laser_game("osu_vr_draw_laser_game", true, FCVAR_NONE);
+ConVar osu_vr_draw_laser_menu("osu_vr_draw_laser_menu", true, FCVAR_NONE);
 
-ConVar osu_vr_ui_offset("osu_vr_ui_offset", 0.1f);
+ConVar osu_vr_ui_offset("osu_vr_ui_offset", 0.1f, FCVAR_NONE);
 
 const char *OsuVR::OSUVR_CONFIG_FILE_NAME = "osuvrplayarea";
 
@@ -207,7 +207,8 @@ OsuVR::OsuVR(Osu *osu)
 				"   gl_FragColor = texture2D(mytexture, texCoords) * gl_Color;\n"
 				"}\n"
 		);
-		///m_shaderTexturedLegacyGeneric = engine->getResourceManager()->loadShader("texturedLegacyGeneric.vsh", "texturedLegacyGeneric.fsh");
+		/////m_shaderTexturedLegacyGeneric = engine->getResourceManager()->loadShader("texturedLegacyGeneric.vsh", "texturedLegacyGeneric.fsh");
+		///m_shaderTexturedLegacyGeneric = engine->getResourceManager()->loadShader2("texturedLegacyGeneric.mcshader");
 
 		m_shaderGenericUntextured = engine->getResourceManager()->createShader(
 
