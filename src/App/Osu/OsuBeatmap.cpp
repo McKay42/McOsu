@@ -1626,11 +1626,12 @@ void OsuBeatmap::fail()
 
 	if (!m_osu->isInMultiplayer() && osu_drain_kill.getBool())
 	{
-		if(osu_restart_on_death.getBool()) 
+		if(osu_restart_on_death.getBool())
 			restart();
-		else{
-			engine->getSound()->play(getSkin()->getFailsound());
 
+		else
+		{
+			engine->getSound()->play(getSkin()->getFailsound());
 			m_bFailed = true;
 			m_fFailAnim = 1.0f;
 			anim->moveLinear(&m_fFailAnim, 0.0f, osu_fail_time.getFloat(), true); // trigger music slowdown and delayed menu, see update()
