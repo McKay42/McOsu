@@ -1418,7 +1418,13 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 			db->readByte(); // ObjType
 			unsigned int mods = db->readInt();
 			db->readByte(); // ObjType
-			double starRating = db->readDouble();
+
+			float starRating;
+			if(m_iVersion >= 20250108) // see https://osu.ppy.sh/home/changelog/stable40/20250108.3
+				starRating = db->readFloat();
+			else
+				starRating = db->readDouble();
+
 			//debugLog("%f stars for %u\n", starRating, mods);
 
 			if (mods == 0)
@@ -1442,7 +1448,10 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 			db->readByte(); // ObjType
 			db->readInt();
 			db->readByte(); // ObjType
-			db->readDouble();
+			if(m_iVersion >= 20250108) // see https://osu.ppy.sh/home/changelog/stable40/20250108.3
+				db->readFloat();
+			else
+				db->readDouble();
 		}
 
 		unsigned int numCtbStarRatings = db->readInt();
@@ -1452,7 +1461,10 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 			db->readByte(); // ObjType
 			db->readInt();
 			db->readByte(); // ObjType
-			db->readDouble();
+			if(m_iVersion >= 20250108) // see https://osu.ppy.sh/home/changelog/stable40/20250108.3
+				db->readFloat();
+			else
+				db->readDouble();
 		}
 
 		unsigned int numManiaStarRatings = db->readInt();
@@ -1462,7 +1474,10 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 			db->readByte(); // ObjType
 			db->readInt();
 			db->readByte(); // ObjType
-			db->readDouble();
+			if(m_iVersion >= 20250108) // see https://osu.ppy.sh/home/changelog/stable40/20250108.3
+				db->readFloat();
+			else
+				db->readDouble();
 		}
 
 		/*unsigned int drainTime = */db->readInt(); // seconds
