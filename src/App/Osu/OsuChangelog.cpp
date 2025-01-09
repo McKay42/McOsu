@@ -36,7 +36,10 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	std::vector<CHANGELOG> changelogs;
 
 	CHANGELOG alpha317;
-	alpha317.title = UString::format("33.09 (Build Date: %s, %s)", __DATE__, __TIME__); // (09.01.2022 - ?)
+	alpha317.title = UString::format("33.10 (Build Date: %s, %s)", __DATE__, __TIME__); // (09.01.2022 - ?)
+	alpha317.changes.push_back("- Updated osu!stable database loader to support new 20250108 format (see https://osu.ppy.sh/home/changelog/stable40/20250108.3)");
+	alpha317.changes.push_back("");
+	alpha317.changes.push_back("");
 	alpha317.changes.push_back("- For more info on the star/pp changes in this update see https://osu.ppy.sh/home/news/2024-10-28-performance-points-star-rating-updates");
 	alpha317.changes.push_back("- Updated star + pp algorithms to match current lazer implementation aka CSR aka Combo Scaling Removal aka 20241007 (18) (thanks to @Khangaroo!)");
 	alpha317.changes.push_back("- Increased performance of live star/pp calc by ~100x (yes, two orders of magnitude faster. thanks to @Khangaroo!)");
