@@ -276,7 +276,7 @@ void OsuUISongBrowserScoreButton::draw(Graphics *g)
 	g->popTransform();
 
 	// custom info (Spd.)
-	if (m_style == STYLE::SCORE_BROWSER && m_sCustom.length() > 0)
+	if (m_sCustom.length() > 0)
 	{
 		const float customScale = 0.50f;
 		McFont *customFont = m_osu->getSubTitleFont();
@@ -300,7 +300,7 @@ void OsuUISongBrowserScoreButton::draw(Graphics *g)
 		g->popTransform();
 	}
 
-	if (m_style == STYLE::TOP_RANKS)
+	if (m_style == STYLE::TOP_RANKS && m_sCustom.length() < 1)
 	{
 		// weighted percent
 		const float weightScale = 0.65f;
