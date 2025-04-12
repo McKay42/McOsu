@@ -244,6 +244,7 @@ protected:
 	bool m_bContinueScheduled;
 	unsigned long m_iContinueMusicPos;
 	float m_fWaitTime;
+	float m_fPrevUnpauseTime;
 
 	// database
 	OsuDatabaseBeatmap *m_selectedDifficulty2;
