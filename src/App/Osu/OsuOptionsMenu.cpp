@@ -561,27 +561,32 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 
 	addSubSection("");
 	OsuUIButton *downloadOsuButton = addButton("Download osu! and get some beatmaps!");
+	downloadOsuButton->setTooltipText("https://osu.ppy.sh/home/download");
 	downloadOsuButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onDownloadOsuClicked) );
 	downloadOsuButton->setColor(0xff00ff00);
 	downloadOsuButton->setTextColor(0xffffffff);
 
 	addLabel("... or ...")->setCenterText(true);
 	OsuUIButton *manuallyManageBeatmapsButton = addButton("Manually manage beatmap files?");
+	manuallyManageBeatmapsButton->setTooltipText("https://steamcommunity.com/sharedfiles/filedetails/?id=880768265");
 	manuallyManageBeatmapsButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onManuallyManageBeatmapsClicked) );
 	manuallyManageBeatmapsButton->setColor(0xff10667b);
 
 	addSubSection("osu!folder");
-	addLabel("1) If you have an existing osu! installation:")->setTextColor(0xff666666);
-	addLabel("2) osu! > Options > \"Open osu! folder\"")->setTextColor(0xff666666);
-	addLabel("3) Copy paste the full path into the textbox:")->setTextColor(0xff666666);
+	addLabel("1) If you have an existing osu!stable installation:")->setTextColor(0xff666666);
+	addLabel("2) osu!stable > Options > \"Open osu! folder\"")->setTextColor(0xff666666);
+	addLabel("3) Copy & Paste the full path into the textbox:")->setTextColor(0xff666666);
 	addLabel("");
 	m_osuFolderTextbox = addTextbox(convar->getConVarByName("osu_folder")->getString(), convar->getConVarByName("osu_folder"));
-	addSpacer();
-	addCheckbox("Use osu!.db database (read-only)", "If you have an existing osu! installation,\nthen this will speed up the initial loading process.", convar->getConVarByName("osu_database_enabled"));
+	addLabel("");
+	addLabel("osu!lazer databases are not supported.")->setTextColor(0xff770000);
+	//addSpacer();
+	addLabel("");
+	addCheckbox("Use osu!stable osu!.db database (read-only)", "If you have an existing osu!stable installation,\nthen this will massively speed up songbrowser beatmap loading.", convar->getConVarByName("osu_database_enabled"));
 	if (env->getOS() != Environment::OS::OS_HORIZON)
-		addCheckbox("Load osu! collection.db (read-only)", "If you have an existing osu! installation,\nalso load and display your created collections from there.", convar->getConVarByName("osu_collections_legacy_enabled"));
+		addCheckbox("Load osu!stable collection.db (read-only)", "If you have an existing osu!stable installation,\nalso load and display your created collections from there.", convar->getConVarByName("osu_collections_legacy_enabled"));
 	if (env->getOS() != Environment::OS::OS_HORIZON)
-		addCheckbox("Load osu! scores.db (read-only)", "If you have an existing osu! installation,\nalso load and display your achieved scores from there.", convar->getConVarByName("osu_scores_legacy_enabled"));
+		addCheckbox("Load osu!stable scores.db (read-only)", "If you have an existing osu!stable installation,\nalso load and display your achieved scores from there.", convar->getConVarByName("osu_scores_legacy_enabled"));
 
 	addSubSection("Player (Name)");
 	m_nameTextbox = addTextbox(convar->getConVarByName("name")->getString(), convar->getConVarByName("name"));
@@ -2887,12 +2892,12 @@ void OsuOptionsMenu::onDownloadOsuClicked()
 {
 	if (env->getOS() == Environment::OS::OS_HORIZON)
 	{
-		m_osu->getNotificationOverlay()->addNotification("Go to https://osu.ppy.sh/", 0xffffffff, false, 0.75f);
+		m_osu->getNotificationOverlay()->addNotification("Go to https://osu.ppy.sh/home/download", 0xffffffff, false, 0.75f);
 		return;
 	}
 
 	m_osu->getNotificationOverlay()->addNotification("Opening browser, please wait ...", 0xffffffff, false, 0.75f);
-	env->openURLInDefaultBrowser("https://osu.ppy.sh/");
+	env->openURLInDefaultBrowser("https://osu.ppy.sh/home/download");
 }
 
 void OsuOptionsMenu::onManuallyManageBeatmapsClicked()
