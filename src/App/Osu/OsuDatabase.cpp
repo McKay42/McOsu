@@ -406,7 +406,7 @@ OsuDatabase::OsuDatabase(Osu *osu)
 	m_scoreSortingMethods.push_back({"Sort By Misses", new SortScoreByMisses()});
 	m_scoreSortingMethods.push_back({"Sort By pp (Mc)", new SortScoreByPP()});
 	m_scoreSortingMethods.push_back({"Sort By Score", new SortScoreByScore()});
-	m_scoreSortingMethods.push_back({"Sort By Unstable Rate", new SortScoreByUnstableRate()});
+	m_scoreSortingMethods.push_back({"Sort By Unstable Rate (Mc)", new SortScoreByUnstableRate()});
 }
 
 OsuDatabase::~OsuDatabase()
