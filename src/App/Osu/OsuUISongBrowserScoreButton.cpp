@@ -808,7 +808,10 @@ void OsuUISongBrowserScoreButton::setScore(const OsuDatabase::Score &score, cons
 	else
 		m_tooltipLines.push_back(UString::format("300:%i 100:%i 50:%i Miss:%i SBreak:%i", score.num300s, score.num100s, score.num50s, score.numMisses, score.numSliderBreaks));
 
-	m_tooltipLines.push_back(UString::format("Accuracy: %.2f%%", accuracy));
+	if (m_score.isLegacyScore || m_score.isImportedLegacyScore)
+		m_tooltipLines.push_back(UString::format("Accuracy: %.2f%%", accuracy));
+	else
+		m_tooltipLines.push_back(UString::format("Accuracy: %.2f%%  UR: %.2f", accuracy, score.unstableRate));
 
 	UString tooltipMods = "Mods: ";
 	if (m_sScoreMods.length() > 0)
