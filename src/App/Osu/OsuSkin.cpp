@@ -69,6 +69,7 @@ OsuSkin::OsuSkin(Osu *osu, UString name, UString filepath, bool isDefaultSkin, b
 	m_bIsWorkshopSkin = isWorkshopSkin;
 
 	m_bReady = false;
+	m_bReadyOnce = true;
 
 	// convar refs
 	if (m_osu_skin_ref == NULL)
@@ -346,10 +347,10 @@ void OsuSkin::update()
 	// tasks which have to be run after async loading finishes
 	if (!m_bReady && isReady())
 	{
-		m_bReady = true;
-
 		// force effect volume update
 		onEffectVolumeChange("", UString::format("%f", osu_volume_effects.getFloat()));
+
+		m_bReady = true;
 	}
 
 	// shitty check to not animate while paused with hitobjects in background
@@ -360,6 +361,18 @@ void OsuSkin::update()
 	for (int i=0; i<m_images.size(); i++)
 	{
 		m_images[i]->update(useEngineTimeForAnimations, curMusicPos);
+	}
+}
+
+void OsuSkin::onJustBeforeReady()
+{
+	// prevent invalid image sizes from breaking the songbrowser UI layout
+	{
+		if (m_songSelectTop->getWidth() < 3 || m_songSelectTop->getHeight() < 3)
+			m_songSelectTop = engine->getResourceManager()->getImage("OSU_SKIN_SONGSELECT_TOP_DEFAULT");
+
+		if (m_songSelectBottom->getHeight() < 3 || m_songSelectBottom->getHeight() < 3)
+			m_songSelectBottom = engine->getResourceManager()->getImage("OSU_SKIN_SONGSELECT_BOTTOM_DEFAULT");
 	}
 }
 
@@ -377,6 +390,13 @@ bool OsuSkin::isReady()
 	{
 		if (!m_images[i]->isReady())
 			return false;
+	}
+
+	if (m_bReadyOnce)
+	{
+		m_bReadyOnce = false;
+
+		onJustBeforeReady();
 	}
 
 	// (ready is set in update())
@@ -1469,7 +1489,7 @@ OsuSkinImage *OsuSkin::createOsuSkinImage(UString skinElementName, Vector2 baseS
 	return skinImage;
 }
 
-void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, UString resourceName, bool ignoreDefaultSkin, UString fileExtension, bool forceLoadMipmaps)
+void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, UString resourceName, bool ignoreDefaultSkin, UString fileExtension, bool forceLoadMipmaps, bool forceUseDefaultSkin)
 {
 	if (*addressOfPointer != m_missingTexture) return; // we are already loaded
 
@@ -1499,15 +1519,15 @@ void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, 
 
 	const bool existsDefaultFilePath1 = env->fileExists(defaultFilePath1);
 	const bool existsDefaultFilePath2 = env->fileExists(defaultFilePath2);
-	const bool existsFilepath1 = env->fileExists(filepath1);
-	const bool existsFilepath2 = env->fileExists(filepath2);
+	const bool existsFilepath1 = (!forceUseDefaultSkin && env->fileExists(filepath1));
+	const bool existsFilepath2 = (!forceUseDefaultSkin && env->fileExists(filepath2));
 
 	// check if an @2x version of this image exists
 	if (osu_skin_hd.getBool())
 	{
 		// load default skin
 
-		if (!ignoreDefaultSkin)
+		if (!ignoreDefaultSkin || forceUseDefaultSkin)
 		{
 			if (existsDefaultFilePath1)
 			{
@@ -1538,7 +1558,7 @@ void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, 
 
 		// load user skin
 
-		if (existsFilepath1)
+		if (existsFilepath1 && !forceUseDefaultSkin)
 		{
 			if (osu_skin_async.getBool())
 				engine->getResourceManager()->requestNextLoadAsync();
@@ -1572,7 +1592,7 @@ void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, 
 
 	// load default skin
 
-	if (!ignoreDefaultSkin)
+	if (!ignoreDefaultSkin || forceUseDefaultSkin)
 	{
 		if (existsDefaultFilePath2)
 		{
@@ -1589,7 +1609,7 @@ void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, 
 
 	// load user skin
 
-	if (existsFilepath2)
+	if (existsFilepath2 && !forceUseDefaultSkin)
 	{
 		if (osu_skin_async.getBool())
 			engine->getResourceManager()->requestNextLoadAsync();
@@ -1600,13 +1620,16 @@ void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, 
 
 	// export
 	{
-		if (existsFilepath1)
-			m_filepathsForExport.push_back(filepath1);
+		if (!forceUseDefaultSkin)
+		{
+			if (existsFilepath1)
+				m_filepathsForExport.push_back(filepath1);
 
-		if (existsFilepath2)
-			m_filepathsForExport.push_back(filepath2);
+			if (existsFilepath2)
+				m_filepathsForExport.push_back(filepath2);
+		}
 
-		if (!existsFilepath1 && !existsFilepath2)
+		if ((!existsFilepath1 && !existsFilepath2) || forceUseDefaultSkin)
 		{
 			if (existsDefaultFilePath1)
 				m_filepathsForExport.push_back(defaultFilePath1);
