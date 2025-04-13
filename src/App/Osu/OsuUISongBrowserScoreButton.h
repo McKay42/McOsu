@@ -60,6 +60,8 @@ private:
 	static ConVar *m_osu_cs_override_ref;
 	static ConVar *m_osu_od_override_ref;
 	static ConVar *m_osu_hp_override_ref;
+	static ConVar *m_osu_ar_override_lock_ref;
+	static ConVar *m_osu_od_override_lock_ref;
 	static UString recentScoreIconString;
 
 	void updateElapsedTimeString();

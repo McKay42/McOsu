@@ -42,6 +42,8 @@ ConVar *OsuUISongBrowserScoreButton::m_osu_ar_override_ref = NULL;
 ConVar *OsuUISongBrowserScoreButton::m_osu_cs_override_ref = NULL;
 ConVar *OsuUISongBrowserScoreButton::m_osu_od_override_ref = NULL;
 ConVar *OsuUISongBrowserScoreButton::m_osu_hp_override_ref = NULL;
+ConVar *OsuUISongBrowserScoreButton::m_osu_ar_override_lock_ref = NULL;
+ConVar *OsuUISongBrowserScoreButton::m_osu_od_override_lock_ref = NULL;
 UString OsuUISongBrowserScoreButton::recentScoreIconString;
 
 OsuUISongBrowserScoreButton::OsuUISongBrowserScoreButton(Osu *osu, OsuUIContextMenu *contextMenu, float xPos, float yPos, float xSize, float ySize, UString name, STYLE style) : CBaseUIButton(xPos, yPos, xSize, ySize, name, "")
@@ -64,6 +66,10 @@ OsuUISongBrowserScoreButton::OsuUISongBrowserScoreButton(Osu *osu, OsuUIContextM
 		m_osu_od_override_ref = convar->getConVarByName("osu_od_override");
 	if (m_osu_hp_override_ref == NULL)
 		m_osu_hp_override_ref = convar->getConVarByName("osu_hp_override");
+	if (m_osu_ar_override_lock_ref == NULL)
+		m_osu_ar_override_lock_ref = convar->getConVarByName("osu_ar_override_lock");
+	if (m_osu_od_override_lock_ref == NULL)
+		m_osu_od_override_lock_ref = convar->getConVarByName("osu_od_override_lock");
 
 	if (recentScoreIconString.length() < 1)
 		recentScoreIconString.insert(0, OsuIcons::ARROW_CIRCLE_UP);
@@ -582,8 +588,14 @@ void OsuUISongBrowserScoreButton::onUseModsClicked()
 	bool nomod = (m_score.modsLegacy == 0);
 
 	// legacy mods (common to all scores)
+	bool wasARLocked = false;
+	bool wasODLocked = false;
 	{
+		wasARLocked = m_osu_ar_override_lock_ref->getBool();
+		wasODLocked = m_osu_od_override_lock_ref->getBool();
+
 		m_osu->getModSelector()->resetMods();
+
 		m_osu_mods_ref->setValue(getModsStringForConVar(m_score.modsLegacy));
 	}
 
@@ -618,10 +630,13 @@ void OsuUISongBrowserScoreButton::onUseModsClicked()
 		const OsuReplay::BEATMAP_VALUES legacyValues = OsuReplay::getBeatmapValuesForModsLegacy(m_score.modsLegacy, tempAR, tempCS, tempOD, tempHP);
 
 		// beatmap values
+		float actualAR = legacyValues.AR;
+		float actualOD = legacyValues.OD;
 		{
 			const float beatmapValueComparisonEpsilon = 0.0001f;
 			if (std::abs(legacyValues.AR - m_score.AR) >= beatmapValueComparisonEpsilon)
 			{
+				actualAR = m_score.AR;
 				m_osu_ar_override_ref->setValue(m_score.AR);
 				nomod = false;
 			}
@@ -632,6 +647,7 @@ void OsuUISongBrowserScoreButton::onUseModsClicked()
 			}
 			if (std::abs(legacyValues.OD - m_score.OD) >= beatmapValueComparisonEpsilon)
 			{
+				actualOD = m_score.OD;
 				m_osu_od_override_ref->setValue(m_score.OD);
 				nomod = false;
 			}
@@ -643,10 +659,12 @@ void OsuUISongBrowserScoreButton::onUseModsClicked()
 		}
 
 		// speed multiplier
+		float actualSpeedMultiplier = legacyValues.speedMultiplier;
 		{
 			const float speedMultiplierComparisonEpsilon = 0.0001f;
 			if (std::abs(legacyValues.speedMultiplier - m_score.speedMultiplier) >= speedMultiplierComparisonEpsilon)
 			{
+				actualSpeedMultiplier = m_score.speedMultiplier;
 				m_osu_speed_override_ref->setValue(m_score.speedMultiplier);
 				nomod = false;
 			}
@@ -665,6 +683,21 @@ void OsuUISongBrowserScoreButton::onUseModsClicked()
 				}
 				else
 					debugLog("couldn't find \"%s\"\n", experimentalMods[i].toUtf8());
+			}
+		}
+
+		// persist override slider locks
+		{
+			if (wasARLocked)
+			{
+				m_osu_ar_override_lock_ref->setValue(1.0f);
+				m_osu_ar_override_ref->setValue(OsuGameRules::getRawApproachRateForSpeedMultiplier(OsuGameRules::getRawApproachTime(actualAR), actualSpeedMultiplier));
+			}
+
+			if (wasODLocked)
+			{
+				m_osu_od_override_lock_ref->setValue(1.0f);
+				m_osu_od_override_ref->setValue(OsuGameRules::getRawOverallDifficultyForSpeedMultiplier(OsuGameRules::getRawHitWindow300(actualOD), actualSpeedMultiplier));
 			}
 		}
 	}
