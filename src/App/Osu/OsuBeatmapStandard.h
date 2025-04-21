@@ -61,6 +61,7 @@ public:
 	inline int getNumHitObjects() const {return m_hitobjects.size();}
 	inline float getAimStars() const {return m_fAimStars;}
 	inline float getAimSliderFactor() const {return m_fAimSliderFactor;}
+	inline float getAimDifficultSliders() const {return m_fAimDifficultSliders;}
 	inline float getAimDifficultStrains() const {return m_fAimDifficultStrains;}
 	inline float getSpeedStars() const {return m_fSpeedStars;}
 	inline float getSpeedNotes() const {return m_fSpeedNotes;}
@@ -159,6 +160,7 @@ private:
 	// pp calculation buffer (only needs to be recalculated in onModUpdate(), instead of on every hit)
 	float m_fAimStars;
 	float m_fAimSliderFactor;
+	float m_fAimDifficultSliders;
 	float m_fAimDifficultStrains;
 	float m_fSpeedStars;
 	float m_fSpeedNotes;

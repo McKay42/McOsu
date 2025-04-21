@@ -128,6 +128,7 @@ OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 
 	m_fAimStars = 0.0f;
 	m_fAimSliderFactor = 0.0f;
+	m_fAimDifficultSliders = 0.0f;
 	m_fAimDifficultStrains = 0.0f;
 	m_fSpeedStars = 0.0f;
 	m_fSpeedNotes = 0.0f;
@@ -1627,6 +1628,7 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 		debugLog("OsuBeatmapStandard::onBeforeStop() calculating pp ...\n");
 		double aim = 0.0;
 		double aimSliderFactor = 0.0;
+		double aimDifficultSliders = 0.0;
 		double aimDifficultStrains = 0.0;
 		double speed = 0.0;
 		double speedNotes = 0.0;
@@ -1640,10 +1642,11 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 		const float OD = getOD();
 		const float speedMultiplier = m_osu->getSpeedMultiplier(); // NOTE: not this->getSpeedMultiplier()!
 		const bool relax = m_osu->getModRelax();
+		const bool autopilot = m_osu->getModAutopilot();
 		const bool touchDevice = m_osu->getModTD();
 
 		OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT diffres = OsuDatabaseBeatmap::loadDifficultyHitObjects(osuFilePath, gameMode, AR, CS, speedMultiplier);
-		const double totalStars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, CS, OD, speedMultiplier, relax, touchDevice, &aim, &aimSliderFactor, &aimDifficultStrains, &speed, &speedNotes, &speedDifficultStrains);
+		const double totalStars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, CS, OD, speedMultiplier, relax, autopilot, touchDevice, &aim, &aimSliderFactor, &aimDifficultSliders, &aimDifficultStrains, &speed, &speedNotes, &speedDifficultStrains);
 
 		m_fAimStars = (float)aim;
 		m_fSpeedStars = (float)speed;
@@ -1658,7 +1661,7 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 		const int num300s = m_osu->getScore()->getNum300s();
 		const int num100s = m_osu->getScore()->getNum100s();
 		const int num50s = m_osu->getScore()->getNum50s();
-		const float pp = OsuDifficultyCalculator::calculatePPv2(m_osu, this, aim, aimSliderFactor, aimDifficultStrains, speed, speedNotes, speedDifficultStrains, numHitObjects, numCircles, numSliders, numSpinners, maxPossibleCombo, highestCombo, numMisses, num300s, num100s, num50s);
+		const float pp = OsuDifficultyCalculator::calculatePPv2(m_osu, this, aim, aimSliderFactor, aimDifficultSliders, aimDifficultStrains, speed, speedNotes, speedDifficultStrains, numHitObjects, numCircles, numSliders, numSpinners, maxPossibleCombo, highestCombo, numMisses, num300s, num100s, num50s);
 		m_osu->getScore()->setStarsTomTotal(totalStars);
 		m_osu->getScore()->setStarsTomAim(m_fAimStars);
 		m_osu->getScore()->setStarsTomSpeed(m_fSpeedStars);

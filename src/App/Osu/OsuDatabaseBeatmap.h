@@ -443,7 +443,7 @@ public:
 	void kill() {m_bDead = true;}
 	void revive() {m_bDead = false;}
 
-	void setBeatmapDifficulty(OsuDatabaseBeatmap *diff2, float AR, float CS, float OD, float speedMultiplier, bool relax, bool touchDevice);
+	void setBeatmapDifficulty(OsuDatabaseBeatmap *diff2, float AR, float CS, float OD, float speedMultiplier, bool relax, bool autopilot, bool touchDevice);
 
 	inline OsuDatabaseBeatmap *getBeatmapDifficulty() const {return m_diff2;}
 
@@ -475,11 +475,13 @@ private:
 	float m_fOD;
 	float m_fSpeedMultiplier;
 	bool m_bRelax;
+	bool m_bAutopilot;
 	bool m_bTouchDevice;
 
 	std::atomic<double> m_totalStars;
 	std::atomic<double> m_aimStars;
 	std::atomic<double> m_aimSliderFactor;
+	std::atomic<double> m_aimDifficultSliders;
 	std::atomic<double> m_aimDifficultStrains;
 	std::atomic<double> m_speedStars;
 	std::atomic<double> m_speedNotes;
