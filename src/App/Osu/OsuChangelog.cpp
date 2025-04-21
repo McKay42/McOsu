@@ -36,7 +36,16 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	std::vector<CHANGELOG> changelogs;
 
 	CHANGELOG alpha317;
-	alpha317.title = UString::format("33.10 (Build Date: %s, %s)", __DATE__, __TIME__); // (09.01.2022 - ?)
+	alpha317.title = UString::format("33.11 (Build Date: %s, %s)", __DATE__, __TIME__); // (09.01.2022 - ?)
+	alpha317.changes.push_back("- Added \"Sort by Unstable Rate (Mc)\" to score sorting options");
+	alpha317.changes.push_back("- Added ConVars: osu_unpause_continue_delay, osu_confine_cursor_gameplay");
+	alpha317.changes.push_back("- Updated \"Sort by pp (Mc)\" to always show pp scores above scores without pp values");
+	alpha317.changes.push_back("- Updated Top Ranks screen to show speed multiplier on non-1.0x scores");
+	alpha317.changes.push_back("- Updated scorebrowser tooltips to also display UR next to Accuracy");
+	alpha317.changes.push_back("- Updated right click > \"Use Mods\" to persist override slider locks state");
+	alpha317.changes.push_back("- Fixed invalid 1x1 songselect-top.png/songselect-bottom.png skin images breaking songbrowser layout");
+	alpha317.changes.push_back("");
+	alpha317.changes.push_back("");
 	alpha317.changes.push_back("- Updated osu!stable database loader to support new 20250108 format (see https://osu.ppy.sh/home/changelog/stable40/20250108.3)");
 	alpha317.changes.push_back("");
 	alpha317.changes.push_back("");
