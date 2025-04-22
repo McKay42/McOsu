@@ -108,6 +108,7 @@ ConVar osu_fail_time("osu_fail_time", 2.25f, FCVAR_NONE, "Timeframe in s for the
 ConVar osu_notelock_type("osu_notelock_type", 2, FCVAR_NONE, "which notelock algorithm to use (0 = None, 1 = McOsu, 2 = osu!stable, 3 = osu!lazer 2020)");
 ConVar osu_notelock_stable_tolerance2b("osu_notelock_stable_tolerance2b", 3, FCVAR_NONE, "time tolerance in milliseconds to allow hitting simultaneous objects close together (e.g. circle at end of slider)");
 ConVar osu_mod_suddendeath_restart("osu_mod_suddendeath_restart", false, FCVAR_NONE, "osu! has this set to false (i.e. you fail after missing). if set to true, then behave like SS/PF, instantly restarting the map");
+ConVar osu_unpause_continue_delay("osu_unpause_continue_delay", 0.15f, FCVAR_NONE, "when unpausing, wait for this many seconds before allowing \"click to continue\" to be actually clicked (to avoid instantly triggering accidentally)");
 
 ConVar osu_drain_type("osu_drain_type", 2, FCVAR_NONE, "which hp drain algorithm to use (0 = None, 1 = VR, 2 = osu!stable, 3 = osu!lazer 2020, 4 = osu!lazer 2018)");
 ConVar osu_drain_kill("osu_drain_kill", true, FCVAR_NONE, "whether to kill the player upon failing");
@@ -195,6 +196,7 @@ OsuBeatmap::OsuBeatmap(Osu *osu)
 	m_bContinueScheduled = false;
 	m_iContinueMusicPos = 0;
 	m_fWaitTime = 0.0f;
+	m_fPrevUnpauseTime = 0.0f;
 
 	m_selectedDifficulty2 = NULL;
 
@@ -1195,7 +1197,12 @@ void OsuBeatmap::skipEmptySection()
 void OsuBeatmap::keyPressed1(bool mouse)
 {
 	if (m_bContinueScheduled)
+	{
+		if (engine->getTime() < m_fPrevUnpauseTime + osu_unpause_continue_delay.getFloat())
+			return;
+
 		m_bClickedContinue = !m_osu->getModSelector()->isMouseInside();
+	}
 
 	if (m_osu->isInVRMode() && !m_osu_vr_draw_desktop_playfield_ref->getBool()) return;
 
@@ -1230,7 +1237,12 @@ void OsuBeatmap::keyPressed1(bool mouse)
 void OsuBeatmap::keyPressed2(bool mouse)
 {
 	if (m_bContinueScheduled)
+	{
+		if (engine->getTime() < m_fPrevUnpauseTime + osu_unpause_continue_delay.getFloat())
+			return;
+
 		m_bClickedContinue = !m_osu->getModSelector()->isMouseInside();
+	}
 
 	if (m_osu->isInVRMode() && !m_osu_vr_draw_desktop_playfield_ref->getBool()) return;
 
@@ -1568,7 +1580,10 @@ void OsuBeatmap::pause(bool quitIfWaiting)
 	if (m_bIsPaused)
 		onPaused(isFirstPause);
 	else
+	{
+		m_fPrevUnpauseTime = engine->getTime();
 		onUnpaused();
+	}
 
 	// don't kill VR players while paused
 	if (m_osu_drain_type_ref->getInt() == 1)

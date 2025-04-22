@@ -112,7 +112,7 @@ private:
 class OsuDifficultyCalculator
 {
 public:
-	static constexpr const int PP_ALGORITHM_VERSION = 20241007;
+	static constexpr const int PP_ALGORITHM_VERSION = 20250306;
 
 public:
 	class Skills
@@ -148,7 +148,7 @@ public:
 	// see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/Aim.cs
 
 	static constexpr const double decay_base[Skills::NUM_SKILLS] = {0.3, 0.15, 0.15};			// how much strains decay per interval (if the previous interval's peak strains after applying decay are still higher than the current one's, they will be used as the peak strains).
-	static constexpr const double weight_scaling[Skills::NUM_SKILLS] = {1.430, 25.18, 25.18};	// used to keep speed and aim balanced between eachother
+	static constexpr const double weight_scaling[Skills::NUM_SKILLS] = {1.46, 25.6, 25.6};		// used to keep speed and aim balanced between eachother
 
 	static constexpr const double DIFFCALC_EPSILON = 1e-32;
 
@@ -160,7 +160,10 @@ public:
 		double relevant_note_sum; // speed only
 		double consistent_top_strain;
 		double difficult_strains;
+		double max_slider_strain;
+		double difficult_sliders;
 		std::vector<double> highest_strains;
+		std::vector<double> slider_strains;
 	};
 
 	class DiffObject
@@ -200,28 +203,29 @@ public:
 
 		inline const DiffObject *get_previous(int backwardsIdx) const {return (objects.size() > 0 && prevObjectIndex - backwardsIdx < (int)objects.size() ? &objects[std::max(0, prevObjectIndex - backwardsIdx)] : NULL);}
 		inline double get_strain(Skills::Skill type) const {return strains[Skills::skillToIndex(type)] * (type == Skills::Skill::SPEED ? rhythm : 1.0);}
+		inline double get_slider_aim_strain() const {return ho->type == OsuDifficultyHitObject::TYPE::SLIDER ? strains[Skills::skillToIndex(Skills::Skill::AIM_SLIDERS)] : -1.0;}
 		inline static double applyDiminishingExp(double val) {return std::pow(val, 0.99);}
 		inline static double strainDecay(Skills::Skill type, double ms) {return std::pow(decay_base[Skills::skillToIndex(type)], ms / 1000.0);}
 
-		void calculate_strains(const DiffObject &prev, const DiffObject *next, double hitWindow300);
-		void calculate_strain(const DiffObject &prev, const DiffObject *next, double hitWindow300, const Skills::Skill dtype);
-		static double calculate_difficulty(const Skills::Skill type, const DiffObject *dobjects, size_t dobjectCount, IncrementalState *incremental, std::vector<double> *outStrains = NULL, double *outDifficultStrains = NULL, double *outRelevantNotes = NULL);
+		void calculate_strains(const DiffObject &prev, const DiffObject *next, double hitWindow300, bool autopilotNerf);
+		void calculate_strain(const DiffObject &prev, const DiffObject *next, double hitWindow300, bool autopilotNerf, const Skills::Skill dtype);
+		static double calculate_difficulty(const Skills::Skill type, const DiffObject *dobjects, size_t dobjectCount, IncrementalState *incremental, std::vector<double> *outStrains = NULL, double *outDifficultStrains = NULL, double *outSkillSpecificAttrib = NULL);
 		static double spacing_weight1(const double distance, const Skills::Skill diff_type);
-		double spacing_weight2(const Skills::Skill diff_type, const DiffObject& prev, const DiffObject *next, double hitWindow300);
+		double spacing_weight2(const Skills::Skill diff_type, const DiffObject &prev, const DiffObject *next, double hitWindow300, bool autopilotNerf);
 		double get_doubletapness(const DiffObject *next, double hitWindow300) const;
 	};
 
 public:
 	// stars, fully static
-	static double calculateStarDiffForHitObjects(std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, float OD, float speedMultiplier, bool relax, bool touchDevice, double *aim, double *aimSliderFactor, double *difficultAimStrains, double *speed, double *speedNotes, double *difficultSpeedStrains, int upToObjectIndex = -1, std::vector<double> *outAimStrains = NULL, std::vector<double> *outSpeedStrains = NULL);
-	static double calculateStarDiffForHitObjects(std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, float OD, float speedMultiplier, bool relax, bool touchDevice, double *aim, double *aimSliderFactor, double *difficultAimStrains, double *speed, double *speedNotes, double *difficultSpeedStrains, int upToObjectIndex, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains, const std::atomic<bool> &dead);
-	static double calculateStarDiffForHitObjectsInt(std::vector<DiffObject> &cachedDiffObjects, std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, float OD, float speedMultiplier, bool relax, bool touchDevice, double *aim, double *aimSliderFactor, double *difficultAimStrains, double *speed, double *speedNotes, double *difficultSpeedStrains, int upToObjectIndex, IncrementalState *incremental, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains, const std::atomic<bool> &dead);
+	static double calculateStarDiffForHitObjects(std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, float OD, float speedMultiplier, bool relax, bool autopilot, bool touchDevice, double *aim, double *aimSliderFactor, double *aimDifficultSliders, double *difficultAimStrains, double *speed, double *speedNotes, double *difficultSpeedStrains, int upToObjectIndex = -1, std::vector<double> *outAimStrains = NULL, std::vector<double> *outSpeedStrains = NULL);
+	static double calculateStarDiffForHitObjects(std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, float OD, float speedMultiplier, bool relax, bool autopilot, bool touchDevice, double *aim, double *aimSliderFactor, double *aimDifficultSliders, double *difficultAimStrains, double *speed, double *speedNotes, double *difficultSpeedStrains, int upToObjectIndex, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains, const std::atomic<bool> &dead);
+	static double calculateStarDiffForHitObjectsInt(std::vector<DiffObject> &cachedDiffObjects, std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, float OD, float speedMultiplier, bool relax, bool autopilot, bool touchDevice, double *aim, double *aimSliderFactor, double *aimDifficultSliders, double *difficultAimStrains, double *speed, double *speedNotes, double *difficultSpeedStrains, int upToObjectIndex, IncrementalState *incremental, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains, const std::atomic<bool> &dead);
 
 	// pp, use runtime mods (convenience)
-	static double calculatePPv2(Osu *osu, OsuBeatmap *beatmap, double aim, double aimSliderFactor, double difficultAimStrains, double speed, double speedNotes, double difficultSpeedStrains, int numHitObjects, int numCircles, int numSliders, int numSpinners, int maxPossibleCombo, int combo = -1, int misses = 0, int c300 = -1, int c100 = 0, int c50 = 0);
+	static double calculatePPv2(Osu *osu, OsuBeatmap *beatmap, double aim, double aimSliderFactor, double aimDifficultSliders, double difficultAimStrains, double speed, double speedNotes, double difficultSpeedStrains, int numHitObjects, int numCircles, int numSliders, int numSpinners, int maxPossibleCombo, int combo = -1, int misses = 0, int c300 = -1, int c100 = 0, int c50 = 0);
 
 	// pp, fully static
-	static double calculatePPv2(int modsLegacy, double timescale, double ar, double od, double aim, double aimSliderFactor, double difficultAimStrains, double speed, double speedNotes, double difficultSpeedStrains, int numHitObjects, int numCircles, int numSliders, int numSpinners, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50);
+	static double calculatePPv2(int modsLegacy, double timescale, double ar, double od, double aim, double aimSliderFactor, double aimDifficultSliders, double difficultAimStrains, double speed, double speedNotes, double difficultSpeedStrains, int numHitObjects, int numCircles, int numSliders, int numSpinners, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50);
 
 	// helper functions
 	static double calculateTotalStarsFromSkills(double aim, double speed);
@@ -236,6 +240,7 @@ private:
 	{
 		double AimStrain;
 		double SliderFactor;
+		double AimDifficultSliderCount;
 		double AimDifficultStrainCount;
 		double SpeedStrain;
 		double SpeedNoteCount;
@@ -271,8 +276,29 @@ private:
 
 private:
 	static double computeAimValue(const ScoreData &score, const Attributes &attributes, double effectiveMissCount);
-	static double computeSpeedValue(const ScoreData &score, const Attributes &attributes, double effectiveMissCount);
+	static double computeSpeedValue(const ScoreData &score, const Attributes &attributes, double effectiveMissCount, double speedDeviation);
 	static double computeAccuracyValue(const ScoreData &score, const Attributes &attributes);
+
+	static double calculateSpeedDeviation(const ScoreData& score, const Attributes& attributes, double timescale);
+	static double calculateDeviation(const Attributes &attributes, double timescale, double relevantCountGreat, double relevantCountOk, double relevantCountMeh, double relevantCountMiss);
+	static double calculateSpeedHighDeviationNerf(const Attributes &attributes, double speedDeviation);
+
+	static double erf(double x);
+	static double erfInv(double z);
+	static double erfImp(double x, bool invert);
+	static double erfInvImp(double p, double q, double s);
+
+	template<size_t N>
+	static double evaluatePolynomial(double z, const double (&coefficients)[N])
+	{
+		double sum = coefficients[N - 1];
+		for (int i = N - 2; i >= 0; --i)
+		{
+			sum *= z;
+			sum += coefficients[i];
+		}
+		return sum;
+	}
 };
 
 #endif

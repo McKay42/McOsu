@@ -349,12 +349,14 @@ private:
 		float hardcodedVolumeMultiplier; // some samples in osu have hardcoded multipliers which can not be modified (i.e. you can NEVER reach 100% volume with them)
 	};
 
+	void onJustBeforeReady();
+
 	bool parseSkinINI(UString filepath);
 
 	bool compareFilenameWithSkinElementName(UString filename, UString skinElementName);
 
 	OsuSkinImage *createOsuSkinImage(UString skinElementName, Vector2 baseSizeForScaling2x, float osuSize, bool ignoreDefaultSkin = false, UString animationSeparator = "-");
-	void checkLoadImage(Image **addressOfPointer, UString skinElementName, UString resourceName, bool ignoreDefaultSkin = false, UString fileExtension = "png", bool forceLoadMipmaps = false);
+	void checkLoadImage(Image **addressOfPointer, UString skinElementName, UString resourceName, bool ignoreDefaultSkin = false, UString fileExtension = "png", bool forceLoadMipmaps = false, bool forceUseDefaultSkin = false);
 	void checkLoadSound(Sound **addressOfPointer, UString skinElementName, UString resourceName, bool isOverlayable = false, bool isSample = false, bool loop = false, float hardcodedVolumeMultiplier = -1.0f);
 
 	void onEffectVolumeChange(UString oldValue, UString newValue);
@@ -363,6 +365,7 @@ private:
 
 	Osu *m_osu;
 	bool m_bReady;
+	bool m_bReadyOnce;
 	bool m_bIsDefaultSkin;
 	bool m_bIsWorkshopSkin;
 	UString m_sName;

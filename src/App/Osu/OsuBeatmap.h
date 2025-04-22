@@ -111,6 +111,7 @@ public:
 	inline unsigned long long getScoreV2ComboPortionMaximum() const {return m_iScoreV2ComboPortionMaximum;}
 	inline double getAimStarsForUpToHitObjectIndex(int upToHitObjectIndex) const {return (m_aimStarsForNumHitObjects.size() > 0 && upToHitObjectIndex > -1 ? m_aimStarsForNumHitObjects[clamp<int>(upToHitObjectIndex, 0, m_aimStarsForNumHitObjects.size()-1)] : 0);}
 	inline double getAimSliderFactorForUpToHitObjectIndex(int upToHitObjectIndex) const {return (m_aimSliderFactorForNumHitObjects.size() > 0 && upToHitObjectIndex > -1 ? m_aimSliderFactorForNumHitObjects[clamp<int>(upToHitObjectIndex, 0, m_aimSliderFactorForNumHitObjects.size()-1)] : 0);}
+	inline double getAimDifficultSlidersForUpToHitObjectIndex(int upToHitObjectIndex) const {return (m_aimDifficultSlidersForNumHitObjects.size() > 0 && upToHitObjectIndex > -1 ? m_aimDifficultSlidersForNumHitObjects[clamp<int>(upToHitObjectIndex, 0, m_aimDifficultSlidersForNumHitObjects.size()-1)] : 0);}
 	inline double getAimDifficultStrainsForUpToHitObjectIndex(int upToHitObjectIndex) const {return (m_aimDifficultStrainsForNumHitObjects.size() > 0 && upToHitObjectIndex > -1 ? m_aimDifficultStrainsForNumHitObjects[clamp<int>(upToHitObjectIndex, 0, m_aimDifficultStrainsForNumHitObjects.size()-1)] : 0);}
 	inline double getSpeedStarsForUpToHitObjectIndex(int upToHitObjectIndex) const {return (m_speedStarsForNumHitObjects.size() > 0 && upToHitObjectIndex > -1 ? m_speedStarsForNumHitObjects[clamp<int>(upToHitObjectIndex, 0, m_speedStarsForNumHitObjects.size()-1)] : 0);}
 	inline double getSpeedNotesForUpToHitObjectIndex(int upToHitObjectIndex) const {return (m_speedNotesForNumHitObjects.size() > 0 && upToHitObjectIndex > -1 ? m_speedNotesForNumHitObjects[clamp<int>(upToHitObjectIndex, 0, m_speedNotesForNumHitObjects.size()-1)] : 0);}
@@ -244,6 +245,7 @@ protected:
 	bool m_bContinueScheduled;
 	unsigned long m_iContinueMusicPos;
 	float m_fWaitTime;
+	float m_fPrevUnpauseTime;
 
 	// database
 	OsuDatabaseBeatmap *m_selectedDifficulty2;
@@ -308,6 +310,7 @@ protected:
 	unsigned long long m_iScoreV2ComboPortionMaximum;
 	std::vector<double> m_aimStarsForNumHitObjects;
 	std::vector<double> m_aimSliderFactorForNumHitObjects;
+	std::vector<double> m_aimDifficultSlidersForNumHitObjects;
 	std::vector<double> m_aimDifficultStrainsForNumHitObjects;
 	std::vector<double> m_speedStarsForNumHitObjects;
 	std::vector<double> m_speedNotesForNumHitObjects;

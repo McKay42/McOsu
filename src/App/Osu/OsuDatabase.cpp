@@ -212,8 +212,9 @@ struct SortScoreByPP : public OsuDatabase::SCORE_SORTING_COMPARATOR
 	bool operator() (OsuDatabase::Score const &a, OsuDatabase::Score const &b) const
 	{
 		// first: pp
-		unsigned long long score1 = (unsigned long long)std::max(a.pp * 100.0f, 0.0f);
-		unsigned long long score2 = (unsigned long long)std::max(b.pp * 100.0f, 0.0f);
+		unsigned long long score1 = (unsigned long long)std::max((a.isLegacyScore ? -b.score : a.pp) * 100.0f, 0.0f);
+		unsigned long long score2 = (unsigned long long)std::max((b.isLegacyScore ? -a.score : b.pp) * 100.0f, 0.0f);
+
 
 		// second: score
 		if (score1 == score2)
@@ -230,10 +231,31 @@ struct SortScoreByPP : public OsuDatabase::SCORE_SORTING_COMPARATOR
 		}
 
 		// strict weak ordering!
-		if (score1 == score2 || a.isLegacyScore != b.isLegacyScore) // force for type discrepancies (legacy scores don't contain pp data)
+		if (score1 == score2)
+		{
 			return a.sortHack > b.sortHack;
+		}
 
 		return score1 > score2;
+	}
+};
+
+struct SortScoreByUnstableRate : public OsuDatabase::SCORE_SORTING_COMPARATOR
+{
+	virtual ~SortScoreByUnstableRate() {;}
+	bool operator() (OsuDatabase::Score const &a, OsuDatabase::Score const &b) const
+	{
+		// first: UR (reversed, lower is better)
+		unsigned long long ur1 = (unsigned long long)(std::abs(a.isLegacyScore ? -a.sortHack : a.unstableRate) * 100000.0f);
+		unsigned long long ur2 = (unsigned long long)(std::abs(b.isLegacyScore ? -b.sortHack : b.unstableRate) * 100000.0f);
+
+		// strict weak ordering!
+		if (ur1 == ur2)
+		{
+			return a.sortHack > b.sortHack;
+		}
+
+		return -ur1 > -ur2;
 	}
 };
 
@@ -384,6 +406,7 @@ OsuDatabase::OsuDatabase(Osu *osu)
 	m_scoreSortingMethods.push_back({"Sort By Misses", new SortScoreByMisses()});
 	m_scoreSortingMethods.push_back({"Sort By pp (Mc)", new SortScoreByPP()});
 	m_scoreSortingMethods.push_back({"Sort By Score", new SortScoreByScore()});
+	m_scoreSortingMethods.push_back({"Sort By Unstable Rate (Mc)", new SortScoreByUnstableRate()});
 }
 
 OsuDatabase::~OsuDatabase()
@@ -2210,7 +2233,7 @@ void OsuDatabase::loadScores()
 			if (originalScoresFile.canRead())
 			{
 				UString backupScoresFilePath = scoresFilePath;
-				const int forcedBackupCounter = 4;
+				const int forcedBackupCounter = 5;
 				backupScoresFilePath.append(UString::format(".%i_%i.backup", (makeBackupType < 2 ? backupLessThanVersion : maxSupportedCustomDbVersion), forcedBackupCounter));
 
 				if (!env->fileExists(backupScoresFilePath)) // NOTE: avoid overwriting when people switch betas
@@ -2291,7 +2314,7 @@ void OsuDatabase::loadScores()
 						db.readByteArray(); // replayCompressed
 
 						/*long long onlineScoreID = 0;*/
-						if (scoreVersion >= 20140721)
+						if (scoreVersion >= 20131110)
 							/*onlineScoreID = */db.readLongLong();
 						else if (scoreVersion >= 20121008)
 							/*onlineScoreID = */db.readInt();

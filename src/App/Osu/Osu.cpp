@@ -65,7 +65,7 @@
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 33.10f, FCVAR_NONE);
+ConVar osu_version("osu_version", 33.11f, FCVAR_NONE);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr", FCVAR_NONE);
 #else
@@ -80,6 +80,7 @@ ConVar osu_disable_mousebuttons("osu_disable_mousebuttons", false, FCVAR_NONE);
 ConVar osu_disable_mousewheel("osu_disable_mousewheel", false, FCVAR_NONE);
 ConVar osu_confine_cursor_windowed("osu_confine_cursor_windowed", false, FCVAR_NONE);
 ConVar osu_confine_cursor_fullscreen("osu_confine_cursor_fullscreen", true, FCVAR_NONE);
+ConVar osu_confine_cursor_gameplay("osu_confine_cursor_gameplay", true, FCVAR_NONE);
 
 ConVar osu_skin("osu_skin", "", FCVAR_NONE); // set dynamically below in the constructor
 ConVar osu_skin_is_from_workshop("osu_skin_is_from_workshop", false, FCVAR_NONE, "determines whether osu_skin contains a relative folder name, or a full absolute path (for workshop skins)");
@@ -314,6 +315,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 
 	osu_confine_cursor_windowed.setCallback( fastdelegate::MakeDelegate(this, &Osu::onConfineCursorWindowedChange) );
 	osu_confine_cursor_fullscreen.setCallback( fastdelegate::MakeDelegate(this, &Osu::onConfineCursorFullscreenChange) );
+	osu_confine_cursor_gameplay.setCallback( fastdelegate::MakeDelegate(this, &Osu::onConfineCursorGameplayChange) );
 
 	convar->getConVarByName("osu_playfield_mirror_horizontal")->setCallback( fastdelegate::MakeDelegate(this, &Osu::updateModsForConVarTemplate) ); // force a mod update on OsuBeatmap if changed
 	convar->getConVarByName("osu_playfield_mirror_vertical")->setCallback( fastdelegate::MakeDelegate(this, &Osu::updateModsForConVarTemplate) ); // force a mod update on OsuBeatmap if changed
@@ -2512,9 +2514,11 @@ void Osu::updateConfineCursor()
 	if (isInVRMode() || m_iInstanceID > 0) return;
 
 	if ((osu_confine_cursor_fullscreen.getBool() && env->isFullscreen())
-			|| (osu_confine_cursor_windowed.getBool() && !env->isFullscreen())
-			|| (isInPlayMode() && !m_pauseMenu->isVisible() && !getModAuto() && !getModAutopilot()))
+	 || (osu_confine_cursor_windowed.getBool() && !env->isFullscreen())
+	 || (osu_confine_cursor_gameplay.getBool() && isInPlayMode() && !m_pauseMenu->isVisible() && !getModAuto() && !getModAutopilot()))
+	{
 		env->setCursorClip(true, McRect());
+	}
 	else
 		env->setCursorClip(false, McRect());
 }
@@ -2525,6 +2529,11 @@ void Osu::onConfineCursorWindowedChange(UString oldValue, UString newValue)
 }
 
 void Osu::onConfineCursorFullscreenChange(UString oldValue, UString newValue)
+{
+	updateConfineCursor();
+}
+
+void Osu::onConfineCursorGameplayChange(UString oldValue, UString newValue)
 {
 	updateConfineCursor();
 }

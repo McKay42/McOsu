@@ -66,7 +66,11 @@ ConVar fposu_noclipspeed("fposu_noclipspeed", 2.0f, FCVAR_NONE);
 ConVar fposu_noclipaccelerate("fposu_noclipaccelerate", 20.0f, FCVAR_NONE);
 ConVar fposu_noclipfriction("fposu_noclipfriction", 10.0f, FCVAR_NONE);
 
+#ifndef MCOSU_FPOSU_4D_MODE_FINISHED
 #define MCOSU_FPOSU_4D_MODE_CVAR_FLAGS (FCVAR_DEVELOPMENTONLY|FCVAR_HARDCODED)
+#else
+#define MCOSU_FPOSU_4D_MODE_CVAR_FLAGS (FCVAR_NONE)
+#endif
 ConVar fposu_3d("fposu_3d", false, MCOSU_FPOSU_4D_MODE_CVAR_FLAGS);
 ConVar fposu_3d_playfield_scale("fposu_3d_playfield_scale", 1.0f, MCOSU_FPOSU_4D_MODE_CVAR_FLAGS);
 ConVar fposu_3d_spheres("fposu_3d_spheres", true, MCOSU_FPOSU_4D_MODE_CVAR_FLAGS, "whether to draw combocolored lit 3d spheres instead of flat skin image quads");
