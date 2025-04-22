@@ -261,11 +261,19 @@ public:
 		return mapDifficultyRange(beatmap->getRawOD(), getMinHitWindow300(), getMidHitWindow300(), getMaxHitWindow300());
 	}
 
+	static float getRawHitWindow100(float OD) // ignore all mods and overrides
+	{
+		return mapDifficultyRange(OD, getMinHitWindow100(), getMidHitWindow100(), getMaxHitWindow100());
+	}
 	static float getHitWindow100(OsuBeatmap *beatmap)
 	{
 		return mapDifficultyRange(beatmap->getOD(), getMinHitWindow100(), getMidHitWindow100(), getMaxHitWindow100());
 	}
 
+	static float getRawHitWindow50(float OD) // ignore all mods and overrides
+	{
+		return mapDifficultyRange(OD, getMinHitWindow50(), getMidHitWindow50(), getMaxHitWindow50());
+	}
 	static float getHitWindow50(OsuBeatmap *beatmap)
 	{
 		return mapDifficultyRange(beatmap->getOD(), getMinHitWindow50(), getMidHitWindow50(), getMaxHitWindow50());
