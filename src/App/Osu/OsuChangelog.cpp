@@ -37,6 +37,8 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 
 	CHANGELOG alpha317;
 	alpha317.title = UString::format("33.11 (Build Date: %s, %s)", __DATE__, __TIME__); // (09.01.2022 - ?)
+	alpha317.changes.push_back("- For more info on the star/pp changes in this update see https://osu.ppy.sh/home/news/2025-03-06-performance-points-star-rating-updates");
+	alpha317.changes.push_back("- Updated star + pp algorithms to match current lazer implementation aka 20250306 (19) (thanks to @Khangaroo!)");
 	alpha317.changes.push_back("- Added \"Sort by Unstable Rate (Mc)\" to score sorting options");
 	alpha317.changes.push_back("- Added ConVars: osu_unpause_continue_delay, osu_confine_cursor_gameplay");
 	alpha317.changes.push_back("- Updated \"Sort by pp (Mc)\" to always show pp scores above scores without pp values");
@@ -402,6 +404,7 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha313.changes.push_back("- Windows: Fixed Windows key not unlocking on focus loss if \"Pause on Focus Loss\" is disabled");
 	changelogs.push_back(alpha313);
 
+	/*
 	CHANGELOG alpha312;
 	alpha312.title = "30.12 (19.12.2019)";
 	alpha312.changes.push_back("- Added button \"Random Skin\" (Options > Skin)");
@@ -463,7 +466,6 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha30.changes.push_back("- Fixed custom ConVars being ignored in cfg: osu_mods, osu_speed/ar/od/cs_override");
 	changelogs.push_back(alpha30);
 
-	/*
 	CHANGELOG alpha295;
 	alpha295.title =  "29.5 (26.05.2019)";
 	alpha295.changes.push_back("- Added lock buttons to AR/OD override sliders (force constant AR/OD even with speed multiplier)");
@@ -855,6 +857,10 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 
 	CHANGELOG padding;
 	padding.title = "... (older changelogs are available on GitHub or Steam)";
+	padding.changes.push_back("");
+	padding.changes.push_back("https://github.com/McKay42/McOsu");
+	padding.changes.push_back("https://github.com/McKay42/McEngine");
+	padding.changes.push_back("https://store.steampowered.com/news/app/607260");
 	padding.changes.push_back("");
 	padding.changes.push_back("");
 	padding.changes.push_back("");
