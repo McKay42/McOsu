@@ -166,9 +166,9 @@ private:
 					const float OD = (score.isLegacyScore ? legacyValues.OD : score.OD);
 					const float HP = (score.isLegacyScore ? legacyValues.HP : score.HP);
 					const float speedMultiplier = (score.isLegacyScore ? legacyValues.speedMultiplier : score.speedMultiplier);
-					const float relax = score.modsLegacy & OsuReplay::Mods::Relax;
-					const float autopilot = score.modsLegacy & OsuReplay::Mods::Relax2;
-					const float touchDevice = score.modsLegacy & OsuReplay::Mods::TouchDevice;
+					const bool relax = score.modsLegacy & OsuReplay::Mods::Relax;
+					const bool autopilot = score.modsLegacy & OsuReplay::Mods::Relax2;
+					const bool touchDevice = score.modsLegacy & OsuReplay::Mods::TouchDevice;
 
 					// 2) load hitobjects for diffcalc
 					OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT diffres = OsuDatabaseBeatmap::loadDifficultyHitObjects(osuFilePath, gameMode, AR, CS, speedMultiplier);
