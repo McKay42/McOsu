@@ -1629,12 +1629,13 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 		const float CS = getCS();
 		const float OD = getOD();
 		const float speedMultiplier = m_osu->getSpeedMultiplier(); // NOTE: not this->getSpeedMultiplier()!
+		const bool hidden = m_osu->getModHD();
 		const bool relax = m_osu->getModRelax();
 		const bool autopilot = m_osu->getModAutopilot();
 		const bool touchDevice = m_osu->getModTD();
 
 		OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT diffres = OsuDatabaseBeatmap::loadDifficultyHitObjects(osuFilePath, gameMode, AR, CS, speedMultiplier);
-		const double totalStars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, CS, OD, speedMultiplier, relax, autopilot, touchDevice, &attributes);
+		const double totalStars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, CS, AR, OD, speedMultiplier, hidden, relax, autopilot, touchDevice, &attributes);
 
 		m_difficulty_attributes = attributes;
 
