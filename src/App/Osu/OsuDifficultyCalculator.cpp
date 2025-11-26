@@ -904,8 +904,11 @@ double OsuDifficultyCalculator::computeAccuracyValue(const ScoreData &score, con
 	accuracyValue *= std::min(1.15, std::pow(score.amountHitObjectsWithAccuracy / 1000.0, 0.3));
 
 	// hidden bonus
-	if (score.modsLegacy & OsuReplay::Mods::Hidden)
-		accuracyValue *= 1.08;
+	if (score.modsLegacy & OsuReplay::Mods::Hidden) {
+		// Decrease bonus for AR > 10
+		accuracyValue *= 1 + 0.08 * reverseLerp(attributes.ApproachRate, 11.5, 10);
+	}
+		
 	// flashlight bonus
 	if (score.modsLegacy & OsuReplay::Mods::Flashlight)
 		accuracyValue *= 1.02;
