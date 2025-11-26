@@ -1507,6 +1507,20 @@ double OsuDifficultyCalculator::DiffObject::spacing_weight1(const double distanc
 	return 0.0;
 }
 
+double reverseLerp(double x, double start, double end) {
+	return clamp<double>((x - start) / (end - start), 0.0, 1.0);
+};
+
+double smoothStep(double x, double start, double end) {
+	x = reverseLerp(x, start, end);
+	return x * x * (3.0 - 2.0 * x);
+};
+
+double smootherStep(double x, double start, double end) {
+	x = reverseLerp(x, start, end);
+	return x * x * x * (x * (x * 6.0 - 15.0) + 10.0);
+};
+
 // new implementation, Xexxar, (ppv2.1), see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/
 double OsuDifficultyCalculator::DiffObject::spacing_weight2(const Skills::Skill diff_type, const DiffObject &prev, const DiffObject *next, double hitWindow300, bool autopilotNerf)
 {
@@ -1714,18 +1728,6 @@ double OsuDifficultyCalculator::DiffObject::spacing_weight2(const Skills::Skill 
 
 				if (ho->type == OsuDifficultyHitObject::TYPE::SPINNER || prevObjectIndex <= 1 || prev.ho->type == OsuDifficultyHitObject::TYPE::SPINNER)
 					return 0.0;
-
-				auto reverseLerp = [] (double x, double start, double end) {
-					return clamp<double>((x - start) / (end - start), 0.0, 1.0);
-				};
-				auto smoothStep = [=] (double x, double start, double end) {
-					x = reverseLerp(x, start, end);
-					return x * x * (3.0 - 2.0 * x);
-				};
-				auto smootherStep = [=] (double x, double start, double end) {
-					x = reverseLerp(x, start, end);
-					return x * x * x * (x * (x * 6.0 - 15.0) + 10.0);
-				};
 
 				auto calcWideAngleBonus = [=] (double angle) {
 					return smoothStep(angle, 40.0 * (PI / 180.0), 140.0 * (PI / 180.0));
