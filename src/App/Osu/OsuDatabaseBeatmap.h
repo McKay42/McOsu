@@ -448,8 +448,7 @@ public:
 	inline OsuDatabaseBeatmap *getBeatmapDifficulty() const {return m_diff2;}
 
 	inline double getTotalStars() const {return m_totalStars.load();}
-	inline double getAimStars() const {return m_aimStars.load();}
-	inline double getSpeedStars() const {return m_speedStars.load();}
+	inline OsuDifficultyCalculator::Attributes getDifficultyAttributes() const {return m_difficulty_attributes.load();}
 	inline double getPPv2() const {return m_pp.load();} // NOTE: pp with currently active mods (runtime mods)
 
 	inline long getLengthMS() const {return m_iLengthMS.load();}
@@ -479,13 +478,7 @@ private:
 	bool m_bTouchDevice;
 
 	std::atomic<double> m_totalStars;
-	std::atomic<double> m_aimStars;
-	std::atomic<double> m_aimSliderFactor;
-	std::atomic<double> m_aimDifficultSliders;
-	std::atomic<double> m_aimDifficultStrains;
-	std::atomic<double> m_speedStars;
-	std::atomic<double> m_speedNotes;
-	std::atomic<double> m_speedDifficultStrains;
+	std::atomic<OsuDifficultyCalculator::Attributes> m_difficulty_attributes;
 	std::atomic<double> m_pp;
 
 	std::atomic<long> m_iLengthMS;

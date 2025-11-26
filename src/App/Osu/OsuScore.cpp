@@ -303,13 +303,7 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, OsuHitObject *hitObject, HIT hi
 		OsuBeatmapStandard *standardPointer = dynamic_cast<OsuBeatmapStandard*>(beatmap);
 		if (standardPointer != NULL && beatmap->getSelectedDifficulty2() != NULL)
 		{
-			double aimStars = standardPointer->getAimStars();
-			double aimSliderFactor = standardPointer->getAimSliderFactor();
-			double aimDifficultSliders = standardPointer->getAimDifficultSliders();
-			double aimDifficultStrains = standardPointer->getAimDifficultStrains();
-			double speedStars = standardPointer->getSpeedStars();
-			double speedNotes = standardPointer->getSpeedNotes();
-			double speedDifficultStrains = standardPointer->getSpeedDifficultStrains();
+			OsuDifficultyCalculator::Attributes attributes = standardPointer->getDifficultyAttributes();
 
 			//int numHitObjects = standardPointer->getNumHitObjects();
 			int maxPossibleCombo = beatmap->getMaxPossibleCombo();
@@ -334,18 +328,12 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, OsuHitObject *hitObject, HIT hi
 				numSpinners = clamp<int>(beatmap->getNumSpinnersForCurrentTime() + (hitObject != NULL && hitObject->isSpinner() && hitObject->isFinished() ? 1 : 0), 0, beatmap->getSelectedDifficulty2()->getNumSpinners()); // current maximum number of fully finished (!) spinners at this time
 
 				//beatmap->getSelectedDifficulty()->calculateStarDiff(beatmap, &aimStars, &speedStars, curHitobjectIndex); // recalculating this live costs too much time
-				aimStars = beatmap->getAimStarsForUpToHitObjectIndex(curHitobjectIndex);
-				aimSliderFactor = beatmap->getAimSliderFactorForUpToHitObjectIndex(curHitobjectIndex);
-				aimDifficultSliders = beatmap->getAimDifficultSlidersForUpToHitObjectIndex(curHitobjectIndex);
-				aimDifficultStrains = beatmap->getAimDifficultStrainsForUpToHitObjectIndex(curHitobjectIndex);
-				speedStars = beatmap->getSpeedStarsForUpToHitObjectIndex(curHitobjectIndex);
-				speedNotes = beatmap->getSpeedNotesForUpToHitObjectIndex(curHitobjectIndex);
-				speedDifficultStrains = beatmap->getSpeedDifficultStrainsForUpToHitObjectIndex(curHitobjectIndex);
+				attributes = beatmap->getDifficultyAttributesForUpToHitObjectIndex(curHitobjectIndex);
 
-				m_fPPv2 = OsuDifficultyCalculator::calculatePPv2(m_osu, beatmap, aimStars, aimSliderFactor, aimDifficultSliders, aimDifficultStrains, speedStars, speedNotes, speedDifficultStrains, -1, numCircles, numSliders, numSpinners, maxPossibleCombo, m_iComboMax, m_iNumMisses, m_iNum300s, m_iNum100s, m_iNum50s);
+				m_fPPv2 = OsuDifficultyCalculator::calculatePPv2(m_osu, beatmap, attributes, -1, numCircles, numSliders, numSpinners, maxPossibleCombo, m_iComboMax, m_iNumMisses, m_iNum300s, m_iNum100s, m_iNum50s);
 
 				if (osu_debug_pp.getBool())
-					debugLog("pp = %f, aimstars = %f, aimsliderfactor = %f, speedstars = %f, speednotes = %f, curindex = %i, maxPossibleCombo = %i, numCircles = %i, numSliders = %i, numSpinners = %i\n", m_fPPv2, aimStars, aimSliderFactor, speedStars, speedNotes, curHitobjectIndex, maxPossibleCombo, numCircles, numSliders, numSpinners);
+					debugLog("pp = %f, aimstars = %f, aimsliderfactor = %f, speedstars = %f, speednotes = %f, curindex = %i, maxPossibleCombo = %i, numCircles = %i, numSliders = %i, numSpinners = %i\n", m_fPPv2, attributes.AimDifficulty, attributes.SliderFactor, attributes.SpeedDifficulty, attributes.SpeedNoteCount, curHitobjectIndex, maxPossibleCombo, numCircles, numSliders, numSpinners);
 			}
 		}
 		else

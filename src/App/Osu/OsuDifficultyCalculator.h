@@ -157,13 +157,58 @@ public:
 		double interval_end;
 		double max_strain;
 		double max_object_strain;
-		double relevant_note_sum; // speed only
 		double consistent_top_strain;
 		double difficult_strains;
 		double max_slider_strain;
-		double difficult_sliders;
+		
 		std::vector<double> highest_strains;
 		std::vector<double> slider_strains;
+
+		// difficulty attributes
+		double aim_difficult_slider_count;
+		double speed_note_count;
+	};
+
+	// TODO: this should match osu-lazer difficulty attributes:
+	// 1) Add StarRating here, and use it globally instead of separate variable
+	// 2) Add HitCircle and Spinner count here, and use them globally instead of separate variable (together with SliderCount)
+	// 3) Remove ApproachRate and OverallDifficulty
+	struct Attributes
+	{
+		double AimDifficulty;
+		double AimDifficultSliderCount;
+
+		double SpeedDifficulty;
+		double SpeedNoteCount;
+
+		double SliderFactor;
+		
+		double AimDifficultStrainCount;
+		double SpeedDifficultStrainCount;
+
+		// Those 3 attributes are performance calculator only (for now)
+		// TODO: use SliderCount globally like the attributes above and remove AR and OD
+		double ApproachRate;
+		double OverallDifficulty;
+		int SliderCount;
+
+		void clear()
+		{
+			AimDifficulty = 0;
+			AimDifficultSliderCount = 0;
+
+			SpeedDifficulty = 0;
+			SpeedNoteCount = 0;
+
+			SliderFactor = 0;
+			
+			AimDifficultStrainCount = 0;
+			SpeedDifficultStrainCount = 0;
+
+			ApproachRate = 0;
+			OverallDifficulty = 0;
+			SliderCount = 0;
+		}
 	};
 
 	class DiffObject
@@ -210,7 +255,7 @@ public:
 
 		void calculate_strains(const DiffObject &prev, const DiffObject *next, double hitWindow300, bool autopilotNerf);
 		void calculate_strain(const DiffObject &prev, const DiffObject *next, double hitWindow300, bool autopilotNerf, const Skills::Skill dtype);
-		static double calculate_difficulty(const Skills::Skill type, const DiffObject *dobjects, size_t dobjectCount, IncrementalState *incremental, std::vector<double> *outStrains = NULL, double *outDifficultStrains = NULL, double *outSkillSpecificAttrib = NULL);
+		static double calculate_difficulty(const Skills::Skill type, const DiffObject *dobjects, size_t dobjectCount, IncrementalState *incremental, std::vector<double> *outStrains = NULL, Attributes *attributes = NULL);
 		static double spacing_weight1(const double distance, const Skills::Skill diff_type);
 		double spacing_weight2(const Skills::Skill diff_type, const DiffObject &prev, const DiffObject *next, double hitWindow300, bool autopilotNerf);
 		double get_doubletapness(const DiffObject *next, double hitWindow300) const;
@@ -218,15 +263,15 @@ public:
 
 public:
 	// stars, fully static
-	static double calculateStarDiffForHitObjects(std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, float OD, float speedMultiplier, bool relax, bool autopilot, bool touchDevice, double *aim, double *aimSliderFactor, double *aimDifficultSliders, double *difficultAimStrains, double *speed, double *speedNotes, double *difficultSpeedStrains, int upToObjectIndex = -1, std::vector<double> *outAimStrains = NULL, std::vector<double> *outSpeedStrains = NULL);
-	static double calculateStarDiffForHitObjects(std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, float OD, float speedMultiplier, bool relax, bool autopilot, bool touchDevice, double *aim, double *aimSliderFactor, double *aimDifficultSliders, double *difficultAimStrains, double *speed, double *speedNotes, double *difficultSpeedStrains, int upToObjectIndex, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains, const std::atomic<bool> &dead);
-	static double calculateStarDiffForHitObjectsInt(std::vector<DiffObject> &cachedDiffObjects, std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, float OD, float speedMultiplier, bool relax, bool autopilot, bool touchDevice, double *aim, double *aimSliderFactor, double *aimDifficultSliders, double *difficultAimStrains, double *speed, double *speedNotes, double *difficultSpeedStrains, int upToObjectIndex, IncrementalState *incremental, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains, const std::atomic<bool> &dead);
+	static double calculateStarDiffForHitObjects(std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, float OD, float speedMultiplier, bool relax, bool autopilot, bool touchDevice, Attributes* attributes, int upToObjectIndex = -1, std::vector<double> *outAimStrains = NULL, std::vector<double> *outSpeedStrains = NULL);
+	static double calculateStarDiffForHitObjects(std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, float OD, float speedMultiplier, bool relax, bool autopilot, bool touchDevice, Attributes* attributes, int upToObjectIndex, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains, const std::atomic<bool> &dead);
+	static double calculateStarDiffForHitObjectsInt(std::vector<DiffObject> &cachedDiffObjects, std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, float OD, float speedMultiplier, bool relax, bool autopilot, bool touchDevice, Attributes* attributes, int upToObjectIndex, IncrementalState *incremental, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains, const std::atomic<bool> &dead);
 
 	// pp, use runtime mods (convenience)
-	static double calculatePPv2(Osu *osu, OsuBeatmap *beatmap, double aim, double aimSliderFactor, double aimDifficultSliders, double difficultAimStrains, double speed, double speedNotes, double difficultSpeedStrains, int numHitObjects, int numCircles, int numSliders, int numSpinners, int maxPossibleCombo, int combo = -1, int misses = 0, int c300 = -1, int c100 = 0, int c50 = 0);
+	static double calculatePPv2(Osu *osu, OsuBeatmap *beatmap, Attributes attributes, int numHitObjects, int numCircles, int numSliders, int numSpinners, int maxPossibleCombo, int combo = -1, int misses = 0, int c300 = -1, int c100 = 0, int c50 = 0);
 
 	// pp, fully static
-	static double calculatePPv2(int modsLegacy, double timescale, double ar, double od, double aim, double aimSliderFactor, double aimDifficultSliders, double difficultAimStrains, double speed, double speedNotes, double difficultSpeedStrains, int numHitObjects, int numCircles, int numSliders, int numSpinners, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50);
+	static double calculatePPv2(int modsLegacy, double timescale, double ar, double od, Attributes attributes, int numHitObjects, int numCircles, int numSliders, int numSpinners, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50);
 
 	// helper functions
 	static double calculateTotalStarsFromSkills(double aim, double speed);
@@ -237,20 +282,6 @@ private:
 	static ConVar *m_osu_slider_curve_max_length_ref;
 
 private:
-	struct Attributes
-	{
-		double AimStrain;
-		double SliderFactor;
-		double AimDifficultSliderCount;
-		double AimDifficultStrainCount;
-		double SpeedStrain;
-		double SpeedNoteCount;
-		double SpeedDifficultStrainCount;
-		double ApproachRate;
-		double OverallDifficulty;
-		int SliderCount;
-	};
-
 	struct ScoreData
 	{
 		double accuracy;
