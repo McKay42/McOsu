@@ -1705,7 +1705,7 @@ double OsuDifficultyCalculator::DiffObject::spacing_weight2(const Skills::Skill 
 			{
 				// https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Evaluators/AimEvaluator.cs
 				static const double wide_angle_multiplier = 1.5;
-				static const double acute_angle_multiplier = 2.6;
+				static const double acute_angle_multiplier = 2.55;
 				static const double slider_multiplier = 1.35;
 				static const double velocity_change_multiplier = 0.75;
 				static const double wiggle_multiplier = 1.02;
@@ -1735,6 +1735,8 @@ double OsuDifficultyCalculator::DiffObject::spacing_weight2(const Skills::Skill 
 				};
 
 				const DiffObject *prevPrev = get_previous(1);
+				const DiffObject *prev2 = get_previous(2);
+
 				double currVelocity = jumpDistance / adjusted_delta_time;
 
 				if (prev.ho->type == OsuDifficultyHitObject::TYPE::SLIDER && withSliders)
@@ -1759,29 +1761,37 @@ double OsuDifficultyCalculator::DiffObject::spacing_weight2(const Skills::Skill 
 				double velocityChangeBonus = 0;
 				double wiggleBonus = 0;
 
-				if (std::max(adjusted_delta_time, prev.adjusted_delta_time) < 1.25 * std::min(adjusted_delta_time, prev.adjusted_delta_time))
+				if (!std::isnan(angle) && !std::isnan(prev.angle))
 				{
-					if (!std::isnan(angle) && !std::isnan(prev.angle))
+					double angleBonus = std::min(currVelocity, prevVelocity);
+
+					if (std::max(adjusted_delta_time, prev.adjusted_delta_time) < 1.25 * std::min(adjusted_delta_time, prev.adjusted_delta_time))
 					{
-						double angleBonus = std::min(currVelocity, prevVelocity);
-
-						wideAngleBonus = calcWideAngleBonus(angle);
 						acuteAngleBonus = calcAcuteAngleBonus(angle);
-
-						wideAngleBonus *= 1.0 - std::min(wideAngleBonus, pow(calcWideAngleBonus(prev.angle), 3.0));
 						acuteAngleBonus *= 0.08 + 0.92 * (1.0 - std::min(acuteAngleBonus, std::pow(calcAcuteAngleBonus(prev.angle), 3.0)));
-
-						wideAngleBonus *= angleBonus * smootherStep(jumpDistance, 0.0, 100.0);
-
 						acuteAngleBonus *= angleBonus * smootherStep(60000.0 / (adjusted_delta_time * 2.0), 300.0, 400.0) * smootherStep(jumpDistance, 100.0, 200.0);
+					}
 
-						wiggleBonus = angleBonus
-							* smootherStep(jumpDistance, 50.0, 100.0)
-							* pow(reverseLerp(jumpDistance, 300.0, 100.0), 1.8)
-							* smootherStep(angle, 110.0 * (PI / 180.0), 60.0 * (PI / 180.0))
-							* smootherStep(prev.jumpDistance, 50.0, 100.0)
-							* pow(reverseLerp(prev.jumpDistance, 300.0, 100.0), 1.8)
-							* smootherStep(prev.angle, 110.0 * (PI / 180.0), 60.0 * (PI / 180.0));
+					wideAngleBonus = calcWideAngleBonus(angle);
+					wideAngleBonus *= 1.0 - std::min(wideAngleBonus, pow(calcWideAngleBonus(prev.angle), 3.0));
+					wideAngleBonus *= angleBonus * smootherStep(jumpDistance, 0.0, 100.0);
+					
+					wiggleBonus = angleBonus
+						* smootherStep(jumpDistance, 50.0, 100.0)
+						* pow(reverseLerp(jumpDistance, 300.0, 100.0), 1.8)
+						* smootherStep(angle, 110.0 * (PI / 180.0), 60.0 * (PI / 180.0))
+						* smootherStep(prev.jumpDistance, 50.0, 100.0)
+						* pow(reverseLerp(prev.jumpDistance, 300.0, 100.0), 1.8)
+						* smootherStep(prev.angle, 110.0 * (PI / 180.0), 60.0 * (PI / 180.0));
+
+					if (prev2 != NULL)
+					{
+						float distance = (prevPrev->ho->pos - prev2->ho->pos).length();
+
+						if (distance < 1)
+						{
+							wideAngleBonus *= 1 - 0.35 * (1 - distance);
+						}
 					}
 				}
 
@@ -1790,7 +1800,7 @@ double OsuDifficultyCalculator::DiffObject::spacing_weight2(const Skills::Skill 
 					prevVelocity = (prev.jumpDistance + prevPrev->travelDistance) / prev.adjusted_delta_time;
 					currVelocity = (jumpDistance + prev.travelDistance) / adjusted_delta_time;
 
-					double distRatio = std::pow(std::sin(PI / 2.0 * std::abs(prevVelocity - currVelocity) / std::max(prevVelocity, currVelocity)), 2.0);
+					double distRatio = smoothStep(std::abs(prevVelocity - currVelocity) / std::max(prevVelocity, currVelocity), 0, 1);
 					double overlapVelocityBuff = std::min(125.0 / std::min(adjusted_delta_time, prev.adjusted_delta_time), std::abs(prevVelocity - currVelocity));
 					velocityChangeBonus = overlapVelocityBuff * distRatio * std::pow(std::min(adjusted_delta_time, prev.adjusted_delta_time) / std::max(adjusted_delta_time, prev.adjusted_delta_time), 2.0);
 				}
@@ -1799,8 +1809,9 @@ double OsuDifficultyCalculator::DiffObject::spacing_weight2(const Skills::Skill 
 					sliderBonus = prev.travelDistance / prev.travelTime;
 
 				aimStrain += wiggleBonus * wiggle_multiplier;
+				aimStrain += velocityChangeBonus * velocity_change_multiplier;
+            	aimStrain += std::max(acuteAngleBonus * acute_angle_multiplier, wideAngleBonus * wide_angle_multiplier);
 
-				aimStrain += std::max(acuteAngleBonus * acute_angle_multiplier, wideAngleBonus * wide_angle_multiplier + velocityChangeBonus * velocity_change_multiplier);
 				if (withSliders)
 					aimStrain += sliderBonus * slider_multiplier;
 
