@@ -202,6 +202,7 @@ public:
 		DiffObject(OsuDifficultyHitObject *base_object, float radius_scaling_factor, std::vector<DiffObject> &diff_objects, int prevObjectIdx);
 
 		inline const DiffObject *get_previous(int backwardsIdx) const {return (objects.size() > 0 && prevObjectIndex - backwardsIdx < (int)objects.size() ? &objects[std::max(0, prevObjectIndex - backwardsIdx)] : NULL);}
+		inline const DiffObject *get_next(int forwardIdx) const {return (objects.size() > 0 && prevObjectIndex + forwardIdx < (int)objects.size() ? &objects[std::max(0, prevObjectIndex + forwardIdx)] : NULL);}
 		inline double get_strain(Skills::Skill type) const {return strains[Skills::skillToIndex(type)] * (type == Skills::Skill::SPEED ? rhythm : 1.0);}
 		inline double get_slider_aim_strain() const {return ho->type == OsuDifficultyHitObject::TYPE::SLIDER ? strains[Skills::skillToIndex(Skills::Skill::AIM_SLIDERS)] : -1.0;}
 		inline static double applyDiminishingExp(double val) {return std::pow(val, 0.99);}

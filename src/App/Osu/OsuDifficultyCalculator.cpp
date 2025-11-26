@@ -1521,6 +1521,13 @@ double smootherStep(double x, double start, double end) {
 	return x * x * x * (x * (x * 6.0 - 15.0) + 10.0);
 };
 
+double smoothstepBellCurve(double x, double mean = 0.5, double width = 0.5)
+{
+	x -= mean;
+	x = x > 0 ? (width - x) : (width + x);
+	return smoothStep(x, 0, width);
+};
+
 // new implementation, Xexxar, (ppv2.1), see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/
 double OsuDifficultyCalculator::DiffObject::spacing_weight2(const Skills::Skill diff_type, const DiffObject &prev, const DiffObject *next, double hitWindow300, bool autopilotNerf)
 {
@@ -1528,12 +1535,12 @@ double OsuDifficultyCalculator::DiffObject::spacing_weight2(const Skills::Skill 
 
 	static const double min_speed_bonus = 75.0; /* ~200BPM 1/4 streams */
 	static const double speed_balancing_factor = 40.0;
-	static const double distance_multiplier = 0.9;
+	static const double distance_multiplier = 0.8;
 
 	static const int history_time_max = 5000;
 	static const int history_objects_max = 32;
-	static const double rhythm_overall_multiplier = 0.95;
-	static const double rhythm_ratio_multiplier = 12.0;
+	static const double rhythm_overall_multiplier = 1.0;
+	static const double rhythm_ratio_multiplier = 15.0;
 
 	//double angle_bonus = 1.0; // (apparently unused now in lazer?)
 
@@ -1601,22 +1608,25 @@ double OsuDifficultyCalculator::DiffObject::spacing_weight2(const Skills::Skill 
 
 					double currHistoricalDecay = std::min(noteDecay, timeDecay); // either we're limited by time or limited by object count.
 
-					double currDelta = currObj->adjusted_delta_time;
-					double prevDelta = prevObj->adjusted_delta_time;
-					double lastDelta = lastObj->adjusted_delta_time;
+					double currDelta = std::max(currObj->delta_time, 1e-7);
+					double prevDelta = std::max(prevObj->delta_time, 1e-7);
+					double lastDelta = std::max(lastObj->delta_time, 1e-7);
 
 					// calculate how much current delta difference deserves a rhythm bonus
 					// this function is meant to reduce rhythm bonus for deltas that are multiples of each other (i.e 100 and 200)
-					double deltaDifferenceRatio = std::min(prevDelta, currDelta) / std::max(prevDelta, currDelta);
-					double currRatio = 1.0 + rhythm_ratio_multiplier * std::min(0.5, std::pow(std::sin(PI / deltaDifferenceRatio), 2.0));
+					double deltaDifference = std::max(prevDelta, currDelta) / std::min(prevDelta, currDelta);
+
+					// Take only the fractional part of the value since we're only interested in punishing multiples
+					double deltaDifferenceFraction = deltaDifference - std::trunc(deltaDifference);
+
+					double currRatio = 1.0 + rhythm_ratio_multiplier * std::min(0.5, smoothstepBellCurve(deltaDifferenceFraction));
 
 					// reduce ratio bonus if delta difference is too big
-					double fraction = std::max(prevDelta / currDelta, currDelta / prevDelta);
-					double fractionMultiplier = clamp<double>(2.0 - fraction / 8.0, 0.0, 1.0);
+					double differenceMultiplier = std::clamp(2.0 - deltaDifference / 8.0, 0.0, 1.0);
 
 					double windowPenalty = std::min(1.0, std::max(0.0, std::abs(prevDelta - currDelta) - deltaDifferenceEpsilon) / deltaDifferenceEpsilon);
 
-					double effectiveRatio = windowPenalty * currRatio * fractionMultiplier;
+					double effectiveRatio = windowPenalty * currRatio * differenceMultiplier;
 
 					if (firstDeltaSwitch)
 					{
@@ -1708,7 +1718,8 @@ double OsuDifficultyCalculator::DiffObject::spacing_weight2(const Skills::Skill 
 					prevObj = currObj;
 				}
 
-				rhythm = std::sqrt(4.0 + rhythmComplexitySum * rhythm_overall_multiplier) / 2.0;
+				rhythm = std::sqrt(4 + rhythmComplexitySum * rhythm_overall_multiplier) / 2.0; // produces multiplier that can be applied to strain. range [1, infinity) (not really though)
+            	rhythm *= 1 - get_doubletapness(get_next(0), hitWindow300);
 
 				return raw_speed_strain;
 			}
