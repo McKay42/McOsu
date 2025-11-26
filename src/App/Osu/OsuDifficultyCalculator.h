@@ -240,6 +240,8 @@ public:
 		double lazyTravelTime;	// precalc temp
 		double travelTime;		// precalc temp
 
+		double smallCircleBonus;
+
 		const std::vector<DiffObject> &objects;	// NOTE: McOsu stores the first object in this array while lazer doesn't. newer lazer algorithms require referencing objects "randomly", so we just keep the entire vector around.
 		int prevObjectIndex;					// WARNING: this will be -1 for the first object (as the name implies), see note above
 

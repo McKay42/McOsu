@@ -440,17 +440,12 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjectsInt(std::vector<Di
 	static const float normalized_radius = 50.0f;		// normalization factor
 	static const float maximum_slider_radius = normalized_radius * 2.4f;
 	static const float assumed_slider_radius = normalized_radius * 1.8f;
-	static const float circlesize_buff_treshold = 30;	// non-normalized diameter where the circlesize buff starts
 
 	// multiplier to normalize positions so that we can calc as if everything was the same circlesize.
-	// also handle high CS bonus
-
 	float radius_scaling_factor = normalized_radius / circleRadiusInOsuPixels;
-	if (circleRadiusInOsuPixels < circlesize_buff_treshold)
-	{
-		const float smallCircleBonus = std::min(circlesize_buff_treshold - circleRadiusInOsuPixels, 5.0f) / 50.0f;
-		radius_scaling_factor *= 1.0f + smallCircleBonus;
-	}
+
+	// handle high CS bonus
+	double smallCircleBonus = std::max(1.0, 1.0 + (30 - circleRadiusInOsuPixels) / 40);
 
 	// ****************************************************************************************************************************************** //
 
@@ -575,7 +570,9 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjectsInt(std::vector<Di
 			if (dead.load())
 				return 0.0;
 
-			cachedDiffObjects.push_back(DiffObject(&sortedHitObjects[i], radius_scaling_factor, cachedDiffObjects, (int)i - 1)); // this already initializes the angle to NaN
+			DiffObject newDiffObject = DiffObject(&sortedHitObjects[i], radius_scaling_factor, cachedDiffObjects, (int)i - 1); // this already initializes the angle to NaN
+			newDiffObject.smallCircleBonus = smallCircleBonus;
+			cachedDiffObjects.push_back(std::move(newDiffObject)); 
 		}
 	}
 	diffObjects = cachedDiffObjects.data();
@@ -1256,6 +1253,8 @@ OsuDifficultyCalculator::DiffObject::DiffObject(OsuDifficultyHitObject *base_obj
 	lazyTravelTime = 0.0;
 	travelTime = 0.0;
 
+	smallCircleBonus = 1.0;
+
 	prevObjectIndex = prevObjectIdx;
 }
 
@@ -1671,6 +1670,10 @@ double OsuDifficultyCalculator::DiffObject::spacing_weight2(const Skills::Skill 
 					speed_bonus = 0.75 * std::pow((min_speed_bonus - adjusted_delta_time) / speed_balancing_factor, 2.0);
 
 				double distance_bonus = autopilotNerf ? 0.0 : std::pow(distance / single_spacing_threshold, 3.95) * distance_multiplier;
+
+				// Apply reduced small circle bonus because flow aim difficulty on small circles doesn't scale as hard as jumps
+            	distance_bonus *= std::sqrt(smallCircleBonus);
+
 				raw_speed_strain = (1.0 + speed_bonus + distance_bonus) * 1000.0 * doubletapness / adjusted_delta_time;
 
 				// https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Evaluators/RhythmEvaluator.cs
@@ -1925,6 +1928,9 @@ double OsuDifficultyCalculator::DiffObject::spacing_weight2(const Skills::Skill 
 				aimStrain += wiggleBonus * wiggle_multiplier;
 				aimStrain += velocityChangeBonus * velocity_change_multiplier;
             	aimStrain += std::max(acuteAngleBonus * acute_angle_multiplier, wideAngleBonus * wide_angle_multiplier);
+
+				// Apply high circle size bonus
+            	aimStrain *= smallCircleBonus;
 
 				if (withSliders)
 					aimStrain += sliderBonus * slider_multiplier;
