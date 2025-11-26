@@ -188,7 +188,7 @@ public:
 		double travelDistance;	// precalc
 
 		double delta_time;		// strain temp
-		double strain_time;		// strain temp
+		double adjusted_delta_time;		// strain temp
 
 		bool lazyCalcFinished;	// precalc temp
 		Vector2 lazyEndPos;		// precalc temp

@@ -457,7 +457,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjectsInt(std::vector<Di
 
 					const Vector2 lastCursorPosition = DistanceCalc::getEndCursorPosition(prev1, circleRadiusInOsuPixels);
 
-					double cur_strain_time = (double)std::max(cur.ho->time - prev1.ho->time, 25l); // strain_time isn't initialized here
+					double cur_strain_time = (double)std::max(cur.ho->time - prev1.ho->time, 25l); // adjusted_delta_time isn't initialized here
 					cur.jumpDistance = (cur.norm_start - lastCursorPosition*radius_scaling_factor).length();
 					cur.minJumpDistance = cur.jumpDistance;
 					cur.minJumpTime = cur_strain_time;
@@ -1132,7 +1132,7 @@ OsuDifficultyCalculator::DiffObject::DiffObject(OsuDifficultyHitObject *base_obj
 	travelDistance = 0.0;
 
 	delta_time = 0.0;
-	strain_time = 0.0;
+	adjusted_delta_time = 0.0;
 
 	lazyCalcFinished = false;
 	lazyEndPos = ho->pos;
@@ -1159,7 +1159,7 @@ void OsuDifficultyCalculator::DiffObject::calculate_strain(const DiffObject &pre
 
 	// update our delta time
 	delta_time = (double)time_elapsed;
-	strain_time = (double)std::max(time_elapsed, 25l);
+	adjusted_delta_time = (double)std::max(time_elapsed, 25l);
 
 	switch (ho->type)
 	{
@@ -1187,7 +1187,7 @@ void OsuDifficultyCalculator::DiffObject::calculate_strain(const DiffObject &pre
 	// see Process() @ https://github.com/ppy/osu/blob/master/osu.Game/Rulesets/Difficulty/Skills/Skill.cs
 	double currentStrain = prev.strains[Skills::skillToIndex(dtype)];
 	{
-		currentStrain *= strainDecay(dtype, dtype == Skills::Skill::SPEED ? strain_time : delta_time);
+		currentStrain *= strainDecay(dtype, dtype == Skills::Skill::SPEED ? adjusted_delta_time : delta_time);
 		currentStrain += currentStrainOfDiffObject * weight_scaling[Skills::skillToIndex(dtype)];
 	}
 	strains[Skills::skillToIndex(dtype)] = currentStrain;
@@ -1539,17 +1539,17 @@ double OsuDifficultyCalculator::DiffObject::spacing_weight2(const Skills::Skill 
 				// https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Evaluators/SpeedEvaluator.cs
 				const double distance = std::min(single_spacing_threshold, prev.travelDistance + minJumpDistance);
 
-				double strain_time = this->strain_time;
-				strain_time /= clamp<double>((strain_time / hitWindow300) / 0.93, 0.92, 1.0);
+				double adjusted_delta_time = this->adjusted_delta_time;
+				adjusted_delta_time /= clamp<double>((adjusted_delta_time / hitWindow300) / 0.93, 0.92, 1.0);
 
 				double doubletapness = 1.0 - get_doubletapness(next, hitWindow300);
 
 				double speed_bonus = 0.0;
-				if (strain_time < min_speed_bonus)
-					speed_bonus = 0.75 * std::pow((min_speed_bonus - strain_time) / speed_balancing_factor, 2.0);
+				if (adjusted_delta_time < min_speed_bonus)
+					speed_bonus = 0.75 * std::pow((min_speed_bonus - adjusted_delta_time) / speed_balancing_factor, 2.0);
 
 				double distance_bonus = autopilotNerf ? 0.0 : std::pow(distance / single_spacing_threshold, 3.95) * distance_multiplier;
-				raw_speed_strain = (1.0 + speed_bonus + distance_bonus) * 1000.0 * doubletapness / strain_time;
+				raw_speed_strain = (1.0 + speed_bonus + distance_bonus) * 1000.0 * doubletapness / adjusted_delta_time;
 
 				// https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Evaluators/RhythmEvaluator.cs
 				double rhythmComplexitySum = 0;
@@ -1587,9 +1587,9 @@ double OsuDifficultyCalculator::DiffObject::spacing_weight2(const Skills::Skill 
 
 					double currHistoricalDecay = std::min(noteDecay, timeDecay); // either we're limited by time or limited by object count.
 
-					double currDelta = currObj->strain_time;
-					double prevDelta = prevObj->strain_time;
-					double lastDelta = lastObj->strain_time;
+					double currDelta = currObj->adjusted_delta_time;
+					double prevDelta = prevObj->adjusted_delta_time;
+					double lastDelta = lastObj->adjusted_delta_time;
 
 					// calculate how much current delta difference deserves a rhythm bonus
 					// this function is meant to reduce rhythm bonus for deltas that are multiples of each other (i.e 100 and 200)
@@ -1735,7 +1735,7 @@ double OsuDifficultyCalculator::DiffObject::spacing_weight2(const Skills::Skill 
 				};
 
 				const DiffObject *prevPrev = get_previous(1);
-				double currVelocity = jumpDistance / strain_time;
+				double currVelocity = jumpDistance / adjusted_delta_time;
 
 				if (prev.ho->type == OsuDifficultyHitObject::TYPE::SLIDER && withSliders)
 				{
@@ -1745,7 +1745,7 @@ double OsuDifficultyCalculator::DiffObject::spacing_weight2(const Skills::Skill 
 				}
 				double aimStrain = currVelocity;
 
-				double prevVelocity = prev.jumpDistance / prev.strain_time;
+				double prevVelocity = prev.jumpDistance / prev.adjusted_delta_time;
 				if (prevPrev->ho->type == OsuDifficultyHitObject::TYPE::SLIDER && withSliders)
 				{
 					double travelVelocity = prevPrev->travelDistance / prevPrev->travelTime;
@@ -1759,7 +1759,7 @@ double OsuDifficultyCalculator::DiffObject::spacing_weight2(const Skills::Skill 
 				double velocityChangeBonus = 0;
 				double wiggleBonus = 0;
 
-				if (std::max(strain_time, prev.strain_time) < 1.25 * std::min(strain_time, prev.strain_time))
+				if (std::max(adjusted_delta_time, prev.adjusted_delta_time) < 1.25 * std::min(adjusted_delta_time, prev.adjusted_delta_time))
 				{
 					if (!std::isnan(angle) && !std::isnan(prev.angle))
 					{
@@ -1773,7 +1773,7 @@ double OsuDifficultyCalculator::DiffObject::spacing_weight2(const Skills::Skill 
 
 						wideAngleBonus *= angleBonus * smootherStep(jumpDistance, 0.0, 100.0);
 
-						acuteAngleBonus *= angleBonus * smootherStep(60000.0 / (strain_time * 2.0), 300.0, 400.0) * smootherStep(jumpDistance, 100.0, 200.0);
+						acuteAngleBonus *= angleBonus * smootherStep(60000.0 / (adjusted_delta_time * 2.0), 300.0, 400.0) * smootherStep(jumpDistance, 100.0, 200.0);
 
 						wiggleBonus = angleBonus
 							* smootherStep(jumpDistance, 50.0, 100.0)
@@ -1787,12 +1787,12 @@ double OsuDifficultyCalculator::DiffObject::spacing_weight2(const Skills::Skill 
 
 				if (std::max(prevVelocity, currVelocity) != 0.0)
 				{
-					prevVelocity = (prev.jumpDistance + prevPrev->travelDistance) / prev.strain_time;
-					currVelocity = (jumpDistance + prev.travelDistance) / strain_time;
+					prevVelocity = (prev.jumpDistance + prevPrev->travelDistance) / prev.adjusted_delta_time;
+					currVelocity = (jumpDistance + prev.travelDistance) / adjusted_delta_time;
 
 					double distRatio = std::pow(std::sin(PI / 2.0 * std::abs(prevVelocity - currVelocity) / std::max(prevVelocity, currVelocity)), 2.0);
-					double overlapVelocityBuff = std::min(125.0 / std::min(strain_time, prev.strain_time), std::abs(prevVelocity - currVelocity));
-					velocityChangeBonus = overlapVelocityBuff * distRatio * std::pow(std::min(strain_time, prev.strain_time) / std::max(strain_time, prev.strain_time), 2.0);
+					double overlapVelocityBuff = std::min(125.0 / std::min(adjusted_delta_time, prev.adjusted_delta_time), std::abs(prevVelocity - currVelocity));
+					velocityChangeBonus = overlapVelocityBuff * distRatio * std::pow(std::min(adjusted_delta_time, prev.adjusted_delta_time) / std::max(adjusted_delta_time, prev.adjusted_delta_time), 2.0);
 				}
 
 				if (prev.ho->type == OsuDifficultyHitObject::TYPE::SLIDER)
