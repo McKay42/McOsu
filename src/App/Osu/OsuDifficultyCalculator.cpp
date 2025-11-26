@@ -773,7 +773,7 @@ double OsuDifficultyCalculator::calculatePPv2(int modsLegacy, double timescale, 
 	double effectiveMissCount = clamp<double>(comboBasedMissCount, (double)misses, (double)(c50 + c100 + misses));
 
 	// custom multipliers for nofail and spunout
-	double multiplier = 1.15; // keep final pp normalized across changes
+	double multiplier = performance_base_multiplier; // keep final pp normalized across changes
 	{
 		if (modsLegacy & OsuReplay::Mods::NoFail)
 			multiplier *= std::max(0.9, 1.0 - 0.02 * effectiveMissCount); // see https://github.com/ppy/osu-performance/pull/127/files
@@ -783,7 +783,7 @@ double OsuDifficultyCalculator::calculatePPv2(int modsLegacy, double timescale, 
 
 		if ((modsLegacy & OsuReplay::Mods::Relax) && !osu_stars_and_pp_lazer_relax_autopilot_nerf_disabled.getBool())
 		{
-			double okMultiplier = std::max(0.0, od > 0.0 ? 1.0 - std::pow(od / 13.33, 1.8) : 1.0);	// 100
+			double okMultiplier = 0.75 * std::max(0.0, od > 0.0 ? 1 - od / 13.33 : 1.0);	// 100
 			double mehMultiplier = std::max(0.0, od > 0.0 ? 1.0 - std::pow(od / 13.33, 5.0) : 1.0);	// 50
 			effectiveMissCount = std::min(effectiveMissCount + c100 * okMultiplier + c50 * mehMultiplier, (double)score.totalHits);
 		}
