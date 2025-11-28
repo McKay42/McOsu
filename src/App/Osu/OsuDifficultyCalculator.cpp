@@ -31,7 +31,7 @@ double reverseLerp(double x, double start, double end) {
 	return clamp<double>((x - start) / (end - start), 0.0, 1.0);
 };
 
-double smoothStep(double x, double start, double end) {
+double smoothstep(double x, double start, double end) {
 	x = reverseLerp(x, start, end);
 	return x * x * (3.0 - 2.0 * x);
 };
@@ -41,12 +41,15 @@ double smootherStep(double x, double start, double end) {
 	return x * x * x * (x * (x * 6.0 - 15.0) + 10.0);
 };
 
-double smoothstepBellCurve(double x, double mean = 0.5, double width = 0.5)
-{
+double smoothstepBellCurve(double x, double mean = 0.5, double width = 0.5) {
 	x -= mean;
 	x = x > 0 ? (width - x) : (width + x);
-	return smoothStep(x, 0, width);
+	return smoothstep(x, 0, width);
 };
+
+double logistic(double x, double midpointOffset, double multiplier, double maxValue = 1) {
+	return maxValue / (1 + std::exp(multiplier * (midpointOffset - x)));
+}
 
 unsigned long long OsuDifficultyHitObject::sortHackCounter = 0;
 
@@ -1026,7 +1029,7 @@ double OsuDifficultyCalculator::computeAimValue(const ScoreData &score, const Os
 		aimDifficulty *= sliderNerfFactor;
 	}
 
-	double aimValue = std::pow(5.0 * std::max(1.0, aimDifficulty / 0.0675) - 4.0, 3.0) / 100000.0;
+	double aimValue = strainDifficultyToPerformance(aimDifficulty);
 
 	// length bonus
 	double lengthBonus = 0.95 + 0.4 * std::min(1.0, ((double)score.totalHits / 2000.0))
@@ -1049,7 +1052,7 @@ double OsuDifficultyCalculator::computeSpeedValue(const ScoreData &score, const 
 	if (((score.modsLegacy & OsuReplay::Relax) && !osu_stars_and_pp_lazer_relax_autopilot_nerf_disabled.getBool()) || std::isnan(speedDeviation))
 		return 0.0;
 
-	double speedValue = std::pow(5.0 * std::max(1.0, attributes.SpeedDifficulty / 0.0675) - 4.0, 3.0) / 100000.0;
+	double speedValue = strainDifficultyToPerformance(attributes.SpeedDifficulty);
 
 	// length bonus
 	double lengthBonus = 0.95 + 0.4 * std::min(1.0, ((double)score.totalHits / 2000.0))
@@ -2169,10 +2172,10 @@ double OsuDifficultyCalculator::DiffObject::spacing_weight2(const Skills::Skill 
 					return 0.0;
 
 				auto calcWideAngleBonus = [=] (double angle) {
-					return smoothStep(angle, 40.0 * (PI / 180.0), 140.0 * (PI / 180.0));
+					return smoothstep(angle, 40.0 * (PI / 180.0), 140.0 * (PI / 180.0));
 				};
 				auto calcAcuteAngleBonus = [=] (double angle) {
-					return smoothStep(angle, 140.0 * (PI / 180.0), 40.0 * (PI / 180.0));
+					return smoothstep(angle, 140.0 * (PI / 180.0), 40.0 * (PI / 180.0));
 				};
 
 				const DiffObject *prevPrev = get_previous(1);
@@ -2241,7 +2244,7 @@ double OsuDifficultyCalculator::DiffObject::spacing_weight2(const Skills::Skill 
 					prevVelocity = (prev.jumpDistance + prevPrev->travelDistance) / prev.adjusted_delta_time;
 					currVelocity = (jumpDistance + prev.travelDistance) / adjusted_delta_time;
 
-					double distRatio = smoothStep(std::abs(prevVelocity - currVelocity) / std::max(prevVelocity, currVelocity), 0, 1);
+					double distRatio = smoothstep(std::abs(prevVelocity - currVelocity) / std::max(prevVelocity, currVelocity), 0, 1);
 					double overlapVelocityBuff = std::min(125.0 / std::min(adjusted_delta_time, prev.adjusted_delta_time), std::abs(prevVelocity - currVelocity));
 					velocityChangeBonus = overlapVelocityBuff * distRatio * std::pow(std::min(adjusted_delta_time, prev.adjusted_delta_time) / std::max(adjusted_delta_time, prev.adjusted_delta_time), 2.0);
 				}
