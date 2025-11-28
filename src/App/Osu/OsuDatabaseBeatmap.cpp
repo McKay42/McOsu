@@ -1608,12 +1608,7 @@ OsuDatabaseBeatmap::LOAD_GAMEPLAY_RESULT OsuDatabaseBeatmap::loadGameplay(OsuDat
 				const Osu::GAMEMODE gameMode = Osu::GAMEMODE::STD;
 				const float AR = beatmap->getAR();
 				const float CS = beatmap->getCS();
-				const float OD = beatmap->getOD();
 				const float speedMultiplier = databaseBeatmap->m_osu->getSpeedMultiplier(); // NOTE: not this->getSpeedMultiplier()!
-				const bool hidden = databaseBeatmap->m_osu->getModHD();
-				const bool relax = databaseBeatmap->m_osu->getModRelax();
-				const bool autopilot = databaseBeatmap->m_osu->getModAutopilot();
-				const bool touchDevice = databaseBeatmap->m_osu->getModTD();
 
 				LOAD_DIFFOBJ_RESULT diffres = OsuDatabaseBeatmap::loadDifficultyHitObjects(osuFilePath, gameMode, AR, CS, speedMultiplier);
 
