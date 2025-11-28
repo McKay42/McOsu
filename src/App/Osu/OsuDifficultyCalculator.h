@@ -321,7 +321,7 @@ private:
 		double accuracy;
 		int modsLegacy;
 		int countGreat;
-		int countGood;
+		int countOk;
 		int countMeh;
 		int countMiss;
 		int totalHits;

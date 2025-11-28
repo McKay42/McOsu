@@ -945,7 +945,7 @@ double OsuDifficultyCalculator::calculatePPv2(int modsLegacy, double timescale, 
 	{
 		score.modsLegacy = modsLegacy;
 		score.countGreat = c300;
-		score.countGood = c100;
+		score.countOk = c100;
 		score.countMeh = c50;
 		score.countMiss = misses;
 		score.totalHits = c300 + c100 + c50 + misses;
@@ -1033,7 +1033,7 @@ double OsuDifficultyCalculator::computeAimValue(const ScoreData &score, const Os
 	// McOsu doesn't track dropped slider ends, so the ScoreV2/lazer case can't be handled here
 	if (attributes.SliderCount > 0 && attributes.AimDifficultSliderCount > 0)
 	{
-		int maximumPossibleDroppedSliders = score.countGood + score.countMeh + score.countMiss;
+		int maximumPossibleDroppedSliders = score.countOk + score.countMeh + score.countMiss;
 		double estimateImproperlyFollowedDifficultSliders = clamp<double>((double)std::min(maximumPossibleDroppedSliders, score.beatmapMaxCombo - score.scoreMaxCombo), 0.0, attributes.AimDifficultSliderCount);
 		double sliderNerfFactor = (1.0 - attributes.SliderFactor) * std::pow(1.0 - estimateImproperlyFollowedDifficultSliders / attributes.AimDifficultSliderCount, 3.0) + attributes.SliderFactor;
 		aimDifficulty *= sliderNerfFactor;
@@ -1051,7 +1051,7 @@ double OsuDifficultyCalculator::computeAimValue(const ScoreData &score, const Os
 	if (effectiveMissCount > 0 && score.totalHits > 0)
 	{
 		double aimEstimatedSliderBreaks = calculateEstimatedSliderBreaks(score, attributes, attributes.AimTopWeightedSliderFactor, effectiveMissCount);
-		double relevantMissCount = std::min(effectiveMissCount + aimEstimatedSliderBreaks, double(score.countGood + score.countMeh + score.countMiss));
+		double relevantMissCount = std::min(effectiveMissCount + aimEstimatedSliderBreaks, double(score.countOk + score.countMeh + score.countMiss));
 		aimValue *= 0.96 / ((relevantMissCount / (4.0 * std::pow(std::log(attributes.AimDifficultStrainCount), 0.94))) + 1.0);
 	}
 
@@ -1078,7 +1078,7 @@ double OsuDifficultyCalculator::computeSpeedValue(const ScoreData &score, const 
 	if (effectiveMissCount > 0)
 	{
 		double speedEstimatedSliderBreaks = calculateEstimatedSliderBreaks(score, attributes, attributes.SpeedTopWeightedSliderFactor, effectiveMissCount);
-		double relevantMissCount = std::min(effectiveMissCount + speedEstimatedSliderBreaks, double(score.countGood + score.countMeh + score.countMiss));
+		double relevantMissCount = std::min(effectiveMissCount + speedEstimatedSliderBreaks, double(score.countOk + score.countMeh + score.countMiss));
 		speedValue *= 0.96 / ((relevantMissCount / (4.0 * std::pow(std::log(attributes.SpeedDifficultStrainCount), 0.94))) + 1.0);
 	}
 
@@ -1088,8 +1088,8 @@ double OsuDifficultyCalculator::computeSpeedValue(const ScoreData &score, const 
 	// "Calculate accuracy assuming the worst case scenario"
 	double relevantTotalDiff = std::max(0.0, score.totalHits - attributes.SpeedNoteCount);
 	double relevantCountGreat = std::max(0.0, score.countGreat - relevantTotalDiff);
-	double relevantCountOk = std::max(0.0, score.countGood - std::max(0.0, relevantTotalDiff - score.countGreat));
-	double relevantCountMeh = std::max(0.0, score.countMeh - std::max(0.0, relevantTotalDiff - score.countGreat - score.countGood));
+	double relevantCountOk = std::max(0.0, score.countOk - std::max(0.0, relevantTotalDiff - score.countGreat));
+	double relevantCountMeh = std::max(0.0, score.countMeh - std::max(0.0, relevantTotalDiff - score.countGreat - score.countOk));
 	double relevantAccuracy = attributes.SpeedNoteCount == 0 ? 0 : (relevantCountGreat * 6.0 + relevantCountOk * 2.0 + relevantCountMeh) / (attributes.SpeedNoteCount * 6.0);
 
 	// see https://github.com/ppy/osu-performance/pull/128/
@@ -1106,7 +1106,7 @@ double OsuDifficultyCalculator::computeAccuracyValue(const ScoreData &score, con
 
 	double betterAccuracyPercentage;
 	if (score.amountHitObjectsWithAccuracy > 0)
-		betterAccuracyPercentage = ((double)(score.countGreat - std::max(score.totalHits - score.amountHitObjectsWithAccuracy, 0)) * 6.0 + (score.countGood * 2.0) + score.countMeh) / (double)(score.amountHitObjectsWithAccuracy * 6.0);
+		betterAccuracyPercentage = ((double)(score.countGreat - std::max(score.totalHits - score.amountHitObjectsWithAccuracy, 0)) * 6.0 + (score.countOk * 2.0) + score.countMeh) / (double)(score.amountHitObjectsWithAccuracy * 6.0);
 	else
 		betterAccuracyPercentage = 0.0;
 
@@ -1135,14 +1135,14 @@ double OsuDifficultyCalculator::computeAccuracyValue(const ScoreData &score, con
 
 double OsuDifficultyCalculator::calculateEstimatedSliderBreaks(const ScoreData& score, const DifficultyAttributes& attributes, double topWeightedSliderFactor, double effectiveMissCount)
 {
-	if (score.countGood == 0)
+	if (score.countOk == 0)
 		return 0;
 
 	double missedComboPercent = 1.0 - (double)score.scoreMaxCombo / score.beatmapMaxCombo;
-	double estimatedSliderBreaks = std::min((double)score.countGood, effectiveMissCount * topWeightedSliderFactor);
+	double estimatedSliderBreaks = std::min((double)score.countOk, effectiveMissCount * topWeightedSliderFactor);
 
 	// Scores with more Oks are more likely to have slider breaks.
-	double okAdjustment = ((score.countGood - estimatedSliderBreaks) + 0.5) / (double)score.countGood;
+	double okAdjustment = ((score.countOk - estimatedSliderBreaks) + 0.5) / (double)score.countOk;
 
 	// There is a low probability of extra slider breaks on effective miss counts close to 1, as score based calculations are good at indicating if only a single break occurred.
 	estimatedSliderBreaks *= smoothstep(effectiveMissCount, 1, 2);
@@ -1152,7 +1152,7 @@ double OsuDifficultyCalculator::calculateEstimatedSliderBreaks(const ScoreData& 
 
 double OsuDifficultyCalculator::calculateSpeedDeviation(const ScoreData &score, const DifficultyAttributes &attributes, double timescale)
 {
-	if (score.countGreat + score.countGood + score.countMeh == 0)
+	if (score.countGreat + score.countOk + score.countMeh == 0)
 		return std::numeric_limits<double>::quiet_NaN();
 
 	double speedNoteCount = attributes.SpeedNoteCount;
@@ -1160,7 +1160,7 @@ double OsuDifficultyCalculator::calculateSpeedDeviation(const ScoreData &score, 
 
 	double relevantCountMiss = std::min((double)score.countMiss, speedNoteCount);
 	double relevantCountMeh = std::min((double)score.countMeh, speedNoteCount - relevantCountMiss);
-	double relevantCountOk = std::min((double)score.countGood, speedNoteCount - relevantCountMiss - relevantCountMeh);
+	double relevantCountOk = std::min((double)score.countOk, speedNoteCount - relevantCountMiss - relevantCountMeh);
 	double relevantCountGreat = std::max(0.0, speedNoteCount - relevantCountMiss - relevantCountMeh - relevantCountOk);
 
 	return calculateDeviation(attributes, timescale, relevantCountGreat, relevantCountOk, relevantCountMeh, relevantCountMiss);
@@ -1245,7 +1245,7 @@ double OsuDifficultyCalculator::calculateScoreBasedMisscount(const DifficultyAtt
 double OsuDifficultyCalculator::calculateScoreAtCombo(const DifficultyAttributes &attributes, const ScoreData &score, double combo, double relevantComboPerObject, double scoreV1Multiplier)
 {
 	int countGreat = score.countGreat;
-	int countOk = score.countGood;
+	int countOk = score.countOk;
 	int countMeh = score.countMeh;
 	int countMiss = score.countMiss;
 
@@ -1289,7 +1289,7 @@ double OsuDifficultyCalculator::calculateMaximumComboBasedMissCount(const Diffic
 	if (attributes.SliderCount <= 0)
 		return scoreMissCount;
 
-	int countOk = score.countGood;
+	int countOk = score.countOk;
 	int countMeh = score.countMeh;
 
 	int totalImperfectHits = countOk + countMeh + scoreMissCount;
