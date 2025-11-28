@@ -362,9 +362,7 @@ private:
 	static float getLegacyScoreMultiplier(const ScoreData& score);
 
 	static double erf(double x);
-	static double erfInv(double z);
-	static double erfImp(double x, bool invert);
-	static double erfInvImp(double p, double q, double s);
+	static double erfInv(double x);
 
 	template<size_t N>
 	static double evaluatePolynomial(double z, const double (&coefficients)[N])
