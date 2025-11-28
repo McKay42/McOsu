@@ -765,6 +765,15 @@ double OsuDifficultyCalculator::calculateDifficultyAttributesInternal(Difficulty
 	// calculate final difficulty (weigh strains)
 	double aimNoSliders = osu_stars_xexxar_angles_sliders.getBool() ? DiffObject::calculate_difficulty(Skills::Skill::AIM_NO_SLIDERS, diffObjects, numDiffObjects, incremental ? &incremental[(size_t)Skills::Skill::AIM_NO_SLIDERS] : NULL, NULL, &attributes) : 0.0;
 	double speed = DiffObject::calculate_difficulty(Skills::Skill::SPEED, diffObjects, numDiffObjects, incremental ? &incremental[(size_t)Skills::Skill::SPEED] : NULL, outSpeedStrains, &attributes);
+
+	// Very important hack (because otherwise I have to rewrite how to `DiffObject::calculate_difficulty` works):
+	// At this point attributes `AimDifficultStrains` and `AimTopWeightedSlidersFactor` are calculated on aimNoSliders, what is exactly what we need here
+	// Later it would be overriden by normal Aim that includes sliders
+	// Technically TopWeightedSliderFactor attribute here is TopWeightedSliderCount, we're temporary using it for calculations
+	double aimTopWeightedSliderFactor = attributes.AimTopWeightedSliderFactor / std::max(1.0, attributes.AimDifficultStrainCount - attributes.AimTopWeightedSliderFactor);
+	double speedTopWeightedSliderFactor = attributes.SpeedTopWeightedSliderFactor / std::max(1.0, attributes.SpeedDifficultStrainCount - attributes.SpeedTopWeightedSliderFactor);
+
+	// Don't move this aim above, it's intended, read previous comments
 	double aim = DiffObject::calculate_difficulty(Skills::Skill::AIM_SLIDERS, diffObjects, numDiffObjects, incremental ? &incremental[(size_t)Skills::Skill::AIM_SLIDERS] : NULL, outAimStrains, &attributes);
 
 	attributes.SliderFactor = (aim > 0 && osu_stars_xexxar_angles_sliders.getBool()) ? calculateDifficultyRating(aimNoSliders) / calculateDifficultyRating(aim) : 1.0;
@@ -784,6 +793,9 @@ double OsuDifficultyCalculator::calculateDifficultyAttributesInternal(Difficulty
 
 	attributes.AimDifficulty = aim;
 	attributes.SpeedDifficulty = speed;
+
+	attributes.AimTopWeightedSliderFactor = aimTopWeightedSliderFactor;
+	attributes.SpeedTopWeightedSliderFactor = speedTopWeightedSliderFactor;
 
 	return calculateTotalStarsFromSkills(aim, speed);
 }
@@ -891,8 +903,6 @@ void OsuDifficultyCalculator::calculateScorev1Attributes(DifficultyAttributes &a
 		// We have already increased combo for slider
 		if (hitObject.type != OsuDifficultyHitObject::TYPE::SLIDER) ++combo;
 	}
-
-	debugLog("(%i) Nested = %f, Multiplier = %f, Combo = %i\n", b.sortedHitObjects.size(),attributes.NestedScorePerObject, attributes.LegacyScoreBaseMultiplier, attributes.MaximumLegacyComboScore);
 }
 
 double OsuDifficultyCalculator::calculatePPv2(Osu *osu, OsuBeatmap *beatmap, DifficultyAttributes attributes, int numHitObjects, int numCircles, int numSliders, int numSpinners, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50, unsigned long legacyTotalScore)
@@ -1039,7 +1049,11 @@ double OsuDifficultyCalculator::computeAimValue(const ScoreData &score, const Os
 	// miss penalty
 	// see https://github.com/ppy/osu/pull/16280/
 	if (effectiveMissCount > 0 && score.totalHits > 0)
-		aimValue *= 0.96 / ((effectiveMissCount / (4.0 * std::pow(std::log(attributes.AimDifficultStrainCount), 0.94))) + 1.0);
+	{
+		double aimEstimatedSliderBreaks = calculateEstimatedSliderBreaks(score, attributes, attributes.AimTopWeightedSliderFactor, effectiveMissCount);
+		double relevantMissCount = std::min(effectiveMissCount + aimEstimatedSliderBreaks, double(score.countGood + score.countMeh + score.countMiss));
+		aimValue *= 0.96 / ((relevantMissCount / (4.0 * std::pow(std::log(attributes.AimDifficultStrainCount), 0.94))) + 1.0);
+	}
 
 	// scale aim with acc
 	aimValue *= score.accuracy;
@@ -1062,7 +1076,11 @@ double OsuDifficultyCalculator::computeSpeedValue(const ScoreData &score, const 
 	// miss penalty
 	// see https://github.com/ppy/osu/pull/16280/
 	if (effectiveMissCount > 0)
-		speedValue *= 0.96 / ((effectiveMissCount / (4.0 * std::pow(std::log(attributes.SpeedDifficultStrainCount), 0.94))) + 1.0);
+	{
+		double speedEstimatedSliderBreaks = calculateEstimatedSliderBreaks(score, attributes, attributes.SpeedTopWeightedSliderFactor, effectiveMissCount);
+		double relevantMissCount = std::min(effectiveMissCount + speedEstimatedSliderBreaks, double(score.countGood + score.countMeh + score.countMiss));
+		speedValue *= 0.96 / ((relevantMissCount / (4.0 * std::pow(std::log(attributes.SpeedDifficultStrainCount), 0.94))) + 1.0);
+	}
 
 	double speedHighDeviationMultiplier = calculateSpeedHighDeviationNerf(attributes, speedDeviation);
 	speedValue *= speedHighDeviationMultiplier;
@@ -1113,6 +1131,23 @@ double OsuDifficultyCalculator::computeAccuracyValue(const ScoreData &score, con
 		accuracyValue *= 1.02;
 
 	return accuracyValue;
+}
+
+double OsuDifficultyCalculator::calculateEstimatedSliderBreaks(const ScoreData& score, const DifficultyAttributes& attributes, double topWeightedSliderFactor, double effectiveMissCount)
+{
+	if (score.countGood == 0)
+		return 0;
+
+	double missedComboPercent = 1.0 - (double)score.scoreMaxCombo / score.beatmapMaxCombo;
+	double estimatedSliderBreaks = std::min((double)score.countGood, effectiveMissCount * topWeightedSliderFactor);
+
+	// Scores with more Oks are more likely to have slider breaks.
+	double okAdjustment = ((score.countGood - estimatedSliderBreaks) + 0.5) / (double)score.countGood;
+
+	// There is a low probability of extra slider breaks on effective miss counts close to 1, as score based calculations are good at indicating if only a single break occurred.
+	estimatedSliderBreaks *= smoothstep(effectiveMissCount, 1, 2);
+
+	return estimatedSliderBreaks * okAdjustment * logistic(missedComboPercent, 0.33, 15);
 }
 
 double OsuDifficultyCalculator::calculateSpeedDeviation(const ScoreData &score, const DifficultyAttributes &attributes, double timescale)
@@ -1887,36 +1922,55 @@ double OsuDifficultyCalculator::DiffObject::calculate_difficulty(const Skills::S
 	// see CountDifficultStrains @ https://github.com/ppy/osu/pull/16280/files#diff-07543a9ffe2a8d7f02cadf8ef7f81e3d7ec795ec376b2fff8bba7b10fb574e19R78
 	if (attributes)
 	{
-		double& difficultStrainCount = type == Skills::Skill::SPEED ? attributes->SpeedDifficultStrainCount : attributes->AimDifficultStrainCount;
+		double &difficultStrainCount = (type == Skills::Skill::SPEED ? attributes->SpeedDifficultStrainCount : attributes->AimDifficultStrainCount);
+		double &topWeightedSlidersCount = (type == Skills::Skill::SPEED ? attributes->SpeedTopWeightedSliderFactor : attributes->AimTopWeightedSliderFactor);
 
 		if (difficulty == 0.0)
+		{
 			difficultStrainCount = difficulty;
+			topWeightedSlidersCount = 0;
+		}
 		else
 		{
-			double tempSum = 0.0;
+			double tempTotalSum = 0.0;
+			double tempSliderSum = 0.0;
+			double consistentTopStrain = difficulty / 10.0;
+
+			if (incremental && std::abs(incremental->consistent_top_strain - consistentTopStrain) < DIFFCALC_EPSILON)
 			{
-				double consistentTopStrain = difficulty / 10.0;
+				incremental->difficult_strains += 1.1 / (1.0 + std::exp(-10.0 * (dobjects[dobjectCount - 1].get_strain(type) / consistentTopStrain - 0.88)));
+				tempTotalSum = incremental->difficult_strains;
 
-				if (incremental && std::abs(incremental->consistent_top_strain - consistentTopStrain) < DIFFCALC_EPSILON)
+				double sliderStrain = dobjects[dobjectCount - 1].get_slider_strain(type);
+				if (sliderStrain >= 0)
 				{
-					incremental->difficult_strains += 1.1 / (1.0 + std::exp(-10.0 * (dobjects[dobjectCount - 1].get_strain(type) / consistentTopStrain - 0.88)));
-					tempSum = incremental->difficult_strains;
-				}
-				else
-				{
-					for (size_t i=0; i<dobjectCount; i++)
-					{
-						tempSum += 1.1 / (1.0 + std::exp(-10.0 * (dobjects[i].get_strain(type) / consistentTopStrain - 0.88)));
-					}
-
-					if (incremental)
-					{
-						incremental->consistent_top_strain = consistentTopStrain;
-						incremental->difficult_strains = tempSum;
-					}
+					incremental->top_weighted_sliders += 1.1 / (1.0 + std::exp(-10.0 * (sliderStrain / consistentTopStrain - 0.88)));
+					tempSliderSum = incremental->top_weighted_sliders;
 				}
 			}
-			difficultStrainCount = tempSum;
+			else
+			{
+				int slider_count = 0;
+				for (size_t i=0; i<dobjectCount; i++)
+				{
+					tempTotalSum += 1.1 / (1.0 + std::exp(-10.0 * (dobjects[i].get_strain(type) / consistentTopStrain - 0.88)));
+
+					double sliderStrain = dobjects[i].get_slider_strain(type);
+					if (sliderStrain >= 0)
+						tempSliderSum += 1.1 / (1.0 + std::exp(-10.0 * (sliderStrain / consistentTopStrain - 0.88)));
+						
+				}
+
+				if (incremental)
+				{
+					incremental->consistent_top_strain = consistentTopStrain;
+					incremental->difficult_strains = tempTotalSum;
+					incremental->top_weighted_sliders = tempSliderSum;
+				}
+			}
+
+			difficultStrainCount = tempTotalSum;
+			topWeightedSlidersCount = tempSliderSum;
 		}
 	}
 
