@@ -1648,7 +1648,8 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 		const int num300s = m_osu->getScore()->getNum300s();
 		const int num100s = m_osu->getScore()->getNum100s();
 		const int num50s = m_osu->getScore()->getNum50s();
-		const float pp = OsuDifficultyCalculator::calculatePPv2(m_osu, this, attributes, numHitObjects, numCircles, numSliders, numSpinners, maxPossibleCombo, highestCombo, numMisses, num300s, num100s, num50s);
+		const unsigned long legacyTotalScore = m_osu->getScore()->getScore();
+		const float pp = OsuDifficultyCalculator::calculatePPv2(m_osu, this, attributes, numHitObjects, numCircles, numSliders, numSpinners, maxPossibleCombo, highestCombo, numMisses, num300s, num100s, num50s, legacyTotalScore);
 		m_osu->getScore()->setStarsTomTotal(totalStars);
 		m_osu->getScore()->setStarsTomAim(attributes.AimDifficulty);
 		m_osu->getScore()->setStarsTomSpeed(attributes.SpeedDifficulty);

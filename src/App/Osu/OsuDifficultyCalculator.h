@@ -180,7 +180,7 @@ public:
 	// This struct is the core data computed by difficulty calculation and used in performance calculation
 	// TODO: this should match osu-lazer difficulty attributes:
 	// 1) Add StarRating here, and use it globally instead of separate variable
-	// 2) Add HitCircle and Spinner count here, and use them globally instead of separate variable (together with SliderCount and MaxCombo)
+	// 2) Add MaxCombo, HitCircle and Spinner count here, and use them globally instead of separate variable (together with SliderCount)
 	// 3) Remove ApproachRate and OverallDifficulty
 	struct DifficultyAttributes
 	{
@@ -203,11 +203,10 @@ public:
         unsigned long MaximumLegacyComboScore;
 
 		// Those 3 attributes are performance calculator only (for now)
-		// TODO: use SliderCount and MaxCombo globally like the attributes above and remove AR and OD
+		// TODO: use SliderCount globally like the attributes above and remove AR and OD
 		double ApproachRate;
 		double OverallDifficulty;
 
-		int MaxCombo;
 		int SliderCount;
 
 		void clear();
@@ -303,10 +302,10 @@ public:
 	static void calculateScorev1Attributes(DifficultyAttributes &attributes, const BeatmapDiffcalcData& beatmapData);
 
 	// pp, use runtime mods (convenience)
-	static double calculatePPv2(Osu *osu, OsuBeatmap *beatmap, DifficultyAttributes attributes, int numHitObjects, int numCircles, int numSliders, int numSpinners, int maxPossibleCombo, int combo = -1, int misses = 0, int c300 = -1, int c100 = 0, int c50 = 0);
+	static double calculatePPv2(Osu *osu, OsuBeatmap *beatmap, DifficultyAttributes attributes, int numHitObjects, int numCircles, int numSliders, int numSpinners, int maxPossibleCombo, int combo = -1, int misses = 0, int c300 = -1, int c100 = 0, int c50 = 0, unsigned long legacyTotalScore = 0);
 
 	// pp, fully static
-	static double calculatePPv2(int modsLegacy, double timescale, double ar, double od, DifficultyAttributes attributes, int numHitObjects, int numCircles, int numSliders, int numSpinners, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50);
+	static double calculatePPv2(int modsLegacy, double timescale, double ar, double od, DifficultyAttributes attributes, int numHitObjects, int numCircles, int numSliders, int numSpinners, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50, unsigned long legacyTotalScore);
 
 	// helper functions
 	static double calculateTotalStarsFromSkills(double aim, double speed);
@@ -330,6 +329,7 @@ private:
 		int beatmapMaxCombo;
 		int scoreMaxCombo;
 		int amountHitObjectsWithAccuracy;
+		unsigned long legacyTotalScore;
 	};
 
 	struct RhythmIsland
@@ -342,15 +342,24 @@ private:
 	};
 
 private:
+	// Skill values calculation
 	static double computeAimValue(const ScoreData &score, const DifficultyAttributes &attributes, double effectiveMissCount);
 	static double computeSpeedValue(const ScoreData &score, const DifficultyAttributes &attributes, double effectiveMissCount, double speedDeviation);
 	static double computeAccuracyValue(const ScoreData &score, const DifficultyAttributes &attributes);
 
+	// High deviation nerf
 	static double calculateSpeedDeviation(const ScoreData& score, const DifficultyAttributes& attributes, double timescale);
 	static double calculateDeviation(const DifficultyAttributes &attributes, double timescale, double relevantCountGreat, double relevantCountOk, double relevantCountMeh, double relevantCountMiss);
 	static double calculateSpeedHighDeviationNerf(const DifficultyAttributes &attributes, double speedDeviation);
 
 	static double calculateEstimatedSliderBreaks(const ScoreData& score, const DifficultyAttributes& attributes, double topWeightedSliderFactor, double effectiveMissCount);
+
+	// Scorev1 misscount estimation
+	static double calculateScoreBasedMisscount(const DifficultyAttributes &attributes, const ScoreData &score);
+	static double calculateScoreAtCombo(const DifficultyAttributes &attributes, const ScoreData &score, double combo, double relevantComboPerObject, double scoreV1Multiplier);
+	static double calculateRelevantScoreComboPerObject(const DifficultyAttributes &attributes, const ScoreData &score);
+	static double calculateMaximumComboBasedMissCount(const DifficultyAttributes &attributes, const ScoreData &score);
+	static float getLegacyScoreMultiplier(const ScoreData& score);
 
 	static double erf(double x);
 	static double erfInv(double z);

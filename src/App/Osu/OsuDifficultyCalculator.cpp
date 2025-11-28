@@ -287,7 +287,6 @@ void OsuDifficultyCalculator::DifficultyAttributes::clear()
 
 	ApproachRate = 0;
 	OverallDifficulty = 0;
-	MaxCombo = 0;
 	SliderCount = 0;
 }
 
@@ -786,7 +785,7 @@ double OsuDifficultyCalculator::calculateDifficultyAttributesInternal(Difficulty
 	return calculateTotalStarsFromSkills(aim, speed);
 }
 
-double calculateSpinnerScore(double spinnerDuration, bool addBonusScore)
+double calculateSpinnerScore(double spinnerDuration)
 {
 	const int spin_score = 100;
 	const int bonus_spin_score = 1000;
@@ -816,14 +815,11 @@ double calculateSpinnerScore(double spinnerDuration, bool addBonusScore)
 	// Normal spin score
 	score += spin_score * fullSpins;
 
-	if (addBonusScore)
-	{
-		int bonusSpins = (totalHalfSpinsPossible - halfSpinsRequiredBeforeBonus) / 2;
+	int bonusSpins = (totalHalfSpinsPossible - halfSpinsRequiredBeforeBonus) / 2;
 
-		// Reduce amount of bonus spins because we want to represent the more average case, rather than the best one.
-		bonusSpins = std::max(0, bonusSpins - fullSpins / 2);
-		score += bonus_spin_score * bonusSpins;
-	}
+	// Reduce amount of bonus spins because we want to represent the more average case, rather than the best one.
+	bonusSpins = std::max(0, bonusSpins - fullSpins / 2);
+	score += bonus_spin_score * bonusSpins;
 
 	return score;
 }
@@ -860,7 +856,7 @@ void OsuDifficultyCalculator::calculateScorev1Attributes(DifficultyAttributes &a
 		}
 		else if (hitObject.type == OsuDifficultyHitObject::TYPE::SPINNER)
 		{
-			spinnerScore += calculateSpinnerScore(hitObject.baseEndTime - hitObject.baseTime, true);
+			spinnerScore += calculateSpinnerScore(hitObject.baseEndTime - hitObject.baseTime);
 		}
 	}
 
@@ -896,7 +892,7 @@ void OsuDifficultyCalculator::calculateScorev1Attributes(DifficultyAttributes &a
 	debugLog("(%i) Nested = %f, Multiplier = %f, Combo = %i\n", b.sortedHitObjects.size(),attributes.NestedScorePerObject, attributes.LegacyScoreBaseMultiplier, attributes.MaximumLegacyComboScore);
 }
 
-double OsuDifficultyCalculator::calculatePPv2(Osu *osu, OsuBeatmap *beatmap, DifficultyAttributes attributes, int numHitObjects, int numCircles, int numSliders, int numSpinners, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50)
+double OsuDifficultyCalculator::calculatePPv2(Osu *osu, OsuBeatmap *beatmap, DifficultyAttributes attributes, int numHitObjects, int numCircles, int numSliders, int numSpinners, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50, unsigned long legacyTotalScore)
 {
 	// NOTE: depends on active mods + OD + AR
 
@@ -910,10 +906,10 @@ double OsuDifficultyCalculator::calculatePPv2(Osu *osu, OsuBeatmap *beatmap, Dif
 		modsLegacy |= (m_osu_slider_scorev2_ref->getBool() ? OsuReplay::Mods::ScoreV2 : 0);
 	}
 
-	return calculatePPv2(modsLegacy, osu->getSpeedMultiplier(), beatmap->getAR(), beatmap->getOD(), attributes, numHitObjects, numCircles, numSliders, numSpinners, maxPossibleCombo, combo, misses, c300, c100, c50);
+	return calculatePPv2(modsLegacy, osu->getSpeedMultiplier(), beatmap->getAR(), beatmap->getOD(), attributes, numHitObjects, numCircles, numSliders, numSpinners, maxPossibleCombo, combo, misses, c300, c100, c50, legacyTotalScore);
 }
 
-double OsuDifficultyCalculator::calculatePPv2(int modsLegacy, double timescale, double ar, double od, DifficultyAttributes attributes, int numHitObjects, int numCircles, int numSliders, int numSpinners, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50)
+double OsuDifficultyCalculator::calculatePPv2(int modsLegacy, double timescale, double ar, double od, DifficultyAttributes attributes, int numHitObjects, int numCircles, int numSliders, int numSpinners, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50, unsigned long legacyTotalScore)
 {
 	// NOTE: depends on active mods + OD + AR
 
@@ -943,6 +939,7 @@ double OsuDifficultyCalculator::calculatePPv2(int modsLegacy, double timescale, 
 		score.totalSuccessfulHits = c300 + c100 + c50;
 		score.beatmapMaxCombo = maxPossibleCombo;
 		score.scoreMaxCombo = combo;
+		score.legacyTotalScore = legacyTotalScore;
 		{
 			score.accuracy = (score.totalHits > 0 ? (double)(c300 * 300 + c100 * 100 + c50 * 50) / (double)(score.totalHits * 300) : 0.0);
 			score.amountHitObjectsWithAccuracy = (modsLegacy & OsuReplay::ScoreV2 ? numCircles + numSliders : numCircles);
@@ -962,7 +959,14 @@ double OsuDifficultyCalculator::calculatePPv2(int modsLegacy, double timescale, 
 		if ((double)combo < fullComboThreshold)
 			comboBasedMissCount = fullComboThreshold / std::max(1.0, (double)combo);
 	}
+
 	double effectiveMissCount = clamp<double>(comboBasedMissCount, (double)misses, (double)(c50 + c100 + misses));
+
+	if (score.legacyTotalScore > 0) 
+	{
+		double scoreBasedMisscount = calculateScoreBasedMisscount(attributes, score);
+		effectiveMissCount = clamp<double>(scoreBasedMisscount, (double)misses, (double)(c50 + c100 + misses));
+	}
 
 	// custom multipliers for nofail and spunout
 	double multiplier = performance_base_multiplier; // keep final pp normalized across changes
@@ -1172,6 +1176,131 @@ double OsuDifficultyCalculator::calculateSpeedHighDeviationNerf(const Difficulty
 	return adjustedSpeedValue / speedValue;
 }
 
+double OsuDifficultyCalculator::calculateScoreBasedMisscount(const DifficultyAttributes &attributes, const ScoreData &score)
+{
+	if (score.beatmapMaxCombo == 0)
+		return 0;
+
+	double scoreV1Multiplier = attributes.LegacyScoreBaseMultiplier * getLegacyScoreMultiplier(score);
+	double relevantComboPerObject = calculateRelevantScoreComboPerObject(attributes, score);
+
+	double maximumMissCount = calculateMaximumComboBasedMissCount(attributes, score);
+
+	double scoreObtainedDuringMaxCombo = calculateScoreAtCombo(attributes, score, score.scoreMaxCombo, relevantComboPerObject, scoreV1Multiplier);
+	double remainingScore = score.legacyTotalScore - scoreObtainedDuringMaxCombo;
+
+	if (remainingScore <= 0)
+		return maximumMissCount;
+
+	double remainingCombo = score.beatmapMaxCombo - score.scoreMaxCombo;
+	double expectedRemainingScore = calculateScoreAtCombo(attributes, score, remainingCombo, relevantComboPerObject, scoreV1Multiplier);
+
+	double scoreBasedMissCount = expectedRemainingScore / remainingScore;
+
+	// If there's less then one miss detected - let combo-based miss count decide if this is FC or not
+	scoreBasedMissCount = std::max(scoreBasedMissCount, 1.0);
+
+	// Cap result by very harsh version of combo-based miss count
+	return std::min(scoreBasedMissCount, maximumMissCount);
+}
+
+double OsuDifficultyCalculator::calculateScoreAtCombo(const DifficultyAttributes &attributes, const ScoreData &score, double combo, double relevantComboPerObject, double scoreV1Multiplier)
+{
+	int countGreat = score.countGreat;
+	int countOk = score.countGood;
+	int countMeh = score.countMeh;
+	int countMiss = score.countMiss;
+
+	int totalHits = countGreat + countOk + countMeh + countMiss;
+
+	double estimatedObjects = combo / relevantComboPerObject - 1;
+
+	// The combo portion of ScoreV1 follows arithmetic progression
+	// Therefore, we calculate the combo portion of score using the combo per object and our current combo.
+	double comboScore = relevantComboPerObject > 0 ? (2 * (relevantComboPerObject - 1) + (estimatedObjects - 1) * relevantComboPerObject) * estimatedObjects / 2 : 0;
+
+	// We then apply the accuracy and ScoreV1 multipliers to the resulting score.
+	comboScore *= score.accuracy * 300 / 25 * scoreV1Multiplier;
+
+	double objectsHit = (totalHits - countMiss) * combo / score.beatmapMaxCombo;
+
+	// Score also has a non-combo portion we need to create the final score value.
+	double nonComboScore = (300 + attributes.NestedScorePerObject) * score.accuracy * objectsHit;
+
+	return comboScore + nonComboScore;
+}
+
+double OsuDifficultyCalculator::calculateRelevantScoreComboPerObject(const DifficultyAttributes &attributes, const ScoreData &score)
+{
+	double comboScore = attributes.MaximumLegacyComboScore;
+
+	// We then reverse apply the ScoreV1 multipliers to get the raw value.
+	comboScore /= 300.0 / 25.0 * attributes.LegacyScoreBaseMultiplier;
+
+	// Reverse the arithmetic progression to work out the amount of combo per object based on the score.
+	double result = (score.beatmapMaxCombo - 2) * score.beatmapMaxCombo;
+	result /= std::max(score.beatmapMaxCombo + 2 * (comboScore - 1), 1.0);
+
+	return result;
+}
+
+double OsuDifficultyCalculator::calculateMaximumComboBasedMissCount(const DifficultyAttributes &attributes, const ScoreData &score)
+{
+	int scoreMissCount = score.countMiss;
+
+	if (attributes.SliderCount <= 0)
+		return scoreMissCount;
+
+	int countOk = score.countGood;
+	int countMeh = score.countMeh;
+
+	int totalImperfectHits = countOk + countMeh + scoreMissCount;
+
+	double missCount = 0;
+
+	// Consider that full combo is maximum combo minus dropped slider tails since they don't contribute to combo but also don't break it
+	// In classic scores we can't know the amount of dropped sliders so we estimate to 10% of all sliders on the map
+	double fullComboThreshold = score.beatmapMaxCombo - 0.1 * attributes.SliderCount;
+
+	if (score.scoreMaxCombo < fullComboThreshold)
+		missCount = std::pow(fullComboThreshold / std::max(1, score.scoreMaxCombo), 2.5);
+
+	// In classic scores there can't be more misses than a sum of all non-perfect judgements
+	missCount = std::min(missCount, (double)totalImperfectHits);
+
+	// Every slider has *at least* 2 combo attributed in classic mechanics.
+	// If they broke on a slider with a tick, then this still works since they would have lost at least 2 combo (the tick and the end)
+	// Using this as a max means a score that loses 1 combo on a map can't possibly have been a slider break.
+	// It must have been a slider end.
+	int maxPossibleSliderBreaks = std::min(attributes.SliderCount, (score.beatmapMaxCombo - score.scoreMaxCombo) / 2);
+
+	double sliderBreaks = missCount - scoreMissCount;
+
+	if (sliderBreaks > maxPossibleSliderBreaks)
+		missCount = scoreMissCount + maxPossibleSliderBreaks;
+
+	return missCount;
+}
+
+float OsuDifficultyCalculator::getLegacyScoreMultiplier(const ScoreData& score)
+{
+	float multiplier = 1.0f;
+
+	if (score.modsLegacy & OsuReplay::Easy)
+		multiplier *= 0.50f;
+	if (score.modsLegacy & OsuReplay::HalfTime)
+		multiplier *= 0.30f;
+	if (score.modsLegacy & OsuReplay::HardRock)
+		multiplier *= 1.06f;
+	if (score.modsLegacy & OsuReplay::DoubleTime)
+		multiplier *= 1.12f;
+	if (score.modsLegacy & OsuReplay::Hidden)
+		multiplier *= 1.06f;
+	if (score.modsLegacy & OsuReplay::SpunOut)
+		multiplier *= 0.90f;
+
+	return multiplier;
+}
 
 double OsuDifficultyCalculator::erf(double x)
 {

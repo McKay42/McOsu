@@ -330,7 +330,7 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, OsuHitObject *hitObject, HIT hi
 				//beatmap->getSelectedDifficulty()->calculateStarDiff(beatmap, &aimStars, &speedStars, curHitobjectIndex); // recalculating this live costs too much time
 				attributes = beatmap->getDifficultyAttributesForUpToHitObjectIndex(curHitobjectIndex);
 
-				m_fPPv2 = OsuDifficultyCalculator::calculatePPv2(m_osu, beatmap, attributes, -1, numCircles, numSliders, numSpinners, maxPossibleCombo, m_iComboMax, m_iNumMisses, m_iNum300s, m_iNum100s, m_iNum50s);
+				m_fPPv2 = OsuDifficultyCalculator::calculatePPv2(m_osu, beatmap, attributes, -1, numCircles, numSliders, numSpinners, maxPossibleCombo, m_iComboMax, m_iNumMisses, m_iNum300s, m_iNum100s, m_iNum50s, m_iScoreV1);
 
 				if (osu_debug_pp.getBool())
 					debugLog("pp = %f, aimstars = %f, aimsliderfactor = %f, speedstars = %f, speednotes = %f, curindex = %i, maxPossibleCombo = %i, numCircles = %i, numSliders = %i, numSpinners = %i\n", m_fPPv2, attributes.AimDifficulty, attributes.SliderFactor, attributes.SpeedDifficulty, attributes.SpeedNoteCount, curHitobjectIndex, maxPossibleCombo, numCircles, numSliders, numSpinners);
