@@ -156,8 +156,6 @@ public:
 	TIMING_INFO getTimingInfoForTime(unsigned long positionMS);
 	static TIMING_INFO getTimingInfoForTimeAndTimingPoints(unsigned long positionMS, std::vector<TIMINGPOINT> &timingpoints);
 
-
-
 public:
 	// raw metadata
 
@@ -188,8 +186,7 @@ public:
 	inline float getSliderMultiplier() const {return m_fSliderMultiplier;}
 
 	inline const std::vector<TIMINGPOINT> &getTimingpoints() const {return m_timingpoints;}
-
-
+	unsigned long getBreakDurationTotal() const;
 
 	// redundant data
 
@@ -252,6 +249,7 @@ private:
 	float m_fSliderMultiplier;
 
 	std::vector<TIMINGPOINT> m_timingpoints; // necessary for main menu anim
+	std::vector<BREAK> m_breaks; // necessary for diffcalc
 
 
 
@@ -372,14 +370,10 @@ private:
 	static ConVar *m_osu_debug_pp_ref;
 	static ConVar *m_osu_slider_end_inside_check_offset_ref;
 
-
-
 	static PRIMITIVE_CONTAINER loadPrimitiveObjects(const UString &osuFilePath, Osu::GAMEMODE gameMode, bool filePathIsInMemoryBeatmap = false);
 	static PRIMITIVE_CONTAINER loadPrimitiveObjects(const UString &osuFilePath, Osu::GAMEMODE gameMode, bool filePathIsInMemoryBeatmap, const std::atomic<bool> &dead);
 	static CALCULATE_SLIDER_TIMES_CLICKS_TICKS_RESULT calculateSliderTimesClicksTicks(int beatmapVersion, std::vector<SLIDER> &sliders, std::vector<TIMINGPOINT> &timingpoints, float sliderMultiplier, float sliderTickRate);
 	static CALCULATE_SLIDER_TIMES_CLICKS_TICKS_RESULT calculateSliderTimesClicksTicks(int beatmapVersion, std::vector<SLIDER> &sliders, std::vector<TIMINGPOINT> &timingpoints, float sliderMultiplier, float sliderTickRate, const std::atomic<bool> &dead);
-
-
 
 	Osu *m_osu;
 
@@ -392,8 +386,6 @@ private:
 	std::vector<OsuDatabaseBeatmap*> m_difficulties;
 
 	std::string m_sMD5Hash;
-
-
 
 	// helper functions
 
@@ -443,12 +435,14 @@ public:
 	void kill() {m_bDead = true;}
 	void revive() {m_bDead = false;}
 
-	void setBeatmapDifficulty(OsuDatabaseBeatmap *diff2, float AR, float CS, float OD, float speedMultiplier, bool hidden, bool relax, bool autopilot, bool touchDevice);
+	void setBeatmapDifficulty(OsuDatabaseBeatmap *diff2, float AR, float CS, float OD, float HP, float speedMultiplier, bool hidden, bool relax, bool autopilot, bool touchDevice);
+
+	OsuDifficultyCalculator::BeatmapDiffcalcData createBeatmapDiffcalcData(std::vector<OsuDifficultyHitObject> &loadedDifficultyHitObjects);
 
 	inline OsuDatabaseBeatmap *getBeatmapDifficulty() const {return m_diff2;}
 
 	inline double getTotalStars() const {return m_totalStars.load();}
-	inline OsuDifficultyCalculator::Attributes getDifficultyAttributes() const {return m_difficulty_attributes.load();}
+	inline OsuDifficultyCalculator::DifficultyAttributes getDifficultyAttributes() const {return m_difficulty_attributes.load();}
 	inline double getPPv2() const {return m_pp.load();} // NOTE: pp with currently active mods (runtime mods)
 
 	inline long getLengthMS() const {return m_iLengthMS.load();}
@@ -472,6 +466,7 @@ private:
 	float m_fAR;
 	float m_fCS;
 	float m_fOD;
+	float m_fHP;
 	float m_fSpeedMultiplier;
 	bool m_bHidden;
 	bool m_bRelax;
@@ -479,7 +474,7 @@ private:
 	bool m_bTouchDevice;
 
 	std::atomic<double> m_totalStars;
-	std::atomic<OsuDifficultyCalculator::Attributes> m_difficulty_attributes;
+	std::atomic<OsuDifficultyCalculator::DifficultyAttributes> m_difficulty_attributes;
 	std::atomic<double> m_pp;
 
 	std::atomic<long> m_iLengthMS;

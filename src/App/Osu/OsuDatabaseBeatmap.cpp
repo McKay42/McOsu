@@ -1183,7 +1183,7 @@ bool OsuDatabaseBeatmap::loadMetadata(OsuDatabaseBeatmap *databaseBeatmap)
 				case 3: // Events
 					{
 						memset(stringBuffer, '\0', 1024);
-						int type, startTime;
+						int type, startTime, endTime;
 						if (sscanf(curLineChar, " %i , %i , \"%1023[^\"]\"", &type, &startTime, stringBuffer) == 3)
 						{
 							if (type == 0)
@@ -1191,6 +1191,18 @@ bool OsuDatabaseBeatmap::loadMetadata(OsuDatabaseBeatmap *databaseBeatmap)
 								databaseBeatmap->m_sBackgroundImageFileName = UString(stringBuffer);
 								databaseBeatmap->m_sFullBackgroundImageFilePath = databaseBeatmap->m_sFolder;
 								databaseBeatmap->m_sFullBackgroundImageFilePath.append(databaseBeatmap->m_sBackgroundImageFileName);
+							}
+						}
+						else if (sscanf(curLineChar, " %i , %i , %i \n", &type, &startTime, &endTime) == 3)
+						{
+							if (type == 2)
+							{
+								BREAK b;
+								{
+									b.startTime = startTime;
+									b.endTime = endTime;
+								}
+								databaseBeatmap->m_breaks.push_back(b);
 							}
 						}
 					}
@@ -1605,8 +1617,11 @@ OsuDatabaseBeatmap::LOAD_GAMEPLAY_RESULT OsuDatabaseBeatmap::loadGameplay(OsuDat
 
 				LOAD_DIFFOBJ_RESULT diffres = OsuDatabaseBeatmap::loadDifficultyHitObjects(osuFilePath, gameMode, AR, CS, speedMultiplier);
 
-				OsuDifficultyCalculator::Attributes attributes{}; 
-				double stars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, CS, AR, OD, speedMultiplier, hidden, relax, autopilot, touchDevice, &attributes);
+				// Create beatmap data from beatmap and init difficulty attributes
+				OsuDifficultyCalculator::BeatmapDiffcalcData beatmapData(beatmap, diffres.diffobjects);
+				OsuDifficultyCalculator::DifficultyAttributes attributes{}; 
+
+				double stars = OsuDifficultyCalculator::calculateDifficultyAttributes(attributes, beatmapData);
 				double pp = OsuDifficultyCalculator::calculatePPv2(beatmap->getOsu(), beatmap, attributes, databaseBeatmap->m_iNumObjects, databaseBeatmap->m_iNumCircles, databaseBeatmap->m_iNumSliders, databaseBeatmap->m_iNumSpinners, maxPossibleCombo);
 
 				engine->showMessageInfo("PP", UString::format("pp = %f, stars = %f, aimstars = %f, speedstars = %f, %i circles, %i sliders, %i spinners, %i hitobjects, maxcombo = %i", pp, stars, attributes.AimDifficulty, attributes.SpeedDifficulty, databaseBeatmap->m_iNumCircles, databaseBeatmap->m_iNumSliders, databaseBeatmap->m_iNumSpinners, databaseBeatmap->m_iNumObjects, maxPossibleCombo));
@@ -1919,7 +1934,16 @@ OsuDatabaseBeatmap::TIMING_INFO OsuDatabaseBeatmap::getTimingInfoForTimeAndTimin
 	return ti;
 }
 
+unsigned long OsuDatabaseBeatmap::getBreakDurationTotal() const
+{
+	unsigned long breakDurationTotal = 0;
+	for (int i=0; i<m_breaks.size(); i++)
+	{
+		breakDurationTotal += (unsigned long)(m_breaks[i].endTime - m_breaks[i].startTime);
+	}
 
+	return breakDurationTotal;
+}
 
 OsuDatabaseBeatmapBackgroundImagePathLoader::OsuDatabaseBeatmapBackgroundImagePathLoader(const UString &filePath) : Resource()
 {
@@ -1990,6 +2014,7 @@ OsuDatabaseBeatmapStarCalculator::OsuDatabaseBeatmapStarCalculator() : Resource(
 	m_fAR = 5.0f;
 	m_fCS = 5.0f;
 	m_fOD = 5.0f;
+	m_fHP = 5.0f;
 	m_fSpeedMultiplier = 1.0f;
 	m_bHidden = false;
 	m_bRelax = false;
@@ -1997,7 +2022,7 @@ OsuDatabaseBeatmapStarCalculator::OsuDatabaseBeatmapStarCalculator() : Resource(
 	m_bTouchDevice = false;
 
 	m_totalStars = 0.0;
-	m_difficulty_attributes = OsuDifficultyCalculator::Attributes{};
+	m_difficulty_attributes = OsuDifficultyCalculator::DifficultyAttributes{};
 	m_pp = 0.0;
 
 	m_iLengthMS = 0;
@@ -2015,7 +2040,7 @@ void OsuDatabaseBeatmapStarCalculator::init()
 	// NOTE: this accesses runtime mods, so must be run sync (not async)
 	// technically the getSelectedBeatmap() call here is a bit unsafe, since the beatmap could have changed already between async and sync, but in that case we recalculate immediately after anyways
 	if (!m_bDead.load() && m_iErrorCode == 0 && m_diff2->m_osu->getSelectedBeatmap() != NULL) {
-		OsuDifficultyCalculator::Attributes attributes = m_difficulty_attributes.load();
+		OsuDifficultyCalculator::DifficultyAttributes attributes = m_difficulty_attributes.load();
 		m_pp = OsuDifficultyCalculator::calculatePPv2(m_diff2->m_osu, m_diff2->m_osu->getSelectedBeatmap(), attributes, m_iNumObjects.load(), m_iNumCircles.load(), m_iNumSliders.load(), m_iNumSpinners.load(), m_iMaxPossibleCombo);
 	}
 	m_bReady = true;
@@ -2025,7 +2050,7 @@ void OsuDatabaseBeatmapStarCalculator::initAsync()
 {
 	// sanity reset
 	m_totalStars = 0.0;
-	m_difficulty_attributes = OsuDifficultyCalculator::Attributes{};
+	m_difficulty_attributes = OsuDifficultyCalculator::DifficultyAttributes{};
 	m_pp = 0.0;
 
 	m_iLengthMS = 0;
@@ -2053,9 +2078,12 @@ void OsuDatabaseBeatmapStarCalculator::initAsync()
 		}
 		m_iMaxPossibleCombo = diffres.maxPossibleCombo;
 
-		OsuDifficultyCalculator::Attributes attributes{};
+		// We've already loaded the diff objects, so we will just pass them here to avoid another load
+		OsuDifficultyCalculator::BeatmapDiffcalcData beatmapData = createBeatmapDiffcalcData(diffres.diffobjects);
+		OsuDifficultyCalculator::DifficultyAttributes attributes{};
 		
-		m_totalStars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, m_fCS, m_fAR, m_fOD, m_fSpeedMultiplier, m_bHidden, m_bRelax, m_bAutopilot, m_bTouchDevice, &attributes, -1, &m_aimStrains, &m_speedStrains, m_bDead);
+		m_totalStars = OsuDifficultyCalculator::calculateDifficultyAttributes(attributes, beatmapData, -1, &m_aimStrains, &m_speedStrains, m_bDead);
+
 		m_difficulty_attributes = attributes;
 
 		// NOTE: this matches osu, i.e. it is the time from the start of the music track until the end of the last hitobject (including all breaks and initial skippable sections!)
@@ -2066,7 +2094,38 @@ void OsuDatabaseBeatmapStarCalculator::initAsync()
 	m_bAsyncReady = true;
 }
 
-void OsuDatabaseBeatmapStarCalculator::setBeatmapDifficulty(OsuDatabaseBeatmap *diff2, float AR, float CS, float OD, float speedMultiplier, bool hidden, bool relax, bool autopilot, bool touchDevice)
+OsuDifficultyCalculator::BeatmapDiffcalcData OsuDatabaseBeatmapStarCalculator::createBeatmapDiffcalcData(std::vector<OsuDifficultyHitObject> &loadedDifficultyHitObjects)
+{
+	OsuDifficultyCalculator::BeatmapDiffcalcData beatmapData(loadedDifficultyHitObjects);
+
+	beatmapData.CS = m_fCS;
+	beatmapData.HP = m_fHP;
+	beatmapData.AR = m_fAR;
+	beatmapData.OD = m_fOD;
+
+	beatmapData.hidden = m_bHidden;
+	beatmapData.relax = m_bRelax;
+	beatmapData.autopilot = m_bAutopilot;
+	beatmapData.touchDevice = m_bTouchDevice;
+	beatmapData.speedMultiplier = m_fSpeedMultiplier;
+
+	// This is another load even tho we already loaded difficulty hit objects
+	// But I don't see how to avoid that so we will just load primitive objects for scorev1-related data calculation
+	OsuDatabaseBeatmap::PRIMITIVE_CONTAINER result = OsuDatabaseBeatmap::loadPrimitiveObjects(m_sFilePath, Osu::GAMEMODE::STD, false, m_bDead);
+
+	beatmapData.breakDuration = 0;
+	for (int i=0; i<result.breaks.size(); i++)
+		beatmapData.breakDuration += (unsigned long)(result.breaks[i].endTime - result.breaks[i].startTime);
+
+	if (loadedDifficultyHitObjects.size() > 0)
+		beatmapData.playableLength = (unsigned long)(loadedDifficultyHitObjects[loadedDifficultyHitObjects.size()-1].baseEndTime - loadedDifficultyHitObjects[0].baseTime);
+	else
+		beatmapData.playableLength = m_iLengthMS;
+
+	return beatmapData;
+}
+
+void OsuDatabaseBeatmapStarCalculator::setBeatmapDifficulty(OsuDatabaseBeatmap *diff2, float AR, float CS, float OD, float HP, float speedMultiplier, bool hidden, bool relax, bool autopilot, bool touchDevice)
 {
 	m_diff2 = diff2;
 
@@ -2075,6 +2134,7 @@ void OsuDatabaseBeatmapStarCalculator::setBeatmapDifficulty(OsuDatabaseBeatmap *
 	m_fAR = AR;
 	m_fCS = CS;
 	m_fOD = OD;
+	m_fHP = HP;
 	m_fSpeedMultiplier = speedMultiplier;
 	m_bHidden = hidden;
 	m_bRelax = relax;

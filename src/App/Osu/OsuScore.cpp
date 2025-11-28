@@ -303,7 +303,7 @@ void OsuScore::addHitResult(OsuBeatmap *beatmap, OsuHitObject *hitObject, HIT hi
 		OsuBeatmapStandard *standardPointer = dynamic_cast<OsuBeatmapStandard*>(beatmap);
 		if (standardPointer != NULL && beatmap->getSelectedDifficulty2() != NULL)
 		{
-			OsuDifficultyCalculator::Attributes attributes = standardPointer->getDifficultyAttributes();
+			OsuDifficultyCalculator::DifficultyAttributes attributes = standardPointer->getDifficultyAttributes();
 
 			//int numHitObjects = standardPointer->getNumHitObjects();
 			int maxPossibleCombo = beatmap->getMaxPossibleCombo();

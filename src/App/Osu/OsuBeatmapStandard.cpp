@@ -1620,22 +1620,21 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 	{
 		// calculate final pp
 		debugLog("OsuBeatmapStandard::onBeforeStop() calculating pp ...\n");
-		OsuDifficultyCalculator::Attributes attributes{};
 
 		// calculate stars
 		const UString &osuFilePath = m_selectedDifficulty2->getFilePath();
 		const Osu::GAMEMODE gameMode = Osu::GAMEMODE::STD;
 		const float AR = getAR();
 		const float CS = getCS();
-		const float OD = getOD();
 		const float speedMultiplier = m_osu->getSpeedMultiplier(); // NOTE: not this->getSpeedMultiplier()!
-		const bool hidden = m_osu->getModHD();
-		const bool relax = m_osu->getModRelax();
-		const bool autopilot = m_osu->getModAutopilot();
-		const bool touchDevice = m_osu->getModTD();
 
 		OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT diffres = OsuDatabaseBeatmap::loadDifficultyHitObjects(osuFilePath, gameMode, AR, CS, speedMultiplier);
-		const double totalStars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, CS, AR, OD, speedMultiplier, hidden, relax, autopilot, touchDevice, &attributes);
+
+		// Create beatmap data from beatmap and init difficulty attributes
+		OsuDifficultyCalculator::BeatmapDiffcalcData beatmapData(this, diffres.diffobjects);
+		OsuDifficultyCalculator::DifficultyAttributes attributes{};
+
+		const double totalStars = OsuDifficultyCalculator::calculateDifficultyAttributes(attributes, beatmapData);
 
 		m_difficulty_attributes = attributes;
 

@@ -110,7 +110,7 @@ public:
 	inline int getMaxPossibleCombo() const {return m_iMaxPossibleCombo;}
 	inline unsigned long long getScoreV2ComboPortionMaximum() const {return m_iScoreV2ComboPortionMaximum;}
 
-	inline OsuDifficultyCalculator::Attributes getDifficultyAttributesForUpToHitObjectIndex(int upToHitObjectIndex) const {return (m_attributesForNumHitObjects.size() > 0 && upToHitObjectIndex > -1 ? m_attributesForNumHitObjects[clamp<int>(upToHitObjectIndex, 0, m_attributesForNumHitObjects.size()-1)] : OsuDifficultyCalculator::Attributes{});}
+	inline OsuDifficultyCalculator::DifficultyAttributes getDifficultyAttributesForUpToHitObjectIndex(int upToHitObjectIndex) const {return (m_attributesForNumHitObjects.size() > 0 && upToHitObjectIndex > -1 ? m_attributesForNumHitObjects[clamp<int>(upToHitObjectIndex, 0, m_attributesForNumHitObjects.size()-1)] : OsuDifficultyCalculator::DifficultyAttributes{});}
 	inline const std::vector<double> &getAimStrains() const {return m_aimStrains;}
 	inline const std::vector<double> &getSpeedStrains() const {return m_speedStrains;}
 
@@ -305,7 +305,7 @@ protected:
 	unsigned long long m_iScoreV2ComboPortionMaximum;
 
 	// diffcalc
-	std::vector<OsuDifficultyCalculator::Attributes> m_attributesForNumHitObjects;
+	std::vector<OsuDifficultyCalculator::DifficultyAttributes> m_attributesForNumHitObjects;
 	std::vector<double> m_aimStrains;
 	std::vector<double> m_speedStrains;
 

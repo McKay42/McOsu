@@ -13,6 +13,9 @@
 class Osu;
 class OsuBeatmap;
 
+class OsuDatabaseBeatmap;
+class OsuDatabase;
+
 class OsuSliderCurve;
 
 class ConVar;
@@ -81,9 +84,11 @@ public:
 	TYPE type;
 	Vector2 pos;
 	long time;
+	long baseTime; // not adjusted by clockrate
 
 	// spinners + sliders
 	long endTime;
+	long baseEndTime; // not adjusted by clockrate
 
 	// sliders
 	float spanDuration; // i.e. sliderTimeWithoutRepeats
@@ -151,14 +156,18 @@ public:
 
 	static constexpr const double DIFFCALC_EPSILON = 1e-32;
 
+	// This struct is the stripped out version of difficulty attributes needed for incremental (per-object) calculation
 	struct IncrementalState
 	{
 		double interval_end;
 		double max_strain;
 		double max_object_strain;
+		double max_slider_strain;
+
+		// for difficult strain count calculation
 		double consistent_top_strain;
 		double difficult_strains;
-		double max_slider_strain;
+		double top_weighted_sliders;
 		
 		std::vector<double> highest_strains;
 		std::vector<double> slider_strains;
@@ -168,11 +177,12 @@ public:
 		double speed_note_count;
 	};
 
+	// This struct is the core data computed by difficulty calculation and used in performance calculation
 	// TODO: this should match osu-lazer difficulty attributes:
 	// 1) Add StarRating here, and use it globally instead of separate variable
-	// 2) Add HitCircle and Spinner count here, and use them globally instead of separate variable (together with SliderCount)
+	// 2) Add HitCircle and Spinner count here, and use them globally instead of separate variable (together with SliderCount and MaxCombo)
 	// 3) Remove ApproachRate and OverallDifficulty
-	struct Attributes
+	struct DifficultyAttributes
 	{
 		double AimDifficulty;
 		double AimDifficultSliderCount;
@@ -181,33 +191,53 @@ public:
 		double SpeedNoteCount;
 
 		double SliderFactor;
+
+		double AimTopWeightedSliderFactor;
+		double SpeedTopWeightedSliderFactor;
 		
 		double AimDifficultStrainCount;
 		double SpeedDifficultStrainCount;
 
+		double NestedScorePerObject;
+        double LegacyScoreBaseMultiplier;
+        unsigned long MaximumLegacyComboScore;
+
 		// Those 3 attributes are performance calculator only (for now)
-		// TODO: use SliderCount globally like the attributes above and remove AR and OD
+		// TODO: use SliderCount and MaxCombo globally like the attributes above and remove AR and OD
 		double ApproachRate;
 		double OverallDifficulty;
+
+		int MaxCombo;
 		int SliderCount;
 
-		void clear()
-		{
-			AimDifficulty = 0;
-			AimDifficultSliderCount = 0;
+		void clear();
+	};
 
-			SpeedDifficulty = 0;
-			SpeedNoteCount = 0;
+	// This structs has all the beatmap data necessary for difficulty calculation
+	// It's purpose is to remove dependancy of diffcalc on the specific beatmap class/object
+	struct BeatmapDiffcalcData
+	{
+		// Hitobjects
+		std::vector<OsuDifficultyHitObject> &sortedHitObjects;
 
-			SliderFactor = 0;
-			
-			AimDifficultStrainCount = 0;
-			SpeedDifficultStrainCount = 0;
+		// Basic attributes, they're NOT adjusted by rate
+		float CS, HP, AR, OD;
 
-			ApproachRate = 0;
-			OverallDifficulty = 0;
-			SliderCount = 0;
-		}
+		// Relevant mods
+		bool hidden, relax, autopilot, touchDevice;
+		float speedMultiplier;
+
+		// Scorev1 data
+		unsigned long breakDuration, playableLength;
+
+		// From normal beatmap
+		BeatmapDiffcalcData(const OsuBeatmap* beatmap, std::vector<OsuDifficultyHitObject> &loadedSortedHitObjects);
+
+		// From database beatmap (for base values), score (for mods), and loaded hitobjects
+		BeatmapDiffcalcData(const OsuDatabaseBeatmap* beatmap, const OsuDatabase::Score &score, std::vector<OsuDifficultyHitObject> &loadedSortedHitObjects);
+
+		// Bare minimum init with just hitobjects (populate everything else manually!)
+		BeatmapDiffcalcData(std::vector<OsuDifficultyHitObject> &loadedSortedHitObjects) : sortedHitObjects(loadedSortedHitObjects) {}
 	};
 
 	class DiffObject
@@ -250,29 +280,33 @@ public:
 		inline const DiffObject *get_previous(int backwardsIdx) const {return (objects.size() > 0 && prevObjectIndex - backwardsIdx < (int)objects.size() ? &objects[std::max(0, prevObjectIndex - backwardsIdx)] : NULL);}
 		inline const DiffObject *get_next(int forwardIdx) const {return (objects.size() > 0 && prevObjectIndex + forwardIdx < (int)objects.size() ? &objects[std::max(0, prevObjectIndex + forwardIdx)] : NULL);}
 		inline double get_strain(Skills::Skill type) const {return strains[Skills::skillToIndex(type)] * (type == Skills::Skill::SPEED ? rhythm : 1.0);}
-		inline double get_slider_aim_strain() const {return ho->type == OsuDifficultyHitObject::TYPE::SLIDER ? strains[Skills::skillToIndex(Skills::Skill::AIM_SLIDERS)] : -1.0;}
+		inline double get_slider_strain(Skills::Skill type) const {return ho->type == OsuDifficultyHitObject::TYPE::SLIDER ? strains[Skills::skillToIndex(type)] : -1;}
 		inline static double applyDiminishingExp(double val) {return std::pow(val, 0.99);}
 		inline static double strainDecay(Skills::Skill type, double ms) {return std::pow(decay_base[Skills::skillToIndex(type)], ms / 1000.0);}
 
 		void calculate_strains(const DiffObject &prev, const DiffObject *next, double hitWindow300, bool autopilotNerf);
 		void calculate_strain(const DiffObject &prev, const DiffObject *next, double hitWindow300, bool autopilotNerf, const Skills::Skill dtype);
-		static double calculate_difficulty(const Skills::Skill type, const DiffObject *dobjects, size_t dobjectCount, IncrementalState *incremental, std::vector<double> *outStrains = NULL, Attributes *attributes = NULL);
+		static double calculate_difficulty(const Skills::Skill type, const DiffObject *dobjects, size_t dobjectCount, IncrementalState *incremental, std::vector<double> *outStrains = NULL, DifficultyAttributes *attributes = NULL);
+
 		static double spacing_weight1(const double distance, const Skills::Skill diff_type);
 		double spacing_weight2(const Skills::Skill diff_type, const DiffObject &prev, const DiffObject *next, double hitWindow300, bool autopilotNerf);
+		
 		double get_doubletapness(const DiffObject *next, double hitWindow300) const;
 	};
 
 public:
 	// stars, fully static
-	static double calculateStarDiffForHitObjects(std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, float AR, float OD, float speedMultiplier, bool hidden, bool relax, bool autopilot, bool touchDevice, Attributes* attributes, int upToObjectIndex = -1, std::vector<double> *outAimStrains = NULL, std::vector<double> *outSpeedStrains = NULL);
-	static double calculateStarDiffForHitObjects(std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, float AR, float OD, float speedMultiplier, bool hidden, bool relax, bool autopilot, bool touchDevice, Attributes* attributes, int upToObjectIndex, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains, const std::atomic<bool> &dead);
-	static double calculateStarDiffForHitObjectsInt(std::vector<DiffObject> &cachedDiffObjects, std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, float AR, float OD, float speedMultiplier, bool hidden, bool relax, bool autopilot, bool touchDevice, Attributes* attributes, int upToObjectIndex, IncrementalState *incremental, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains, const std::atomic<bool> &dead);
+	static double calculateDifficultyAttributes(DifficultyAttributes &outAttributes, const BeatmapDiffcalcData &beatmapData, int upToObjectIndex = -1, std::vector<double> *outAimStrains = NULL, std::vector<double> *outSpeedStrains = NULL);
+	static double calculateDifficultyAttributes(DifficultyAttributes &outAttributes, const BeatmapDiffcalcData &beatmapData, int upToObjectIndex, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains, const std::atomic<bool> &dead);
+	static double calculateDifficultyAttributesInternal(DifficultyAttributes &outAttributes, const BeatmapDiffcalcData &beatmapData, int upToObjectIndex, std::vector<DiffObject> &cachedDiffObjects, IncrementalState *incremental, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains, const std::atomic<bool> &dead);
+
+	static void calculateScorev1Attributes(DifficultyAttributes &attributes, const BeatmapDiffcalcData& beatmapData);
 
 	// pp, use runtime mods (convenience)
-	static double calculatePPv2(Osu *osu, OsuBeatmap *beatmap, Attributes attributes, int numHitObjects, int numCircles, int numSliders, int numSpinners, int maxPossibleCombo, int combo = -1, int misses = 0, int c300 = -1, int c100 = 0, int c50 = 0);
+	static double calculatePPv2(Osu *osu, OsuBeatmap *beatmap, DifficultyAttributes attributes, int numHitObjects, int numCircles, int numSliders, int numSpinners, int maxPossibleCombo, int combo = -1, int misses = 0, int c300 = -1, int c100 = 0, int c50 = 0);
 
 	// pp, fully static
-	static double calculatePPv2(int modsLegacy, double timescale, double ar, double od, Attributes attributes, int numHitObjects, int numCircles, int numSliders, int numSpinners, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50);
+	static double calculatePPv2(int modsLegacy, double timescale, double ar, double od, DifficultyAttributes attributes, int numHitObjects, int numCircles, int numSliders, int numSpinners, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50);
 
 	// helper functions
 	static double calculateTotalStarsFromSkills(double aim, double speed);
@@ -308,13 +342,15 @@ private:
 	};
 
 private:
-	static double computeAimValue(const ScoreData &score, const Attributes &attributes, double effectiveMissCount);
-	static double computeSpeedValue(const ScoreData &score, const Attributes &attributes, double effectiveMissCount, double speedDeviation);
-	static double computeAccuracyValue(const ScoreData &score, const Attributes &attributes);
+	static double computeAimValue(const ScoreData &score, const DifficultyAttributes &attributes, double effectiveMissCount);
+	static double computeSpeedValue(const ScoreData &score, const DifficultyAttributes &attributes, double effectiveMissCount, double speedDeviation);
+	static double computeAccuracyValue(const ScoreData &score, const DifficultyAttributes &attributes);
 
-	static double calculateSpeedDeviation(const ScoreData& score, const Attributes& attributes, double timescale);
-	static double calculateDeviation(const Attributes &attributes, double timescale, double relevantCountGreat, double relevantCountOk, double relevantCountMeh, double relevantCountMiss);
-	static double calculateSpeedHighDeviationNerf(const Attributes &attributes, double speedDeviation);
+	static double calculateSpeedDeviation(const ScoreData& score, const DifficultyAttributes& attributes, double timescale);
+	static double calculateDeviation(const DifficultyAttributes &attributes, double timescale, double relevantCountGreat, double relevantCountOk, double relevantCountMeh, double relevantCountMiss);
+	static double calculateSpeedHighDeviationNerf(const DifficultyAttributes &attributes, double speedDeviation);
+
+	static double calculateEstimatedSliderBreaks(const ScoreData& score, const DifficultyAttributes& attributes, double topWeightedSliderFactor, double effectiveMissCount);
 
 	static double erf(double x);
 	static double erfInv(double z);
