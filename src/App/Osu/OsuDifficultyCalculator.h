@@ -299,7 +299,7 @@ public:
 	static double calculateDifficultyAttributes(DifficultyAttributes &outAttributes, const BeatmapDiffcalcData &beatmapData, int upToObjectIndex, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains, const std::atomic<bool> &dead);
 	static double calculateDifficultyAttributesInternal(DifficultyAttributes &outAttributes, const BeatmapDiffcalcData &beatmapData, int upToObjectIndex, std::vector<DiffObject> &cachedDiffObjects, IncrementalState *incremental, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains, const std::atomic<bool> &dead);
 
-	static void calculateScorev1Attributes(DifficultyAttributes &attributes, const BeatmapDiffcalcData& beatmapData);
+	static void calculateScorev1Attributes(DifficultyAttributes &attributes, const BeatmapDiffcalcData& beatmapData, int upToObjectIndex);
 
 	// pp, use runtime mods (convenience)
 	static double calculatePPv2(Osu *osu, OsuBeatmap *beatmap, DifficultyAttributes attributes, int numHitObjects, int numCircles, int numSliders, int numSpinners, int maxPossibleCombo, int combo = -1, int misses = 0, int c300 = -1, int c100 = 0, int c50 = 0, unsigned long legacyTotalScore = 0);

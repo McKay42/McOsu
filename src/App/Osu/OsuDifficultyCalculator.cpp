@@ -800,7 +800,7 @@ double OsuDifficultyCalculator::calculateDifficultyAttributesInternal(Difficulty
 	speed = computeSpeedRating(speed, numDiffObjects, AR, OD, mechanicalDifficultyRating, b);
 
 	// Scorev1
-	calculateScorev1Attributes(attributes, b);
+	calculateScorev1Attributes(attributes, b, upToObjectIndex);
 
 	attributes.AimDifficulty = aim;
 	attributes.SpeedDifficulty = speed;
@@ -850,7 +850,7 @@ double calculateSpinnerScore(double spinnerDuration)
 	return score;
 }
 
-void OsuDifficultyCalculator::calculateScorev1Attributes(DifficultyAttributes &attributes, const BeatmapDiffcalcData& b)
+void OsuDifficultyCalculator::calculateScorev1Attributes(DifficultyAttributes &attributes, const BeatmapDiffcalcData& b, int upToObjectIndex)
 {
 	// Nested score per object
 	const double big_tick_score = 30;
@@ -859,8 +859,12 @@ void OsuDifficultyCalculator::calculateScorev1Attributes(DifficultyAttributes &a
 	double sliderScore = 0;
 	double spinnerScore = 0;
 
-	for (const auto& hitObject : b.sortedHitObjects)
+	if (upToObjectIndex < 1) upToObjectIndex = b.sortedHitObjects.size();
+
+	for (int i = 0; i < upToObjectIndex; ++i)
 	{
+		const auto& hitObject = b.sortedHitObjects[i];
+
 		if (hitObject.type == OsuDifficultyHitObject::TYPE::SLIDER)
 		{
 			// 1 for head, 1 for tail
@@ -886,7 +890,7 @@ void OsuDifficultyCalculator::calculateScorev1Attributes(DifficultyAttributes &a
 		}
 	}
 
-	attributes.NestedScorePerObject = (sliderScore + spinnerScore) / (double)b.sortedHitObjects.size();
+	attributes.NestedScorePerObject = (sliderScore + spinnerScore) / (double)std::max(upToObjectIndex, 1);
 
 	// Legacy score base multiplier
 	const unsigned long breakTimeMS = b.breakDuration;
@@ -898,8 +902,10 @@ void OsuDifficultyCalculator::calculateScorev1Attributes(DifficultyAttributes &a
 	int combo = 0;
 	attributes.MaximumLegacyComboScore = 0;
 
-	for (const auto& hitObject : b.sortedHitObjects)
+	for (int i = 0; i < upToObjectIndex; ++i)
 	{
+		const auto& hitObject = b.sortedHitObjects[i];
+		
 		if (hitObject.type == OsuDifficultyHitObject::TYPE::SLIDER)
 		{
 			// Increase combo for each nested object
