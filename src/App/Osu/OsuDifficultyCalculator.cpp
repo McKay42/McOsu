@@ -51,6 +51,20 @@ double logistic(double x, double midpointOffset, double multiplier, double maxVa
 	return maxValue / (1 + std::exp(multiplier * (midpointOffset - x)));
 }
 
+double strainDifficultyToPerformance(double difficulty) { return std::pow(5.0 * std::max(1.0, difficulty / 0.0675) - 4.0, 3.0) / 100000.0;; }
+
+// Adjust hitwindow to match lazer
+double adjustHitWindow(double hitwindow) {return std::floor(hitwindow) - 0.5;}
+
+// Lazer formula for adjusting OD by clock rate
+double adjustOveralDifficultyByClockRate(double OD, double clockRate) 
+{
+	double hitwindow = OsuGameRules::getRawHitWindow300(OD);
+	hitwindow = adjustHitWindow(hitwindow);
+	hitwindow /= clockRate;
+	return (79.5 - hitwindow) / 6;
+}
+
 unsigned long long OsuDifficultyHitObject::sortHackCounter = 0;
 
 OsuDifficultyHitObject::OsuDifficultyHitObject(TYPE type, Vector2 pos, long time) : OsuDifficultyHitObject(type, pos, time, time)
@@ -464,8 +478,6 @@ double computeSpeedRating(double speedDifficultyValue, int totalHits, double app
 	return speedRating * std::cbrt(ratingMultiplier);
 }
 
-double strainDifficultyToPerformance(double difficulty) { return std::pow(5.0 * std::max(1.0, difficulty / 0.0675) - 4.0, 3.0) / 100000.0;; }
-
 // https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/OsuDifficultyCalculator.cs#L148-L164
 double calculateStarRating(double basePerformance) {
 	const double star_rating_multiplier = 0.0265;
@@ -514,7 +526,7 @@ double OsuDifficultyCalculator::calculateDifficultyAttributesInternal(Difficulty
 
 	// global independent variables/constants
 	float circleRadiusInOsuPixels = 64.0f * OsuGameRules::getRawHitCircleScale(clamp<float>(b.CS, 0.0f, 12.142f)); // NOTE: clamped CS because McOsu allows CS > ~12.1429 (at which point the diameter becomes negative)
-	const float hitWindow300 = 2.0f * OsuGameRules::getRawHitWindow300(b.OD) / b.speedMultiplier;
+	const float hitWindow300 = 2.0f * adjustHitWindow(OsuGameRules::getRawHitWindow300(b.OD)) / b.speedMultiplier;
 
 	// ****************************************************************************************************************************************** //
 
@@ -782,7 +794,7 @@ double OsuDifficultyCalculator::calculateDifficultyAttributesInternal(Difficulty
 
 	// Don't forget to scale AR and OD by rate here before using it in rating calculation
 	double AR = OsuGameRules::getRawApproachRateForSpeedMultiplier(OsuGameRules::getRawApproachTime(b.AR), b.speedMultiplier);
-	double OD = OsuGameRules::getRawOverallDifficultyForSpeedMultiplier(OsuGameRules::getRawHitWindow300(b.OD), b.speedMultiplier);
+	double OD = adjustOveralDifficultyByClockRate(b.OD, b.speedMultiplier);
 
 	aimNoSliders = computeAimRating(aimNoSliders, numDiffObjects, AR, OD, mechanicalDifficultyRating, attributes.SliderFactor, b);
 	aim = computeAimRating(aim, numDiffObjects, AR, OD, mechanicalDifficultyRating, attributes.SliderFactor, b);
@@ -960,8 +972,8 @@ double OsuDifficultyCalculator::calculatePPv2(int modsLegacy, double timescale, 
 	// (the original incoming ar/od values are guaranteed to not yet have any speed multiplier applied to them, but they do have non-time-related mods already applied, like HR or any custom overrides)
 	// (yes, this does work correctly when the override slider "locking" feature is used. in this case, the stored ar/od is already compensated such that it will have the locked value AFTER applying the speed multiplier here)
 	// (all UI elements which display ar/od from stored scores, like the ranking screen or score buttons, also do this calculation before displaying the values to the user. of course the mod selection screen does too.)
-	od = OsuGameRules::getRawOverallDifficultyForSpeedMultiplier(OsuGameRules::getRawHitWindow300(od), timescale);
 	ar = OsuGameRules::getRawApproachRateForSpeedMultiplier(OsuGameRules::getRawApproachTime(ar), timescale);
+	od = adjustOveralDifficultyByClockRate(od, timescale);
 
 	// calculateEffectiveMissCount @ https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/OsuPerformanceCalculator.cs
 	// required because slider breaks aren't exposed to pp calculation
@@ -1176,9 +1188,10 @@ double OsuDifficultyCalculator::calculateDeviation(const DifficultyAttributes &a
 	if (relevantCountGreat + relevantCountOk + relevantCountMeh <= 0.0)
 		return std::numeric_limits<double>::quiet_NaN();
 
-	const double greatHitWindow = OsuGameRules::getRawHitWindow300(attributes.OverallDifficulty) / timescale;
-	const double okHitWindow = OsuGameRules::getRawHitWindow100(attributes.OverallDifficulty) / timescale;
-	const double mehHitWindow = OsuGameRules::getRawHitWindow50(attributes.OverallDifficulty) / timescale;
+	// Don't forget to use lazer hitwindows
+	const double greatHitWindow = adjustHitWindow(OsuGameRules::getRawHitWindow300(attributes.OverallDifficulty)) / timescale;
+	const double okHitWindow = adjustHitWindow(OsuGameRules::getRawHitWindow100(attributes.OverallDifficulty)) / timescale;
+	const double mehHitWindow = adjustHitWindow(OsuGameRules::getRawHitWindow50(attributes.OverallDifficulty)) / timescale;
 
 	const double z = 2.32634787404;
 	const double sqrt2 = 1.4142135623730951;
