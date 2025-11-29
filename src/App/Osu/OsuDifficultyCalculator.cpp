@@ -926,13 +926,6 @@ double OsuDifficultyCalculator::calculatePPv2(int modsLegacy, double timescale, 
 {
 	// NOTE: depends on active mods + OD + AR
 
-	// apply "timescale" aka speed multiplier to ar/od
-	// (the original incoming ar/od values are guaranteed to not yet have any speed multiplier applied to them, but they do have non-time-related mods already applied, like HR or any custom overrides)
-	// (yes, this does work correctly when the override slider "locking" feature is used. in this case, the stored ar/od is already compensated such that it will have the locked value AFTER applying the speed multiplier here)
-	// (all UI elements which display ar/od from stored scores, like the ranking screen or score buttons, also do this calculation before displaying the values to the user. of course the mod selection screen does too.)
-	od = OsuGameRules::getRawOverallDifficultyForSpeedMultiplier(OsuGameRules::getRawHitWindow300(od), timescale);
-	ar = OsuGameRules::getRawApproachRateForSpeedMultiplier(OsuGameRules::getRawApproachTime(ar), timescale);
-
 	if (c300 < 0)
 		c300 = numHitObjects - c100 - c50 - misses;
 
@@ -959,9 +952,16 @@ double OsuDifficultyCalculator::calculatePPv2(int modsLegacy, double timescale, 
 		}
 	}
 
-	attributes.ApproachRate = ar;
+	// We apply original (not adjusted) OD here
 	attributes.OverallDifficulty = od;
 	attributes.SliderCount = numSliders;
+
+	// apply "timescale" aka speed multiplier to ar/od
+	// (the original incoming ar/od values are guaranteed to not yet have any speed multiplier applied to them, but they do have non-time-related mods already applied, like HR or any custom overrides)
+	// (yes, this does work correctly when the override slider "locking" feature is used. in this case, the stored ar/od is already compensated such that it will have the locked value AFTER applying the speed multiplier here)
+	// (all UI elements which display ar/od from stored scores, like the ranking screen or score buttons, also do this calculation before displaying the values to the user. of course the mod selection screen does too.)
+	od = OsuGameRules::getRawOverallDifficultyForSpeedMultiplier(OsuGameRules::getRawHitWindow300(od), timescale);
+	ar = OsuGameRules::getRawApproachRateForSpeedMultiplier(OsuGameRules::getRawApproachTime(ar), timescale);
 
 	// calculateEffectiveMissCount @ https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/OsuPerformanceCalculator.cs
 	// required because slider breaks aren't exposed to pp calculation
@@ -999,6 +999,11 @@ double OsuDifficultyCalculator::calculatePPv2(int modsLegacy, double timescale, 
 	}
 
 	const double speedDeviation = calculateSpeedDeviation(score, attributes, timescale);
+
+	// Apply adjusted AR and OD when deviation is calculated
+	attributes.ApproachRate = ar;
+	attributes.OverallDifficulty = od;
+
 	const double aimValue = computeAimValue(score, attributes, effectiveMissCount);
 	const double speedValue = computeSpeedValue(score, attributes, effectiveMissCount, speedDeviation);
 	const double accuracyValue = computeAccuracyValue(score, attributes);
