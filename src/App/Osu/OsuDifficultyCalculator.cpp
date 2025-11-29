@@ -1186,16 +1186,22 @@ double OsuDifficultyCalculator::calculateDeviation(const DifficultyAttributes &a
 	const double sqrt2OverPi = 0.7978845608028654;
 
 	double objectCount = relevantCountGreat + relevantCountOk + relevantCountMeh + relevantCountMiss;
-	double n = std::max(1.0, objectCount - relevantCountMiss - relevantCountMeh);
+	double n = std::max(1.0, relevantCountGreat + relevantCountOk);
 	double p = relevantCountGreat / n;
-	double pLowerBound = (n * p + z * z / 2.0) / (n + z * z) - z / (n + z * z) * sqrt(n * p * (1.0 - p) + z * z / 4.0);
-	double deviation = greatHitWindow / (sqrt2 * erfInv(pLowerBound));
-	double randomValue = sqrt2OverPi * okHitWindow * std::exp(-0.5 * std::pow(okHitWindow / deviation, 2.0)) / (deviation * erf(okHitWindow / (sqrt2 * deviation)));
-	deviation *= std::sqrt(1.0 - randomValue);
+	double pLowerBound = std::min(p, (n * p + z * z / 2.0) / (n + z * z) - z / (n + z * z) * sqrt(n * p * (1.0 - p) + z * z / 4.0));
 
-	double limitValue = okHitWindow / sqrt3;
-	if (pLowerBound == 0.0 || randomValue >= 1.0 || deviation > limitValue)
-		deviation = limitValue;
+	double deviation;
+
+	if (pLowerBound > 0.01)
+    {
+		deviation = greatHitWindow / (sqrt2 * erfInv(pLowerBound));
+		double okHitWindowTailAmount = sqrt2OverPi * okHitWindow * std::exp(-0.5 * std::pow(okHitWindow / deviation, 2.0)) / (deviation * erf(okHitWindow / (sqrt2 * deviation)));
+		deviation *= std::sqrt(1.0 - okHitWindowTailAmount);
+	}
+	else
+	{
+		deviation = okHitWindow / sqrt3;
+	}
 
 	double mehVariance = (mehHitWindow * mehHitWindow + okHitWindow * mehHitWindow + okHitWindow * okHitWindow) / 3.0;
 	return std::sqrt(((relevantCountGreat + relevantCountOk) * std::pow(deviation, 2.0) + relevantCountMeh * mehVariance) / (relevantCountGreat + relevantCountOk + relevantCountMeh));
