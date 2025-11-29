@@ -14,7 +14,6 @@
 #include "OsuBeatmap.h"
 #include "OsuGameRules.h"
 #include "OsuReplay.h"
-#include "OsuDatabase.h"
 
 #include "OsuSliderCurves.h"
 
@@ -1198,7 +1197,6 @@ double OsuDifficultyCalculator::calculateDeviation(const DifficultyAttributes &a
 	const double sqrt3 = 1.7320508075688772;
 	const double sqrt2OverPi = 0.7978845608028654;
 
-	double objectCount = relevantCountGreat + relevantCountOk + relevantCountMeh + relevantCountMiss;
 	double n = std::max(1.0, relevantCountGreat + relevantCountOk);
 	double p = relevantCountGreat / n;
 	double pLowerBound = std::min(p, (n * p + z * z / 2.0) / (n + z * z) - z / (n + z * z) * sqrt(n * p * (1.0 - p) + z * z / 4.0));

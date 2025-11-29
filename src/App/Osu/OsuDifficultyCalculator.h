@@ -9,12 +9,12 @@
 #define OSUDIFFICULTYCALCULATOR_H
 
 #include "cbase.h"
+#include "OsuDatabase.h"
 
 class Osu;
 class OsuBeatmap;
 
 class OsuDatabaseBeatmap;
-class OsuDatabase;
 
 class OsuSliderCurve;
 
