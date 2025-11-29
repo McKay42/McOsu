@@ -1782,8 +1782,8 @@ double OsuDifficultyCalculator::DiffObject::calculate_difficulty(const Skills::S
 				if (sliderStrain >= 0)
 				{
 					incremental->top_weighted_sliders += 1.1 / (1.0 + std::exp(-10.0 * (sliderStrain / consistentTopStrain - 0.88)));
-					tempSliderSum = incremental->top_weighted_sliders;
 				}
+				tempSliderSum = incremental->top_weighted_sliders;
 			}
 			else
 			{
