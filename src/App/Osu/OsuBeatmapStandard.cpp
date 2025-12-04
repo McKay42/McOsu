@@ -1709,7 +1709,7 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 				score.hitErrorAvgMax = m_osu->getScore()->getHitErrorAvgMax();
 				score.starsTomTotal = totalStars;
 				score.starsTomAim = attributes.AimDifficulty;
-				score.starsTomSpeed = attributes.AimDifficulty;
+				score.starsTomSpeed = attributes.SpeedDifficulty;
 				score.speedMultiplier = m_osu->getSpeedMultiplier();
 				score.CS = CS;
 				score.AR = AR;
