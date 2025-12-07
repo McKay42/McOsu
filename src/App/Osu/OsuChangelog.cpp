@@ -36,7 +36,11 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	std::vector<CHANGELOG> changelogs;
 
 	CHANGELOG alpha317;
-	alpha317.title = UString::format("33.11 (Build Date: %s, %s)", __DATE__, __TIME__); // (09.01.2022 - ?)
+	alpha317.title = UString::format("33.12 (Build Date: %s, %s)", __DATE__, __TIME__); // (09.01.2022 - ?)
+	alpha317.changes.push_back("- For more info on the star/pp changes in this update see https://osu.ppy.sh/home/news/2025-10-29-performance-points-star-rating-updates");
+	alpha317.changes.push_back("- Updated star + pp algorithms to match current lazer implementation aka 20251007 (20) (thanks to @Givikap120!)");
+	alpha317.changes.push_back("");
+	alpha317.changes.push_back("");
 	alpha317.changes.push_back("- For more info on the star/pp changes in this update see https://osu.ppy.sh/home/news/2025-03-06-performance-points-star-rating-updates");
 	alpha317.changes.push_back("- Updated star + pp algorithms to match current lazer implementation aka 20250306 (19) (thanks to @Khangaroo!)");
 	alpha317.changes.push_back("- Added \"Sort by Unstable Rate (Mc)\" to score sorting options");
