@@ -576,11 +576,10 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addLabel("1) If you have an existing osu!stable installation:")->setTextColor(0xff666666);
 	addLabel("2) osu!stable > Options > \"Open osu! folder\"")->setTextColor(0xff666666);
 	addLabel("3) Copy & Paste the full path into the textbox:")->setTextColor(0xff666666);
+	addLabel("4) Note that only osu!stable databases are supported!")->setTextColor(0xff666666);
 	addLabel("");
 	m_osuFolderTextbox = addTextbox(convar->getConVarByName("osu_folder")->getString(), convar->getConVarByName("osu_folder"));
-	addLabel("");
-	addLabel("osu!lazer databases are not supported.")->setTextColor(0xff770000);
-	//addSpacer();
+	addSpacer();
 	addLabel("");
 	addCheckbox("Use osu!stable osu!.db database (read-only)", "If you have an existing osu!stable installation,\nthen this will massively speed up songbrowser beatmap loading.", convar->getConVarByName("osu_database_enabled"));
 	if (env->getOS() != Environment::OS::OS_HORIZON)
@@ -600,6 +599,8 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSubSection("Songbrowser");
 	addCheckbox("Draw Strain Graph in Songbrowser", "Hold either SHIFT/CTRL to show only speed/aim strains.\nSpeed strain is red, aim strain is green.\n(See osu_hud_scrubbing_timeline_strains_*)", convar->getConVarByName("osu_draw_songbrowser_strain_graph"));
 	addCheckbox("Draw Strain Graph in Scrubbing Timeline", "Speed strain is red, aim strain is green.\n(See osu_hud_scrubbing_timeline_strains_*)", convar->getConVarByName("osu_draw_scrubbing_timeline_strain_graph"));
+	addCheckbox("Song Buttons Velocity Animation", "If enabled, then song buttons are pushed to the right depending on the scrolling velocity.", convar->getConVarByName("osu_songbrowser_button_anim_x_push"));
+	addCheckbox("Song Buttons Curved Layout", "If enabled, then song buttons are positioned on a vertically centered curve.", convar->getConVarByName("osu_songbrowser_button_anim_y_curve"));
 
 	addSubSection("Window");
 	addCheckbox("Pause on Focus Loss", "Should the game pause when you switch to another application?", convar->getConVarByName("osu_pause_on_focus_loss"));

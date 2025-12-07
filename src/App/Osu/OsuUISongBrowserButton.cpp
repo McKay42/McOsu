@@ -21,6 +21,9 @@
 #include "CBaseUIContainer.h"
 #include "CBaseUIScrollView.h"
 
+ConVar osu_songbrowser_button_anim_x_push("osu_songbrowser_button_anim_x_push", false, FCVAR_NONE, "whether to push songbuttons to the right depending on the vertical scrolling velocity (set this to 0 for osu!lazer style carousel)");
+ConVar osu_songbrowser_button_anim_y_curve("osu_songbrowser_button_anim_y_curve", true, FCVAR_NONE, "whether to move songbuttons slightly to the right depending on their vertical position, on a vertically centered curve");
+
 ConVar osu_songbrowser_button_active_color_a("osu_songbrowser_button_active_color_a", 220 + 10, FCVAR_NONE);
 ConVar osu_songbrowser_button_active_color_r("osu_songbrowser_button_active_color_r", 255, FCVAR_NONE);
 ConVar osu_songbrowser_button_active_color_g("osu_songbrowser_button_active_color_g", 255, FCVAR_NONE);
@@ -184,11 +187,11 @@ void OsuUISongBrowserButton::updateLayoutEx()
 	if (m_bVisible) // lag prevention (animationHandler overflow)
 	{
 		const float centerOffsetAnimationTarget = 1.0f - clamp<float>(std::abs((m_vPos.y+(m_vSize.y/2)-m_view->getPos().y-m_view->getSize().y/2)/(m_view->getSize().y/2)), 0.0f, 1.0f);
-		anim->moveQuadOut(&m_fCenterOffsetAnimation, centerOffsetAnimationTarget, 0.5f, true);
+		anim->moveQuadOut(&m_fCenterOffsetAnimation, (osu_songbrowser_button_anim_y_curve.getBool() && !m_songBrowser->isRightClickScrolling() ? centerOffsetAnimationTarget : 1.0f) + (m_bSelected && !osu_songbrowser_button_anim_y_curve.getBool() ? 0.5f : 0.0f), 0.5f, true);
 
 		float centerOffsetVelocityAnimationTarget = clamp<float>((std::abs(m_view->getVelocity().y))/3500.0f, 0.0f, 1.0f);
 
-		if (m_songBrowser->isRightClickScrolling())
+		if (m_songBrowser->isRightClickScrolling() || !osu_songbrowser_button_anim_x_push.getBool())
 			centerOffsetVelocityAnimationTarget = 0.0f;
 
 		if (m_view->isScrolling())
@@ -233,7 +236,7 @@ OsuUISongBrowserButton *OsuUISongBrowserButton::setVisible(bool visible)
 
 		float centerOffsetVelocityAnimationTarget = clamp<float>((std::abs(m_view->getVelocity().y)) / 3500.0f, 0.0f, 1.0f);
 
-		if (m_songBrowser->isRightClickScrolling())
+		if (m_songBrowser->isRightClickScrolling() || !osu_songbrowser_button_anim_x_push.getBool())
 			centerOffsetVelocityAnimationTarget = 0.0f;
 
 		m_fCenterOffsetVelocityAnimation = centerOffsetVelocityAnimationTarget;
