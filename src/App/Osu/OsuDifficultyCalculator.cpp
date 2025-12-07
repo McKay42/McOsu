@@ -1208,7 +1208,7 @@ double OsuDifficultyCalculator::calculateVisibilityBonus(double approachRate, do
 	// So in this case we're always setting it to false
 	bool isAlwaysPartiallyVisible = false;
 
-	double readingBonus = (isAlwaysPartiallyVisible ? 0.025 : 0.04) * (12.0 - std::max(std::max(12.0, approachRate), 7.0)); // NOTE: clamped because McOsu allows AR > 12
+	double readingBonus = (isAlwaysPartiallyVisible ? 0.025 : 0.04) * (12.0 - std::max(std::min(12.0, approachRate), 7.0)); // NOTE: clamped because McOsu allows AR > 12
 
 	readingBonus *= visibilityFactor;
 
