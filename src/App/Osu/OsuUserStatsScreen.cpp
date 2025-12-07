@@ -166,9 +166,6 @@ private:
 					const float OD = (score.isLegacyScore ? legacyValues.OD : score.OD);
 					const float HP = (score.isLegacyScore ? legacyValues.HP : score.HP);
 					const float speedMultiplier = (score.isLegacyScore ? legacyValues.speedMultiplier : score.speedMultiplier);
-					const bool relax = score.modsLegacy & OsuReplay::Mods::Relax;
-					const bool autopilot = score.modsLegacy & OsuReplay::Mods::Relax2;
-					const bool touchDevice = score.modsLegacy & OsuReplay::Mods::TouchDevice;
 
 					// 2) load hitobjects for diffcalc
 					OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT diffres = OsuDatabaseBeatmap::loadDifficultyHitObjects(osuFilePath, gameMode, AR, CS, speedMultiplier);
@@ -181,14 +178,9 @@ private:
 					}
 
 					// 3) calculate stars
-					double aimStars = 0.0;
-					double aimSliderFactor = 0.0;
-					double aimDifficultSliders = 0.0;
-					double aimDifficultStrains = 0.0;
-					double speedStars = 0.0;
-					double speedNotes = 0.0;
-					double speedDifficultStrains = 0.0;
-					const double totalStars = OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, CS, OD, speedMultiplier, relax, autopilot, touchDevice, &aimStars, &aimSliderFactor, &aimDifficultSliders, &aimDifficultStrains, &speedStars, &speedNotes, &speedDifficultStrains);
+					OsuDifficultyCalculator::DifficultyAttributes attributes{};
+					OsuDifficultyCalculator::BeatmapDiffcalcData beatmapData(diff2, score, diffres.diffobjects);
+					const double totalStars = OsuDifficultyCalculator::calculateDifficultyAttributes(attributes, beatmapData);
 
 					// 4) calculate pp
 					double pp = 0.0;
@@ -215,7 +207,7 @@ private:
 						if (maxPossibleCombo < 1)
 							continue;
 
-						pp = OsuDifficultyCalculator::calculatePPv2(score.modsLegacy, speedMultiplier, AR, OD, aimStars, aimSliderFactor, aimDifficultSliders, aimDifficultStrains, speedStars, speedNotes, speedDifficultStrains, numHitObjects, numCircles, numSliders, numSpinners, maxPossibleCombo, score.comboMax, score.numMisses, score.num300s, score.num100s, score.num50s);
+						pp = OsuDifficultyCalculator::calculatePPv2(score.modsLegacy, speedMultiplier, AR, OD, attributes, numHitObjects, numCircles, numSliders, numSpinners, maxPossibleCombo, score.comboMax, score.numMisses, score.num300s, score.num100s, score.num50s, score.score);
 					}
 
 					// 5) overwrite score with new pp data (and handle imports)
@@ -236,8 +228,8 @@ private:
 								score.hitErrorAvgMax = 0.0f;
 							}
 							score.starsTomTotal = totalStars;
-							score.starsTomAim = aimStars;
-							score.starsTomSpeed = speedStars;
+							score.starsTomAim = attributes.AimDifficulty;
+							score.starsTomSpeed = attributes.SpeedDifficulty;
 							score.speedMultiplier = speedMultiplier;
 							score.CS = CS;
 							score.AR = AR;

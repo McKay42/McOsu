@@ -1,9 +1,9 @@
-//================ Copyright (c) 2019, PG & Francesco149, All rights reserved. =================//
+//================ Copyright (c) 2019, PG & Francesco149 & Khangaroo & Givikap120, All rights reserved. =================//
 //
 // Purpose:		star rating + pp calculation, based on https://github.com/Francesco149/oppai/
 //
 // $NoKeywords: $tomstarspp
-//==============================================================================================//
+//=======================================================================================================================//
 
 #include "OsuDifficultyCalculator.h"
 
@@ -25,8 +25,6 @@ ConVar osu_stars_and_pp_lazer_relax_autopilot_nerf_disabled("osu_stars_and_pp_la
 ConVar osu_stars_always_recalc_live_strains("osu_stars_always_recalc_live_strains", false, FCVAR_NONE, "leave this disabled for massive performance gains for live stars/pp calc loading times (at the cost of extremely rare temporary minor accuracy loss (~0.001 stars))");
 ConVar osu_stars_ignore_clamped_sliders("osu_stars_ignore_clamped_sliders", true, FCVAR_NONE, "skips processing sliders limited by osu_slider_curve_max_length");
 
-
-
 unsigned long long OsuDifficultyHitObject::sortHackCounter = 0;
 
 OsuDifficultyHitObject::OsuDifficultyHitObject(TYPE type, Vector2 pos, long time) : OsuDifficultyHitObject(type, pos, time, time)
@@ -47,6 +45,9 @@ OsuDifficultyHitObject::OsuDifficultyHitObject(TYPE type, Vector2 pos, long time
 	this->osuSliderCurveType = osuSliderCurveType;
 	this->pixelLength = pixelLength;
 	this->scoringTimes = scoringTimes;
+
+	this->baseTime = time;
+	this->baseEndTime = endTime;
 
 	this->curve = NULL;
 	this->scheduledCurveAlloc = false;
@@ -98,6 +99,8 @@ OsuDifficultyHitObject::OsuDifficultyHitObject(OsuDifficultyHitObject &&dobj)
 	this->pos = dobj.pos;
 	this->time = dobj.time;
 	this->endTime = dobj.endTime;
+	this->baseTime = dobj.baseTime;
+	this->baseEndTime = dobj.baseEndTime;
 	this->spanDuration = dobj.spanDuration;
 	this->osuSliderCurveType = dobj.osuSliderCurveType;
 	this->pixelLength = dobj.pixelLength;
@@ -125,6 +128,8 @@ OsuDifficultyHitObject& OsuDifficultyHitObject::operator = (OsuDifficultyHitObje
 	this->pos = dobj.pos;
 	this->time = dobj.time;
 	this->endTime = dobj.endTime;
+	this->baseTime = dobj.baseTime;
+	this->baseEndTime = dobj.baseEndTime;
 	this->spanDuration = dobj.spanDuration;
 	this->osuSliderCurveType = dobj.osuSliderCurveType;
 	this->pixelLength = dobj.pixelLength;
@@ -229,44 +234,106 @@ float OsuDifficultyHitObject::getT(long pos, bool raw)
 	}
 }
 
-
+// DIFFICULTY CALCULATOR
 
 ConVar *OsuDifficultyCalculator::m_osu_slider_scorev2_ref = NULL;
 ConVar *OsuDifficultyCalculator::m_osu_slider_end_inside_check_offset_ref = NULL;
 ConVar *OsuDifficultyCalculator::m_osu_slider_curve_max_length_ref = NULL;
 
-double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, float OD, float speedMultiplier, bool relax, bool autopilot, bool touchDevice, double *aim, double *aimSliderFactor, double *aimDifficultSliders, double *difficultAimStrains, double *speed, double *speedNotes, double *difficultSpeedStrains, int upToObjectIndex, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains)
+void OsuDifficultyCalculator::DifficultyAttributes::clear()
+{
+	AimDifficulty = 0;
+	AimDifficultSliderCount = 0;
+
+	SpeedDifficulty = 0;
+	SpeedNoteCount = 0;
+
+	SliderFactor = 0;
+
+	AimTopWeightedSliderFactor = 0;
+	SpeedTopWeightedSliderFactor = 0;
+	
+	AimDifficultStrainCount = 0;
+	SpeedDifficultStrainCount = 0;
+
+	NestedScorePerObject = 0;
+	LegacyScoreBaseMultiplier = 0;
+	MaximumLegacyComboScore = 0;
+
+	ApproachRate = 0;
+	OverallDifficulty = 0;
+	SliderCount = 0;
+}
+
+OsuDifficultyCalculator::BeatmapDiffcalcData::BeatmapDiffcalcData(const OsuBeatmap* beatmap, std::vector<OsuDifficultyHitObject> &loadedSortedHitObjects): sortedHitObjects(loadedSortedHitObjects)
+{
+	CS = beatmap->getCS();
+	HP = beatmap->getHP();
+	AR = beatmap->getAR();
+	OD = beatmap->getOD();
+
+	speedMultiplier = beatmap->getOsu()->getSpeedMultiplier(); // NOTE: not beatmap->getSpeedMultiplier()!
+	hidden = beatmap->getOsu()->getModHD();
+	touchDevice = beatmap->getOsu()->getModTD();
+	relax = beatmap->getOsu()->getModRelax();
+	autopilot = beatmap->getOsu()->getModAutopilot();
+
+	breakDuration = beatmap->getBreakDurationTotal();
+	playableLength = beatmap->getLengthPlayable();
+}
+
+OsuDifficultyCalculator::BeatmapDiffcalcData::BeatmapDiffcalcData(const OsuDatabaseBeatmap* beatmap, const OsuDatabase::Score &score, std::vector<OsuDifficultyHitObject> &loadedSortedHitObjects) : sortedHitObjects(loadedSortedHitObjects)
+{
+	const OsuReplay::BEATMAP_VALUES legacyValues = OsuReplay::getBeatmapValuesForModsLegacy(score.modsLegacy, beatmap->getAR(), beatmap->getCS(), beatmap->getOD(), beatmap->getHP());
+	AR = (score.isLegacyScore ? legacyValues.AR : score.AR);
+	CS = (score.isLegacyScore ? legacyValues.CS : score.CS);
+	OD = (score.isLegacyScore ? legacyValues.OD : score.OD);
+	HP = (score.isLegacyScore ? legacyValues.HP : score.HP);
+
+	speedMultiplier = (score.isLegacyScore ? legacyValues.speedMultiplier : score.speedMultiplier);
+	hidden = score.modsLegacy & OsuReplay::Mods::Hidden;
+	relax = score.modsLegacy & OsuReplay::Mods::Relax;
+	autopilot = score.modsLegacy & OsuReplay::Mods::Relax2;
+	touchDevice = score.modsLegacy & OsuReplay::Mods::TouchDevice;
+
+	breakDuration = beatmap->getBreakDurationTotal();
+
+	if (sortedHitObjects.size() > 0)
+		playableLength = (unsigned long)(sortedHitObjects[sortedHitObjects.size()-1].baseEndTime - sortedHitObjects[0].baseTime);
+	else
+		playableLength = beatmap->getLengthMS();
+}
+
+double OsuDifficultyCalculator::calculateDifficultyAttributes(DifficultyAttributes &outAttributes, const BeatmapDiffcalcData &beatmapData, int upToObjectIndex, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains)
 {
 	std::atomic<bool> dead;
 	dead = false;
-	return calculateStarDiffForHitObjects(sortedHitObjects, CS, OD, speedMultiplier, relax, autopilot, touchDevice, aim, aimSliderFactor, aimDifficultSliders, difficultAimStrains, speed, speedNotes, difficultSpeedStrains, upToObjectIndex, outAimStrains, outSpeedStrains, dead);
+	return calculateDifficultyAttributes(outAttributes, beatmapData, upToObjectIndex, outAimStrains, outSpeedStrains, dead);
 }
 
-double OsuDifficultyCalculator::calculateStarDiffForHitObjects(std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, float OD, float speedMultiplier, bool relax, bool autopilot, bool touchDevice, double *aim, double *aimSliderFactor, double *aimDifficultSliders, double *difficultAimStrains, double *speed, double *speedNotes, double *difficultSpeedStrains, int upToObjectIndex, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains, const std::atomic<bool> &dead)
+double OsuDifficultyCalculator::calculateDifficultyAttributes(DifficultyAttributes &outAttributes, const BeatmapDiffcalcData &beatmapData, int upToObjectIndex, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains, const std::atomic<bool> &dead)
 {
 	std::vector<DiffObject> emptyCachedDiffObjects;
-	return calculateStarDiffForHitObjectsInt(emptyCachedDiffObjects, sortedHitObjects, CS, OD, speedMultiplier, relax, autopilot, touchDevice, aim, aimSliderFactor, aimDifficultSliders, difficultAimStrains, speed, speedNotes, difficultSpeedStrains, upToObjectIndex, NULL, outAimStrains, outSpeedStrains, dead);
+	return calculateDifficultyAttributesInternal(outAttributes, beatmapData, upToObjectIndex, emptyCachedDiffObjects, NULL, outAimStrains, outSpeedStrains, dead);
 }
 
-double OsuDifficultyCalculator::calculateStarDiffForHitObjectsInt(std::vector<DiffObject> &cachedDiffObjects, std::vector<OsuDifficultyHitObject> &sortedHitObjects, float CS, float OD, float speedMultiplier, bool relax, bool autopilot, bool touchDevice, double *aim, double *aimSliderFactor, double *aimDifficultSliders, double *difficultAimStrains, double *speed, double *speedNotes, double *difficultSpeedStrains, int upToObjectIndex, IncrementalState *incremental, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains, const std::atomic<bool> &dead)
+double OsuDifficultyCalculator::calculateDifficultyAttributesInternal(DifficultyAttributes &attributes, const BeatmapDiffcalcData &b, int upToObjectIndex, std::vector<DiffObject> &cachedDiffObjects, IncrementalState *incremental, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains, const std::atomic<bool> &dead)
 {
-	// NOTE: depends on speed multiplier + CS + OD + relax + touchDevice
-
 	// NOTE: upToObjectIndex is applied way below, during the construction of the 'dobjects'
 
 	// NOTE: osu always returns 0 stars for beatmaps with only 1 object, except if that object is a slider
-	if (sortedHitObjects.size() < 2)
+	if (b.sortedHitObjects.size() < 2)
 	{
-		if (sortedHitObjects.size() < 1) return 0.0;
-		if (sortedHitObjects[0].type != OsuDifficultyHitObject::TYPE::SLIDER) return 0.0;
+		if (b.sortedHitObjects.size() < 1) return 0.0;
+		if (b.sortedHitObjects[0].type != OsuDifficultyHitObject::TYPE::SLIDER) return 0.0;
 	}
 
 	if (m_osu_slider_end_inside_check_offset_ref == NULL)
 		m_osu_slider_end_inside_check_offset_ref = convar->getConVarByName("osu_slider_end_inside_check_offset");
 
 	// global independent variables/constants
-	float circleRadiusInOsuPixels = 64.0f * OsuGameRules::getRawHitCircleScale(clamp<float>(CS, 0.0f, 12.142f)); // NOTE: clamped CS because McOsu allows CS > ~12.1429 (at which point the diameter becomes negative)
-	const float hitWindow300 = 2.0f * OsuGameRules::getRawHitWindow300(OD) / speedMultiplier;
+	float circleRadiusInOsuPixels = 64.0f * OsuGameRules::getRawHitCircleScale(clamp<float>(b.CS, 0.0f, 12.142f)); // NOTE: clamped CS because McOsu allows CS > ~12.1429 (at which point the diameter becomes negative)
+	const float hitWindow300 = 2.0f * adjustHitWindow(OsuGameRules::getRawHitWindow300(b.OD)) / b.speedMultiplier;
 
 	// ****************************************************************************************************************************************** //
 
@@ -275,17 +342,12 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjectsInt(std::vector<Di
 	static const float normalized_radius = 50.0f;		// normalization factor
 	static const float maximum_slider_radius = normalized_radius * 2.4f;
 	static const float assumed_slider_radius = normalized_radius * 1.8f;
-	static const float circlesize_buff_treshold = 30;	// non-normalized diameter where the circlesize buff starts
 
 	// multiplier to normalize positions so that we can calc as if everything was the same circlesize.
-	// also handle high CS bonus
-
 	float radius_scaling_factor = normalized_radius / circleRadiusInOsuPixels;
-	if (circleRadiusInOsuPixels < circlesize_buff_treshold)
-	{
-		const float smallCircleBonus = std::min(circlesize_buff_treshold - circleRadiusInOsuPixels, 5.0f) / 50.0f;
-		radius_scaling_factor *= 1.0f + smallCircleBonus;
-	}
+
+	// handle high CS bonus
+	double smallCircleBonus = std::max(1.0, 1.0 + (30.0 - circleRadiusInOsuPixels) / 40.0);
 
 	// ****************************************************************************************************************************************** //
 
@@ -398,7 +460,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjectsInt(std::vector<Di
 	// ****************************************************************************************************************************************** //
 
 	// initialize dobjects
-	const size_t numDiffObjects = (upToObjectIndex < 0) ? sortedHitObjects.size() : upToObjectIndex + 1;
+	const size_t numDiffObjects = (upToObjectIndex < 0) ? b.sortedHitObjects.size() : upToObjectIndex + 1;
 	const bool isUsingCachedDiffObjects = (cachedDiffObjects.size() > 0);
 	DiffObject *diffObjects;
 	if (!isUsingCachedDiffObjects)
@@ -410,7 +472,9 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjectsInt(std::vector<Di
 			if (dead.load())
 				return 0.0;
 
-			cachedDiffObjects.push_back(DiffObject(&sortedHitObjects[i], radius_scaling_factor, cachedDiffObjects, (int)i - 1)); // this already initializes the angle to NaN
+			DiffObject newDiffObject = DiffObject(&b.sortedHitObjects[i], radius_scaling_factor, cachedDiffObjects, (int)i - 1); // this already initializes the angle to NaN
+			newDiffObject.smallCircleBonus = smallCircleBonus;
+			cachedDiffObjects.push_back(std::move(newDiffObject)); 
 		}
 	}
 	diffObjects = cachedDiffObjects.data();
@@ -457,7 +521,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjectsInt(std::vector<Di
 
 					const Vector2 lastCursorPosition = DistanceCalc::getEndCursorPosition(prev1, circleRadiusInOsuPixels);
 
-					double cur_strain_time = (double)std::max(cur.ho->time - prev1.ho->time, 25l); // strain_time isn't initialized here
+					double cur_strain_time = (double)std::max(cur.ho->time - prev1.ho->time, 25l); // adjusted_delta_time isn't initialized here
 					cur.jumpDistance = (cur.norm_start - lastCursorPosition*radius_scaling_factor).length();
 					cur.minJumpDistance = cur.jumpDistance;
 					cur.minJumpTime = cur_strain_time;
@@ -510,7 +574,7 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjectsInt(std::vector<Di
 	// calculate strains/skills
 	if (!isUsingCachedDiffObjects || osu_stars_always_recalc_live_strains.getBool()) // NOTE: yes, this loses some extremely minor accuracy (~0.001 stars territory) for live star/pp for some rare individual upToObjectIndex due to not being recomputed for the cut set of cached diffObjects every time, but the performance gain is so insane I don't care
 	{
-		bool autopilotNerf = !osu_stars_and_pp_lazer_relax_autopilot_nerf_disabled.getBool() && autopilot;
+		const bool autopilotNerf = !osu_stars_and_pp_lazer_relax_autopilot_nerf_disabled.getBool() && b.autopilot;
 		for (size_t i=1; i<numDiffObjects; i++) // NOTE: start at 1
 		{
 			diffObjects[i].calculate_strains(diffObjects[i - 1], (i == numDiffObjects - 1) ? nullptr : &diffObjects[i + 1], hitWindow300, autopilotNerf);
@@ -518,39 +582,155 @@ double OsuDifficultyCalculator::calculateStarDiffForHitObjectsInt(std::vector<Di
 	}
 
 	// calculate final difficulty (weigh strains)
-	double aimNoSliders = osu_stars_xexxar_angles_sliders.getBool() ? DiffObject::calculate_difficulty(Skills::Skill::AIM_NO_SLIDERS, diffObjects, numDiffObjects, incremental ? &incremental[(size_t)Skills::Skill::AIM_NO_SLIDERS] : NULL) : 0.0;
-	*aim = DiffObject::calculate_difficulty(Skills::Skill::AIM_SLIDERS, diffObjects, numDiffObjects, incremental ? &incremental[(size_t)Skills::Skill::AIM_SLIDERS] : NULL, outAimStrains, difficultAimStrains, aimDifficultSliders);
-	*speed = DiffObject::calculate_difficulty(Skills::Skill::SPEED, diffObjects, numDiffObjects, incremental ? &incremental[(size_t)Skills::Skill::SPEED] : NULL, outSpeedStrains, difficultSpeedStrains, speedNotes);
+	double aimNoSliders = osu_stars_xexxar_angles_sliders.getBool() ? DiffObject::calculate_difficulty(Skills::Skill::AIM_NO_SLIDERS, diffObjects, numDiffObjects, incremental ? &incremental[(size_t)Skills::Skill::AIM_NO_SLIDERS] : NULL, NULL, &attributes) : 0.0;
+	double speed = DiffObject::calculate_difficulty(Skills::Skill::SPEED, diffObjects, numDiffObjects, incremental ? &incremental[(size_t)Skills::Skill::SPEED] : NULL, outSpeedStrains, &attributes);
 
-	static const double star_scaling_factor = 0.0675;
+	// Very important hack (because otherwise I have to rewrite how to `DiffObject::calculate_difficulty` works):
+	// At this point attributes `AimDifficultStrains` and `AimTopWeightedSlidersFactor` are calculated on aimNoSliders, what is exactly what we need here
+	// Later it would be overriden by normal Aim that includes sliders
+	// Technically TopWeightedSliderFactor attribute here is TopWeightedSliderCount, we're temporary using it for calculations
+	double aimTopWeightedSliderFactor = attributes.AimTopWeightedSliderFactor / std::max(1.0, attributes.AimDifficultStrainCount - attributes.AimTopWeightedSliderFactor);
+	double speedTopWeightedSliderFactor = attributes.SpeedTopWeightedSliderFactor / std::max(1.0, attributes.SpeedDifficultStrainCount - attributes.SpeedTopWeightedSliderFactor);
 
-	aimNoSliders = std::sqrt(aimNoSliders) * star_scaling_factor;
-	*aim = std::sqrt(*aim) * star_scaling_factor;
-	*speed = std::sqrt(*speed) * star_scaling_factor;
+	// Don't move this aim above, it's intended, read previous comments
+	double aim = DiffObject::calculate_difficulty(Skills::Skill::AIM_SLIDERS, diffObjects, numDiffObjects, incremental ? &incremental[(size_t)Skills::Skill::AIM_SLIDERS] : NULL, outAimStrains, &attributes);
 
-	*aimSliderFactor = (*aim > 0 && osu_stars_xexxar_angles_sliders.getBool()) ? aimNoSliders / *aim : 1.0;
+	attributes.SliderFactor = (aim > 0.0 && osu_stars_xexxar_angles_sliders.getBool()) ? calculateDifficultyRating(aimNoSliders) / calculateDifficultyRating(aim) : 1.0;
 
-	if (touchDevice)
-		*aim = std::pow(*aim, 0.8);
+	double mechanicalDifficultyRating = calculateMechanicalDifficultyRating(aim, speed);
 
-	if (!osu_stars_and_pp_lazer_relax_autopilot_nerf_disabled.getBool())
-	{
-		if (relax)
-		{
-			*aim *= 0.9;
-			*speed = 0.0;
-		}
-		else if (autopilot)
-		{
-			*speed *= 0.5;
-			*aim = 0.0;
-		}
-	}
+	// Don't forget to scale AR and OD by rate here before using it in rating calculation
+	double AR = OsuGameRules::getRawApproachRateForSpeedMultiplier(OsuGameRules::getRawApproachTime(b.AR), b.speedMultiplier);
+	double OD = adjustOveralDifficultyByClockRate(b.OD, b.speedMultiplier);
 
-	return calculateTotalStarsFromSkills(*aim, *speed);
+	aimNoSliders = computeAimRating(aimNoSliders, numDiffObjects, AR, OD, mechanicalDifficultyRating, attributes.SliderFactor, b);
+	aim = computeAimRating(aim, numDiffObjects, AR, OD, mechanicalDifficultyRating, attributes.SliderFactor, b);
+	speed = computeSpeedRating(speed, numDiffObjects, AR, OD, mechanicalDifficultyRating, b);
+
+	// Scorev1
+	calculateScoreV1Attributes(attributes, b, upToObjectIndex);
+
+	attributes.AimDifficulty = aim;
+	attributes.SpeedDifficulty = speed;
+
+	attributes.AimTopWeightedSliderFactor = aimTopWeightedSliderFactor;
+	attributes.SpeedTopWeightedSliderFactor = speedTopWeightedSliderFactor;
+
+	return calculateTotalStarsFromSkills(aim, speed);
 }
 
-double OsuDifficultyCalculator::calculatePPv2(Osu *osu, OsuBeatmap *beatmap, double aim, double aimSliderFactor, double aimDifficultSliders, double aimDifficultStrains, double speed, double speedNotes, double speedDifficultStrains, int numHitObjects, int numCircles, int numSliders, int numSpinners, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50)
+void OsuDifficultyCalculator::calculateScoreV1Attributes(DifficultyAttributes &attributes, const BeatmapDiffcalcData &b, int upToObjectIndex)
+{
+	// Nested score per object
+	const double big_tick_score = 30;
+	const double small_tick_score = 10;
+
+	double sliderScore = 0;
+	double spinnerScore = 0;
+
+	if (upToObjectIndex < 1)
+		upToObjectIndex = (int)b.sortedHitObjects.size();
+
+	for (int i=0; i<upToObjectIndex; i++)
+	{
+		const auto &hitObject = b.sortedHitObjects[i];
+
+		if (hitObject.type == OsuDifficultyHitObject::TYPE::SLIDER)
+		{
+			// 1 for head, 1 for tail
+			int amountOfBigTicks = 2;
+
+			// Add slider repeats
+			amountOfBigTicks += hitObject.repeats - 1;
+
+			int amountOfSmallTicks = 0;
+
+			// Slider ticks
+			for (const auto &nestedHitObject : hitObject.scoringTimes)
+			{
+				if (nestedHitObject.type == OsuDifficultyHitObject::SLIDER_SCORING_TIME::TYPE::TICK)
+					amountOfSmallTicks++;
+			}
+
+			sliderScore += amountOfBigTicks * big_tick_score + amountOfSmallTicks * small_tick_score;
+		}
+		else if (hitObject.type == OsuDifficultyHitObject::TYPE::SPINNER)
+			spinnerScore += calculateScoreV1SpinnerScore(hitObject.baseEndTime - hitObject.baseTime);
+	}
+
+	attributes.NestedScorePerObject = (sliderScore + spinnerScore) / (double)std::max(upToObjectIndex, 1);
+
+	// Legacy score base multiplier
+	const unsigned long breakTimeMS = b.breakDuration;
+	const unsigned long drainLength = std::max(b.playableLength - std::min(breakTimeMS, b.playableLength), (unsigned long)1000) / 1000;
+	attributes.LegacyScoreBaseMultiplier = (int)std::round((b.CS + b.HP + b.OD + clamp<float>((float)b.sortedHitObjects.size() / (float)drainLength * 8.0f, 0.0f, 16.0f)) / 38.0f * 5.0f);
+
+	// Maximum combo score
+	const unsigned long score_increase = 300;
+	int combo = 0;
+	attributes.MaximumLegacyComboScore = 0;
+
+	for (int i=0; i<upToObjectIndex; i++)
+	{
+		const auto &hitObject = b.sortedHitObjects[i];
+		
+		if (hitObject.type == OsuDifficultyHitObject::TYPE::SLIDER)
+		{
+			// Increase combo for each nested object
+			combo += hitObject.scoringTimes.size();
+
+			// For sliders we need to increase combo BEFORE giving score
+			combo++;
+		}
+
+		attributes.MaximumLegacyComboScore += (int)(std::max(0, combo - 1) * (score_increase / 25 * attributes.LegacyScoreBaseMultiplier));
+		
+		// We have already increased combo for slider
+		if (hitObject.type != OsuDifficultyHitObject::TYPE::SLIDER)
+			combo++;
+	}
+}
+
+double OsuDifficultyCalculator::calculateScoreV1SpinnerScore(double spinnerDuration)
+{
+	const int spin_score = 100;
+	const int bonus_spin_score = 1000;
+
+	// The spinner object applies a lenience because gameplay mechanics differ from osu-stable.
+	// We'll redo the calculations to match osu-stable here...
+	const double maximum_rotations_per_second = 477.0 / 60;
+
+	// Normally, this value depends on the final overall difficulty. For simplicity, we'll only consider the worst case that maximises bonus score.
+	// As we're primarily concerned with computing the maximum theoretical final score,
+	// this will have the final effect of slightly underestimating bonus score achieved on stable when converting from score V1.
+	const double minimum_rotations_per_second = 3.0;
+
+	double secondsDuration = spinnerDuration / 1000.0;
+
+	// The total amount of half spins possible for the entire spinner.
+	int totalHalfSpinsPossible = (int)(secondsDuration * maximum_rotations_per_second * 2);
+	// The amount of half spins that are required to successfully complete the spinner (i.e. get a 300).
+	int halfSpinsRequiredForCompletion = (int)(secondsDuration * minimum_rotations_per_second);
+	// To be able to receive bonus points, the spinner must be rotated another 1.5 times.
+	int halfSpinsRequiredBeforeBonus = halfSpinsRequiredForCompletion + 3;
+
+	long score = 0;
+
+	int fullSpins = (totalHalfSpinsPossible / 2);
+
+	// Normal spin score
+	score += spin_score * fullSpins;
+
+	int bonusSpins = (totalHalfSpinsPossible - halfSpinsRequiredBeforeBonus) / 2;
+
+	// Reduce amount of bonus spins because we want to represent the more average case, rather than the best one.
+	bonusSpins = std::max(0, bonusSpins - fullSpins / 2);
+	score += bonus_spin_score * bonusSpins;
+
+	return score;
+}
+
+double OsuDifficultyCalculator::calculatePPv2(Osu *osu, OsuBeatmap *beatmap, DifficultyAttributes attributes, int numHitObjects, int numCircles, int numSliders, int numSpinners, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50, unsigned long legacyTotalScore)
 {
 	// NOTE: depends on active mods + OD + AR
 
@@ -564,19 +744,12 @@ double OsuDifficultyCalculator::calculatePPv2(Osu *osu, OsuBeatmap *beatmap, dou
 		modsLegacy |= (m_osu_slider_scorev2_ref->getBool() ? OsuReplay::Mods::ScoreV2 : 0);
 	}
 
-	return calculatePPv2(modsLegacy, osu->getSpeedMultiplier(), beatmap->getAR(), beatmap->getOD(), aim, aimSliderFactor, aimDifficultSliders, aimDifficultStrains, speed, speedNotes, speedDifficultStrains, numHitObjects, numCircles, numSliders, numSpinners, maxPossibleCombo, combo, misses, c300, c100, c50);
+	return calculatePPv2(modsLegacy, osu->getSpeedMultiplier(), beatmap->getAR(), beatmap->getOD(), attributes, numHitObjects, numCircles, numSliders, numSpinners, maxPossibleCombo, combo, misses, c300, c100, c50, legacyTotalScore);
 }
 
-double OsuDifficultyCalculator::calculatePPv2(int modsLegacy, double timescale, double ar, double od, double aim, double aimSliderFactor, double aimDifficultSliders, double aimDifficultStrains, double speed, double speedNotes, double speedDifficultStrains, int numHitObjects, int numCircles, int numSliders, int numSpinners, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50)
+double OsuDifficultyCalculator::calculatePPv2(int modsLegacy, double timescale, double ar, double od, DifficultyAttributes attributes, int numHitObjects, int numCircles, int numSliders, int numSpinners, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50, unsigned long legacyTotalScore)
 {
 	// NOTE: depends on active mods + OD + AR
-
-	// apply "timescale" aka speed multiplier to ar/od
-	// (the original incoming ar/od values are guaranteed to not yet have any speed multiplier applied to them, but they do have non-time-related mods already applied, like HR or any custom overrides)
-	// (yes, this does work correctly when the override slider "locking" feature is used. in this case, the stored ar/od is already compensated such that it will have the locked value AFTER applying the speed multiplier here)
-	// (all UI elements which display ar/od from stored scores, like the ranking screen or score buttons, also do this calculation before displaying the values to the user. of course the mod selection screen does too.)
-	od = OsuGameRules::getRawOverallDifficultyForSpeedMultiplier(OsuGameRules::getRawHitWindow300(od), timescale);
-	ar = OsuGameRules::getRawApproachRateForSpeedMultiplier(OsuGameRules::getRawApproachTime(ar), timescale);
 
 	if (c300 < 0)
 		c300 = numHitObjects - c100 - c50 - misses;
@@ -590,32 +763,30 @@ double OsuDifficultyCalculator::calculatePPv2(int modsLegacy, double timescale, 
 	{
 		score.modsLegacy = modsLegacy;
 		score.countGreat = c300;
-		score.countGood = c100;
+		score.countOk = c100;
 		score.countMeh = c50;
 		score.countMiss = misses;
 		score.totalHits = c300 + c100 + c50 + misses;
 		score.totalSuccessfulHits = c300 + c100 + c50;
 		score.beatmapMaxCombo = maxPossibleCombo;
 		score.scoreMaxCombo = combo;
+		score.legacyTotalScore = legacyTotalScore;
 		{
 			score.accuracy = (score.totalHits > 0 ? (double)(c300 * 300 + c100 * 100 + c50 * 50) / (double)(score.totalHits * 300) : 0.0);
 			score.amountHitObjectsWithAccuracy = (modsLegacy & OsuReplay::ScoreV2 ? numCircles + numSliders : numCircles);
 		}
 	}
 
-	Attributes attributes;
-	{
-		attributes.AimStrain = aim;
-		attributes.SliderFactor = aimSliderFactor;
-		attributes.AimDifficultSliderCount = aimDifficultSliders;
-		attributes.AimDifficultStrainCount = aimDifficultStrains;
-		attributes.SpeedStrain = speed;
-		attributes.SpeedNoteCount = speedNotes;
-		attributes.SpeedDifficultStrainCount = speedDifficultStrains;
-		attributes.ApproachRate = ar;
-		attributes.OverallDifficulty = od;
-		attributes.SliderCount = numSliders;
-	}
+	// We apply original (not adjusted) OD here
+	attributes.OverallDifficulty = od;
+	attributes.SliderCount = numSliders;
+
+	// apply "timescale" aka speed multiplier to ar/od
+	// (the original incoming ar/od values are guaranteed to not yet have any speed multiplier applied to them, but they do have non-time-related mods already applied, like HR or any custom overrides)
+	// (yes, this does work correctly when the override slider "locking" feature is used. in this case, the stored ar/od is already compensated such that it will have the locked value AFTER applying the speed multiplier here)
+	// (all UI elements which display ar/od from stored scores, like the ranking screen or score buttons, also do this calculation before displaying the values to the user. of course the mod selection screen does too.)
+	ar = OsuGameRules::getRawApproachRateForSpeedMultiplier(OsuGameRules::getRawApproachTime(ar), timescale);
+	od = adjustOveralDifficultyByClockRate(od, timescale);
 
 	// calculateEffectiveMissCount @ https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/OsuPerformanceCalculator.cs
 	// required because slider breaks aren't exposed to pp calculation
@@ -626,10 +797,17 @@ double OsuDifficultyCalculator::calculatePPv2(int modsLegacy, double timescale, 
 		if ((double)combo < fullComboThreshold)
 			comboBasedMissCount = fullComboThreshold / std::max(1.0, (double)combo);
 	}
+
 	double effectiveMissCount = clamp<double>(comboBasedMissCount, (double)misses, (double)(c50 + c100 + misses));
 
+	if (score.legacyTotalScore > 0) 
+	{
+		double scoreBasedMisscount = calculateScoreBasedMisscount(attributes, score);
+		effectiveMissCount = clamp<double>(scoreBasedMisscount, (double)misses, (double)(c50 + c100 + misses));
+	}
+
 	// custom multipliers for nofail and spunout
-	double multiplier = 1.15; // keep final pp normalized across changes
+	double multiplier = performance_base_multiplier; // keep final pp normalized across changes
 	{
 		if (modsLegacy & OsuReplay::Mods::NoFail)
 			multiplier *= std::max(0.9, 1.0 - 0.02 * effectiveMissCount); // see https://github.com/ppy/osu-performance/pull/127/files
@@ -639,13 +817,18 @@ double OsuDifficultyCalculator::calculatePPv2(int modsLegacy, double timescale, 
 
 		if ((modsLegacy & OsuReplay::Mods::Relax) && !osu_stars_and_pp_lazer_relax_autopilot_nerf_disabled.getBool())
 		{
-			double okMultiplier = std::max(0.0, od > 0.0 ? 1.0 - std::pow(od / 13.33, 1.8) : 1.0);	// 100
+			double okMultiplier = 0.75 * std::max(0.0, od > 0.0 ? 1 - od / 13.33 : 1.0);	// 100
 			double mehMultiplier = std::max(0.0, od > 0.0 ? 1.0 - std::pow(od / 13.33, 5.0) : 1.0);	// 50
 			effectiveMissCount = std::min(effectiveMissCount + c100 * okMultiplier + c50 * mehMultiplier, (double)score.totalHits);
 		}
 	}
 
 	const double speedDeviation = calculateSpeedDeviation(score, attributes, timescale);
+
+	// Apply adjusted AR and OD when deviation is calculated
+	attributes.ApproachRate = ar;
+	attributes.OverallDifficulty = od;
+
 	const double aimValue = computeAimValue(score, attributes, effectiveMissCount);
 	const double speedValue = computeSpeedValue(score, attributes, effectiveMissCount, speedDeviation);
 	const double accuracyValue = computeAccuracyValue(score, attributes);
@@ -661,34 +844,32 @@ double OsuDifficultyCalculator::calculatePPv2(int modsLegacy, double timescale, 
 
 double OsuDifficultyCalculator::calculateTotalStarsFromSkills(double aim, double speed)
 {
-	double baseAimPerformance = std::pow(5.0 * std::max(1.0, aim / 0.0675) - 4.0, 3.0) / 100000.0;
-	double baseSpeedPerformance = std::pow(5.0 * std::max(1.0, speed / 0.0675) - 4.0, 3.0) / 100000.0;
+	double baseAimPerformance = strainDifficultyToPerformance(aim);
+	double baseSpeedPerformance = strainDifficultyToPerformance(speed);
 	double basePerformance = std::pow(std::pow(baseAimPerformance, 1.1) + std::pow(baseSpeedPerformance, 1.1), 1.0 / 1.1);
-	return basePerformance > 0.00001 ? 1.0476895531716472 /* Math.Cbrt(OsuPerformanceCalculator.PERFORMANCE_BASE_MULTIPLIER) */ * 0.027 * (std::cbrt(100000.0 / std::pow(2.0, 1 / 1.1) * basePerformance) + 4.0) : 0.0;
+	return calculateStarRating(basePerformance);
 }
-
-
 
 // https://github.com/ppy/osu-performance/blob/master/src/performance/osu/OsuScore.cpp
 // https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/OsuPerformanceCalculator.cs
 
-double OsuDifficultyCalculator::computeAimValue(const ScoreData &score, const OsuDifficultyCalculator::Attributes &attributes, double effectiveMissCount)
+double OsuDifficultyCalculator::computeAimValue(const ScoreData &score, const OsuDifficultyCalculator::DifficultyAttributes &attributes, double effectiveMissCount)
 {
 	if ((score.modsLegacy & OsuReplay::Relax2) && !osu_stars_and_pp_lazer_relax_autopilot_nerf_disabled.getBool())
 		return 0.0;
 
-	double aimDifficulty = attributes.AimStrain;
+	double aimDifficulty = attributes.AimDifficulty;
 
 	// McOsu doesn't track dropped slider ends, so the ScoreV2/lazer case can't be handled here
 	if (attributes.SliderCount > 0 && attributes.AimDifficultSliderCount > 0)
 	{
-		int maximumPossibleDroppedSliders = score.countGood + score.countMeh + score.countMiss;
+		int maximumPossibleDroppedSliders = score.countOk + score.countMeh + score.countMiss;
 		double estimateImproperlyFollowedDifficultSliders = clamp<double>((double)std::min(maximumPossibleDroppedSliders, score.beatmapMaxCombo - score.scoreMaxCombo), 0.0, attributes.AimDifficultSliderCount);
 		double sliderNerfFactor = (1.0 - attributes.SliderFactor) * std::pow(1.0 - estimateImproperlyFollowedDifficultSliders / attributes.AimDifficultSliderCount, 3.0) + attributes.SliderFactor;
 		aimDifficulty *= sliderNerfFactor;
 	}
 
-	double aimValue = std::pow(5.0 * std::max(1.0, aimDifficulty / 0.0675) - 4.0, 3.0) / 100000.0;
+	double aimValue = strainDifficultyToPerformance(aimDifficulty);
 
 	// length bonus
 	double lengthBonus = 0.95 + 0.4 * std::min(1.0, ((double)score.totalHits / 2000.0))
@@ -698,38 +879,24 @@ double OsuDifficultyCalculator::computeAimValue(const ScoreData &score, const Os
 	// miss penalty
 	// see https://github.com/ppy/osu/pull/16280/
 	if (effectiveMissCount > 0 && score.totalHits > 0)
-		aimValue *= 0.96 / ((effectiveMissCount / (4.0 * std::pow(std::log(attributes.AimDifficultStrainCount), 0.94))) + 1.0);
-
-	// ar bonus
-	double approachRateFactor = 0.0; // see https://github.com/ppy/osu-performance/pull/125/
-	if ((score.modsLegacy & OsuReplay::Relax) == 0 || osu_stars_and_pp_lazer_relax_autopilot_nerf_disabled.getBool())
 	{
-		if (attributes.ApproachRate > 10.33)
-			approachRateFactor = 0.3 * (attributes.ApproachRate - 10.33); // from 0.3 to 0.4 see https://github.com/ppy/osu-performance/pull/125/ // and completely changed the logic in https://github.com/ppy/osu-performance/pull/135/
-		else if (attributes.ApproachRate < 8.0)
-			approachRateFactor = 0.05 * (8.0 - attributes.ApproachRate); // from 0.01 to 0.1 see https://github.com/ppy/osu-performance/pull/125/ // and back again from 0.1 to 0.01 see https://github.com/ppy/osu-performance/pull/133/ // and completely changed the logic in https://github.com/ppy/osu-performance/pull/135/
+		double aimEstimatedSliderBreaks = calculateEstimatedSliderBreaks(score, attributes, attributes.AimTopWeightedSliderFactor, effectiveMissCount);
+		double relevantMissCount = std::min(effectiveMissCount + aimEstimatedSliderBreaks, double(score.countOk + score.countMeh + score.countMiss));
+		aimValue *= 0.96 / ((relevantMissCount / (4.0 * std::pow(std::log(attributes.AimDifficultStrainCount), 0.94))) + 1.0);
 	}
-
-	aimValue *= 1.0 + approachRateFactor * lengthBonus;
-
-	// hidden
-	if (score.modsLegacy & OsuReplay::Mods::Hidden)
-		aimValue *= 1.0 + 0.04 * (std::max(12.0 - attributes.ApproachRate, 0.0)); // NOTE: clamped to 0 because McOsu allows AR > 12
 
 	// scale aim with acc
 	aimValue *= score.accuracy;
-	// also consider acc difficulty when doing that
-	aimValue *= 0.98 + std::pow(std::max(0.0, attributes.OverallDifficulty), 2.0) / 2500.0;
 
 	return aimValue;
 }
 
-double OsuDifficultyCalculator::computeSpeedValue(const ScoreData &score, const Attributes &attributes, double effectiveMissCount, double speedDeviation)
+double OsuDifficultyCalculator::computeSpeedValue(const ScoreData &score, const DifficultyAttributes &attributes, double effectiveMissCount, double speedDeviation)
 {
 	if (((score.modsLegacy & OsuReplay::Relax) && !osu_stars_and_pp_lazer_relax_autopilot_nerf_disabled.getBool()) || std::isnan(speedDeviation))
 		return 0.0;
 
-	double speedValue = std::pow(5.0 * std::max(1.0, attributes.SpeedStrain / 0.0675) - 4.0, 3.0) / 100000.0;
+	double speedValue = strainDifficultyToPerformance(attributes.SpeedDifficulty);
 
 	// length bonus
 	double lengthBonus = 0.95 + 0.4 * std::min(1.0, ((double)score.totalHits / 2000.0))
@@ -739,18 +906,11 @@ double OsuDifficultyCalculator::computeSpeedValue(const ScoreData &score, const 
 	// miss penalty
 	// see https://github.com/ppy/osu/pull/16280/
 	if (effectiveMissCount > 0)
-		speedValue *= 0.96 / ((effectiveMissCount / (4.0 * std::pow(std::log(attributes.SpeedDifficultStrainCount), 0.94))) + 1.0);
-
-	// ar bonus
-	double approachRateFactor = 0.0; // see https://github.com/ppy/osu-performance/pull/125/
-	if (attributes.ApproachRate > 10.33)
-		approachRateFactor = 0.3 * (attributes.ApproachRate - 10.33); // from 0.3 to 0.4 see https://github.com/ppy/osu-performance/pull/125/ // and completely changed the logic in https://github.com/ppy/osu-performance/pull/135/
-
-	speedValue *= 1.0 + approachRateFactor * lengthBonus;
-
-	// hidden
-	if (score.modsLegacy & OsuReplay::Mods::Hidden)
-		speedValue *= 1.0 + 0.04 * (std::max(12.0 - attributes.ApproachRate, 0.0)); // NOTE: clamped to 0 because McOsu allows AR > 12
+	{
+		double speedEstimatedSliderBreaks = calculateEstimatedSliderBreaks(score, attributes, attributes.SpeedTopWeightedSliderFactor, effectiveMissCount);
+		double relevantMissCount = std::min(effectiveMissCount + speedEstimatedSliderBreaks, double(score.countOk + score.countMeh + score.countMiss));
+		speedValue *= 0.96 / ((relevantMissCount / (4.0 * std::pow(std::log(attributes.SpeedDifficultStrainCount), 0.94))) + 1.0);
+	}
 
 	double speedHighDeviationMultiplier = calculateSpeedHighDeviationNerf(attributes, speedDeviation);
 	speedValue *= speedHighDeviationMultiplier;
@@ -758,25 +918,25 @@ double OsuDifficultyCalculator::computeSpeedValue(const ScoreData &score, const 
 	// "Calculate accuracy assuming the worst case scenario"
 	double relevantTotalDiff = std::max(0.0, score.totalHits - attributes.SpeedNoteCount);
 	double relevantCountGreat = std::max(0.0, score.countGreat - relevantTotalDiff);
-	double relevantCountOk = std::max(0.0, score.countGood - std::max(0.0, relevantTotalDiff - score.countGreat));
-	double relevantCountMeh = std::max(0.0, score.countMeh - std::max(0.0, relevantTotalDiff - score.countGreat - score.countGood));
+	double relevantCountOk = std::max(0.0, score.countOk - std::max(0.0, relevantTotalDiff - score.countGreat));
+	double relevantCountMeh = std::max(0.0, score.countMeh - std::max(0.0, relevantTotalDiff - score.countGreat - score.countOk));
 	double relevantAccuracy = attributes.SpeedNoteCount == 0 ? 0 : (relevantCountGreat * 6.0 + relevantCountOk * 2.0 + relevantCountMeh) / (attributes.SpeedNoteCount * 6.0);
 
 	// see https://github.com/ppy/osu-performance/pull/128/
 	// Scale the speed value with accuracy and OD
-	speedValue *= (0.95 + std::pow(std::max(0.0, attributes.OverallDifficulty), 2.0) / 750.0) * std::pow((score.accuracy + relevantAccuracy) / 2.0, (14.5 - attributes.OverallDifficulty) / 2.0);
+	speedValue *= std::pow((score.accuracy + relevantAccuracy) / 2.0, (14.5 - attributes.OverallDifficulty) / 2);
 
 	return speedValue;
 }
 
-double OsuDifficultyCalculator::computeAccuracyValue(const ScoreData &score, const Attributes &attributes)
+double OsuDifficultyCalculator::computeAccuracyValue(const ScoreData &score, const DifficultyAttributes &attributes)
 {
 	if ((score.modsLegacy & OsuReplay::Relax) && !osu_stars_and_pp_lazer_relax_autopilot_nerf_disabled.getBool())
 		return 0.0;
 
 	double betterAccuracyPercentage;
 	if (score.amountHitObjectsWithAccuracy > 0)
-		betterAccuracyPercentage = ((double)(score.countGreat - std::max(score.totalHits - score.amountHitObjectsWithAccuracy, 0)) * 6.0 + (score.countGood * 2.0) + score.countMeh) / (double)(score.amountHitObjectsWithAccuracy * 6.0);
+		betterAccuracyPercentage = ((double)(score.countGreat - std::max(score.totalHits - score.amountHitObjectsWithAccuracy, 0)) * 6.0 + (score.countOk * 2.0) + score.countMeh) / (double)(score.amountHitObjectsWithAccuracy * 6.0);
 	else
 		betterAccuracyPercentage = 0.0;
 
@@ -792,7 +952,11 @@ double OsuDifficultyCalculator::computeAccuracyValue(const ScoreData &score, con
 
 	// hidden bonus
 	if (score.modsLegacy & OsuReplay::Mods::Hidden)
-		accuracyValue *= 1.08;
+	{
+		// Decrease bonus for AR > 10
+		accuracyValue *= 1.0 + 0.08 * reverseLerp(attributes.ApproachRate, 11.5, 10.0);
+	}
+		
 	// flashlight bonus
 	if (score.modsLegacy & OsuReplay::Mods::Flashlight)
 		accuracyValue *= 1.02;
@@ -800,9 +964,26 @@ double OsuDifficultyCalculator::computeAccuracyValue(const ScoreData &score, con
 	return accuracyValue;
 }
 
-double OsuDifficultyCalculator::calculateSpeedDeviation(const ScoreData &score, const Attributes &attributes, double timescale)
+double OsuDifficultyCalculator::calculateEstimatedSliderBreaks(const ScoreData &score, const DifficultyAttributes &attributes, double topWeightedSliderFactor, double effectiveMissCount)
 {
-	if (score.countGreat + score.countGood + score.countMeh == 0)
+	if (score.countOk == 0 || score.beatmapMaxCombo < 1)
+		return 0.0;
+
+	double missedComboPercent = 1.0 - (double)score.scoreMaxCombo / score.beatmapMaxCombo;
+	double estimatedSliderBreaks = std::min((double)score.countOk, effectiveMissCount * topWeightedSliderFactor);
+
+	// Scores with more Oks are more likely to have slider breaks.
+	double okAdjustment = ((score.countOk - estimatedSliderBreaks) + 0.5) / (double)score.countOk;
+
+	// There is a low probability of extra slider breaks on effective miss counts close to 1, as score based calculations are good at indicating if only a single break occurred.
+	estimatedSliderBreaks *= smoothstep(effectiveMissCount, 1.0, 2.0);
+
+	return estimatedSliderBreaks * okAdjustment * logistic(missedComboPercent, 0.33, 15.0);
+}
+
+double OsuDifficultyCalculator::calculateSpeedDeviation(const ScoreData &score, const DifficultyAttributes &attributes, double timescale)
+{
+	if (score.countGreat + score.countOk + score.countMeh == 0)
 		return std::numeric_limits<double>::quiet_NaN();
 
 	double speedNoteCount = attributes.SpeedNoteCount;
@@ -810,48 +991,51 @@ double OsuDifficultyCalculator::calculateSpeedDeviation(const ScoreData &score, 
 
 	double relevantCountMiss = std::min((double)score.countMiss, speedNoteCount);
 	double relevantCountMeh = std::min((double)score.countMeh, speedNoteCount - relevantCountMiss);
-	double relevantCountOk = std::min((double)score.countGood, speedNoteCount - relevantCountMiss - relevantCountMeh);
+	double relevantCountOk = std::min((double)score.countOk, speedNoteCount - relevantCountMiss - relevantCountMeh);
 	double relevantCountGreat = std::max(0.0, speedNoteCount - relevantCountMiss - relevantCountMeh - relevantCountOk);
 
 	return calculateDeviation(attributes, timescale, relevantCountGreat, relevantCountOk, relevantCountMeh, relevantCountMiss);
 }
 
-double OsuDifficultyCalculator::calculateDeviation(const Attributes &attributes, double timescale, double relevantCountGreat, double relevantCountOk, double relevantCountMeh, double relevantCountMiss)
+double OsuDifficultyCalculator::calculateDeviation(const DifficultyAttributes &attributes, double timescale, double relevantCountGreat, double relevantCountOk, double relevantCountMeh, double relevantCountMiss)
 {
 	if (relevantCountGreat + relevantCountOk + relevantCountMeh <= 0.0)
 		return std::numeric_limits<double>::quiet_NaN();
 
-	const double greatHitWindow = OsuGameRules::getRawHitWindow300(attributes.OverallDifficulty) / timescale;
-	const double okHitWindow = OsuGameRules::getRawHitWindow100(attributes.OverallDifficulty) / timescale;
-	const double mehHitWindow = OsuGameRules::getRawHitWindow50(attributes.OverallDifficulty) / timescale;
+	const double greatHitWindow = adjustHitWindow(OsuGameRules::getRawHitWindow300(attributes.OverallDifficulty)) / timescale;
+	const double okHitWindow = adjustHitWindow(OsuGameRules::getRawHitWindow100(attributes.OverallDifficulty)) / timescale;
+	const double mehHitWindow = adjustHitWindow(OsuGameRules::getRawHitWindow50(attributes.OverallDifficulty)) / timescale;
 
 	const double z = 2.32634787404;
 	const double sqrt2 = 1.4142135623730951;
 	const double sqrt3 = 1.7320508075688772;
 	const double sqrt2OverPi = 0.7978845608028654;
 
-	double objectCount = relevantCountGreat + relevantCountOk + relevantCountMeh + relevantCountMiss;
-	double n = std::max(1.0, objectCount - relevantCountMiss - relevantCountMeh);
+	double n = std::max(1.0, relevantCountGreat + relevantCountOk);
 	double p = relevantCountGreat / n;
-	double pLowerBound = (n * p + z * z / 2.0) / (n + z * z) - z / (n + z * z) * sqrt(n * p * (1.0 - p) + z * z / 4.0);
-	double deviation = greatHitWindow / (sqrt2 * erfInv(pLowerBound));
-	double randomValue = sqrt2OverPi * okHitWindow * std::exp(-0.5 * std::pow(okHitWindow / deviation, 2.0)) / (deviation * erf(okHitWindow / (sqrt2 * deviation)));
-	deviation *= std::sqrt(1.0 - randomValue);
+	double pLowerBound = std::min(p, (n * p + z * z / 2.0) / (n + z * z) - z / (n + z * z) * sqrt(n * p * (1.0 - p) + z * z / 4.0));
 
-	double limitValue = okHitWindow / sqrt3;
-	if (pLowerBound == 0.0 || randomValue >= 1.0 || deviation > limitValue)
-		deviation = limitValue;
+	double deviation;
+
+	if (pLowerBound > 0.01)
+    {
+		deviation = greatHitWindow / (sqrt2 * erfInv(pLowerBound));
+		double okHitWindowTailAmount = sqrt2OverPi * okHitWindow * std::exp(-0.5 * std::pow(okHitWindow / deviation, 2.0)) / (deviation * erf(okHitWindow / (sqrt2 * deviation)));
+		deviation *= std::sqrt(1.0 - okHitWindowTailAmount);
+	}
+	else
+		deviation = okHitWindow / sqrt3;
 
 	double mehVariance = (mehHitWindow * mehHitWindow + okHitWindow * mehHitWindow + okHitWindow * okHitWindow) / 3.0;
 	return std::sqrt(((relevantCountGreat + relevantCountOk) * std::pow(deviation, 2.0) + relevantCountMeh * mehVariance) / (relevantCountGreat + relevantCountOk + relevantCountMeh));
 }
 
-double OsuDifficultyCalculator::calculateSpeedHighDeviationNerf(const Attributes &attributes, double speedDeviation)
+double OsuDifficultyCalculator::calculateSpeedHighDeviationNerf(const DifficultyAttributes &attributes, double speedDeviation)
 {
 	if (std::isnan(speedDeviation))
 		return 0.0;
 
-	double speedValue = std::pow(5.0 * std::max(1.0, attributes.SpeedStrain / 0.0675) - 4.0, 3.0) / 100000.0;
+	double speedValue = std::pow(5.0 * std::max(1.0, attributes.SpeedDifficulty / 0.0675) - 4.0, 3.0) / 100000.0;
 	double excessSpeedDifficultyCutoff = 100.0 + 220.0 * std::pow(22.0 / speedDeviation, 6.5);
 	if (speedValue <= excessSpeedDifficultyCutoff)
 		return 1.0;
@@ -864,6 +1048,280 @@ double OsuDifficultyCalculator::calculateSpeedHighDeviationNerf(const Attributes
 	return adjustedSpeedValue / speedValue;
 }
 
+double OsuDifficultyCalculator::calculateScoreBasedMisscount(const DifficultyAttributes &attributes, const ScoreData &score)
+{
+	if (score.beatmapMaxCombo == 0)
+		return 0;
+
+	double scoreV1Multiplier = attributes.LegacyScoreBaseMultiplier * getLegacyScoreMultiplier(score);
+	double relevantComboPerObject = calculateRelevantScoreComboPerObject(attributes, score);
+
+	double maximumMissCount = calculateMaximumComboBasedMissCount(attributes, score);
+
+	double scoreObtainedDuringMaxCombo = calculateScoreAtCombo(attributes, score, score.scoreMaxCombo, relevantComboPerObject, scoreV1Multiplier);
+	double remainingScore = score.legacyTotalScore - scoreObtainedDuringMaxCombo;
+
+	if (remainingScore <= 0)
+		return maximumMissCount;
+
+	double remainingCombo = score.beatmapMaxCombo - score.scoreMaxCombo;
+	double expectedRemainingScore = calculateScoreAtCombo(attributes, score, remainingCombo, relevantComboPerObject, scoreV1Multiplier);
+
+	double scoreBasedMissCount = expectedRemainingScore / remainingScore;
+
+	// If there's less then one miss detected - let combo-based miss count decide if this is FC or not
+	scoreBasedMissCount = std::max(scoreBasedMissCount, 1.0);
+
+	// Cap result by very harsh version of combo-based miss count
+	return std::min(scoreBasedMissCount, maximumMissCount);
+}
+
+double OsuDifficultyCalculator::calculateScoreAtCombo(const DifficultyAttributes &attributes, const ScoreData &score, double combo, double relevantComboPerObject, double scoreV1Multiplier)
+{
+	int countGreat = score.countGreat;
+	int countOk = score.countOk;
+	int countMeh = score.countMeh;
+	int countMiss = score.countMiss;
+
+	int totalHits = countGreat + countOk + countMeh + countMiss;
+
+	double estimatedObjects = (combo / relevantComboPerObject) - 1.0;
+
+	// The combo portion of ScoreV1 follows arithmetic progression
+	// Therefore, we calculate the combo portion of score using the combo per object and our current combo.
+	double comboScore = relevantComboPerObject > 0.0 ? (2.0 * (relevantComboPerObject - 1.0) + (estimatedObjects - 1.0) * relevantComboPerObject) * estimatedObjects / 2.0 : 0.0;
+
+	// We then apply the accuracy and ScoreV1 multipliers to the resulting score.
+	comboScore *= score.accuracy * 300.0 / 25.0 * scoreV1Multiplier;
+
+	double objectsHit = (totalHits - countMiss) * combo / score.beatmapMaxCombo;
+
+	// Score also has a non-combo portion we need to create the final score value.
+	double nonComboScore = (300.0 + attributes.NestedScorePerObject) * score.accuracy * objectsHit;
+
+	return comboScore + nonComboScore;
+}
+
+double OsuDifficultyCalculator::calculateRelevantScoreComboPerObject(const DifficultyAttributes &attributes, const ScoreData &score)
+{
+	double comboScore = attributes.MaximumLegacyComboScore;
+
+	// We then reverse apply the ScoreV1 multipliers to get the raw value.
+	comboScore /= 300.0 / 25.0 * attributes.LegacyScoreBaseMultiplier;
+
+	// Reverse the arithmetic progression to work out the amount of combo per object based on the score.
+	double result = (double)((score.beatmapMaxCombo - 2) * score.beatmapMaxCombo);
+	result /= std::max((double)score.beatmapMaxCombo + 2.0 * (comboScore - 1.0), 1.0);
+
+	return result;
+}
+
+double OsuDifficultyCalculator::calculateMaximumComboBasedMissCount(const DifficultyAttributes &attributes, const ScoreData &score)
+{
+	int scoreMissCount = score.countMiss;
+
+	if (attributes.SliderCount <= 0)
+		return scoreMissCount;
+
+	int countOk = score.countOk;
+	int countMeh = score.countMeh;
+
+	int totalImperfectHits = countOk + countMeh + scoreMissCount;
+
+	double missCount = 0;
+
+	// Consider that full combo is maximum combo minus dropped slider tails since they don't contribute to combo but also don't break it
+	// In classic scores we can't know the amount of dropped sliders so we estimate to 10% of all sliders on the map
+	double fullComboThreshold = score.beatmapMaxCombo - 0.1 * attributes.SliderCount;
+
+	if (score.scoreMaxCombo < fullComboThreshold)
+		missCount = std::pow(fullComboThreshold / std::max(1, score.scoreMaxCombo), 2.5);
+
+	// In classic scores there can't be more misses than a sum of all non-perfect judgements
+	missCount = std::min(missCount, (double)totalImperfectHits);
+
+	// Every slider has *at least* 2 combo attributed in classic mechanics.
+	// If they broke on a slider with a tick, then this still works since they would have lost at least 2 combo (the tick and the end)
+	// Using this as a max means a score that loses 1 combo on a map can't possibly have been a slider break.
+	// It must have been a slider end.
+	int maxPossibleSliderBreaks = std::min(attributes.SliderCount, (score.beatmapMaxCombo - score.scoreMaxCombo) / 2);
+
+	double sliderBreaks = missCount - scoreMissCount;
+
+	if (sliderBreaks > maxPossibleSliderBreaks)
+		missCount = scoreMissCount + maxPossibleSliderBreaks;
+
+	return missCount;
+}
+
+float OsuDifficultyCalculator::getLegacyScoreMultiplier(const ScoreData &score)
+{
+	float multiplier = 1.0f;
+
+	if (score.modsLegacy & OsuReplay::Easy)
+		multiplier *= 0.50f;
+	if (score.modsLegacy & OsuReplay::HalfTime)
+		multiplier *= 0.30f;
+	if (score.modsLegacy & OsuReplay::HardRock)
+		multiplier *= 1.06f;
+	if (score.modsLegacy & OsuReplay::DoubleTime)
+		multiplier *= 1.12f;
+	if (score.modsLegacy & OsuReplay::Hidden)
+		multiplier *= 1.06f;
+	if (score.modsLegacy & OsuReplay::SpunOut)
+		multiplier *= 0.90f;
+
+	return multiplier;
+}
+
+// https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/OsuRatingCalculator.cs
+
+double OsuDifficultyCalculator::calculateDifficultyRating(double difficultyValue)
+{
+	const double difficulty_multiplier = 0.0675;
+	return std::sqrt(difficultyValue) * difficulty_multiplier;
+}
+
+double OsuDifficultyCalculator::calculateAimVisibilityFactor(double approachRate, double mechanicalDifficultyRating)
+{
+	const double ar_factor_end_point = 11.5;
+
+	double mechanicalDifficultyFactor = reverseLerp(mechanicalDifficultyRating, 5.0, 10.0);
+	double arFactorStartingPoint = lerp<double>(9, 10.33, mechanicalDifficultyFactor);
+
+	return reverseLerp(approachRate, ar_factor_end_point, arFactorStartingPoint);
+}
+
+double OsuDifficultyCalculator::calculateSpeedVisibilityFactor(double approachRate, double mechanicalDifficultyRating)
+{
+	const double ar_factor_end_point = 11.5;
+
+	double mechanicalDifficultyFactor = reverseLerp(mechanicalDifficultyRating, 5.0, 10.0);
+	double arFactorStartingPoint = lerp<double>(10, 10.33, mechanicalDifficultyFactor);
+
+	return reverseLerp(approachRate, ar_factor_end_point, arFactorStartingPoint);
+}
+
+double OsuDifficultyCalculator::calculateVisibilityBonus(double approachRate, double visibilityFactor, double sliderFactor)
+{
+	// WARNING: this value is equal to true for Traceable (Lazer mod) and the lazer-specific HD setting.
+	// So in this case we're always setting it to false
+	bool isAlwaysPartiallyVisible = false;
+
+	double readingBonus = (isAlwaysPartiallyVisible ? 0.025 : 0.04) * (12.0 - std::max(std::max(12.0, approachRate), 7.0)); // NOTE: clamped because McOsu allows AR > 12
+
+	readingBonus *= visibilityFactor;
+
+	// We want to reward slideraim on low AR less
+	double sliderVisibilityFactor = std::pow(sliderFactor, 3.0);
+
+	// For AR up to 0 - reduce reward for very low ARs when object is visible
+	if (approachRate < 7.0)
+		readingBonus += (isAlwaysPartiallyVisible ? 0.02 : 0.045) * (7.0 - std::max(approachRate, 0.0)) * sliderVisibilityFactor;
+
+	// Starting from AR0 - cap values so they won't grow to infinity
+	if (approachRate < 0.0)
+		readingBonus += (isAlwaysPartiallyVisible ? 0.01 : 0.1) * (1.0 - std::max(1.5, approachRate)) * sliderVisibilityFactor;
+
+	return readingBonus;
+}
+
+double OsuDifficultyCalculator::computeAimRating(double aimDifficultyValue, int totalHits, double approachRate, double overallDifficulty, double mechanicalDifficultyRating, double sliderFactor, const BeatmapDiffcalcData &beatmapData)
+{
+	if (beatmapData.autopilot && !osu_stars_and_pp_lazer_relax_autopilot_nerf_disabled.getBool())
+		return 0;
+
+	double aimRating = calculateDifficultyRating(aimDifficultyValue);
+
+	if (beatmapData.touchDevice)
+		aimRating = std::pow(aimRating, 0.8);
+
+	if (beatmapData.relax && !osu_stars_and_pp_lazer_relax_autopilot_nerf_disabled.getBool())
+		aimRating *= 0.9;
+
+	double ratingMultiplier = 1.0;
+
+	double approachRateLengthBonus = 0.95 + 0.4 * std::min(1.0, totalHits / 2000.0) +
+										(totalHits > 2000 ? std::log10(totalHits / 2000.0) * 0.5 : 0.0);
+
+	double approachRateFactor = 0.0;
+	if (approachRate > 10.33)
+		approachRateFactor = 0.3 * (approachRate - 10.33);
+	else if (approachRate < 8.0)
+		approachRateFactor = 0.05 * (8.0 - approachRate);
+
+	if (beatmapData.relax && !osu_stars_and_pp_lazer_relax_autopilot_nerf_disabled.getBool())
+		approachRateFactor = 0.0;
+
+	ratingMultiplier += approachRateFactor * approachRateLengthBonus; // Buff for longer maps with high AR.
+
+	if (beatmapData.hidden)
+	{
+		double visibilityFactor = calculateAimVisibilityFactor(approachRate, mechanicalDifficultyRating);
+		ratingMultiplier += calculateVisibilityBonus(approachRate, visibilityFactor, sliderFactor);
+	}
+
+	// It is important to consider accuracy difficulty when scaling with accuracy.
+	ratingMultiplier *= 0.98 + std::pow(std::max(0.0, overallDifficulty), 2.0) / 2500.0;
+
+	return aimRating * std::cbrt(ratingMultiplier);
+}
+
+double OsuDifficultyCalculator::computeSpeedRating(double speedDifficultyValue, int totalHits, double approachRate, double overallDifficulty, double mechanicalDifficultyRating, const BeatmapDiffcalcData &beatmapData)
+{
+	if (beatmapData.relax && !osu_stars_and_pp_lazer_relax_autopilot_nerf_disabled.getBool())
+		return 0.0;
+
+	double speedRating = calculateDifficultyRating(speedDifficultyValue);
+
+	if (beatmapData.autopilot && !osu_stars_and_pp_lazer_relax_autopilot_nerf_disabled.getBool())
+		speedRating *= 0.5;
+
+	double ratingMultiplier = 1.0;
+
+	double approachRateLengthBonus = 0.95 + 0.4 * std::min(1.0, totalHits / 2000.0) +
+										(totalHits > 2000 ? std::log10(totalHits / 2000.0) * 0.5 : 0.0);
+
+	double approachRateFactor = 0.0;
+	if (approachRate > 10.33)
+		approachRateFactor = 0.3 * (approachRate - 10.33);
+
+	if (beatmapData.autopilot && !osu_stars_and_pp_lazer_relax_autopilot_nerf_disabled.getBool())
+		approachRateFactor = 0.0;
+
+	ratingMultiplier += approachRateFactor * approachRateLengthBonus; // Buff for longer maps with high AR.
+
+	if (beatmapData.hidden)
+	{
+		double visibilityFactor = calculateSpeedVisibilityFactor(approachRate, mechanicalDifficultyRating);
+		ratingMultiplier += calculateVisibilityBonus(approachRate, visibilityFactor);
+	}
+
+	ratingMultiplier *= 0.95 + std::pow(std::max(0.0, overallDifficulty), 2.0) / 750.0;
+
+	return speedRating * std::cbrt(ratingMultiplier);
+}
+
+// https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/OsuDifficultyCalculator.cs#L148-L164
+double OsuDifficultyCalculator::calculateStarRating(double basePerformance)
+{
+	const double star_rating_multiplier = 0.0265;
+
+	if (basePerformance <= 0.00001)
+		return 0.0;
+
+	return std::cbrt(performance_base_multiplier) * star_rating_multiplier * (std::cbrt(100000.0 / std::pow(2.0, 1.0 / 1.1) * basePerformance) + 4.0);
+}
+
+double OsuDifficultyCalculator::calculateMechanicalDifficultyRating(double aimDifficultyValue, double speedDifficultyValue)
+{
+	double aimValue = strainDifficultyToPerformance(calculateDifficultyRating(aimDifficultyValue));
+	double speedValue = strainDifficultyToPerformance(calculateDifficultyRating(speedDifficultyValue));
+
+	double totalValue = std::pow(std::pow(aimValue, 1.1) + std::pow(speedValue, 1.1), 1.0 / 1.1);
+
+	return calculateStarRating(totalValue);
+}
 
 double OsuDifficultyCalculator::erf(double x)
 {
@@ -876,240 +1334,56 @@ double OsuDifficultyCalculator::erf(double x)
 		case FP_ZERO:
 			return 0.0;
 		default:
-			return erfImp(x, false);
+        	break;
 	}
+
+	// Constants for approximation (Abramowitz and Stegun formula 7.1.26)
+	double t = 1.0 / (1.0 + 0.3275911 * std::abs(x));
+	double tau = t * (0.254829592
+						+ t * (-0.284496736
+								+ t * (1.421413741
+									+ t * (-1.453152027
+											+ t * 1.061405429))));
+
+	double erf = 1.0 - tau * std::exp(-x * x);
+
+	return x >= 0 ? erf : -erf;
 }
 
-double OsuDifficultyCalculator::erfInv(double z)
+double OsuDifficultyCalculator::erfInv(double x)
 {
-	if (z == 0.0)
+	if (x == 0.0)
 		return 0.0;
-	else if (z >= 1.0)
+	else if (x >= 1.0)
 		return std::numeric_limits<double>::infinity();
-	else if (z <= -1.0)
+	else if (x <= -1.0)
 		return -std::numeric_limits<double>::infinity();
 
-	if (z < 0.0)
-		return erfInvImp(-z, 1.0 + z, -1.0);
-	else
-		return erfInvImp(z, 1.0 - z, 1.0);
+	const double a = 0.147;
+	double sgn = (x > 0.0) ? 1.0 : (x < 0.0 ? -1.0 : 0.0);
+	x = std::fabs(x);
+
+	double ln = std::log(1.0 - x * x);
+	double t1 = 2.0 / (PI * a) + ln / 2.0;
+	double t2 = ln / a;
+	double baseApprox = std::sqrt(t1 * t1 - t2) - t1;
+
+	// Correction reduces max error from -0.005 to -0.00045.
+	double c = (x >= 0.85)
+		? std::pow((x - 0.85) / 0.293, 8.0)
+		: 0.0;
+
+	double erfInv = sgn * (std::sqrt(baseApprox) + c);
+	return erfInv;
 }
 
-double OsuDifficultyCalculator::erfImp(double z, bool invert)
+double OsuDifficultyCalculator::adjustOveralDifficultyByClockRate(double OD, double clockRate)
 {
-	if (z < 0.0)
-	{
-		if (!invert)
-			return -erfImp(-z, false);
-
-		if (z < -0.5)
-			return 2 - erfImp(-z, true);
-
-		return 1.0 + erfImp(-z, false);
-	}
-
-	double result;
-	if (z < 0.5)
-	{
-		static constexpr double erf_imp_an[] = {0.00337916709551257388990745, -0.00073695653048167948530905, -0.374732337392919607868241, 0.0817442448733587196071743, -0.0421089319936548595203468, 0.0070165709512095756344528, -0.00495091255982435110337458, 0.000871646599037922480317225};
-		static constexpr double erf_imp_ad[] = {1, -0.218088218087924645390535, 0.412542972725442099083918, -0.0841891147873106755410271, 0.0655338856400241519690695, -0.0120019604454941768171266, 0.00408165558926174048329689, -0.000615900721557769691924509};
-
-		if (z < 1e-10)
-			result = (z * 1.125) + (z * 0.003379167095512573896158903121545171688);
-		else
-			result = (z * 1.125) + (z * evaluatePolynomial(z, erf_imp_an) / evaluatePolynomial(z, erf_imp_ad));
-	}
-	else if (z < 110)
-	{
-		invert = !invert;
-		double r, b;
-
-		if (z < 0.75)
-		{
-			static constexpr double erf_imp_bn[] = {-0.0361790390718262471360258, 0.292251883444882683221149, 0.281447041797604512774415, 0.125610208862766947294894, 0.0274135028268930549240776, 0.00250839672168065762786937};
-			static constexpr double erf_imp_bd[] = {1, 1.8545005897903486499845, 1.43575803037831418074962, 0.582827658753036572454135, 0.124810476932949746447682, 0.0113724176546353285778481};
-			r = evaluatePolynomial(z - 0.5, erf_imp_bn) / evaluatePolynomial(z - 0.5, erf_imp_bd);
-
-			// NOTE: despite being assigned to a double, all of these are single-precision float literals in the original code
-			b = 0.3440242112f;
-		}
-		else if (z < 1.25)
-		{
-			static constexpr double erf_imp_cn[] = {-0.0397876892611136856954425, 0.153165212467878293257683, 0.191260295600936245503129, 0.10276327061989304213645, 0.029637090615738836726027, 0.0046093486780275489468812, 0.000307607820348680180548455};
-			static constexpr double erf_imp_cd[] = {1, 1.95520072987627704987886, 1.64762317199384860109595, 0.768238607022126250082483, 0.209793185936509782784315, 0.0319569316899913392596356, 0.00213363160895785378615014};
-			r = evaluatePolynomial(z - 0.75, erf_imp_cn) / evaluatePolynomial(z - 0.75, erf_imp_cd);
-			b = 0.419990927f;
-		}
-		else if (z < 2.25)
-		{
-			static constexpr double erf_imp_dn[] = {-0.0300838560557949717328341, 0.0538578829844454508530552, 0.0726211541651914182692959, 0.0367628469888049348429018, 0.00964629015572527529605267, 0.00133453480075291076745275, 0.778087599782504251917881e-4};
-			static constexpr double erf_imp_dd[] = {1, 1.75967098147167528287343, 1.32883571437961120556307, 0.552528596508757581287907, 0.133793056941332861912279, 0.0179509645176280768640766, 0.00104712440019937356634038, -0.106640381820357337177643e-7};
-			r = evaluatePolynomial(z - 1.25, erf_imp_dn) / evaluatePolynomial(z - 1.25, erf_imp_dd);
-			b = 0.4898625016f;
-		}
-		else if (z < 3.5)
-		{
-			static constexpr double erf_imp_en[] = {-0.0117907570137227847827732, 0.014262132090538809896674, 0.0202234435902960820020765, 0.00930668299990432009042239, 0.00213357802422065994322516, 0.00025022987386460102395382, 0.120534912219588189822126e-4};
-			static constexpr double erf_imp_ed[] = {1, 1.50376225203620482047419, 0.965397786204462896346934, 0.339265230476796681555511, 0.0689740649541569716897427, 0.00771060262491768307365526, 0.000371421101531069302990367};
-			r = evaluatePolynomial(z - 2.25, erf_imp_en) / evaluatePolynomial(z - 2.25, erf_imp_ed);
-			b = 0.5317370892f;
-		}
-		else if (z < 5.25)
-		{
-			static constexpr double erf_imp_fn[] = {-0.00546954795538729307482955, 0.00404190278731707110245394, 0.0054963369553161170521356, 0.00212616472603945399437862, 0.000394984014495083900689956, 0.365565477064442377259271e-4, 0.135485897109932323253786e-5};
-			static constexpr double erf_imp_fd[] = {1, 1.21019697773630784832251, 0.620914668221143886601045, 0.173038430661142762569515, 0.0276550813773432047594539, 0.00240625974424309709745382, 0.891811817251336577241006e-4, -0.465528836283382684461025e-11};
-			r = evaluatePolynomial(z - 3.5, erf_imp_fn) / evaluatePolynomial(z - 3.5, erf_imp_fd);
-			b = 0.5489973426f;
-		}
-		else if (z < 8)
-		{
-			static constexpr double erf_imp_gn[] = {-0.00270722535905778347999196, 0.0013187563425029400461378, 0.00119925933261002333923989, 0.00027849619811344664248235, 0.267822988218331849989363e-4, 0.923043672315028197865066e-6};
-			static constexpr double erf_imp_gd[] = {1, 0.814632808543141591118279, 0.268901665856299542168425, 0.0449877216103041118694989, 0.00381759663320248459168994, 0.000131571897888596914350697, 0.404815359675764138445257e-11};
-			r = evaluatePolynomial(z - 5.25, erf_imp_gn) / evaluatePolynomial(z - 5.25, erf_imp_gd);
-			b = 0.5571740866f;
-		}
-		else if (z < 11.5)
-		{
-			static constexpr double erf_imp_hn[] = {-0.00109946720691742196814323, 0.000406425442750422675169153, 0.000274499489416900707787024, 0.465293770646659383436343e-4, 0.320955425395767463401993e-5, 0.778286018145020892261936e-7};
-			static constexpr double erf_imp_hd[] = {1, 0.588173710611846046373373, 0.139363331289409746077541, 0.0166329340417083678763028, 0.00100023921310234908642639, 0.24254837521587225125068e-4};
-			r = evaluatePolynomial(z - 8, erf_imp_hn) / evaluatePolynomial(z - 8, erf_imp_hd);
-			b = 0.5609807968f;
-		}
-		else if (z < 17)
-		{
-			static constexpr double erf_imp_in[] = {-0.00056907993601094962855594, 0.000169498540373762264416984, 0.518472354581100890120501e-4, 0.382819312231928859704678e-5, 0.824989931281894431781794e-7};
-			static constexpr double erf_imp_id[] = {1, 0.339637250051139347430323, 0.043472647870310663055044, 0.00248549335224637114641629, 0.535633305337152900549536e-4, -0.117490944405459578783846e-12};
-			r = evaluatePolynomial(z - 11.5, erf_imp_in) / evaluatePolynomial(z - 11.5, erf_imp_id);
-			b = 0.5626493692f;
-		}
-		else if (z < 24)
-		{
-			static constexpr double erf_imp_jn[] = {-0.000241313599483991337479091, 0.574224975202501512365975e-4, 0.115998962927383778460557e-4, 0.581762134402593739370875e-6, 0.853971555085673614607418e-8};
-			static constexpr double erf_imp_jd[] = {1, 0.233044138299687841018015, 0.0204186940546440312625597, 0.000797185647564398289151125, 0.117019281670172327758019e-4};
-			r = evaluatePolynomial(z - 17, erf_imp_jn) / evaluatePolynomial(z - 17, erf_imp_jd);
-			b = 0.5634598136f;
-		}
-		else if (z < 38)
-		{
-			static constexpr double erf_imp_kn[] = {-0.000146674699277760365803642, 0.162666552112280519955647e-4, 0.269116248509165239294897e-5, 0.979584479468091935086972e-7, 0.101994647625723465722285e-8};
-			static constexpr double erf_imp_kd[] = {1, 0.165907812944847226546036, 0.0103361716191505884359634, 0.000286593026373868366935721, 0.298401570840900340874568e-5};
-			r = evaluatePolynomial(z - 24, erf_imp_kn) / evaluatePolynomial(z - 24, erf_imp_kd);
-			b = 0.5638477802f;
-		}
-		else if (z < 60)
-		{
-			static constexpr double erf_imp_ln[] = {-0.583905797629771786720406e-4, 0.412510325105496173512992e-5, 0.431790922420250949096906e-6, 0.993365155590013193345569e-8, 0.653480510020104699270084e-10};
-			static constexpr double erf_imp_ld[] = {1, 0.105077086072039915406159, 0.00414278428675475620830226, 0.726338754644523769144108e-4, 0.477818471047398785369849e-6};
-			r = evaluatePolynomial(z - 38, erf_imp_ln) / evaluatePolynomial(z - 38, erf_imp_ld);
-			b = 0.5640528202f;
-		}
-		else if (z < 85)
-		{
-			static constexpr double erf_imp_mn[] = {-0.196457797609229579459841e-4, 0.157243887666800692441195e-5, 0.543902511192700878690335e-7, 0.317472492369117710852685e-9};
-			static constexpr double erf_imp_md[] = {1, 0.052803989240957632204885, 0.000926876069151753290378112, 0.541011723226630257077328e-5, 0.535093845803642394908747e-15};
-			r = evaluatePolynomial(z - 60, erf_imp_mn) / evaluatePolynomial(z - 60, erf_imp_md);
-			b = 0.5641309023f;
-		}
-		else
-		{
-			static constexpr double erf_imp_nn[] = {-0.789224703978722689089794e-5, 0.622088451660986955124162e-6, 0.145728445676882396797184e-7, 0.603715505542715364529243e-10};
-			static constexpr double erf_imp_nd[] = {1, 0.0375328846356293715248719, 0.000467919535974625308126054, 0.193847039275845656900547e-5};
-			r = evaluatePolynomial(z - 85, erf_imp_nn) / evaluatePolynomial(z - 85, erf_imp_nd);
-			b = 0.5641584396f;
-		}
-
-		double g = std::exp(-z * z) / z;
-		result = (g * b) + (g * r);
-	}
-	else
-	{
-		result = 0.0;
-		invert = !invert;
-	}
-
-	if (invert)
-		result = 1.0 - result;
-
-	return result;
+	double hitwindow = OsuGameRules::getRawHitWindow300(OD);
+	hitwindow = adjustHitWindow(hitwindow);
+	hitwindow /= clockRate;
+	return (79.5 - hitwindow) / 6.0;
 }
-
-double OsuDifficultyCalculator::erfInvImp(double p, double q, double s)
-{
-	double result;
-
-	if (p <= 0.5)
-	{
-		static constexpr double erv_inv_imp_an[] = {-0.000508781949658280665617, -0.00836874819741736770379, 0.0334806625409744615033, -0.0126926147662974029034, -0.0365637971411762664006, 0.0219878681111168899165, 0.00822687874676915743155, -0.00538772965071242932965};
-		static constexpr double erv_inv_imp_ad[] = {1, -0.970005043303290640362, -1.56574558234175846809, 1.56221558398423026363, 0.662328840472002992063, -0.71228902341542847553, -0.0527396382340099713954, 0.0795283687341571680018, -0.00233393759374190016776, 0.000886216390456424707504};
-		const float y = 0.0891314744949340820313f;
-		double g = p * (p + 10);
-		double r = evaluatePolynomial(p, erv_inv_imp_an) / evaluatePolynomial(p, erv_inv_imp_ad);
-		result = (g * y) + (g * r);
-	}
-	else if (q >= 0.25)
-	{
-		static constexpr double erv_inv_imp_bn[] = {-0.202433508355938759655, 0.105264680699391713268, 8.37050328343119927838, 17.6447298408374015486, -18.8510648058714251895, -44.6382324441786960818, 17.445385985570866523, 21.1294655448340526258, -3.67192254707729348546};
-		static constexpr double erv_inv_imp_bd[] = {1, 6.24264124854247537712, 3.9713437953343869095, -28.6608180499800029974, -20.1432634680485188801, 48.5609213108739935468, 10.8268667355460159008, -22.6436933413139721736, 1.72114765761200282724};
-		const float y = 2.249481201171875f;
-		double g = std::sqrt(-2.0 * std::log(q));
-		double xs = q - 0.25;
-		double r = evaluatePolynomial(xs, erv_inv_imp_bn) / evaluatePolynomial(xs, erv_inv_imp_bd);
-		result = g / (y + r);
-	}
-	else
-	{
-		double x = std::sqrt(-std::log(q));
-
-		if (x < 3)
-		{
-			static constexpr double erv_inv_imp_cn[] = {-0.131102781679951906451, -0.163794047193317060787, 0.117030156341995252019, 0.387079738972604337464, 0.337785538912035898924, 0.142869534408157156766, 0.0290157910005329060432, 0.00214558995388805277169, -0.679465575181126350155e-6, 0.285225331782217055858e-7, -0.681149956853776992068e-9};
-			static constexpr double erv_inv_imp_cd[] = {1, 3.46625407242567245975, 5.38168345707006855425, 4.77846592945843778382, 2.59301921623620271374, 0.848854343457902036425, 0.152264338295331783612, 0.01105924229346489121};
-			const float y = 0.807220458984375f;
-			double xs = x - 1.125;
-			double r = evaluatePolynomial(xs, erv_inv_imp_cn) / evaluatePolynomial(xs, erv_inv_imp_cd);
-			result = (y * x) + (r * x);
-		}
-		else if (x < 6)
-		{
-			static constexpr double erv_inv_imp_dn[] = {-0.0350353787183177984712, -0.00222426529213447927281, 0.0185573306514231072324, 0.00950804701325919603619, 0.00187123492819559223345, 0.000157544617424960554631, 0.460469890584317994083e-5, -0.230404776911882601748e-9, 0.266339227425782031962e-11};
-			static constexpr double erv_inv_imp_dd[] = {1, 1.3653349817554063097, 0.762059164553623404043, 0.220091105764131249824, 0.0341589143670947727934, 0.00263861676657015992959, 0.764675292302794483503e-4};
-			const float y = 0.93995571136474609375f;
-			double xs = x - 3;
-			double r = evaluatePolynomial(xs, erv_inv_imp_dn) / evaluatePolynomial(xs, erv_inv_imp_dd);
-			result = (y * x) + (r * x);
-		}
-		else if (x < 18)
-		{
-			static constexpr double erv_inv_imp_en[] = {-0.0167431005076633737133, -0.00112951438745580278863, 0.00105628862152492910091, 0.000209386317487588078668, 0.149624783758342370182e-4, 0.449696789927706453732e-6, 0.462596163522878599135e-8, -0.281128735628831791805e-13, 0.99055709973310326855e-16};
-			static constexpr double erv_inv_imp_ed[] = {1, 0.591429344886417493481, 0.138151865749083321638, 0.0160746087093676504695, 0.000964011807005165528527, 0.275335474764726041141e-4, 0.282243172016108031869e-6};
-			const float y = 0.98362827301025390625f;
-			double xs = x - 6;
-			double r = evaluatePolynomial(xs, erv_inv_imp_en) / evaluatePolynomial(xs, erv_inv_imp_ed);
-			result = (y * x) + (r * x);
-		}
-		else if (x < 44)
-		{
-			static constexpr double erv_inv_imp_fn[] = {-0.0024978212791898131227, -0.779190719229053954292e-5, 0.254723037413027451751e-4, 0.162397777342510920873e-5, 0.396341011304801168516e-7, 0.411632831190944208473e-9, 0.145596286718675035587e-11, -0.116765012397184275695e-17};
-			static constexpr double erv_inv_imp_fd[] = {1, 0.207123112214422517181, 0.0169410838120975906478, 0.000690538265622684595676, 0.145007359818232637924e-4, 0.144437756628144157666e-6, 0.509761276599778486139e-9};
-			const float y = 0.99714565277099609375f;
-			double xs = x - 18;
-			double r = evaluatePolynomial(xs, erv_inv_imp_fn) / evaluatePolynomial(xs, erv_inv_imp_fd);
-			result = (y * x) + (r * x);
-		}
-		else
-		{
-			static constexpr double erv_inv_imp_gn[] = {-0.000539042911019078575891, -0.28398759004727721098e-6, 0.899465114892291446442e-6, 0.229345859265920864296e-7, 0.225561444863500149219e-9, 0.947846627503022684216e-12, 0.135880130108924861008e-14, -0.348890393399948882918e-21};
-			static constexpr double erv_inv_imp_gd[] = {1, 0.0845746234001899436914, 0.00282092984726264681981, 0.468292921940894236786e-4, 0.399968812193862100054e-6, 0.161809290887904476097e-8, 0.231558608310259605225e-11};
-			const float y = 0.99941349029541015625f;
-			double xs = x - 44;
-			double r = evaluatePolynomial(xs, erv_inv_imp_gn) / evaluatePolynomial(xs, erv_inv_imp_gd);
-			result = (y * x) + (r * x);
-		}
-	}
-
-	return s * result;
-}
-
 
 OsuDifficultyCalculator::DiffObject::DiffObject(OsuDifficultyHitObject *base_object, float radius_scaling_factor, std::vector<DiffObject> &diff_objects, int prevObjectIdx) : objects(diff_objects)
 {
@@ -1132,13 +1406,15 @@ OsuDifficultyCalculator::DiffObject::DiffObject(OsuDifficultyHitObject *base_obj
 	travelDistance = 0.0;
 
 	delta_time = 0.0;
-	strain_time = 0.0;
+	adjusted_delta_time = 0.0;
 
 	lazyCalcFinished = false;
 	lazyEndPos = ho->pos;
 	lazyTravelDist = 0.0;
 	lazyTravelTime = 0.0;
 	travelTime = 0.0;
+
+	smallCircleBonus = 1.0;
 
 	prevObjectIndex = prevObjectIdx;
 }
@@ -1153,13 +1429,16 @@ void OsuDifficultyCalculator::DiffObject::calculate_strains(const DiffObject &pr
 
 void OsuDifficultyCalculator::DiffObject::calculate_strain(const DiffObject &prev, const DiffObject *next, double hitWindow300, bool autopilotNerf, const Skills::Skill dtype)
 {
+	const double AimMultiplier = 26;
+	const double SpeedMultiplier = 1.47;
+	
 	double currentStrainOfDiffObject = 0;
 
 	const long time_elapsed = ho->time - prev.ho->time;
 
 	// update our delta time
 	delta_time = (double)time_elapsed;
-	strain_time = (double)std::max(time_elapsed, 25l);
+	adjusted_delta_time = (double)std::max(time_elapsed, 25l);
 
 	switch (ho->type)
 	{
@@ -1187,13 +1466,14 @@ void OsuDifficultyCalculator::DiffObject::calculate_strain(const DiffObject &pre
 	// see Process() @ https://github.com/ppy/osu/blob/master/osu.Game/Rulesets/Difficulty/Skills/Skill.cs
 	double currentStrain = prev.strains[Skills::skillToIndex(dtype)];
 	{
-		currentStrain *= strainDecay(dtype, dtype == Skills::Skill::SPEED ? strain_time : delta_time);
-		currentStrain += currentStrainOfDiffObject * weight_scaling[Skills::skillToIndex(dtype)];
+		currentStrain *= strainDecay(dtype, dtype == Skills::Skill::SPEED ? adjusted_delta_time : delta_time);
+		currentStrain += currentStrainOfDiffObject * (dtype == Skills::Skill::SPEED ? SpeedMultiplier : AimMultiplier);
 	}
+
 	strains[Skills::skillToIndex(dtype)] = currentStrain;
 }
 
-double OsuDifficultyCalculator::DiffObject::calculate_difficulty(const Skills::Skill type, const DiffObject *dobjects, size_t dobjectCount, IncrementalState *incremental, std::vector<double> *outStrains, double *outDifficultStrains, double *outSkillSpecificAttrib)
+double OsuDifficultyCalculator::DiffObject::calculate_difficulty(const Skills::Skill type, const DiffObject *dobjects, size_t dobjectCount, IncrementalState *incremental, std::vector<double> *outStrains, DifficultyAttributes *outAttributes)
 {
 	// (old) see https://github.com/ppy/osu/blob/master/osu.Game/Rulesets/Difficulty/Skills/Skill.cs
 	// (new) see https://github.com/ppy/osu/blob/master/osu.Game/Rulesets/Difficulty/Skills/StrainSkill.cs
@@ -1258,13 +1538,13 @@ double OsuDifficultyCalculator::DiffObject::calculate_difficulty(const Skills::S
 	if (outStrains != NULL)
 		(*outStrains) = highestStrains; // save a copy
 
-	if (outSkillSpecificAttrib)
+	if (outAttributes)
 	{
 		if (type == Skills::Skill::SPEED)
 		{
 			// calculate relevant speed note count
 			// RelevantNoteCount @ https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/Speed.cs
-			const auto compareDiffObjects = [=] (const DiffObject& x, const DiffObject& y) {
+			const auto compareDiffObjects = [=] (const DiffObject &x, const DiffObject &y) {
 				return (x.get_strain(type) < y.get_strain(type));
 			};
 
@@ -1277,14 +1557,14 @@ double OsuDifficultyCalculator::DiffObject::calculate_difficulty(const Skills::S
 			}
 
 			if (maxObjectStrain == 0.0 || !osu_stars_xexxar_angles_sliders.getBool())
-				*outSkillSpecificAttrib = 0.0;
+				outAttributes->SpeedNoteCount = 0.0;
 			else
 			{
 				double tempSum = 0.0;
 				if (incremental && std::abs(incremental->max_object_strain - maxObjectStrain) < DIFFCALC_EPSILON)
 				{
-					incremental->relevant_note_sum += 1.0 / (1.0 + std::exp(-((dobjects[dobjectCount - 1].get_strain(type) / maxObjectStrain * 12.0) - 6.0)));
-					tempSum = incremental->relevant_note_sum;
+					incremental->speed_note_count += 1.0 / (1.0 + std::exp(-((dobjects[dobjectCount - 1].get_strain(type) / maxObjectStrain * 12.0) - 6.0)));
+					tempSum = incremental->speed_note_count;
 				}
 				else
 				{
@@ -1296,22 +1576,22 @@ double OsuDifficultyCalculator::DiffObject::calculate_difficulty(const Skills::S
 					if (incremental)
 					{
 						incremental->max_object_strain = maxObjectStrain;
-						incremental->relevant_note_sum = tempSum;
+						incremental->speed_note_count = tempSum;
 					}
 				}
-				*outSkillSpecificAttrib = tempSum;
+				outAttributes->SpeedNoteCount = tempSum;
 			}
 		}
 		else if (type == Skills::Skill::AIM_SLIDERS)
 		{
 			// calculate difficult sliders
 			// GetDifficultSliders @ https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/Aim.cs
-			const auto compareSliderObjects = [=] (const DiffObject& x, const DiffObject& y) {
-				return (x.get_slider_aim_strain() < y.get_slider_aim_strain());
+			const auto compareSliderObjects = [=] (const DiffObject &x, const DiffObject &y) {
+				return (x.get_slider_strain(Skills::Skill::AIM_SLIDERS) < y.get_slider_strain(Skills::Skill::AIM_SLIDERS));
 			};
 
 			if (incremental && dobjects[dobjectCount - 1].ho->type != OsuDifficultyHitObject::TYPE::SLIDER)
-				*outSkillSpecificAttrib = incremental->difficult_sliders;
+				outAttributes->AimDifficultSliderCount = incremental->aim_difficult_slider_count;
 			else
 			{
 				double maxSliderStrain;
@@ -1323,18 +1603,18 @@ double OsuDifficultyCalculator::DiffObject::calculate_difficulty(const Skills::S
 						maxSliderStrain = std::max(incremental->max_slider_strain, curSliderStrain);
 					}
 					else
-						maxSliderStrain = (*std::max_element(dobjects, dobjects + dobjectCount, compareSliderObjects)).get_slider_aim_strain();
+						maxSliderStrain = (*std::max_element(dobjects, dobjects + dobjectCount, compareSliderObjects)).get_slider_strain(Skills::Skill::AIM_SLIDERS);
 				}
 
 				if (maxSliderStrain <= 0.0 || !osu_stars_xexxar_angles_sliders.getBool())
-					*outSkillSpecificAttrib = 0.0;
+					outAttributes->AimDifficultSliderCount = 0.0;
 				else
 				{
 					double tempSum = 0.0;
 					if (incremental && std::abs(incremental->max_slider_strain - maxSliderStrain) < DIFFCALC_EPSILON)
 					{
-						incremental->difficult_sliders += 1.0 / (1.0 + std::exp(-((curSliderStrain / maxSliderStrain * 12.0) - 6.0)));
-						tempSum = incremental->difficult_sliders;
+						incremental->aim_difficult_slider_count += 1.0 / (1.0 + std::exp(-((curSliderStrain / maxSliderStrain * 12.0) - 6.0)));
+						tempSum = incremental->aim_difficult_slider_count;
 					}
 					else
 					{
@@ -1345,19 +1625,19 @@ double OsuDifficultyCalculator::DiffObject::calculate_difficulty(const Skills::S
 								tempSum += 1.0 / (1.0 + std::exp(-((incremental->slider_strains[i] / maxSliderStrain * 12.0) - 6.0)));
 							}
 							incremental->max_slider_strain = maxSliderStrain;
-							incremental->difficult_sliders = tempSum;
+							incremental->aim_difficult_slider_count = tempSum;
 						}
 						else
 						{
 							for (size_t i = 0; i < dobjectCount; i++)
 							{
-								double sliderStrain = dobjects[i].get_slider_aim_strain();
+								double sliderStrain = dobjects[i].get_slider_strain(Skills::Skill::AIM_SLIDERS);
 								if (sliderStrain >= 0.0)
 									tempSum += 1.0 / (1.0 + std::exp(-((sliderStrain / maxSliderStrain * 12.0) - 6.0)));
 							}
 						}
 					}
-					*outSkillSpecificAttrib = tempSum;
+					outAttributes->AimDifficultSliderCount = tempSum;
 				}
 			}
 		}
@@ -1439,36 +1719,56 @@ double OsuDifficultyCalculator::DiffObject::calculate_difficulty(const Skills::S
 	}
 
 	// see CountDifficultStrains @ https://github.com/ppy/osu/pull/16280/files#diff-07543a9ffe2a8d7f02cadf8ef7f81e3d7ec795ec376b2fff8bba7b10fb574e19R78
-	if (outDifficultStrains)
+	if (outAttributes)
 	{
+		double &difficultStrainCount = (type == Skills::Skill::SPEED ? outAttributes->SpeedDifficultStrainCount : outAttributes->AimDifficultStrainCount);
+		double &topWeightedSlidersCount = (type == Skills::Skill::SPEED ? outAttributes->SpeedTopWeightedSliderFactor : outAttributes->AimTopWeightedSliderFactor);
+
 		if (difficulty == 0.0)
-			*outDifficultStrains = difficulty;
+		{
+			difficultStrainCount = difficulty;
+			topWeightedSlidersCount = 0;
+		}
 		else
 		{
-			double tempSum = 0.0;
+			double tempTotalSum = 0.0;
+			double tempSliderSum = 0.0;
+			double consistentTopStrain = difficulty / 10.0;
+
+			if (incremental && std::abs(incremental->consistent_top_strain - consistentTopStrain) < DIFFCALC_EPSILON)
 			{
-				double consistentTopStrain = difficulty / 10.0;
+				incremental->difficult_strains += 1.1 / (1.0 + std::exp(-10.0 * (dobjects[dobjectCount - 1].get_strain(type) / consistentTopStrain - 0.88)));
+				tempTotalSum = incremental->difficult_strains;
 
-				if (incremental && std::abs(incremental->consistent_top_strain - consistentTopStrain) < DIFFCALC_EPSILON)
+				double sliderStrain = dobjects[dobjectCount - 1].get_slider_strain(type);
+				if (sliderStrain >= 0)
 				{
-					incremental->difficult_strains += 1.1 / (1.0 + std::exp(-10.0 * (dobjects[dobjectCount - 1].get_strain(type) / consistentTopStrain - 0.88)));
-					tempSum = incremental->difficult_strains;
+					incremental->top_weighted_sliders += 1.1 / (1.0 + std::exp(-10.0 * (sliderStrain / consistentTopStrain - 0.88)));
 				}
-				else
+				tempSliderSum = incremental->top_weighted_sliders;
+			}
+			else
+			{
+				for (size_t i=0; i<dobjectCount; i++)
 				{
-					for (size_t i=0; i<dobjectCount; i++)
-					{
-						tempSum += 1.1 / (1.0 + std::exp(-10.0 * (dobjects[i].get_strain(type) / consistentTopStrain - 0.88)));
-					}
+					tempTotalSum += 1.1 / (1.0 + std::exp(-10.0 * (dobjects[i].get_strain(type) / consistentTopStrain - 0.88)));
 
-					if (incremental)
-					{
-						incremental->consistent_top_strain = consistentTopStrain;
-						incremental->difficult_strains = tempSum;
-					}
+					double sliderStrain = dobjects[i].get_slider_strain(type);
+					if (sliderStrain >= 0)
+						tempSliderSum += 1.1 / (1.0 + std::exp(-10.0 * (sliderStrain / consistentTopStrain - 0.88)));
+						
+				}
+
+				if (incremental)
+				{
+					incremental->consistent_top_strain = consistentTopStrain;
+					incremental->difficult_strains = tempTotalSum;
+					incremental->top_weighted_sliders = tempSliderSum;
 				}
 			}
-			*outDifficultStrains = tempSum;
+
+			difficultStrainCount = tempTotalSum;
+			topWeightedSlidersCount = tempSliderSum;
 		}
 	}
 
@@ -1514,12 +1814,12 @@ double OsuDifficultyCalculator::DiffObject::spacing_weight2(const Skills::Skill 
 
 	static const double min_speed_bonus = 75.0; /* ~200BPM 1/4 streams */
 	static const double speed_balancing_factor = 40.0;
-	static const double distance_multiplier = 0.9;
+	static const double distance_multiplier = 0.8;
 
 	static const int history_time_max = 5000;
 	static const int history_objects_max = 32;
-	static const double rhythm_overall_multiplier = 0.95;
-	static const double rhythm_ratio_multiplier = 12.0;
+	static const double rhythm_overall_multiplier = 1.0;
+	static const double rhythm_ratio_multiplier = 15.0;
 
 	//double angle_bonus = 1.0; // (apparently unused now in lazer?)
 
@@ -1539,17 +1839,21 @@ double OsuDifficultyCalculator::DiffObject::spacing_weight2(const Skills::Skill 
 				// https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Evaluators/SpeedEvaluator.cs
 				const double distance = std::min(single_spacing_threshold, prev.travelDistance + minJumpDistance);
 
-				double strain_time = this->strain_time;
-				strain_time /= clamp<double>((strain_time / hitWindow300) / 0.93, 0.92, 1.0);
+				double adjusted_delta_time = this->adjusted_delta_time;
+				adjusted_delta_time /= clamp<double>((adjusted_delta_time / hitWindow300) / 0.93, 0.92, 1.0);
 
 				double doubletapness = 1.0 - get_doubletapness(next, hitWindow300);
 
 				double speed_bonus = 0.0;
-				if (strain_time < min_speed_bonus)
-					speed_bonus = 0.75 * std::pow((min_speed_bonus - strain_time) / speed_balancing_factor, 2.0);
+				if (adjusted_delta_time < min_speed_bonus)
+					speed_bonus = 0.75 * std::pow((min_speed_bonus - adjusted_delta_time) / speed_balancing_factor, 2.0);
 
 				double distance_bonus = autopilotNerf ? 0.0 : std::pow(distance / single_spacing_threshold, 3.95) * distance_multiplier;
-				raw_speed_strain = (1.0 + speed_bonus + distance_bonus) * 1000.0 * doubletapness / strain_time;
+
+				// Apply reduced small circle bonus because flow aim difficulty on small circles doesn't scale as hard as jumps
+            	distance_bonus *= std::sqrt(smallCircleBonus);
+
+				raw_speed_strain = (1.0 + speed_bonus + distance_bonus) * 1000.0 * doubletapness / adjusted_delta_time;
 
 				// https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Evaluators/RhythmEvaluator.cs
 				double rhythmComplexitySum = 0;
@@ -1587,22 +1891,25 @@ double OsuDifficultyCalculator::DiffObject::spacing_weight2(const Skills::Skill 
 
 					double currHistoricalDecay = std::min(noteDecay, timeDecay); // either we're limited by time or limited by object count.
 
-					double currDelta = currObj->strain_time;
-					double prevDelta = prevObj->strain_time;
-					double lastDelta = lastObj->strain_time;
+					double currDelta = std::max(currObj->delta_time, 1e-7);
+					double prevDelta = std::max(prevObj->delta_time, 1e-7);
+					double lastDelta = std::max(lastObj->delta_time, 1e-7);
 
 					// calculate how much current delta difference deserves a rhythm bonus
 					// this function is meant to reduce rhythm bonus for deltas that are multiples of each other (i.e 100 and 200)
-					double deltaDifferenceRatio = std::min(prevDelta, currDelta) / std::max(prevDelta, currDelta);
-					double currRatio = 1.0 + rhythm_ratio_multiplier * std::min(0.5, std::pow(std::sin(PI / deltaDifferenceRatio), 2.0));
+					double deltaDifference = std::max(prevDelta, currDelta) / std::min(prevDelta, currDelta);
+
+					// Take only the fractional part of the value since we're only interested in punishing multiples
+					double deltaDifferenceFraction = deltaDifference - std::trunc(deltaDifference);
+
+					double currRatio = 1.0 + rhythm_ratio_multiplier * std::min(0.5, smoothstepBellCurve(deltaDifferenceFraction));
 
 					// reduce ratio bonus if delta difference is too big
-					double fraction = std::max(prevDelta / currDelta, currDelta / prevDelta);
-					double fractionMultiplier = clamp<double>(2.0 - fraction / 8.0, 0.0, 1.0);
+					double differenceMultiplier = clamp<double>(2.0 - deltaDifference / 8.0, 0.0, 1.0);
 
 					double windowPenalty = std::min(1.0, std::max(0.0, std::abs(prevDelta - currDelta) - deltaDifferenceEpsilon) / deltaDifferenceEpsilon);
 
-					double effectiveRatio = windowPenalty * currRatio * fractionMultiplier;
+					double effectiveRatio = windowPenalty * currRatio * differenceMultiplier;
 
 					if (firstDeltaSwitch)
 					{
@@ -1694,7 +2001,8 @@ double OsuDifficultyCalculator::DiffObject::spacing_weight2(const Skills::Skill 
 					prevObj = currObj;
 				}
 
-				rhythm = std::sqrt(4.0 + rhythmComplexitySum * rhythm_overall_multiplier) / 2.0;
+				rhythm = std::sqrt(4.0 + rhythmComplexitySum * rhythm_overall_multiplier) / 2.0; // produces multiplier that can be applied to strain. range [1, infinity) (not really though)
+            	rhythm *= 1.0 - get_doubletapness(get_next(0), hitWindow300);
 
 				return raw_speed_strain;
 			}
@@ -1705,7 +2013,7 @@ double OsuDifficultyCalculator::DiffObject::spacing_weight2(const Skills::Skill 
 			{
 				// https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Evaluators/AimEvaluator.cs
 				static const double wide_angle_multiplier = 1.5;
-				static const double acute_angle_multiplier = 2.6;
+				static const double acute_angle_multiplier = 2.55;
 				static const double slider_multiplier = 1.35;
 				static const double velocity_change_multiplier = 0.75;
 				static const double wiggle_multiplier = 1.02;
@@ -1715,27 +2023,17 @@ double OsuDifficultyCalculator::DiffObject::spacing_weight2(const Skills::Skill 
 				if (ho->type == OsuDifficultyHitObject::TYPE::SPINNER || prevObjectIndex <= 1 || prev.ho->type == OsuDifficultyHitObject::TYPE::SPINNER)
 					return 0.0;
 
-				auto reverseLerp = [] (double x, double start, double end) {
-					return clamp<double>((x - start) / (end - start), 0.0, 1.0);
-				};
-				auto smoothStep = [=] (double x, double start, double end) {
-					x = reverseLerp(x, start, end);
-					return x * x * (3.0 - 2.0 * x);
-				};
-				auto smootherStep = [=] (double x, double start, double end) {
-					x = reverseLerp(x, start, end);
-					return x * x * x * (x * (x * 6.0 - 15.0) + 10.0);
-				};
-
 				auto calcWideAngleBonus = [=] (double angle) {
-					return smoothStep(angle, 40.0 * (PI / 180.0), 140.0 * (PI / 180.0));
+					return smoothstep(angle, 40.0 * (PI / 180.0), 140.0 * (PI / 180.0));
 				};
 				auto calcAcuteAngleBonus = [=] (double angle) {
-					return smoothStep(angle, 140.0 * (PI / 180.0), 40.0 * (PI / 180.0));
+					return smoothstep(angle, 140.0 * (PI / 180.0), 40.0 * (PI / 180.0));
 				};
 
 				const DiffObject *prevPrev = get_previous(1);
-				double currVelocity = jumpDistance / strain_time;
+				const DiffObject *prev2 = get_previous(2);
+
+				double currVelocity = jumpDistance / adjusted_delta_time;
 
 				if (prev.ho->type == OsuDifficultyHitObject::TYPE::SLIDER && withSliders)
 				{
@@ -1745,7 +2043,7 @@ double OsuDifficultyCalculator::DiffObject::spacing_weight2(const Skills::Skill 
 				}
 				double aimStrain = currVelocity;
 
-				double prevVelocity = prev.jumpDistance / prev.strain_time;
+				double prevVelocity = prev.jumpDistance / prev.adjusted_delta_time;
 				if (prevPrev->ho->type == OsuDifficultyHitObject::TYPE::SLIDER && withSliders)
 				{
 					double travelVelocity = prevPrev->travelDistance / prevPrev->travelTime;
@@ -1759,48 +2057,57 @@ double OsuDifficultyCalculator::DiffObject::spacing_weight2(const Skills::Skill 
 				double velocityChangeBonus = 0;
 				double wiggleBonus = 0;
 
-				if (std::max(strain_time, prev.strain_time) < 1.25 * std::min(strain_time, prev.strain_time))
+				if (!std::isnan(angle) && !std::isnan(prev.angle))
 				{
-					if (!std::isnan(angle) && !std::isnan(prev.angle))
+					double angleBonus = std::min(currVelocity, prevVelocity);
+
+					if (std::max(adjusted_delta_time, prev.adjusted_delta_time) < 1.25 * std::min(adjusted_delta_time, prev.adjusted_delta_time))
 					{
-						double angleBonus = std::min(currVelocity, prevVelocity);
-
-						wideAngleBonus = calcWideAngleBonus(angle);
 						acuteAngleBonus = calcAcuteAngleBonus(angle);
-
-						wideAngleBonus *= 1.0 - std::min(wideAngleBonus, pow(calcWideAngleBonus(prev.angle), 3.0));
 						acuteAngleBonus *= 0.08 + 0.92 * (1.0 - std::min(acuteAngleBonus, std::pow(calcAcuteAngleBonus(prev.angle), 3.0)));
+						acuteAngleBonus *= angleBonus * smootherStep(60000.0 / (adjusted_delta_time * 2.0), 300.0, 400.0) * smootherStep(jumpDistance, 100.0, 200.0);
+					}
 
-						wideAngleBonus *= angleBonus * smootherStep(jumpDistance, 0.0, 100.0);
+					wideAngleBonus = calcWideAngleBonus(angle);
+					wideAngleBonus *= 1.0 - std::min(wideAngleBonus, pow(calcWideAngleBonus(prev.angle), 3.0));
+					wideAngleBonus *= angleBonus * smootherStep(jumpDistance, 0.0, 100.0);
+					
+					wiggleBonus = angleBonus
+						* smootherStep(jumpDistance, 50.0, 100.0)
+						* pow(reverseLerp(jumpDistance, 300.0, 100.0), 1.8)
+						* smootherStep(angle, 110.0 * (PI / 180.0), 60.0 * (PI / 180.0))
+						* smootherStep(prev.jumpDistance, 50.0, 100.0)
+						* pow(reverseLerp(prev.jumpDistance, 300.0, 100.0), 1.8)
+						* smootherStep(prev.angle, 110.0 * (PI / 180.0), 60.0 * (PI / 180.0));
 
-						acuteAngleBonus *= angleBonus * smootherStep(60000.0 / (strain_time * 2.0), 300.0, 400.0) * smootherStep(jumpDistance, 100.0, 200.0);
-
-						wiggleBonus = angleBonus
-							* smootherStep(jumpDistance, 50.0, 100.0)
-							* pow(reverseLerp(jumpDistance, 300.0, 100.0), 1.8)
-							* smootherStep(angle, 110.0 * (PI / 180.0), 60.0 * (PI / 180.0))
-							* smootherStep(prev.jumpDistance, 50.0, 100.0)
-							* pow(reverseLerp(prev.jumpDistance, 300.0, 100.0), 1.8)
-							* smootherStep(prev.angle, 110.0 * (PI / 180.0), 60.0 * (PI / 180.0));
+					if (prev2 != NULL)
+					{
+						float distance = (prev.ho->pos - prev2->ho->pos).length();
+						if (distance < 1.0)
+							wideAngleBonus *= 1.0 - 0.35 * (1.0 - distance);
 					}
 				}
 
 				if (std::max(prevVelocity, currVelocity) != 0.0)
 				{
-					prevVelocity = (prev.jumpDistance + prevPrev->travelDistance) / prev.strain_time;
-					currVelocity = (jumpDistance + prev.travelDistance) / strain_time;
+					prevVelocity = (prev.jumpDistance + prevPrev->travelDistance) / prev.adjusted_delta_time;
+					currVelocity = (jumpDistance + prev.travelDistance) / adjusted_delta_time;
 
-					double distRatio = std::pow(std::sin(PI / 2.0 * std::abs(prevVelocity - currVelocity) / std::max(prevVelocity, currVelocity)), 2.0);
-					double overlapVelocityBuff = std::min(125.0 / std::min(strain_time, prev.strain_time), std::abs(prevVelocity - currVelocity));
-					velocityChangeBonus = overlapVelocityBuff * distRatio * std::pow(std::min(strain_time, prev.strain_time) / std::max(strain_time, prev.strain_time), 2.0);
+					double distRatio = smoothstep(std::abs(prevVelocity - currVelocity) / std::max(prevVelocity, currVelocity), 0, 1);
+					double overlapVelocityBuff = std::min(125.0 / std::min(adjusted_delta_time, prev.adjusted_delta_time), std::abs(prevVelocity - currVelocity));
+					velocityChangeBonus = overlapVelocityBuff * distRatio * std::pow(std::min(adjusted_delta_time, prev.adjusted_delta_time) / std::max(adjusted_delta_time, prev.adjusted_delta_time), 2.0);
 				}
 
 				if (prev.ho->type == OsuDifficultyHitObject::TYPE::SLIDER)
 					sliderBonus = prev.travelDistance / prev.travelTime;
 
 				aimStrain += wiggleBonus * wiggle_multiplier;
+				aimStrain += velocityChangeBonus * velocity_change_multiplier;
+            	aimStrain += std::max(acuteAngleBonus * acute_angle_multiplier, wideAngleBonus * wide_angle_multiplier);
 
-				aimStrain += std::max(acuteAngleBonus * acute_angle_multiplier, wideAngleBonus * wide_angle_multiplier + velocityChangeBonus * velocity_change_multiplier);
+				// Apply high circle size bonus
+            	aimStrain *= smallCircleBonus;
+
 				if (withSliders)
 					aimStrain += sliderBonus * slider_multiplier;
 
@@ -1817,7 +2124,7 @@ double OsuDifficultyCalculator::DiffObject::get_doubletapness(const OsuDifficult
 	if (next != NULL)
 	{
 		double cur_delta = std::max(1.0, delta_time);
-		double next_delta = std::max(1l, next->ho->time - ho->time); // next delta time isn't initialized yet
+		double next_delta = std::max(1l, next->ho->time - ho->time); // NOTE: next delta time isn't initialized yet
 		double delta_diff = std::abs(next_delta - cur_delta);
 		double speedRatio = cur_delta / std::max(cur_delta, delta_diff);
 		double windowRatio = std::pow(std::min(1.0, cur_delta / hitWindow300), 2.0);

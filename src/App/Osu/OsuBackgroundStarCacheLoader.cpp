@@ -45,39 +45,25 @@ void OsuBackgroundStarCacheLoader::initAsync()
 		// precalculate cut star values for live pp
 
 		// reset
-		m_beatmap->m_aimStarsForNumHitObjects.clear();
-		m_beatmap->m_aimSliderFactorForNumHitObjects.clear();
-		m_beatmap->m_aimDifficultSlidersForNumHitObjects.clear();
-		m_beatmap->m_aimDifficultStrainsForNumHitObjects.clear();
-		m_beatmap->m_speedStarsForNumHitObjects.clear();
-		m_beatmap->m_speedNotesForNumHitObjects.clear();
-		m_beatmap->m_speedDifficultStrainsForNumHitObjects.clear();
+		m_beatmap->m_attributesForNumHitObjects.clear();
 
 		const UString &osuFilePath = diff2->getFilePath();
 		const Osu::GAMEMODE gameMode = m_beatmap->getOsu()->getGamemode();
 		const float AR = m_beatmap->getAR();
 		const float CS = m_beatmap->getCS();
-		const float OD = m_beatmap->getOD();
 		const float speedMultiplier = m_beatmap->getOsu()->getSpeedMultiplier(); // NOTE: not beatmap->getSpeedMultiplier()!
-		const bool relax = m_beatmap->getOsu()->getModRelax();
-		const bool autopilot = m_beatmap->getOsu()->getModAutopilot();
-		const bool touchDevice = m_beatmap->getOsu()->getModTD();
 
 		OsuDatabaseBeatmap::LOAD_DIFFOBJ_RESULT diffres = OsuDatabaseBeatmap::loadDifficultyHitObjects(osuFilePath, gameMode, AR, CS, speedMultiplier, false, m_bDead);
 
-		double aimStars = 0.0;
-		double aimSliderFactor = 0.0;
-		double aimDifficultSliders = 0.0;
-		double aimDifficultStrains = 0.0;
-		double speedStars = 0.0;
-		double speedNotes = 0.0;
-		double speedDifficultStrains = 0.0;
+		// Create beatmap data from beatmap and init difficulty attributes
+		OsuDifficultyCalculator::BeatmapDiffcalcData beatmapData(m_beatmap, diffres.diffobjects);
+		OsuDifficultyCalculator::DifficultyAttributes attributes{};
 
 		// new fast method  (build full cached DiffObjects once) (1/2)
 		Timer cacheObjectsTimer;
 		cacheObjectsTimer.start();
 		std::vector<OsuDifficultyCalculator::DiffObject> cachedDiffObjects;
-		OsuDifficultyCalculator::calculateStarDiffForHitObjectsInt(cachedDiffObjects, diffres.diffobjects, CS, OD, speedMultiplier, relax, autopilot, touchDevice, &aimStars, &aimSliderFactor, &aimDifficultSliders, &aimDifficultStrains, &speedStars, &speedNotes, &speedDifficultStrains, -1, NULL, NULL, NULL, m_bDead);
+		OsuDifficultyCalculator::calculateDifficultyAttributesInternal(attributes, beatmapData, -1, cachedDiffObjects, NULL, NULL, NULL, m_bDead);
 		cacheObjectsTimer.update();
 
 		Timer calcStrainsTimer;
@@ -94,13 +80,7 @@ void OsuBackgroundStarCacheLoader::initAsync()
 		}
 		for (size_t i=0; i<diffres.diffobjects.size(); i++)
 		{
-			aimStars = 0.0;
-			aimSliderFactor = 0.0;
-			aimDifficultSliders = 0.0;
-			aimDifficultStrains = 0.0;
-			speedStars = 0.0;
-			speedNotes = 0.0;
-			speedDifficultStrains = 0.0;
+			attributes.clear();
 
 			// old slow method:
 			/*
@@ -108,15 +88,15 @@ void OsuBackgroundStarCacheLoader::initAsync()
 			double oldAimSliderFactor = 0.0;
 			double oldSpeedStars = 0.0;
 			double oldSpeedNotes = 0.0;
-			OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, CS, OD, speedMultiplier, relax, touchDevice, &oldAimStars, &oldAimSliderFactor, &oldSpeedStars, &oldSpeedNotes, i, NULL, NULL, m_bDead);
+			OsuDifficultyCalculator::calculateDifficultyAttributes(diffres.diffobjects, CS, OD, speedMultiplier, relax, touchDevice, &oldAimStars, &oldAimSliderFactor, &oldSpeedStars, &oldSpeedNotes, i, NULL, NULL, m_bDead);
 			*/
-			//OsuDifficultyCalculator::calculateStarDiffForHitObjects(diffres.diffobjects, CS, OD, speedMultiplier, relax, touchDevice, &aimStars, &aimSliderFactor, &speedStars, &speedNotes, i, NULL, NULL, m_bDead);
+			//OsuDifficultyCalculator::calculateDifficultyAttributes(diffres.diffobjects, CS, OD, speedMultiplier, relax, touchDevice, &aimStars, &sliderFactor, &speedStars, &speedNotes, i, NULL, NULL, m_bDead);
 
 			// new fast method (reuse cached DiffObjects instead of re-computing them every single iteration for the entire beatmap) (2/2)
-			OsuDifficultyCalculator::calculateStarDiffForHitObjectsInt(cachedDiffObjects, diffres.diffobjects, CS, OD, speedMultiplier, relax, autopilot, touchDevice, &aimStars, &aimSliderFactor, &aimDifficultSliders, &aimDifficultStrains, &speedStars, &speedNotes, &speedDifficultStrains, i, incremental, NULL, NULL, m_bDead);
+			OsuDifficultyCalculator::calculateDifficultyAttributesInternal(attributes, beatmapData, i, cachedDiffObjects, incremental, NULL, NULL, m_bDead);
 			/*
 			const double deltaOldAimStars = std::abs(aimStars - oldAimStars);
-			const double deltaOldAimSliderFactor = std::abs(aimSliderFactor - oldAimSliderFactor);
+			const double deltaOldAimSliderFactor = std::abs(sliderFactor - oldAimSliderFactor);
 			const double deltaOldSpeedStars = std::abs(speedStars - oldSpeedStars);
 			const double deltaOldSpeedNotes = std::abs(speedNotes - oldSpeedNotes);
 
@@ -132,26 +112,13 @@ void OsuBackgroundStarCacheLoader::initAsync()
 			}
 			*/
 
-			m_beatmap->m_aimStarsForNumHitObjects.push_back(aimStars);
-			m_beatmap->m_aimSliderFactorForNumHitObjects.push_back(aimSliderFactor);
-			m_beatmap->m_aimDifficultSlidersForNumHitObjects.push_back(aimDifficultSliders);
-			m_beatmap->m_aimDifficultStrainsForNumHitObjects.push_back(aimDifficultStrains);
-			m_beatmap->m_speedStarsForNumHitObjects.push_back(speedStars);
-			m_beatmap->m_speedNotesForNumHitObjects.push_back(speedNotes);
-			m_beatmap->m_speedDifficultStrainsForNumHitObjects.push_back(speedDifficultStrains);
-
+			m_beatmap->m_attributesForNumHitObjects.push_back(attributes);
+			
 			m_iProgress = i;
 
 			if (m_bDead.load())
 			{
-				m_beatmap->m_aimStarsForNumHitObjects.clear();
-				m_beatmap->m_aimSliderFactorForNumHitObjects.clear();
-				m_beatmap->m_aimDifficultSlidersForNumHitObjects.clear();
-				m_beatmap->m_aimDifficultStrainsForNumHitObjects.clear();
-				m_beatmap->m_speedStarsForNumHitObjects.clear();
-				m_beatmap->m_speedNotesForNumHitObjects.clear();
-				m_beatmap->m_speedDifficultStrainsForNumHitObjects.clear();
-
+				m_beatmap->m_attributesForNumHitObjects.clear();
 				break;
 			}
 		}

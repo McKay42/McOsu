@@ -65,7 +65,7 @@
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 33.11f, FCVAR_NONE);
+ConVar osu_version("osu_version", 33.12f, FCVAR_NONE);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr", FCVAR_NONE);
 #else
@@ -186,6 +186,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_fullalternate"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_random"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_reverse_sliders"));
+	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_no_spinners"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_no50s"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_no100s"));
 	m_experimentalMods.push_back(convar->getConVarByName("osu_mod_ming3012"));

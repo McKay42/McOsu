@@ -59,13 +59,7 @@ public:
 
 	// score
 	inline int getNumHitObjects() const {return m_hitobjects.size();}
-	inline float getAimStars() const {return m_fAimStars;}
-	inline float getAimSliderFactor() const {return m_fAimSliderFactor;}
-	inline float getAimDifficultSliders() const {return m_fAimDifficultSliders;}
-	inline float getAimDifficultStrains() const {return m_fAimDifficultStrains;}
-	inline float getSpeedStars() const {return m_fSpeedStars;}
-	inline float getSpeedNotes() const {return m_fSpeedNotes;}
-	inline float getSpeedDifficultStrains() const {return m_fSpeedDifficultStrains;}
+	inline OsuDifficultyCalculator::DifficultyAttributes getDifficultyAttributes() const {return m_difficultyAttributes;}
 
 	// hud
 	inline bool isSpinnerActive() const {return m_bIsSpinnerActive;}
@@ -158,13 +152,8 @@ private:
 	int m_iAutoCursorDanceIndex;
 
 	// pp calculation buffer (only needs to be recalculated in onModUpdate(), instead of on every hit)
-	float m_fAimStars;
-	float m_fAimSliderFactor;
-	float m_fAimDifficultSliders;
-	float m_fAimDifficultStrains;
-	float m_fSpeedStars;
-	float m_fSpeedNotes;
-	float m_fSpeedDifficultStrains;
+	OsuDifficultyCalculator::DifficultyAttributes m_difficultyAttributes;
+
 	OsuBackgroundStarCacheLoader *m_starCacheLoader;
 	float m_fStarCacheTime;
 

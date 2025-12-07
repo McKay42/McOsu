@@ -300,7 +300,7 @@ void OsuUISongBrowserScoreButton::draw(Graphics *g)
 			g->setAlpha(0.75f);
 			g->drawString(customFont, m_sCustom);
 			g->translate(-0.75f, -0.75f);
-			g->setColor((m_style == STYLE::TOP_RANKS ? 0xffffcc22 : 0xffffffff));
+			g->setColor(0xffffffff);
 			g->drawString(customFont, m_sCustom);
 		}
 		g->popTransform();
