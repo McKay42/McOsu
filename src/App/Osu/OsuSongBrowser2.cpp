@@ -224,9 +224,14 @@ bool OsuSongBrowser2::SortByArtist::operator () (OsuUISongBrowserButton const *a
 	if (a->getDatabaseBeatmap() == NULL || b->getDatabaseBeatmap() == NULL)
 		return a->getSortHack() < b->getSortHack();
 
-	// strict weak ordering!
 	if (a->getDatabaseBeatmap()->getArtist().equalsIgnoreCase(b->getDatabaseBeatmap()->getArtist()))
-		return a->getSortHack() < b->getSortHack();
+	{
+		// strict weak ordering!
+		if (a->getDatabaseBeatmap()->getTitle().equalsIgnoreCase(b->getDatabaseBeatmap()->getTitle()))
+			return a->getSortHack() < b->getSortHack();
+		else
+			return a->getDatabaseBeatmap()->getTitle().lessThanIgnoreCase(b->getDatabaseBeatmap()->getTitle());
+	}
 
 	return a->getDatabaseBeatmap()->getArtist().lessThanIgnoreCase(b->getDatabaseBeatmap()->getArtist());
 }
