@@ -126,7 +126,7 @@ OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 
 	m_iAutoCursorDanceIndex = 0;
 
-	m_difficulty_attributes.clear();
+	m_difficultyAttributes.clear();
 	m_starCacheLoader = new OsuBackgroundStarCacheLoader(this);
 	m_fStarCacheTime = 0.0f;
 
@@ -1636,7 +1636,7 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 
 		const double totalStars = OsuDifficultyCalculator::calculateDifficultyAttributes(attributes, beatmapData);
 
-		m_difficulty_attributes = attributes;
+		m_difficultyAttributes = attributes;
 
 		const int numHitObjects = m_hitobjects.size();
 		const int numCircles = m_selectedDifficulty2->getNumCircles();

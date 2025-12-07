@@ -2017,7 +2017,7 @@ OsuDatabaseBeatmapStarCalculator::OsuDatabaseBeatmapStarCalculator() : Resource(
 	m_bTouchDevice = false;
 
 	m_totalStars = 0.0;
-	m_difficulty_attributes = OsuDifficultyCalculator::DifficultyAttributes{};
+	m_difficultyAttributes = OsuDifficultyCalculator::DifficultyAttributes{};
 	m_pp = 0.0;
 
 	m_iLengthMS = 0;
@@ -2034,8 +2034,9 @@ void OsuDatabaseBeatmapStarCalculator::init()
 {
 	// NOTE: this accesses runtime mods, so must be run sync (not async)
 	// technically the getSelectedBeatmap() call here is a bit unsafe, since the beatmap could have changed already between async and sync, but in that case we recalculate immediately after anyways
-	if (!m_bDead.load() && m_iErrorCode == 0 && m_diff2->m_osu->getSelectedBeatmap() != NULL) {
-		OsuDifficultyCalculator::DifficultyAttributes attributes = m_difficulty_attributes.load();
+	if (!m_bDead.load() && m_iErrorCode == 0 && m_diff2->m_osu->getSelectedBeatmap() != NULL)
+	{
+		OsuDifficultyCalculator::DifficultyAttributes attributes = m_difficultyAttributes.load();
 		m_pp = OsuDifficultyCalculator::calculatePPv2(m_diff2->m_osu, m_diff2->m_osu->getSelectedBeatmap(), attributes, m_iNumObjects.load(), m_iNumCircles.load(), m_iNumSliders.load(), m_iNumSpinners.load(), m_iMaxPossibleCombo);
 	}
 	m_bReady = true;
@@ -2045,7 +2046,7 @@ void OsuDatabaseBeatmapStarCalculator::initAsync()
 {
 	// sanity reset
 	m_totalStars = 0.0;
-	m_difficulty_attributes = OsuDifficultyCalculator::DifficultyAttributes{};
+	m_difficultyAttributes = OsuDifficultyCalculator::DifficultyAttributes{};
 	m_pp = 0.0;
 
 	m_iLengthMS = 0;
@@ -2079,7 +2080,7 @@ void OsuDatabaseBeatmapStarCalculator::initAsync()
 		
 		m_totalStars = OsuDifficultyCalculator::calculateDifficultyAttributes(attributes, beatmapData, -1, &m_aimStrains, &m_speedStrains, m_bDead);
 
-		m_difficulty_attributes = attributes;
+		m_difficultyAttributes = attributes;
 
 		// NOTE: this matches osu, i.e. it is the time from the start of the music track until the end of the last hitobject (including all breaks and initial skippable sections!)
 		if (diffres.diffobjects.size() > 0)
@@ -2110,7 +2111,9 @@ OsuDifficultyCalculator::BeatmapDiffcalcData OsuDatabaseBeatmapStarCalculator::c
 
 	beatmapData.breakDuration = 0;
 	for (int i=0; i<result.breaks.size(); i++)
+	{
 		beatmapData.breakDuration += (unsigned long)(result.breaks[i].endTime - result.breaks[i].startTime);
+	}
 
 	if (loadedDifficultyHitObjects.size() > 0)
 		beatmapData.playableLength = (unsigned long)(loadedDifficultyHitObjects[loadedDifficultyHitObjects.size()-1].baseEndTime - loadedDifficultyHitObjects[0].baseTime);

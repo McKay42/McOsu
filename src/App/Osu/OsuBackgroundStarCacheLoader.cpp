@@ -113,6 +113,7 @@ void OsuBackgroundStarCacheLoader::initAsync()
 			*/
 
 			m_beatmap->m_attributesForNumHitObjects.push_back(attributes);
+			
 			m_iProgress = i;
 
 			if (m_bDead.load())

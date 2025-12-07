@@ -59,7 +59,7 @@ public:
 
 	// score
 	inline int getNumHitObjects() const {return m_hitobjects.size();}
-	inline OsuDifficultyCalculator::DifficultyAttributes getDifficultyAttributes() const {return m_difficulty_attributes;}
+	inline OsuDifficultyCalculator::DifficultyAttributes getDifficultyAttributes() const {return m_difficultyAttributes;}
 
 	// hud
 	inline bool isSpinnerActive() const {return m_bIsSpinnerActive;}
@@ -152,7 +152,7 @@ private:
 	int m_iAutoCursorDanceIndex;
 
 	// pp calculation buffer (only needs to be recalculated in onModUpdate(), instead of on every hit)
-	OsuDifficultyCalculator::DifficultyAttributes m_difficulty_attributes;
+	OsuDifficultyCalculator::DifficultyAttributes m_difficultyAttributes;
 
 	OsuBackgroundStarCacheLoader *m_starCacheLoader;
 	float m_fStarCacheTime;

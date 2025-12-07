@@ -1,21 +1,18 @@
-//================ Copyright (c) 2019, PG & Francesco149, All rights reserved. =================//
+//================ Copyright (c) 2019, PG & Francesco149 & Khangaroo & Givikap120, All rights reserved. =================//
 //
 // Purpose:		star rating + pp calculation, based on https://github.com/Francesco149/oppai/
 //
 // $NoKeywords: $tomstarspp
-//==============================================================================================//
+//=======================================================================================================================//
 
 #ifndef OSUDIFFICULTYCALCULATOR_H
 #define OSUDIFFICULTYCALCULATOR_H
 
-#include "cbase.h"
-#include "OsuDatabase.h"
+#include "OsuDatabase.h" // for OsuDatabase::Score
 
 class Osu;
 class OsuBeatmap;
-
 class OsuDatabaseBeatmap;
-
 class OsuSliderCurve;
 
 class ConVar;
@@ -117,7 +114,7 @@ private:
 class OsuDifficultyCalculator
 {
 public:
-	static constexpr const int PP_ALGORITHM_VERSION = 20250306;
+	static constexpr const int PP_ALGORITHM_VERSION = 20251007;
 
 public:
 	class Skills
@@ -148,6 +145,8 @@ public:
 			return 0;
 		}
 	};
+
+	static constexpr const double performance_base_multiplier = 1.14; // keep final pp normalized across changes
 
 	// see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/Speed.cs
 	// see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/Aim.cs
@@ -217,7 +216,7 @@ public:
 	struct BeatmapDiffcalcData
 	{
 		// Hitobjects
-		std::vector<OsuDifficultyHitObject> &sortedHitObjects;
+		std::vector<OsuDifficultyHitObject> &sortedHitObjects; // WARNING: reference...
 
 		// Basic attributes, they're NOT adjusted by rate
 		float CS, HP, AR, OD;
@@ -226,17 +225,27 @@ public:
 		bool hidden, relax, autopilot, touchDevice;
 		float speedMultiplier;
 
-		// Scorev1 data
+		// ScoreV1 data
 		unsigned long breakDuration, playableLength;
 
-		// From normal beatmap
-		BeatmapDiffcalcData(const OsuBeatmap* beatmap, std::vector<OsuDifficultyHitObject> &loadedSortedHitObjects);
+		BeatmapDiffcalcData(const OsuBeatmap* beatmap, std::vector<OsuDifficultyHitObject> &loadedSortedHitObjects); // From normal beatmap
+		BeatmapDiffcalcData(const OsuDatabaseBeatmap* beatmap, const OsuDatabase::Score &score, std::vector<OsuDifficultyHitObject> &loadedSortedHitObjects); // From database beatmap (for base values), score (for mods), and loaded hitobjects
+		BeatmapDiffcalcData(std::vector<OsuDifficultyHitObject> &loadedSortedHitObjects) : sortedHitObjects(loadedSortedHitObjects) // Bare minimum init with just hitobjects
+		{
+			CS = 5.0f;
+			HP = 5.0f;
+			AR = 5.0f;
+			OD = 5.0f;
 
-		// From database beatmap (for base values), score (for mods), and loaded hitobjects
-		BeatmapDiffcalcData(const OsuDatabaseBeatmap* beatmap, const OsuDatabase::Score &score, std::vector<OsuDifficultyHitObject> &loadedSortedHitObjects);
+			hidden = false;
+			relax = false;
+			autopilot = false;
+			touchDevice = false;
+			speedMultiplier = 1.0f;
 
-		// Bare minimum init with just hitobjects (populate everything else manually!)
-		BeatmapDiffcalcData(std::vector<OsuDifficultyHitObject> &loadedSortedHitObjects) : sortedHitObjects(loadedSortedHitObjects) {}
+			breakDuration = 0;
+			playableLength = 0;
+		}
 	};
 
 	class DiffObject
@@ -285,7 +294,7 @@ public:
 
 		void calculate_strains(const DiffObject &prev, const DiffObject *next, double hitWindow300, bool autopilotNerf);
 		void calculate_strain(const DiffObject &prev, const DiffObject *next, double hitWindow300, bool autopilotNerf, const Skills::Skill dtype);
-		static double calculate_difficulty(const Skills::Skill type, const DiffObject *dobjects, size_t dobjectCount, IncrementalState *incremental, std::vector<double> *outStrains = NULL, DifficultyAttributes *attributes = NULL);
+		static double calculate_difficulty(const Skills::Skill type, const DiffObject *dobjects, size_t dobjectCount, IncrementalState *incremental, std::vector<double> *outStrains = NULL, DifficultyAttributes *outAttributes = NULL);
 
 		static double spacing_weight1(const double distance, const Skills::Skill diff_type);
 		double spacing_weight2(const Skills::Skill diff_type, const DiffObject &prev, const DiffObject *next, double hitWindow300, bool autopilotNerf);
@@ -299,7 +308,8 @@ public:
 	static double calculateDifficultyAttributes(DifficultyAttributes &outAttributes, const BeatmapDiffcalcData &beatmapData, int upToObjectIndex, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains, const std::atomic<bool> &dead);
 	static double calculateDifficultyAttributesInternal(DifficultyAttributes &outAttributes, const BeatmapDiffcalcData &beatmapData, int upToObjectIndex, std::vector<DiffObject> &cachedDiffObjects, IncrementalState *incremental, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains, const std::atomic<bool> &dead);
 
-	static void calculateScorev1Attributes(DifficultyAttributes &attributes, const BeatmapDiffcalcData& beatmapData, int upToObjectIndex);
+	static void calculateScoreV1Attributes(DifficultyAttributes &attributes, const BeatmapDiffcalcData &beatmapData, int upToObjectIndex);
+	static double calculateScoreV1SpinnerScore(double spinnerDuration);
 
 	// pp, use runtime mods (convenience)
 	static double calculatePPv2(Osu *osu, OsuBeatmap *beatmap, DifficultyAttributes attributes, int numHitObjects, int numCircles, int numSliders, int numSpinners, int maxPossibleCombo, int combo = -1, int misses = 0, int c300 = -1, int c100 = 0, int c50 = 0, unsigned long legacyTotalScore = 0);
@@ -348,33 +358,39 @@ private:
 	static double computeAccuracyValue(const ScoreData &score, const DifficultyAttributes &attributes);
 
 	// High deviation nerf
-	static double calculateSpeedDeviation(const ScoreData& score, const DifficultyAttributes& attributes, double timescale);
+	static double calculateSpeedDeviation(const ScoreData &score, const DifficultyAttributes &attributes, double timescale);
 	static double calculateDeviation(const DifficultyAttributes &attributes, double timescale, double relevantCountGreat, double relevantCountOk, double relevantCountMeh, double relevantCountMiss);
 	static double calculateSpeedHighDeviationNerf(const DifficultyAttributes &attributes, double speedDeviation);
 
-	static double calculateEstimatedSliderBreaks(const ScoreData& score, const DifficultyAttributes& attributes, double topWeightedSliderFactor, double effectiveMissCount);
+	static double calculateEstimatedSliderBreaks(const ScoreData &score, const DifficultyAttributes &attributes, double topWeightedSliderFactor, double effectiveMissCount);
 
-	// Scorev1 misscount estimation
+	// ScoreV1 misscount estimation
 	static double calculateScoreBasedMisscount(const DifficultyAttributes &attributes, const ScoreData &score);
 	static double calculateScoreAtCombo(const DifficultyAttributes &attributes, const ScoreData &score, double combo, double relevantComboPerObject, double scoreV1Multiplier);
 	static double calculateRelevantScoreComboPerObject(const DifficultyAttributes &attributes, const ScoreData &score);
 	static double calculateMaximumComboBasedMissCount(const DifficultyAttributes &attributes, const ScoreData &score);
-	static float getLegacyScoreMultiplier(const ScoreData& score);
+	static float getLegacyScoreMultiplier(const ScoreData &score);
 
+	static double calculateDifficultyRating(double difficultyValue);
+	static double calculateAimVisibilityFactor(double approachRate, double mechanicalDifficultyRating);
+	static double calculateSpeedVisibilityFactor(double approachRate, double mechanicalDifficultyRating);
+	static double calculateVisibilityBonus(double approachRate, double visibilityFactor = 1.0, double sliderFactor = 1.0);
+	static double computeAimRating(double aimDifficultyValue, int totalHits, double approachRate, double overallDifficulty, double mechanicalDifficultyRating, double sliderFactor, const BeatmapDiffcalcData &beatmapData);
+	static double computeSpeedRating(double speedDifficultyValue, int totalHits, double approachRate, double overallDifficulty, double mechanicalDifficultyRating, const BeatmapDiffcalcData &beatmapData);
+	static double calculateStarRating(double basePerformance);
+	static double calculateMechanicalDifficultyRating(double aimDifficultyValue, double speedDifficultyValue);
+
+	// helper functions
 	static double erf(double x);
 	static double erfInv(double x);
-
-	template<size_t N>
-	static double evaluatePolynomial(double z, const double (&coefficients)[N])
-	{
-		double sum = coefficients[N - 1];
-		for (int i = N - 2; i >= 0; --i)
-		{
-			sum *= z;
-			sum += coefficients[i];
-		}
-		return sum;
-	}
+	static double reverseLerp(double x, double start, double end) {return clamp<double>((x - start) / (end - start), 0.0, 1.0);};
+	static double smoothstep(double x, double start, double end) {x = reverseLerp(x, start, end); return x * x * (3.0 - 2.0 * x);};
+	static double smootherStep(double x, double start, double end) {x = reverseLerp(x, start, end); return x * x * x * (x * (x * 6.0 - 15.0) + 10.0);};
+	static double smoothstepBellCurve(double x, double mean = 0.5, double width = 0.5) {x -= mean; x = x > 0 ? (width - x) : (width + x); return smoothstep(x, 0, width);};
+	static double logistic(double x, double midpointOffset, double multiplier, double maxValue = 1.0) {return maxValue / (1 + std::exp(multiplier * (midpointOffset - x)));}
+	static double strainDifficultyToPerformance(double difficulty) {return std::pow(5.0 * std::max(1.0, difficulty / 0.0675) - 4.0, 3.0) / 100000.0;}
+	static double adjustHitWindow(double hitwindow) {return std::floor(hitwindow) - 0.5;} // Adjust hitwindow to match lazer
+	static double adjustOveralDifficultyByClockRate(double OD, double clockRate); // Lazer formula for adjusting OD by clock rate
 };
 
 #endif
