@@ -121,6 +121,8 @@ private:
 	bool m_bWaitForF1KeyUp;
 
 	bool m_bWaitForCSChangeFinished;
+	bool m_bWaitForARChangeFinished;
+	bool m_bWaitForODChangeFinished;
 	bool m_bWaitForSpeedChangeFinished;
 	bool m_bWaitForHPChangeFinished;
 
