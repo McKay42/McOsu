@@ -1851,7 +1851,7 @@ float OsuBeatmap::getRawAR() const
 	return clamp<float>(m_selectedDifficulty2->getAR() * m_osu->getDifficultyMultiplier(), 0.0f, 10.0f);
 }
 
-float OsuBeatmap::getAR() const
+float OsuBeatmap::getAR(bool useAudioLibrarySpeedMultiplierForOverrideLockCalculationsIfPlaying) const
 {
 	if (m_selectedDifficulty2 == NULL) return 5.0f;
 
@@ -1864,7 +1864,7 @@ float OsuBeatmap::getAR() const
 			AR = osu_ar_overridenegative.getFloat();
 
 		if (osu_ar_override_lock.getBool())
-			AR = OsuGameRules::getRawConstantApproachRateForSpeedMultiplier(OsuGameRules::getRawApproachTime(AR), (m_music != NULL && m_bIsPlaying ? getSpeedMultiplier() : m_osu->getSpeedMultiplier()));
+			AR = OsuGameRules::getRawConstantApproachRateForSpeedMultiplier(OsuGameRules::getRawApproachTime(AR), (m_music != NULL && m_bIsPlaying && useAudioLibrarySpeedMultiplierForOverrideLockCalculationsIfPlaying ? getSpeedMultiplier() : m_osu->getSpeedMultiplier()));
 
 		if (osu_mod_artimewarp.getBool() && m_hitobjects.size() > 0)
 		{
@@ -1923,14 +1923,14 @@ float OsuBeatmap::getRawOD() const
 	return clamp<float>(m_selectedDifficulty2->getOD() * m_osu->getDifficultyMultiplier(), 0.0f, 10.0f);
 }
 
-float OsuBeatmap::getOD() const
+float OsuBeatmap::getOD(bool useAudioLibrarySpeedMultiplierForOverrideLockCalculationsIfPlaying) const
 {
 	float OD = getRawOD();
 	if (osu_od_override.getFloat() >= 0.0f)
 		OD = osu_od_override.getFloat();
 
 	if (osu_od_override_lock.getBool())
-		OD = OsuGameRules::getRawConstantOverallDifficultyForSpeedMultiplier(OsuGameRules::getRawHitWindow300(OD), (m_music != NULL && m_bIsPlaying ? getSpeedMultiplier() : m_osu->getSpeedMultiplier()));
+		OD = OsuGameRules::getRawConstantOverallDifficultyForSpeedMultiplier(OsuGameRules::getRawHitWindow300(OD), (m_music != NULL && m_bIsPlaying && useAudioLibrarySpeedMultiplierForOverrideLockCalculationsIfPlaying ? getSpeedMultiplier() : m_osu->getSpeedMultiplier()));
 
 	return OD;
 }

@@ -49,7 +49,7 @@ void OsuBackgroundStarCacheLoader::initAsync()
 
 		const UString &osuFilePath = diff2->getFilePath();
 		const Osu::GAMEMODE gameMode = m_beatmap->getOsu()->getGamemode();
-		const float AR = m_beatmap->getAR();
+		const float AR = m_beatmap->getAR(false);
 		const float CS = m_beatmap->getCS();
 		const float speedMultiplier = m_beatmap->getOsu()->getSpeedMultiplier(); // NOTE: not beatmap->getSpeedMultiplier()!
 
