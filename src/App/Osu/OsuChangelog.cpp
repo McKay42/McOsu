@@ -44,6 +44,8 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha317.changes.push_back("- Added Options > Songbrowser > \"Song Buttons Curved Layout\"");
 	alpha317.changes.push_back("- Updated songbrowser song buttons to have the velocity animation disabled by default");
 	alpha317.changes.push_back("- Updated \"Sort by Artist\" to secondarily sort by title");
+	alpha317.changes.push_back("- Updated mod selector when changing AR/OD live while playing a beatmap to instantly update the live star/pp cache instead of deferred");
+	alpha317.changes.push_back("- Fixed override slider locks in combination with non-1.0x music speeds sometimes causing weird live pp counter desyncs");
 	alpha317.changes.push_back("");
 	alpha317.changes.push_back("");
 	alpha317.changes.push_back("- For more info on the star/pp changes in this update see https://osu.ppy.sh/home/news/2025-03-06-performance-points-star-rating-updates");
@@ -970,6 +972,9 @@ void OsuChangelog::update()
 		engine->getMouse()->resetWheelDelta();
 
 	m_container->update();
+
+	if (m_backButton->isMouseInside())
+		m_container->stealFocus();
 
 	if (m_osu->getHUD()->isVolumeOverlayBusy() || m_osu->getOptionsMenu()->isMouseInside())
 	{

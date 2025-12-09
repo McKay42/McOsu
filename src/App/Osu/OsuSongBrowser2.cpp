@@ -4359,9 +4359,9 @@ void OsuSongBrowser2::recalculateStarsForSelectedBeatmap(bool force)
 		m_dynamicStarCalculator->release();
 		m_dynamicStarCalculator->revive();
 
-		const float AR = m_selectedBeatmap->getAR();
+		const float AR = m_selectedBeatmap->getAR(false);
 		const float CS = m_selectedBeatmap->getCS();
-		const float OD = m_selectedBeatmap->getOD();
+		const float OD = m_selectedBeatmap->getOD(false);
 		const float HP = m_selectedBeatmap->getHP();
 		const float speedMultiplier = m_osu->getSpeedMultiplier(); // NOTE: not m_selectedBeatmap->getSpeedMultiplier()!
 		const bool hidden = m_osu->getModHD();

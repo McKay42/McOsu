@@ -1610,7 +1610,7 @@ OsuDatabaseBeatmap::LOAD_GAMEPLAY_RESULT OsuDatabaseBeatmap::loadGameplay(OsuDat
 			{
 				const UString &osuFilePath = databaseBeatmap->m_sFilePath;
 				const Osu::GAMEMODE gameMode = Osu::GAMEMODE::STD;
-				const float AR = beatmap->getAR();
+				const float AR = beatmap->getAR(false);
 				const float CS = beatmap->getCS();
 				const float speedMultiplier = databaseBeatmap->m_osu->getSpeedMultiplier(); // NOTE: not this->getSpeedMultiplier()!
 

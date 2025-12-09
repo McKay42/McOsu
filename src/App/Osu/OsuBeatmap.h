@@ -123,11 +123,11 @@ public:
 	inline long getCurMusicPosWithOffsets() const {return m_iCurMusicPosWithOffsets;}
 
 	float getRawAR() const;
-	float getAR() const;
+	float getAR(bool useAudioLibrarySpeedMultiplierForOverrideLockCalculationsIfPlaying = true) const;
 	float getCS() const;
 	float getHP() const;
 	float getRawOD() const;
-	float getOD() const;
+	float getOD(bool useAudioLibrarySpeedMultiplierForOverrideLockCalculationsIfPlaying = true) const;
 
 	// health
 	inline double getHealth() const {return m_fHealth;}

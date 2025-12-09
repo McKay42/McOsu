@@ -231,9 +231,9 @@ public:
 	{
 		return mapDifficultyRange(AR, getRawMinApproachTime(), getRawMidApproachTime(), getRawMaxApproachTime());
 	}
-	static float getApproachTime(OsuBeatmap *beatmap)
+	static float getApproachTime(OsuBeatmap *beatmap, bool useAudioLibrarySpeedMultiplierForOverrideLockCalculationsIfPlaying = true)
 	{
-		return osu_mod_mafham.getBool() ? beatmap->getLength()*2 : mapDifficultyRange(beatmap->getAR(), getMinApproachTime(), getMidApproachTime(), getMaxApproachTime());
+		return osu_mod_mafham.getBool() ? beatmap->getLength()*2 : mapDifficultyRange(beatmap->getAR(useAudioLibrarySpeedMultiplierForOverrideLockCalculationsIfPlaying), getMinApproachTime(), getMidApproachTime(), getMaxApproachTime());
 	}
 	static float getRawApproachTime(OsuBeatmap *beatmap) // ignore AR override
 	{
@@ -245,7 +245,7 @@ public:
 	}
 	static float getApproachTimeForStacking(OsuBeatmap *beatmap)
 	{
-		return mapDifficultyRange(osu_stacking_ar_override.getFloat() < 0.0f ? beatmap->getAR() : osu_stacking_ar_override.getFloat(), getMinApproachTime(), getMidApproachTime(), getMaxApproachTime());
+		return mapDifficultyRange(osu_stacking_ar_override.getFloat() < 0.0f ? beatmap->getAR(false) : osu_stacking_ar_override.getFloat(), getMinApproachTime(), getMidApproachTime(), getMaxApproachTime());
 	}
 
 	static float getRawHitWindow300(float OD) // ignore all mods and overrides

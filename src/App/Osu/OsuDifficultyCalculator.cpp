@@ -269,8 +269,8 @@ OsuDifficultyCalculator::BeatmapDiffcalcData::BeatmapDiffcalcData(const OsuBeatm
 {
 	CS = beatmap->getCS();
 	HP = beatmap->getHP();
-	AR = beatmap->getAR();
-	OD = beatmap->getOD();
+	AR = beatmap->getAR(false);
+	OD = beatmap->getOD(false);
 
 	speedMultiplier = beatmap->getOsu()->getSpeedMultiplier(); // NOTE: not beatmap->getSpeedMultiplier()!
 	hidden = beatmap->getOsu()->getModHD();
@@ -744,7 +744,7 @@ double OsuDifficultyCalculator::calculatePPv2(Osu *osu, OsuBeatmap *beatmap, Dif
 		modsLegacy |= (m_osu_slider_scorev2_ref->getBool() ? OsuReplay::Mods::ScoreV2 : 0);
 	}
 
-	return calculatePPv2(modsLegacy, osu->getSpeedMultiplier(), beatmap->getAR(), beatmap->getOD(), attributes, numHitObjects, numCircles, numSliders, numSpinners, maxPossibleCombo, combo, misses, c300, c100, c50, legacyTotalScore);
+	return calculatePPv2(modsLegacy, osu->getSpeedMultiplier(), beatmap->getAR(false), beatmap->getOD(false), attributes, numHitObjects, numCircles, numSliders, numSpinners, maxPossibleCombo, combo, misses, c300, c100, c50, legacyTotalScore);
 }
 
 double OsuDifficultyCalculator::calculatePPv2(int modsLegacy, double timescale, double ar, double od, DifficultyAttributes attributes, int numHitObjects, int numCircles, int numSliders, int numSpinners, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50, unsigned long legacyTotalScore)
@@ -1164,7 +1164,7 @@ float OsuDifficultyCalculator::getLegacyScoreMultiplier(const ScoreData &score)
 		multiplier *= 0.30f;
 	if (score.modsLegacy & OsuReplay::HardRock)
 		multiplier *= 1.06f;
-	if (score.modsLegacy & OsuReplay::DoubleTime)
+	if ((score.modsLegacy & OsuReplay::DoubleTime) || (score.modsLegacy & OsuReplay::Nightcore)) // sanity nightcore
 		multiplier *= 1.12f;
 	if (score.modsLegacy & OsuReplay::Hidden)
 		multiplier *= 1.06f;

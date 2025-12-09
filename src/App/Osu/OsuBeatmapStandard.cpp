@@ -1624,7 +1624,7 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 		// calculate stars
 		const UString &osuFilePath = m_selectedDifficulty2->getFilePath();
 		const Osu::GAMEMODE gameMode = Osu::GAMEMODE::STD;
-		const float AR = getAR();
+		const float AR = getAR(false);
 		const float CS = getCS();
 		const float speedMultiplier = m_osu->getSpeedMultiplier(); // NOTE: not this->getSpeedMultiplier()!
 
@@ -1713,7 +1713,7 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 				score.speedMultiplier = m_osu->getSpeedMultiplier();
 				score.CS = CS;
 				score.AR = AR;
-				score.OD = getOD();
+				score.OD = getOD(false);
 				score.HP = getHP();
 
 				//if (scoreVersion > 20180722)
@@ -2291,7 +2291,7 @@ void OsuBeatmapStandard::computeDrainRate()
 			testPlayer.resetHealth();
 
 			double lowestHp = testPlayer.health;
-			int lastTime = (int)(m_hitobjects[0]->getTime() - (long)OsuGameRules::getApproachTime(this));
+			int lastTime = (int)(m_hitobjects[0]->getTime() - (long)OsuGameRules::getApproachTime(this, false));
 			fail = false;
 
 			const int breakCount = m_breaks.size();

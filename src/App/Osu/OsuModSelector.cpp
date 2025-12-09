@@ -166,6 +166,8 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen(osu)
 	m_bWaitForF1KeyUp = false;
 
 	m_bWaitForCSChangeFinished = false;
+	m_bWaitForARChangeFinished = false;
+	m_bWaitForODChangeFinished = false;
 	m_bWaitForSpeedChangeFinished = false;
 	m_bWaitForHPChangeFinished = false;
 
@@ -572,6 +574,7 @@ void OsuModSelector::update()
 	// delayed onModUpdate() triggers when changing some values
 	{
 		// handle dynamic CS and slider vertex buffer updates
+		// handle dynamic live pp calculation updates (when CS changes)
 		if (m_CSSlider != NULL && (m_CSSlider->isActive() || m_CSSlider->hasChanged()))
 		{
 			m_bWaitForCSChangeFinished = true;
@@ -579,6 +582,8 @@ void OsuModSelector::update()
 		else if (m_bWaitForCSChangeFinished)
 		{
 			m_bWaitForCSChangeFinished = false;
+			m_bWaitForARChangeFinished = false;
+			m_bWaitForODChangeFinished = false;
 			m_bWaitForSpeedChangeFinished = false;
 			m_bWaitForHPChangeFinished = false;
 
@@ -590,7 +595,49 @@ void OsuModSelector::update()
 			}
 		}
 
-		// handle dynamic live pp calculation updates (when CS or Speed/BPM changes)
+		// handle dynamic live pp calculation updates (when AR changes)
+		if (m_ARSlider != NULL && (m_ARSlider->isActive() || m_ARSlider->hasChanged()))
+		{
+			m_bWaitForARChangeFinished = true;
+		}
+		else if (m_bWaitForARChangeFinished)
+		{
+			m_bWaitForCSChangeFinished = false;
+			m_bWaitForARChangeFinished = false;
+			m_bWaitForODChangeFinished = false;
+			m_bWaitForSpeedChangeFinished = false;
+			m_bWaitForHPChangeFinished = false;
+
+			{
+				if (m_osu->isInPlayMode() && m_osu->getSelectedBeatmap() != NULL)
+					m_osu->getSelectedBeatmap()->onModUpdate();
+
+				m_osu->getSongBrowser()->recalculateStarsForSelectedBeatmap(true);
+			}
+		}
+
+		// handle dynamic live pp calculation updates (when OD changes)
+		if (m_ODSlider != NULL && (m_ODSlider->isActive() || m_ODSlider->hasChanged()))
+		{
+			m_bWaitForODChangeFinished = true;
+		}
+		else if (m_bWaitForODChangeFinished)
+		{
+			m_bWaitForCSChangeFinished = false;
+			m_bWaitForARChangeFinished = false;
+			m_bWaitForODChangeFinished = false;
+			m_bWaitForSpeedChangeFinished = false;
+			m_bWaitForHPChangeFinished = false;
+
+			{
+				if (m_osu->isInPlayMode() && m_osu->getSelectedBeatmap() != NULL)
+					m_osu->getSelectedBeatmap()->onModUpdate();
+
+				m_osu->getSongBrowser()->recalculateStarsForSelectedBeatmap(true);
+			}
+		}
+
+		// handle dynamic live pp calculation updates (when Speed/BPM changes)
 		if (m_speedSlider != NULL && (m_speedSlider->isActive() || m_speedSlider->hasChanged()))
 		{
 			m_bWaitForSpeedChangeFinished = true;
@@ -598,6 +645,8 @@ void OsuModSelector::update()
 		else if (m_bWaitForSpeedChangeFinished)
 		{
 			m_bWaitForCSChangeFinished = false;
+			m_bWaitForARChangeFinished = false;
+			m_bWaitForODChangeFinished = false;
 			m_bWaitForSpeedChangeFinished = false;
 			m_bWaitForHPChangeFinished = false;
 
@@ -617,8 +666,11 @@ void OsuModSelector::update()
 		else if (m_bWaitForHPChangeFinished)
 		{
 			m_bWaitForCSChangeFinished = false;
+			m_bWaitForARChangeFinished = false;
+			m_bWaitForODChangeFinished = false;
 			m_bWaitForSpeedChangeFinished = false;
 			m_bWaitForHPChangeFinished = false;
+
 			if (m_osu->isInPlayMode() && m_osu->getSelectedBeatmap() != NULL)
 				m_osu->getSelectedBeatmap()->onModUpdate();
 		}
