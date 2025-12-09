@@ -1164,7 +1164,7 @@ float OsuDifficultyCalculator::getLegacyScoreMultiplier(const ScoreData &score)
 		multiplier *= 0.30f;
 	if (score.modsLegacy & OsuReplay::HardRock)
 		multiplier *= 1.06f;
-	if (score.modsLegacy & OsuReplay::DoubleTime)
+	if ((score.modsLegacy & OsuReplay::DoubleTime) || (score.modsLegacy & OsuReplay::Nightcore)) // sanity nightcore
 		multiplier *= 1.12f;
 	if (score.modsLegacy & OsuReplay::Hidden)
 		multiplier *= 1.06f;
