@@ -1053,19 +1053,26 @@ double OsuDifficultyCalculator::calculateScoreBasedMisscount(const DifficultyAtt
 	if (score.beatmapMaxCombo == 0)
 		return 0;
 
-	double scoreV1Multiplier = attributes.LegacyScoreBaseMultiplier * getLegacyScoreMultiplier(score);
+	bool scoreV2 = score.modsLegacy & OsuReplay::ScoreV2;
+
+	double modMultiplier = getLegacyScoreMultiplier(score);
+	double scoreV1Multiplier = attributes.LegacyScoreBaseMultiplier * modMultiplier;
 	double relevantComboPerObject = calculateRelevantScoreComboPerObject(attributes, score);
 
 	double maximumMissCount = calculateMaximumComboBasedMissCount(attributes, score);
 
 	double scoreObtainedDuringMaxCombo = calculateScoreAtCombo(attributes, score, score.scoreMaxCombo, relevantComboPerObject, scoreV1Multiplier);
-	double remainingScore = score.legacyTotalScore - scoreObtainedDuringMaxCombo;
+	if (scoreV2) scoreObtainedDuringMaxCombo *= 700000 / attributes.MaximumLegacyComboScore;
+
+	double scoreLegacyTotalScore = score.legacyTotalScore - (scoreV2 ? 300000.0 * std::pow(score.accuracy, 10) * modMultiplier : 0);
+	double remainingScore = scoreLegacyTotalScore - scoreObtainedDuringMaxCombo;
 
 	if (remainingScore <= 0)
 		return maximumMissCount;
 
 	double remainingCombo = score.beatmapMaxCombo - score.scoreMaxCombo;
 	double expectedRemainingScore = calculateScoreAtCombo(attributes, score, remainingCombo, relevantComboPerObject, scoreV1Multiplier);
+	if (scoreV2) expectedRemainingScore *= 700000 / attributes.MaximumLegacyComboScore;
 
 	double scoreBasedMissCount = expectedRemainingScore / remainingScore;
 
@@ -1084,6 +1091,7 @@ double OsuDifficultyCalculator::calculateScoreAtCombo(const DifficultyAttributes
 	int countMiss = score.countMiss;
 
 	int totalHits = countGreat + countOk + countMeh + countMiss;
+	bool scoreV2 = score.modsLegacy & OsuReplay::ScoreV2;
 
 	double estimatedObjects = (combo / relevantComboPerObject) - 1.0;
 
@@ -1092,14 +1100,19 @@ double OsuDifficultyCalculator::calculateScoreAtCombo(const DifficultyAttributes
 	double comboScore = relevantComboPerObject > 0.0 ? (2.0 * (relevantComboPerObject - 1.0) + (estimatedObjects - 1.0) * relevantComboPerObject) * estimatedObjects / 2.0 : 0.0;
 
 	// We then apply the accuracy and ScoreV1 multipliers to the resulting score.
-	comboScore *= score.accuracy * 300.0 / 25.0 * scoreV1Multiplier;
+	comboScore *= 300.0 / 25.0 * scoreV1Multiplier;
+
+	// For scoreV2 we need only combo score not scaled by accuracy.
+	// This is technically incorrect because scoreV2 is using different formula,
+	// but we have to sacrifice estimation precision, since it's not as important here.
+	if (scoreV2) return comboScore;
 
 	double objectsHit = (totalHits - countMiss) * combo / score.beatmapMaxCombo;
 
 	// Score also has a non-combo portion we need to create the final score value.
-	double nonComboScore = (300.0 + attributes.NestedScorePerObject) * score.accuracy * objectsHit;
+	double nonComboScore = (300.0 + attributes.NestedScorePerObject) * objectsHit;
 
-	return comboScore + nonComboScore;
+	return (comboScore + nonComboScore) * score.accuracy;
 }
 
 double OsuDifficultyCalculator::calculateRelevantScoreComboPerObject(const DifficultyAttributes &attributes, const ScoreData &score)
@@ -1156,16 +1169,20 @@ double OsuDifficultyCalculator::calculateMaximumComboBasedMissCount(const Diffic
 
 float OsuDifficultyCalculator::getLegacyScoreMultiplier(const ScoreData &score)
 {
+	bool scoreV2 = score.modsLegacy & OsuReplay::ScoreV2;
+
 	float multiplier = 1.0f;
 
+	if (score.modsLegacy & OsuReplay::NoFail)
+		multiplier *= scoreV2 ? 1.0f : 0.50f;
 	if (score.modsLegacy & OsuReplay::Easy)
 		multiplier *= 0.50f;
 	if (score.modsLegacy & OsuReplay::HalfTime)
 		multiplier *= 0.30f;
 	if (score.modsLegacy & OsuReplay::HardRock)
-		multiplier *= 1.06f;
+		multiplier *= scoreV2 ? 1.1f : 1.06f;
 	if ((score.modsLegacy & OsuReplay::DoubleTime) || (score.modsLegacy & OsuReplay::Nightcore)) // sanity nightcore
-		multiplier *= 1.12f;
+		multiplier *= scoreV2 ? 1.2f : 1.12f;
 	if (score.modsLegacy & OsuReplay::Hidden)
 		multiplier *= 1.06f;
 	if (score.modsLegacy & OsuReplay::SpunOut)
