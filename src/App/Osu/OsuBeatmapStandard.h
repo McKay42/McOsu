@@ -79,7 +79,6 @@ private:
 	static ConVar *m_fposu_mod_strafing_strength_y_ref;
 	static ConVar *m_fposu_mod_strafing_strength_z_ref;
 	static ConVar *m_fposu_mod_3d_depthwobble_ref;
-	static ConVar *m_osu_slider_scorev2_ref;
 
 	static inline Vector2 mapNormalizedCoordsOntoUnitCircle(const Vector2 &in)
 	{
