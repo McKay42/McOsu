@@ -1026,6 +1026,10 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Show Skip Button during Intro", "Skip intro to first hitobject.", convar->getConVarByName("osu_skip_intro_enabled"));
 	addCheckbox("Show Skip Button during Breaks", "Skip breaks in the middle of beatmaps.", convar->getConVarByName("osu_skip_breaks_enabled"));
 	addSpacer();
+	addSubSection("Hitobjects");
+	addCheckbox("Use Fast Hidden Fading Sliders (!)", "NOTE: osu! doesn't do this, so don't enable it for serious practicing.\nIf enabled: Fade out sliders with the same speed as circles.", convar->getConVarByName("osu_mod_hd_slider_fast_fade"));
+	addCheckbox("Use ScoreV2 Slider Accuracy", "Affects accuracy calculations, but does not affect score nor pp.\nUse the ScoreV2 mod if you want the 1000000 max score cap/calculation.", convar->getConVarByName("osu_slider_scorev2"));
+	addSpacer();
 	addSubSection("Mechanics", "health drain notelock lock block blocking noteblock");
 	addCheckbox("Kill Player upon Failing", "Enabled: Singleplayer default. You die upon failing and the beatmap stops.\nDisabled: Multiplayer default. Allows you to keep playing even after failing.", convar->getConVarByName("osu_drain_kill"));
 	addSpacer();
@@ -1061,6 +1065,16 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addLabel("- osu!lazer 2020: Auto miss previous circle if > time.")->setTextColor(0xff666666);
 	addLabel("");
 	addSpacer();
+
+	addSubSection("Playfield");
+	addCheckbox("Draw FollowPoints", convar->getConVarByName("osu_draw_followpoints"));
+	addCheckbox("Draw Playfield Border", "Correct border relative to the current Circle Size.", convar->getConVarByName("osu_draw_playfield_border"));
+	addSpacer();
+	m_playfieldBorderSizeSlider = addSlider("Playfield Border Size:", 0.0f, 500.0f, convar->getConVarByName("osu_hud_playfield_border_size"));
+	m_playfieldBorderSizeSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeInt) );
+	m_playfieldBorderSizeSlider->setKeyDelta(1.0f);
+	addSpacer();
+
 	addSubSection("Backgrounds");
 	addCheckbox("Load Background Images (!)", "NOTE: Disabling this will disable ALL beatmap images everywhere!", convar->getConVarByName("osu_load_beatmap_background_images"));
 	addCheckbox("Draw Background in Beatmap", convar->getConVarByName("osu_draw_beatmap_background_image"));
@@ -1148,18 +1162,6 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_statisticsOverlayYOffsetSlider = addSlider("Statistics Y Offset:", 0.0f, 1000.0f, convar->getConVarByName("osu_hud_statistics_offset_y"), 165.0f, true);
 	m_statisticsOverlayYOffsetSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeInt) );
 	m_statisticsOverlayYOffsetSlider->setKeyDelta(1.0f);
-
-	addSubSection("Playfield");
-	addCheckbox("Draw FollowPoints", convar->getConVarByName("osu_draw_followpoints"));
-	addCheckbox("Draw Playfield Border", "Correct border relative to the current Circle Size.", convar->getConVarByName("osu_draw_playfield_border"));
-	addSpacer();
-	m_playfieldBorderSizeSlider = addSlider("Playfield Border Size:", 0.0f, 500.0f, convar->getConVarByName("osu_hud_playfield_border_size"));
-	m_playfieldBorderSizeSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeInt) );
-	m_playfieldBorderSizeSlider->setKeyDelta(1.0f);
-
-	addSubSection("Hitobjects");
-	addCheckbox("Use Fast Hidden Fading Sliders (!)", "NOTE: osu! doesn't do this, so don't enable it for serious practicing.\nIf enabled: Fade out sliders with the same speed as circles.", convar->getConVarByName("osu_mod_hd_slider_fast_fade"));
-	addCheckbox("Use Score v2 Slider Accuracy", "Affects pp and accuracy calculations, but does not affect score.\nUse the score v2 mod if you want the 1000000 max score cap/calculation.", convar->getConVarByName("osu_slider_scorev2"));
 
 	//**************************************************************************************************************************//
 

@@ -36,7 +36,12 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	std::vector<CHANGELOG> changelogs;
 
 	CHANGELOG alpha317;
-	alpha317.title = UString::format("33.12 (Build Date: %s, %s)", __DATE__, __TIME__); // (09.01.2022 - ?)
+	alpha317.title = UString::format("33.13 (Build Date: %s, %s)", __DATE__, __TIME__); // (09.01.2022 - ?)
+	alpha317.changes.push_back("- Updated pp algorithm to better handle ScoreV2 cases for ScoreV1-based misscount estimation (thanks to @Givikap120!)");
+	alpha317.changes.push_back("- Updated pp algorithm to disable ScoreV1-based misscount estimation for all older ScoreV2 McOsu scores (discrepancy with osu_slider_scorev2)");
+	alpha317.changes.push_back("- Updated \"Use ScoreV2 Slider Accuracy\" to only affect slider head accuracy and not force store the ScoreV2 mod as enabled (osu_slider_scorev2)");
+	alpha317.changes.push_back("");
+	alpha317.changes.push_back("");
 	alpha317.changes.push_back("- For more info on the star/pp changes in this update see https://osu.ppy.sh/home/news/2025-10-29-performance-points-star-rating-updates");
 	alpha317.changes.push_back("- Updated star + pp algorithms to match current lazer implementation aka 20251007 (20) (thanks to @Givikap120!)");
 	alpha317.changes.push_back("- Added new experimental mod \"No Spinners\"");

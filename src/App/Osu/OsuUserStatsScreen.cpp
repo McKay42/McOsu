@@ -207,7 +207,7 @@ private:
 						if (maxPossibleCombo < 1)
 							continue;
 
-						pp = OsuDifficultyCalculator::calculatePPv2(score.modsLegacy, speedMultiplier, AR, OD, attributes, numHitObjects, numCircles, numSliders, numSpinners, maxPossibleCombo, score.comboMax, score.numMisses, score.num300s, score.num100s, score.num50s, score.score);
+						pp = OsuDifficultyCalculator::calculatePPv2((score.isLegacyScore || score.isImportedLegacyScore), score.version, score.modsLegacy, speedMultiplier, AR, OD, attributes, numHitObjects, numCircles, numSliders, numSpinners, maxPossibleCombo, score.comboMax, score.numMisses, score.num300s, score.num100s, score.num50s, score.score);
 					}
 
 					// 5) overwrite score with new pp data (and handle imports)
@@ -215,7 +215,7 @@ private:
 					if (pp > 0.0f)
 					{
 						score.pp = pp;
-						score.version = OsuScore::VERSION;
+						score.version = (score.version < 20251214 && (score.modsLegacy & OsuReplay::ScoreV2) && !score.isLegacyScore && !score.isImportedLegacyScore ? score.version : OsuScore::VERSION); // NOTE: special case for older ScoreV2 McOsu scores, they need to keep their old version (see OsuDifficultyCalculator) for a fix related to how osu_slider_scorev2 was handled previously
 
 						if (m_bImportLegacyScores && score.isLegacyScore)
 						{

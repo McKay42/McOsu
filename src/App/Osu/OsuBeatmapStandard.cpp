@@ -107,7 +107,6 @@ ConVar *OsuBeatmapStandard::m_fposu_mod_strafing_strength_x_ref = NULL;
 ConVar *OsuBeatmapStandard::m_fposu_mod_strafing_strength_y_ref = NULL;
 ConVar *OsuBeatmapStandard::m_fposu_mod_strafing_strength_z_ref = NULL;
 ConVar *OsuBeatmapStandard::m_fposu_mod_3d_depthwobble_ref = NULL;
-ConVar *OsuBeatmapStandard::m_osu_slider_scorev2_ref = NULL;
 
 OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 {
@@ -187,8 +186,6 @@ OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 		m_fposu_mod_strafing_strength_z_ref = convar->getConVarByName("fposu_mod_strafing_strength_z");
 	if (m_fposu_mod_3d_depthwobble_ref == NULL)
 		m_fposu_mod_3d_depthwobble_ref = convar->getConVarByName("fposu_mod_3d_depthwobble");
-	if (m_osu_slider_scorev2_ref == NULL)
-		m_osu_slider_scorev2_ref = convar->getConVarByName("osu_slider_scorev2");
 }
 
 OsuBeatmapStandard::~OsuBeatmapStandard()
@@ -1695,11 +1692,6 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 				score.comboMax = m_osu->getScore()->getComboMax();
 				score.perfect = (maxPossibleCombo > 0 && score.comboMax > 0 && score.comboMax >= maxPossibleCombo);
 				score.modsLegacy = m_osu->getScore()->getModsLegacy();
-				{
-					// special case: manual slider accuracy has been enabled (affects pp but not score), so force scorev2 for potential future score recalculations
-					// NOTE: I forgot to add this before 20210103, so all old scores which were played without scorev2 but with osu_slider_scorev2 will get downgraded slighly :(
-					score.modsLegacy |= (m_osu_slider_scorev2_ref->getBool() ? OsuReplay::Mods::ScoreV2 : 0);
-				}
 
 				// custom
 				score.numSliderBreaks = m_osu->getScore()->getNumSliderBreaks();
