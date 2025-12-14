@@ -229,6 +229,7 @@ ConVar osu_main_menu_banner_ifupdatedfromoldversion_le3303_text("osu_main_menu_b
 ConVar osu_main_menu_banner_ifupdatedfromoldversion_le3308_text("osu_main_menu_banner_ifupdatedfromoldversion_le3308_text", "", FCVAR_NONE);
 ConVar osu_main_menu_banner_ifupdatedfromoldversion_le3310_text("osu_main_menu_banner_ifupdatedfromoldversion_le3310_text", "", FCVAR_NONE);
 ConVar osu_main_menu_banner_ifupdatedfromoldversion_le3311_text("osu_main_menu_banner_ifupdatedfromoldversion_le3311_text", "", FCVAR_NONE);
+ConVar osu_main_menu_banner_ifupdatedfromoldversion_le3312_text("osu_main_menu_banner_ifupdatedfromoldversion_le3312_text", "", FCVAR_NONE);
 
 ConVar *OsuMainMenu::m_osu_universal_offset_ref = NULL;
 ConVar *OsuMainMenu::m_osu_universal_offset_hardcoded_ref = NULL;
@@ -341,6 +342,7 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen(osu)
 	m_bDidUserUpdateFromOlderVersionLe3308 = false;
 	m_bDidUserUpdateFromOlderVersionLe3310 = false;
 	m_bDidUserUpdateFromOlderVersionLe3311 = false;
+	m_bDidUserUpdateFromOlderVersionLe3312 = false;
 	{
 		m_bDrawVersionNotificationArrow = false;
 		if (env->fileExists(MCOSU_NEWVERSION_NOTIFICATION_TRIGGER_FILE))
@@ -362,6 +364,8 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen(osu)
 					m_bDidUserUpdateFromOlderVersionLe3310 = true;
 				if (version < 33.12f - 0.0001f)
 					m_bDidUserUpdateFromOlderVersionLe3311 = true;
+				if (version < 33.13f - 0.0001f)
+					m_bDidUserUpdateFromOlderVersionLe3312 = true;
 			}
 			else
 				m_bDrawVersionNotificationArrow = true;
@@ -611,6 +615,8 @@ void OsuMainMenu::draw(Graphics *g)
 			bannerText = osu_main_menu_banner_ifupdatedfromoldversion_le3310_text.getString();
 		else if (m_bDidUserUpdateFromOlderVersionLe3311 && osu_main_menu_banner_ifupdatedfromoldversion_le3311_text.getString().length() > 0)
 			bannerText = osu_main_menu_banner_ifupdatedfromoldversion_le3311_text.getString();
+		else if (m_bDidUserUpdateFromOlderVersionLe3312 && osu_main_menu_banner_ifupdatedfromoldversion_le3312_text.getString().length() > 0)
+			bannerText = osu_main_menu_banner_ifupdatedfromoldversion_le3312_text.getString();
 
 		if (bannerText.length() > 0)
 		{
