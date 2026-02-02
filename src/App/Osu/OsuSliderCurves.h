@@ -48,6 +48,9 @@ public:
 
 	inline float getPixelLength() const {return m_fPixelLength;}
 
+	inline Vector4 getBounds() const {return m_bounds;}					// with stacking
+	inline Vector4 getOriginalBounds() const {return m_originalBounds;}	// without stacking
+
 protected:
 	// original input values
 	float m_fPixelLength;
@@ -60,6 +63,10 @@ protected:
 	std::vector<Vector2> m_originalCurvePoints;
 	float m_fStartAngle;
 	float m_fEndAngle;
+
+private:
+	Vector4 m_bounds;
+	Vector4 m_originalBounds;
 };
 
 

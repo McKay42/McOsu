@@ -337,7 +337,11 @@ void OsuBeatmap::drawBackground(Graphics *g)
 			{
 				g->scale(scale, scale);
 				g->translate((int)centerTrans.x, (int)centerTrans.y);
-				g->drawImage(backgroundImage);
+				g->setBlending(false);
+				{
+					g->drawImage(backgroundImage);
+				}
+				g->setBlending(true);
 			}
 			g->popTransform();
 		}
@@ -2353,7 +2357,7 @@ unsigned long OsuBeatmap::getMusicPositionMSInterpolated()
 		return m_music->getPositionMS();
 	else
 	{
-#ifdef MCENGINE_FEATURE_SDL_MIXER
+#ifdef MCENGINE_FEATURE_SDL2_MIXER
 
 		const double interpolationMultiplier = 2.0;
 

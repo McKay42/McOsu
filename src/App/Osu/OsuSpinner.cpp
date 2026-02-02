@@ -11,8 +11,8 @@
 #include "ResourceManager.h"
 #include "SoundEngine.h"
 #include "AnimationHandler.h"
-#include "OpenVRInterface.h"
-#include "OpenVRController.h"
+//#include "OpenVRInterface.h"
+//#include "OpenVRController.h"
 #include "Mouse.h"
 #include "ConVar.h"
 

@@ -7,8 +7,8 @@
 
 #include "OsuVRUISlider.h"
 
-#include "OpenVRInterface.h"
-#include "OpenVRController.h"
+//#include "OpenVRInterface.h"
+//#include "OpenVRController.h"
 #include "Shader.h"
 #include "VertexArrayObject.h"
 
@@ -86,6 +86,7 @@ void OsuVRUISlider::update(Vector2 cursorPos)
 	OsuVRUIElement::update(cursorPos);
 	if (!m_bIsVisible) return;
 
+	/*
 	OpenVRController *controller = openvr->getController();
 
 	if (controller->getTrigger() > 0.95f || controller->isButtonPressed(OpenVRController::BUTTON::BUTTON_STEAMVR_TOUCHPAD))
@@ -117,6 +118,7 @@ void OsuVRUISlider::update(Vector2 cursorPos)
 		if (m_sliderChangeCallback != NULL && hasChanged)
 			m_sliderChangeCallback(this);
 	}
+	*/
 }
 
 void OsuVRUISlider::setValue(float value, bool ignoreCallback)

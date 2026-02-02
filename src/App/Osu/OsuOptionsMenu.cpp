@@ -14,8 +14,8 @@
 #include "Environment.h"
 #include "ResourceManager.h"
 #include "AnimationHandler.h"
-#include "OpenVRInterface.h"
-#include "OpenVRController.h"
+//#include "OpenVRInterface.h"
+//#include "OpenVRController.h"
 #include "SteamworksInterface.h"
 #include "Mouse.h"
 #include "File.h"
@@ -233,7 +233,8 @@ public:
 							if (m_vao == NULL)
 								m_vao = OsuSliderRenderer::generateVAO(m_osu, points, hitcircleDiameter, Vector3(0, 0, 0), false);
 						}
-						OsuSliderRenderer::draw(g, m_osu, m_vao, emptyVector, m_vPos, 1, hitcircleDiameter, 0, 1, m_osu->getSkin()->getComboColorForCounter(420, 0));
+						Vector4 emptyBounds;
+						OsuSliderRenderer::draw(g, m_osu, m_vao, emptyBounds, emptyVector, m_vPos, 1, hitcircleDiameter, 0, 1, m_osu->getSkin()->getComboColorForCounter(420, 0));
 					}
 				}
 			}
@@ -344,6 +345,7 @@ public:
 	{
 		if (m_font != NULL && m_sText.length() > 0)
 		{
+			g->setClipping(true);
 			g->pushClipRect(McRect(m_vPos.x+1, m_vPos.y+1, m_vSize.x-1, m_vSize.y-1));
 			{
 				g->setColor(m_textColor);
@@ -355,6 +357,7 @@ public:
 				g->popTransform();
 			}
 			g->popClipRect();
+			g->setClipping(false);
 		}
 	}
 
@@ -582,9 +585,9 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addSpacer();
 	addLabel("");
 	addCheckbox("Use osu!stable osu!.db database (read-only)", "If you have an existing osu!stable installation,\nthen this will massively speed up songbrowser beatmap loading.", convar->getConVarByName("osu_database_enabled"));
-	if (env->getOS() != Environment::OS::OS_HORIZON)
+	//if (env->getOS() != Environment::OS::OS_HORIZON)
 		addCheckbox("Load osu!stable collection.db (read-only)", "If you have an existing osu!stable installation,\nalso load and display your created collections from there.", convar->getConVarByName("osu_collections_legacy_enabled"));
-	if (env->getOS() != Environment::OS::OS_HORIZON)
+	//if (env->getOS() != Environment::OS::OS_HORIZON)
 		addCheckbox("Load osu!stable scores.db (read-only)", "If you have an existing osu!stable installation,\nalso load and display your achieved scores from there.", convar->getConVarByName("osu_scores_legacy_enabled"));
 
 	addSubSection("Player (Name)");
@@ -616,7 +619,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 		addCheckbox("High Priority (!)", "WARNING: Only enable this if nothing else works!\nSets the process priority to High.\nMay fix microstuttering and other weird problems.\nTry to fix your broken computer/OS/drivers first!", convar->getConVarByName("win_processpriority"));
 
 	addCheckbox("Show FPS Counter", convar->getConVarByName("osu_draw_fps"));
-	if (env->getOS() != Environment::OS::OS_HORIZON)
+	//if (env->getOS() != Environment::OS::OS_HORIZON)
 	{
 		addSpacer();
 
@@ -657,7 +660,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Snaking in sliders", "\"Growing\" sliders.\nSliders gradually snake out from their starting point while fading in.\nHas no impact on performance whatsoever.", convar->getConVarByName("osu_snaking_sliders"));
 	addCheckbox("Snaking out sliders", "\"Shrinking\" sliders.\nSliders will shrink with the sliderball while sliding.\nCan improve performance a tiny bit, since there will be less to draw overall.", convar->getConVarByName("osu_slider_shrink"));
 	addSpacer();
-	if (env->getOS() != Environment::OS::OS_HORIZON)
+	//if (env->getOS() != Environment::OS::OS_HORIZON)
 	{
 		addCheckbox("Legacy Slider Renderer (!)", "WARNING: Only try enabling this on shitty old computers!\nMay or may not improve fps while few sliders are visible.\nGuaranteed lower fps while many sliders are visible!", convar->getConVarByName("osu_force_legacy_slider_renderer"));
 		addCheckbox("Higher Quality Sliders (!)", "Disable this if your fps drop too low while sliders are visible.", convar->getConVarByName("osu_options_high_quality_sliders"))->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onHighQualitySlidersCheckboxChange) );
@@ -747,7 +750,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	CBaseUIElement *sectionAudio = addSection("Audio");
 
 	addSubSection("Devices");
-	if (env->getOS() != Environment::OS::OS_HORIZON)
+	//if (env->getOS() != Environment::OS::OS_HORIZON)
 	{
 		OPTIONS_ELEMENT outputDeviceSelect = addButton("Select Output Device", "Default", true);
 		((CBaseUIButton*)outputDeviceSelect.elements[0])->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onOutputDeviceSelect) );
@@ -771,8 +774,8 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 		m_outputDeviceSelectButton = outputDeviceSelect.elements[0];
 		m_outputDeviceLabel = (CBaseUILabel*)outputDeviceSelect.elements[1];
 	}
-	else
-		addButton("Restart SoundEngine (fix crackling)")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onOutputDeviceRestart) );
+	//else
+	//	addButton("Restart SoundEngine (fix crackling)")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onOutputDeviceRestart) );
 
 #ifdef MCENGINE_FEATURE_BASS_WASAPI
 
@@ -821,7 +824,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	offsetSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onSliderChangeIntMS) );
 	offsetSlider->setKeyDelta(1);
 
-	if (env->getOS() != Environment::OS::OS_HORIZON)
+	//if (env->getOS() != Environment::OS::OS_HORIZON)
 	{
 		addSubSection("Songbrowser");
 		addCheckbox("Apply speed/pitch mods while browsing", "Whether to always apply all mods, or keep the preview music normal.", convar->getConVarByName("osu_beatmap_preview_mods_live"));
@@ -899,19 +902,21 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	CBaseUIElement *sectionInput = addSection("Input");
 
 	addSubSection("Mouse", "scroll");
-	if (env->getOS() == Environment::OS::OS_WINDOWS || env->getOS() == Environment::OS::OS_MACOS || env->getOS() == Environment::OS::OS_HORIZON)
+	if (env->getOS() == Environment::OS::OS_WINDOWS /*|| env->getOS() == Environment::OS::OS_MACOS || env->getOS() == Environment::OS::OS_HORIZON*/)
 	{
-		addSlider("Sensitivity:", (env->getOS() == Environment::OS::OS_HORIZON ? 1.0f : 0.1f), 6.0f, convar->getConVarByName("mouse_sensitivity"))->setKeyDelta(0.01f);
+		addSlider("Sensitivity:", (/*env->getOS() == Environment::OS::OS_HORIZON ? 1.0f :*/ 0.1f), 6.0f, convar->getConVarByName("mouse_sensitivity"))->setKeyDelta(0.01f);
 
-		if (env->getOS() == Environment::OS::OS_HORIZON)
-			addSlider("Joystick S.:", 0.1f, 6.0f, convar->getConVarByName("sdl_joystick_mouse_sensitivity"))->setKeyDelta(0.01f);
+		//if (env->getOS() == Environment::OS::OS_HORIZON)
+		//	addSlider("Joystick S.:", 0.1f, 6.0f, convar->getConVarByName("sdl_joystick_mouse_sensitivity"))->setKeyDelta(0.01f);
 
+		/*
 		if (env->getOS() == Environment::OS::OS_MACOS)
 		{
 			addLabel("");
 			addLabel("WARNING: Set Sensitivity to 1 for tablets!")->setTextColor(0xffff0000);
 			addLabel("");
 		}
+		*/
 	}
 	if (env->getOS() == Environment::OS::OS_WINDOWS)
 	{
@@ -930,7 +935,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 		addLabel("Use xinput or xsetwacom to change the tablet area.")->setTextColor(0xff555555);
 		addLabel("");
 	}
-	if (env->getOS() != Environment::OS::OS_HORIZON)
+	//if (env->getOS() != Environment::OS::OS_HORIZON)
 	{
 		addCheckbox("Confine Cursor (Windowed)", convar->getConVarByName("osu_confine_cursor_windowed"));
 		addCheckbox("Confine Cursor (Fullscreen)", convar->getConVarByName("osu_confine_cursor_fullscreen"));
@@ -941,17 +946,16 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 
 	if (env->getOS() == Environment::OS::OS_WINDOWS)
 	{
-#ifndef MCENGINE_FEATURE_SDL
+#ifndef MCENGINE_FEATURE_SDL2
 
 		addSubSection("Tablet");
-		addCheckbox("OS TabletPC Support (!)", "WARNING: Windows 10 may break raw mouse input if this is enabled!\nWARNING: Do not enable this with a mouse (will break right click)!\nEnable this if your tablet clicks aren't handled correctly.", convar->getConVarByName("win_realtimestylus"));
 		addCheckbox("Windows Ink Workaround", "Enable this if your tablet cursor is stuck in a tiny area on the top left of the screen.\nIf this doesn't fix it, use \"Ignore Sensitivity & Raw Input\" below.", convar->getConVarByName("win_ink_workaround"));
 		addCheckbox("Ignore Sensitivity & Raw Input", "Only use this if nothing else works.\nIf this is enabled, then the in-game sensitivity slider will no longer work for tablets!\n(You can then instead use your tablet configuration software to change the tablet area.)", convar->getConVarByName("tablet_sensitivity_ignore"));
 
 #endif
 	}
 
-#ifdef MCENGINE_FEATURE_SDL
+#ifdef MCENGINE_FEATURE_SDL2
 
 	addSubSection("Gamepad");
 	addSlider("Stick Sens.:", 0.1f, 6.0f, convar->getConVarByName("sdl_joystick_mouse_sensitivity"))->setKeyDelta(0.01f);
@@ -1227,7 +1231,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	//**************************************************************************************************************************//
 
 	CBaseUIElement *sectionOnline = NULL;
-	if (env->getOS() != Environment::OS::OS_HORIZON)
+	//if (env->getOS() != Environment::OS::OS_HORIZON)
 	{
 		sectionOnline = addSection("Online");
 
@@ -1489,6 +1493,7 @@ void OsuOptionsMenu::update()
 		m_osuFolderTextbox->setBackgroundColor(0xff000000);
 
 	// demo vibration strength while sliding
+	/*
 	if (m_vrVibrationStrengthSlider != NULL && m_vrVibrationStrengthSlider->isActive())
 	{
 		if (engine->getTime() > m_fVibrationStrengthExampleTimer)
@@ -1500,6 +1505,7 @@ void OsuOptionsMenu::update()
 	}
 	if (m_vrSliderVibrationStrengthSlider != NULL && m_vrSliderVibrationStrengthSlider->isActive())
 		openvr->getController()->triggerHapticPulse(m_osu->getVR()->getSliderHapticPulseStrength());
+	*/
 
 	// hack to avoid entering search text while binding keys
 	if (m_osu->getNotificationOverlay()->isVisible() && m_osu->getNotificationOverlay()->isWaitingForKey())
@@ -2417,10 +2423,12 @@ void OsuOptionsMenu::updateFposuCMper360()
 
 void OsuOptionsMenu::updateVRRenderTargetResolutionLabel()
 {
+	/*
 	if (m_vrRenderTargetResolutionLabel == NULL || !openvr->isReady() || !m_osu->isInVRMode()) return;
 
 	Vector2 vrRenderTargetResolution = openvr->getRenderTargetResolution();
 	m_vrRenderTargetResolutionLabel->setText(UString::format(m_vrRenderTargetResolutionLabel->getName().toUtf8(), (int)vrRenderTargetResolution.x, (int)vrRenderTargetResolution.y));
+	*/
 }
 
 void OsuOptionsMenu::updateSkinNameLabel()
@@ -2893,11 +2901,13 @@ void OsuOptionsMenu::onAudioCompatibilityModeChange(CBaseUICheckbox *checkbox)
 
 void OsuOptionsMenu::onDownloadOsuClicked()
 {
+	/*
 	if (env->getOS() == Environment::OS::OS_HORIZON)
 	{
 		m_osu->getNotificationOverlay()->addNotification("Go to https://osu.ppy.sh/home/download", 0xffffffff, false, 0.75f);
 		return;
 	}
+	*/
 
 	m_osu->getNotificationOverlay()->addNotification("Opening browser, please wait ...", 0xffffffff, false, 0.75f);
 	env->openURLInDefaultBrowser("https://osu.ppy.sh/home/download");
@@ -2905,11 +2915,13 @@ void OsuOptionsMenu::onDownloadOsuClicked()
 
 void OsuOptionsMenu::onManuallyManageBeatmapsClicked()
 {
+	/*
 	if (env->getOS() == Environment::OS::OS_HORIZON)
 	{
 		m_osu->getNotificationOverlay()->addNotification("Google \"How to use McOsu without osu!\"", 0xffffffff, false, 0.75f);
 		return;
 	}
+	*/
 
 	m_osu->getNotificationOverlay()->addNotification("Opening browser, please wait ...", 0xffffffff, false, 0.75f);
 	env->openURLInDefaultBrowser("https://steamcommunity.com/sharedfiles/filedetails/?id=880768265");
@@ -2917,11 +2929,13 @@ void OsuOptionsMenu::onManuallyManageBeatmapsClicked()
 
 void OsuOptionsMenu::onCM360CalculatorLinkClicked()
 {
+	/*
 	if (env->getOS() == Environment::OS::OS_HORIZON)
 	{
 		m_osu->getNotificationOverlay()->addNotification("Go to https://www.mouse-sensitivity.com/", 0xffffffff, false, 0.75f);
 		return;
 	}
+	*/
 
 	m_osu->getNotificationOverlay()->addNotification("Opening browser, please wait ...", 0xffffffff, false, 0.75f);
 	env->openURLInDefaultBrowser("https://www.mouse-sensitivity.com/");

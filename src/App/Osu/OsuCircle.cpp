@@ -11,8 +11,8 @@
 #include "ResourceManager.h"
 #include "AnimationHandler.h"
 #include "SoundEngine.h"
-#include "OpenVRInterface.h"
-#include "OpenVRController.h"
+//#include "OpenVRInterface.h"
+//#include "OpenVRController.h"
 #include "Camera.h"
 #include "ConVar.h"
 
@@ -24,10 +24,10 @@
 #include "OsuBeatmapStandard.h"
 #include "OsuModFPoSu.h"
 
-#include "OpenGLHeaders.h"
-#include "OpenGLLegacyInterface.h"
-#include "OpenGL3Interface.h"
-#include "OpenGLES2Interface.h"
+//#include "OpenGLHeaders.h"
+//#include "OpenGLLegacyInterface.h"
+//#include "OpenGL3Interface.h"
+//#include "OpenGLES2Interface.h"
 
 ConVar osu_bug_flicker_log("osu_bug_flicker_log", false, FCVAR_NONE);
 
@@ -1054,10 +1054,12 @@ void OsuCircle::onHit(OsuScore::HIT result, long delta, float targetDelta, float
 
 		if (m_beatmap->getOsu()->isInVRMode())
 		{
+			/*
 			if (m_bOnHitVRLeftControllerHapticFeedback)
 				openvr->getLeftController()->triggerHapticPulse(m_beatmap->getOsu()->getVR()->getHapticPulseStrength());
 			else
 				openvr->getRightController()->triggerHapticPulse(m_beatmap->getOsu()->getVR()->getHapticPulseStrength());
+			*/
 		}
 	}
 

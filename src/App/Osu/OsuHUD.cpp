@@ -11,10 +11,11 @@
 #include "Environment.h"
 #include "ConVar.h"
 #include "Mouse.h"
-#include "NetworkHandler.h"
+//#include "NetworkHandler.h"
 #include "ResourceManager.h"
 #include "AnimationHandler.h"
 #include "VertexArrayObject.h"
+#include "VertexLayout.h"
 #include "Shader.h"
 
 #include "CBaseUIContainer.h"
@@ -42,9 +43,6 @@
 #include "OsuCircle.h"
 
 #include "OsuUIVolumeSlider.h"
-
-#include "DirectX11Interface.h"
-#include "OpenGLES2Interface.h"
 
 ConVar osu_automatic_cursor_size("osu_automatic_cursor_size", false, FCVAR_NONE);
 
@@ -260,8 +258,8 @@ OsuHUD::OsuHUD(Osu *osu) : OsuScreen(osu)
 	m_tempFont = engine->getResourceManager()->getFont("FONT_DEFAULT");
 	m_cursorTrailShader = engine->getResourceManager()->loadShader2("cursortrail.mcshader", "cursortrail");
 	m_cursorTrail.reserve(osu_cursor_trail_max_size.getInt()*2);
-	if (env->getOS() == Environment::OS::OS_HORIZON)
-		m_cursorTrail2.reserve(osu_cursor_trail_max_size.getInt()*2);
+	//if (env->getOS() == Environment::OS::OS_HORIZON)
+	//	m_cursorTrail2.reserve(osu_cursor_trail_max_size.getInt()*2);
 
 	m_cursorTrailShaderVR = NULL;
 	if (m_osu->isInVRMode())
@@ -272,7 +270,10 @@ OsuHUD::OsuHUD(Osu *osu) : OsuScreen(osu)
 		m_cursorTrailSpectator1.reserve(osu_cursor_trail_max_size.getInt()*2);
 		m_cursorTrailSpectator2.reserve(osu_cursor_trail_max_size.getInt()*2);
 	}
-	m_cursorTrailVAO = engine->getResourceManager()->createVertexArrayObject(Graphics::PRIMITIVE::PRIMITIVE_QUADS, Graphics::USAGE_TYPE::USAGE_DYNAMIC);
+	m_cursorTrailVertexLayout = new VertexLayout();
+	m_cursorTrailVertexLayout->addAttribute(VertexLayout::DATATYPE::FLOAT, 3, VertexLayout::ATTRIBUTE::POSITION);
+	m_cursorTrailVertexLayout->addAttribute(VertexLayout::DATATYPE::FLOAT, 2, VertexLayout::ATTRIBUTE::TEXCOORD_0);
+	m_cursorTrailVAO = engine->getResourceManager()->createVertexArrayObject(m_cursorTrailVertexLayout, Graphics::PRIMITIVE::PRIMITIVE_QUADS, Graphics::USAGE_TYPE::USAGE_DYNAMIC);
 
 	m_fCurFps = 60.0f;
 	m_fCurFpsSmooth = 60.0f;
@@ -333,6 +334,7 @@ OsuHUD::OsuHUD(Osu *osu) : OsuScreen(osu)
 
 OsuHUD::~OsuHUD()
 {
+	SAFE_DELETE(m_cursorTrailVertexLayout);
 	SAFE_DELETE(m_volumeSliderOverlayContainer);
 }
 
@@ -943,29 +945,9 @@ void OsuHUD::drawCursorTrailInt(Graphics *g, Shader *trailShader, std::vector<CU
 
 				trailShader->setUniform1f("time", engine->getTime());
 
-#ifdef MCENGINE_FEATURE_OPENGLES
-				{
-					OpenGLES2Interface *gles2 = dynamic_cast<OpenGLES2Interface*>(g);
-					if (gles2 != NULL)
-					{
-						g->forceUpdateTransform();
-						Matrix4 mvp = g->getMVP();
-						trailShader->setUniformMatrix4fv("mvp", mvp);
-					}
-				}
-#endif
-
-#ifdef MCENGINE_FEATURE_DIRECTX11
-				{
-					DirectX11Interface *dx11 = dynamic_cast<DirectX11Interface*>(g);
-					if (dx11 != NULL)
-					{
-						g->forceUpdateTransform();
-						Matrix4 mvp = g->getMVP();
-						trailShader->setUniformMatrix4fv("mvp", mvp);
-					}
-				}
-#endif
+				g->forceUpdateTransform();
+				Matrix4 mvp = g->getMVP();
+				trailShader->setUniformMatrix4fv("mvp", mvp);
 
 				trailImage->bind();
 				{
@@ -1122,9 +1104,9 @@ void OsuHUD::drawFps(Graphics *g, McFont *font, float fps)
 	g->popTransform();
 
 	// top
-	if (fps >= 200 || (m_osu->isInVRMode() && fps >= 80) || (env->getOS() == Environment::OS::OS_HORIZON && fps >= 50))
+	if (fps >= 200 || (m_osu->isInVRMode() && fps >= 80) /*|| (env->getOS() == Environment::OS::OS_HORIZON && fps >= 50)*/)
 		g->setColor(0xffffffff);
-	else if (fps >= 120 || (m_osu->isInVRMode() && fps >= 60) || (env->getOS() == Environment::OS::OS_HORIZON && fps >= 40))
+	else if (fps >= 120 || (m_osu->isInVRMode() && fps >= 60) /*|| (env->getOS() == Environment::OS::OS_HORIZON && fps >= 40)*/)
 		g->setColor(0xffdddd00);
 	else
 	{
@@ -1966,7 +1948,7 @@ void OsuHUD::drawScoreBoardMP(Graphics *g)
 		scoreEntry.missingBeatmap = (*m_osu->getMultiplayer()->getPlayers())[i].missingBeatmap;
 		scoreEntry.downloadingBeatmap = (*m_osu->getMultiplayer()->getPlayers())[i].downloadingBeatmap;
 		scoreEntry.dead = (*m_osu->getMultiplayer()->getPlayers())[i].dead;
-		scoreEntry.highlight = ((*m_osu->getMultiplayer()->getPlayers())[i].id == engine->getNetworkHandler()->getLocalClientID());
+		///scoreEntry.highlight = ((*m_osu->getMultiplayer()->getPlayers())[i].id == engine->getNetworkHandler()->getLocalClientID());
 
 		scoreEntries.push_back(std::move(scoreEntry));
 	}
@@ -2075,7 +2057,10 @@ void OsuHUD::drawScoreBoardInt(Graphics *g, const std::vector<OsuHUD::SCORE_ENTR
 				const bool isInPlayModeAndAlsoNotInVR = m_osu->isInPlayMode() && !m_osu->isInVRMode();
 
 				if (isInPlayModeAndAlsoNotInVR)
+				{
+					g->setClipping(true);
 					g->pushClipRect(McRect(x, y, width - 2*padding, height));
+				}
 
 				UString nameString = scoreEntries[i].name;
 				if (scoreEntries[i].downloadingBeatmap)
@@ -2098,7 +2083,10 @@ void OsuHUD::drawScoreBoardInt(Graphics *g, const std::vector<OsuHUD::SCORE_ENTR
 				g->drawString(nameFont, nameString);
 
 				if (isInPlayModeAndAlsoNotInVR)
+				{
 					g->popClipRect();
+					g->setClipping(false);
+				}
 			}
 			g->popTransform();
 		}
@@ -2184,7 +2172,10 @@ void OsuHUD::drawScoreBoardInt(Graphics *g, const std::vector<OsuHUD::SCORE_ENTR
 				const bool isInPlayModeAndAlsoNotInVR = m_osu->isInPlayMode() && !m_osu->isInVRMode();
 
 				if (isInPlayModeAndAlsoNotInVR)
+				{
+					g->setClipping(true);
 					g->pushClipRect(McRect(x, y, width - 2*padding, height));
+				}
 
 				UString nameString = scoreEntries[i].name;
 				if (scoreEntries[i].downloadingBeatmap)
@@ -2207,7 +2198,10 @@ void OsuHUD::drawScoreBoardInt(Graphics *g, const std::vector<OsuHUD::SCORE_ENTR
 				g->drawString(nameFont, nameString);
 
 				if (isInPlayModeAndAlsoNotInVR)
+				{
 					g->popClipRect();
+					g->setClipping(false);
+				}
 			}
 			g->popTransform();
 		}

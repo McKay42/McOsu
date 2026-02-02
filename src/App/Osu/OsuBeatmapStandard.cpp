@@ -1037,6 +1037,14 @@ bool OsuBeatmapStandard::isLoading()
 	return (isLoadingInt() || (m_osu->isInMultiplayer() && m_osu->getMultiplayer()->isWaitingForPlayers()));
 }
 
+Vector2 OsuBeatmapStandard::legacyPixels2RawPixels(Vector2 coords) const
+{
+	// just scale
+	coords *= m_fScaleFactor;
+
+	return coords;
+}
+
 Vector2 OsuBeatmapStandard::pixels2OsuCoords(Vector2 pixelCoords) const
 {
 	// un-first-person

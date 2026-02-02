@@ -84,12 +84,12 @@ public:
 	virtual void onKeyUp(KeyboardEvent &e);
 	virtual void onChar(KeyboardEvent &e);
 
-	void onLeftChange(bool down);
-	void onMiddleChange(bool down){;}
-	void onRightChange(bool down);
+	void onLeftChange(MouseEvent &e, bool down);
+	void onMiddleChange(MouseEvent &e, bool down){;}
+	void onRightChange(MouseEvent &e, bool down);
 
-	void onWheelVertical(int delta){;}
-	void onWheelHorizontal(int delta){;}
+	void onWheelVertical(MouseEvent &e, int delta){;}
+	void onWheelHorizontal(MouseEvent &e, int delta){;}
 
 	virtual void onResolutionChanged(Vector2 newResolution);
 	virtual void onDPIChanged();

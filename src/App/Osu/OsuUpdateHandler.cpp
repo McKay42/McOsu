@@ -9,7 +9,7 @@
 
 #include "Engine.h"
 #include "ResourceManager.h"
-#include "NetworkHandler.h"
+//#include "NetworkHandler.h"
 #include "ConVar.h"
 #include "File.h"
 
@@ -177,7 +177,7 @@ void OsuUpdateHandler::_requestUpdate()
 	m_releases.clear();
 	std::vector<GITHUB_RELEASE_BUILD> asyncReleases;
 
-	UString gitReleases = engine->getNetworkHandler()->httpGet(GITHUB_API_RELEASE_URL);
+	UString gitReleases/* = engine->getNetworkHandler()->httpGet(GITHUB_API_RELEASE_URL)*/;
 
 	//	[array
 	//		{object
@@ -294,7 +294,7 @@ bool OsuUpdateHandler::_downloadUpdate(UString url)
 	// setting the status in every error check return is retarded
 
 	// download
-	std::string data = engine->getNetworkHandler()->httpDownload(url);
+	std::string data/* = engine->getNetworkHandler()->httpDownload(url)*/;
 	if (data.length() < 2)
 	{
 		debugLog("OsuUpdateHandler::downloadUpdate() error, downloaded file is too small (%i)!\n", data.length());
@@ -470,8 +470,10 @@ Environment::OS OsuUpdateHandler::stringToOS(UString osString)
 		os = Environment::OS::OS_WINDOWS;
 	else if (osString.find("linux") != -1)
 		os = Environment::OS::OS_LINUX;
+	/*
 	else if (osString.find("macos") != -1)
 		os = Environment::OS::OS_MACOS;
+	*/
 
 	return os;
 }

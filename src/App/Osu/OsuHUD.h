@@ -20,6 +20,7 @@ class ConVar;
 class Image;
 class Shader;
 class VertexArrayObject;
+class VertexLayout;
 
 class OsuUIVolumeSlider;
 
@@ -249,6 +250,7 @@ private:
 	std::vector<CURSORTRAIL> m_cursorTrailVR2;
 	Shader *m_cursorTrailShader;
 	Shader *m_cursorTrailShaderVR;
+	VertexLayout *m_cursorTrailVertexLayout;
 	VertexArrayObject *m_cursorTrailVAO;
 	std::vector<CURSORRIPPLE> m_cursorRipples;
 

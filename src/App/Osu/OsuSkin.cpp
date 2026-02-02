@@ -324,6 +324,9 @@ OsuSkin::OsuSkin(Osu *osu, UString name, UString filepath, bool isDefaultSkin, b
 
 OsuSkin::~OsuSkin()
 {
+	stopSliderSlideSound();
+	stopSpinnerSpinSound();
+
 	for (int i=0; i<m_resources.size(); i++)
 	{
 		if (m_resources[i] != (Resource*)m_missingTexture)
@@ -489,7 +492,7 @@ void OsuSkin::load()
 	// skin ini
 	randomizeFilePath();
 	m_sSkinIniFilePath = m_sFilePath;
-	UString defaultSkinIniFilePath = UString(env->getOS() == Environment::OS::OS_HORIZON ? "romfs:/materials/" : "./materials/");
+	UString defaultSkinIniFilePath = UString(/*env->getOS() == Environment::OS::OS_HORIZON ? "romfs:/materials/" :*/ "./materials/");
 	defaultSkinIniFilePath.append(OSUSKIN_DEFAULT_SKIN_PATH);
 	defaultSkinIniFilePath.append("skin.ini");
 	m_sSkinIniFilePath.append("skin.ini");
@@ -1458,17 +1461,17 @@ void OsuSkin::playSpinnerBonusSound()
 
 void OsuSkin::stopSliderSlideSound(int sampleSet)
 {
-	if ((sampleSet == -2 || sampleSet == 3) && m_drumSliderSlide->isPlaying())
+	if ((sampleSet == -2 || sampleSet == 3) && m_drumSliderSlide != NULL && m_drumSliderSlide->isPlaying())
 		engine->getSound()->stop(m_drumSliderSlide);
-	if ((sampleSet == -2 || sampleSet == 2) && m_softSliderSlide->isPlaying())
+	if ((sampleSet == -2 || sampleSet == 2) && m_softSliderSlide != NULL && m_softSliderSlide->isPlaying())
 		engine->getSound()->stop(m_softSliderSlide);
-	if ((sampleSet == -2 || sampleSet == 1 || sampleSet == 0) && m_normalSliderSlide->isPlaying())
+	if ((sampleSet == -2 || sampleSet == 1 || sampleSet == 0) && m_normalSliderSlide != NULL && m_normalSliderSlide->isPlaying())
 		engine->getSound()->stop(m_normalSliderSlide);
 }
 
 void OsuSkin::stopSpinnerSpinSound()
 {
-	if (m_spinnerSpinSound->isPlaying())
+	if (m_spinnerSpinSound != NULL && m_spinnerSpinSound->isPlaying())
 		engine->getSound()->stop(m_spinnerSpinSound);
 }
 
@@ -1495,13 +1498,13 @@ void OsuSkin::checkLoadImage(Image **addressOfPointer, UString skinElementName, 
 
 	// NOTE: only the default skin is loaded with a resource name (it must never be unloaded by other instances), and it is NOT added to the resources vector
 
-	UString defaultFilePath1 = UString(env->getOS() == Environment::OS::OS_HORIZON ? "romfs:/materials/" : "./materials/");
+	UString defaultFilePath1 = UString(/*env->getOS() == Environment::OS::OS_HORIZON ? "romfs:/materials/" :*/ "./materials/");
 	defaultFilePath1.append(OSUSKIN_DEFAULT_SKIN_PATH);
 	defaultFilePath1.append(skinElementName);
 	defaultFilePath1.append("@2x.");
 	defaultFilePath1.append(fileExtension);
 
-	UString defaultFilePath2 = UString(env->getOS() == Environment::OS::OS_HORIZON ? "romfs:/materials/" : "./materials/");
+	UString defaultFilePath2 = UString(/*env->getOS() == Environment::OS::OS_HORIZON ? "romfs:/materials/" :*/ "./materials/");
 	defaultFilePath2.append(OSUSKIN_DEFAULT_SKIN_PATH);
 	defaultFilePath2.append(skinElementName);
 	defaultFilePath2.append(".");
@@ -1651,21 +1654,21 @@ void OsuSkin::checkLoadSound(Sound **addressOfPointer, UString skinElementName, 
 
 	// load default skin
 
-	UString defaultpath1 = UString(env->getOS() == Environment::OS::OS_HORIZON ? "romfs:/materials/" : "./materials/");
+	UString defaultpath1 = UString(/*env->getOS() == Environment::OS::OS_HORIZON ? "romfs:/materials/" :*/ "./materials/");
 	{
 		defaultpath1.append(OSUSKIN_DEFAULT_SKIN_PATH);
 		defaultpath1.append(skinElementName);
 		defaultpath1.append(".wav");
 	}
 
-	UString defaultpath2 = UString(env->getOS() == Environment::OS::OS_HORIZON ? "romfs:/materials/" : "./materials/");
+	UString defaultpath2 = UString(/*env->getOS() == Environment::OS::OS_HORIZON ? "romfs:/materials/" :*/ "./materials/");
 	{
 		defaultpath2.append(OSUSKIN_DEFAULT_SKIN_PATH);
 		defaultpath2.append(skinElementName);
 		defaultpath2.append(".mp3");
 	}
 
-	UString defaultpath3 = UString(env->getOS() == Environment::OS::OS_HORIZON ? "romfs:/materials/" : "./materials/");
+	UString defaultpath3 = UString(/*env->getOS() == Environment::OS::OS_HORIZON ? "romfs:/materials/" :*/ "./materials/");
 	{
 		defaultpath3.append(OSUSKIN_DEFAULT_SKIN_PATH);
 		defaultpath3.append(skinElementName);

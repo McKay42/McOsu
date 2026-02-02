@@ -173,6 +173,7 @@ void OsuUISongBrowserScoreButton::draw(Graphics *g)
 	// username | (artist + songName + diffName)
 	const float usernameScale = (m_style == STYLE::TOP_RANKS ? 0.6f : 0.7f);
 	McFont *usernameFont = m_osu->getSongBrowserFont();
+	g->setClipping(true);
 	g->pushClipRect(McRect(m_vPos.x, m_vPos.y, m_vSize.x, m_vSize.y));
 	g->pushTransform();
 	{
@@ -195,6 +196,7 @@ void OsuUISongBrowserScoreButton::draw(Graphics *g)
 	}
 	g->popTransform();
 	g->popClipRect();
+	g->setClipping(false);
 
 	// score | pp | weighted 95% (pp)
 	const float scoreScale = 0.5f;

@@ -9,8 +9,8 @@
 #include "Engine.h"
 #include "SoundEngine.h"
 #include "ResourceManager.h"
-#include "OpenVRInterface.h"
-#include "OpenVRController.h"
+//#include "OpenVRInterface.h"
+//#include "OpenVRController.h"
 #include "VertexArrayObject.h"
 #include "Keyboard.h"
 #include "Mouse.h"
@@ -152,7 +152,7 @@ OsuVR::OsuVR(Osu *osu)
 	m_uiElements.push_back(m_lockLayoutCheckbox);
 
 	// load/execute VR stuff only in VR builds
-	if (openvr->isReady())
+	if (/*openvr->isReady()*/ false)
 	{
 		engine->getResourceManager()->loadImage("ic_keyboard_white_48dp.png", "OSU_VR_UI_ICON_KEYBOARD");
 		engine->getResourceManager()->loadImage("ic_replay_white_48dp.png", "OSU_VR_UI_ICON_RESET");
@@ -267,6 +267,7 @@ OsuVR::~OsuVR()
 
 void OsuVR::drawVR(Graphics *g, Matrix4 &mvp, RenderTarget *screen)
 {
+	/*
 	// draw floor
 	if (osu_vr_draw_floor.getBool())
 	{
@@ -394,6 +395,7 @@ void OsuVR::drawVR(Graphics *g, Matrix4 &mvp, RenderTarget *screen)
 		}
 		m_shaderGenericUntextured->disable();
 	}
+	*/
 
 	/*
 	VertexArrayObject playfieldWireframeVao(Graphics::PRIMITIVE::PRIMITIVE_LINES);
@@ -513,6 +515,7 @@ void OsuVR::drawVRCursors(Graphics *g, Matrix4 &mvp)
 
 void OsuVR::update()
 {
+	/*
 	OpenVRController *primaryController = openvr->getController();
 	OpenVRController *rightController = openvr->getRightController();
 	OpenVRController *leftController = openvr->getLeftController();
@@ -567,7 +570,9 @@ void OsuVR::update()
 			m_bScreenIntersection = false;
 		}
 	}
+	*/
 
+	/*
 	// calculate virtual playfield plane and the two virtual cursors
 	{
 		// certain controllers need (hardcoded) offsets, e.g. Oculus Touch
@@ -602,12 +607,6 @@ void OsuVR::update()
 				m_fPlayfieldCursorDist1 = std::abs(leftIntersectionDistance);
 				m_fPlayfieldCursorDistSigned1 = leftIntersectionDistance;
 			}
-
-			/*
-			if (newCursorPos.x >= 0 && newCursorPos.y >= 0 && newCursorPos.x <= OsuGameRules::OSU_COORD_WIDTH && newCursorPos.y <= OsuGameRules::OSU_COORD_HEIGHT)
-			{
-			}
-			*/
 		}
 
 		Vector3 rightControllerPosition = rightController->getPosition() + (rightController->getMatrixPose() * controllerOffset);
@@ -630,12 +629,6 @@ void OsuVR::update()
 				m_fPlayfieldCursorDist2 = std::abs(rightIntersectionDistance);
 				m_fPlayfieldCursorDistSigned2 = rightIntersectionDistance;
 			}
-
-			/*
-			if (newCursorPos.x >= 0 && newCursorPos.y >= 0 && newCursorPos.x <= OsuGameRules::OSU_COORD_WIDTH && newCursorPos.y <= OsuGameRules::OSU_COORD_HEIGHT)
-			{
-			}
-			*/
 		}
 
 		// get ray intersection with playfield (this is only used for grip button movement logic atm)
@@ -924,6 +917,7 @@ void OsuVR::update()
 	// force update to current songPos
 	if (m_osu->isInPlayMode() && m_osu->getSelectedBeatmap() != NULL)
 		m_scrubbingSlider->setValue(m_osu->getSelectedBeatmap()->getPercentFinishedPlayable(), true);
+	*/
 }
 
 float OsuVR::intersectRayPlane(Vector3 rayOrigin, Vector3 rayDir, Vector3 planeOrigin, Vector3 planeNormal)
@@ -1019,6 +1013,7 @@ void OsuVR::save()
 
 void OsuVR::resetMatrices()
 {
+	/*
 	Matrix4 screenRotation;
 	screenRotation.rotate(-90.0f, 0, 1, 0);
 	Matrix4 screenTranslation;
@@ -1029,6 +1024,7 @@ void OsuVR::resetMatrices()
 
 	osu_vr_screen_scale.setValue(m_fDefaultScreenScale);
 	osu_vr_playfield_scale.setValue(m_fDefaultPlayfieldScale);
+	*/
 }
 
 float OsuVR::getDrawScale()
@@ -1077,28 +1073,34 @@ void OsuVR::onLayoutLockClicked()
 
 void OsuVR::onKeyboardButtonClicked()
 {
+	/*
 	openvr->getController()->triggerHapticPulse(2500);
 	engine->getSound()->play(m_osu->getSkin()->getCheckOn());
 
 	openvr->showKeyboard();
+	*/
 }
 
 void OsuVR::onOffsetUpClicked()
 {
+	/*
 	openvr->getController()->triggerHapticPulse(2500);
 	engine->getSound()->play(m_osu->getSkin()->getCheckOn());
 
 	engine->onKeyboardKeyDown((KEYCODE)OsuKeyBindings::INCREASE_LOCAL_OFFSET.getInt());
 	engine->onKeyboardKeyUp((KEYCODE)OsuKeyBindings::INCREASE_LOCAL_OFFSET.getInt());
+	*/
 }
 
 void OsuVR::onOffsetDownClicked()
 {
+	/*
 	openvr->getController()->triggerHapticPulse(2500);
 	engine->getSound()->play(m_osu->getSkin()->getCheckOff());
 
 	engine->onKeyboardKeyDown((KEYCODE)OsuKeyBindings::DECREASE_LOCAL_OFFSET.getInt());
 	engine->onKeyboardKeyUp((KEYCODE)OsuKeyBindings::DECREASE_LOCAL_OFFSET.getInt());
+	*/
 }
 
 void OsuVR::onVolumeSliderChange(OsuVRUISlider *slider)

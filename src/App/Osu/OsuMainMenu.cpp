@@ -19,7 +19,7 @@
 #include "ConVar.h"
 #include "File.h"
 
-#include "HorizonSDLEnvironment.h"
+//#include "HorizonSDLEnvironment.h"
 
 #include "Osu.h"
 #include "OsuSkin.h"
@@ -266,8 +266,8 @@ void OsuMainMenu::openSteamWorkshopInDefaultBrowser(bool launchInSteam)
 
 OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen(osu)
 {
-	if (env->getOS() == Environment::OS::OS_HORIZON)
-		MCOSU_MAIN_BUTTON_TEXT.append(" NX");
+	//if (env->getOS() == Environment::OS::OS_HORIZON)
+	//	MCOSU_MAIN_BUTTON_TEXT.append(" NX");
 	if (m_osu->isInVRMode())
 		MCOSU_MAIN_BUTTON_TEXT.append(" VR");
 	if (m_osu->isInVRMode())
@@ -588,7 +588,7 @@ void OsuMainMenu::draw(Graphics *g)
 #ifdef MCENGINE_FEATURE_DIRECTX11
 
 		if (dynamic_cast<DirectX11Interface*>(engine->getGraphics()) != NULL)
-			bannerText = "-- DirectX11 Test - Unoptimized renderer (no batching etc.) - VR is not supported - Please report feedback on Discord/Steam Forums --";
+			bannerText = " DirectX11 Beta   -   VR is not supported   -";
 
 #endif
 
@@ -723,7 +723,8 @@ void OsuMainMenu::draw(Graphics *g)
 					const bool doDisableRenderTarget = (i+1 >= numHitObjects);
 					const bool doDrawSliderFrameBufferToScreen = false;
 
-					OsuSliderRenderer::draw(g, m_osu, sliderPointer->getVAO(), alwaysPoints, translation, scale, (to < 1.0f ? m_fMainMenuSliderTextRawHitCircleDiameter*scale : OsuSliderRenderer::UNIT_CIRCLE_VAO_DIAMETER), from, to, m_osu->getSkin()->getComboColorForCounter(sliderPointer->getColorCounter(), sliderPointer->getColorOffset()), 1.0f, 1.0f, 0, doEnableRenderTarget, doDisableRenderTarget, doDrawSliderFrameBufferToScreen);
+					Vector4 emptyBounds;
+					OsuSliderRenderer::draw(g, m_osu, sliderPointer->getVAO(), emptyBounds, alwaysPoints, translation, scale, (to < 1.0f ? m_fMainMenuSliderTextRawHitCircleDiameter*scale : OsuSliderRenderer::UNIT_CIRCLE_VAO_DIAMETER), from, to, m_osu->getSkin()->getComboColorForCounter(sliderPointer->getColorCounter(), sliderPointer->getColorOffset()), 1.0f, 1.0f, 0, doEnableRenderTarget, doDisableRenderTarget, doDrawSliderFrameBufferToScreen);
 				}
 			}
 		}
@@ -1418,7 +1419,7 @@ void OsuMainMenu::onKeyDown(KeyboardEvent &e)
 	}
 }
 
-void OsuMainMenu::onMiddleChange(bool down)
+void OsuMainMenu::onMiddleChange(MouseEvent &e, bool down)
 {
 	if (!m_bVisible) return;
 
@@ -1758,11 +1759,13 @@ void OsuMainMenu::onGithubPressed()
 {
 	if (m_osu->getInstanceID() > 1) return;
 
+	/*
 	if (env->getOS() == Environment::OS::OS_HORIZON)
 	{
 		m_osu->getNotificationOverlay()->addNotification("Go to https://github.com/McKay42/McOsu/", 0xffffffff, false, 0.75f);
 		return;
 	}
+	*/
 
 	m_osu->getNotificationOverlay()->addNotification("Opening browser, please wait ...", 0xffffffff, false, 0.75f);
 	env->openURLInDefaultBrowser("https://github.com/McKay42/McOsu/");

@@ -82,6 +82,7 @@ void OsuUISongBrowserUserButton::draw(Graphics *g)
 	*/
 
 	g->setColor(0xffffffff);
+	g->setClipping(true);
 	g->pushClipRect(McRect(m_vPos.x + iconBorder + 1, m_vPos.y + iconBorder + 2, iconWidth, iconHeight));
 	g->pushTransform();
 	{
@@ -92,11 +93,13 @@ void OsuUISongBrowserUserButton::draw(Graphics *g)
 	}
 	g->popTransform();
 	g->popClipRect();
+	g->setClipping(false);
 
 	// draw username
 	McFont *usernameFont = m_osu->getSongBrowserFont();
 	const float usernameScale = 0.5f;
 	float usernamePaddingLeft = 0.0f;
+	g->setClipping(true);
 	g->pushClipRect(McRect(m_vPos.x + iconBorder, m_vPos.y + iconBorder, m_vSize.x - 2*iconBorder, iconHeight));
 	g->pushTransform();
 	{
@@ -116,6 +119,7 @@ void OsuUISongBrowserUserButton::draw(Graphics *g)
 	}
 	g->popTransform();
 	g->popClipRect();
+	g->setClipping(false);
 
 	if (m_osu_scores_enabled_ref->getBool())
 	{

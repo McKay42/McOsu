@@ -13,8 +13,8 @@
 #include "Camera.h"
 #include "AnimationHandler.h"
 #include "ResourceManager.h"
-#include "OpenVRInterface.h"
-#include "OpenVRController.h"
+//#include "OpenVRInterface.h"
+//#include "OpenVRController.h"
 #include "SoundEngine.h"
 
 #include "Shader.h"
@@ -1348,7 +1348,18 @@ void OsuSlider::drawBody(Graphics *g, float alpha, float from, float to)
 		if (m_osu_mod_fps_ref->getBool())
 			translation += m_beatmap->getFirstPersonCursorDelta();
 
-		OsuSliderRenderer::draw(g, m_beatmap->getOsu(), m_vao, alwaysPoints, translation, scale, m_beatmap->getHitcircleDiameter(), from, to, undimmedComboColor, m_fHittableDimRGBColorMultiplierPercent, alpha, getTime());
+		Vector2 minBounds = m_beatmap->legacyPixels2RawPixels(m_beatmap->osuCoords2LegacyPixels(Vector2(m_curve->getBounds().x, m_curve->getBounds().y)));
+		Vector2 maxBounds = m_beatmap->legacyPixels2RawPixels(m_beatmap->osuCoords2LegacyPixels(Vector2(m_curve->getBounds().z, m_curve->getBounds().w)));
+
+		if (minBounds.x > maxBounds.x)
+			std::swap(minBounds.x, maxBounds.x);
+		if (minBounds.y > maxBounds.y)
+			std::swap(minBounds.y, maxBounds.y);
+
+		minBounds += translation;
+		maxBounds += translation;
+
+		OsuSliderRenderer::draw(g, m_beatmap->getOsu(), m_vao, Vector4(minBounds.x, minBounds.y, maxBounds.x, maxBounds.y), alwaysPoints, translation, scale, m_beatmap->getHitcircleDiameter(), from, to, undimmedComboColor, m_fHittableDimRGBColorMultiplierPercent, alpha, getTime());
 	}
 }
 
@@ -1771,6 +1782,7 @@ void OsuSlider::update(long curPos)
 		// handle VR controller constant sliding vibration
 		if (m_beatmap->getOsu()->isInVRMode())
 		{
+			/*
 			if (m_bStartFinished && !m_bEndFinished && m_bCursorInside
 				&& !m_beatmap->isPaused() && !m_beatmap->isWaiting() && m_beatmap->isPlaying())
 			{
@@ -1781,6 +1793,7 @@ void OsuSlider::update(long curPos)
 				else
 					openvr->getRightController()->triggerHapticPulse(m_beatmap->getOsu()->getVR()->getSliderHapticPulseStrength());
 			}
+			*/
 		}
 
 		// handle sliderslide sound
@@ -1996,10 +2009,12 @@ void OsuSlider::onHit(OsuScore::HIT result, long delta, bool startOrEnd, float t
 
 			if (m_beatmap->getOsu()->isInVRMode())
 			{
+				/*
 				if (m_bOnHitVRLeftControllerHapticFeedback)
 					openvr->getLeftController()->triggerHapticPulse(m_beatmap->getOsu()->getVR()->getHapticPulseStrength());
 				else
 					openvr->getRightController()->triggerHapticPulse(m_beatmap->getOsu()->getVR()->getHapticPulseStrength());
+				*/
 			}
 		}
 
@@ -2117,10 +2132,12 @@ void OsuSlider::onRepeatHit(bool successful, bool sliderend)
 
 		if (m_beatmap->getOsu()->isInVRMode())
 		{
+			/*
 			if (m_bOnHitVRLeftControllerHapticFeedback)
 				openvr->getLeftController()->triggerHapticPulse(m_beatmap->getOsu()->getVR()->getHapticPulseStrength());
 			else
 				openvr->getRightController()->triggerHapticPulse(m_beatmap->getOsu()->getVR()->getHapticPulseStrength());
+			*/
 		}
 	}
 

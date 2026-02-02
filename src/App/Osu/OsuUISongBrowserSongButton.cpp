@@ -140,11 +140,13 @@ void OsuUISongBrowserSongButton::drawBeatmapBackgroundThumbnail(Graphics *g, Ima
 	{
 		g->scale(beatmapBackgroundScale, beatmapBackgroundScale);
 		g->translate(pos.x + (int)centerOffset.x, pos.y + (int)centerOffset.y);
+		g->setClipping(true);
 		g->pushClipRect(clipRect);
 		{
 			g->drawImage(image);
 		}
 		g->popClipRect();
+		g->setClipping(false);
 	}
 	g->popTransform();
 
@@ -631,7 +633,7 @@ void OsuUISongBrowserSongButton::onAddToCollectionConfirmed(UString text, int id
 			spacer->setTextColor(0xff888888);
 			spacer->setTextDarkColor(0xff000000);
 
-			label = m_contextMenu->addButton(env->getOS() == Environment::OS::OS_HORIZON ? "(Click HERE to confirm)" : "(Press ENTER to confirm.)", id);
+			label = m_contextMenu->addButton(/*env->getOS() == Environment::OS::OS_HORIZON ? "(Click HERE to confirm)" :*/ "(Press ENTER to confirm.)", id);
 			label->setTextLeft(false);
 			label->setTextColor(0xff555555);
 			label->setTextDarkColor(0xff000000);

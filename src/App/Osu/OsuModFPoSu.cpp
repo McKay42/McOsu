@@ -25,10 +25,10 @@
 #include "OsuOptionsMenu.h"
 #include "OsuModSelector.h"
 
-#include "OpenGLHeaders.h"
-#include "OpenGLLegacyInterface.h"
-#include "OpenGL3Interface.h"
-#include "OpenGLES2Interface.h"
+//#include "OpenGLHeaders.h"
+//#include "OpenGLLegacyInterface.h"
+//#include "OpenGL3Interface.h"
+//#include "OpenGLES2Interface.h"
 
 #include <sstream>
 
@@ -932,7 +932,7 @@ Vector3 OsuModFPoSu::calculateUnProjectedVector(Vector2 pos)
 
 void OsuModFPoSu::makePlayfield()
 {
-	m_vao->clear();
+	m_vao->clearAndReleaseMemory();
 	m_meshList.clear();
 
 #ifdef MCENGINE_FEATURE_DIRECTX11
@@ -1005,7 +1005,7 @@ void OsuModFPoSu::makePlayfield()
 
 void OsuModFPoSu::makeBackgroundCube()
 {
-	m_vaoCube->clear();
+	m_vaoCube->clearAndReleaseMemory();
 
 	const float size = fposu_cube_size.getFloat();
 
@@ -1225,6 +1225,8 @@ OsuModFPoSu3DModel::OsuModFPoSu3DModel(const UString &objFilePathOrContents, Ima
 					}
 					else
 						debugLog("Failed to load %s\n", objFilePathOrContents.toUtf8());
+
+					// engine->showMessageError("OsuModFPoSu3DModel Error", UString::format("Failed to load \"%s\"", objFilePathOrContents.toUtf8()));
 				}
 				fileContents = UString(stdFileContents.c_str(), stdFileContents.size());
 			}

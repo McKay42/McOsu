@@ -7,8 +7,8 @@
 
 #include "OsuVRUIButton.h"
 
-#include "OpenVRInterface.h"
-#include "OpenVRController.h"
+//#include "OpenVRInterface.h"
+//#include "OpenVRController.h"
 #include "Shader.h"
 #include "VertexArrayObject.h"
 
@@ -70,6 +70,7 @@ void OsuVRUIButton::update(Vector2 cursorPos)
 	OsuVRUIElement::update(cursorPos);
 	if (!m_bIsVisible) return;
 
+	/*
 	OpenVRController *controller = openvr->getController();
 
 	if (controller->getTrigger() > 0.95f || controller->isButtonPressed(OpenVRController::BUTTON::BUTTON_STEAMVR_TOUCHPAD))
@@ -92,6 +93,7 @@ void OsuVRUIButton::update(Vector2 cursorPos)
 		m_bClickCheck = false;
 		m_bIsActive = false;
 	}
+	*/
 }
 
 void OsuVRUIButton::onClicked()

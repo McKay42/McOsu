@@ -14,7 +14,6 @@
 #include "Mouse.h"
 #include "ResourceManager.h"
 #include "AnimationHandler.h"
-#include "VertexArrayObject.h"
 #include "ConVar.h"
 
 #include "Osu.h"
@@ -76,6 +75,7 @@ private:
 		{
 			float xPosAdd = m_vSize.x/2.0f - m_fStringWidth/2.0f;
 
+			//g->setClipping(true);
 			//g->pushClipRect(McRect(m_vPos.x, m_vPos.y, m_vSize.x, m_vSize.y));
 			{
 				g->setColor(m_textColor);
@@ -87,6 +87,7 @@ private:
 				g->popTransform();
 			}
 			//g->popClipRect();
+			//g->setClipping(false);
 		}
 	}
 
@@ -217,7 +218,7 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen(osu)
 	m_ARLock = overrideAR.lock;
 	m_ODLock = overrideOD.lock;
 
-	if (env->getOS() != Environment::OS::OS_HORIZON)
+	//if (env->getOS() != Environment::OS::OS_HORIZON)
 	{
 		OVERRIDE_SLIDER overrideSpeed = addOverrideSlider("Speed/BPM Multiplier", "x", convar->getConVarByName("osu_speed_override"), 0.0f, 2.5f);
 
@@ -238,8 +239,8 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen(osu)
 	addExperimentalCheckbox("AR Wobble", "Approach rate oscillates between -1 and +1.", convar->getConVarByName("osu_mod_arwobble"));
 	addExperimentalCheckbox("Approach Different", "Customize the approach circle animation.\nSee osu_mod_approach_different_style.\nSee osu_mod_approach_different_initial_size.", convar->getConVarByName("osu_mod_approach_different"));
 
-	if (env->getOS() != Environment::OS::OS_HORIZON)
-		addExperimentalCheckbox("Timewarp", "Speed increases from 100% to 150% over the course of the beatmap.", convar->getConVarByName("osu_mod_timewarp"));
+	//if (env->getOS() != Environment::OS::OS_HORIZON)
+	//	addExperimentalCheckbox("Timewarp", "Speed increases from 100% to 150% over the course of the beatmap.", convar->getConVarByName("osu_mod_timewarp"));
 
 	addExperimentalCheckbox("AR Timewarp", "Approach rate decreases from 100% to 50% over the course of the beatmap.", convar->getConVarByName("osu_mod_artimewarp"));
 	addExperimentalCheckbox("Minimize", "Circle size decreases from 100% to 50% over the course of the beatmap.", convar->getConVarByName("osu_mod_minimize"));
@@ -307,11 +308,13 @@ void OsuModSelector::updateButtons(bool initial)
 	setModButtonOnGrid(4, 2, 0, initial && m_osu->getModTarget(), "practicetarget", "Accuracy is based on the distance to the center of all hitobjects.\n300s still require at least being in the hit window of a 100 in addition to the rule above.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModTarget();});
 	m_modButtonScoreV2 = setModButtonOnGrid(5, 2, 0, initial && m_osu->getModScorev2(), "v2", "Try the future scoring system.\n** UNRANKED **", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModScorev2();});
 
+	/*
 	if (env->getOS() == Environment::OS::OS_HORIZON)
 	{
 		getModButtonOnGrid(2, 1)->setAvailable(false);
 		getModButtonOnGrid(2, 0)->setAvailable(false);
 	}
+	*/
 }
 
 void OsuModSelector::updateScoreMultiplierLabelText()
