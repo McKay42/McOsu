@@ -1,4 +1,4 @@
-###OpenGLLegacyInterface::VertexShader##########################################################################################
+###OpenGLLegacyInterface::VertexShader#########################################################################################
 
 #version 110
 
@@ -12,7 +12,7 @@ void main()
 	tex_coord = gl_MultiTexCoord0.xy;
 }
 
-###OpenGLLegacyInterface::FragmentShader########################################################################################
+###OpenGLLegacyInterface::FragmentShader#######################################################################################
 
 #version 110
 
@@ -134,7 +134,151 @@ void main()
 	gl_FragColor = out_color;
 }
 
-###OpenGLES2Interface::VertexShader#############################################################################################
+
+###OpenGL3Interface::VertexShader##############################################################################################
+
+##in::POSITION::vec3
+##in::TEXCOORD_0::vec2
+
+#version 330 core
+
+in vec3 position;
+in vec2 uv;
+
+out vec2 texcoords;
+
+uniform mat4 mvp;
+
+void main()
+{
+	texcoords = uv;
+	gl_Position = mvp * vec4(position, 1.0);
+}
+
+###OpenGL3Interface::FragmentShader############################################################################################
+
+#version 330 core
+
+in vec2 texcoords;
+
+out vec4 color;
+
+uniform int style;
+uniform float bodyColorSaturation;
+uniform float bodyAlphaMultiplier;
+uniform float borderSizeMultiplier;
+uniform float borderFeather;
+uniform vec3 colBorder;
+uniform vec3 colBody;
+
+const float defaultTransitionSize = 0.011;
+const float defaultBorderSize = 0.11;
+const float outerShadowSize = 0.08;
+
+vec4 getInnerBodyColor(in vec4 bodyColor)
+{
+	float brightnessMultiplier = 0.25;
+	bodyColor.r = min(1.0, bodyColor.r * (1.0 + 0.5 * brightnessMultiplier) + brightnessMultiplier);
+	bodyColor.g = min(1.0, bodyColor.g * (1.0 + 0.5 * brightnessMultiplier) + brightnessMultiplier);
+	bodyColor.b = min(1.0, bodyColor.b * (1.0 + 0.5 * brightnessMultiplier) + brightnessMultiplier);
+	return vec4(bodyColor);
+}
+
+vec4 getOuterBodyColor(in vec4 bodyColor)
+{
+	float darknessMultiplier = 0.1;
+	bodyColor.r = min(1.0, bodyColor.r / (1.0 + darknessMultiplier));
+	bodyColor.g = min(1.0, bodyColor.g / (1.0 + darknessMultiplier));
+	bodyColor.b = min(1.0, bodyColor.b / (1.0 + darknessMultiplier));
+	return vec4(bodyColor);
+}
+
+void main()
+{
+	float borderSize = (defaultBorderSize + borderFeather) * borderSizeMultiplier;
+	float transitionSize = defaultTransitionSize + borderFeather;
+
+	// output var
+	vec4 out_color = vec4(0.0);
+	
+	// dynamic color calculations
+	vec4 borderColor = vec4(colBorder.x, colBorder.y, colBorder.z, 1.0);
+	vec4 bodyColor = vec4(colBody.x, colBody.y, colBody.z, 0.7*bodyAlphaMultiplier);
+	vec4 outerShadowColor = vec4(0, 0, 0, 0.25);
+	vec4 innerBodyColor = getInnerBodyColor(bodyColor);
+	vec4 outerBodyColor = getOuterBodyColor(bodyColor);
+	
+	innerBodyColor.rgb *= bodyColorSaturation;
+	outerBodyColor.rgb *= bodyColorSaturation;
+	
+	// osu!next style color modifications
+	if (style == 1)
+	{
+		outerBodyColor.rgb = bodyColor.rgb * bodyColorSaturation;
+		outerBodyColor.a = 1.0*bodyAlphaMultiplier;
+		innerBodyColor.rgb = bodyColor.rgb * 0.5 * bodyColorSaturation;
+		innerBodyColor.a = 0.0;
+	}
+	
+	// a bit of a hack, but better than rough edges
+	if (borderSizeMultiplier < 0.01)
+		borderColor = outerShadowColor;
+	
+	// conditional variant
+	
+	if (texcoords.x < outerShadowSize - transitionSize) // just shadow
+	{
+		float delta = texcoords.x / (outerShadowSize - transitionSize);
+		out_color = mix(vec4(0), outerShadowColor, delta);
+	}
+	if (texcoords.x > outerShadowSize - transitionSize && texcoords.x < outerShadowSize + transitionSize) // shadow + border
+	{
+		float delta = (texcoords.x - outerShadowSize + transitionSize) / (2.0*transitionSize);
+		out_color = mix(outerShadowColor, borderColor, delta);
+	}
+	if (texcoords.x > outerShadowSize + transitionSize && texcoords.x < outerShadowSize + borderSize - transitionSize) // just border
+	{
+		out_color = borderColor;
+	}
+	if (texcoords.x > outerShadowSize + borderSize - transitionSize && texcoords.x < outerShadowSize + borderSize + transitionSize) // border + outer body
+	{
+		float delta = (texcoords.x - outerShadowSize - borderSize + transitionSize) / (2.0*transitionSize);
+		out_color = mix(borderColor, outerBodyColor, delta);
+	}
+	if (texcoords.x > outerShadowSize + borderSize + transitionSize) // outer body + inner body
+	{	
+		float size = outerShadowSize + borderSize + transitionSize;
+		float delta = ((texcoords.x - size) / (1.0-size));
+		out_color = mix(outerBodyColor, innerBodyColor, delta);
+	}
+	
+	// linear variant
+	/*
+	// just shadow
+	float delta = texcoords.x/(outerShadowSize-transitionSize);
+	out_color += mix(vec4(0.0), outerShadowColor, delta) * clamp(ceil(-delta+1.0), 0.0, 1.0);
+	
+	// shadow + border
+	delta = (texcoords.x - outerShadowSize + transitionSize) / (2.0*transitionSize);
+	out_color += mix(outerShadowColor, borderColor, delta) * clamp(ceil(texcoords.x - (outerShadowSize - transitionSize)), 0.0, 1.0) * clamp(ceil(-abs(delta)+1.0), 0.0, 1.0);
+	
+	// just border
+	out_color += borderColor * clamp(ceil(texcoords.x - (outerShadowSize + transitionSize)), 0.0, 1.0) * clamp(ceil(-(texcoords.x - (outerShadowSize + borderSize - transitionSize))), 0.0, 1.0);
+	
+	// border + outer body
+	delta = (texcoords.x - outerShadowSize - borderSize + transitionSize) / (2.0*transitionSize);
+	out_color += mix(borderColor, outerBodyColor, delta) * clamp(ceil(texcoords.x - (outerShadowSize + borderSize - transitionSize)), 0.0, 1.0) * clamp(ceil(-abs(delta)+1.0), 0.0, 1.0);
+	
+	// outer body + inner body
+	delta = outerShadowSize + borderSize + transitionSize;
+	delta = (texcoords.x - delta) / (1.0-delta); // [VARIABLE REUSING INTENSIFIES]
+	out_color += mix(outerBodyColor, innerBodyColor, delta) * clamp(ceil(texcoords.x - (outerShadowSize + borderSize + transitionSize)), 0.0, 1.0);
+	*/
+	
+	color = out_color;
+}
+
+###OpenGLES2Interface::VertexShader############################################################################################
 
 #version 100
 
@@ -151,7 +295,7 @@ void main()
 	tex_coord = uv;
 }
 
-###OpenGLES2Interface::FragmentShader###########################################################################################
+###OpenGLES2Interface::FragmentShader##########################################################################################
 
 #version 100
 precision highp float;
@@ -275,10 +419,9 @@ void main()
 	gl_FragColor = out_color;
 }
 
-###DirectX11Interface::VertexShader#############################################################################################
+###DirectX11Interface::VertexShader############################################################################################
 
 ##D3D11_INPUT_ELEMENT_DESC::VS_INPUT::POSITION::DXGI_FORMAT_R32G32B32_FLOAT::D3D11_INPUT_PER_VERTEX_DATA
-##D3D11_INPUT_ELEMENT_DESC::VS_INPUT::COLOR0::DXGI_FORMAT_R32G32B32A32_FLOAT::D3D11_INPUT_PER_VERTEX_DATA
 ##D3D11_INPUT_ELEMENT_DESC::VS_INPUT::TEXCOORD0::DXGI_FORMAT_R32G32_FLOAT::D3D11_INPUT_PER_VERTEX_DATA
 
 ##D3D11_BUFFER_DESC::D3D11_BIND_CONSTANT_BUFFER::ModelViewProjectionConstantBuffer::mvp::float4x4
@@ -307,7 +450,6 @@ cbuffer ModelViewProjectionConstantBuffer : register(b0)
 struct VS_INPUT
 {
 	float4 pos	: POSITION;
-	float4 col	: COLOR0;
 	float2 tex	: TEXCOORD0;
 };
 
@@ -342,7 +484,7 @@ VS_OUTPUT vsmain(in VS_INPUT In)
 	return Out;
 };
 
-###DirectX11Interface::PixelShader##############################################################################################
+###DirectX11Interface::PixelShader#############################################################################################
 
 struct PS_INPUT
 {

@@ -1,0 +1,104 @@
+###OpenGL3Interface::VertexShader##############################################################################################
+
+##in::POSITION::vec3
+##in::TEXCOORD_0::vec2
+
+#version 330 core
+
+in vec3 position;
+in vec2 uv;
+
+out vec2 texcoords;
+
+uniform mat4 mvp;
+
+void main()
+{
+	texcoords = uv;
+	gl_Position = mvp * vec4(position, 1.0);
+}
+
+###OpenGL3Interface::FragmentShader############################################################################################
+
+#version 330 core
+
+in vec2 texcoords;
+
+out vec4 color;
+
+uniform sampler2D tex;
+uniform vec4 colMult;
+
+void main()
+{
+	color = texture(tex, texcoords) * colMult;
+}
+
+###DirectX11Interface::VertexShader############################################################################################
+
+##D3D11_INPUT_ELEMENT_DESC::VS_INPUT::POSITION::DXGI_FORMAT_R32G32B32_FLOAT::D3D11_INPUT_PER_VERTEX_DATA
+##D3D11_INPUT_ELEMENT_DESC::VS_INPUT::TEXCOORD0::DXGI_FORMAT_R32G32_FLOAT::D3D11_INPUT_PER_VERTEX_DATA
+
+##D3D11_BUFFER_DESC::D3D11_BIND_CONSTANT_BUFFER::ModelViewProjectionConstantBuffer::mvp::float4x4
+##D3D11_BUFFER_DESC::D3D11_BIND_CONSTANT_BUFFER::ModelViewProjectionConstantBuffer::colMult::float4
+
+cbuffer ModelViewProjectionConstantBuffer : register(b0)
+{
+	float4x4 mvp;
+	float4 colMult;
+};
+
+struct VS_INPUT
+{
+	float4 pos	: POSITION;
+	float2 tex	: TEXCOORD0;
+};
+
+struct VS_OUTPUT
+{
+	float4 pos	: SV_Position;
+	float2 tex	: TEXCOORD0;
+	float4 colMult	: COLOR1;
+};
+
+VS_OUTPUT vsmain(in VS_INPUT In)
+{
+	VS_OUTPUT Out;
+	In.pos.w = 1.0f;
+	Out.pos = mul(In.pos, mvp);
+	Out.tex = In.tex;
+	Out.colMult = colMult;
+	return Out;
+};
+
+###DirectX11Interface::PixelShader#############################################################################################
+
+Texture2D tex2D;
+
+SamplerState samplerState
+{
+	Filter = MIN_MAG_MIP_LINEAR;
+	AddressU = Clamp;
+	AddressV = Clamp;
+};
+
+struct PS_INPUT
+{
+	float4 pos	: SV_Position;
+	float2 tex	: TEXCOORD0;
+	float4 colMult	: COLOR1;
+};
+
+struct PS_OUTPUT
+{
+	float4 col	: SV_Target;
+};
+
+PS_OUTPUT psmain(in PS_INPUT In)
+{
+	PS_OUTPUT Out;
+
+	Out.col = tex2D.Sample(samplerState, In.tex) * In.colMult;
+	
+	return Out;
+};
