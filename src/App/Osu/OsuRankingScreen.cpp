@@ -442,7 +442,7 @@ void OsuRankingScreen::update()
 			m_osu->getTooltipOverlay()->addLine(UString::format("Speed: %.3gx", m_fSpeedMultiplier));
 			m_osu->getTooltipOverlay()->addLine(UString::format("CS:%.4g AR:%.4g OD:%.4g HP:%.4g", m_fCS, m_fAR, m_fOD, m_fHP));
 
-			if (m_sMods.length() > 0)
+			if (m_sMods.lengthUtf8() > 0)
 				m_osu->getTooltipOverlay()->addLine(m_sMods);
 
 			if (!m_bIsImportedLegacyScore)
@@ -512,7 +512,7 @@ void OsuRankingScreen::setScore(OsuScore *score)
 	m_fPPv2 = score->getPPv2();
 
 	const UString modsString = OsuUISongBrowserScoreButton::getModsStringForDisplay(score->getModsLegacy());
-	if (modsString.length() > 0)
+	if (modsString.lengthUtf8() > 0)
 	{
 		m_sMods = "Mods: ";
 		m_sMods.append(modsString);
@@ -579,7 +579,7 @@ void OsuRankingScreen::setScore(OsuDatabase::Score score, UString dateTime)
 	m_fHP = std::round(score.HP * 100.0f) / 100.0f;
 
 	const UString modsString = OsuUISongBrowserScoreButton::getModsStringForDisplay(score.modsLegacy);
-	if (modsString.length() > 0)
+	if (modsString.lengthUtf8() > 0)
 	{
 		m_sMods = "Mods: ";
 		m_sMods.append(modsString);
@@ -606,12 +606,12 @@ void OsuRankingScreen::setScore(OsuDatabase::Score score, UString dateTime)
 	m_bModTD = score.modsLegacy & OsuReplay::Mods::TouchDevice;
 
 	m_enabledExperimentalMods.clear();
-	if (score.experimentalModsConVars.length() > 0)
+	if (score.experimentalModsConVars.lengthUtf8() > 0)
 	{
 		std::vector<UString> experimentalMods = score.experimentalModsConVars.split(";");
 		for (int i=0; i<experimentalMods.size(); i++)
 		{
-			if (experimentalMods[i].length() > 0)
+			if (experimentalMods[i].lengthUtf8() > 0)
 			{
 				ConVar *cvar = convar->getConVarByName(experimentalMods[i], false);
 				if (cvar != NULL)

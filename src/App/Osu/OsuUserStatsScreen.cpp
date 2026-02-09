@@ -52,7 +52,7 @@ public:
 		// HACKHACK: force update string height to non-average line height for icon
 		m_fStringHeight = m_font->getStringHeight(m_sText);
 
-		if (m_font != NULL && m_sText.length() > 0)
+		if (m_font != NULL && m_sText.lengthUtf8() > 0)
 		{
 			g->setClipping(true);
 			g->pushClipRect(McRect(m_vPos.x+1, m_vPos.y+1, m_vSize.x-1, m_vSize.y-1));
@@ -736,11 +736,11 @@ void OsuUserStatsScreen::onCopyAllScoresUserSelected(UString text, int id)
 void OsuUserStatsScreen::onCopyAllScoresConfirmed(UString text, int id)
 {
 	if (id != 1) return;
-	if (m_sCopyAllScoresFromUser.length() < 1) return;
+	if (m_sCopyAllScoresFromUser.lengthUtf8() < 1) return;
 
 	const UString &playerNameToCopyInto = m_name_ref->getString();
 
-	if (playerNameToCopyInto.length() < 1 || m_sCopyAllScoresFromUser == playerNameToCopyInto) return;
+	if (playerNameToCopyInto.lengthUtf8() < 1 || m_sCopyAllScoresFromUser == playerNameToCopyInto) return;
 
 	debugLog("Copying all scores from \"%s\" into \"%s\"\n", m_sCopyAllScoresFromUser.toUtf8(), playerNameToCopyInto.toUtf8());
 

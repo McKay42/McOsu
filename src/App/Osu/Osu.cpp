@@ -289,7 +289,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 
 	// generate default osu! appdata user path
 	UString userDataPath = env->getUserDataPath();
-	if (userDataPath.length() > 1)
+	if (userDataPath.lengthUtf8() > 1)
 	{
 		UString defaultOsuFolder = userDataPath;
 		defaultOsuFolder.append(env->getOS() == Environment::OS::OS_WINDOWS ? "\\osu!\\" : "/osu!/");
@@ -398,6 +398,7 @@ Osu::Osu(Osu2 *osu2, int instanceID)
 	m_bVolumeInactiveToActiveScheduled = false;
 	m_fVolumeInactiveToActiveAnim = 0.0f;
 	m_bFireDelayedFontReloadAndResolutionChangeToFixDesyncedUIScaleScheduled = false;
+	m_iMouseWheelDeltaVertical = 0;
 
 	// debug
 	m_windowManager = new CWindowManager();
@@ -875,7 +876,8 @@ void Osu::drawVR(Graphics *g)
 
 void Osu::update()
 {
-	const int wheelDelta = engine->getMouse()->getWheelDeltaVertical(); // HACKHACK: songbrowser focus
+	const int wheelDelta = m_iMouseWheelDeltaVertical; // HACKHACK: songbrowser focus
+	m_iMouseWheelDeltaVertical = 0;
 
 	if (m_skin != NULL)
 		m_skin->update();
@@ -894,6 +896,7 @@ void Osu::update()
 	}
 
 	// main beatmap update
+	m_bIsSeekFrame = false;
 	m_bSeeking = false;
 	if (isInPlayMode())
 	{
@@ -922,6 +925,7 @@ void Osu::update()
 							getSelectedBeatmap()->cancelFailing();
 
 						getSelectedBeatmap()->seekPercentPlayable(percent);
+						m_bIsSeekFrame = true;
 					}
 					else
 					{
@@ -1189,7 +1193,7 @@ void Osu::update()
 			{
 				m_bSkinLoadWasReload = false;
 
-				m_notificationOverlay->addNotification(m_skin->getName().length() > 0 ? UString::format("Skin reloaded! (%s)", m_skin->getName().toUtf8()) : "Skin reloaded!", 0xffffffff, false, 0.75f);
+				m_notificationOverlay->addNotification(m_skin->getName().lengthUtf8() > 0 ? UString::format("Skin reloaded! (%s)", m_skin->getName().toUtf8()) : "Skin reloaded!", 0xffffffff, false, 0.75f);
 			}
 		}
 	}
@@ -1746,6 +1750,11 @@ void Osu::onRightChange(MouseEvent &e, bool down)
 	}
 }
 
+void Osu::onWheelVertical(MouseEvent &e, int delta)
+{
+	m_iMouseWheelDeltaVertical = delta;
+}
+
 void Osu::toggleModSelection(bool waitForF1KeyUp)
 {
 	m_bToggleModSelectionScheduled = true;
@@ -2269,7 +2278,7 @@ void Osu::fireResolutionChanged()
 
 void Osu::onInternalResolutionChanged(UString oldValue, UString args)
 {
-	if (args.length() < 7) return;
+	if (args.lengthUtf8() < 7) return;
 
 	const float prevUIScale = getUIScale(this);
 
@@ -2407,7 +2416,7 @@ void Osu::onSkinChange(UString oldValue, UString newValue)
 	if (m_skin != NULL)
 	{
 		if (m_bSkinLoadScheduled || m_skinScheduledToLoad != NULL) return;
-		if (newValue.length() < 1) return;
+		if (newValue.lengthUtf8() < 1) return;
 	}
 
 	UString skinFolder = m_osu_folder_ref->getString();

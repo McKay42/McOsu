@@ -48,7 +48,7 @@ void OsuUISearchOverlay::draw(Graphics *g)
 
 	UString offsetText = (m_iNumFoundResults < 0 ? combinedSearchText : noMatchesFoundText1);
 
-	bool hasSearchSubTextVisible = m_sSearchString.length() > 0 && m_bDrawNumResults;
+	bool hasSearchSubTextVisible = m_sSearchString.lengthUtf8() > 0 && m_bDrawNumResults;
 
 	const float searchStringWidth = searchTextFont->getStringWidth(m_sSearchString);
 	const float offsetTextStringWidth = searchTextFont->getStringWidth(offsetText);
@@ -73,13 +73,13 @@ void OsuUISearchOverlay::draw(Graphics *g)
 			else
 				numLines = 3.0f;
 
-			if (m_sHardcodedSearchString.length() > 0)
+			if (m_sHardcodedSearchString.lengthUtf8() > 0)
 				numLines += 1.5f;
 		}
 		const float height = lineHeight * numLines;
 		const int offsetTextWidthWithOverflow = offsetTextWidthWithoutOverflow + textOverflowXOffset;
 
-		g->setColor(COLOR(m_sSearchString.length() > 0 ? 100 : 30, 0, 0, 0));
+		g->setColor(COLOR(m_sSearchString.lengthUtf8() > 0 ? 100 : 30, 0, 0, 0));
 		g->fillRect(m_vPos.x + m_vSize.x - offsetTextWidthWithOverflow, m_vPos.y, offsetTextWidthWithOverflow, height);
 	}
 
@@ -101,7 +101,7 @@ void OsuUISearchOverlay::draw(Graphics *g)
 			g->setColor(0xff00ff00);
 			g->drawString(searchTextFont, searchText1);
 
-			if (m_sHardcodedSearchString.length() > 0)
+			if (m_sHardcodedSearchString.lengthUtf8() > 0)
 			{
 				const float searchText1Width = searchTextFont->getStringWidth(searchText1) * searchTextScale;
 
@@ -124,14 +124,14 @@ void OsuUISearchOverlay::draw(Graphics *g)
 			g->translate((int)(searchTextFont->getStringWidth(searchText1)*searchTextScale), 0);
 			g->translate(1, 1);
 			g->setColor(0xff000000);
-			if (m_sSearchString.length() < 1)
+			if (m_sSearchString.lengthUtf8() < 1)
 				g->drawString(searchTextFont, searchText2);
 			else
 				g->drawString(searchTextFont, m_sSearchString);
 
 			g->translate(-1, -1);
 			g->setColor(0xffffffff);
-			if (m_sSearchString.length() < 1)
+			if (m_sSearchString.lengthUtf8() < 1)
 				g->drawString(searchTextFont, searchText2);
 			else
 				g->drawString(searchTextFont, m_sSearchString);
@@ -141,7 +141,7 @@ void OsuUISearchOverlay::draw(Graphics *g)
 		// draw number of matches
 		if (hasSearchSubTextVisible)
 		{
-			g->translate(0, (int)((searchTextFont->getHeight()*searchTextScale)*1.5f * (m_sHardcodedSearchString.length() > 0 ? 2.0f : 1.0f)));
+			g->translate(0, (int)((searchTextFont->getHeight()*searchTextScale)*1.5f * (m_sHardcodedSearchString.lengthUtf8() > 0 ? 2.0f : 1.0f)));
 			g->translate(1, 1);
 
 			if (m_bSearching)

@@ -80,7 +80,7 @@ void OsuBackgroundImageHandler::update(bool allowEviction)
 				{
 					entry.isLoadScheduled = false;
 
-					if (entry.backgroundImageFileName.length() < 2)
+					if (entry.backgroundImageFileName.lengthUtf8() < 2)
 					{
 						// if the backgroundImageFileName is not loaded, then we have to create a full OsuDatabaseBeatmapBackgroundImagePathLoader
 						entry.image = NULL;
@@ -99,7 +99,7 @@ void OsuBackgroundImageHandler::update(bool allowEviction)
 				// no load scheduled (potential load-in-progress if it was necessary), handle backgroundImagePathLoader loading finish
 				if (entry.image == NULL && entry.backgroundImagePathLoader != NULL && entry.backgroundImagePathLoader->isReady())
 				{
-					if (entry.backgroundImagePathLoader->getLoadedBackgroundImageFileName().length() > 1)
+					if (entry.backgroundImagePathLoader->getLoadedBackgroundImageFileName().lengthUtf8() > 1)
 					{
 						entry.backgroundImageFileName = entry.backgroundImagePathLoader->getLoadedBackgroundImageFileName();
 						handleLoadImageForEntry(entry);
@@ -162,7 +162,7 @@ Image *OsuBackgroundImageHandler::getLoadBackgroundImage(const OsuDatabaseBeatma
 
 			// HACKHACK: to improve future loading speed, if we have already loaded the backgroundImageFileName, force update the database backgroundImageFileName and fullBackgroundImageFilePath
 			// this is similar to how it worked before the rework, but 100% safe(r) since we are not async
-			if (m_cache[i].image != NULL && m_cache[i].backgroundImageFileName.length() > 1 && beatmap->getBackgroundImageFileName().length() < 2)
+			if (m_cache[i].image != NULL && m_cache[i].backgroundImageFileName.lengthUtf8() > 1 && beatmap->getBackgroundImageFileName().lengthUtf8() < 2)
 			{
 				const_cast<OsuDatabaseBeatmap*>(beatmap)->m_sBackgroundImageFileName = m_cache[i].backgroundImageFileName;
 				const_cast<OsuDatabaseBeatmap*>(beatmap)->m_sFullBackgroundImageFilePath = beatmap->getFolder();

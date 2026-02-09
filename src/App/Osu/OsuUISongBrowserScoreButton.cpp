@@ -71,7 +71,7 @@ OsuUISongBrowserScoreButton::OsuUISongBrowserScoreButton(Osu *osu, OsuUIContextM
 	if (m_osu_od_override_lock_ref == NULL)
 		m_osu_od_override_lock_ref = convar->getConVarByName("osu_od_override_lock");
 
-	if (recentScoreIconString.length() < 1)
+	if (recentScoreIconString.lengthUtf8() < 1)
 		recentScoreIconString.insert(0, OsuIcons::ARROW_CIRCLE_UP);
 
 	m_fIndexNumberAnim = 0.0f;
@@ -284,7 +284,7 @@ void OsuUISongBrowserScoreButton::draw(Graphics *g)
 	g->popTransform();
 
 	// custom info (Spd.)
-	if (m_sCustom.length() > 0)
+	if (m_sCustom.lengthUtf8() > 0)
 	{
 		const float customScale = 0.50f;
 		McFont *customFont = m_osu->getSubTitleFont();
@@ -308,7 +308,7 @@ void OsuUISongBrowserScoreButton::draw(Graphics *g)
 		g->popTransform();
 	}
 
-	if (m_style == STYLE::TOP_RANKS && m_sCustom.length() < 1)
+	if (m_style == STYLE::TOP_RANKS && m_sCustom.lengthUtf8() < 1)
 	{
 		// weighted percent
 		const float weightScale = 0.65f;
@@ -359,7 +359,7 @@ void OsuUISongBrowserScoreButton::draw(Graphics *g)
 		g->popTransform();
 
 		// elapsed time since score
-		if (m_sScoreTime.length() > 0)
+		if (m_sScoreTime.lengthUtf8() > 0)
 		{
 			const float timeHeight = rightSideThirdHeight;
 			const float timeScale = (timeHeight / timeFont->getHeight())*timeElapsedScale;
@@ -428,7 +428,7 @@ void OsuUISongBrowserScoreButton::update()
 				{
 					for (int i=0; i<m_tooltipLines.size(); i++)
 					{
-						if (m_tooltipLines[i].length() > 0)
+						if (m_tooltipLines[i].lengthUtf8() > 0)
 							m_osu->getTooltipOverlay()->addLine(m_tooltipLines[i]);
 					}
 				}
@@ -502,7 +502,7 @@ void OsuUISongBrowserScoreButton::updateElapsedTimeString()
 		{
 			m_iScoreUnixTimestamp = 0;
 
-			if (m_sScoreTime.length() > 0)
+			if (m_sScoreTime.lengthUtf8() > 0)
 				m_sScoreTime.clear();
 		}
 	}
@@ -766,15 +766,15 @@ void OsuUISongBrowserScoreButton::setScore(const OsuDatabase::Score &score, cons
 	m_sScoreAccuracy = UString::format("%.2f%%", accuracy);
 	m_sScoreAccuracyFC = UString::format((score.perfect ? "PFC %.2f%%" : (fullCombo ? "FC %.2f%%" : "%.2f%%")), accuracy);
 	m_sScoreMods = getModsStringForDisplay(score.modsLegacy);
-	if (score.experimentalModsConVars.length() > 0)
+	if (score.experimentalModsConVars.lengthUtf8() > 0)
 	{
-		if (m_sScoreMods.length() > 0)
+		if (m_sScoreMods.lengthUtf8() > 0)
 			m_sScoreMods.append(",");
 
 		std::vector<UString> experimentalMods = score.experimentalModsConVars.split(";");
 		for (int i=0; i<experimentalMods.size(); i++)
 		{
-			if (experimentalMods[i].length() > 0)
+			if (experimentalMods[i].lengthUtf8() > 0)
 				m_sScoreMods.append("+");
 		}
 	}
@@ -793,7 +793,7 @@ void OsuUISongBrowserScoreButton::setScore(const OsuDatabase::Score &score, cons
 
 		if (beatmapValuesForModsLegacy.CS != score.CS)
 		{
-			if (m_sCustom.length() > 0)
+			if (m_sCustom.lengthUtf8() > 0)
 				m_sCustom.append(", ");
 
 			m_sCustom.append(UString::format("CS:%.4g", compensatedCS));
@@ -801,7 +801,7 @@ void OsuUISongBrowserScoreButton::setScore(const OsuDatabase::Score &score, cons
 
 		if (beatmapValuesForModsLegacy.AR != score.AR)
 		{
-			if (m_sCustom.length() > 0)
+			if (m_sCustom.lengthUtf8() > 0)
 				m_sCustom.append(", ");
 
 			m_sCustom.append(UString::format("AR:%.4g", compensatedAR));
@@ -809,7 +809,7 @@ void OsuUISongBrowserScoreButton::setScore(const OsuDatabase::Score &score, cons
 
 		if (beatmapValuesForModsLegacy.OD != score.OD)
 		{
-			if (m_sCustom.length() > 0)
+			if (m_sCustom.lengthUtf8() > 0)
 				m_sCustom.append(", ");
 
 			m_sCustom.append(UString::format("OD:%.4g", compensatedOD));
@@ -817,7 +817,7 @@ void OsuUISongBrowserScoreButton::setScore(const OsuDatabase::Score &score, cons
 
 		if (beatmapValuesForModsLegacy.HP != score.HP)
 		{
-			if (m_sCustom.length() > 0)
+			if (m_sCustom.lengthUtf8() > 0)
 				m_sCustom.append(", ");
 
 			m_sCustom.append(UString::format("HP:%.4g", compensatedHP));
@@ -849,18 +849,18 @@ void OsuUISongBrowserScoreButton::setScore(const OsuDatabase::Score &score, cons
 		m_tooltipLines.push_back(UString::format("Accuracy: %.2f%%  UR: %.2f", accuracy, score.unstableRate));
 
 	UString tooltipMods = "Mods: ";
-	if (m_sScoreMods.length() > 0)
+	if (m_sScoreMods.lengthUtf8() > 0)
 		tooltipMods.append(m_sScoreMods);
 	else
 		tooltipMods.append("None");
 
 	m_tooltipLines.push_back(tooltipMods);
-	if (score.experimentalModsConVars.length() > 0)
+	if (score.experimentalModsConVars.lengthUtf8() > 0)
 	{
 		std::vector<UString> experimentalMods = score.experimentalModsConVars.split(";");
 		for (int i=0; i<experimentalMods.size(); i++)
 		{
-			if (experimentalMods[i].length() > 0)
+			if (experimentalMods[i].lengthUtf8() > 0)
 			{
 				UString experimentalModString = "+ ";
 				experimentalModString.append(experimentalMods[i]);

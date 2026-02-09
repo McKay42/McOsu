@@ -82,13 +82,13 @@ protected:
 				item.type = OsuSteamWorkshop::SUBSCRIBED_ITEM_TYPE::SKIN;
 				item.status = (installed ? OsuSteamWorkshop::SUBSCRIBED_ITEM_STATUS::INSTALLED : OsuSteamWorkshop::SUBSCRIBED_ITEM_STATUS::DOWNLOADING);
 				item.id = subscribedItems[i];
-				item.title = (detail.title.length() > 0 ? detail.title : UString::format("%llu", subscribedItems[i]));
+				item.title = (detail.title.lengthUtf8() > 0 ? detail.title : UString::format("%llu", subscribedItems[i]));
 
 				if (installed)
 				{
 					item.installInfo = steam->getWorkshopItemInstallInfo(subscribedItems[i]);
 
-					if (item.installInfo.length() < 1)
+					if (item.installInfo.lengthUtf8() < 1)
 					{
 						debugLog("OsuSteamWorkshop: Invalid item %llu (installInfo = %s)\n", subscribedItems[i], item.installInfo.toUtf8());
 						continue;
@@ -148,7 +148,7 @@ protected:
 	{
 		if (!m_bPrepared || m_bReady) return;
 
-		if (m_sErrorMessage.length() < 1)
+		if (m_sErrorMessage.lengthUtf8() < 1)
 			m_osu->getNotificationOverlay()->addNotification("Done.", 0xff00ff00);
 		else
 			m_osu->getSteamWorkshop()->handleUploadError(m_sErrorMessage);
@@ -368,13 +368,13 @@ void OsuSteamWorkshop::onUpload()
 
 	debugLog("skinName = \"%s\", skinFolder = \"%s\"\n", m_osu_skin_ref->getString().toUtf8(), skinPath.toUtf8());
 
-	if (skinName.length() < 1)
+	if (skinName.lengthUtf8() < 1)
 	{
 		handleUploadError("Invalid skin name.");
 		return;
 	}
 
-	if (skinPath.length() < 2)
+	if (skinPath.lengthUtf8() < 2)
 	{
 		handleUploadError("Invalid skin folder.");
 		return;

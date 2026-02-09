@@ -56,7 +56,7 @@ public:
 		CBaseUIButton::update();
 		if (!m_bVisible) return;
 
-		if (isMouseInside() && m_sTooltipText.length() > 0)
+		if (isMouseInside() && m_sTooltipText.lengthUtf8() > 0)
 		{
 			m_osu->getTooltipOverlay()->begin();
 			{
@@ -71,7 +71,7 @@ public:
 private:
 	virtual void drawText(Graphics *g)
 	{
-		if (m_font != NULL && m_sText.length() > 0)
+		if (m_font != NULL && m_sText.lengthUtf8() > 0)
 		{
 			float xPosAdd = m_vSize.x/2.0f - m_fStringWidth/2.0f;
 

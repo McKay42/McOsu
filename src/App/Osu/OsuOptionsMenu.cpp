@@ -10,6 +10,7 @@
 #include "SoundEngine.h"
 #include "Engine.h"
 #include "ConVar.h"
+#include "Console.h"
 #include "Keyboard.h"
 #include "Environment.h"
 #include "ResourceManager.h"
@@ -1252,6 +1253,8 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Draw 300s", convar->getConVarByName("osu_hitresult_draw_300s"));
 
 	addSection("Maintenance");
+	addSubSection("Console");
+	addButton("> Open Console Window")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onOpenConsoleWindowClicked) );
 	addSubSection("Restore");
 	OsuUIButton *resetAllSettingsButton = addButton("Reset all settings");
 	resetAllSettingsButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onResetEverythingClicked) );
@@ -1633,7 +1636,7 @@ void OsuOptionsMenu::onKeyDown(KeyboardEvent &e)
 	}
 
 	// searching text delete & escape key handling
-	if (m_sSearchString.length() > 0)
+	if (m_sSearchString.lengthUtf8() > 0)
 	{
 		switch (e.getKeyCode())
 		{
@@ -1681,7 +1684,7 @@ void OsuOptionsMenu::onKeyDown(KeyboardEvent &e)
 		if (engine->getKeyboard()->isControlDown())
 		{
 			const UString clipstring = env->getClipBoardText();
-			if (clipstring.length() > 0)
+			if (clipstring.lengthUtf8() > 0)
 			{
 				m_sSearchString.append(clipstring);
 				scheduleSearchUpdate();
@@ -1975,7 +1978,7 @@ void OsuOptionsMenu::updateLayout()
 	bool inSkipSubSection = false;
 	bool sectionTitleMatch = false;
 	bool subSectionTitleMatch = false;
-	const std::string search = m_sSearchString.length() > 0 ? m_sSearchString.toUtf8() : "";
+	const std::string search = m_sSearchString.lengthUtf8() > 0 ? m_sSearchString.toUtf8() : "";
 	for (int i=0; i<m_elements.size(); i++)
 	{
 		// searching logic happens here:
@@ -1989,7 +1992,7 @@ void OsuOptionsMenu::updateLayout()
 		// if match in section or subsection -> display entire section (disregard content match)
 		// matcher is run through all remaining elements at every section + subsection
 
-		if (m_sSearchString.length() > 0)
+		if (m_sSearchString.lengthUtf8() > 0)
 		{
 			const std::string searchTags = m_elements[i].searchTags.toUtf8();
 
@@ -2012,7 +2015,7 @@ void OsuOptionsMenu::updateLayout()
 
 					for (int e=0; e<m_elements[s].elements.size(); e++)
 					{
-						if (m_elements[s].elements[e]->getName().length() > 0)
+						if (m_elements[s].elements[e]->getName().lengthUtf8() > 0)
 						{
 							std::string tags = m_elements[s].elements[e]->getName().toUtf8();
 
@@ -2048,7 +2051,7 @@ void OsuOptionsMenu::updateLayout()
 
 					for (int e=0; e<m_elements[s].elements.size(); e++)
 					{
-						if (m_elements[s].elements[e]->getName().length() > 0)
+						if (m_elements[s].elements[e]->getName().lengthUtf8() > 0)
 						{
 							std::string tags = m_elements[s].elements[e]->getName().toUtf8();
 
@@ -2073,7 +2076,7 @@ void OsuOptionsMenu::updateLayout()
 				{
 					for (int e=0; e<m_elements[i].elements.size(); e++)
 					{
-						if (m_elements[i].elements[e]->getName().length() > 0)
+						if (m_elements[i].elements[e]->getName().lengthUtf8() > 0)
 						{
 							std::string tags = m_elements[i].elements[e]->getName().toUtf8();
 
@@ -3713,6 +3716,11 @@ void OsuOptionsMenu::onResetEverythingClicked(CBaseUIButton *button)
 	}
 }
 
+void OsuOptionsMenu::onOpenConsoleWindowClicked(CBaseUIButton *button)
+{
+	engine->getConsole()->show();
+}
+
 void OsuOptionsMenu::addSpacer()
 {
 	OPTIONS_ELEMENT e;
@@ -3913,7 +3921,7 @@ CBaseUICheckbox *OsuOptionsMenu::addCheckbox(UString text, UString tooltipText, 
 	checkbox->setDrawFrame(false);
 	checkbox->setDrawBackground(false);
 
-	if (tooltipText.length() > 0)
+	if (tooltipText.lengthUtf8() > 0)
 		checkbox->setTooltipText(tooltipText);
 
 	if (cvar != NULL)

@@ -184,6 +184,9 @@ private:
 	void onResetClicked(CBaseUIButton *button);
 	void onResetEverythingClicked(CBaseUIButton *button);
 
+	// maintenance
+	void onOpenConsoleWindowClicked(CBaseUIButton *button);
+
 	// options
 	void addSpacer();
 	CBaseUILabel *addSection(UString text);

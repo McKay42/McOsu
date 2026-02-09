@@ -84,7 +84,7 @@ ConVar osu_debug_background_star_calc("osu_debug_background_star_calc", false, F
 
 void _osu_songbrowser_search_hardcoded_filter(UString oldValue, UString newValue)
 {
-	if (newValue.length() == 1 && newValue.isWhitespaceOnly())
+	if (newValue.lengthUtf8() == 1 && newValue.isWhitespaceOnly())
 		osu_songbrowser_search_hardcoded_filter.setValue("");
 }
 
@@ -107,7 +107,7 @@ public:
 		m_songButtons = songButtons;
 
 		m_sSearchString.clear();
-		if (hardcodedSearchString.length() > 0)
+		if (hardcodedSearchString.lengthUtf8() > 0)
 		{
 			m_sSearchString.append(hardcodedSearchString);
 			m_sSearchString.append(" ");
@@ -592,7 +592,7 @@ OsuSongBrowser2::OsuSongBrowser2(Osu *osu) : OsuScreenBackable(osu)
 	m_search = new OsuUISearchOverlay(m_osu, 0, 0, 0, 0, "");
 	m_search->setOffsetRight(10);
 	m_fSearchWaitTime = 0.0f;
-	m_bInSearch = (osu_songbrowser_search_hardcoded_filter.getString().length() > 0);
+	m_bInSearch = (osu_songbrowser_search_hardcoded_filter.getString().lengthUtf8() > 0);
 	m_searchPrevGroup = GROUP::GROUP_NO_GROUPING;
 	m_backgroundSearchMatcher = new OsuSongBrowserBackgroundSearchMatcher();
 	m_bOnAfterSortingOrGroupChangeUpdateScheduled = false;
@@ -1346,14 +1346,14 @@ void OsuSongBrowser2::onKeyDown(KeyboardEvent &key)
 	if (key.isConsumed()) return;
 
 	// searching text delete & escape key handling
-	if (m_sSearchString.length() > 0)
+	if (m_sSearchString.lengthUtf8() > 0)
 	{
 		switch (key.getKeyCode())
 		{
 		case KEY_DELETE:
 		case KEY_BACKSPACE:
 			key.consume();
-			if (m_sSearchString.length() > 0)
+			if (m_sSearchString.lengthUtf8() > 0)
 			{
 				if (engine->getKeyboard()->isControlDown())
 				{
@@ -1375,7 +1375,7 @@ void OsuSongBrowser2::onKeyDown(KeyboardEvent &key)
 				else
 					m_sSearchString = m_sSearchString.substr(0, m_sSearchString.length()-1);
 
-				scheduleSearchUpdate(m_sSearchString.length() == 0);
+				scheduleSearchUpdate(m_sSearchString.lengthUtf8() == 0);
 			}
 			break;
 
@@ -1398,7 +1398,7 @@ void OsuSongBrowser2::onKeyDown(KeyboardEvent &key)
 		if (engine->getKeyboard()->isControlDown())
 		{
 			const UString clipstring = env->getClipBoardText();
-			if (clipstring.length() > 0)
+			if (clipstring.lengthUtf8() > 0)
 			{
 				m_sSearchString.append(clipstring);
 				scheduleSearchUpdate(false);
@@ -1879,7 +1879,7 @@ void OsuSongBrowser2::onDifficultySelectedMP(OsuDatabaseBeatmap *diff2, bool pla
 void OsuSongBrowser2::selectBeatmapMP(OsuDatabaseBeatmap *diff2)
 {
 	// force exit search
-	if (m_sSearchString.length() > 0)
+	if (m_sSearchString.lengthUtf8() > 0)
 	{
 		m_sSearchString = "";
 		osu_songbrowser_search_hardcoded_filter.setValue(m_sSearchString); // safety
@@ -2038,7 +2038,7 @@ void OsuSongBrowser2::addBeatmap(OsuDatabaseBeatmap *beatmap)
 		if (m_artistCollectionButtons.size() == 28)
 		{
 			const UString &artist = beatmap->getArtist();
-			if (artist.length() > 0)
+			if (artist.lengthUtf8() > 0)
 			{
 				const char firstChar = artist.toUtf8()[0];
 
@@ -2080,7 +2080,7 @@ void OsuSongBrowser2::addBeatmap(OsuDatabaseBeatmap *beatmap)
 		if (m_creatorCollectionButtons.size() == 28)
 		{
 			const UString &creator = beatmap->getCreator();
-			if (creator.length() > 0)
+			if (creator.lengthUtf8() > 0)
 			{
 				const char firstChar = creator.toUtf8()[0];
 
@@ -2133,7 +2133,7 @@ void OsuSongBrowser2::addBeatmap(OsuDatabaseBeatmap *beatmap)
 		if (m_titleCollectionButtons.size() == 28)
 		{
 			const UString &creator = beatmap->getTitle();
-			if (creator.length() > 0)
+			if (creator.lengthUtf8() > 0)
 			{
 				const char firstChar = creator.toUtf8()[0];
 
@@ -2526,7 +2526,7 @@ bool OsuSongBrowser2::searchMatcher(const OsuDatabaseBeatmap *databaseBeatmap, c
 					// split expression into left and right parts (only accept singular expressions, things like "0<bpm<1" will not work with this)
 					//debugLog("splitting by string %s\n", operators[o].first.toUtf8());
 					std::vector<UString> values = searchStringTokens[i].split(operators[o].first);
-					if (values.size() == 2 && values[0].length() > 0 && values[1].length() > 0)
+					if (values.size() == 2 && values[0].lengthUtf8() > 0 && values[1].lengthUtf8() > 0)
 					{
 						const UString lvalue = values[0];
 						const int rvaluePercentIndex = values[1].find("%");
@@ -2652,7 +2652,7 @@ bool OsuSongBrowser2::searchMatcher(const OsuDatabaseBeatmap *databaseBeatmap, c
 				if (!exists)
 				{
 					const UString litAdd = searchStringTokens[i].trim();
-					if (litAdd.length() > 0 && !litAdd.isWhitespaceOnly())
+					if (litAdd.lengthUtf8() > 0 && !litAdd.isWhitespaceOnly())
 						literalSearchStrings.push_back(litAdd);
 				}
 			}
@@ -2672,7 +2672,7 @@ bool OsuSongBrowser2::searchMatcher(const OsuDatabaseBeatmap *databaseBeatmap, c
 	bool hasAnyValidLiteralSearchString = false;
 	for (size_t i=0; i<literalSearchStrings.size(); i++)
 	{
-		if (literalSearchStrings[i].length() > 0)
+		if (literalSearchStrings[i].lengthUtf8() > 0)
 		{
 			hasAnyValidLiteralSearchString = true;
 			break;
@@ -2708,37 +2708,37 @@ bool OsuSongBrowser2::searchMatcher(const OsuDatabaseBeatmap *databaseBeatmap, c
 
 bool OsuSongBrowser2::findSubstringInDifficulty(const OsuDatabaseBeatmap *diff, const UString &searchString)
 {
-	if (diff->getTitle().length() > 0)
+	if (diff->getTitle().lengthUtf8() > 0)
 	{
 		if (diff->getTitle().findIgnoreCase(searchString) != -1)
 			return true;
 	}
 
-	if (diff->getArtist().length() > 0)
+	if (diff->getArtist().lengthUtf8() > 0)
 	{
 		if (diff->getArtist().findIgnoreCase(searchString) != -1)
 			return true;
 	}
 
-	if (diff->getCreator().length() > 0)
+	if (diff->getCreator().lengthUtf8() > 0)
 	{
 		if (diff->getCreator().findIgnoreCase(searchString) != -1)
 			return true;
 	}
 
-	if (diff->getDifficultyName().length() > 0)
+	if (diff->getDifficultyName().lengthUtf8() > 0)
 	{
 		if (diff->getDifficultyName().findIgnoreCase(searchString) != -1)
 			return true;
 	}
 
-	if (diff->getSource().length() > 0)
+	if (diff->getSource().lengthUtf8() > 0)
 	{
 		if (diff->getSource().findIgnoreCase(searchString) != -1)
 			return true;
 	}
 
-	if (diff->getTags().length() > 0)
+	if (diff->getTags().lengthUtf8() > 0)
 	{
 		if (diff->getTags().findIgnoreCase(searchString) != -1)
 			return true;
@@ -3298,7 +3298,7 @@ void OsuSongBrowser2::onDatabaseLoadingFinished()
 	// update user name/stats
 	onUserButtonChange(m_name_ref->getString(), -1);
 
-	if (osu_songbrowser_search_hardcoded_filter.getString().length() > 0)
+	if (osu_songbrowser_search_hardcoded_filter.getString().lengthUtf8() > 0)
 		onSearchUpdate();
 }
 
@@ -3308,7 +3308,7 @@ void OsuSongBrowser2::onSearchUpdate()
 	const bool hasSearchStringChanged = (m_sPrevSearchString != m_sSearchString);
 
 	const bool prevInSearch = m_bInSearch;
-	m_bInSearch = (m_sSearchString.length() > 0 || osu_songbrowser_search_hardcoded_filter.getString().length() > 0);
+	m_bInSearch = (m_sSearchString.lengthUtf8() > 0 || osu_songbrowser_search_hardcoded_filter.getString().lengthUtf8() > 0);
 	const bool hasInSearchChanged = (prevInSearch != m_bInSearch);
 
 	if (m_bInSearch)
@@ -3572,7 +3572,7 @@ void OsuSongBrowser2::onGroupChange(UString text, int id)
 	GROUPING *grouping = (m_groupings.size() > 0 ? &m_groupings[0] : NULL);
 	for (size_t i=0; i<m_groupings.size(); i++)
 	{
-		if (m_groupings[i].id == id || (text.length() > 1 && m_groupings[i].name == text))
+		if (m_groupings[i].id == id || (text.lengthUtf8() > 1 && m_groupings[i].name == text))
 		{
 			grouping = &m_groupings[i];
 			break;
@@ -4271,7 +4271,7 @@ void OsuSongBrowser2::onSongButtonContextMenu(OsuUISongBrowserSongButton *songBu
 			rebuildSongButtonsAndVisibleSongButtonsWithSearchMatchSupport(false, false);	// (last false = skipping rebuildSongButtons() here)
 			onSortChangeInt(osu_songbrowser_sortingtype.getString(), false);				// (because this does the rebuildSongButtons())
 		}
-		if (previouslySelectedCollectionName.length() > 0)
+		if (previouslySelectedCollectionName.lengthUtf8() > 0)
 		{
 			for (size_t i=0; i<m_collectionButtons.size(); i++)
 			{

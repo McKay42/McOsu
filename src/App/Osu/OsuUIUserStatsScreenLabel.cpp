@@ -25,7 +25,7 @@ void OsuUIUserStatsScreenLabel::update()
 		bool isEmpty = true;
 		for (size_t i=0; i<m_tooltipTextLines.size(); i++)
 		{
-			if (m_tooltipTextLines[i].length() > 0)
+			if (m_tooltipTextLines[i].lengthUtf8() > 0)
 			{
 				isEmpty = false;
 				break;
@@ -38,7 +38,7 @@ void OsuUIUserStatsScreenLabel::update()
 			{
 				for (size_t i=0; i<m_tooltipTextLines.size(); i++)
 				{
-					if (m_tooltipTextLines[i].length() > 0)
+					if (m_tooltipTextLines[i].lengthUtf8() > 0)
 						m_osu->getTooltipOverlay()->addLine(m_tooltipTextLines[i]);
 				}
 			}

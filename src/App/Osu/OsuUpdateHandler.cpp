@@ -343,7 +343,7 @@ void OsuUpdateHandler::_installUpdate(UString zipFilePath)
 		m_status = STATUS::STATUS_ERROR;
 		return;
 	}
-	const char *content = f.readFile();
+	//const char *content = f.readFile();
 
 	/*
 	// initialize zip

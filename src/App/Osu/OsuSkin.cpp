@@ -530,7 +530,7 @@ void OsuSkin::load()
 
 	randomizeFilePath();
 	{
-		UString hitCirclePrefix = m_sHitCirclePrefix.length() > 0 ? m_sHitCirclePrefix : "default";
+		UString hitCirclePrefix = m_sHitCirclePrefix.lengthUtf8() > 0 ? m_sHitCirclePrefix : "default";
 		UString hitCircleStringFinal = hitCirclePrefix; hitCircleStringFinal.append("-0");
 		checkLoadImage(&m_default0, hitCircleStringFinal, "OSU_SKIN_DEFAULT0");
 		if (m_default0 == m_missingTexture) checkLoadImage(&m_default0, "default-0", "OSU_SKIN_DEFAULT0"); // special cases: fallback to default skin hitcircle numbers if the defined prefix doesn't point to any valid files
@@ -565,7 +565,7 @@ void OsuSkin::load()
 
 	randomizeFilePath();
 	{
-		UString scorePrefix = m_sScorePrefix.length() > 0 ? m_sScorePrefix : "score";
+		UString scorePrefix = m_sScorePrefix.lengthUtf8() > 0 ? m_sScorePrefix : "score";
 		UString scoreStringFinal = scorePrefix; scoreStringFinal.append("-0");
 		checkLoadImage(&m_score0, scoreStringFinal, "OSU_SKIN_SCORE0");
 		if (m_score0 == m_missingTexture) checkLoadImage(&m_score0, "score-0", "OSU_SKIN_SCORE0"); // special cases: fallback to default skin score numbers if the defined prefix doesn't point to any valid files
@@ -612,7 +612,7 @@ void OsuSkin::load()
 
 	randomizeFilePath();
 	{
-		UString comboPrefix = m_sComboPrefix.length() > 0 ? m_sComboPrefix : "score"; // yes, "score" is the default value for the combo prefix
+		UString comboPrefix = m_sComboPrefix.lengthUtf8() > 0 ? m_sComboPrefix : "score"; // yes, "score" is the default value for the combo prefix
 		UString comboStringFinal = comboPrefix; comboStringFinal.append("-0");
 		checkLoadImage(&m_combo0, comboStringFinal, "OSU_SKIN_COMBO0");
 		if (m_combo0 == m_missingTexture) checkLoadImage(&m_combo0, "score-0", "OSU_SKIN_COMBO0"); // special cases: fallback to default skin combo numbers if the defined prefix doesn't point to any valid files
@@ -1210,7 +1210,7 @@ void OsuSkin::onIgnoreBeatmapSampleVolumeChange(UString oldValue, UString newVal
 
 void OsuSkin::onExport(UString folderName)
 {
-	if (folderName.length() < 1)
+	if (folderName.lengthUtf8() < 1)
 	{
 		m_osu->getNotificationOverlay()->addNotification("Usage: osu_skin_export MyExportedSkinName", 0xffffffff, false, 3.0f);
 		return;
@@ -1253,13 +1253,13 @@ void OsuSkin::onExport(UString folderName)
 	// checkLoadImage + checkLoadSound + createOsuSkinImage
 	for (const UString &filepath : m_filepathsForExport)
 	{
-		if (filepath.length() < 3) continue;
+		if (filepath.lengthUtf8() < 3) continue;
 
 		const int lastPathSeparatorIndex = filepath.findLast("/");
 		if (lastPathSeparatorIndex > -1)
 		{
 			const UString fileNameWithExtension = filepath.substr(lastPathSeparatorIndex + 1);
-			if (fileNameWithExtension.length() > 0)
+			if (fileNameWithExtension.lengthUtf8() > 0)
 				filesToCopy.push_back({filepath, fileNameWithExtension});
 		}
 	}
@@ -1775,7 +1775,7 @@ void OsuSkin::checkLoadSound(Sound **addressOfPointer, UString skinElementName, 
 
 bool OsuSkin::compareFilenameWithSkinElementName(UString filename, UString skinElementName)
 {
-	if (filename.length() == 0 || skinElementName.length() == 0) return false;
+	if (filename.lengthUtf8() == 0 || skinElementName.lengthUtf8() == 0) return false;
 
 	return filename.substr(0, filename.findLast(".")) == skinElementName;
 }

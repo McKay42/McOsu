@@ -88,7 +88,7 @@ void OsuRichPresence::onPlayEnd(Osu *osu, bool quit)
 
 			// mods
 			UString mods = osu->getScore()->getModsStringForRichPresence();
-			if (mods.length() > 0)
+			if (mods.lengthUtf8() > 0)
 			{
 				scoreInfo.append(" ");
 				scoreInfo.append(mods);

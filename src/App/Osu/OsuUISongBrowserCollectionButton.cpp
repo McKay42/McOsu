@@ -215,7 +215,7 @@ void OsuUISongBrowserCollectionButton::onContextMenu(UString text, int id)
 
 void OsuUISongBrowserCollectionButton::onRenameCollectionConfirmed(UString text, int id)
 {
-	if (text.length() > 0)
+	if (text.lengthUtf8() > 0)
 	{
 		if (m_osu->getSongBrowser()->getDatabase()->renameCollection(m_sCollectionName, text))
 		{

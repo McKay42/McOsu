@@ -1086,7 +1086,7 @@ void OsuMultiplayer::onServerModUpdate()
 		string = "osu_mods ";
 		{
 			UString mods = convar->getConVarByName("osu_mods")->getString();
-			if (mods.length() < 1)
+			if (mods.lengthUtf8() < 1)
 				string.append(" ;");
 			else
 				string.append(mods);
@@ -1379,7 +1379,7 @@ void OsuMultiplayer::onBeatmapDownloadFinished(const BeatmapDownloadState &dl)
 			musicFile.write((const char*)&dl.musicFileBytes[0], dl.musicFileBytes.size());
 		}
 	}
-	if (dl.backgroundFileName.length() > 1)
+	if (dl.backgroundFileName.lengthUtf8() > 1)
 	{
 		UString backgroundFilePath = beatmapFolderPath;
 		backgroundFilePath.append(dl.backgroundFileName);

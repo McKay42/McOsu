@@ -601,24 +601,24 @@ void OsuMainMenu::draw(Graphics *g)
 
 #endif
 
-		if (osu_main_menu_banner_always_text.getString().length() > 0)
+		if (osu_main_menu_banner_always_text.getString().lengthUtf8() > 0)
 			bannerText = osu_main_menu_banner_always_text.getString();
-		else if (m_bDidUserUpdateFromOlderVersion && osu_main_menu_banner_ifupdatedfromoldversion_text.getString().length() > 0)
+		else if (m_bDidUserUpdateFromOlderVersion && osu_main_menu_banner_ifupdatedfromoldversion_text.getString().lengthUtf8() > 0)
 			bannerText = osu_main_menu_banner_ifupdatedfromoldversion_text.getString();
-		else if (m_bDidUserUpdateFromOlderVersionLe3300 && osu_main_menu_banner_ifupdatedfromoldversion_le3300_text.getString().length() > 0)
+		else if (m_bDidUserUpdateFromOlderVersionLe3300 && osu_main_menu_banner_ifupdatedfromoldversion_le3300_text.getString().lengthUtf8() > 0)
 			bannerText = osu_main_menu_banner_ifupdatedfromoldversion_le3300_text.getString();
-		else if (m_bDidUserUpdateFromOlderVersionLe3303 && osu_main_menu_banner_ifupdatedfromoldversion_le3303_text.getString().length() > 0)
+		else if (m_bDidUserUpdateFromOlderVersionLe3303 && osu_main_menu_banner_ifupdatedfromoldversion_le3303_text.getString().lengthUtf8() > 0)
 			bannerText = osu_main_menu_banner_ifupdatedfromoldversion_le3303_text.getString();
-		else if (m_bDidUserUpdateFromOlderVersionLe3308 && osu_main_menu_banner_ifupdatedfromoldversion_le3308_text.getString().length() > 0)
+		else if (m_bDidUserUpdateFromOlderVersionLe3308 && osu_main_menu_banner_ifupdatedfromoldversion_le3308_text.getString().lengthUtf8() > 0)
 			bannerText = osu_main_menu_banner_ifupdatedfromoldversion_le3308_text.getString();
-		else if (m_bDidUserUpdateFromOlderVersionLe3310 && osu_main_menu_banner_ifupdatedfromoldversion_le3310_text.getString().length() > 0)
+		else if (m_bDidUserUpdateFromOlderVersionLe3310 && osu_main_menu_banner_ifupdatedfromoldversion_le3310_text.getString().lengthUtf8() > 0)
 			bannerText = osu_main_menu_banner_ifupdatedfromoldversion_le3310_text.getString();
-		else if (m_bDidUserUpdateFromOlderVersionLe3311 && osu_main_menu_banner_ifupdatedfromoldversion_le3311_text.getString().length() > 0)
+		else if (m_bDidUserUpdateFromOlderVersionLe3311 && osu_main_menu_banner_ifupdatedfromoldversion_le3311_text.getString().lengthUtf8() > 0)
 			bannerText = osu_main_menu_banner_ifupdatedfromoldversion_le3311_text.getString();
-		else if (m_bDidUserUpdateFromOlderVersionLe3312 && osu_main_menu_banner_ifupdatedfromoldversion_le3312_text.getString().length() > 0)
+		else if (m_bDidUserUpdateFromOlderVersionLe3312 && osu_main_menu_banner_ifupdatedfromoldversion_le3312_text.getString().lengthUtf8() > 0)
 			bannerText = osu_main_menu_banner_ifupdatedfromoldversion_le3312_text.getString();
 
-		if (bannerText.length() > 0)
+		if (bannerText.lengthUtf8() > 0)
 		{
 			McFont *bannerFont = m_osu->getSubTitleFont();
 			float bannerStringWidth = bannerFont->getStringWidth(bannerText);
@@ -1061,7 +1061,7 @@ void OsuMainMenu::draw(Graphics *g)
 	}
 
 	// subtext
-	if (osu_draw_main_menu_button_subtext.getBool() && MCOSU_MAIN_BUTTON_SUBTEXT.length() > 0)
+	if (osu_draw_main_menu_button_subtext.getBool() && MCOSU_MAIN_BUTTON_SUBTEXT.lengthUtf8() > 0)
 	{
 		float invertedPulse = 1.0f - pulse;
 

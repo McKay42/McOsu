@@ -633,7 +633,7 @@ void OsuDatabase::sortScores(std::string beatmapMD5Hash)
 
 bool OsuDatabase::addCollection(UString collectionName)
 {
-	if (collectionName.length() < 1) return false;
+	if (collectionName.lengthUtf8() < 1) return false;
 
 	// don't want duplicates
 	for (size_t i=0; i<m_collections.size(); i++)
@@ -662,7 +662,7 @@ bool OsuDatabase::addCollection(UString collectionName)
 
 bool OsuDatabase::renameCollection(UString oldCollectionName, UString newCollectionName)
 {
-	if (newCollectionName.length() < 1) return false;
+	if (newCollectionName.lengthUtf8() < 1) return false;
 	if (oldCollectionName == newCollectionName) return false;
 
 	// don't want duplicates
@@ -1174,7 +1174,7 @@ UString OsuDatabase::parseLegacyCfgBeatmapDirectoryParameter()
 {
 	// get BeatmapDirectory parameter from osu!.<OS_USERNAME>.cfg
 	debugLog("OsuDatabase::parseLegacyCfgBeatmapDirectoryParameter() : username = %s\n", env->getUsername().toUtf8());
-	if (env->getUsername().length() > 0)
+	if (env->getUsername().lengthUtf8() > 0)
 	{
 		UString osuUserConfigFilePath = osu_folder.getString();
 		osuUserConfigFilePath.append("osu!.");
@@ -1195,7 +1195,7 @@ UString OsuDatabase::parseLegacyCfgBeatmapDirectoryParameter()
 				UString beatmapDirectory = UString(stringBuffer);
 				beatmapDirectory = beatmapDirectory.trim();
 
-				if (beatmapDirectory.length() > 2)
+				if (beatmapDirectory.lengthUtf8() > 2)
 				{
 					// if we have an absolute path, use it in its entirety.
 					// otherwise, append the beatmapDirectory to the songFolder (which uses the osu_folder as the starting point)
@@ -1235,7 +1235,7 @@ void OsuDatabase::scheduleLoadRaw()
 	m_sRawBeatmapLoadOsuSongFolder = osu_folder.getString();
 	{
 		const UString customBeatmapDirectory = parseLegacyCfgBeatmapDirectoryParameter();
-		if (customBeatmapDirectory.length() < 1)
+		if (customBeatmapDirectory.lengthUtf8() < 1)
 			m_sRawBeatmapLoadOsuSongFolder.append(osu_folder_sub_songs.getString());
 		else
 			m_sRawBeatmapLoadOsuSongFolder = customBeatmapDirectory;
@@ -1325,7 +1325,7 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 	UString songFolder = osu_folder.getString();
 	{
 		const UString customBeatmapDirectory = parseLegacyCfgBeatmapDirectoryParameter();
-		if (customBeatmapDirectory.length() < 1)
+		if (customBeatmapDirectory.lengthUtf8() < 1)
 			songFolder.append(osu_folder_sub_songs.getString());
 		else
 			songFolder = customBeatmapDirectory;
@@ -1573,7 +1573,7 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 		// skip invalid/corrupt entries
 		// the good way would be to check if the .osu file actually exists on disk, but that is slow af, ain't nobody got time for that
 		// so, since I've seen some concrete examples of what happens in such cases, we just exclude those
-		if (artistName.length() < 1 && songTitle.length() < 1 && creatorName.length() < 1 && difficultyName.length() < 1 && md5hash.length() < 1)
+		if (artistName.lengthUtf8() < 1 && songTitle.lengthUtf8() < 1 && creatorName.lengthUtf8() < 1 && difficultyName.lengthUtf8() < 1 && md5hash.length() < 1)
 			continue;
 
 		// fill diff with data
@@ -1761,13 +1761,13 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 			}
 
 			// special case: legacy fallback behavior for invalid beatmapSetID, try to parse the ID from the path
-			if (beatmapSetID < 1 && path.length() > 0)
+			if (beatmapSetID < 1 && path.lengthUtf8() > 0)
 			{
 				const std::vector<UString> pathTokens = path.split("\\"); // NOTE: this is hardcoded to backslash since osu is windows only
-				if (pathTokens.size() > 0 && pathTokens[0].length() > 0)
+				if (pathTokens.size() > 0 && pathTokens[0].lengthUtf8() > 0)
 				{
 					const std::vector<UString> spaceTokens = pathTokens[0].split(" ");
-					if (spaceTokens.size() > 0 && spaceTokens[0].length() > 0)
+					if (spaceTokens.size() > 0 && spaceTokens[0].lengthUtf8() > 0)
 					{
 						try
 						{
@@ -1833,7 +1833,7 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 				// and in the other hashmap
 				UString titleArtist = bm->getTitle();
 				titleArtist.append(bm->getArtist());
-				if (titleArtist.length() > 0)
+				if (titleArtist.lengthUtf8() > 0)
 					titleArtistToBeatmap[std::string(titleArtist.toUtf8())] = bm;
 			}
 		}
@@ -1862,7 +1862,7 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 					UString titleArtistCreator = diff2->getTitle();
 					titleArtistCreator.append(diff2->getArtist());
 					titleArtistCreator.append(diff2->getCreator());
-					if (titleArtistCreator.length() > 0)
+					if (titleArtistCreator.lengthUtf8() > 0)
 					{
 						const auto result = titleArtistToBeatmap.find(std::string(titleArtistCreator.toUtf8()));
 						if (result != titleArtistToBeatmap.end())
@@ -2945,7 +2945,7 @@ OsuDatabaseBeatmap *OsuDatabase::loadRawBeatmap(UString beatmapPath)
 
 void OsuDatabase::onScoresRename(UString args)
 {
-	if (args.length() < 2)
+	if (args.lengthUtf8() < 2)
 	{
 		m_osu->getNotificationOverlay()->addNotification(UString::format("Usage: %s MyNewName", osu_scores_rename.getName().toUtf8()));
 		return;
