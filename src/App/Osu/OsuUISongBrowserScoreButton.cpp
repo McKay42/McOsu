@@ -71,7 +71,7 @@ OsuUISongBrowserScoreButton::OsuUISongBrowserScoreButton(Osu *osu, OsuUIContextM
 	if (m_osu_od_override_lock_ref == NULL)
 		m_osu_od_override_lock_ref = convar->getConVarByName("osu_od_override_lock");
 
-	if (recentScoreIconString.lengthUtf8() < 1)
+	if (recentScoreIconString.length() < 1)
 		recentScoreIconString.insert(0, OsuIcons::ARROW_CIRCLE_UP);
 
 	m_fIndexNumberAnim = 0.0f;

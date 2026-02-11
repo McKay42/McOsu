@@ -11,7 +11,7 @@
 #include "ConVar.h"
 #include "Environment.h"
 #include "SteamworksInterface.h"
-//#include "DiscordInterface.h"
+#include "DiscordInterface.h"
 
 #include "Osu.h"
 #include "OsuScore.h"
@@ -109,7 +109,6 @@ void OsuRichPresence::setStatus(Osu *osu, UString status, bool force)
 	// steam
 	steam->setRichPresence(KEY_STEAM_STATUS, status);
 
-	/*
 	// discord
 	discord->setRichPresence("largeImageKey", "logo_512", true);
 	discord->setRichPresence("smallImageKey", "logo_discord_512_blackfill", true);
@@ -131,7 +130,6 @@ void OsuRichPresence::setStatus(Osu *osu, UString status, bool force)
 	}
 	else if (force && status.length() < 1)
 		discord->setRichPresence(KEY_DISCORD_STATUS, "");
-	*/
 }
 
 void OsuRichPresence::onRichPresenceChange(UString oldValue, UString newValue)
