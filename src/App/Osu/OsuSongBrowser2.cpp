@@ -1009,6 +1009,7 @@ void OsuSongBrowser2::draw(Graphics *g)
 		Color topColor = 0x00ffffff;
 		Color bottomColor = COLOR((int)(25*m_fPulseAnimation), 255, 255, 255);
 
+		g->setColor(0xffffffff);
 		g->fillGradient(0, 0, m_osu->getScreenWidth(), m_osu->getScreenHeight(), topColor, topColor, bottomColor, bottomColor);
 	}
 

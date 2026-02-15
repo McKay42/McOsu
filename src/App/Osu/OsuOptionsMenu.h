@@ -186,6 +186,7 @@ private:
 
 	// maintenance
 	void onOpenConsoleWindowClicked(CBaseUIButton *button);
+	void onOpenConsoleTextboxClicked(CBaseUIButton *button);
 
 	// options
 	void addSpacer();

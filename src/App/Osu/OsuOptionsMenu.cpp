@@ -11,6 +11,7 @@
 #include "Engine.h"
 #include "ConVar.h"
 #include "Console.h"
+#include "ConsoleBox.h"
 #include "Keyboard.h"
 #include "Environment.h"
 #include "ResourceManager.h"
@@ -396,6 +397,7 @@ public:
 		Color middle = COLOR((int)(255*m_fAnim), 255, 211, 50);
 		Color right = 0x00000000;
 
+		g->setColor(0xffffffff);
 		g->fillGradient(m_vPos.x, m_vPos.y, m_vSize.x*1.25f, m_vSize.y, middle, right, middle, right);
 		g->fillGradient(m_vPos.x, m_vPos.y, fullColorBlockSize, m_vSize.y, left, middle, left, middle);
 	}
@@ -903,8 +905,16 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	CBaseUIElement *sectionInput = addSection("Input");
 
 	addSubSection("Mouse", "scroll");
-	if (env->getOS() == Environment::OS::OS_WINDOWS /*|| env->getOS() == Environment::OS::OS_MACOS || env->getOS() == Environment::OS::OS_HORIZON*/)
 	{
+		if (env->getOS() == Environment::OS::OS_LINUX)
+		{
+			addLabel("");
+			addLabel("NOTE: Raw input must be enabled for sensitivity!")->setTextColor(0xffffff00);
+			addLabel("");
+			addLabel("NOTE: Raw input always confines cursor to window!")->setTextColor(0xffffff00);
+			addLabel("");
+		}
+
 		addSlider("Sensitivity:", (/*env->getOS() == Environment::OS::OS_HORIZON ? 1.0f :*/ 0.1f), 6.0f, convar->getConVarByName("mouse_sensitivity"))->setKeyDelta(0.01f);
 
 		//if (env->getOS() == Environment::OS::OS_HORIZON)
@@ -919,14 +929,13 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 		}
 		*/
 	}
+	addCheckbox("Raw Input", convar->getConVarByName("mouse_raw_input"));
 	if (env->getOS() == Environment::OS::OS_WINDOWS)
 	{
-		addCheckbox("Raw Input", convar->getConVarByName("mouse_raw_input"));
-		{
-			ConVar *win_mouse_raw_input_buffer_ref = convar->getConVarByName("win_mouse_raw_input_buffer", false);
-			if (win_mouse_raw_input_buffer_ref != NULL)
-				addCheckbox("[Beta] RawInputBuffer", "Improves performance problems caused by insane mouse usb polling rates above 1000 Hz.\nOnly relevant if \"Raw Input\" is enabled, or if in FPoSu mode (with disabled \"Tablet/Absolute Mode\").", win_mouse_raw_input_buffer_ref);
-		}
+		ConVar *win_mouse_raw_input_buffer_ref = convar->getConVarByName("win_mouse_raw_input_buffer", false);
+		if (win_mouse_raw_input_buffer_ref != NULL)
+			addCheckbox("[Beta] RawInputBuffer", "Improves performance problems caused by insane mouse usb polling rates above 1000 Hz.\nOnly relevant if \"Raw Input\" is enabled, or if in FPoSu mode (with disabled \"Tablet/Absolute Mode\").", win_mouse_raw_input_buffer_ref);
+
 		addCheckbox("Map Absolute Raw Input to Window", convar->getConVarByName("mouse_raw_input_absolute_to_window"))->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onRawInputToAbsoluteWindowChange) );
 	}
 	if (env->getOS() == Environment::OS::OS_LINUX)
@@ -1254,7 +1263,10 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 
 	addSection("Maintenance");
 	addSubSection("Console");
+	addCheckbox("Prefer Window instead of Textbox", "Usually SHIFT + F1 opens the small/unobtrusive console textbox.\nEnable this to have it toggle the full console window instead.", convar->getConVarByName("console_window"));
+	addSpacer();
 	addButton("> Open Console Window")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onOpenConsoleWindowClicked) );
+	addButton("> Open Console Textbox")->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onOpenConsoleTextboxClicked) );
 	addSubSection("Restore");
 	OsuUIButton *resetAllSettingsButton = addButton("Reset all settings");
 	resetAllSettingsButton->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onResetEverythingClicked) );
@@ -1692,7 +1704,8 @@ void OsuOptionsMenu::onKeyDown(KeyboardEvent &e)
 		}
 	}
 
-	e.consume();
+	if (e != KEY_O || !engine->getKeyboard()->isControlDown() || !engine->getKeyboard()->isShiftDown())
+		e.consume();
 }
 
 void OsuOptionsMenu::onKeyUp(KeyboardEvent &e)
@@ -3719,6 +3732,11 @@ void OsuOptionsMenu::onResetEverythingClicked(CBaseUIButton *button)
 void OsuOptionsMenu::onOpenConsoleWindowClicked(CBaseUIButton *button)
 {
 	engine->getConsole()->show();
+}
+
+void OsuOptionsMenu::onOpenConsoleTextboxClicked(CBaseUIButton *button)
+{
+	engine->getConsoleBox()->show();
 }
 
 void OsuOptionsMenu::addSpacer()

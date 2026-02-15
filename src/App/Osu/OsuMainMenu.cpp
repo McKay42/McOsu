@@ -45,8 +45,6 @@
 #include "CBaseUIContainer.h"
 #include "CBaseUIButton.h"
 
-#include "DirectX11Interface.h"
-
 #define MCOSU_VERSION_TEXT "Version"
 #define MCOSU_BANNER_TEXT ""
 UString OsuMainMenu::MCOSU_MAIN_BUTTON_TEXT = UString("McOsu");
@@ -584,13 +582,6 @@ void OsuMainMenu::draw(Graphics *g)
 	if (drawBanner)
 	{
 		UString bannerText = MCOSU_BANNER_TEXT;
-
-#ifdef MCENGINE_FEATURE_DIRECTX11
-
-		if (dynamic_cast<DirectX11Interface*>(engine->getGraphics()) != NULL)
-			bannerText = " DirectX11 Beta   -   VR is not supported   -";
-
-#endif
 
 #ifdef MCENGINE_FEATURE_BASS_WASAPI
 

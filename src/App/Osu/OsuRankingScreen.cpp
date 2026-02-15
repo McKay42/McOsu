@@ -58,6 +58,7 @@ public:
 		// draw background gradient
 		const Color topColor = 0xdd634e13;
 		const Color bottomColor = 0xdd785f15;
+		g->setColor(0xffffffff);
 		g->fillGradient(m_vPos.x, m_vPos.y, m_vSize.x, m_vSize.y, topColor, topColor, bottomColor, bottomColor);
 
 		// draw ranking index text
@@ -101,6 +102,7 @@ public:
 		// draw background gradient
 		const Color topColor = 0xdd3a2e0c;
 		const Color bottomColor = 0xdd493a0f;
+		g->setColor(0xffffffff);
 		g->fillGradient(m_vPos.x, m_vPos.y, m_vSize.x, m_vSize.y, topColor, topColor, bottomColor, bottomColor);
 	}
 
