@@ -940,9 +940,8 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	}
 	if (env->getOS() == Environment::OS::OS_LINUX)
 	{
-		addLabel("Use system settings to change the mouse sensitivity.")->setTextColor(0xff555555);
 		addLabel("");
-		addLabel("Use xinput or xsetwacom to change the tablet area.")->setTextColor(0xff555555);
+		addLabel("Use xinput/xsetwacom/etc. to change the tablet area.")->setTextColor(0xff555555);
 		addLabel("");
 	}
 	//if (env->getOS() != Environment::OS::OS_HORIZON)
@@ -2201,8 +2200,11 @@ void OsuOptionsMenu::updateLayout()
 			if (buttonPointer != NULL)
 				buttonPointer->onResized(); // HACKHACK: framework, setSize*() does not update string metrics
 
-			// button-button spacing
 			CBaseUIButton *buttonPointer2 = dynamic_cast<CBaseUIButton*>(e2);
+			if (buttonPointer2 != NULL)
+				buttonPointer2->onResized(); // HACKHACK: framework, setSize*() does not update string metrics
+
+			// button-button spacing
 			if (buttonPointer != NULL && buttonPointer2 != NULL)
 				spacing *= 0.35f;
 
@@ -2279,9 +2281,17 @@ void OsuOptionsMenu::updateLayout()
 						label1Pointer->setSizeX(label1Pointer->getRelSize().x * (96.0f / m_elements[i].relSizeDPI) * dpiScale);
 				}
 
+				CBaseUIButton *buttonPointer1 = dynamic_cast<CBaseUIButton*>(e1);
+				if (buttonPointer1 != NULL)
+					buttonPointer1->onResized(); // HACKHACK: framework, setSize*() does not update string metrics
+
 				CBaseUISlider *sliderPointer = dynamic_cast<CBaseUISlider*>(e2);
 				if (sliderPointer != NULL)
 					sliderPointer->setBlockSize(20 * dpiScale, 20 * dpiScale);
+
+				CBaseUIButton *buttonPointer2 = dynamic_cast<CBaseUIButton*>(e2);
+				if (buttonPointer2 != NULL)
+					buttonPointer2->onResized(); // HACKHACK: framework, setSize*() does not update string metrics
 
 				CBaseUILabel *label2Pointer = dynamic_cast<CBaseUILabel*>(e3);
 				if (label2Pointer != NULL)

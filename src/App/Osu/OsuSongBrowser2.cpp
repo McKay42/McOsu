@@ -2828,14 +2828,15 @@ void OsuSongBrowser2::updateLayout()
 	const int topbarRightSortButtonWidth = clamp<float>((float)(m_topbarRight->getSize().x - 2*topbarRightSortButtonMargin) / (float)m_topbarRightSortButtons.size(), 0.0f, 200.0f * dpiScale);
 	for (int i=0; i<m_topbarRightSortButtons.size(); i++)
 	{
+		m_topbarRightSortButtons[i]->onResized(); // HACKHACK: framework bug (should update string metrics on setSize())
 		m_topbarRightSortButtons[i]->setSize(topbarRightSortButtonWidth, topbarRightSortButtonHeight);
 		m_topbarRightSortButtons[i]->setRelPos(m_topbarRight->getSize().x - (topbarRightSortButtonMargin + (m_topbarRightTabButtons.size()-i)*topbarRightSortButtonWidth), topbarRightSortButtonMargin);
 	}
 	for (int i=0; i<m_topbarRightGroupButtons.size(); i++)
 	{
+		m_topbarRightGroupButtons[i]->onResized(); // HACKHACK: framework bug (should update string metrics on setSize())
 		m_topbarRightGroupButtons[i]->setSize(topbarRightSortButtonWidth, topbarRightSortButtonHeight);
 		m_topbarRightGroupButtons[i]->setRelPos(m_topbarRight->getSize().x - (topbarRightSortButtonMargin + (m_topbarRightTabButtons.size()-i)*topbarRightSortButtonWidth), topbarRightSortButtonMargin);
-
 	}
 
 	if (m_topbarRightGroupButtons.size() > 0)
