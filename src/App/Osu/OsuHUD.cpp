@@ -1148,6 +1148,7 @@ void OsuHUD::drawPlayfieldBorder(Graphics *g, Vector2 playfieldCenter, Vector2 p
 	const Color innerColor = 0x44ffffff;
 	const Color outerColor = 0x00000000;
 
+	g->setColor(0xffffffff);
 	g->pushTransform();
 	{
 		g->translate(0, 0, 0.2f);
