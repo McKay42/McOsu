@@ -2233,7 +2233,7 @@ void OsuDatabase::loadScores()
 			if (originalScoresFile.canRead())
 			{
 				UString backupScoresFilePath = scoresFilePath;
-				const int forcedBackupCounter = 7;
+				const int forcedBackupCounter = 8;
 				backupScoresFilePath.append(UString::format(".%i_%i.backup", (makeBackupType < 2 ? backupLessThanVersion : maxSupportedCustomDbVersion), forcedBackupCounter));
 
 				if (!env->fileExists(backupScoresFilePath)) // NOTE: avoid overwriting when people switch betas
@@ -2760,7 +2760,7 @@ void OsuDatabase::loadCollections(UString collectionFilePath, bool isLegacy, con
 		if (originalCollectionsFile.canRead())
 		{
 			UString backupCollectionsFilePath = collectionFilePath;
-			const int forcedBackupCounter = 6;
+			const int forcedBackupCounter = 7;
 			backupCollectionsFilePath.append(UString::format(".%i_%i.backup", osu_collections_custom_version.getInt(), forcedBackupCounter));
 
 			if (!env->fileExists(backupCollectionsFilePath)) // NOTE: avoid overwriting when people switch betas

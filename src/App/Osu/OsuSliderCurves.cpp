@@ -28,6 +28,9 @@ OsuSliderCurve *OsuSliderCurve::createCurve(char osuSliderCurveType, std::vector
 
 OsuSliderCurve *OsuSliderCurve::createCurve(char osuSliderCurveType, std::vector<Vector2> controlPoints, float pixelLength, float curvePointsSeparation)
 {
+	OsuSliderCurve *curve = NULL;
+
+	// build curve
 	if (osuSliderCurveType == OSUSLIDERCURVETYPE_PASSTHROUGH && controlPoints.size() == 3)
 	{
 		Vector2 nora = controlPoints[1] - controlPoints[0];
@@ -43,14 +46,30 @@ OsuSliderCurve *OsuSliderCurve::createCurve(char osuSliderCurveType, std::vector
 		// TODO: to properly support all aspire sliders (e.g. Ping), need to use osu circular arc calc + subdivide line segments if they are too big
 
 		if (std::abs(norb.x * nora.y - norb.y * nora.x) < 0.00001f)
-			return new OsuSliderCurveLinearBezier(controlPoints, pixelLength, false, curvePointsSeparation); // vectors parallel, use linear bezier instead
+			curve = new OsuSliderCurveLinearBezier(controlPoints, pixelLength, false, curvePointsSeparation); // vectors parallel, use linear bezier instead
 		else
-			return new OsuSliderCurveCircumscribedCircle(controlPoints, pixelLength, curvePointsSeparation);
+			curve = new OsuSliderCurveCircumscribedCircle(controlPoints, pixelLength, curvePointsSeparation);
 	}
 	else if (osuSliderCurveType == OSUSLIDERCURVETYPE_CATMULL)
-		return new OsuSliderCurveCatmull(controlPoints, pixelLength, curvePointsSeparation);
+		curve = new OsuSliderCurveCatmull(controlPoints, pixelLength, curvePointsSeparation);
 	else
-		return new OsuSliderCurveLinearBezier(controlPoints, pixelLength, (osuSliderCurveType == OSUSLIDERCURVETYPE_LINEAR), curvePointsSeparation);
+		curve = new OsuSliderCurveLinearBezier(controlPoints, pixelLength, (osuSliderCurveType == OSUSLIDERCURVETYPE_LINEAR), curvePointsSeparation);
+
+	// calculate bounds
+	for (const Vector2 &point : curve->getPoints())
+	{
+		if (point.x < curve->m_originalBounds.x)
+			curve->m_originalBounds.x = point.x;
+		if (point.x > curve->m_originalBounds.z)
+			curve->m_originalBounds.z = point.x;
+		if (point.y < curve->m_originalBounds.y)
+			curve->m_originalBounds.y = point.y;
+		if (point.y > curve->m_originalBounds.w)
+			curve->m_originalBounds.w = point.y;
+	}
+	curve->m_bounds = curve->m_originalBounds;
+
+	return curve;
 }
 
 OsuSliderCurve::OsuSliderCurve(std::vector<Vector2> controlPoints, float pixelLength)
@@ -60,6 +79,12 @@ OsuSliderCurve::OsuSliderCurve(std::vector<Vector2> controlPoints, float pixelLe
 
 	m_fStartAngle = 0.0f;
 	m_fEndAngle = 0.0f;
+
+	m_originalBounds.x = std::numeric_limits<float>::max();	// minX
+	m_originalBounds.y = std::numeric_limits<float>::max();	// minY
+	m_originalBounds.z = 0.0f;								// maxX
+	m_originalBounds.w = 0.0f;								// maxY
+	m_bounds = m_originalBounds;
 }
 
 void OsuSliderCurve::updateStackPosition(float stackMulStackOffset, bool HR)
@@ -76,6 +101,11 @@ void OsuSliderCurve::updateStackPosition(float stackMulStackOffset, bool HR)
 			m_curvePointSegments[s][p] = m_originalCurvePointSegments[s][p] - Vector2(stackMulStackOffset, stackMulStackOffset * (HR ? -1.0f : 1.0f));
 		}
 	}
+
+	m_bounds.x = m_originalBounds.x - stackMulStackOffset;
+	m_bounds.y = m_originalBounds.y - (stackMulStackOffset * (HR ? -1.0f : 1.0f));
+	m_bounds.z = m_originalBounds.z - stackMulStackOffset;
+	m_bounds.w = m_originalBounds.w - (stackMulStackOffset * (HR ? -1.0f : 1.0f));
 }
 
 

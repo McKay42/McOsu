@@ -53,6 +53,16 @@ private:
 		float alpha;
 		float backgroundAnim;
 		float fallAnim;
+
+		NOTIFICATION()
+		{
+			textColor = 0xffffffff;
+
+			time = 0.0f;
+			alpha = 0.0f;
+			backgroundAnim = 0.0f;
+			fallAnim = 0.0f;
+		}
 	};
 
 	void drawNotificationText(Graphics *g, NOTIFICATION &n);

@@ -197,6 +197,7 @@ public:
 
 	inline bool isSkipScheduled() const {return m_bSkipScheduled;}
 	inline bool isSeeking() const {return m_bSeeking;}
+	inline bool isSeekFrame() const {return m_bIsSeekFrame;}
 	inline float getQuickSaveTime() const {return m_fQuickSaveTime;}
 
 	bool shouldFallBackToLegacySliderRenderer(); // certain mods or actions require OsuSliders to render dynamically (e.g. wobble or the CS override slider)
@@ -351,6 +352,7 @@ private:
 	float m_fQuickRetryTime;
 	bool m_bSeekKey;
 	bool m_bSeeking;
+	bool m_bIsSeekFrame;
 	float m_fPrevSeekMousePosX;
 	float m_fQuickSaveTime;
 
