@@ -1198,7 +1198,6 @@ void OsuMultiplayer::setBeatmap(OsuDatabaseBeatmap *beatmap)
 
 void OsuMultiplayer::setBeatmap(std::string md5hash)
 {
-	/*
 	if (md5hash.length() < 32) return;
 
 	GAME_STATE_PACKET pp;
@@ -1220,7 +1219,6 @@ void OsuMultiplayer::setBeatmap(std::string md5hash)
 	memcpy((void*)(((char*)&wrappedPacket) + wrapperSize), &pp, size);
 
 	onClientReceiveInt(0, wrappedPacket, size + wrapperSize);
-	*/
 }
 
 bool OsuMultiplayer::isServer()
