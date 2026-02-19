@@ -913,14 +913,31 @@ std::vector<UString> OsuDatabase::getPlayerNamesWithScoresForUserSwitcher()
 	// always add local user, even if there were no scores
 	tempNames.insert(std::string(m_name_ref->getString().toUtf8()));
 
-	std::vector<UString> names;
-	names.reserve(tempNames.size());
+	std::vector<std::string> stdNames;
+	stdNames.reserve(tempNames.size());
 	for (auto k : tempNames)
 	{
 		if (k.length() > 0)
-			names.push_back(UString(k.c_str()));
+			stdNames.push_back(k);
 	}
+	struct CaseInsensitiveStringComparator
+	{
+		bool operator() (const std::string &a, const std::string &b) const noexcept
+		{
+			return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end(), [] (unsigned char c1, unsigned char c2) {
+                	return std::tolower(c1) < std::tolower(c2);
+				}
+			);
+		}
+	};
+	std::sort(stdNames.begin(), stdNames.end(), CaseInsensitiveStringComparator());
 
+	std::vector<UString> names;
+	names.reserve(stdNames.size());
+	for (const std::string &stdName : stdNames)
+	{
+		names.push_back(UString(stdName.c_str(), stdName.size()));
+	}
 	return names;
 }
 
@@ -939,15 +956,15 @@ OsuDatabase::PlayerPPScores OsuDatabase::getPlayerPPScores(UString playerName)
 
 	struct ScoreSortComparator
 	{
-	    bool operator() (Score const *a, Score const *b) const
-	    {
-	    	// sort by pp
-	    	// strict weak ordering!
-	    	if (a->pp == b->pp)
-	    		return a->sortHack < b->sortHack;
-	    	else
-	    		return a->pp < b->pp;
-	    }
+		bool operator() (Score const *a, Score const *b) const
+		{
+			// sort by pp
+			// strict weak ordering!
+			if (a->pp == b->pp)
+				return a->sortHack < b->sortHack;
+			else
+				return a->pp < b->pp;
+		}
 	};
 
 	unsigned long long totalScore = 0;
@@ -1718,19 +1735,19 @@ void OsuDatabase::loadDB(OsuFile *db, bool &fallbackToRawLoad)
 						// "Get the most common one, or 0 as a suitable default"
 						struct SortByDuration
 						{
-						    bool operator() (Tuple const &a, Tuple const &b) const
-						    {
-						    	// first condition: duration
-						    	// second condition: if duration is the same, higher BPM goes before lower BPM
+							bool operator() (Tuple const &a, Tuple const &b) const
+							{
+								// first condition: duration
+								// second condition: if duration is the same, higher BPM goes before lower BPM
 
-						    	// strict weak ordering!
-						    	if (a.duration == b.duration && a.beatLength == b.beatLength)
-						    		return a.sortHack > b.sortHack;
-						    	else if (a.duration == b.duration)
-						    		return (a.beatLength < b.beatLength);
-						    	else
-						    		return (a.duration > b.duration);
-						    }
+								// strict weak ordering!
+								if (a.duration == b.duration && a.beatLength == b.beatLength)
+									return a.sortHack > b.sortHack;
+								else if (a.duration == b.duration)
+									return (a.beatLength < b.beatLength);
+								else
+									return (a.duration > b.duration);
+							}
 						};
 						std::sort(aggregations.begin(), aggregations.end(), SortByDuration());
 

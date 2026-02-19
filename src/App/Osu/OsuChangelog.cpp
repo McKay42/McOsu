@@ -38,6 +38,7 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	CHANGELOG alpha317;
 	alpha317.title = UString::format("33.14 (Build Date: %s, %s)", __DATE__, __TIME__); // (09.01.2022 - ?)
 	alpha317.changes.push_back("- Improved slider rendering performance at higher resolutions (reduced rt blending overdraw)");
+	alpha317.changes.push_back("- Updated user switcher to sort names alphabetically");
 	alpha317.changes.push_back("- Updated cursortrail handling to reduce spam while click-seeking via the scrubbing timeline");
 	alpha317.changes.push_back("- Fixed game extremely rarely randomly starting with dimmed colors/overlay");
 	alpha317.changes.push_back("- Fixed button text not being centered sometimes under certain DPI/UI scaling conditions");
