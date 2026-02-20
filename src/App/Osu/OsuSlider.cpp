@@ -502,13 +502,15 @@ void OsuSlider::draw2(Graphics *g, bool drawApproachCircle, bool drawOnlyApproac
 		{
 			// HACKHACK: very dirty code
 			bool sliderRepeatStartCircleFinished = m_iRepeat < 2;
-			bool sliderRepeatEndCircleFinished = false;
+			//bool sliderRepeatEndCircleFinished = false;
 			for (int i=0; i<m_clicks.size(); i++)
 			{
 				if (m_clicks[i].type == 0)
 				{
 					if (m_clicks[i].sliderend)
-						sliderRepeatEndCircleFinished = m_clicks[i].finished;
+					{
+						//sliderRepeatEndCircleFinished = m_clicks[i].finished;
+					}
 					else
 						sliderRepeatStartCircleFinished = m_clicks[i].finished;
 				}
@@ -842,10 +844,10 @@ void OsuSlider::draw3D(Graphics *g)
 		float sliderSnake = osu_snaking_sliders.getBool() ? m_fSliderSnakePercent : 1.0f;
 
 		// shrinking sliders
-		float sliderSnakeStart = 0.0f;
+		//float sliderSnakeStart = 0.0f;
 		if (osu_slider_shrink.getBool() && m_iReverseArrowPos == 0)
 		{
-			sliderSnakeStart = (m_bInReverse ? 0.0f : m_fSlidePercent);
+			//sliderSnakeStart = (m_bInReverse ? 0.0f : m_fSlidePercent);
 			if (m_bInReverse)
 				sliderSnake = m_fSlidePercent;
 		}
@@ -1130,13 +1132,15 @@ void OsuSlider::draw3D2(Graphics *g)
 
 			// HACKHACK: very dirty code
 			bool sliderRepeatStartCircleFinished = m_iRepeat < 2;
-			bool sliderRepeatEndCircleFinished = false;
+			//bool sliderRepeatEndCircleFinished = false;
 			for (int i=0; i<m_clicks.size(); i++)
 			{
 				if (m_clicks[i].type == 0)
 				{
 					if (m_clicks[i].sliderend)
-						sliderRepeatEndCircleFinished = m_clicks[i].finished;
+					{
+						//sliderRepeatEndCircleFinished = m_clicks[i].finished;
+					}
 					else
 						sliderRepeatStartCircleFinished = m_clicks[i].finished;
 				}
@@ -1348,7 +1352,18 @@ void OsuSlider::drawBody(Graphics *g, float alpha, float from, float to)
 		if (m_osu_mod_fps_ref->getBool())
 			translation += m_beatmap->getFirstPersonCursorDelta();
 
-		OsuSliderRenderer::draw(g, m_beatmap->getOsu(), m_vao, alwaysPoints, translation, scale, m_beatmap->getHitcircleDiameter(), from, to, undimmedComboColor, m_fHittableDimRGBColorMultiplierPercent, alpha, getTime());
+		Vector2 minBounds = m_beatmap->legacyPixels2RawPixels(m_beatmap->osuCoords2LegacyPixels(Vector2(m_curve->getBounds().x, m_curve->getBounds().y)));
+		Vector2 maxBounds = m_beatmap->legacyPixels2RawPixels(m_beatmap->osuCoords2LegacyPixels(Vector2(m_curve->getBounds().z, m_curve->getBounds().w)));
+
+		if (minBounds.x > maxBounds.x)
+			std::swap(minBounds.x, maxBounds.x);
+		if (minBounds.y > maxBounds.y)
+			std::swap(minBounds.y, maxBounds.y);
+
+		minBounds += translation;
+		maxBounds += translation;
+
+		OsuSliderRenderer::draw(g, m_beatmap->getOsu(), m_vao, Vector4(minBounds.x, minBounds.y, maxBounds.x, maxBounds.y), alwaysPoints, translation, scale, m_beatmap->getHitcircleDiameter(), from, to, undimmedComboColor, m_fHittableDimRGBColorMultiplierPercent, alpha, getTime());
 	}
 }
 

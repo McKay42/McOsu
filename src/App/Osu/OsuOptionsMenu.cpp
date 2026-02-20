@@ -233,7 +233,8 @@ public:
 							if (m_vao == NULL)
 								m_vao = OsuSliderRenderer::generateVAO(m_osu, points, hitcircleDiameter, Vector3(0, 0, 0), false);
 						}
-						OsuSliderRenderer::draw(g, m_osu, m_vao, emptyVector, m_vPos, 1, hitcircleDiameter, 0, 1, m_osu->getSkin()->getComboColorForCounter(420, 0));
+						Vector4 emptyBounds;
+						OsuSliderRenderer::draw(g, m_osu, m_vao, emptyBounds, emptyVector, m_vPos, 1, hitcircleDiameter, 0, 1, m_osu->getSkin()->getComboColorForCounter(420, 0));
 					}
 				}
 			}
@@ -392,6 +393,7 @@ public:
 		Color middle = COLOR((int)(255*m_fAnim), 255, 211, 50);
 		Color right = 0x00000000;
 
+		g->setColor(0xffffffff);
 		g->fillGradient(m_vPos.x, m_vPos.y, m_vSize.x*1.25f, m_vSize.y, middle, right, middle, right);
 		g->fillGradient(m_vPos.x, m_vPos.y, fullColorBlockSize, m_vSize.y, left, middle, left, middle);
 	}
@@ -2179,8 +2181,11 @@ void OsuOptionsMenu::updateLayout()
 			if (buttonPointer != NULL)
 				buttonPointer->onResized(); // HACKHACK: framework, setSize*() does not update string metrics
 
-			// button-button spacing
 			CBaseUIButton *buttonPointer2 = dynamic_cast<CBaseUIButton*>(e2);
+			if (buttonPointer2 != NULL)
+				buttonPointer2->onResized(); // HACKHACK: framework, setSize*() does not update string metrics
+
+			// button-button spacing
 			if (buttonPointer != NULL && buttonPointer2 != NULL)
 				spacing *= 0.35f;
 
@@ -2257,9 +2262,17 @@ void OsuOptionsMenu::updateLayout()
 						label1Pointer->setSizeX(label1Pointer->getRelSize().x * (96.0f / m_elements[i].relSizeDPI) * dpiScale);
 				}
 
+				CBaseUIButton *buttonPointer1 = dynamic_cast<CBaseUIButton*>(e1);
+				if (buttonPointer1 != NULL)
+					buttonPointer1->onResized(); // HACKHACK: framework, setSize*() does not update string metrics
+
 				CBaseUISlider *sliderPointer = dynamic_cast<CBaseUISlider*>(e2);
 				if (sliderPointer != NULL)
 					sliderPointer->setBlockSize(20 * dpiScale, 20 * dpiScale);
+
+				CBaseUIButton *buttonPointer2 = dynamic_cast<CBaseUIButton*>(e2);
+				if (buttonPointer2 != NULL)
+					buttonPointer2->onResized(); // HACKHACK: framework, setSize*() does not update string metrics
 
 				CBaseUILabel *label2Pointer = dynamic_cast<CBaseUILabel*>(e3);
 				if (label2Pointer != NULL)

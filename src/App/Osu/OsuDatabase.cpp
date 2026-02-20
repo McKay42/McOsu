@@ -913,14 +913,31 @@ std::vector<UString> OsuDatabase::getPlayerNamesWithScoresForUserSwitcher()
 	// always add local user, even if there were no scores
 	tempNames.insert(std::string(m_name_ref->getString().toUtf8()));
 
-	std::vector<UString> names;
-	names.reserve(tempNames.size());
+	std::vector<std::string> stdNames;
+	stdNames.reserve(tempNames.size());
 	for (auto k : tempNames)
 	{
 		if (k.length() > 0)
-			names.push_back(UString(k.c_str()));
+			stdNames.push_back(k);
 	}
+	struct CaseInsensitiveStringComparator
+	{
+		bool operator() (const std::string &a, const std::string &b) const noexcept
+		{
+			return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end(), [] (unsigned char c1, unsigned char c2) {
+                	return std::tolower(c1) < std::tolower(c2);
+				}
+			);
+		}
+	};
+	std::sort(stdNames.begin(), stdNames.end(), CaseInsensitiveStringComparator());
 
+	std::vector<UString> names;
+	names.reserve(stdNames.size());
+	for (const std::string &stdName : stdNames)
+	{
+		names.push_back(UString(stdName.c_str(), stdName.size()));
+	}
 	return names;
 }
 
@@ -2233,7 +2250,7 @@ void OsuDatabase::loadScores()
 			if (originalScoresFile.canRead())
 			{
 				UString backupScoresFilePath = scoresFilePath;
-				const int forcedBackupCounter = 7;
+				const int forcedBackupCounter = 8;
 				backupScoresFilePath.append(UString::format(".%i_%i.backup", (makeBackupType < 2 ? backupLessThanVersion : maxSupportedCustomDbVersion), forcedBackupCounter));
 
 				if (!env->fileExists(backupScoresFilePath)) // NOTE: avoid overwriting when people switch betas
@@ -2760,7 +2777,7 @@ void OsuDatabase::loadCollections(UString collectionFilePath, bool isLegacy, con
 		if (originalCollectionsFile.canRead())
 		{
 			UString backupCollectionsFilePath = collectionFilePath;
-			const int forcedBackupCounter = 6;
+			const int forcedBackupCounter = 7;
 			backupCollectionsFilePath.append(UString::format(".%i_%i.backup", osu_collections_custom_version.getInt(), forcedBackupCounter));
 
 			if (!env->fileExists(backupCollectionsFilePath)) // NOTE: avoid overwriting when people switch betas

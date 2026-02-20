@@ -324,6 +324,9 @@ OsuSkin::OsuSkin(Osu *osu, UString name, UString filepath, bool isDefaultSkin, b
 
 OsuSkin::~OsuSkin()
 {
+	stopSliderSlideSound();
+	stopSpinnerSpinSound();
+
 	for (int i=0; i<m_resources.size(); i++)
 	{
 		if (m_resources[i] != (Resource*)m_missingTexture)
@@ -1458,17 +1461,17 @@ void OsuSkin::playSpinnerBonusSound()
 
 void OsuSkin::stopSliderSlideSound(int sampleSet)
 {
-	if ((sampleSet == -2 || sampleSet == 3) && m_drumSliderSlide->isPlaying())
+	if ((sampleSet == -2 || sampleSet == 3) && m_drumSliderSlide != NULL && m_drumSliderSlide->isPlaying())
 		engine->getSound()->stop(m_drumSliderSlide);
-	if ((sampleSet == -2 || sampleSet == 2) && m_softSliderSlide->isPlaying())
+	if ((sampleSet == -2 || sampleSet == 2) && m_softSliderSlide != NULL && m_softSliderSlide->isPlaying())
 		engine->getSound()->stop(m_softSliderSlide);
-	if ((sampleSet == -2 || sampleSet == 1 || sampleSet == 0) && m_normalSliderSlide->isPlaying())
+	if ((sampleSet == -2 || sampleSet == 1 || sampleSet == 0) && m_normalSliderSlide != NULL && m_normalSliderSlide->isPlaying())
 		engine->getSound()->stop(m_normalSliderSlide);
 }
 
 void OsuSkin::stopSpinnerSpinSound()
 {
-	if (m_spinnerSpinSound->isPlaying())
+	if (m_spinnerSpinSound != NULL && m_spinnerSpinSound->isPlaying())
 		engine->getSound()->stop(m_spinnerSpinSound);
 }
 

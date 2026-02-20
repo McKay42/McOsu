@@ -61,10 +61,10 @@ ConVar osu_slider_legacy_use_baked_vao("osu_slider_legacy_use_baked_vao", false,
 
 VertexArrayObject *OsuSliderRenderer::generateVAO(Osu *osu, const std::vector<Vector2> &points, float hitcircleDiameter, Vector3 translation, bool skipOOBPoints)
 {
+	checkUpdateVars(osu, hitcircleDiameter);
+
 	engine->getResourceManager()->requestNextLoadUnmanaged();
 	VertexArrayObject *vao = engine->getResourceManager()->createVertexArrayObject();
-
-	checkUpdateVars(osu, hitcircleDiameter);
 
 	const Vector3 xOffset = Vector3(hitcircleDiameter, 0, 0);
 	const Vector3 yOffset = Vector3(0, hitcircleDiameter, 0);
@@ -251,17 +251,17 @@ void OsuSliderRenderer::draw(Graphics *g, Osu *osu, const std::vector<Vector2> &
 	g->setDepthBuffer(false);
 
 	// now draw the slider to the screen (with alpha blending enabled again)
-	const int pixelFudge = 2;
+	const float pixelFudge = 2.0f;
 	m_fBoundingBoxMinX -= pixelFudge;
 	m_fBoundingBoxMaxX += pixelFudge;
 	m_fBoundingBoxMinY -= pixelFudge;
 	m_fBoundingBoxMaxY += pixelFudge;
 
 	osu->getSliderFrameBuffer()->setColor(COLORf(alpha*osu_slider_alpha_multiplier.getFloat(), 1.0f, 1.0f, 1.0f));
-	osu->getSliderFrameBuffer()->drawRect(g, m_fBoundingBoxMinX, m_fBoundingBoxMinY, m_fBoundingBoxMaxX - m_fBoundingBoxMinX, m_fBoundingBoxMaxY - m_fBoundingBoxMinY);
+	osu->getSliderFrameBuffer()->drawRect(g, (int)m_fBoundingBoxMinX, (int)m_fBoundingBoxMinY, (int)(m_fBoundingBoxMaxX - m_fBoundingBoxMinX), (int)(m_fBoundingBoxMaxY - m_fBoundingBoxMinY));
 }
 
-void OsuSliderRenderer::draw(Graphics *g, Osu *osu, VertexArrayObject *vao, const std::vector<Vector2> &alwaysPoints, Vector2 translation, float scale, float hitcircleDiameter, float from, float to, Color undimmedColor, float colorRGBMultiplier, float alpha, long sliderTimeForRainbow, bool doEnableRenderTarget, bool doDisableRenderTarget, bool doDrawSliderFrameBufferToScreen)
+void OsuSliderRenderer::draw(Graphics *g, Osu *osu, VertexArrayObject *vao, Vector4 bounds, const std::vector<Vector2> &alwaysPoints, Vector2 translation, float scale, float hitcircleDiameter, float from, float to, Color undimmedColor, float colorRGBMultiplier, float alpha, long sliderTimeForRainbow, bool doEnableRenderTarget, bool doDisableRenderTarget, bool doDrawSliderFrameBufferToScreen)
 {
 	if ((osu_slider_alpha_multiplier.getFloat() <= 0.0f && doDrawSliderFrameBufferToScreen) || (alpha <= 0.0f && doDrawSliderFrameBufferToScreen) || vao == NULL) return;
 
@@ -330,6 +330,9 @@ void OsuSliderRenderer::draw(Graphics *g, Osu *osu, VertexArrayObject *vao, cons
 			scaleToApplyAfterTranslationY = sclY / (-tLS.y + bRS.y);
 	}
 	*/
+
+	// reset
+	resetRenderTargetBoundingBox();
 
 	// draw entire slider into framebuffer
 	g->setDepthBuffer(true);
@@ -436,10 +439,28 @@ void OsuSliderRenderer::draw(Graphics *g, Osu *osu, VertexArrayObject *vao, cons
 	g->setBlending(true);
 	g->setDepthBuffer(false);
 
+	// optional bounds performance optimization to reduce rt blending overdraw
+	if (bounds.x != 0.0f || bounds.y != 0.0f || bounds.z != 0.0f || bounds.w != 0.0f)
+	{
+		const float pixelFudge = 2.0f;
+		m_fBoundingBoxMinX = std::max(0.0f, bounds.x - hitcircleDiameter/2.0f - pixelFudge);
+		m_fBoundingBoxMaxX = std::min((float)osu->getScreenWidth(), bounds.z + hitcircleDiameter/2.0f + pixelFudge);
+		m_fBoundingBoxMinY = std::max(0.0f, bounds.y - hitcircleDiameter/2.0f - pixelFudge);
+		m_fBoundingBoxMaxY = std::min((float)osu->getScreenHeight(), bounds.w + hitcircleDiameter/2.0f + pixelFudge);
+	}
+	else
+	{
+		m_fBoundingBoxMinX = 0.0f;
+		m_fBoundingBoxMaxX = (float)osu->getScreenWidth();
+		m_fBoundingBoxMinY = 0.0f;
+		m_fBoundingBoxMaxY = (float)osu->getScreenHeight();
+	}
+
+	// now draw the slider to the screen (with alpha blending enabled again)
 	if (doDrawSliderFrameBufferToScreen)
 	{
 		osu->getSliderFrameBuffer()->setColor(COLORf(alpha*osu_slider_alpha_multiplier.getFloat(), 1.0f, 1.0f, 1.0f));
-		osu->getSliderFrameBuffer()->draw(g, 0, 0);
+		osu->getSliderFrameBuffer()->drawRect(g, (int)m_fBoundingBoxMinX, (int)m_fBoundingBoxMinY, (int)(m_fBoundingBoxMaxX - m_fBoundingBoxMinX), (int)(m_fBoundingBoxMaxY - m_fBoundingBoxMinY));
 	}
 }
 
@@ -780,7 +801,7 @@ void OsuSliderRenderer::checkUpdateVars(Osu *osu, float hitcircleDiameter)
 		DirectX11Interface *dx11 = dynamic_cast<DirectX11Interface*>(engine->getGraphics());
 		if (dx11 != NULL)
 		{
-			// NOTE: compensate for zn/zf Camera::buildMatrixOrtho2DDXLH() differences compared to OpenGL
+			// NOTE: compensate for zflip
 			if (MESH_CENTER_HEIGHT > 0.0f)
 				MESH_CENTER_HEIGHT = -MESH_CENTER_HEIGHT;
 		}

@@ -1225,6 +1225,8 @@ OsuModFPoSu3DModel::OsuModFPoSu3DModel(const UString &objFilePathOrContents, Ima
 					}
 					else
 						debugLog("Failed to load %s\n", objFilePathOrContents.toUtf8());
+
+					// engine->showMessageError("OsuModFPoSu3DModel Error", UString::format("Failed to load \"%s\"", objFilePathOrContents.toUtf8()));
 				}
 				fileContents = UString(stdFileContents.c_str(), stdFileContents.size());
 			}

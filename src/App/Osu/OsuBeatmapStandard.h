@@ -29,6 +29,7 @@ public:
 	void onModUpdate(bool rebuildSliderVertexBuffers = true, bool recomputeDrainRate = true); // this seems very dangerous compiler-wise, but it works
 	virtual bool isLoading();
 
+	Vector2 legacyPixels2RawPixels(Vector2 coords) const; // only used for bounds calculations atm (just scales, nothing else)
 	Vector2 pixels2OsuCoords(Vector2 pixelCoords) const; // only used for positional audio atm
 	Vector2 osuCoords2Pixels(Vector2 coords) const; // hitobjects should use this one (includes lots of special behaviour)
 	Vector2 osuCoords2RawPixels(Vector2 coords) const; // raw transform from osu!pixels to absolute screen pixels (without any mods whatsoever)

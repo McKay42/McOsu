@@ -886,7 +886,8 @@ void OsuHUD::drawCursorTrailInt(Graphics *g, Shader *trailShader, std::vector<CU
 			m_cursorTrailVAO->empty();
 
 		// add the sample for the current frame
-		addCursorTrailPosition(trail, pos, emptyTrailFrame);
+		if (!m_osu->isSeekFrame())
+			addCursorTrailPosition(trail, pos, emptyTrailFrame);
 
 		// disable depth buffer for drawing any trail in VR
 		if (trailShader == m_cursorTrailShaderVR)

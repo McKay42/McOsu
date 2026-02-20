@@ -49,7 +49,8 @@ public:
 
 	virtual void drawText(Graphics *g)
 	{
-		// HACKHACK: force update string height to non-average line height for icon
+		// HACKHACK: force update string width/height to non-average line height for icon
+		m_fStringWidth = m_font->getStringWidth(m_sText);
 		m_fStringHeight = m_font->getStringHeight(m_sText);
 
 		if (m_font != NULL && m_sText.length() > 0)
