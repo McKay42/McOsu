@@ -594,6 +594,16 @@ void OsuMainMenu::draw(Graphics *g)
 
 #ifdef MCENGINE_FEATURE_BASS_WASAPI
 
+#ifdef MCENGINE_FEATURE_BASS_ASIO
+
+		if (engine->getSound()->isASIO())
+			bannerText = UString::format("-- ASIO Mode! buffer = %i samples, driver output latency = %.1f ms --",
+					engine->getSound()->getASIOBufferLength(),
+					engine->getSound()->getASIOOutputLatency()*1000.0f);
+		else
+
+#endif
+
 		bannerText = UString::format(convar->getConVarByName("win_snd_wasapi_exclusive")->getBool() ?
 				"-- WASAPI Exclusive Mode! win_snd_wasapi_buffer_size = %i ms --" :
 				"-- WASAPI Shared Mode! win_snd_wasapi_buffer_size = %i ms --",
