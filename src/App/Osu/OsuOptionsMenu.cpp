@@ -453,6 +453,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_win_snd_fallback_dsound_ref = convar->getConVarByName("win_snd_fallback_dsound");
 	m_win_snd_wasapi_buffer_size_ref = convar->getConVarByName("win_snd_wasapi_buffer_size", false);
 	m_win_snd_wasapi_period_size_ref = convar->getConVarByName("win_snd_wasapi_period_size", false);
+	m_win_snd_asio_buffer_size_ref = convar->getConVarByName("win_snd_asio_buffer_size", false);
 	m_osu_notelock_type_ref = convar->getConVarByName("osu_notelock_type");
 	m_osu_drain_type_ref = convar->getConVarByName("osu_drain_type");
 	m_osu_background_color_r_ref = convar->getConVarByName("osu_background_color_r");
@@ -487,6 +488,8 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_wasapiPeriodSizeSlider = NULL;
 	m_wasapiBufferSizeResetButton = NULL;
 	m_wasapiPeriodSizeResetButton = NULL;
+	m_asioBufferSizeSlider = NULL;
+	m_asioBufferSizeResetButton = NULL;
 	m_dpiTextbox = NULL;
 	m_cm360Textbox = NULL;
 	m_letterboxingOffsetResetButton = NULL;
@@ -509,6 +512,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_bDPIScalingScrollToSliderScheduled = false;
 	m_bWASAPIBufferChangeScheduled = false;
 	m_bWASAPIPeriodChangeScheduled = false;
+	m_bASIOBufferChangeScheduled = false;
 
 	m_iNumResetAllKeyBindingsPressed = 0;
 	m_iNumResetEverythingPressed = 0;
@@ -801,6 +805,26 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	restartSoundEngine->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onOutputDeviceRestart) );
 	restartSoundEngine->setColor(0xff00566b);
 	addLabel("");
+
+#ifdef MCENGINE_FEATURE_BASS_ASIO
+
+	addSubSection("ASIO");
+	addLabel("Pick an \"[ASIO] ...\" device in \"Select Output Device\" above.")->setTextColor(0xff666666);
+	m_asioBufferSizeSlider = addSlider("Buffer Size:", 0.000f, 0.050f, convar->getConVarByName("win_snd_asio_buffer_size"));
+	m_asioBufferSizeSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onASIOBufferChange) );
+	m_asioBufferSizeSlider->setKeyDelta(0.001f);
+	m_asioBufferSizeSlider->setAnimated(false);
+	addLabel("0 = driver default. Values outside the driver's range are clamped.")->setTextColor(0xff666666);
+	addLabel("Most drivers only change the buffer in their own panel:")->setTextColor(0xff666666);
+	OsuUIButton *asioControlPanel = addButton("Open ASIO Control Panel");
+	asioControlPanel->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onASIOControlPanelClicked) );
+	asioControlPanel->setColor(0xff00566b);
+	OsuUIButton *restartSoundEngineASIO = addButton("Restart SoundEngine");
+	restartSoundEngineASIO->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onOutputDeviceRestart) );
+	restartSoundEngineASIO->setColor(0xff00566b);
+	addLabel("");
+
+#endif
 
 #endif
 
@@ -1596,6 +1620,18 @@ void OsuOptionsMenu::update()
 
 			// and update reset buttons as usual
 			onResetUpdate(m_wasapiPeriodSizeResetButton);
+		}
+	}
+	if (m_bASIOBufferChangeScheduled)
+	{
+		if (!m_asioBufferSizeSlider->isActive())
+		{
+			m_bASIOBufferChangeScheduled = false;
+
+			m_win_snd_asio_buffer_size_ref->setValue(m_asioBufferSizeSlider->getFloat());
+
+			// and update reset buttons as usual
+			onResetUpdate(m_asioBufferSizeResetButton);
 		}
 	}
 
@@ -3541,6 +3577,42 @@ void OsuOptionsMenu::onWASAPIPeriodChange(CBaseUISlider *slider)
 			}
 		}
 	}
+}
+
+void OsuOptionsMenu::onASIOBufferChange(CBaseUISlider *slider)
+{
+	m_bASIOBufferChangeScheduled = true;
+
+	for (int i=0; i<m_elements.size(); i++)
+	{
+		for (int e=0; e<m_elements[i].elements.size(); e++)
+		{
+			if (m_elements[i].elements[e] == slider)
+			{
+				if (m_elements[i].elements.size() == 3)
+				{
+					CBaseUILabel *labelPointer = dynamic_cast<CBaseUILabel*>(m_elements[i].elements[2]);
+					const int ms = (int)std::round(slider->getFloat()*1000.0f);
+					labelPointer->setText(ms > 0 ? UString::format("%i ms", ms) : UString("driver default"));
+				}
+
+				m_asioBufferSizeResetButton = m_elements[i].resetButton; // HACKHACK: disgusting
+
+				break;
+			}
+		}
+	}
+}
+
+void OsuOptionsMenu::onASIOControlPanelClicked()
+{
+	if (!engine->getSound()->isASIO())
+	{
+		m_osu->getNotificationOverlay()->addNotification("Select an [ASIO] output device first.", 0xffffff00);
+		return;
+	}
+
+	engine->getSound()->openASIOControlPanel();
 }
 
 void OsuOptionsMenu::onUseSkinsSoundSamplesChange(UString oldValue, UString newValue)

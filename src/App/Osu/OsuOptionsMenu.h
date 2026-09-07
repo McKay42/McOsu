@@ -171,6 +171,8 @@ private:
 
 	void onWASAPIBufferChange(CBaseUISlider *slider);
 	void onWASAPIPeriodChange(CBaseUISlider *slider);
+	void onASIOBufferChange(CBaseUISlider *slider);
+	void onASIOControlPanelClicked();
 
 	void onUseSkinsSoundSamplesChange(UString oldValue, UString newValue);
 	void onHighQualitySlidersCheckboxChange(CBaseUICheckbox *checkbox);
@@ -254,6 +256,8 @@ private:
 	CBaseUISlider *m_wasapiPeriodSizeSlider;
 	OsuOptionsMenuResetButton *m_wasapiBufferSizeResetButton;
 	OsuOptionsMenuResetButton *m_wasapiPeriodSizeResetButton;
+	CBaseUISlider *m_asioBufferSizeSlider;
+	OsuOptionsMenuResetButton *m_asioBufferSizeResetButton;
 	CBaseUILabel *m_vrRenderTargetResolutionLabel;
 	CBaseUISlider *m_vrApproachDistanceSlider;
 	CBaseUISlider *m_vrVibrationStrengthSlider;
@@ -291,6 +295,7 @@ private:
 	ConVar *m_win_snd_fallback_dsound_ref;
 	ConVar *m_win_snd_wasapi_buffer_size_ref;
 	ConVar *m_win_snd_wasapi_period_size_ref;
+	ConVar *m_win_snd_asio_buffer_size_ref;
 	ConVar *m_osu_notelock_type_ref;
 	ConVar *m_osu_drain_type_ref;
 	ConVar *m_osu_background_color_r_ref;
@@ -306,6 +311,7 @@ private:
 	bool m_bDPIScalingScrollToSliderScheduled;
 	bool m_bWASAPIBufferChangeScheduled;
 	bool m_bWASAPIPeriodChangeScheduled;
+	bool m_bASIOBufferChangeScheduled;
 
 	int m_iNumResetAllKeyBindingsPressed;
 	int m_iNumResetEverythingPressed;
