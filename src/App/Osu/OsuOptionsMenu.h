@@ -257,7 +257,6 @@ private:
 	OsuOptionsMenuResetButton *m_wasapiBufferSizeResetButton;
 	OsuOptionsMenuResetButton *m_wasapiPeriodSizeResetButton;
 	CBaseUISlider *m_asioBufferSizeSlider;
-	OsuOptionsMenuResetButton *m_asioBufferSizeResetButton;
 	CBaseUILabel *m_vrRenderTargetResolutionLabel;
 	CBaseUISlider *m_vrApproachDistanceSlider;
 	CBaseUISlider *m_vrVibrationStrengthSlider;

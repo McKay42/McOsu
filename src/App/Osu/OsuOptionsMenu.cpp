@@ -38,6 +38,31 @@
 #include "OsuMainMenu.h"
 #include "OsuSliderRenderer.h"
 #include "OsuCircle.h"
+
+// asio buffer size slider: log scale, index 0 = driver default, index 1..9 = 8, 16, ..., 2048 samples
+static const int ASIO_BUFFER_SLIDER_MAX_INDEX = 9;
+
+static int asioSliderIndexToSamples(int index)
+{
+	if (index <= 0) return 0;
+	if (index > ASIO_BUFFER_SLIDER_MAX_INDEX) index = ASIO_BUFFER_SLIDER_MAX_INDEX;
+	return (4 << index);
+}
+
+static int asioSamplesToSliderIndex(int samples)
+{
+	if (samples <= 0) return 0;
+
+	int index = 1;
+	while (index < ASIO_BUFFER_SLIDER_MAX_INDEX && (4 << index) < samples)
+		index++;
+
+	// round to the nearest power of two
+	if (index > 1 && (samples - (4 << (index - 1))) < ((4 << index) - samples))
+		index--;
+
+	return index;
+}
 #include "OsuIcons.h"
 
 #include "OsuUIButton.h"
@@ -489,7 +514,6 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	m_wasapiBufferSizeResetButton = NULL;
 	m_wasapiPeriodSizeResetButton = NULL;
 	m_asioBufferSizeSlider = NULL;
-	m_asioBufferSizeResetButton = NULL;
 	m_dpiTextbox = NULL;
 	m_cm360Textbox = NULL;
 	m_letterboxingOffsetResetButton = NULL;
@@ -810,11 +834,27 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 
 	addSubSection("ASIO");
 	addLabel("Pick an \"[ASIO] ...\" device in \"Select Output Device\" above.")->setTextColor(0xff666666);
-	m_asioBufferSizeSlider = addSlider("Buffer Size:", 0.000f, 0.050f, convar->getConVarByName("win_snd_asio_buffer_size"));
+	// NOTE: deliberately not bound to the cvar (the generic binding is linear), the slider index maps to samples on a log scale
+	m_asioBufferSizeSlider = addSlider("Buffer Size:", 0.0f, (float)ASIO_BUFFER_SLIDER_MAX_INDEX, NULL);
 	m_asioBufferSizeSlider->setChangeCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onASIOBufferChange) );
-	m_asioBufferSizeSlider->setKeyDelta(0.001f);
+	m_asioBufferSizeSlider->setKeyDelta(1.0f);
 	m_asioBufferSizeSlider->setAnimated(false);
-	addLabel("0 = driver default. Values outside the driver's range are clamped.")->setTextColor(0xff666666);
+	{
+		// reserve enough width for the widest value text
+		CBaseUILabel *valueLabel = dynamic_cast<CBaseUILabel*>(m_elements.back().elements[2]);
+		if (valueLabel != NULL)
+		{
+			valueLabel->setText("2048 (46.4 ms)");
+			valueLabel->setWidthToContent();
+			valueLabel->setRelSizeX(valueLabel->getSize().x);
+		}
+	}
+	if (m_win_snd_asio_buffer_size_ref != NULL)
+	{
+		m_asioBufferSizeSlider->setValue((float)asioSamplesToSliderIndex(m_win_snd_asio_buffer_size_ref->getInt()), false);
+		m_asioBufferSizeSlider->fireChangeCallback();
+	}
+	addLabel("0 = driver default, otherwise powers of two (8 ... 2048 samples).")->setTextColor(0xff666666);
 	addLabel("Most drivers only change the buffer in their own panel:")->setTextColor(0xff666666);
 	OsuUIButton *asioControlPanel = addButton("Open ASIO Control Panel");
 	asioControlPanel->setClickCallback( fastdelegate::MakeDelegate(this, &OsuOptionsMenu::onASIOControlPanelClicked) );
@@ -1628,10 +1668,8 @@ void OsuOptionsMenu::update()
 		{
 			m_bASIOBufferChangeScheduled = false;
 
-			m_win_snd_asio_buffer_size_ref->setValue(m_asioBufferSizeSlider->getFloat());
-
-			// and update reset buttons as usual
-			onResetUpdate(m_asioBufferSizeResetButton);
+			if (m_win_snd_asio_buffer_size_ref != NULL)
+				m_win_snd_asio_buffer_size_ref->setValue((float)asioSliderIndexToSamples((int)std::round(m_asioBufferSizeSlider->getFloat())));
 		}
 	}
 
@@ -1885,6 +1923,13 @@ bool OsuOptionsMenu::shouldDrawVRDummyHUD()
 
 void OsuOptionsMenu::updateLayout()
 {
+	// the asio buffer slider is log-scale and not bound to its cvar, refresh it by hand
+	if (m_asioBufferSizeSlider != NULL && m_win_snd_asio_buffer_size_ref != NULL)
+	{
+		m_asioBufferSizeSlider->setValue((float)asioSamplesToSliderIndex(m_win_snd_asio_buffer_size_ref->getInt()), false);
+		m_asioBufferSizeSlider->fireChangeCallback();
+	}
+
 	// set all elements to the current convar values, and update the reset button states
 	for (int i=0; i<m_elements.size(); i++)
 	{
@@ -3592,11 +3637,19 @@ void OsuOptionsMenu::onASIOBufferChange(CBaseUISlider *slider)
 				if (m_elements[i].elements.size() == 3)
 				{
 					CBaseUILabel *labelPointer = dynamic_cast<CBaseUILabel*>(m_elements[i].elements[2]);
-					const int ms = (int)std::round(slider->getFloat()*1000.0f);
-					labelPointer->setText(ms > 0 ? UString::format("%i ms", ms) : UString("driver default"));
-				}
+					const int samples = asioSliderIndexToSamples((int)std::round(slider->getFloat()));
+					if (samples > 0)
+					{
+						// show the resulting latency at the active asio rate (or the engine's requested rate if asio is not running yet)
+						double rate = engine->getSound()->getASIOSampleRate();
+						if (rate <= 0.0)
+							rate = convar->getConVarByName("snd_freq")->getFloat();
 
-				m_asioBufferSizeResetButton = m_elements[i].resetButton; // HACKHACK: disgusting
+						labelPointer->setText(UString::format("%i (%.1f ms)", samples, (float)((double)samples / rate * 1000.0)));
+					}
+					else
+						labelPointer->setText("driver default");
+				}
 
 				break;
 			}

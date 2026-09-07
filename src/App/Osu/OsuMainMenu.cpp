@@ -597,8 +597,10 @@ void OsuMainMenu::draw(Graphics *g)
 #ifdef MCENGINE_FEATURE_BASS_ASIO
 
 		if (engine->getSound()->isASIO())
-			bannerText = UString::format("-- ASIO Mode! buffer = %i samples, driver output latency = %.1f ms --",
+			bannerText = UString::format("-- ASIO Mode! buffer = %i samples (%.1f ms @ %i Hz), driver output latency = %.1f ms --",
 					engine->getSound()->getASIOBufferLength(),
+					(engine->getSound()->getASIOSampleRate() > 0.0 ? (float)(engine->getSound()->getASIOBufferLength() / engine->getSound()->getASIOSampleRate() * 1000.0) : 0.0f),
+					(int)engine->getSound()->getASIOSampleRate(),
 					engine->getSound()->getASIOOutputLatency()*1000.0f);
 		else
 

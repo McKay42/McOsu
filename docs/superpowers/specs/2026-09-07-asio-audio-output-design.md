@@ -113,10 +113,12 @@ otherwise. All ASIO entries are explicit devices (BASSASIO has no default device
 
 ConVars (ASIO only):
 
-- `win_snd_asio_buffer_size` (float, seconds, default `0` = driver preferred
+- `win_snd_asio_buffer_size` (int, **samples**, default `0` = driver preferred
   length). Change callback forces a device restart, identical to the WASAPI
-  buffer cvar. Converted to samples at the device rate and clamped/snapped to the
-  driver's `bufmin`/`bufmax`/`bufgran` (`-1` = powers of two, `0` = only `bufpref`).
+  buffer cvar. Clamped/snapped to the driver's `bufmin`/`bufmax`/`bufgran`
+  (`-1` = powers of two, `0` = only `bufpref`). ASIO users think in samples
+  (64/128/256), so the cvar and the UI use samples; milliseconds are shown as a
+  derived value at the active device rate (`getASIOSampleRate()`).
 - `win_snd_asio_control_panel` (concommand) → `openASIOControlPanel()`.
 
 Callbacks:
@@ -196,11 +198,13 @@ Inside `#ifdef MCENGINE_FEATURE_BASS_ASIO`, after the WASAPI subsection:
 
 - `addSubSection("ASIO")`
 - label: `"Pick an [ASIO] device in \"Select Output Device\" above."`
-- `m_asioBufferSizeSlider = addSlider("Buffer Size:", 0.0f, 0.050f, win_snd_asio_buffer_size)`
-  with `onASIOBufferChange` (shows `"%i ms"`, or `"driver default"` for 0),
-  key delta 0.001, not animated. Applied deferred in `update()` when the slider is
-  released, exactly like the WASAPI sliders (`m_bASIOBufferChangeScheduled`,
-  `m_asioBufferSizeResetButton`).
+- `m_asioBufferSizeSlider = addSlider("Buffer Size:", 0.0f, 9.0f, NULL)`: a
+  log-scale slider whose index maps to samples (0 = driver default, 1..9 =
+  8, 16, ..., 2048). It is deliberately not bound to the cvar (the generic
+  binding is linear), so `updateLayout()` refreshes it from the cvar by hand and
+  there is no reset button. `onASIOBufferChange` shows `"%i (%.1f ms)"` at the
+  active ASIO rate, or `"driver default"`. Applied deferred in `update()` when
+  the slider is released, like the WASAPI sliders (`m_bASIOBufferChangeScheduled`).
 - labels: `"0 = driver default. Most drivers set the buffer in their own panel:"`
 - `addButton("Open ASIO Control Panel")` → `onASIOControlPanelClicked` →
   `engine->getSound()->openASIOControlPanel()`.
@@ -216,7 +220,7 @@ Inside the WASAPI banner block, before the WASAPI text:
 ```cpp
 #ifdef MCENGINE_FEATURE_BASS_ASIO
 if (engine->getSound()->isASIO())
-    bannerText = UString::format("-- ASIO Mode! buffer = %i samples, driver output latency = %.1f ms --",
+    bannerText = UString::format("-- ASIO Mode! buffer = %i samples (%.1f ms @ %i Hz), driver output latency = %.1f ms --",
         engine->getSound()->getASIOBufferLength(),
         engine->getSound()->getASIOOutputLatency()*1000.0f);
 else
