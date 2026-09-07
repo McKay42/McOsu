@@ -881,6 +881,16 @@ Expected last line: `=== done. objects: 208, failures: 0`. For any failure read 
 
 - [ ] **Step 3: Link**
 
+> **Pitfall found during execution:** the un4seen `bass*.lib` files contain MSVC-style import-descriptor objects (`__IMPORT_DESCRIPTOR_BASS_FX`, `BASS_FX_NULL_THUNK_DATA`). lld links them in and then emits an *empty* import table for that DLL, so the first call (`BASS_FX_TempoCreate` on song select) jumps to an unpatched IAT slot and crashes. Generate clean import libraries first and put their directory first in the `-L` order:
+>
+> ```bash
+> mkdir -p $SP/implibs2 && cd $SP/implibs2
+> gen() { { echo "LIBRARY $(basename $2)"; echo EXPORTS; $TC/llvm-nm "$3" | grep -o "__imp__[A-Za-z0-9_]*@[0-9]*" | sed 's/^__imp__//' | sort -u; } > $1.def; $TC/llvm-dlltool -m i386 -k -d $1.def -l lib$1.a -D "$(basename $2)"; }
+> gen bass $ME/build/bass.dll $ME/libraries/bass/lib/windows/bass.lib   # same for bass_fx, bassmix, basswasapi, bassasio
+> ```
+> Verify after linking: `llvm-readobj --coff-imports McOsu.exe` lists `Symbol:` lines under every DLL, and `llvm-nm McOsu.exe | grep NULL_THUNK` prints nothing.
+
+
 ```bash
 cat > $SP/link.sh <<'EOF'
 #!/bin/bash
