@@ -33,8 +33,6 @@
 
 #include "OsuUIContextMenu.h"
 
-#include <chrono>
-
 ConVar *OsuUISongBrowserScoreButton::m_osu_scores_sort_by_pp_ref = NULL;
 ConVar *OsuUISongBrowserScoreButton::m_osu_mods_ref = NULL;
 ConVar *OsuUISongBrowserScoreButton::m_osu_speed_override_ref = NULL;
@@ -476,7 +474,7 @@ void OsuUISongBrowserScoreButton::updateElapsedTimeString()
 {
 	if (m_iScoreUnixTimestamp > 0)
 	{
-		const uint64_t curUnixTime = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+		const uint64_t curUnixTime = Util::getUnixTimestamp();
 		const uint64_t delta = curUnixTime - m_iScoreUnixTimestamp;
 
 		const uint64_t deltaInSeconds = delta;

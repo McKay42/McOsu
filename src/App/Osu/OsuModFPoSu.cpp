@@ -264,21 +264,7 @@ void OsuModFPoSu::draw(Graphics *g)
 							g->setBlendMode(Graphics::BLEND_MODE::BLEND_MODE_PREMUL_COLOR);
 						}
 
-						Matrix4 worldMatrix = m_modelMatrix;
-
-#ifdef MCENGINE_FEATURE_DIRECTX11
-						{
-							DirectX11Interface *dx11 = dynamic_cast<DirectX11Interface*>(engine->getGraphics());
-							if (dx11 != NULL)
-							{
-								// NOTE: convert from OpenGL coordinate system
-								static Matrix4 zflip = Matrix4().scale(1, 1, -1);
-								worldMatrix = worldMatrix * zflip;
-							}
-						}
-#endif
-
-						g->setWorldMatrixMul(worldMatrix);
+						g->setWorldMatrixMul(m_modelMatrix);
 						{
 							m_osu->getPlayfieldBuffer()->bind();
 							{

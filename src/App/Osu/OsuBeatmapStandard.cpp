@@ -40,7 +40,6 @@
 #include <sstream>
 #include <cctype>
 #include <algorithm>
-#include <chrono>
 
 ConVar osu_draw_followpoints("osu_draw_followpoints", true, FCVAR_NONE);
 ConVar osu_draw_reverse_order("osu_draw_reverse_order", false, FCVAR_NONE);
@@ -1685,7 +1684,7 @@ void OsuBeatmapStandard::onBeforeStop(bool quit)
 				}
 
 				score.version = scoreVersion;
-				score.unixTimestamp = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+				score.unixTimestamp = Util::getUnixTimestamp();
 
 				// default
 				score.playerName = convar->getConVarByName("name")->getString();
