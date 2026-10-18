@@ -168,6 +168,9 @@ private:
 	float m_fPrevPlayfieldStretchY;
 	float m_fPrevHitCircleDiameterForStarCache;
 	float m_fPrevSpeedForStarCache;
+	float m_fPrevARForStarCache = -1;
+	float m_fPrevODForStarCache = -1;
+	int m_iPrevModsForStarCache = -1;
 
 	// custom
 	bool m_bIsPreLoading;

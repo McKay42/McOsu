@@ -1024,7 +1024,8 @@ void OsuBeatmapStandard::onModUpdate(bool rebuildSliderVertexBuffers, bool recom
 			didSpeedChange = true;
 		}
 
-		if (didCSChange || didSpeedChange)
+		const bool didSettingsChange = !m_hitobjects.empty() && (getAR(false) != m_fPrevARForStarCache || getOD(false) != m_fPrevODForStarCache || m_osu->getScore()->getModsLegacy() != m_iPrevModsForStarCache);
+		if (didCSChange || didSpeedChange || didSettingsChange)
 		{
 			if (m_selectedDifficulty2 != NULL)
 				updateStarCache();
@@ -2524,6 +2525,9 @@ void OsuBeatmapStandard::updateStarCache()
 		// so we don't get a useless double load inside onModUpdate()
 		m_fPrevHitCircleDiameterForStarCache = getHitcircleDiameter();
 		m_fPrevSpeedForStarCache = m_osu->getSpeedMultiplier();
+		m_fPrevARForStarCache = getAR(false);
+		m_fPrevODForStarCache = getOD(false);
+		m_iPrevModsForStarCache = m_osu->getScore()->getModsLegacy();
 
 		// kill any running loader, so we get to a clean state
 		stopStarCacheLoader();

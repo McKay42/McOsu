@@ -6,6 +6,7 @@
 //===============================================================================//
 
 #include "OsuDatabase.h"
+#include "OsuDifficultyCalculator.h"
 
 #include "Engine.h"
 #include "ConVar.h"
@@ -1946,8 +1947,8 @@ void OsuDatabase::loadStars()
 
 	debugLog("OsuDatabase::loadStars()\n");
 
-	const UString starsFilePath = "stars.cache";
-	const int starsCacheVersion = 20221108;
+	const UString starsFilePath = "stars-lazer-20260706.cache";
+	const int starsCacheVersion = OsuDifficultyCalculator::PP_ALGORITHM_VERSION;
 
 	OsuFile cache(starsFilePath, false);
 	if (cache.isReady())
@@ -1956,7 +1957,7 @@ void OsuDatabase::loadStars()
 
 		const int cacheVersion = cache.readInt();
 
-		if (cacheVersion <= starsCacheVersion)
+		if (cacheVersion == starsCacheVersion)
 		{
 			const std::string md5Hash = cache.readStdString();
 
@@ -1997,8 +1998,8 @@ void OsuDatabase::saveStars()
 
 	debugLog("Osu: Saving stars ...\n");
 
-	const UString starsFilePath = "stars.cache";
-	const int starsCacheVersion = 20221108;
+	const UString starsFilePath = "stars-lazer-20260706.cache";
+	const int starsCacheVersion = OsuDifficultyCalculator::PP_ALGORITHM_VERSION;
 
 	//const double startTime = engine->getTimeReal();
 	{
