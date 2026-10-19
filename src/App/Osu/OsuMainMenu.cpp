@@ -221,13 +221,14 @@ ConVar osu_main_menu_alpha("osu_main_menu_alpha", 1.0f, FCVAR_NONE);
 ConVar osu_main_menu_friend("osu_main_menu_friend", true, FCVAR_NONE);
 
 ConVar osu_main_menu_banner_always_text("osu_main_menu_banner_always_text", "", FCVAR_NONE);
-ConVar osu_main_menu_banner_ifupdatedfromoldversion_text("osu_main_menu_banner_ifupdatedfromoldversion_text", "", FCVAR_NONE);
-ConVar osu_main_menu_banner_ifupdatedfromoldversion_le3300_text("osu_main_menu_banner_ifupdatedfromoldversion_le3300_text", "", FCVAR_NONE);
-ConVar osu_main_menu_banner_ifupdatedfromoldversion_le3303_text("osu_main_menu_banner_ifupdatedfromoldversion_le3303_text", "", FCVAR_NONE);
-ConVar osu_main_menu_banner_ifupdatedfromoldversion_le3308_text("osu_main_menu_banner_ifupdatedfromoldversion_le3308_text", "", FCVAR_NONE);
-ConVar osu_main_menu_banner_ifupdatedfromoldversion_le3310_text("osu_main_menu_banner_ifupdatedfromoldversion_le3310_text", "", FCVAR_NONE);
-ConVar osu_main_menu_banner_ifupdatedfromoldversion_le3311_text("osu_main_menu_banner_ifupdatedfromoldversion_le3311_text", "", FCVAR_NONE);
-ConVar osu_main_menu_banner_ifupdatedfromoldversion_le3312_text("osu_main_menu_banner_ifupdatedfromoldversion_le3312_text", "", FCVAR_NONE);
+ConVar osu_main_menu_banner_ifupdatedfromoldversion_text("osu_main_menu_banner_ifupdatedfromoldversion_text", "", FCVAR_HIDDEN);
+ConVar osu_main_menu_banner_ifupdatedfromoldversion_le3300_text("osu_main_menu_banner_ifupdatedfromoldversion_le3300_text", "", FCVAR_HIDDEN);
+ConVar osu_main_menu_banner_ifupdatedfromoldversion_le3303_text("osu_main_menu_banner_ifupdatedfromoldversion_le3303_text", "", FCVAR_HIDDEN);
+ConVar osu_main_menu_banner_ifupdatedfromoldversion_le3308_text("osu_main_menu_banner_ifupdatedfromoldversion_le3308_text", "", FCVAR_HIDDEN);
+ConVar osu_main_menu_banner_ifupdatedfromoldversion_le3310_text("osu_main_menu_banner_ifupdatedfromoldversion_le3310_text", "", FCVAR_HIDDEN);
+ConVar osu_main_menu_banner_ifupdatedfromoldversion_le3311_text("osu_main_menu_banner_ifupdatedfromoldversion_le3311_text", "", FCVAR_HIDDEN);
+ConVar osu_main_menu_banner_ifupdatedfromoldversion_le3312_text("osu_main_menu_banner_ifupdatedfromoldversion_le3312_text", "", FCVAR_HIDDEN);
+ConVar osu_main_menu_banner_ifupdatedfromoldversion_le3314_text("osu_main_menu_banner_ifupdatedfromoldversion_le3314_text", "", FCVAR_HIDDEN);
 
 ConVar *OsuMainMenu::m_osu_universal_offset_ref = NULL;
 ConVar *OsuMainMenu::m_osu_universal_offset_hardcoded_ref = NULL;
@@ -341,6 +342,7 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen(osu)
 	m_bDidUserUpdateFromOlderVersionLe3310 = false;
 	m_bDidUserUpdateFromOlderVersionLe3311 = false;
 	m_bDidUserUpdateFromOlderVersionLe3312 = false;
+	m_bDidUserUpdateFromOlderVersionLe3314 = false;
 	{
 		m_bDrawVersionNotificationArrow = false;
 		if (env->fileExists(MCOSU_NEWVERSION_NOTIFICATION_TRIGGER_FILE))
@@ -364,6 +366,8 @@ OsuMainMenu::OsuMainMenu(Osu *osu) : OsuScreen(osu)
 					m_bDidUserUpdateFromOlderVersionLe3311 = true;
 				if (version < 33.13f - 0.0001f)
 					m_bDidUserUpdateFromOlderVersionLe3312 = true;
+				if (version < 33.15f - 0.0001f)
+					m_bDidUserUpdateFromOlderVersionLe3314 = true;
 			}
 			else
 				m_bDrawVersionNotificationArrow = true;
@@ -608,6 +612,8 @@ void OsuMainMenu::draw(Graphics *g)
 			bannerText = osu_main_menu_banner_ifupdatedfromoldversion_le3311_text.getString();
 		else if (m_bDidUserUpdateFromOlderVersionLe3312 && osu_main_menu_banner_ifupdatedfromoldversion_le3312_text.getString().lengthUtf8() > 0)
 			bannerText = osu_main_menu_banner_ifupdatedfromoldversion_le3312_text.getString();
+		else if (m_bDidUserUpdateFromOlderVersionLe3314 && osu_main_menu_banner_ifupdatedfromoldversion_le3314_text.getString().lengthUtf8() > 0)
+			bannerText = osu_main_menu_banner_ifupdatedfromoldversion_le3314_text.getString();
 
 		if (bannerText.lengthUtf8() > 0)
 		{

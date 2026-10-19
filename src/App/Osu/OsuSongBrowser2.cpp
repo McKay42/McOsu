@@ -981,7 +981,7 @@ void OsuSongBrowser2::draw(Graphics *g)
 	{
 		UString errorMessage1 = "Invalid osu! folder (or no beatmaps found): ";
 		errorMessage1.append(m_sLastOsuFolder);
-		UString errorMessage2 = "Go to Options -> osu!folder";
+		UString errorMessage2 = "Press F5 to refresh, or go to Options > osu!folder";
 
 		g->setColor(0xffff0000);
 		g->pushTransform();

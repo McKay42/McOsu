@@ -1459,14 +1459,16 @@ bool OsuBeatmap::play()
 
 	// NOTE: loading failures are handled dynamically in update(), so temporarily assume everything has worked in here
 	m_bIsPlaying = true;
-	return m_bIsPlaying;
+	m_bIsRestartScheduled = false;
+	m_bIsRestartScheduledQuick = false;
+	return true/*m_bIsPlaying*/;
 }
 
 void OsuBeatmap::restart(bool quick)
 {
 	engine->getSound()->stop(getSkin()->getFailsound());
 
-	if (!m_bIsWaiting)
+	if (!m_bIsWaiting || !isLoading())
 	{
 		m_bIsRestartScheduled = true;
 		m_bIsRestartScheduledQuick = quick;

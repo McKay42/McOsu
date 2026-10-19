@@ -9,6 +9,7 @@
 #define OSUDIFFICULTYCALCULATOR_H
 
 #include "OsuDatabase.h" // for OsuDatabase::Score
+#include "OsuLazerTypes.h"
 
 class Osu;
 class OsuBeatmap;
@@ -114,68 +115,9 @@ private:
 class OsuDifficultyCalculator
 {
 public:
-	static constexpr const int PP_ALGORITHM_VERSION = 20251007;
+	static constexpr const int PP_ALGORITHM_VERSION = OsuLazer::Version;
 
 public:
-	class Skills
-	{
-	public:
-		static constexpr const int NUM_SKILLS = 3;
-
-	public:
-		enum class Skill
-		{
-			SPEED,
-			AIM_SLIDERS,
-			AIM_NO_SLIDERS,
-		};
-
-		static int skillToIndex(const Skill skill)
-		{
-			switch (skill)
-			{
-			case Skill::SPEED:
-				return 0;
-			case Skill::AIM_SLIDERS:
-				return 1;
-			case Skill::AIM_NO_SLIDERS:
-				return 2;
-			}
-
-			return 0;
-		}
-	};
-
-	static constexpr const double performance_base_multiplier = 1.14; // keep final pp normalized across changes
-
-	// see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/Speed.cs
-	// see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/Aim.cs
-
-	static constexpr const double decay_base[Skills::NUM_SKILLS] = {0.3, 0.15, 0.15};			// how much strains decay per interval (if the previous interval's peak strains after applying decay are still higher than the current one's, they will be used as the peak strains).
-
-	static constexpr const double DIFFCALC_EPSILON = 1e-32;
-
-	// This struct is the stripped out version of difficulty attributes needed for incremental (per-object) calculation
-	struct IncrementalState
-	{
-		double interval_end;
-		double max_strain;
-		double max_object_strain;
-		double max_slider_strain;
-
-		// for difficult strain count calculation
-		double consistent_top_strain;
-		double difficult_strains;
-		double top_weighted_sliders;
-		
-		std::vector<double> highest_strains;
-		std::vector<double> slider_strains;
-
-		// difficulty attributes
-		double aim_difficult_slider_count;
-		double speed_note_count;
-	};
-
 	// This struct is the core data computed by difficulty calculation and used in performance calculation
 	// TODO: this should match osu-lazer difficulty attributes:
 	// 1) Add StarRating here, and use it globally instead of separate variable
@@ -183,6 +125,7 @@ public:
 	// 3) Remove ApproachRate and OverallDifficulty
 	struct DifficultyAttributes
 	{
+		OsuLazer::Attributes lazer;
 		double AimDifficulty;
 		double AimDifficultSliderCount;
 
@@ -223,6 +166,7 @@ public:
 
 		// Relevant mods
 		bool hidden, relax, autopilot, touchDevice;
+		bool flashlight = false;
 		float speedMultiplier;
 
 		// ScoreV1 data
@@ -241,6 +185,7 @@ public:
 			relax = false;
 			autopilot = false;
 			touchDevice = false;
+			flashlight = false;
 			speedMultiplier = 1.0f;
 
 			breakDuration = 0;
@@ -248,65 +193,11 @@ public:
 		}
 	};
 
-	class DiffObject
-	{
-	public:
-		OsuDifficultyHitObject *ho;
-
-		double strains[Skills::NUM_SKILLS];
-
-		// https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Skills/Speed.cs
-		// needed because raw speed strain and rhythm strain are combined in different ways
-		double raw_speed_strain;
-		double rhythm;
-
-		Vector2 norm_start;		// start position normalized on radius
-
-		double angle;			// precalc
-
-		double jumpDistance;	// precalc
-		double minJumpDistance;	// precalc
-		double minJumpTime;		// precalc
-		double travelDistance;	// precalc
-
-		double delta_time;		// strain temp
-		double adjusted_delta_time;		// strain temp
-
-		bool lazyCalcFinished;	// precalc temp
-		Vector2 lazyEndPos;		// precalc temp
-		double lazyTravelDist;	// precalc temp
-		double lazyTravelTime;	// precalc temp
-		double travelTime;		// precalc temp
-
-		double smallCircleBonus;
-
-		const std::vector<DiffObject> &objects;	// NOTE: McOsu stores the first object in this array while lazer doesn't. newer lazer algorithms require referencing objects "randomly", so we just keep the entire vector around.
-		int prevObjectIndex;					// WARNING: this will be -1 for the first object (as the name implies), see note above
-
-		DiffObject(OsuDifficultyHitObject *base_object, float radius_scaling_factor, std::vector<DiffObject> &diff_objects, int prevObjectIdx);
-
-		inline const DiffObject *get_previous(int backwardsIdx) const {return (objects.size() > 0 && prevObjectIndex - backwardsIdx < (int)objects.size() ? &objects[std::max(0, prevObjectIndex - backwardsIdx)] : NULL);}
-		inline const DiffObject *get_next(int forwardIdx) const {return (objects.size() > 0 && prevObjectIndex + forwardIdx < (int)objects.size() ? &objects[std::max(0, prevObjectIndex + forwardIdx)] : NULL);}
-		inline double get_strain(Skills::Skill type) const {return strains[Skills::skillToIndex(type)] * (type == Skills::Skill::SPEED ? rhythm : 1.0);}
-		inline double get_slider_strain(Skills::Skill type) const {return ho->type == OsuDifficultyHitObject::TYPE::SLIDER ? strains[Skills::skillToIndex(type)]* (type == Skills::Skill::SPEED ? rhythm : 1.0) : -1;}
-		inline static double applyDiminishingExp(double val) {return std::pow(val, 0.99);}
-		inline static double strainDecay(Skills::Skill type, double ms) {return std::pow(decay_base[Skills::skillToIndex(type)], ms / 1000.0);}
-
-		void calculate_strains(const DiffObject &prev, const DiffObject *next, double hitWindow300, bool autopilotNerf);
-		void calculate_strain(const DiffObject &prev, const DiffObject *next, double hitWindow300, bool autopilotNerf, const Skills::Skill dtype);
-		static double calculate_difficulty(const Skills::Skill type, const DiffObject *dobjects, size_t dobjectCount, IncrementalState *incremental, std::vector<double> *outStrains = NULL, DifficultyAttributes *outAttributes = NULL);
-
-		static double spacing_weight1(const double distance, const Skills::Skill diff_type);
-		double spacing_weight2(const Skills::Skill diff_type, const DiffObject &prev, const DiffObject *next, double hitWindow300, bool autopilotNerf);
-		
-		double get_doubletapness(const DiffObject *next, double hitWindow300) const;
-	};
-
 public:
 	// stars, fully static
 	static double calculateDifficultyAttributes(DifficultyAttributes &outAttributes, const BeatmapDiffcalcData &beatmapData, int upToObjectIndex = -1, std::vector<double> *outAimStrains = NULL, std::vector<double> *outSpeedStrains = NULL);
 	static double calculateDifficultyAttributes(DifficultyAttributes &outAttributes, const BeatmapDiffcalcData &beatmapData, int upToObjectIndex, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains, const std::atomic<bool> &dead);
-	static double calculateDifficultyAttributesInternal(DifficultyAttributes &outAttributes, const BeatmapDiffcalcData &beatmapData, int upToObjectIndex, std::vector<DiffObject> &cachedDiffObjects, IncrementalState *incremental, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains, const std::atomic<bool> &dead);
+	static std::vector<DifficultyAttributes> calculateLazerLiveDifficultyAttributes(const BeatmapDiffcalcData &beatmapData, const std::atomic<bool> &dead);
 
 	static void calculateScoreV1Attributes(DifficultyAttributes &attributes, const BeatmapDiffcalcData &beatmapData, int upToObjectIndex);
 	static double calculateScoreV1SpinnerScore(double spinnerDuration);
@@ -317,79 +208,6 @@ public:
 	// pp, fully static
 	static double calculatePPv2(bool isImportedLegacyScore, int version, int modsLegacy, double timescale, double ar, double od, DifficultyAttributes attributes, int numHitObjects, int numCircles, int numSliders, int numSpinners, int maxPossibleCombo, int combo, int misses, int c300, int c100, int c50, unsigned long legacyTotalScore);
 
-	// helper functions
-	static double calculateTotalStarsFromSkills(double aim, double speed);
-
-private:
-	static ConVar *m_osu_slider_end_inside_check_offset_ref;
-	static ConVar *m_osu_slider_curve_max_length_ref;
-
-private:
-	struct ScoreData
-	{
-		double accuracy;
-		int modsLegacy;
-		int countGreat;
-		int countOk;
-		int countMeh;
-		int countMiss;
-		int totalHits;
-		int totalSuccessfulHits;
-		int beatmapMaxCombo;
-		int scoreMaxCombo;
-		int amountHitObjectsWithAccuracy;
-		unsigned long legacyTotalScore;
-	};
-
-	struct RhythmIsland
-	{
-		// NOTE: lazer stores "deltaDifferenceEpsilon" (hitWindow300 * 0.3) in this struct, but OD is constant here
-		int delta;
-		int deltaCount;
-
-		inline bool equals(RhythmIsland &other, double deltaDifferenceEpsilon) const {return std::abs(delta - other.delta) < deltaDifferenceEpsilon && deltaCount == other.deltaCount;}
-	};
-
-private:
-	// Skill values calculation
-	static double computeAimValue(const ScoreData &score, const DifficultyAttributes &attributes, double effectiveMissCount);
-	static double computeSpeedValue(const ScoreData &score, const DifficultyAttributes &attributes, double effectiveMissCount, double speedDeviation);
-	static double computeAccuracyValue(const ScoreData &score, const DifficultyAttributes &attributes);
-
-	// High deviation nerf
-	static double calculateSpeedDeviation(const ScoreData &score, const DifficultyAttributes &attributes, double timescale);
-	static double calculateDeviation(const DifficultyAttributes &attributes, double timescale, double relevantCountGreat, double relevantCountOk, double relevantCountMeh, double relevantCountMiss);
-	static double calculateSpeedHighDeviationNerf(const DifficultyAttributes &attributes, double speedDeviation);
-
-	static double calculateEstimatedSliderBreaks(const ScoreData &score, const DifficultyAttributes &attributes, double topWeightedSliderFactor, double effectiveMissCount);
-
-	// ScoreV1 misscount estimation
-	static double calculateScoreBasedMisscount(const DifficultyAttributes &attributes, const ScoreData &score);
-	static double calculateScoreAtCombo(const DifficultyAttributes &attributes, const ScoreData &score, double combo, double relevantComboPerObject, double scoreV1Multiplier);
-	static double calculateRelevantScoreComboPerObject(const DifficultyAttributes &attributes, const ScoreData &score);
-	static double calculateMaximumComboBasedMissCount(const DifficultyAttributes &attributes, const ScoreData &score);
-	static float getLegacyScoreMultiplier(const ScoreData &score);
-
-	static double calculateDifficultyRating(double difficultyValue);
-	static double calculateAimVisibilityFactor(double approachRate, double mechanicalDifficultyRating);
-	static double calculateSpeedVisibilityFactor(double approachRate, double mechanicalDifficultyRating);
-	static double calculateVisibilityBonus(double approachRate, double visibilityFactor = 1.0, double sliderFactor = 1.0);
-	static double computeAimRating(double aimDifficultyValue, int totalHits, double approachRate, double overallDifficulty, double mechanicalDifficultyRating, double sliderFactor, const BeatmapDiffcalcData &beatmapData);
-	static double computeSpeedRating(double speedDifficultyValue, int totalHits, double approachRate, double overallDifficulty, double mechanicalDifficultyRating, const BeatmapDiffcalcData &beatmapData);
-	static double calculateStarRating(double basePerformance);
-	static double calculateMechanicalDifficultyRating(double aimDifficultyValue, double speedDifficultyValue);
-
-	// helper functions
-	static double erf(double x);
-	static double erfInv(double x);
-	static double reverseLerp(double x, double start, double end) {return clamp<double>((x - start) / (end - start), 0.0, 1.0);};
-	static double smoothstep(double x, double start, double end) {x = reverseLerp(x, start, end); return x * x * (3.0 - 2.0 * x);};
-	static double smootherStep(double x, double start, double end) {x = reverseLerp(x, start, end); return x * x * x * (x * (x * 6.0 - 15.0) + 10.0);};
-	static double smoothstepBellCurve(double x, double mean = 0.5, double width = 0.5) {x -= mean; x = x > 0 ? (width - x) : (width + x); return smoothstep(x, 0, width);};
-	static double logistic(double x, double midpointOffset, double multiplier, double maxValue = 1.0) {return maxValue / (1 + std::exp(multiplier * (midpointOffset - x)));}
-	static double strainDifficultyToPerformance(double difficulty) {return std::pow(5.0 * std::max(1.0, difficulty / 0.0675) - 4.0, 3.0) / 100000.0;}
-	static double adjustHitWindow(double hitwindow) {return std::floor(hitwindow) - 0.5;} // Adjust hitwindow to match lazer
-	static double adjustOveralDifficultyByClockRate(double OD, double clockRate); // Lazer formula for adjusting OD by clock rate
 };
 
 #endif

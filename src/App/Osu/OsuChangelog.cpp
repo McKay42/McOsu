@@ -36,7 +36,13 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	std::vector<CHANGELOG> changelogs;
 
 	CHANGELOG alpha317;
-	alpha317.title = UString::format("33.14 (Build Date: %s, %s)", __DATE__, __TIME__); // (09.01.2022 - ?)
+	alpha317.title = UString::format("33.15 (Build Date: %s, %s)", __DATE__, __TIME__); // (09.01.2022 - ?)
+	alpha317.changes.push_back("- For more info on the star/pp changes in this update see https://osu.ppy.sh/home/news/2026-07-03-performance-points-star-rating-updates");
+	alpha317.changes.push_back("- Updated star + pp algorithms to match current lazer implementation aka 20260706");
+	alpha317.changes.push_back("- Added Options > General > Player > \"Always enable Score V2 mod\"");
+	alpha317.changes.push_back("- Fixed premature retries/restarts during beatmap loading");
+	alpha317.changes.push_back("");
+	alpha317.changes.push_back("");
 	alpha317.changes.push_back("- Improved slider rendering performance at higher resolutions (reduced rt blending overdraw)");
 	alpha317.changes.push_back("- Updated user switcher to sort names alphabetically");
 	alpha317.changes.push_back("- Updated cursortrail handling to reduce spam while click-seeking via the scrubbing timeline");

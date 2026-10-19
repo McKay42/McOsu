@@ -600,6 +600,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Disable osu!lazer star/pp Relax/Autopilot nerfs", "Disabled: osu!lazer algorithm default. Relax/Autopilot scores are nerfed.\nEnabled: McOsu default. All Relax/Autopilot nerfs are disabled.", convar->getConVarByName("osu_stars_and_pp_lazer_relax_autopilot_nerf_disabled"));
 	addCheckbox("Show pp instead of score in scorebrowser", "Only McOsu scores and manually imported scores will show pp.\nSee Songbrowser > User Button > Top Ranks > Gear Button > \"Import osu! scores of <NAME>\".", convar->getConVarByName("osu_scores_sort_by_pp"));
 	addCheckbox("Always enable touch device pp nerf mod", "Keep touch device pp nerf mod active even when resetting all mods.", convar->getConVarByName("osu_mod_touchdevice"));
+	addCheckbox("Always enable Score V2 mod", "Keep Score V2 mod active even when resetting all mods.", convar->getConVarByName("osu_mod_scorev2"));
 	addCheckbox("Show osu! scores.db user names in user switcher", "Only relevant if \"Load osu! scores.db\" is enabled.\nShould the user switcher show ALL user names from ALL scores?\n(Even from ones you got in your database because you watched a replay?)", convar->getConVarByName("osu_user_switcher_include_legacy_scores_for_names"));
 
 	addSubSection("Songbrowser");
