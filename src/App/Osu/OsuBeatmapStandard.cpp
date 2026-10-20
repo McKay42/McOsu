@@ -65,10 +65,10 @@ ConVar osu_number_scale_multiplier("osu_number_scale_multiplier", 1.0f, FCVAR_NO
 
 ConVar osu_playfield_mirror_horizontal("osu_playfield_mirror_horizontal", false, FCVAR_NONE);
 ConVar osu_playfield_mirror_vertical("osu_playfield_mirror_vertical", false, FCVAR_NONE);
-ConVar osu_playfield_rotation("osu_playfield_rotation", 0.0f, FCVAR_NONE, "rotates the entire playfield by this many degrees");
-ConVar osu_playfield_stretch_x("osu_playfield_stretch_x", 0.0f, FCVAR_NONE, "offsets/multiplies all hitobject coordinates by it (0 = default 1x playfield size, -1 = on a line, -0.5 = 0.5x playfield size, 0.5 = 1.5x playfield size)");
-ConVar osu_playfield_stretch_y("osu_playfield_stretch_y", 0.0f, FCVAR_NONE, "offsets/multiplies all hitobject coordinates by it (0 = default 1x playfield size, -1 = on a line, -0.5 = 0.5x playfield size, 0.5 = 1.5x playfield size)");
-ConVar osu_playfield_circular("osu_playfield_circular", false, FCVAR_NONE, "whether the playfield area should be transformed from a rectangle into a circle/disc/oval");
+ConVar osu_playfield_rotation("osu_playfield_rotation", 0.0f, FCVAR_NONE, "rotates the entire playfield by this many degrees (only works with legacy slider renderer!)");
+ConVar osu_playfield_stretch_x("osu_playfield_stretch_x", 0.0f, FCVAR_NONE, "offsets/multiplies all hitobject coordinates by it (0 = default 1x playfield size, -1 = on a line, -0.5 = 0.5x playfield size, 0.5 = 1.5x playfield size) (only works with legacy slider renderer!)");
+ConVar osu_playfield_stretch_y("osu_playfield_stretch_y", 0.0f, FCVAR_NONE, "offsets/multiplies all hitobject coordinates by it (0 = default 1x playfield size, -1 = on a line, -0.5 = 0.5x playfield size, 0.5 = 1.5x playfield size) (only works with legacy slider renderer!)");
+ConVar osu_playfield_circular("osu_playfield_circular", false, FCVAR_NONE, "whether the playfield area should be transformed from a rectangle into a circle/disc/oval (only works with legacy slider renderer!)");
 
 ConVar osu_drain_lazer_health_min("osu_drain_lazer_health_min", 0.95f, FCVAR_NONE);
 ConVar osu_drain_lazer_health_mid("osu_drain_lazer_health_mid", 0.70f, FCVAR_NONE);

@@ -40,6 +40,8 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha317.changes.push_back("- For more info on the star/pp changes in this update see https://osu.ppy.sh/home/news/2026-07-03-performance-points-star-rating-updates");
 	alpha317.changes.push_back("- Updated star + pp algorithms to match current lazer implementation aka 20260706");
 	alpha317.changes.push_back("- Added Options > General > Player > \"Always enable Score V2 mod\"");
+	alpha317.changes.push_back("- Added Options > Gameplay > Hitobjects > \"Use Classic Hidden Style\" (do not fade out sliders, pre-2015 HD)");
+	alpha317.changes.push_back("- Added ConVar: osu_songbrowser_pulse_anim");
 	alpha317.changes.push_back("- Fixed premature retries/restarts during beatmap loading");
 	alpha317.changes.push_back("");
 	alpha317.changes.push_back("");

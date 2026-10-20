@@ -463,7 +463,7 @@ inline Attributes calculateAttributes(const AimSkill& aim,const AimSkill& aimNoS
     return a;
 }
 
-inline Result calculateInternal(const std::vector<Object>& objects,const Mods& mods,const std::atomic<bool>& cancelled,std::vector<Attributes>* liveAttributes)
+inline Result calculateInternal(const std::vector<Object>& objects,const Mods& mods,std::atomic<int> *progress, const std::atomic<bool>& cancelled,std::vector<Attributes>* liveAttributes)
 {
     Result result;if(objects.empty())return result;
     AimSkill aim(objects,mods,true),aimNoSliders(objects,mods,false);
@@ -482,6 +482,9 @@ inline Result calculateInternal(const std::vector<Object>& objects,const Mods& m
         if(mods.Flashlight){if(o.Index==0)flashSectionEnd=std::ceil(o.StartTime/400)*400;while(o.StartTime>flashSectionEnd){flashPeaks.push_back(flashPeak);const Object*p=previous(objects,o);flashPeak=flashStrain*std::pow(0.15,(flashSectionEnd-(p?p->StartTime:o.StartTime-o.DeltaTime))/1000);flashSectionEnd+=400;}flashStrain*=std::pow(0.15,o.DeltaTime/1000);double fd=flashlight(objects,o,mods.Hidden);if(mods.TouchDevice)fd=std::pow(fd,0.9);if(mods.Relax)fd*=0.7;if(mods.Autopilot)fd*=0.4;fd*=0.985+std::pow(std::max(0.0,o.OverallDifficulty),2)/4000;flashStrain+=fd*0.058;flashPeak=std::max(flashPeak,flashStrain);flashlightValues.push_back(flashStrain);}
         if(o.Type==ObjectType::Circle)++hitCircles;else if(o.Type==ObjectType::Slider)++sliders;else ++spinners;
         if(liveAttributes) liveAttributes->push_back(calculateAttributes(aim,aimNoSliders,speedValues,speedSliders,readingValues,readingReducedCount,flashPeaks,flashPeak,mods,i+1,hitCircles,sliders,spinners));
+
+        if (progress != NULL)
+        	*progress = (int)i;
     }
     result.attributes=liveAttributes?liveAttributes->back():calculateAttributes(aim,aimNoSliders,speedValues,speedSliders,readingValues,readingReducedCount,flashPeaks,flashPeak,mods,objects.size(),hitCircles,sliders,spinners);
     result.aimStrains=aim.strains();result.speedStrains=speedValues;return result;
@@ -489,13 +492,13 @@ inline Result calculateInternal(const std::vector<Object>& objects,const Mods& m
 
 inline Result calculate(const std::vector<Object>& objects,const Mods& mods,const std::atomic<bool>& cancelled)
 {
-    return calculateInternal(objects,mods,cancelled,NULL);
+    return calculateInternal(objects,mods,NULL,cancelled,NULL);
 }
 
-inline std::vector<Attributes> calculateLive(const std::vector<Object>& objects,const Mods& mods,const std::atomic<bool>& cancelled)
+inline std::vector<Attributes> calculateLive(const std::vector<Object>& objects,const Mods& mods,std::atomic<int> &progress,const std::atomic<bool>& cancelled)
 {
     std::vector<Attributes> result;
-    calculateInternal(objects,mods,cancelled,&result);
+    calculateInternal(objects,mods,&progress,cancelled,&result);
     return result;
 }
 

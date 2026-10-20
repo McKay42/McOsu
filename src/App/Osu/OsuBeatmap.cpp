@@ -1393,7 +1393,7 @@ bool OsuBeatmap::play()
 
 			case 5:
 				{
-					UString errorMessage = "Error: Too many hitobjects in beatmap :(";
+					UString errorMessage = "Error: Too many hitobjects in beatmap (increase osu_beatmap_max_num_hitobjects)";
 					debugLog("Osu Error: Too many hitobjects in beatmap %s\n", m_selectedDifficulty2->getFilePath().toUtf8());
 
 					if (m_osu != NULL)

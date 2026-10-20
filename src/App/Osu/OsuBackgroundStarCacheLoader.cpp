@@ -61,7 +61,7 @@ void OsuBackgroundStarCacheLoader::initAsync()
         timer.start();
         if (diffres.errorCode == 0)
         {
-            auto attributes = OsuDifficultyCalculator::calculateLazerLiveDifficultyAttributes(beatmapData, m_bDead);
+            auto attributes = OsuDifficultyCalculator::calculateLazerLiveDifficultyAttributes(beatmapData, m_iProgress, m_bDead);
             if (!m_bDead.load())
             {
                 m_beatmap->m_attributesForNumHitObjects.swap(attributes);

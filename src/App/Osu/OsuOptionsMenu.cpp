@@ -1041,6 +1041,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Show Skip Button during Breaks", "Skip breaks in the middle of beatmaps.", convar->getConVarByName("osu_skip_breaks_enabled"));
 	addSpacer();
 	addSubSection("Hitobjects");
+	addCheckbox("Use \"Classic\" Hidden Style (!)", "NOTE: osu! doesn't do this anymore since 2015, so don't enable it for serious practicing.\nIf enabled: Do not fade out sliders, except for the hitcircle number.", convar->getConVarByName("osu_mod_hd_classic"));
 	addCheckbox("Use Fast Hidden Fading Sliders (!)", "NOTE: osu! doesn't do this, so don't enable it for serious practicing.\nIf enabled: Fade out sliders with the same speed as circles.", convar->getConVarByName("osu_mod_hd_slider_fast_fade"));
 	addCheckbox("Use ScoreV2 Slider Accuracy", "Affects accuracy calculations, but does not affect score nor pp.\nUse the ScoreV2 mod if you want the 1000000 max score cap/calculation.", convar->getConVarByName("osu_slider_scorev2"));
 	addSpacer();

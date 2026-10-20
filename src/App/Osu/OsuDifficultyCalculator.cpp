@@ -358,12 +358,66 @@ double OsuDifficultyCalculator::calculateDifficultyAttributes(DifficultyAttribut
 	outAttributes.AimTopWeightedSliderFactor = result.attributes.AimTopWeightedSliderFactor;
 	outAttributes.SpeedTopWeightedSliderFactor = result.attributes.SpeedTopWeightedSliderFactor;
 	outAttributes.SliderCount = result.attributes.SliderCount;
-	if (outAimStrains) *outAimStrains = std::move(result.aimStrains);
-	if (outSpeedStrains) *outSpeedStrains = std::move(result.speedStrains);
+
+	// per-object strains are not used for drawing the strain graph
+	//if (outAimStrains) *outAimStrains = std::move(result.aimStrains);
+	//if (outSpeedStrains) *outSpeedStrains = std::move(result.speedStrains);
+	// instead, the legacy method is used
+	struct LegacyFixedStrainCalc
+	{
+		static std::vector<double> calculate_difficulty(const std::vector<OsuDifficultyHitObject> &dobjects, const size_t objectCount, const std::vector<double> &inStrains, Skills::Skill skill)
+		{
+			static const double strain_step = 400.0;	// the length of each strain section
+
+			std::vector<double> highestStrains;
+			if (dobjects.size() < 2 || inStrains.size() < 1) return highestStrains;
+
+			double interval_end = (std::ceil((double)dobjects[0].time / strain_step) * strain_step);
+			double max_strain = 0.0;
+
+			for (size_t i=1; i<objectCount; i++) // NOTE: starts at 1!
+			{
+				const int curIndex = (int)i;
+				const int prevIndex = (int)i - 1;
+
+				const auto &cur = dobjects[curIndex];
+				const auto &prev = dobjects[prevIndex];
+
+				// make previous peak strain decay until the current object
+				while (cur.time > interval_end)
+				{
+					highestStrains.push_back(max_strain);
+
+					// skip calculating strain decay for very long breaks (e.g. beatmap upload size limit hack diffs)
+					// strainDecay with a base of 0.3 at 60 seconds is 4.23911583e-32, well below any meaningful difference even after being multiplied by object strain
+					double strainDelta = interval_end - (double)prev.time;
+					if (strainDelta > 600000.0) // !prev
+						max_strain = 0.0;
+					else
+						max_strain = (prevIndex - 1 >= 0 ? inStrains[prevIndex - 1] : 0.0) * std::pow(OsuDifficultyCalculator::decay_base[static_cast<int>(skill)], strainDelta / 1000.0);
+
+					interval_end += strain_step;
+				}
+
+				// calculate max strain for this interval
+				max_strain = std::max(max_strain, (curIndex - 1 >= 0 ? inStrains[curIndex - 1] : 0.0));
+			}
+
+		    // the peak strain will not be saved for the last section in the above loop
+			highestStrains.push_back(max_strain);
+
+			return highestStrains;
+		}
+	};
+	if (outAimStrains != NULL)
+		(*outAimStrains) = LegacyFixedStrainCalc::calculate_difficulty(beatmapData.sortedHitObjects, objectCount, result.aimStrains, Skills::Skill::AIM_SLIDERS);
+	if (outSpeedStrains != NULL)
+		(*outSpeedStrains) = LegacyFixedStrainCalc::calculate_difficulty(beatmapData.sortedHitObjects, objectCount, result.speedStrains, Skills::Skill::SPEED);
+
 	return result.attributes.StarRating;
 }
 
-std::vector<OsuDifficultyCalculator::DifficultyAttributes> OsuDifficultyCalculator::calculateLazerLiveDifficultyAttributes(const BeatmapDiffcalcData &beatmapData, const std::atomic<bool> &dead)
+std::vector<OsuDifficultyCalculator::DifficultyAttributes> OsuDifficultyCalculator::calculateLazerLiveDifficultyAttributes(const BeatmapDiffcalcData &beatmapData, std::atomic<int> &progress, const std::atomic<bool> &dead)
 {
 	std::vector<DifficultyAttributes> result;
 	if (beatmapData.sortedHitObjects.empty()) return result;
@@ -376,7 +430,7 @@ std::vector<OsuDifficultyCalculator::DifficultyAttributes> OsuDifficultyCalculat
 	mods.Autopilot = beatmapData.autopilot && !osu_stars_and_pp_lazer_relax_autopilot_nerf_disabled.getBool();
 	const auto objects = OsuLazer::preprocess(beatmapData, dead);
 	if (dead.load()) return result;
-	const auto live = OsuLazer::Difficulty::calculateLive(objects, mods, dead);
+	const auto live = OsuLazer::Difficulty::calculateLive(objects, mods, progress, dead);
 	if (dead.load()) return result;
 
 	result.resize(beatmapData.sortedHitObjects.size());

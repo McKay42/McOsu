@@ -79,6 +79,7 @@ void _osu_songbrowser_search_hardcoded_filter(UString oldValue, UString newValue
 ConVar osu_songbrowser_search_hardcoded_filter("osu_songbrowser_search_hardcoded_filter", "", FCVAR_NONE, "allows forcing the specified search filter to be active all the time", _osu_songbrowser_search_hardcoded_filter);
 ConVar osu_songbrowser_background_star_calculation("osu_songbrowser_background_star_calculation", true, FCVAR_NONE, "precalculate stars for all loaded beatmaps while in songbrowser");
 ConVar osu_songbrowser_dynamic_star_recalc("osu_songbrowser_dynamic_star_recalc", true, FCVAR_NONE, "dynamically recalculate displayed star value of currently selected beatmap in songbrowser");
+ConVar osu_songbrowser_pulse_anim("osu_songbrowser_pulse_anim", true, FCVAR_NONE, "whether to play the subtle glow overlay animation every time when selecting beatmaps");
 
 ConVar osu_debug_background_star_calc("osu_debug_background_star_calc", false, FCVAR_NONE, "prints the name of the beatmap about to get its stars calculated (cmd/terminal window only, no in-game log!)");
 
@@ -1004,7 +1005,7 @@ void OsuSongBrowser2::draw(Graphics *g)
 	m_contextMenu->draw(g);
 
 	// click pulse animation overlay
-	if (m_fPulseAnimation > 0.0f)
+	if (m_fPulseAnimation > 0.0f && osu_songbrowser_pulse_anim.getBool())
 	{
 		Color topColor = 0x00ffffff;
 		Color bottomColor = COLOR((int)(25*m_fPulseAnimation), 255, 255, 255);

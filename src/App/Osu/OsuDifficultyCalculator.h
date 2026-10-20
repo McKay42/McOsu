@@ -118,6 +118,22 @@ public:
 	static constexpr const int PP_ALGORITHM_VERSION = OsuLazer::Version;
 
 public:
+	// only used for LegacyFixedStrainCalc
+	class Skills
+	{
+	public:
+		static constexpr const int NUM_SKILLS = 3;
+
+	public:
+		enum class Skill : int
+		{
+			SPEED			= 0,
+			AIM_SLIDERS		= 1,
+			AIM_NO_SLIDERS	= 2
+		};
+	};
+	static constexpr const double decay_base[Skills::NUM_SKILLS] = {0.3, 0.2, 0.2};
+
 	// This struct is the core data computed by difficulty calculation and used in performance calculation
 	// TODO: this should match osu-lazer difficulty attributes:
 	// 1) Add StarRating here, and use it globally instead of separate variable
@@ -197,7 +213,7 @@ public:
 	// stars, fully static
 	static double calculateDifficultyAttributes(DifficultyAttributes &outAttributes, const BeatmapDiffcalcData &beatmapData, int upToObjectIndex = -1, std::vector<double> *outAimStrains = NULL, std::vector<double> *outSpeedStrains = NULL);
 	static double calculateDifficultyAttributes(DifficultyAttributes &outAttributes, const BeatmapDiffcalcData &beatmapData, int upToObjectIndex, std::vector<double> *outAimStrains, std::vector<double> *outSpeedStrains, const std::atomic<bool> &dead);
-	static std::vector<DifficultyAttributes> calculateLazerLiveDifficultyAttributes(const BeatmapDiffcalcData &beatmapData, const std::atomic<bool> &dead);
+	static std::vector<DifficultyAttributes> calculateLazerLiveDifficultyAttributes(const BeatmapDiffcalcData &beatmapData, std::atomic<int> &progress, const std::atomic<bool> &dead);
 
 	static void calculateScoreV1Attributes(DifficultyAttributes &attributes, const BeatmapDiffcalcData &beatmapData, int upToObjectIndex);
 	static double calculateScoreV1SpinnerScore(double spinnerDuration);
