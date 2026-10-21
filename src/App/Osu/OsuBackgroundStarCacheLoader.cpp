@@ -57,74 +57,21 @@ void OsuBackgroundStarCacheLoader::initAsync()
 
 		// Create beatmap data from beatmap and init difficulty attributes
 		OsuDifficultyCalculator::BeatmapDiffcalcData beatmapData(m_beatmap, diffres.diffobjects);
-		OsuDifficultyCalculator::DifficultyAttributes attributes{};
+        Timer timer;
+        timer.start();
+        if (diffres.errorCode == 0)
+        {
+            auto attributes = OsuDifficultyCalculator::calculateLazerLiveDifficultyAttributes(beatmapData, m_iProgress, m_bDead);
+            if (!m_bDead.load())
+            {
+                m_beatmap->m_attributesForNumHitObjects.swap(attributes);
+                m_iProgress = diffres.diffobjects.size();
+            }
+        }
+        timer.update();
+        if (osu_debug_background_star_cache_loader.getBool())
+            debugLog("OsuBackgroundStarCacheLoader: Took %f sec\n", timer.getElapsedTime());
 
-		// new fast method  (build full cached DiffObjects once) (1/2)
-		Timer cacheObjectsTimer;
-		cacheObjectsTimer.start();
-		std::vector<OsuDifficultyCalculator::DiffObject> cachedDiffObjects;
-		OsuDifficultyCalculator::calculateDifficultyAttributesInternal(attributes, beatmapData, -1, cachedDiffObjects, NULL, NULL, NULL, m_bDead);
-		cacheObjectsTimer.update();
-
-		Timer calcStrainsTimer;
-		calcStrainsTimer.start();
-		OsuDifficultyCalculator::IncrementalState incremental[OsuDifficultyCalculator::Skills::NUM_SKILLS] = {};
-		incremental[OsuDifficultyCalculator::Skills::skillToIndex(OsuDifficultyCalculator::Skills::Skill::AIM_SLIDERS)].slider_strains.reserve(diff2->getNumSliders());
-		if (cachedDiffObjects.size() > 0)
-		{
-			static const double strain_step = 400.0;
-			for (size_t i=0; i<OsuDifficultyCalculator::Skills::NUM_SKILLS; i++)
-			{
-				incremental[i].interval_end = std::ceil((double)cachedDiffObjects[0].ho->time / strain_step) * strain_step;
-			}
-		}
-		for (size_t i=0; i<diffres.diffobjects.size(); i++)
-		{
-			attributes.clear();
-
-			// old slow method:
-			/*
-			double oldAimStars = 0.0;
-			double oldAimSliderFactor = 0.0;
-			double oldSpeedStars = 0.0;
-			double oldSpeedNotes = 0.0;
-			OsuDifficultyCalculator::calculateDifficultyAttributes(diffres.diffobjects, CS, OD, speedMultiplier, relax, touchDevice, &oldAimStars, &oldAimSliderFactor, &oldSpeedStars, &oldSpeedNotes, i, NULL, NULL, m_bDead);
-			*/
-			//OsuDifficultyCalculator::calculateDifficultyAttributes(diffres.diffobjects, CS, OD, speedMultiplier, relax, touchDevice, &aimStars, &sliderFactor, &speedStars, &speedNotes, i, NULL, NULL, m_bDead);
-
-			// new fast method (reuse cached DiffObjects instead of re-computing them every single iteration for the entire beatmap) (2/2)
-			OsuDifficultyCalculator::calculateDifficultyAttributesInternal(attributes, beatmapData, i, cachedDiffObjects, incremental, NULL, NULL, m_bDead);
-			/*
-			const double deltaOldAimStars = std::abs(aimStars - oldAimStars);
-			const double deltaOldAimSliderFactor = std::abs(sliderFactor - oldAimSliderFactor);
-			const double deltaOldSpeedStars = std::abs(speedStars - oldSpeedStars);
-			const double deltaOldSpeedNotes = std::abs(speedNotes - oldSpeedNotes);
-
-			if (deltaOldAimStars > 0.00001f
-			 || deltaOldAimSliderFactor > 0.00001f
-			 || deltaOldSpeedStars > 0.00001f
-			 || deltaOldSpeedNotes > 0.00001f)
-			{
-				debugLog("deltaOldAimStars = %f\n", deltaOldAimStars);
-				debugLog("deltaOldAimSliderFactor = %f\n", deltaOldAimSliderFactor);
-				debugLog("deltaOldSpeedStars = %f\n", deltaOldSpeedStars);
-				debugLog("deltaOldSpeedNotes = %f\n", deltaOldSpeedNotes);
-			}
-			*/
-
-			m_beatmap->m_attributesForNumHitObjects.push_back(attributes);
-			
-			m_iProgress = i;
-
-			if (m_bDead.load())
-			{
-				m_beatmap->m_attributesForNumHitObjects.clear();
-				break;
-			}
-		}
-		calcStrainsTimer.update();
-		if (osu_debug_background_star_cache_loader.getBool())
-			debugLog("OsuBackgroundStarCacheLoader: Took %f sec total = %f sec (diffobjects) + %f sec (strains)\n", cacheObjectsTimer.getElapsedTime() + calcStrainsTimer.getElapsedTime(), cacheObjectsTimer.getElapsedTime(), calcStrainsTimer.getElapsedTime());
 	}
 
 	m_bAsyncReady = true;

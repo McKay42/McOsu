@@ -66,10 +66,10 @@ ConVar osu_number_scale_multiplier("osu_number_scale_multiplier", 1.0f, FCVAR_NO
 
 ConVar osu_playfield_mirror_horizontal("osu_playfield_mirror_horizontal", false, FCVAR_NONE);
 ConVar osu_playfield_mirror_vertical("osu_playfield_mirror_vertical", false, FCVAR_NONE);
-ConVar osu_playfield_rotation("osu_playfield_rotation", 0.0f, FCVAR_NONE, "rotates the entire playfield by this many degrees");
-ConVar osu_playfield_stretch_x("osu_playfield_stretch_x", 0.0f, FCVAR_NONE, "offsets/multiplies all hitobject coordinates by it (0 = default 1x playfield size, -1 = on a line, -0.5 = 0.5x playfield size, 0.5 = 1.5x playfield size)");
-ConVar osu_playfield_stretch_y("osu_playfield_stretch_y", 0.0f, FCVAR_NONE, "offsets/multiplies all hitobject coordinates by it (0 = default 1x playfield size, -1 = on a line, -0.5 = 0.5x playfield size, 0.5 = 1.5x playfield size)");
-ConVar osu_playfield_circular("osu_playfield_circular", false, FCVAR_NONE, "whether the playfield area should be transformed from a rectangle into a circle/disc/oval");
+ConVar osu_playfield_rotation("osu_playfield_rotation", 0.0f, FCVAR_NONE, "rotates the entire playfield by this many degrees (only works with legacy slider renderer!)");
+ConVar osu_playfield_stretch_x("osu_playfield_stretch_x", 0.0f, FCVAR_NONE, "offsets/multiplies all hitobject coordinates by it (0 = default 1x playfield size, -1 = on a line, -0.5 = 0.5x playfield size, 0.5 = 1.5x playfield size) (only works with legacy slider renderer!)");
+ConVar osu_playfield_stretch_y("osu_playfield_stretch_y", 0.0f, FCVAR_NONE, "offsets/multiplies all hitobject coordinates by it (0 = default 1x playfield size, -1 = on a line, -0.5 = 0.5x playfield size, 0.5 = 1.5x playfield size) (only works with legacy slider renderer!)");
+ConVar osu_playfield_circular("osu_playfield_circular", false, FCVAR_NONE, "whether the playfield area should be transformed from a rectangle into a circle/disc/oval (only works with legacy slider renderer!)");
 
 ConVar osu_drain_lazer_health_min("osu_drain_lazer_health_min", 0.95f, FCVAR_NONE);
 ConVar osu_drain_lazer_health_mid("osu_drain_lazer_health_mid", 0.70f, FCVAR_NONE);
@@ -140,6 +140,9 @@ OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 	m_fPrevPlayfieldStretchY = 0.0f;
 	m_fPrevHitCircleDiameterForStarCache = 1.0f;
 	m_fPrevSpeedForStarCache = 1.0f;
+	m_fPrevARForStarCache = -1.0f;
+	m_fPrevODForStarCache = -1.0f;
+	m_iPrevModsForStarCache = -1;
 
 	m_bIsVRDraw = false;
 
@@ -1024,7 +1027,8 @@ void OsuBeatmapStandard::onModUpdate(bool rebuildSliderVertexBuffers, bool recom
 			didSpeedChange = true;
 		}
 
-		if (didCSChange || didSpeedChange)
+		const bool didSettingsChange = !m_hitobjects.empty() && (getAR(false) != m_fPrevARForStarCache || getOD(false) != m_fPrevODForStarCache || m_osu->getScore()->getModsLegacy() != m_iPrevModsForStarCache);
+		if (didCSChange || didSpeedChange || didSettingsChange)
 		{
 			if (m_selectedDifficulty2 != NULL)
 				updateStarCache();
@@ -2524,6 +2528,9 @@ void OsuBeatmapStandard::updateStarCache()
 		// so we don't get a useless double load inside onModUpdate()
 		m_fPrevHitCircleDiameterForStarCache = getHitcircleDiameter();
 		m_fPrevSpeedForStarCache = m_osu->getSpeedMultiplier();
+		m_fPrevARForStarCache = getAR(false);
+		m_fPrevODForStarCache = getOD(false);
+		m_iPrevModsForStarCache = m_osu->getScore()->getModsLegacy();
 
 		// kill any running loader, so we get to a clean state
 		stopStarCacheLoader();

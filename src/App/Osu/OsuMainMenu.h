@@ -130,6 +130,7 @@ private:
 	bool m_bDidUserUpdateFromOlderVersionLe3310;
 	bool m_bDidUserUpdateFromOlderVersionLe3311;
 	bool m_bDidUserUpdateFromOlderVersionLe3312;
+	bool m_bDidUserUpdateFromOlderVersionLe3314;
 
 	// custom
 	float m_fMainMenuAnimTime;

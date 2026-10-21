@@ -60,7 +60,6 @@ ConVar osu_beatmap_max_num_slider_scoringtimes("osu_beatmap_max_num_slider_scori
 unsigned long long OsuDatabaseBeatmap::sortHackCounter = 0;
 
 ConVar *OsuDatabaseBeatmap::m_osu_slider_curve_max_length_ref = NULL;
-ConVar *OsuDatabaseBeatmap::m_osu_stars_xexxar_angles_sliders_ref = NULL;
 ConVar *OsuDatabaseBeatmap::m_osu_stars_stacking_ref = NULL;
 ConVar *OsuDatabaseBeatmap::m_osu_debug_pp_ref = NULL;
 ConVar *OsuDatabaseBeatmap::m_osu_slider_end_inside_check_offset_ref = NULL;
@@ -81,8 +80,6 @@ OsuDatabaseBeatmap::OsuDatabaseBeatmap(Osu *osu, UString filePath, UString folde
 	// convar refs
 	if (m_osu_slider_curve_max_length_ref == NULL)
 		m_osu_slider_curve_max_length_ref = convar->getConVarByName("osu_slider_curve_max_length");
-	if (m_osu_stars_xexxar_angles_sliders_ref == NULL)
-		m_osu_stars_xexxar_angles_sliders_ref = convar->getConVarByName("osu_stars_xexxar_angles_sliders");
 	if (m_osu_stars_stacking_ref == NULL)
 		m_osu_stars_stacking_ref = convar->getConVarByName("osu_stars_stacking");
 	if (m_osu_debug_pp_ref == NULL)
@@ -656,8 +653,6 @@ OsuDatabaseBeatmap::CALCULATE_SLIDER_TIMES_CLICKS_TICKS_RESULT OsuDatabaseBeatma
 
 		// calculate s.scoringTimesForStarCalc, which should include every point in time where the cursor must be within the followcircle radius and at least one key must be pressed:
 		// see https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Difficulty/Preprocessing/OsuDifficultyHitObject.cs
-		// NOTE: only necessary since the latest pp changes (Xexxar)
-		if (m_osu_stars_xexxar_angles_sliders_ref->getBool())
 		{
 			const long osuSliderEndInsideCheckOffset = (long)m_osu_slider_end_inside_check_offset_ref->getInt();
 

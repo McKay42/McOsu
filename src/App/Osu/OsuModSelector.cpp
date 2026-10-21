@@ -177,6 +177,7 @@ OsuModSelector::OsuModSelector(Osu *osu) : OsuScreen(osu)
 	// convar refs
 	m_osu_drain_type_ref = convar->getConVarByName("osu_drain_type");
 	m_osu_mod_touchdevice_ref = convar->getConVarByName("osu_mod_touchdevice");
+	m_osu_mod_scorev2_ref = convar->getConVarByName("osu_mod_scorev2");
 
 	// build mod grid buttons
 	m_iGridWidth = 6;
@@ -305,7 +306,8 @@ void OsuModSelector::updateButtons(bool initial)
 	m_modButtonSpunout = setModButtonOnGrid(2, 2, 0, initial && m_osu->getModSpunout(), "spunout", "Spinners will be automatically completed.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModSpunOut();});
 	m_modButtonAuto = setModButtonOnGrid(3, 2, 0, initial && m_osu->getModAuto(), "auto", "Watch a perfect automated play through the song.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModAutoplay();});
 	setModButtonOnGrid(4, 2, 0, initial && m_osu->getModTarget(), "practicetarget", "Accuracy is based on the distance to the center of all hitobjects.\n300s still require at least being in the hit window of a 100 in addition to the rule above.", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModTarget();});
-	m_modButtonScoreV2 = setModButtonOnGrid(5, 2, 0, initial && m_osu->getModScorev2(), "v2", "Try the future scoring system.\n** UNRANKED **", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModScorev2();});
+	m_modButtonScoreV2 = setModButtonOnGrid(5, 2, 0, initial && (m_osu->getModScorev2() || m_osu_mod_scorev2_ref->getBool()), "v2", "Try the future scoring system.\n** UNRANKED **", [this]() -> OsuSkinImage *{return m_osu->getSkin()->getSelectionModScorev2();});
+	getModButtonOnGrid(5, 2)->setAvailable(!m_osu_mod_scorev2_ref->getBool());
 
 	if (env->getOS() == Environment::OS::OS_HORIZON)
 	{

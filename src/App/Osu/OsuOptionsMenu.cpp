@@ -596,6 +596,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Disable osu!lazer star/pp Relax/Autopilot nerfs", "Disabled: osu!lazer algorithm default. Relax/Autopilot scores are nerfed.\nEnabled: McOsu default. All Relax/Autopilot nerfs are disabled.", convar->getConVarByName("osu_stars_and_pp_lazer_relax_autopilot_nerf_disabled"));
 	addCheckbox("Show pp instead of score in scorebrowser", "Only McOsu scores and manually imported scores will show pp.\nSee Songbrowser > User Button > Top Ranks > Gear Button > \"Import osu! scores of <NAME>\".", convar->getConVarByName("osu_scores_sort_by_pp"));
 	addCheckbox("Always enable touch device pp nerf mod", "Keep touch device pp nerf mod active even when resetting all mods.", convar->getConVarByName("osu_mod_touchdevice"));
+	addCheckbox("Always enable Score V2 mod", "Keep Score V2 mod active even when resetting all mods.", convar->getConVarByName("osu_mod_scorev2"));
 	addCheckbox("Show osu! scores.db user names in user switcher", "Only relevant if \"Load osu! scores.db\" is enabled.\nShould the user switcher show ALL user names from ALL scores?\n(Even from ones you got in your database because you watched a replay?)", convar->getConVarByName("osu_user_switcher_include_legacy_scores_for_names"));
 
 	addSubSection("Songbrowser");
@@ -1029,6 +1030,7 @@ OsuOptionsMenu::OsuOptionsMenu(Osu *osu) : OsuScreenBackable(osu)
 	addCheckbox("Show Skip Button during Breaks", "Skip breaks in the middle of beatmaps.", convar->getConVarByName("osu_skip_breaks_enabled"));
 	addSpacer();
 	addSubSection("Hitobjects");
+	addCheckbox("Use \"Classic\" Hidden Style (!)", "NOTE: osu! doesn't do this anymore since 2015, so don't enable it for serious practicing.\nIf enabled: Do not fade out sliders, except for the hitcircle number.", convar->getConVarByName("osu_mod_hd_classic"));
 	addCheckbox("Use Fast Hidden Fading Sliders (!)", "NOTE: osu! doesn't do this, so don't enable it for serious practicing.\nIf enabled: Fade out sliders with the same speed as circles.", convar->getConVarByName("osu_mod_hd_slider_fast_fade"));
 	addCheckbox("Use ScoreV2 Slider Accuracy", "Affects accuracy calculations, but does not affect score nor pp.\nUse the ScoreV2 mod if you want the 1000000 max score cap/calculation.", convar->getConVarByName("osu_slider_scorev2"));
 	addSpacer();

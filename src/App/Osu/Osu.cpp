@@ -65,7 +65,7 @@
 
 // release configuration
 bool Osu::autoUpdater = false;
-ConVar osu_version("osu_version", 33.14f, FCVAR_NONE);
+ConVar osu_version("osu_version", 33.15f, FCVAR_NONE);
 #ifdef MCENGINE_FEATURE_OPENVR
 ConVar osu_release_stream("osu_release_stream", "vr", FCVAR_NONE);
 #else
@@ -104,7 +104,8 @@ ConVar osu_skip_breaks_enabled("osu_skip_breaks_enabled", true, FCVAR_NONE, "ena
 ConVar osu_seek_delta("osu_seek_delta", 5, FCVAR_NONE, "how many seconds to skip backward/forward when quick seeking");
 
 ConVar osu_mods("osu_mods", "", FCVAR_NONE);
-ConVar osu_mod_touchdevice("osu_mod_touchdevice", false, FCVAR_NONE, "used for force applying touch pp nerf always");
+ConVar osu_mod_touchdevice("osu_mod_touchdevice", false, FCVAR_NONE, "used for force applying touch pp nerf always (nintendo switch build + convenience, same as osu_mod_scorev2)");
+ConVar osu_mod_scorev2("osu_mod_scorev2", false, FCVAR_NONE, "used for force applying the scoreV2 mod always and keeping it enabled (convenience, same as osu_mod_touchdevice)");
 ConVar osu_mod_fadingcursor("osu_mod_fadingcursor", false, FCVAR_NONE);
 ConVar osu_mod_fadingcursor_combo("osu_mod_fadingcursor_combo", 50.0f, FCVAR_NONE);
 ConVar osu_mod_endless("osu_mod_endless", false, FCVAR_NONE);
