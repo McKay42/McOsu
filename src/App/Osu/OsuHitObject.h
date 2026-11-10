@@ -23,6 +23,9 @@ public:
 	static void drawHitResult(Graphics *g, OsuSkin *skin, float hitcircleDiameter, float rawHitcircleDiameter, Vector2 rawPos, OsuScore::HIT result, float animPercentInv, float hitDeltaRangePercent);
 	static void draw3DHitResult(Graphics *g, OsuModFPoSu *fposu, OsuSkin *skin, float hitcircleDiameter, float rawHitcircleDiameter, Vector2 rawPos, OsuScore::HIT result, float animPercentInv, float hitDeltaRangePercent);
 
+	static void drawHitResultAnim(Graphics *g, OsuBeatmap *beatmap, long hitObjectTimeForSkinAnimation, long hitObjectDurationForSkinAnimation, const OsuBeatmap::HITRESULTANIM &hitresultanim);
+	static void draw3DHitResultAnim(Graphics *g, OsuBeatmap *beatmap, long hitObjectTimeForSkinAnimation, long hitObjectDurationForSkinAnimation, const OsuBeatmap::HITRESULTANIM &hitresultanim);
+
 	static ConVar *m_osu_approach_scale_multiplier_ref;
 	static ConVar *m_osu_timingpoints_force;
 	static ConVar *m_osu_vr_approach_type;
@@ -133,20 +136,8 @@ private:
 
 	static float lerp3f(float a, float b, float c, float percent);
 
-	struct HITRESULTANIM
-	{
-		float time;
-		Vector2 rawPos;
-		OsuScore::HIT result;
-		long delta;
-		bool addObjectDurationToSkinAnimationTimeStartOffset;
-	};
-
-	void drawHitResultAnim(Graphics *g, const HITRESULTANIM &hitresultanim);
-	void draw3DHitResultAnim(Graphics *g, const HITRESULTANIM &hitresultanim);
-
-	HITRESULTANIM m_hitresultanim1;
-	HITRESULTANIM m_hitresultanim2;
+	OsuBeatmap::HITRESULTANIM m_hitresultanim1;
+	OsuBeatmap::HITRESULTANIM m_hitresultanim2;
 
 	unsigned long long m_iSortHack;
 };

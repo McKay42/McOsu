@@ -30,7 +30,7 @@ public:
 	virtual bool isLoading();
 
 	Vector2 legacyPixels2RawPixels(Vector2 coords) const; // only used for bounds calculations atm (just scales, nothing else)
-	Vector2 pixels2OsuCoords(Vector2 pixelCoords) const; // only used for positional audio atm
+	Vector2 pixels2OsuCoords(Vector2 pixelCoords) const; // only used for positional audio + nightmare/jigsaw1 hitResult sprites atm
 	Vector2 osuCoords2Pixels(Vector2 coords) const; // hitobjects should use this one (includes lots of special behaviour)
 	Vector2 osuCoords2RawPixels(Vector2 coords) const; // raw transform from osu!pixels to absolute screen pixels (without any mods whatsoever)
 	Vector2 osuCoords2VRPixels(Vector2 coords) const; // this gets called by osuCoords2Pixels() during a VR draw(), for easier backwards compatibility
@@ -80,6 +80,8 @@ private:
 	static ConVar *m_fposu_mod_strafing_strength_y_ref;
 	static ConVar *m_fposu_mod_strafing_strength_z_ref;
 	static ConVar *m_fposu_mod_3d_depthwobble_ref;
+	static ConVar *m_osu_mod_jigsaw1_ref;
+	static ConVar *m_osu_hitresult_duration_max_ref;
 
 	static inline Vector2 mapNormalizedCoordsOntoUnitCircle(const Vector2 &in)
 	{
