@@ -106,6 +106,8 @@ ConVar *OsuBeatmapStandard::m_fposu_mod_strafing_strength_x_ref = NULL;
 ConVar *OsuBeatmapStandard::m_fposu_mod_strafing_strength_y_ref = NULL;
 ConVar *OsuBeatmapStandard::m_fposu_mod_strafing_strength_z_ref = NULL;
 ConVar *OsuBeatmapStandard::m_fposu_mod_3d_depthwobble_ref = NULL;
+ConVar *OsuBeatmapStandard::m_osu_mod_jigsaw1_ref = NULL;
+ConVar *OsuBeatmapStandard::m_osu_hitresult_duration_max_ref = NULL;
 
 OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 {
@@ -188,6 +190,10 @@ OsuBeatmapStandard::OsuBeatmapStandard(Osu *osu) : OsuBeatmap(osu)
 		m_fposu_mod_strafing_strength_z_ref = convar->getConVarByName("fposu_mod_strafing_strength_z");
 	if (m_fposu_mod_3d_depthwobble_ref == NULL)
 		m_fposu_mod_3d_depthwobble_ref = convar->getConVarByName("fposu_mod_3d_depthwobble");
+	if (m_osu_mod_jigsaw1_ref == NULL)
+		m_osu_mod_jigsaw1_ref = convar->getConVarByName("osu_mod_jigsaw1");
+	if (m_osu_hitresult_duration_max_ref == NULL)
+		m_osu_hitresult_duration_max_ref = convar->getConVarByName("osu_hitresult_duration_max");
 }
 
 OsuBeatmapStandard::~OsuBeatmapStandard()
@@ -242,6 +248,24 @@ void OsuBeatmapStandard::draw(Graphics *g)
 		{
 			m_iMandalaIndex = i;
 			drawHitObjects(g);
+		}
+	}
+
+	if (m_osu->getModNM() || m_osu_mod_jigsaw1_ref->getBool())
+	{
+		for (size_t i=0; i<m_extraneousDrawnHitResults.size(); i++)
+		{
+			HITRESULTANIM &hitResultAnim = m_extraneousDrawnHitResults[i];
+
+			// cleanup
+			if (engine->getTime() > (hitResultAnim.time + m_osu_hitresult_duration_max_ref->getFloat()*(1.0f / m_osu->getSpeedMultiplier())))
+			{
+				m_extraneousDrawnHitResults.erase(m_extraneousDrawnHitResults.begin() + i);
+				i--;
+				continue;
+			}
+
+			OsuHitObject::drawHitResultAnim(g, this, 0, 0, hitResultAnim);
 		}
 	}
 

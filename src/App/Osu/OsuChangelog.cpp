@@ -42,6 +42,8 @@ OsuChangelog::OsuChangelog(Osu *osu) : OsuScreenBackable(osu)
 	alpha317.changes.push_back("- Added Options > General > Player > \"Always enable Score V2 mod\"");
 	alpha317.changes.push_back("- Added Options > Gameplay > Hitobjects > \"Use Classic Hidden Style\" (do not fade out sliders, pre-2015 HD)");
 	alpha317.changes.push_back("- Added ConVar: osu_songbrowser_pulse_anim");
+	alpha317.changes.push_back("- Updated Nightmare + Jigsaw 1 to count unnecessary clicks as actual misses instead of sliderbreaks (more difficult)");
+	alpha317.changes.push_back("- Fixed Nightmare + Jigsaw 1 to always play miss sound for unnecessary clicks regardless of osu_combobreak_sound_combo");
 	alpha317.changes.push_back("- Fixed premature retries/restarts during beatmap loading");
 	alpha317.changes.push_back("");
 	alpha317.changes.push_back("");
