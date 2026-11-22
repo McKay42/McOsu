@@ -34,6 +34,7 @@
 ConVar osu_slider_ball_tint_combo_color("osu_slider_ball_tint_combo_color", true, FCVAR_NONE);
 
 ConVar osu_snaking_sliders("osu_snaking_sliders", true, FCVAR_NONE);
+ConVar osu_mod_hd_classic("osu_mod_hd_classic", false, FCVAR_NONE, "if this is enabled then sliders do not fade out (like pre-2015 osu)");
 ConVar osu_mod_hd_slider_fade_percent("osu_mod_hd_slider_fade_percent", 1.0f, FCVAR_NONE);
 ConVar osu_mod_hd_slider_fast_fade("osu_mod_hd_slider_fast_fade", false, FCVAR_NONE);
 
@@ -375,7 +376,7 @@ void OsuSlider::draw(Graphics *g)
 
 	// slider body fade animation, draw start/end circle hit animation
 
-	if (m_fEndSliderBodyFadeAnimation > 0.0f && m_fEndSliderBodyFadeAnimation != 1.0f && !m_beatmap->getOsu()->getModHD())
+	if (m_fEndSliderBodyFadeAnimation > 0.0f && m_fEndSliderBodyFadeAnimation != 1.0f && (!m_beatmap->getOsu()->getModHD() || osu_mod_hd_classic.getBool()))
 	{
 		std::vector<Vector2> emptyVector;
 		std::vector<Vector2> alwaysPoints;
@@ -386,7 +387,7 @@ void OsuSlider::draw(Graphics *g)
 			OsuSliderRenderer::draw(g, m_beatmap->getOsu(), emptyVector, alwaysPoints, m_beatmap->getHitcircleDiameter(), 0.0f, 0.0f, m_beatmap->getSkin()->getComboColorForCounter(m_iColorCounter, m_iColorOffset), 1.0f, 1.0f - m_fEndSliderBodyFadeAnimation, getTime());
 	}
 
-	if (m_fStartHitAnimation > 0.0f && m_fStartHitAnimation != 1.0f && !m_beatmap->getOsu()->getModHD())
+	if (m_fStartHitAnimation > 0.0f && m_fStartHitAnimation != 1.0f && (!m_beatmap->getOsu()->getModHD() || osu_mod_hd_classic.getBool()))
 	{
 		float alpha = 1.0f - m_fStartHitAnimation;
 
@@ -416,7 +417,7 @@ void OsuSlider::draw(Graphics *g)
 		g->popTransform();
 	}
 
-	if (m_fEndHitAnimation > 0.0f && m_fEndHitAnimation != 1.0f && !m_beatmap->getOsu()->getModHD())
+	if (m_fEndHitAnimation > 0.0f && m_fEndHitAnimation != 1.0f && (!m_beatmap->getOsu()->getModHD() || osu_mod_hd_classic.getBool()))
 	{
 		float alpha = 1.0f - m_fEndHitAnimation;
 
@@ -747,7 +748,7 @@ void OsuSlider::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 	}
 	*/
 
-	if (m_fStartHitAnimation > 0.0f && m_fStartHitAnimation != 1.0f && !m_beatmap->getOsu()->getModHD())
+	if (m_fStartHitAnimation > 0.0f && m_fStartHitAnimation != 1.0f && (!m_beatmap->getOsu()->getModHD() || osu_mod_hd_classic.getBool()))
 	{
 		float alpha = 1.0f - m_fStartHitAnimation;
 
@@ -777,7 +778,7 @@ void OsuSlider::drawVR(Graphics *g, Matrix4 &mvp, OsuVR *vr)
 		g->popTransform();
 	}
 
-	if (m_fEndHitAnimation > 0.0f && m_fEndHitAnimation != 1.0f && !m_beatmap->getOsu()->getModHD())
+	if (m_fEndHitAnimation > 0.0f && m_fEndHitAnimation != 1.0f && (!m_beatmap->getOsu()->getModHD() || osu_mod_hd_classic.getBool()))
 	{
 		float alpha = 1.0f - m_fEndHitAnimation;
 
@@ -1063,7 +1064,7 @@ void OsuSlider::draw3D(Graphics *g)
 		}
 		*/
 
-		if (m_fStartHitAnimation > 0.0f && m_fStartHitAnimation != 1.0f && !m_beatmap->getOsu()->getModHD())
+		if (m_fStartHitAnimation > 0.0f && m_fStartHitAnimation != 1.0f && (!m_beatmap->getOsu()->getModHD() || osu_mod_hd_classic.getBool()))
 		{
 			float alpha = 1.0f - m_fStartHitAnimation;
 
@@ -1093,7 +1094,7 @@ void OsuSlider::draw3D(Graphics *g)
 			}
 		}
 
-		if (m_fEndHitAnimation > 0.0f && m_fEndHitAnimation != 1.0f && !m_beatmap->getOsu()->getModHD())
+		if (m_fEndHitAnimation > 0.0f && m_fEndHitAnimation != 1.0f && (!m_beatmap->getOsu()->getModHD() || osu_mod_hd_classic.getBool()))
 		{
 			float alpha = 1.0f - m_fEndHitAnimation;
 
@@ -1263,14 +1264,14 @@ void OsuSlider::drawStartCircle(Graphics *g, float alpha)
 		m_beatmap->getSkin()->getHitCircleOverlay2()->setAnimationTimeOffset(!m_beatmap->isInMafhamRenderChunk() ? m_iTime : m_beatmap->getCurMusicPosWithOffsets());
 		m_beatmap->getSkin()->getSliderEndCircleOverlay2()->setAnimationTimeOffset(!m_beatmap->isInMafhamRenderChunk() ? m_iTime : m_beatmap->getCurMusicPosWithOffsets());
 
-		OsuCircle::drawSliderEndCircle(g, m_beatmap, m_curve->pointAt(0.0f), m_iComboNumber, m_iColorCounter, m_iColorOffset, m_fHittableDimRGBColorMultiplierPercent, 1.0f, m_fAlpha, 0.0f, false, false);
+		OsuCircle::drawSliderEndCircle(g, m_beatmap, m_curve->pointAt(0.0f), m_iComboNumber, m_iColorCounter, m_iColorOffset, m_fHittableDimRGBColorMultiplierPercent, 1.0f, (m_beatmap->getOsu()->getModHD() && osu_mod_hd_classic.getBool() ? alpha : m_fAlpha), 0.0f, false, false);
 	}
 	else
 	{
 		m_beatmap->getSkin()->getHitCircleOverlay2()->setAnimationTimeOffset(!m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iApproachTime : m_beatmap->getCurMusicPosWithOffsets());
 		m_beatmap->getSkin()->getSliderStartCircleOverlay2()->setAnimationTimeOffset(!m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iApproachTime : m_beatmap->getCurMusicPosWithOffsets());
 
-		OsuCircle::drawSliderStartCircle(g, m_beatmap, m_curve->pointAt(0.0f), m_iComboNumber, m_iColorCounter, m_iColorOffset, m_fHittableDimRGBColorMultiplierPercent, m_fApproachScale, m_fAlpha, m_fAlpha, !m_bHideNumberAfterFirstRepeatHit, m_bOverrideHDApproachCircle);
+		OsuCircle::drawSliderStartCircle(g, m_beatmap, m_curve->pointAt(0.0f), m_iComboNumber, m_iColorCounter, m_iColorOffset, m_fHittableDimRGBColorMultiplierPercent, m_fApproachScale, (m_beatmap->getOsu()->getModHD() && osu_mod_hd_classic.getBool() ? alpha : m_fAlpha), m_fAlpha, !m_bHideNumberAfterFirstRepeatHit, m_bOverrideHDApproachCircle);
 	}
 }
 
@@ -1281,14 +1282,14 @@ void OsuSlider::draw3DStartCircle(Graphics *g, const Matrix4 &baseScale, float a
 		m_beatmap->getSkin()->getHitCircleOverlay2()->setAnimationTimeOffset(!m_beatmap->isInMafhamRenderChunk() ? m_iTime : m_beatmap->getCurMusicPosWithOffsets());
 		m_beatmap->getSkin()->getSliderEndCircleOverlay2()->setAnimationTimeOffset(!m_beatmap->isInMafhamRenderChunk() ? m_iTime : m_beatmap->getCurMusicPosWithOffsets());
 
-		OsuCircle::draw3DSliderEndCircle(g, m_beatmap, this, baseScale, m_curve->pointAt(0.0f), m_iComboNumber, m_iColorCounter, m_iColorOffset, m_fHittableDimRGBColorMultiplierPercent, 1.0f, m_fAlpha, 0.0f, false, false);
+		OsuCircle::draw3DSliderEndCircle(g, m_beatmap, this, baseScale, m_curve->pointAt(0.0f), m_iComboNumber, m_iColorCounter, m_iColorOffset, m_fHittableDimRGBColorMultiplierPercent, 1.0f, (m_beatmap->getOsu()->getModHD() && osu_mod_hd_classic.getBool() ? alpha : m_fAlpha), 0.0f, false, false);
 	}
 	else
 	{
 		m_beatmap->getSkin()->getHitCircleOverlay2()->setAnimationTimeOffset(!m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iApproachTime : m_beatmap->getCurMusicPosWithOffsets());
 		m_beatmap->getSkin()->getSliderStartCircleOverlay2()->setAnimationTimeOffset(!m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iApproachTime : m_beatmap->getCurMusicPosWithOffsets());
 
-		OsuCircle::draw3DSliderStartCircle(g, m_beatmap, this, baseScale, m_curve->pointAt(0.0f), m_iComboNumber, m_iColorCounter, m_iColorOffset, m_fHittableDimRGBColorMultiplierPercent, m_fApproachScale, m_fAlpha, m_fAlpha, !m_bHideNumberAfterFirstRepeatHit, m_bOverrideHDApproachCircle);
+		OsuCircle::draw3DSliderStartCircle(g, m_beatmap, this, baseScale, m_curve->pointAt(0.0f), m_iComboNumber, m_iColorCounter, m_iColorOffset, m_fHittableDimRGBColorMultiplierPercent, m_fApproachScale, (m_beatmap->getOsu()->getModHD() && osu_mod_hd_classic.getBool() ? alpha : m_fAlpha), m_fAlpha, !m_bHideNumberAfterFirstRepeatHit, m_bOverrideHDApproachCircle);
 	}
 }
 
@@ -1297,7 +1298,7 @@ void OsuSlider::drawEndCircle(Graphics *g, float alpha, float sliderSnake)
 	m_beatmap->getSkin()->getHitCircleOverlay2()->setAnimationTimeOffset(!m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iFadeInTime : m_beatmap->getCurMusicPosWithOffsets());
 	m_beatmap->getSkin()->getSliderEndCircleOverlay2()->setAnimationTimeOffset(!m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iFadeInTime : m_beatmap->getCurMusicPosWithOffsets());
 
-	OsuCircle::drawSliderEndCircle(g, m_beatmap, m_curve->pointAt(sliderSnake), m_iComboNumber, m_iColorCounter, m_iColorOffset, m_fHittableDimRGBColorMultiplierPercent, 1.0f, m_fAlpha, 0.0f, false, false);
+	OsuCircle::drawSliderEndCircle(g, m_beatmap, m_curve->pointAt(sliderSnake), m_iComboNumber, m_iColorCounter, m_iColorOffset, m_fHittableDimRGBColorMultiplierPercent, 1.0f, (m_beatmap->getOsu()->getModHD() && osu_mod_hd_classic.getBool() ? alpha : m_fAlpha), 0.0f, false, false);
 }
 
 void OsuSlider::draw3DEndCircle(Graphics *g, const Matrix4 &baseScale, float alpha, float sliderSnake)
@@ -1305,7 +1306,7 @@ void OsuSlider::draw3DEndCircle(Graphics *g, const Matrix4 &baseScale, float alp
 	m_beatmap->getSkin()->getHitCircleOverlay2()->setAnimationTimeOffset(!m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iFadeInTime : m_beatmap->getCurMusicPosWithOffsets());
 	m_beatmap->getSkin()->getSliderEndCircleOverlay2()->setAnimationTimeOffset(!m_beatmap->isInMafhamRenderChunk() ? m_iTime - m_iFadeInTime : m_beatmap->getCurMusicPosWithOffsets());
 
-	OsuCircle::draw3DSliderEndCircle(g, m_beatmap, this, baseScale, m_curve->pointAt(sliderSnake), m_iComboNumber, m_iColorCounter, m_iColorOffset, m_fHittableDimRGBColorMultiplierPercent, 1.0f, m_fAlpha, 0.0f, false, false);
+	OsuCircle::draw3DSliderEndCircle(g, m_beatmap, this, baseScale, m_curve->pointAt(sliderSnake), m_iComboNumber, m_iColorCounter, m_iColorOffset, m_fHittableDimRGBColorMultiplierPercent, 1.0f, (m_beatmap->getOsu()->getModHD() && osu_mod_hd_classic.getBool() ? alpha : m_fAlpha), 0.0f, false, false);
 }
 
 void OsuSlider::drawBody(Graphics *g, float alpha, float from, float to)
@@ -1452,6 +1453,9 @@ void OsuSlider::update(long curPos)
 			m_fBodyAlpha = clamp<float>(((float)(hiddenSliderBodyFadeOutEnd - curPos) / (float)(hiddenSliderBodyFadeOutEnd - hiddenSliderBodyFadeOutStart)), 0.0f, 1.0f);
 			m_fBodyAlpha *= m_fBodyAlpha; // quad in body fadeout
 		}
+
+		if (osu_mod_hd_classic.getBool())
+			m_fBodyAlpha = m_fAlphaWithoutHidden;
 	}
 
 	// if this slider is active, recalculate sliding/curve position and general state

@@ -35,6 +35,15 @@ public:
 		int maniaColumn;
 	};
 
+	struct HITRESULTANIM
+	{
+		float time;
+		Vector2 rawPos;
+		OsuScore::HIT result;
+		long delta;
+		bool addObjectDurationToSkinAnimationTimeStartOffset;
+	};
+
 public:
 	OsuBeatmap(Osu *osu);
 	virtual ~OsuBeatmap();
@@ -311,6 +320,7 @@ protected:
 
 	// custom
 	int m_iPreviousFollowPointObjectIndex; // TODO: this shouldn't be in this class
+	std::vector<HITRESULTANIM> m_extraneousDrawnHitResults; // currently only used for the nightmare mod + jigsaw 1, in OsuBeatmapStandard
 
 private:
 	friend class OsuBackgroundStarCacheLoader;

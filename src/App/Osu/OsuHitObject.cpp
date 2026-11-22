@@ -319,27 +319,27 @@ OsuHitObject::OsuHitObject(long time, int sampleType, int comboNumber, bool isEn
 
 void OsuHitObject::draw2(Graphics *g)
 {
-	drawHitResultAnim(g, m_hitresultanim1);
-	drawHitResultAnim(g, m_hitresultanim2);
+	drawHitResultAnim(g, m_beatmap, m_iTime, m_iObjectDuration, m_hitresultanim1);
+	drawHitResultAnim(g, m_beatmap, m_iTime, m_iObjectDuration, m_hitresultanim2);
 }
 
 void OsuHitObject::draw3D2(Graphics *g)
 {
-	draw3DHitResultAnim(g, m_hitresultanim1);
-	draw3DHitResultAnim(g, m_hitresultanim2);
+	draw3DHitResultAnim(g, m_beatmap, m_iTime, m_iObjectDuration, m_hitresultanim1);
+	draw3DHitResultAnim(g, m_beatmap, m_iTime, m_iObjectDuration, m_hitresultanim2);
 }
 
-void OsuHitObject::drawHitResultAnim(Graphics *g, const HITRESULTANIM &hitresultanim)
+void OsuHitObject::drawHitResultAnim(Graphics *g, OsuBeatmap *beatmap, long hitObjectTimeForSkinAnimation, long hitObjectDurationForSkinAnimation, const OsuBeatmap::HITRESULTANIM &hitresultanim)
 {
 	if ((hitresultanim.time - osu_hitresult_duration.getFloat()) < engine->getTime() // NOTE: this is written like that on purpose, don't change it ("future" results can be scheduled with it, e.g. for slider end)
-		&& (hitresultanim.time + osu_hitresult_duration_max.getFloat()*(1.0f / m_beatmap->getOsu()->getSpeedMultiplier())) > engine->getTime())
+	 && (hitresultanim.time + osu_hitresult_duration_max.getFloat()*(1.0f / beatmap->getOsu()->getSpeedMultiplier())) > engine->getTime())
 	{
-		OsuBeatmapStandard *beatmapStd = dynamic_cast<OsuBeatmapStandard*>(m_beatmap);
-		const OsuBeatmapMania *beatmapMania = dynamic_cast<OsuBeatmapMania*>(m_beatmap);
+		OsuBeatmapStandard *beatmapStd = dynamic_cast<OsuBeatmapStandard*>(beatmap);
+		const OsuBeatmapMania *beatmapMania = dynamic_cast<OsuBeatmapMania*>(beatmap);
 
-		OsuSkin *skin = m_beatmap->getSkin();
+		OsuSkin *skin = beatmap->getSkin();
 		{
-			const long skinAnimationTimeStartOffset = m_iTime + (hitresultanim.addObjectDurationToSkinAnimationTimeStartOffset ? m_iObjectDuration : 0) + hitresultanim.delta;
+			const long skinAnimationTimeStartOffset = hitObjectTimeForSkinAnimation + (hitresultanim.addObjectDurationToSkinAnimationTimeStartOffset ? hitObjectDurationForSkinAnimation : 0) + hitresultanim.delta;
 
 			skin->getHit0()->setAnimationTimeOffset(skinAnimationTimeStartOffset);
 			skin->getHit0()->setAnimationFrameClampUp();
@@ -356,7 +356,7 @@ void OsuHitObject::drawHitResultAnim(Graphics *g, const HITRESULTANIM &hitresult
 			skin->getHit300k()->setAnimationTimeOffset(skinAnimationTimeStartOffset);
 			skin->getHit300k()->setAnimationFrameClampUp();
 
-			const float animPercentInv = 1.0f - (((engine->getTime() - hitresultanim.time) * m_beatmap->getOsu()->getSpeedMultiplier()) / osu_hitresult_duration.getFloat());
+			const float animPercentInv = 1.0f - (((engine->getTime() - hitresultanim.time) * beatmap->getOsu()->getSpeedMultiplier()) / osu_hitresult_duration.getFloat());
 
 			if (beatmapStd != NULL)
 				drawHitResult(g, beatmapStd, beatmapStd->osuCoords2Pixels(hitresultanim.rawPos), hitresultanim.result, animPercentInv, clamp<float>((float)hitresultanim.delta / OsuGameRules::getHitWindow50(beatmapStd), -1.0f, 1.0f));
@@ -366,16 +366,16 @@ void OsuHitObject::drawHitResultAnim(Graphics *g, const HITRESULTANIM &hitresult
 	}
 }
 
-void OsuHitObject::draw3DHitResultAnim(Graphics *g, const HITRESULTANIM &hitresultanim)
+void OsuHitObject::draw3DHitResultAnim(Graphics *g, OsuBeatmap *beatmap, long hitObjectTimeForSkinAnimation, long hitObjectDurationForSkinAnimation, const OsuBeatmap::HITRESULTANIM &hitresultanim)
 {
 	if ((hitresultanim.time - osu_hitresult_duration.getFloat()) < engine->getTime() // NOTE: this is written like that on purpose, don't change it ("future" results can be scheduled with it, e.g. for slider end)
-		&& (hitresultanim.time + osu_hitresult_duration_max.getFloat()*(1.0f / m_beatmap->getOsu()->getSpeedMultiplier())) > engine->getTime())
+	 && (hitresultanim.time + osu_hitresult_duration_max.getFloat()*(1.0f / beatmap->getOsu()->getSpeedMultiplier())) > engine->getTime())
 	{
-		OsuBeatmapStandard *beatmapStd = dynamic_cast<OsuBeatmapStandard*>(m_beatmap);
+		OsuBeatmapStandard *beatmapStd = dynamic_cast<OsuBeatmapStandard*>(beatmap);
 
-		OsuSkin *skin = m_beatmap->getSkin();
+		OsuSkin *skin = beatmap->getSkin();
 		{
-			const long skinAnimationTimeStartOffset = m_iTime + (hitresultanim.addObjectDurationToSkinAnimationTimeStartOffset ? m_iObjectDuration : 0) + hitresultanim.delta;
+			const long skinAnimationTimeStartOffset = hitObjectTimeForSkinAnimation + (hitresultanim.addObjectDurationToSkinAnimationTimeStartOffset ? hitObjectDurationForSkinAnimation : 0) + hitresultanim.delta;
 
 			skin->getHit0()->setAnimationTimeOffset(skinAnimationTimeStartOffset);
 			skin->getHit0()->setAnimationFrameClampUp();
@@ -392,7 +392,7 @@ void OsuHitObject::draw3DHitResultAnim(Graphics *g, const HITRESULTANIM &hitresu
 			skin->getHit300k()->setAnimationTimeOffset(skinAnimationTimeStartOffset);
 			skin->getHit300k()->setAnimationFrameClampUp();
 
-			const float animPercentInv = 1.0f - (((engine->getTime() - hitresultanim.time) * m_beatmap->getOsu()->getSpeedMultiplier()) / osu_hitresult_duration.getFloat());
+			const float animPercentInv = 1.0f - (((engine->getTime() - hitresultanim.time) * beatmap->getOsu()->getSpeedMultiplier()) / osu_hitresult_duration.getFloat());
 
 			if (beatmapStd != NULL)
 				draw3DHitResult(g, beatmapStd, hitresultanim.rawPos, hitresultanim.result, animPercentInv, clamp<float>((float)hitresultanim.delta / OsuGameRules::getHitWindow50(beatmapStd), -1.0f, 1.0f));
@@ -533,7 +533,7 @@ void OsuHitObject::addHitResult(OsuScore::HIT result, long delta, bool isEndOfCo
 
 	const OsuScore::HIT returnedHit = m_beatmap->addHitResult(this, result, delta, isEndOfCombo, ignoreOnHitErrorBar, false, ignoreCombo, false, ignoreHealth);
 
-	HITRESULTANIM hitresultanim;
+	OsuBeatmap::HITRESULTANIM hitresultanim;
 	{
 		hitresultanim.result = (returnedHit != OsuScore::HIT::HIT_MISS ? returnedHit : result);
 		hitresultanim.rawPos = posRaw;

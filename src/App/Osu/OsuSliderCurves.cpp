@@ -229,7 +229,7 @@ Vector2 OsuSliderCurveTypeCentripetalCatmullRom::pointAt(float t)
 
 OsuSliderCurveEqualDistanceMulti::OsuSliderCurveEqualDistanceMulti(std::vector<Vector2> controlPoints, float pixelLength, float curvePointsSeparation) : OsuSliderCurve(controlPoints, pixelLength)
 {
-	m_iNCurve = std::min((int)(m_fPixelLength / clamp<float>(curvePointsSeparation, 1.0f, 100.0f)), osu_slider_curve_max_points.getInt());
+	m_iNCurve = std::min((int)(std::max(0.0f, m_fPixelLength) / clamp<float>(curvePointsSeparation, 1.0f, 100.0f)), osu_slider_curve_max_points.getInt());
 }
 
 void OsuSliderCurveEqualDistanceMulti::init(const std::vector<OsuSliderCurveType*> &curvesList)

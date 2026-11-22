@@ -914,11 +914,30 @@ void OsuBeatmap::update()
 			if (osu_play_hitsound_on_click_while_playing.getBool())
 				m_osu->getSkin()->playHitCircleSound(0);
 
-			// nightmare mod: extra clicks = sliderbreak
+			// nightmare mod: extra clicks = miss (unlimited, can generate more misses than missable hitobjects/events exist in the entire beatmap)
 			if ((m_osu->getModNM() || osu_mod_jigsaw1.getBool()) && !m_bIsInSkippableSection && !m_bInBreak && m_iCurrentHitObjectIndex > 0)
 			{
-				addSliderBreak();
-				addHitResult(NULL, OsuScore::HIT::HIT_MISS_SLIDERBREAK, 0, false, true, true, true, true, false); // only decrease health
+				const float prevOsuCombobreakSoundComboValue = osu_combobreak_sound_combo.getFloat();
+				osu_combobreak_sound_combo.setValue(-1.0f); // HACKHACK: always play miss sound in this case
+				{
+					addHitResult(NULL, OsuScore::HIT::HIT_MISS, 0, false, true, false, true, true, false); // miss + decrease health
+				}
+				osu_combobreak_sound_combo.setValue(prevOsuCombobreakSoundComboValue);
+
+				OsuBeatmapStandard *beatmapStd = dynamic_cast<OsuBeatmapStandard*>(this);
+				if (beatmapStd != NULL)
+				{
+					// spawn overlayed hitResult miss sprite (above all hitobjects)
+					HITRESULTANIM hitresultanim;
+					{
+						hitresultanim.result = OsuScore::HIT::HIT_MISS;
+						hitresultanim.rawPos = beatmapStd->pixels2OsuCoords(engine->getMouse()->getPos());
+						hitresultanim.delta = m_iCurMusicPosWithOffsets; // for animated skin images to work properly, time starts at click right now (abusing delta for offsetting this correctly)
+						hitresultanim.time = engine->getTime();
+						hitresultanim.addObjectDurationToSkinAnimationTimeStartOffset = false;
+					}
+					m_extraneousDrawnHitResults.push_back(hitresultanim);
+				}
 			}
 
 			m_clicks.clear();
@@ -1389,7 +1408,7 @@ bool OsuBeatmap::play()
 
 			case 5:
 				{
-					UString errorMessage = "Error: Too many hitobjects in beatmap :(";
+					UString errorMessage = "Error: Too many hitobjects in beatmap (increase osu_beatmap_max_num_hitobjects)";
 					debugLog("Osu Error: Too many hitobjects in beatmap %s\n", m_selectedDifficulty2->getFilePath().toUtf8());
 
 					if (m_osu != NULL)
@@ -1455,14 +1474,16 @@ bool OsuBeatmap::play()
 
 	// NOTE: loading failures are handled dynamically in update(), so temporarily assume everything has worked in here
 	m_bIsPlaying = true;
-	return m_bIsPlaying;
+	m_bIsRestartScheduled = false;
+	m_bIsRestartScheduledQuick = false;
+	return true/*m_bIsPlaying*/;
 }
 
 void OsuBeatmap::restart(bool quick)
 {
 	engine->getSound()->stop(getSkin()->getFailsound());
 
-	if (!m_bIsWaiting)
+	if (!m_bIsWaiting || !isLoading())
 	{
 		m_bIsRestartScheduled = true;
 		m_bIsRestartScheduledQuick = quick;
